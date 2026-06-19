@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <array>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -28,25 +29,35 @@
 #include <utility>
 #include <vector>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/any.hpp>
 
-#include "logging.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
 #include "modelversionstatus.hpp"
 #include "ovms.h"  // NOLINT
-#include "ovinferrequestsqueue.hpp"
 #include "status.hpp"
 #include "servable.hpp"
 #include "tensorinfo.hpp"
 
-// TODO windows
 #ifdef __linux__
-#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
-#include <openvino/runtime/intel_gpu/ocl/va.hpp>
+#include <CL/cl.h>
 #endif
-#include "openvino/runtime/remote_tensor.hpp"
+
+namespace ov {
+class Core;
+class Model;
+class CompiledModel;
+class InferRequest;
+class PartialShape;
+namespace intel_gpu {
+namespace ocl {
+class ClContext;
+class VAContext;
+}  // namespace ocl
+}  // namespace intel_gpu
+class RemoteTensor;
+}  // namespace ov
 
 namespace ovms {
 
@@ -55,8 +66,8 @@ class ModelInstanceUnloadGuard;
 class InferenceRequest;
 class InferenceResponse;
 class IOVTensorFactory;
+class OVInferRequestsQueue;
 struct NotifyReceiver;
-class SequenceManager;
 class Status;
 template <typename T1, typename T2>
 struct RequestProcessor;
@@ -123,11 +134,7 @@ public:
     const cl_context* getOclCContext() const { return &oclContextC; }
 #endif
 
-public:
-    virtual const std::shared_ptr<SequenceManager>& getSequenceManager() const { return this->sequenceManager; }
-
 protected:
-    std::shared_ptr<SequenceManager> sequenceManager;
 #ifdef __linux__
     std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
     std::unique_ptr<ov::intel_gpu::ocl::VAContext> vaContext;
@@ -465,13 +472,7 @@ public:
          *
          * @return batch size
          */
-    virtual std::optional<Dimension> getBatchSize() const {
-        try {
-            return Dimension(ov::get_batch(model));
-        } catch (...) {
-            return std::nullopt;
-        }
-    }
+    virtual std::optional<Dimension> getBatchSize() const;
 
     const size_t getBatchSizeIndex() const;
 
@@ -530,9 +531,7 @@ public:
          *
          * @return OVStreamsQueue
          */
-    OVInferRequestsQueue& getInferRequestsQueue() {
-        return *inferRequestsQueue;
-    }
+    OVInferRequestsQueue& getInferRequestsQueue();
 
     /**
          * @brief Combines plugin config from user with default config calculated at runtime

@@ -61,12 +61,21 @@ using ToolsParameterTypeMap_t = std::unordered_map<std::string, ParametersTypeMa
 class BaseOutputParser {
 protected:
     ov::genai::Tokenizer tokenizer;
+    // When true, the chat template has already emitted the parser's start tag as the
+    // trailing tokens of the prompt, so the model output is expected to begin already
+    // inside the parsed segment (e.g. reasoning) without producing the start tag itself.
+    // Used by reasoning parsers for models like Qwen3.6, Qwen3-VL.
+    // append "<think>\n" at the end of the prompt when thinking is enabled.
+    bool implicitStart = false;
 
 public:
     BaseOutputParser() = delete;
     explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer) :
         tokenizer(tokenizer) {}
     virtual ~BaseOutputParser() = default;
+
+    void setImplicitStart(bool value) { implicitStart = value; }
+    bool isImplicitStart() const { return implicitStart; }
 
     // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
     // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
@@ -107,6 +116,14 @@ public:
     // specific segments of the output.
     virtual bool requiresStreamingWithSpecialTokens() const {
         return false;
+    }
+
+    // Get the vector of special tags that should be erased from the content before parsing.
+    // This is useful for cleaning up the content from tags that are necessary for parsing
+    // but should not be present in the final output.
+    virtual const std::vector<std::string>& getSpecialTagsToErase() const {
+        static const std::vector<std::string> emptyVector;
+        return emptyVector;
     }
 };
 }  // namespace ovms

@@ -48,6 +48,7 @@ public:
     MOCK_METHOD(std::vector<std::string>, getArrayFieldByName, (const std::string& name), (const, override));
     MOCK_METHOD(std::string, getFieldByName, (const std::string& name), (const, override));
     MOCK_METHOD(std::string_view, getFileContentByFieldName, (const std::string& name), (const, override));
+    MOCK_METHOD(std::vector<std::string_view>, getFilesArrayByFieldName, (const std::string& name), (const, override));
     MOCK_METHOD(std::set<std::string>, getAllFieldNames, (), (const, override));
 };
 
@@ -796,6 +797,115 @@ TEST(Image2ImageTest, getImageEditRequestOptionsRejectedFields) {
     ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
 }
 
+TEST(Image2ImageTest, getImageEditRequestOptionsMaskAccepted) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "mask"}));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsUnknownFieldRejected) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "nonexistent_field"}));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("nonexistent_field"));
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsAllExplicitlyRejectedOpenAIFields) {
+    for (const auto& field : {"background", "moderation", "output_compression", "output_format", "quality", "style"}) {
+        MockedMultiPartParser multipartParser;
+        ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+        ON_CALL(multipartParser, getFieldByName(field)).WillByDefault(Return("some_value"));
+        auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+        ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions)) << "Expected rejection for field: " << field;
+        EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+        EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr(field));
+    }
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsUnsupportedResponseFormat) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("response_format")).WillByDefault(Return("url"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("response_format"));
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsAllAcceptedFieldsPassValidation) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("prompt_2")).WillByDefault(Return("prompt 2"));
+    ON_CALL(multipartParser, getFieldByName("size")).WillByDefault(Return("512x1024"));
+    ON_CALL(multipartParser, getFieldByName("n")).WillByDefault(Return("2"));
+    ON_CALL(multipartParser, getFieldByName("response_format")).WillByDefault(Return("b64_json"));
+    ON_CALL(multipartParser, getFieldByName("model")).WillByDefault(Return("test_model"));
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{
+        "prompt", "prompt_2", "prompt_3",
+        "image", "mask",
+        "negative_prompt", "negative_prompt_2", "negative_prompt_3",
+        "size", "height", "width",
+        "n", "num_images_per_prompt",
+        "response_format",
+        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"}));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions)) << std::get<absl::Status>(requestOptions).message();
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsDefaultSizeBehavior) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    // no size, width, or height set — default resolution should be applied
+    auto argsWithDefaults = DEFAULTIMAGE_GEN_ARGS;
+    argsWithDefaults.defaultResolution = std::make_pair(512, 256);
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, argsWithDefaults);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions)) << std::get<absl::Status>(requestOptions).message();
+    auto& options = std::get<ov::AnyMap>(requestOptions);
+    EXPECT_EQ(options.at("width").as<int64_t>(), 512);
+    EXPECT_EQ(options.at("height").as<int64_t>(), 256);
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsZeroWidth) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("width")).WillByDefault(Return("0"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsZeroHeight) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("height")).WillByDefault(Return("0"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsZeroN) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("n")).WillByDefault(Return("0"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsZeroNumInferenceSteps) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("num_inference_steps")).WillByDefault(Return("0"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument);
+}
+
 using mediapipe::CalculatorGraphConfig;
 using ovms::ImageGenPipelineArgs;
 TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
@@ -1386,6 +1496,662 @@ TEST(Text2ImageTest, ResponseFromOvTensorBatch3) {
     uint16_t n = 3;
     testResponseFromOvTensor(n);
 }
+// ===================== LoRA Proto Parsing Tests =====================
+
+TEST(ImageGenCalculatorOptionsTest, LoraAdaptersAbsolutePath) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/absolute/path/to/lora.safetensors" }
+            lora_adapters { alias: "anime" path: "/another/path/weights.safetensors" alpha: 0.5 }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    EXPECT_EQ(imageGenArgs.loraAdapters[0].alias, "pokemon");
+    EXPECT_EQ(imageGenArgs.loraAdapters[0].path, "/absolute/path/to/lora.safetensors");
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 1.0f);
+    EXPECT_EQ(imageGenArgs.loraAdapters[1].alias, "anime");
+    EXPECT_EQ(imageGenArgs.loraAdapters[1].path, "/another/path/weights.safetensors");
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.5f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, LoraAdaptersRelativePath) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "loras/org/repo/model.safetensors" }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "/ovms/graph_dir";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 1);
+    EXPECT_EQ(imageGenArgs.loraAdapters[0].alias, "pokemon");
+    EXPECT_EQ(imageGenArgs.loraAdapters[0].path, "/ovms/graph_dir/loras/org/repo/model.safetensors");
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 1.0f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, NoLoraAdaptersProducesEmptyVector) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+        }
+        }
+    )pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_TRUE(imageGenArgs.loraAdapters.empty());
+}
+
+TEST(ImageGenCalculatorOptionsTest, CompositeLoraAdaptersFromPbtxt) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" alpha: 0.7 }
+              components { adapter_alias: "anime" alpha: 0.5 }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    EXPECT_EQ(imageGenArgs.loraAdapters[0].alias, "pokemon");
+    // No compile-time merge for non-NPU: adapter keeps its own alpha (default 1.0)
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 1.0f);
+    EXPECT_EQ(imageGenArgs.loraAdapters[1].alias, "anime");
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 1.0f);
+    ASSERT_EQ(imageGenArgs.compositeLoraAdapters.size(), 1);
+    auto it = imageGenArgs.compositeLoraAdapters.find("blend");
+    ASSERT_NE(it, imageGenArgs.compositeLoraAdapters.end());
+    ASSERT_EQ(it->second.size(), 2);
+    EXPECT_EQ(it->second[0].first, "pokemon");
+    ASSERT_TRUE(it->second[0].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[0].second.value(), 0.7f);
+    EXPECT_EQ(it->second[1].first, "anime");
+    ASSERT_TRUE(it->second[1].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[1].second.value(), 0.5f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, AlphaOnlyAtIndividualLevelIsValid) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" alpha: 0.8 }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 0.6 }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" }
+              components { adapter_alias: "anime" }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    // Individual alphas preserved (composite has default 1.0)
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.8f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.6f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, AlphaOnlyAtCompositeLevelIsValid) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" alpha: 0.7 }
+              components { adapter_alias: "anime" alpha: 0.4 }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    // No compile-time merge for non-NPU: adapter keeps default alpha
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 1.0f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 1.0f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, IndividualAlphaPreservedWhenCompositeAlsoSet) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" alpha: 0.9 }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 0.3 }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" alpha: 0.7 }
+              components { adapter_alias: "anime" alpha: 0.4 }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    // No compile-time merge for non-NPU: adapter keeps its explicit alpha
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.9f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.3f);
+    // Composite map stores its own alphas independently
+    ASSERT_EQ(imageGenArgs.compositeLoraAdapters.size(), 1);
+    auto it = imageGenArgs.compositeLoraAdapters.find("blend");
+    ASSERT_NE(it, imageGenArgs.compositeLoraAdapters.end());
+    ASSERT_EQ(it->second.size(), 2);
+    EXPECT_EQ(it->second[0].first, "pokemon");
+    ASSERT_TRUE(it->second[0].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[0].second.value(), 0.7f);
+    EXPECT_EQ(it->second[1].first, "anime");
+    ASSERT_TRUE(it->second[1].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[1].second.value(), 0.4f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, ExplicitAlpha1AtCompositeLevelKeepsIndividualAlpha) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" alpha: 0.8 }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" alpha: 0.6 }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" alpha: 1.0 }
+              components { adapter_alias: "anime" alpha: 1.0 }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    // No compile-time merge for non-NPU: individual alpha is kept
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.8f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 0.6f);
+}
+
+TEST(ImageGenCalculatorOptionsTest, AlphaAtBothLevelsIsValid) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            lora_adapters { alias: "pokemon" path: "/path/to/pokemon.safetensors" alpha: 0.8 }
+            lora_adapters { alias: "anime" path: "/path/to/anime.safetensors" }
+            composite_lora_adapters {
+              alias: "blend"
+              components { adapter_alias: "pokemon" alpha: 0.5 }
+              components { adapter_alias: "anime" alpha: 0.4 }
+            }
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    // Alpha at both levels is valid - no compile-time merge for non-NPU
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.loraAdapters.size(), 2);
+    // Individual alpha preserved
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[0].alpha, 0.8f);
+    EXPECT_FLOAT_EQ(imageGenArgs.loraAdapters[1].alpha, 1.0f);
+    // Composite map stores its own alphas
+    ASSERT_EQ(imageGenArgs.compositeLoraAdapters.size(), 1);
+    auto it = imageGenArgs.compositeLoraAdapters.find("blend");
+    ASSERT_NE(it, imageGenArgs.compositeLoraAdapters.end());
+    ASSERT_EQ(it->second.size(), 2);
+    EXPECT_EQ(it->second[0].first, "pokemon");
+    ASSERT_TRUE(it->second[0].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[0].second.value(), 0.5f);
+    EXPECT_EQ(it->second[1].first, "anime");
+    ASSERT_TRUE(it->second[1].second.has_value());
+    EXPECT_FLOAT_EQ(it->second[1].second.value(), 0.4f);
+}
+
 // TODO:
-// -> test for all unhandled OpenAI fields define what to do - ignore/error imageEdit
 // -> test for all unhandled OpenAI fields define what to do - ignore/error imageVariation
+using ovms::LoraAlphaMap;
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideValidObject) {
+    rapidjson::Document doc;
+    doc.Parse(R"({
+        "prompt": "test",
+        "lora_alphas": {
+            "pokemon": 0.7,
+            "anime": 0.4
+        }
+    })");
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(doc);
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    auto result = std::get<LoraAlphaMap>(resultOrStatus);
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_FLOAT_EQ(result["pokemon"], 0.7f);
+    EXPECT_FLOAT_EQ(result["anime"], 0.4f);
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMissingField) {
+    rapidjson::Document doc;
+    doc.Parse(R"({"prompt": "test"})");
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(doc);
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    EXPECT_TRUE(std::get<LoraAlphaMap>(resultOrStatus).empty());
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideNotAnObject) {
+    rapidjson::Document doc;
+    doc.Parse(R"({"prompt": "test", "lora_alphas": "invalid"})");
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(doc);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(resultOrStatus));
+    EXPECT_EQ(std::get<absl::Status>(resultOrStatus).code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideNonNumericValuesRejected) {
+    rapidjson::Document doc;
+    doc.Parse(R"({
+        "prompt": "test",
+        "lora_alphas": {
+            "pokemon": 0.7,
+            "anime": "not_a_number",
+            "style": true
+        }
+    })");
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(doc);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(resultOrStatus));
+    EXPECT_EQ(std::get<absl::Status>(resultOrStatus).code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideEmptyObject) {
+    rapidjson::Document doc;
+    doc.Parse(R"({"prompt": "test", "lora_alphas": {}})");
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(doc);
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    EXPECT_TRUE(std::get<LoraAlphaMap>(resultOrStatus).empty());
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideNegativeAndZeroAlpha) {
+    rapidjson::Document doc;
+    doc.Parse(R"({
+        "prompt": "test",
+        "lora_alphas": {
+            "pokemon": -0.5,
+            "anime": 0.0
+        }
+    })");
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(doc);
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    auto result = std::get<LoraAlphaMap>(resultOrStatus);
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_FLOAT_EQ(result["pokemon"], -0.5f);
+    EXPECT_FLOAT_EQ(result["anime"], 0.0f);
+}
+
+TEST(Text2ImageTest, validateLoraAlphasRejectedWhenNoDynamicAdapters) {
+    std::unordered_map<std::string, float> loraAlphas = {{"pokemon", 0.5f}};
+    auto status = ovms::validateLoraAlphasAllowed(false, loraAlphas);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("lora_alphas is not supported"));
+}
+
+TEST(Text2ImageTest, validateLoraAlphasAllowedWithDynamicAdapters) {
+    std::unordered_map<std::string, float> loraAlphas = {{"pokemon", 0.5f}};
+    auto status = ovms::validateLoraAlphasAllowed(true, loraAlphas);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(Text2ImageTest, validateLoraAlphasEmptyPassesWithoutDynamicAdapters) {
+    std::unordered_map<std::string, float> loraAlphas;
+    auto status = ovms::validateLoraAlphasAllowed(false, loraAlphas);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectsLoraAlphasWithoutDynamicAdapters) {
+    rapidjson::Document doc;
+    doc.Parse(R"({
+        "prompt": "test prompt",
+        "model": "pokemon",
+        "lora_alphas": {"pokemon": 0.5}
+    })");
+    bool hasDynamicAdapters = false;
+    auto result = ovms::getImageGenerationRequestOptions(doc, DEFAULTIMAGE_GEN_ARGS, hasDynamicAdapters);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(result));
+    auto& err = std::get<absl::Status>(result);
+    EXPECT_EQ(err.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(err.message()), ::testing::HasSubstr("lora_alphas is not supported"));
+}
+
+TEST(Text2ImageTest, getImageGenerationRequestOptionsAllowsLoraAlphasWithDynamicAdapters) {
+    rapidjson::Document doc;
+    doc.Parse(R"({
+        "prompt": "test prompt",
+        "model": "pokemon",
+        "lora_alphas": {"pokemon": 0.5}
+    })");
+    bool hasDynamicAdapters = true;
+    auto result = ovms::getImageGenerationRequestOptions(doc, DEFAULTIMAGE_GEN_ARGS, hasDynamicAdapters);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(result));
+}
+
+// ===================== LoRA Alpha Per-Model Validation Tests =====================
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_BaseModelAllowsAnyAlpha) {
+    // Rule: base model can override any adapter's alpha
+    LoraAlphaMap alphas = {{"xray", 0.5f}, {"anime", 0.3f}};
+    std::vector<std::string> aliases = {"xray", "anime", "vector"};
+    ImageGenPipelineArgs::CompositeLoraMap composites;
+    auto status = ovms::validateLoraAlphasForModel("base_model", alphas, aliases, composites);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_SingleLoraAllowsSelfAlpha) {
+    // Rule: targeting a lora adapter, can override own alpha
+    LoraAlphaMap alphas = {{"xray", 0.5f}};
+    std::vector<std::string> aliases = {"xray", "anime"};
+    ImageGenPipelineArgs::CompositeLoraMap composites;
+    auto status = ovms::validateLoraAlphasForModel("xray", alphas, aliases, composites);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_SingleLoraRejectsOtherAlpha) {
+    // Rule: targeting lora "xray" but trying to change "anime" alpha is illegal
+    LoraAlphaMap alphas = {{"anime", 0.5f}};
+    std::vector<std::string> aliases = {"xray", "anime"};
+    ImageGenPipelineArgs::CompositeLoraMap composites;
+    auto status = ovms::validateLoraAlphasForModel("xray", alphas, aliases, composites);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("anime"));
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("xray"));
+}
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_CompositeAllowsComponentAlpha) {
+    // Rule: composite can override alphas of its components
+    LoraAlphaMap alphas = {{"xray", 0.7f}, {"anime", 0.4f}};
+    std::vector<std::string> aliases = {"xray", "anime", "vector"};
+    ImageGenPipelineArgs::CompositeLoraMap composites = {
+        {"blend", {{"xray", 0.5f}, {"anime", 0.5f}}}};
+    auto status = ovms::validateLoraAlphasForModel("blend", alphas, aliases, composites);
+    EXPECT_TRUE(status.ok());
+}
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_CompositeRejectsNonComponentAlpha) {
+    // Rule: composite "blend" has xray+anime, overriding "vector" is illegal
+    LoraAlphaMap alphas = {{"vector", 0.5f}};
+    std::vector<std::string> aliases = {"xray", "anime", "vector"};
+    ImageGenPipelineArgs::CompositeLoraMap composites = {
+        {"blend", {{"xray", 0.5f}, {"anime", 0.5f}}}};
+    auto status = ovms::validateLoraAlphasForModel("blend", alphas, aliases, composites);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("vector"));
+    EXPECT_THAT(std::string(status.message()), ::testing::HasSubstr("blend"));
+}
+
+TEST(Text2ImageTest, validateLoraAlphasForModel_EmptyAlphasAlwaysOk) {
+    LoraAlphaMap alphas;
+    std::vector<std::string> aliases = {"xray"};
+    ImageGenPipelineArgs::CompositeLoraMap composites;
+    auto status = ovms::validateLoraAlphasForModel("xray", alphas, aliases, composites);
+    EXPECT_TRUE(status.ok());
+}
+
+// ===================== Multipart LoRA Alpha Parsing Tests =====================
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMultipartValidObject) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return(R"({"xray": 0.5, "anime": 0.3})"));
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(parser);
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    auto result = std::get<LoraAlphaMap>(resultOrStatus);
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_FLOAT_EQ(result["xray"], 0.5f);
+    EXPECT_FLOAT_EQ(result["anime"], 0.3f);
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMultipartEmptyField) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return(""));
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(parser);
+    ASSERT_TRUE(std::holds_alternative<LoraAlphaMap>(resultOrStatus));
+    auto result = std::get<LoraAlphaMap>(resultOrStatus);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMultipartInvalidJson) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return("{not valid json"));
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(parser);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(resultOrStatus));
+    EXPECT_EQ(std::get<absl::Status>(resultOrStatus).code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(std::get<absl::Status>(resultOrStatus).message()), ::testing::HasSubstr("valid JSON"));
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMultipartNotObject) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return("[1, 2, 3]"));
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(parser);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(resultOrStatus));
+    EXPECT_EQ(std::get<absl::Status>(resultOrStatus).code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(std::get<absl::Status>(resultOrStatus).message()), ::testing::HasSubstr("must be an object"));
+}
+
+TEST(Text2ImageTest, parseLoraAlphasOverrideMultipartNonNumericValue) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return(R"({"xray": "high"})"));
+    auto resultOrStatus = ovms::parseLoraAlphasOverride(parser);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(resultOrStatus));
+    EXPECT_EQ(std::get<absl::Status>(resultOrStatus).code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(std::get<absl::Status>(resultOrStatus).message()), ::testing::HasSubstr("must be a number"));
+}
+
+TEST(Text2ImageTest, getImageEditRequestOptionsRejectsLoraAlphasWithoutDynamicAdapters) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return(R"({"xray": 0.5})"));
+    ON_CALL(parser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(parser, getFieldByName("size")).WillByDefault(Return(""));
+    ON_CALL(parser, getFieldByName("model")).WillByDefault(Return("xray"));
+    ON_CALL(parser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "model", "lora_alphas"}));
+    bool hasDynamicAdapters = false;
+    auto result = ovms::getImageEditRequestOptions(parser, DEFAULTIMAGE_GEN_ARGS, hasDynamicAdapters);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(result));
+    auto& err = std::get<absl::Status>(result);
+    EXPECT_EQ(err.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_THAT(std::string(err.message()), ::testing::HasSubstr("lora_alphas is not supported"));
+}
+
+TEST(Text2ImageTest, getImageEditRequestOptionsAllowsLoraAlphasWithDynamicAdapters) {
+    MockedMultiPartParser parser;
+    ON_CALL(parser, getFieldByName("lora_alphas")).WillByDefault(Return(R"({"xray": 0.5})"));
+    ON_CALL(parser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(parser, getFieldByName("size")).WillByDefault(Return(""));
+    ON_CALL(parser, getFieldByName("model")).WillByDefault(Return("xray"));
+    ON_CALL(parser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "model", "lora_alphas"}));
+    bool hasDynamicAdapters = true;
+    auto result = ovms::getImageEditRequestOptions(parser, DEFAULTIMAGE_GEN_ARGS, hasDynamicAdapters);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(result));
+}

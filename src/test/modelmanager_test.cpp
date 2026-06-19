@@ -14,17 +14,20 @@
 // limitations under the License.
 //*****************************************************************************
 #include <condition_variable>
+#include <fstream>
 #include <iostream>
 #include <mutex>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <openvino/runtime/core.hpp>
+
 #include "../cleaner_utils.hpp"
 #include "../config.hpp"
 #include "../dags/custom_node_library_internal_manager_wrapper.hpp"
 #include "../dags/node_library.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
 #include "../modelinstanceunloadguard.hpp"
@@ -147,7 +150,7 @@ const std::string model_2_path = "/models/dummy2/2";
 class MockModel : public ovms::Model {
 public:
     MockModel() :
-        Model("MOCK_NAME", false, nullptr) {}
+        Model("MOCK_NAME") {}
     MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::Core&, ovms::MetricRegistry*, const ovms::MetricConfig*), (override));
 };
 
@@ -161,7 +164,7 @@ public:
         ModelManager() {
         this->watcherIntervalMillisec = 100;
     }
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return modelMock;
     }
 
@@ -874,6 +877,49 @@ TEST_F(ModelManager, ReadsVersionsFromDiskRelativePath) {
     }
 }
 
+TEST_F(ModelManager, ReadsVersionsFromSingleFilePathForSupportedFormats) {
+    const std::string path = getGenericFullPathForTmp("/tmp/test_model_single_file/");
+    std::filesystem::create_directories(path);
+
+    const std::vector<std::string> extensions = {
+        ".xml",
+        ".onnx",
+        ".pdmodel",
+        ".pdiparams",
+        ".pb",
+        ".tflite"};
+
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+    for (const auto& extension : extensions) {
+        const std::string modelFilePath = path + "model" + extension;
+        std::ofstream(modelFilePath).close();
+
+        ovms::model_versions_t versions;
+        auto status = fixtureManager.readAvailableVersions(fs, modelFilePath, versions);
+        EXPECT_EQ(status, ovms::StatusCode::OK);
+        EXPECT_THAT(versions, ::testing::UnorderedElementsAre(1));
+
+        std::filesystem::remove(modelFilePath);
+    }
+
+    std::filesystem::remove(path);
+}
+
+TEST_F(ModelManager, ReadsVersionsFromSingleFilePathWithUnsupportedExtension) {
+    const std::string path = getGenericFullPathForTmp("/tmp/test_model_single_file_invalid/");
+    std::filesystem::create_directories(path);
+    const std::string modelFilePath = path + "model.invalid";
+    std::ofstream(modelFilePath).close();
+
+    ovms::model_versions_t versions;
+    std::shared_ptr<ovms::FileSystem> fs = std::make_shared<ovms::LocalFileSystem>();
+    auto status = fixtureManager.readAvailableVersions(fs, modelFilePath, versions);
+    EXPECT_EQ(status, ovms::StatusCode::FILE_INVALID);
+
+    std::filesystem::remove(modelFilePath);
+    std::filesystem::remove(path);
+}
+
 TEST_F(ModelManager, PathEscapeError1) {
     const std::string path = getGenericFullPathForTmp("/tmp/../test_model/");
 
@@ -979,6 +1025,30 @@ TEST_F(ModelManagerWatcher, StartFromFileWhenModelFilesMissing) {
     manager.join();
 }
 
+TEST_F(ModelManagerWatcher, StartFromFileSingleModelXmlPath) {
+    const std::string config = std::string(R"({
+     "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": ")") +
+                               getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/dummy.xml") + R"(",
+                "target_device": "CPU",
+                "model_version_policy": {"all": {}}
+            }
+     }]
+})";
+
+    std::string fileToReload = this->getFilePath("/ovms_config_file_single_file.json");
+    createConfigFileWithContent(config, fileToReload);
+    ConstructorEnabledModelManager manager;
+
+    auto status = manager.startFromFile(fileToReload);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    auto modelInstance = manager.findModelInstance("dummy", 1);
+    EXPECT_NE(modelInstance, nullptr);
+}
+
 TEST_F(ModelManagerWatcher, StartFromFileWhenModelFilesMissingRelativePath) {
     auto modelDir = this->getFilePath(model_1_path);
     std::filesystem::create_directories(modelDir);
@@ -1045,14 +1115,6 @@ public:
     }
 };
 
-struct MockedFunctorSequenceCleaner : public ovms::FunctorSequenceCleaner {
-public:
-    MockedFunctorSequenceCleaner(ovms::GlobalSequencesViewer& globalSequencesViewer) :
-        ovms::FunctorSequenceCleaner(globalSequencesViewer) {}
-
-    MOCK_METHOD(void, cleanup, (), (override));
-};
-
 struct MockedFunctorResourcesCleaner : public ovms::FunctorResourcesCleaner {
 public:
     MockedFunctorResourcesCleaner(ovms::ModelManager& modelManager) :
@@ -1064,16 +1126,13 @@ public:
 class ModelManagerCleanerThread : public ::testing::Test {
 public:
     ModelManagerCleanerThread() :
-        mockedFunctorSequenceCleaner(globalSequencesViewer),
         mockedFunctorResourcesCleaner(modelManager) {}
     void SetUp() {
         exitSignal = cleanerExitTrigger.get_future();
     }
 
-    ovms::GlobalSequencesViewer globalSequencesViewer;
     MockModelManager modelManager;
 
-    MockedFunctorSequenceCleaner mockedFunctorSequenceCleaner;
     MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner;
 
     std::promise<void> cleanerExitTrigger;
@@ -1121,8 +1180,7 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
     // Reset mocked wrapper deinitializeSum
     CNLIMWrapperMock::deinitializeSum = 0;
     uint32_t resourcesIntervalMiliseconds = 20;
-    uint32_t sequenceIntervalMiliseconds = 60000;
-    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
+    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), std::ref(exitSignal));
 
     waitForCleanerCycleFinishSignal();
 
@@ -1165,154 +1223,12 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
     }
 }
 
-TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenResourcesIntervalIsShorterAndWaitTimeIsGreaterThanSequenceWaitTime) {
-    uint32_t resourcesIntervalMiliseconds = 200;
-    uint32_t sequenceIntervalMiliseconds = 252;
-
-    absl::Notification sequenceCleanerDone;
-    absl::Notification resourcesCleanerDone;
-
-    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&sequenceCleanerDone]() { sequenceCleanerDone.Notify(); }));
-    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
-    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
-
-    const uint32_t timeout = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
-    sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
-    resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
-    cleanerExitTrigger.set_value();
-
-    if (t.joinable()) {
-        t.join();
-    }
-}
-
-TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesWhenResourcesIntervalIsShorterAndWaitTimeIsShorterThanSequenceInterval) {
-    uint32_t resourcesIntervalMiliseconds = 229;
-    uint32_t sequenceIntervalMiliseconds = 367;
-
-    absl::Notification resourcesCleanerDone;
-
-    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(0);
-    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
-    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
-
-    const uint32_t timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
-    resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
-    cleanerExitTrigger.set_value();
-
-    if (t.joinable()) {
-        t.join();
-    }
-}
-
-TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenSequenceIntervalIsShorterAndWaitTimeIsGreaterThanResurcesInterval) {
-    uint32_t resourcesIntervalMiliseconds = 237;
-    uint32_t sequenceIntervalMiliseconds = 229;
-
-    absl::Notification sequenceCleanerDone;
-    absl::Notification resourcesCleanerDone;
-
-    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&sequenceCleanerDone]() { sequenceCleanerDone.Notify(); }));
-    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
-    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
-
-    const uint32_t timeout = resourcesIntervalMiliseconds > sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
-    sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
-    resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
-    cleanerExitTrigger.set_value();
-
-    if (t.joinable()) {
-        t.join();
-    }
-}
-
-TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupSequenceWhenSequenceIntervalIsShorterAndWaitTimeIsShorterThanResourcesInterval) {
-    uint32_t resourcesIntervalMiliseconds = 337;
-    uint32_t sequenceIntervalMiliseconds = 229;
-
-    absl::Notification sequenceCleanerDone;
-    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&sequenceCleanerDone]() { sequenceCleanerDone.Notify(); }));
-    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(0);
-    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
-
-    const uint32_t timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
-    sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
-    cleanerExitTrigger.set_value();
-
-    if (t.joinable()) {
-        t.join();
-    }
-}
-
-TEST_F(ModelManagerCleanerThread, CleanerShouldCleanupResourcesAndSequenceWhenIntervalsAreEqualAndWaitTimeIsGreaterThanInterval) {
-    uint32_t resourcesIntervalMiliseconds = 290;
-    uint32_t sequenceIntervalMiliseconds = 290;
-
-    absl::Notification sequenceCleanerDone;
-    absl::Notification resourcesCleanerDone;
-
-    EXPECT_CALL(mockedFunctorSequenceCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&sequenceCleanerDone]() { sequenceCleanerDone.Notify(); }));
-    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).Times(1).WillOnce(testing::Invoke([&resourcesCleanerDone]() { resourcesCleanerDone.Notify(); }));
-    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
-
-    const uint32_t timeout = resourcesIntervalMiliseconds < sequenceIntervalMiliseconds ? resourcesIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR : sequenceIntervalMiliseconds * TIMEOUT_MULTIPLIER_FACTOR;
-    sequenceCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
-    resourcesCleanerDone.WaitForNotificationWithTimeout(absl::Milliseconds(timeout));
-    cleanerExitTrigger.set_value();
-
-    if (t.joinable()) {
-        t.join();
-    }
-}
-
 TEST_F(ModelManager, ConfigReloadingWithWrongInputName) {
     ovms::ModelConfig config;
     config.parseShapeParameter("{\"wrong_input_name\": \"(1,3,224,224)\"}");
     config.setBasePath(getGenericFullPathForSrcTest("/ovms/src/test/dummy"));
     auto status = fixtureManager.reloadModelWithVersions(config);
     ASSERT_EQ(status, ovms::StatusCode::CONFIG_SHAPE_IS_NOT_IN_MODEL);
-}
-
-TEST_F(ModelManager, ConfigReloadingStatefulDynamic) {
-    auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(fixtureManager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
-
-    config.setStateful(true);
-    config.setBatchingMode(ovms::Mode::AUTO);
-    ASSERT_EQ(fixtureManager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
-
-    config.setBatchingMode(ovms::Mode::FIXED);
-    config.setShapes({{"A", {ovms::Mode::AUTO, {1, 3, 224, 224}}}});
-    ASSERT_EQ(fixtureManager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL);
-}
-
-TEST_F(ModelManager, ConfigReloadingNonStateful) {
-    ConstructorEnabledModelManager manager;
-    auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
-
-    config.setStateful(false);
-    config.setLowLatencyTransformation(true);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER);
-}
-
-TEST_F(ModelManager, ConfigReloadingStatelessToStateful) {
-    ConstructorEnabledModelManager manager;
-    auto config = DUMMY_MODEL_CONFIG;
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
-
-    config.setStateful(true);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_MODEL_TYPE_CHANGE);
-}
-
-TEST_F(ModelManager, ConfigReloadingStatefulToStateless) {
-    ConstructorEnabledModelManager manager;
-    auto config = DUMMY_MODEL_CONFIG;
-    config.setStateful(true);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
-
-    config.setStateful(false);
-    ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::REQUESTED_MODEL_TYPE_CHANGE);
 }
 
 class DummyModelDirectoryStructure {
@@ -1518,7 +1434,7 @@ TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameNameRelativePath) {
 
 class MockModelManagerWithModelInstancesJustChangingStates : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return std::make_shared<MockModelWithInstancesJustChangingStates>(name);
     }
     ovms::Status readAvailableVersions(
@@ -2075,7 +1991,7 @@ std::shared_ptr<ovms::Model> model;
 
 class MockModelManagerWith1Model : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return model;
     }
 };
@@ -2091,7 +2007,7 @@ TEST_F(GetModelInstanceTest, WithRequestedNameShouldReturnModelNameMissing) {
 TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVersionMissing) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
+    model = std::make_unique<ovms::Model>(config.getName());
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::ModelInstance> modelInstance;
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
@@ -2116,7 +2032,7 @@ protected:
 class ModelWithModelInstanceFakeLoad : public ovms::Model {
 public:
     ModelWithModelInstanceFakeLoad(const std::string& name) :
-        Model(name, false, nullptr) {}
+        Model(name) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return std::make_shared<MockModelInstanceFakeLoad>(ieCore);
     }
@@ -2127,7 +2043,7 @@ std::shared_ptr<ModelWithModelInstanceFakeLoad> modelWithModelInstanceFakeLoad;
 TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnModelVersionMissing) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
+    model = std::make_unique<ovms::Model>(config.getName());
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
     versionsToRetire->emplace_back(1);
@@ -2142,7 +2058,7 @@ TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnMode
 TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoadedAnymore) {
     MockModelManagerWith1Model manager;
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
-    model = std::make_unique<ovms::Model>(config.getName(), false, nullptr);
+    model = std::make_unique<ovms::Model>(config.getName());
     ASSERT_EQ(manager.reloadModelWithVersions(config), ovms::StatusCode::OK_RELOADED);
     std::shared_ptr<ovms::model_versions_t> versionsToRetire = std::make_shared<ovms::model_versions_t>();
     versionsToRetire->emplace_back(1);
@@ -2170,7 +2086,7 @@ protected:
 class ModelWithModelInstanceLoadedStuckInLoadingState : public ovms::Model {
 public:
     ModelWithModelInstanceLoadedStuckInLoadingState(const std::string& name) :
-        Model(name, false, nullptr) {}
+        Model(name) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return std::make_shared<ModelInstanceLoadedStuckInLoadingState>(ieCore);
     }
@@ -2180,7 +2096,7 @@ std::shared_ptr<ModelWithModelInstanceLoadedStuckInLoadingState> modelWithModelI
 
 class ModelManagerWithModelInstanceLoadedStuckInLoadingState : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return modelWithModelInstanceLoadedStuckInLoadingState;
     }
 };
@@ -2216,7 +2132,7 @@ private:
 class ModelWithModelInstanceLoadedWaitInLoadingState : public ovms::Model {
 public:
     ModelWithModelInstanceLoadedWaitInLoadingState(const std::string& name, const uint32_t modelInstanceLoadDelayInMilliseconds) :
-        Model(name, false, nullptr),
+        Model(name),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
     std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string&, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
         return std::make_shared<ModelInstanceLoadedWaitInLoadingState>(ieCore, modelInstanceLoadDelayInMilliseconds);
@@ -2230,7 +2146,7 @@ std::shared_ptr<ModelWithModelInstanceLoadedWaitInLoadingState> modelWithModelIn
 
 class ModelManagerWithModelInstanceLoadedWaitInLoadingState : public ovms::ModelManager {
 public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name, const bool isStateful) override {
+    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return modelWithModelInstanceLoadedWaitInLoadingState;
     }
 

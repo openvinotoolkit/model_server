@@ -30,7 +30,8 @@
 #pragma warning(pop)
 
 #include "../http_payload.hpp"
-#include "apis/openai_completions.hpp"
+#include "../sse_utils.hpp"
+#include "apis/openai_api_handler.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
@@ -59,11 +60,16 @@ Instance of this class is created for each request and is passed through multipl
 Note that GenAiServableExecutionContext pointer is the only parameter most of the GenAiServable methods take.
 */
 
+enum class GenerationPhase {
+    INPUT_TOKEN_PROCESSING,
+    OUTPUT_TOKEN_PROCESSING,
+};
+
 struct GenAiServableExecutionContext {
     // Common API related members
-    ovms::HttpPayload payload;
+    HttpPayload payload;
     Endpoint endpoint;
-    std::shared_ptr<OpenAIChatCompletionsHandler> apiHandler;
+    std::shared_ptr<OpenAIApiHandler> apiHandler;
     std::shared_ptr<GenerationConfigBuilder> generationConfigBuilder;
     // Single tensor with inputIds for the model. This is considered general for all pipelines,
     // but depending on particular pipeline implementation it might be not required or on the other hand, insufficient.
@@ -74,6 +80,7 @@ struct GenAiServableExecutionContext {
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
     std::string lastStreamerCallbackOutput;
+    GenerationPhase generationPhase = GenerationPhase::INPUT_TOKEN_PROCESSING;
 };
 
 struct ExtraGenerationInfo {
@@ -135,7 +142,7 @@ public:
     loadRequest method implementation MUST fill executionContext payload and endpoint fields.
     Base implementation does that and makes sure URI matches either chat/completions or completions endpoint.
     */
-    virtual absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload);
+    virtual absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const HttpPayload& payload);
 
     // Creates execution context for the request
     virtual std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() = 0;
@@ -201,7 +208,6 @@ public:
     */
     virtual absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 };
-std::string wrapTextInServerSideEventMessage(const std::string& text);
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
-void logRequestDetails(const ovms::HttpPayload& payload);
+void logRequestDetails(const HttpPayload& payload);
 }  // namespace ovms

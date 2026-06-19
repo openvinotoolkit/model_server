@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "../../../config.hpp"
 #include "../../../logging.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
@@ -45,10 +46,12 @@ absl::Status VisualLanguageModelServable::loadRequest(std::shared_ptr<GenAiServa
     }
     if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
+    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses") {
+        executionContext->endpoint = Endpoint::RESPONSES;
     } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
         executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
-        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint or /v3/tokenize");
+        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions, /v3/responses endpoint or /v3/tokenize");
     }
     executionContext->payload = payload;
     return absl::OkStatus();
@@ -67,7 +70,7 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
     if (vlmExecutionContext->apiHandler == nullptr) {
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
     }
-    if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS) {
+    if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
 
         for (size_t i = 0; i < chatHistory.size(); i++) {
@@ -92,7 +95,7 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
             chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
         }
 
-        constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
+        constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
         auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
         if (!toolsStatus.ok()) {
             return toolsStatus.status();
@@ -103,9 +106,24 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
             return chatTemplateKwargsStatus.status();
         }
         const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt, {}, tools, chatTemplateKwargs);
+        if (llm_calculator_logger->should_log(spdlog::level::trace)) {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory messages: {}", chatHistory.get_messages().to_json_string());
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory.get_tools(): {}", chatHistory.get_tools().to_json_string());
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory.get_extra_context(): {}", chatHistory.get_extra_context().to_json_string());
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM tools: {}", tools.has_value() ? tools->to_json_string() : std::string("<none>"));
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatTemplateKwargs: {}", chatTemplateKwargs.has_value() ? chatTemplateKwargs->to_json_string() : std::string("<none>"));
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM addGenerationPrompt: {}", addGenerationPrompt);
+        }
+        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+        if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
+            vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
+        }
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
+    }
+
+    if (Config::instance().getServerSettings().verboseResponse) {
+        vlmExecutionContext->apiHandler->enableVerboseResponse(vlmExecutionContext->inputText);
     }
 
     // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.

@@ -318,6 +318,22 @@ sudo reboot
 
 > NOTE: For RedHat base OS unit tests, which require VA API, are skipped.
 
+## Checking code coverage of unit tests
+
+To check code coverage of unit tests, execute the following command to create build image and run unit tests with code coverage enabled:
+
+```
+make ovms_builder_image BASE_OS=ubuntu24 CHECK_COVERAGE=1 RUN_TESTS=1 MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 OV_USE_BINARY=1 OVMS_CPP_DOCKER_IMAGE=ovms_coverage
+```
+
+Then run `get_coverage` target to extract report from the container:
+
+```
+make get_coverage OVMS_CPP_DOCKER_IMAGE=ovms_coverage
+```
+
+It should create report in `genhtml` directory. Open `index.html` file in this directory to check the code coverage report.
+
 ## Debugging
 
 Debugging options are available. Click on the required option :

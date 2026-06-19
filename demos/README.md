@@ -5,16 +5,13 @@
 maxdepth: 1
 hidden:
 ---
-ovms_demos_continuous_batching_agent
+ovms_demos_continuous_batching
 ovms_demos_integration_with_open_webui
+ovms_demos_code_completion_vsc
+ovms_demos_audio
 ovms_demos_rerank
 ovms_demos_embeddings
-ovms_demos_continuous_batching
-ovms_demo_long_context
 ovms_demos_continuous_batching_vlm
-ovms_demos_llm_npu
-ovms_demos_vlm_npu
-ovms_demos_code_completion_vsc
 ovms_demos_image_generation
 ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
@@ -40,10 +37,8 @@ ovms_demo_real_time_stream_analysis
 ovms_demo_using_paddlepaddle_model
 ovms_demo_bert
 ovms_demo_universal-sentence-encoder
-ovms_demo_benchmark_client
 ovms_string_output_model_demo
 ovms_demos_gguf
-ovms_demos_audio
 
 ```
 

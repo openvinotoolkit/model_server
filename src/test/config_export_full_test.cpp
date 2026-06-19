@@ -24,7 +24,7 @@
 #include "light_test_utils.hpp"
 #include "platform_utils.hpp"
 #include "test_with_temp_dir.hpp"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "../module_names.hpp"
 #include "../server.hpp"
 #include "../status.hpp"

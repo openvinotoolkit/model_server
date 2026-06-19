@@ -17,8 +17,10 @@
 #include <numeric>
 
 #include "openvino/core/except.hpp"
+#include "openvino/runtime/core.hpp"
 #include "sidepacket_servable.hpp"
 #include "logging.hpp"
+#include "ov_utils.hpp"
 #include <spdlog/spdlog.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/error/en.h>
@@ -31,7 +33,7 @@
 #include "status.hpp"
 #include "config.hpp"
 
-#include "filesystem.hpp"
+#include "filesystem/filesystem.hpp"
 
 using namespace ov::genai;
 using namespace ov;
@@ -133,6 +135,13 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
     ov::Core core;
     std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
     m_model = this->applyPrePostProcessing(core, m_model, properties);
+    if (targetDevice == "CPU") {
+        auto cpuPropertiesStatus = applyDefaultCpuProperties(properties);
+        if (!cpuPropertiesStatus.ok()) {
+            SPDLOG_ERROR("Failed to apply default CPU properties for embeddings model: {}", cpuPropertiesStatus.string());
+            return;
+        }
+    }
     compiledModel = core.compile_model(m_model, targetDevice, properties);
     SPDLOG_DEBUG("Model compiled {} for {}", parsedModelsPath.string(), targetDevice);
 

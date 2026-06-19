@@ -16,18 +16,64 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include <openvino/genai/image_generation/text2image_pipeline.hpp>
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
+#include <openvino/genai/image_generation/inpainting_pipeline.hpp>
+#include <openvino/genai/image_generation/text2image_pipeline.hpp>
+#include <openvino/genai/lora_adapter.hpp>
 
 #include "imagegenpipelineargs.hpp"
+#include "src/queue.hpp"
 
 namespace ovms {
+
+// RAII guard that acquires a slot from a Queue<int>(1) on construction
+// and returns it on destruction, serializing concurrent pipeline access.
+class PipelineSlotGuard {
+public:
+    // Blocks until a pipeline slot becomes available.
+    explicit PipelineSlotGuard(Queue<int>& queue) :
+        queue_(queue),
+        streamId_(queue_.getIdleStream().get()) {}
+    ~PipelineSlotGuard() {
+        queue_.returnStream(streamId_);
+    }
+
+    PipelineSlotGuard(const PipelineSlotGuard&) = delete;
+    PipelineSlotGuard& operator=(const PipelineSlotGuard&) = delete;
+
+private:
+    Queue<int>& queue_;
+    int streamId_;
+};
+
 struct ImageGenerationPipelines {
     std::unique_ptr<ov::genai::Image2ImagePipeline> image2ImagePipeline;
     std::unique_ptr<ov::genai::Text2ImagePipeline> text2ImagePipeline;
+    std::unique_ptr<ov::genai::InpaintingPipeline> inpaintingPipeline;
+    std::unordered_map<std::string, ov::genai::Adapter> loraAdapters;  // alias -> loaded adapter
+    // composite alias -> [(component adapter alias, alpha)] where alpha is optional
+    std::unordered_map<std::string, std::vector<std::pair<std::string, std::optional<float>>>> compositeLoraAdapters;
     ImageGenPipelineArgs args;
+
+    // When true, LoRA adapters were compiled with MODE_STATIC (NPU).
+    // Runtime adapter switching is not possible — adapters are always active.
+    bool npuLoraStaticMode = false;
+
+    // Serializes concurrent inpainting requests (InpaintingPipeline lacks clone()).
+    // Queue size = 1: only one inpainting inference runs at a time.
+    std::unique_ptr<Queue<int>> inpaintingQueue;
+
+    // Serializes all image generation requests when LoRA adapters are configured
+    // in dynamic mode. The pipeline is used directly (without clone) so that adapter
+    // state tracking remains consistent across requests with different adapters.
+    // Queue size = 1: only one inference runs at a time for this pipeline.
+    std::unique_ptr<Queue<int>> loraQueue;
 
     ImageGenerationPipelines() = delete;
     ImageGenerationPipelines(const ImageGenPipelineArgs& args);

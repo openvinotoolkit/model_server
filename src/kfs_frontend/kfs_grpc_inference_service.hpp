@@ -20,7 +20,7 @@
 #include <utility>
 
 #include <grpcpp/server_context.h>
-#include <openvino/openvino.hpp>
+#include <openvino/core/any.hpp>
 
 #include "kfs_utils.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
@@ -34,7 +34,6 @@ struct KFSModelExtraMetadata {
 
 namespace ovms {
 struct ExecutionContext;
-class MediapipeGraphDefinition;
 class Model;
 class ModelInstance;
 class ModelInstanceUnloadGuard;
@@ -42,9 +41,9 @@ class ModelManager;
 class ServableMetricReporter;
 class Pipeline;
 class Server;
+class SingleVersionServableDefinition;
 class Status;
 class TensorInfo;
-class PipelineDefinition;
 
 class KFSInferenceServiceImpl : public GRPCInferenceService::Service {
 protected:
@@ -66,11 +65,9 @@ public:
     ::grpc::Status ModelInfer(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response) override;
     ::grpc::Status ModelStreamInfer(::grpc::ServerContext* context, ::grpc::ServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest>* stream) override;
     static Status buildResponse(Model& model, ModelInstance& instance, KFSModelMetadataResponse* response, KFSModelExtraMetadata& extraMetadata);
-    static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSModelMetadataResponse* response);
+    static Status buildResponse(SingleVersionServableDefinition& definition, KFSModelMetadataResponse* response);
     static Status buildResponse(std::shared_ptr<ModelInstance> instance, KFSGetModelStatusResponse* response);
-    static Status buildResponse(PipelineDefinition& pipelineDefinition, KFSGetModelStatusResponse* response);
-    static Status buildResponse(MediapipeGraphDefinition& pipelineDefinition, KFSGetModelStatusResponse* response);
-    static Status buildResponse(MediapipeGraphDefinition& mediapipeGraphDefinition, KFSModelMetadataResponse* response);
+    static Status buildResponse(SingleVersionServableDefinition& definition, KFSGetModelStatusResponse* response);
     static void convert(const std::pair<std::string, std::shared_ptr<const TensorInfo>>& from, KFSModelMetadataResponse::TensorMetadata* to);
     static Status getModelReady(const KFSGetModelStatusRequest* request, KFSGetModelStatusResponse* response, const ModelManager& manager, ExecutionContext executionContext);
 

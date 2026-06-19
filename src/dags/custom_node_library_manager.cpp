@@ -22,7 +22,7 @@
 #include <dlfcn.h>
 #endif
 
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "../logging.hpp"
 #include "../status.hpp"
 

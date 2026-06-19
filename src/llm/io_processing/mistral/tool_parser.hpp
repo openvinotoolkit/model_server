@@ -34,7 +34,6 @@ class MistralToolParser : public BaseOutputParser {
     const std::string streamingParsingStartTag = "[{\"";
 
     /////////////////////////////////////////////////
-    // FIXME: Duplicated from Phi4 with slight change
     // Streaming required members
     enum InternalState {
         AWAITING_START_TAG,

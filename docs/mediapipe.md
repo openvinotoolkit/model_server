@@ -65,15 +65,15 @@ Following table lists supported tag and packet types in pbtxt graph definition:
 |pbtxt line|input/output|tag|packet type|stream name|
 |:---|:---|:---|:---|:---|
 |input_stream: "a"|input|none|ov::Tensor|a|
-|output_stream: "b"|input|none|ov::Tensor|b|
+|output_stream: "b"|output|none|ov::Tensor|b|
 |input_stream: "IMAGE:a"|input|IMAGE|mediapipe::ImageFrame|a|
 |output_stream: "IMAGE:b"|output|IMAGE|mediapipe::ImageFrame|b|
-|input_stream: "OVTENSOR:a"|output|OVTENSOR|ov::Tensor|a|
+|input_stream: "OVTENSOR:a"|input|OVTENSOR|ov::Tensor|a|
 |output_stream: "OVTENSOR:b"|output|OVTENSOR|ov::Tensor|b|
 |input_stream: "REQUEST:req"|input|REQUEST|KServe inference::ModelInferRequest|req|
 |output_stream: "RESPONSE:res"|output|RESPONSE|KServe inference::ModelInferResponse|res|
 
-In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor'. The stream name can be arbitrary but the convention is to use a lower case word.
+In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor`. The stream name can be arbitrary but the convention is to use a lowercase word.
 
 The required data layout for the MediaPipe `IMAGE` conversion is HWC and the supported precisions are:
 |Datatype|Allowed number of channels|
@@ -110,7 +110,7 @@ client.async_stream_infer(
 ```
 
 ### List of default calculators
-Beside OpenVINO inference calculators, model server public docker image also includes all the calculators used in the enabled demos.
+Besides OpenVINO inference calculators, model server public docker image also includes all the calculators used in the enabled demos.
 The list of all included calculators, subgraphs, input/output stream handler is reported in the model server is started with extra parameter `--log_level TRACE`.
 
 ### CPU and GPU execution
@@ -214,6 +214,53 @@ Nodes in the MediaPipe graphs can reference both the models configured in model_
 |`"subconfig"`|string|Path to the subconfig file. May be absolute or relative to the base_path. Default value is "(base_path)\subconfig.json". Missing  file does not result in error.|No|
 
 Subconfig file may only contain *model_config_list* section  - in the same format as in [models config file](starting_server.md).
+
+### Graph Pool (Pre-initialized Graph Queue)
+
+OpenVINO Model Server can pre-initialize a pool of MediaPipe `CalculatorGraph` instances for a graph definition. Graphs in the pool are started once during server initialization and reused across inference requests, eliminating per-request graph initialization and teardown overhead. This is especially beneficial for graphs that involve expensive setup, done in calculators `Open()` method.
+
+#### How it works
+
+Without graph pool, each incoming request creates a new `CalculatorGraph`, calls `StartRun()` with side packets, processes the request, then tears down the graph via `CloseAllPacketSources()` and `WaitUntilDone()`.
+
+With graph pool enabled, a fixed number of graphs are pre-initialized and kept in a queue. When a request arrives, an idle graph is acquired from the queue. After processing, the graph is returned to the queue for the next request. The graph is never torn down — instead, `WaitUntilIdle()` is called between requests and the internal timestamp is incremented.
+
+#### Configuration
+
+The graph pool size is controlled via a comment directive in the graph `.pbtxt` file:
+
+```
+# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO
+```
+
+| Value | Behavior |
+|:------|:---------|
+| `AUTO` | Pool size is set to the number of hardware threads (`std::thread::hardware_concurrency()`), or 16 if detection fails |
+| Positive integer (e.g. `4`) | Pool size set to the given value (must not exceed hardware thread count) |
+| `0` | Graph pool disabled — falls back to per-request graph creation |
+| *(directive absent)* | Default: graph pool is disabled |
+
+**Default behavior:** graph pool stays disabled unless `OVMS_GRAPH_QUEUE_MAX_SIZE` is explicitly present in `graph.pbtxt`. Since the OVMS CLI graph exporter (`--pull --task`) always emits this directive, **graphs created via the CLI exporter have the pool enabled by default**.
+
+**Generated graphs from exporters:**
+- OVMS `--task ...` graph export emits `# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO` for all graph types.
+- `demos/common/export_models/export_model.py` also emits `# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO` for all graph types.
+
+**Runtime kill-switch:**
+Setting the environment variable `OVMS_GRAPH_QUEUE_OFF=1` globally disables graph pools at runtime, regardless of the directive in `graph.pbtxt`. 
+
+#### Important considerations for graph developers
+
+**Stateful calculators:**
+Since graphs in the pool are reused across requests, any state held by a calculator between `Process()` calls will persist across requests. If your calculator accumulates state (e.g. counters, buffers, history), that state will carry over to the next request that reuses the same graph instance. Design your calculators to either:
+- Be stateless (reset any per-request state at the beginning of each `Process()` call), or
+- Explicitly handle the fact that the graph may have already processed prior requests.
+
+**Input side packets from requests are not supported:**
+When graph pool is enabled, side packets are set once at pool construction time and cannot be overridden per request. If a client sends request parameters that would normally become input side packets (e.g. KServe request parameters other than `OVMS_MP_TIMESTAMP`), the request will be rejected with an error. If your graph relies on per-request side packets to configure calculator behavior, either disable the graph pool (`# OVMS_GRAPH_QUEUE_MAX_SIZE: 0`) or redesign the graph to accept such parameters as regular input stream packets instead of side packets.
+
+**Python generative nodes (LOOPBACK) are not compatible with graph pool:**
+Python nodes using generative mode (`execute` that `yield`s) rely on per-calculator state (`pyIteratorPtr`) that persists across `Process()` calls within a single request. With graph pool enabled, if a generator does not fully complete (e.g. client disconnects mid-stream), the stale iterator remains on the reused graph instance and subsequent requests will fail. Only Python nodes using regular mode (stateless `execute` that `return`s a list) are safe to use with graph pool.
 
 
 ## Deployment testing

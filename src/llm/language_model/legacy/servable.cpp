@@ -20,7 +20,10 @@
 #include <vector>
 
 #include "../../../logging.hpp"
+#include "../../../profiler.hpp"
 #include "../../../status.hpp"
+#include "../../apis/openai_completions.hpp"
+#include "../../apis/openai_responses.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -32,7 +35,6 @@
 
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
-#include "../../apis/openai_completions.hpp"
 #include "../../text_utils.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "../../py_jinja_template_processor.hpp"
@@ -68,12 +70,21 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     }
 
     legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
-    legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
-        legacyExecutionContext->endpoint,
-        std::chrono::system_clock::now(),
-        getProperties()->tokenizer,
-        getProperties()->toolParserName,
-        getProperties()->reasoningParserName);
+    if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
+        legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
+            legacyExecutionContext->endpoint,
+            std::chrono::system_clock::now(),
+            getProperties()->tokenizer,
+            getProperties()->toolParserName,
+            getProperties()->reasoningParserName);
+    } else {
+        legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
+            legacyExecutionContext->endpoint,
+            std::chrono::system_clock::now(),
+            getProperties()->tokenizer,
+            getProperties()->toolParserName,
+            getProperties()->reasoningParserName);
+    }
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength);
     if (!status.ok()) {
@@ -103,8 +114,9 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     };
     ov::AnyMap streamerConfig;
     if (legacyExecutionContext->apiHandler->isStream() &&
-        legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
-        (legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
+        ((legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
+             legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
+            !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens)) {
         streamerConfig.insert(ov::genai::skip_special_tokens(false));
     }
     legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
@@ -197,7 +209,9 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         executionContext->lastStreamerCallbackOutput = "";
     }
     if (generationStatus != std::future_status::ready) {  // continue
-        if (lastTextChunk.size() > 0) {
+        // For RESPONSES endpoint, always call serializeStreamingChunk so that
+        // output item initialization events are emitted even before the tokenizer produces text.
+        if (lastTextChunk.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
             std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE);
             if (!serializedChunk.empty()) {
                 executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
@@ -215,13 +229,20 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
         }
-        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP);
+        if (legacyExecutionContext->results.finish_reasons.empty()) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in legacy LM streaming generation result, defaulting to STOP");
+        }
+        // Legacy generation path always runs with batch=1, so we read the single finish reason at index 0.
+        ov::genai::GenerationFinishReason finishReason = legacyExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : legacyExecutionContext->results.finish_reasons[0];
+        if (executionContext->apiHandler->isVerboseResponse() && !legacyExecutionContext->results.tokens.empty()) {
+            executionContext->apiHandler->appendVerboseRawTokens(legacyExecutionContext->results.tokens[0]);
+        }
+        executionContext->apiHandler->setPromptTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_input_tokens());
+        executionContext->apiHandler->setCompletionTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_generated_tokens());
+        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
-
-        executionContext->apiHandler->setPromptTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_input_tokens());
-        executionContext->apiHandler->setCompletionTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_generated_tokens());
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 

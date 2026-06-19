@@ -18,7 +18,8 @@
 #include <memory>
 #include <string>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/infer_request.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "tfs_utils.hpp"
 #pragma GCC diagnostic push
@@ -29,7 +30,6 @@
 #pragma GCC diagnostic pop
 
 #include "../profiler.hpp"
-#include "../logging.hpp"
 #include "../status.hpp"
 #include "../serialization_common.hpp"
 #include "../tensorinfo.hpp"

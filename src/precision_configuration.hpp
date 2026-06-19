@@ -16,7 +16,7 @@
 #pragma once
 #include "status.hpp"
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/type/element_type.hpp>
 #include <unordered_map>
 #include <string>
 

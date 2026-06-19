@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <functional>
 #include <memory>
 #include <set>
 #include <string>
@@ -49,6 +50,7 @@ public:
     MOCK_METHOD(std::vector<std::string>, getArrayFieldByName, (const std::string&), (const override));
     MOCK_METHOD(std::string, getFieldByName, (const std::string&), (const override));
     MOCK_METHOD(std::string_view, getFileContentByFieldName, (const std::string&), (const override));
+    MOCK_METHOD(std::vector<std::string_view>, getFilesArrayByFieldName, (const std::string&), (const override));
     MOCK_METHOD(std::set<std::string>, getAllFieldNames, (), (const, override));
 };
 
@@ -88,3 +90,18 @@ public:
         handler.reset();
     }
 };
+
+inline void assertTokenizeWithInvalidTextReturnsError(
+    ovms::HttpRestApiHandler* handler,
+    const std::string& modelName,
+    const std::string& textJson,
+    std::string& response,
+    ovms::HttpRequestComponents& comp,
+    ovms::HttpResponseComponents& responseComponents,
+    std::shared_ptr<MockedServerRequestInterface>& writer,
+    std::shared_ptr<MockedMultiPartParser>& multiPartParser) {
+    std::string requestBody = R"({"model": ")" + modelName + R"(", "text": )" + textJson + R"(})";
+    std::string endpoint = "/v3/tokenize";
+    ovms::Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}

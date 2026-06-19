@@ -19,6 +19,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iterator>
 
 #include <spdlog/spdlog.h>
 
@@ -38,7 +39,7 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
 #include "language_model/continuous_batching/servable_initializer.hpp"
@@ -61,7 +62,23 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
     }
 #endif
-    // In non-python build, GenAI handles chat template loading
+
+    // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
+    // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
+    std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
+    if (std::filesystem::exists(chatTemplateJinjaPath)) {
+        std::ifstream chatTemplateFile(chatTemplateJinjaPath);
+        if (chatTemplateFile.is_open()) {
+            std::string chatTemplateContent((std::istreambuf_iterator<char>(chatTemplateFile)),
+                std::istreambuf_iterator<char>());
+            if (!chatTemplateContent.empty()) {
+                properties->tokenizer.set_chat_template(chatTemplateContent);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using the chat template from: {}", chatTemplateJinjaPath.string());
+            }
+        } else {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
+        }
+    }
 }
 
 #if (PYTHON_DISABLE == 0)
@@ -236,6 +253,8 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             jinja_env.globals["raise_exception"] = raise_exception
             jinja_env.globals["strftime_now"] = strftime_now
             jinja_env.filters["from_json"] = json.loads
+            # Override tojson to return plain str instead of Markup to prevent HTML escaping in LLM prompts
+            jinja_env.filters["tojson"] = lambda value, indent=None: json.dumps(value, ensure_ascii=False, indent=indent)
 
             # Try to read data from tokenizer_config.json to get additional tool chat template if present
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")

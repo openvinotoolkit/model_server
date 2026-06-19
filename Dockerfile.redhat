@@ -87,7 +87,7 @@ RUN git clone --recurse-submodules --depth 1 --branch v2.10.16 https://github.co
     patch -d /azure/azure-storage-cpp/ -p1 </ovms/third_party/azure/azure_sdk.patch
 
 WORKDIR /azure/cpprestsdk/Release/build.release
-ARG SDL_OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security"
+ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 RUN cmake .. -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_LOGS} -DCMAKE_CXX_FLAGS="${SDL_OPS} ${LTO_CXX_FLAGS}" -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_RUNTIME=ON -DBoost_USE_STATIC_LIBS=ON -DWERROR=OFF -DBUILD_SAMPLES=OFF -DBUILD_TESTS=OFF && make --jobs=$JOBS install
 
 WORKDIR /azure/azure-storage-cpp/Microsoft.WindowsAzure.Storage/build.release
@@ -97,7 +97,8 @@ RUN CASABLANCA_DIR=/azure/cpprestsdk cmake .. -DCMAKE_CXX_FLAGS="${SDL_OPS} ${LT
 ####### Build OpenCV
 COPY third_party/opencv /ovms/third_party/opencv
 WORKDIR /ovms/third_party/opencv
-RUN if [ "$VERBOSE_LOGS" == "ON" ] ; then export VERBOSE=1 ; fi && ./install_opencv.sh
+ARG OPENCV_VERSION=4.13.0
+RUN if [ "$VERBOSE_LOGS" == "ON" ] ; then export VERBOSE=1 ; fi && OPENCV_VERSION=${OPENCV_VERSION} ./install_opencv.sh
 ####### End of OpenCV
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -158,6 +159,12 @@ RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHT
 
 RUN  dnf install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && dnf clean all
 
+WORKDIR /patchelf
+# hadolint ignore=DL3003
+RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
+    ./bootstrap.sh && ./configure && make && make install
+
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 ARG ov_source_branch=c01cd93e24d1cd78bfbb401eed51c08fb93e0816
@@ -171,7 +178,7 @@ ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && alternatives --install /usr/bin/python3-config python3-config /usr/bin/python3.12-config 2
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
-
+ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 # hadolint ignore=DL3041
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel fdupes && \
     dnf clean all
@@ -181,9 +188,9 @@ RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debu
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
     if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses  ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. ; \
+        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DCMAKE_CXX_FLAGS="  ${SDL_OPS} -Wno-error=parentheses  ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. ; \
     else \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. ; \
+        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DCMAKE_CXX_FLAGS="  ${SDL_OPS} -Wno-error=parentheses ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. ; \
     fi && \
     make --jobs=$JOBS && \
     make install
@@ -223,12 +230,11 @@ ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:
 WORKDIR /openvino_tokenizers/
 ARG ov_tokenizers_branch=85be884a69f10270703f81f970a5ee596a4c8df7
 ARG ov_tokenizers_org=openvinotoolkit
-ARG SDL_OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized"
 # hadolint ignore=DL3003
 RUN git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive && \
     sed -i '/openvino~=/d' /openvino_tokenizers/pyproject.toml && \
     sed -i '/requires-python/d' /openvino_tokenizers/pyproject.toml && \
-    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -S ./ -B ./build/  && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
+    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -S ./ -B ./build/  && cmake --build ./build/ --parallel $JOBS && cp -vP /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
     if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \  
     python3.12 -m pip wheel -v --no-deps --wheel-dir wheel /openvino_tokenizers && \
     python3.12 -m pip install --no-cache-dir "$(find wheel -name 'openvino_tokenizers*.whl')" --target /opt/intel/openvino/python ; \
@@ -239,10 +245,11 @@ ARG ov_genai_branch=master
 ARG ov_genai_org=openvinotoolkit
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
-    git clone https://github.com/$ov_genai_org/openvino.genai /openvino_genai && cd /openvino_genai && git checkout $ov_genai_branch && git submodule update --init --recursive ; \
-    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS}  ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_SYSTEM_ICU="True" -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON -S ./ -B ./build/ ; \ 
-    cmake --build ./build/ --parallel $JOBS && cp /openvino_genai/build/openvino_genai/lib*.so* /opt/intel/openvino/runtime/lib/intel64/ ; \
-    cp -r /openvino_genai/src/cpp/include/* /opt/intel/openvino/runtime/include/ ; \
+    git clone https://github.com/$ov_genai_org/openvino.genai /openvino_genai && cd /openvino_genai && git checkout $ov_genai_branch && git submodule update --init --recursive && \
+    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_SYSTEM_ICU="True" -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON -S ./ -B ./build/ && \
+    cmake --build ./build/ --parallel $JOBS && cp -vP /openvino_genai/build/openvino_genai/lib*.so* /opt/intel/openvino/runtime/lib/intel64/ && \
+    cp -r /openvino_genai/src/cpp/include/* /opt/intel/openvino/runtime/include/ && \
+    cp /openvino_genai/build/src/cpp/openvino/genai/version.hpp /opt/intel/openvino/runtime/include/openvino/genai/ && \
     if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
         cp -r /openvino_genai/build/openvino_genai/*py* /opt/intel/openvino/python/ ; \
     fi
@@ -263,25 +270,20 @@ COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/re
 
 WORKDIR /ovms
 
-# hadolint ignore=DL3059
-
 # Mediapipe
 COPY BUILD.bazel /ovms/
 COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
-# prebuild dependencies before copying sources
-# hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
-
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
-COPY src/ /ovms/src/
+ARG KONFLUX=1  # This is a workaround to avoid bazel fetching dependencies during build, which causes issues in Konflux. Should be disabled when building outside of Konflux to speed up the build by using bazel cache and avoid fetching dependencies which are already cached.
+RUN if [ "$KONFLUX" == "0" ] ; then true ; else exit 0 ; fi ; \
+    bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
-# hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+COPY src/ /ovms/src/
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
@@ -289,29 +291,18 @@ RUN make
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/python/openvino-4.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2026.1' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2026.3' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
-
-WORKDIR /patchelf
-# hadolint ignore=DL3003
-RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
-    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
-    ./bootstrap.sh && ./configure && make && make install
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2026.1.0"
+ARG PROJECT_VERSION="2026.3.0"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 
 # Set OVMS version strings
 RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
-    if [ "$ov_use_binary" = "1" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(find /opt/intel/ -maxdepth 1 -mindepth 1 -type d | grep openvino | grep -Eo '[0-9]{4}.[0-9].[0-9].[^_]+')#g" /ovms/src/version.hpp ; fi && \
-    if [ "$ov_use_binary" == "0" ] ; then sed -i -e "s#REPLACE_OPENVINO_NAME#$(git --git-dir /openvino/.git log -n 1 | head -n 1 | cut -d' ' -f2 | head -c 12)#g" /ovms/src/version.hpp ; fi && \
     bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
-
-# Custom Nodes
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:release_custom_nodes
 
 # OVMS
 ARG OPTIMIZE_BUILDING_TESTS=0
@@ -336,7 +327,7 @@ RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 COPY client /client
-RUN python3.12 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
+RUN python3.12 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep 'OpenVINO backend' | cut -d' ' -f3)', \
     'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
@@ -372,22 +363,18 @@ ARG BASE_OS=redhat
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
 ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
-COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
 COPY create_package.sh /
 RUN ./create_package.sh
 
 # hadolint ignore=DL3059
 RUN chown -R ovms:ovms /ovms_release
 RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
-# Remove capi library
-RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; else exit 0 ; fi ;
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
 FROM $RELEASE_BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2026.1.0"
+LABEL "version"="2026.3.0"
 LABEL "release"="2026"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"

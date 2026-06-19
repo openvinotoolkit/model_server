@@ -26,6 +26,8 @@
 #include "../ovinferrequestsqueue.hpp"
 #include "../timer.hpp"
 
+#include <openvino/runtime/core.hpp>
+
 using namespace testing;
 
 const std::string DUMMY_MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml";

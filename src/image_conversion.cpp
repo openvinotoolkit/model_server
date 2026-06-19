@@ -74,7 +74,7 @@ ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const i
         SharedImageAllocator(image, desiredChannels, y, x));
 }
 
-ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes) {
+ov::Tensor loadImageStbiFromMemory(std::string_view imageBytes) {
     int x = 0, y = 0, channelsInFile = 0;
     constexpr int desiredChannels = 3;
     unsigned char* image = stbi_load_from_memory(

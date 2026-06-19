@@ -17,20 +17,13 @@
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 load("//:common_settings.bzl", "ovms_cc_library")
 
-mediapipe_proto_library(
-    name = "rerank_calculator_proto", # rerank_calculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-    srcs = ["rerank_calculator.proto"],
-    visibility = ["//visibility:private"],
-    deps = [
-        "@mediapipe//mediapipe/framework:calculator_options_proto",
-        "@mediapipe//mediapipe/framework:calculator_proto",
-    ],
-)
-
 ovms_cc_library(
     name = "rerank_servable",
     hdrs = ["rerank_servable.hpp"],
-    deps = ["//src:sidepacket_servable",],
+    deps = ["//src:sidepacket_servable",
+            "//src/port:rapidjson_document",
+            "//src/port:rapidjson_istreamwrapper",
+            "//src/port:rapidjson_error",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
@@ -46,26 +39,9 @@ mediapipe_proto_library(
 )
 
 ovms_cc_library(
-    name = "rerankcalculator",
-    srcs = ["rerank_calculator.cc"],
-    deps = [
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "@model_api//:model_api",
-        "//src:httppayload",
-        "//src:libhttpclientconnection",
-        "//src:libovmslogging",
-        "//src:libovmsprofiler",
-	    "rerank_calculator_cc_proto",
-        ":rerank_api_handler",
-    ],
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
-
-ovms_cc_library(
     name = "rerankcalculator_ov",
-    srcs = ["rerank_calculator_ov.cc"],
+    srcs = ["rerank_calculator_ov.cc",
+            "rerank_node_initializer.cpp"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -81,6 +57,8 @@ ovms_cc_library(
         "//src:executingstreamidguard",
         "//src:libovms_execution_context",
         "//src/tokenize:tokenize_parser",
+        "//src/mediapipe_internal:node_initializer",
+        "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

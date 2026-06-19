@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 namespace ovms {
 

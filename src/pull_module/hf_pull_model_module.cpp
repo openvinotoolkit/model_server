@@ -16,13 +16,19 @@
 #include "hf_pull_model_module.hpp"
 
 #include <iostream>
+#include <filesystem>
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
+
+#include <nlohmann/json.hpp>
 
 #include "../config.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "libgit2.hpp"
 #include "optimum_export.hpp"
+#include "curl_downloader.hpp"
 #include "gguf_downloader.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "../logging.hpp"
@@ -86,7 +92,7 @@ static std::variant<ovms::Status, Libgit2Options> prepareLibgit2Opts() {
     return opts;
 }
 
-std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createGuard() {
+std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createLibGitGuard() {
     auto optsOrError = prepareLibgit2Opts();
     RETURN_IF_ERROR(optsOrError);
     auto initGuard = std::make_unique<Libgt2InitGuard>(std::get<Libgit2Options>(optsOrError));
@@ -101,7 +107,7 @@ Status HfPullModelModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_TRACE("{} starting", HF_MODEL_PULL_MODULE_NAME);
     if (config.getServerSettings().hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
-        auto guardOrError = createGuard();
+        auto guardOrError = createLibGitGuard();
         RETURN_IF_ERROR(guardOrError);
     }
     this->hfSettings = config.getServerSettings().hfSettings;
@@ -110,12 +116,129 @@ Status HfPullModelModule::start(const ovms::Config& config) {
     return StatusCode::OK;
 }
 
-Status HfPullModelModule::clone() const {
+Status HfPullModelModule::resolveHfLoraFilenames() {
+    if (!std::holds_alternative<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+        return StatusCode::OK;
+    }
+    auto& graphSettings = std::get<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings);
+    for (auto& adapter : graphSettings.loraAdapters) {
+        if (adapter.sourceType != LoraSourceType::HF_REPO) {
+            continue;
+        }
+        if (adapter.safetensorsFile.has_value()) {
+            continue;
+        }
+        if (adapter.resolvedSafetensorsFile.has_value()) {
+            continue;
+        }
+        // Query HF API to find the .safetensors file in the LoRA repo
+        std::string apiUrl = this->GetHfEndpoint() + "api/models/" + adapter.sourceLora;
+        SPDLOG_DEBUG("Querying HF API for LoRA adapter files: {}", apiUrl);
+        std::string responseBody;
+        std::string hfToken = this->GetHfToken();
+        auto status = fetchUrlToString(apiUrl, hfToken, responseBody);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to query HF API for LoRA adapter: {}", adapter.sourceLora);
+            return status;
+        }
+        // Parse JSON response to find .safetensors files in siblings array
+        // Example: { "siblings": [{"rfilename": "file1.safetensors"}, ...] }
+        try {
+            auto json = nlohmann::json::parse(responseBody);
+            std::vector<std::string> safetensorsFiles;
+            if (json.contains("siblings") && json["siblings"].is_array()) {
+                for (const auto& sibling : json["siblings"]) {
+                    if (sibling.contains("rfilename") && sibling["rfilename"].is_string()) {
+                        const std::string& filename = sibling["rfilename"].get_ref<const std::string&>();
+                        if (endsWith(filename, ".safetensors")) {
+                            safetensorsFiles.push_back(filename);
+                        }
+                    }
+                }
+            }
+            if (safetensorsFiles.empty()) {
+                SPDLOG_ERROR("No .safetensors files found via HF API for LoRA adapter: {}", adapter.sourceLora);
+                return StatusCode::PATH_INVALID;
+            }
+            if (safetensorsFiles.size() > 1) {
+                SPDLOG_ERROR("Multiple .safetensors files found for LoRA adapter: {}. Use @filename to specify.", adapter.sourceLora);
+                return StatusCode::PATH_INVALID;
+            }
+            adapter.resolvedSafetensorsFile = safetensorsFiles[0];
+            SPDLOG_DEBUG("Resolved LoRA safetensors file for {}: {}", adapter.sourceLora, adapter.resolvedSafetensorsFile.value());
+        } catch (const nlohmann::json::exception& e) {
+            SPDLOG_ERROR("Failed to parse HF API JSON response for LoRA adapter {}: {}", adapter.sourceLora, e.what());
+            return StatusCode::INTERNAL_ERROR;
+        }
+    }
+    return StatusCode::OK;
+}
+
+Status HfPullModelModule::pullLoraAdapters(const std::string& graphDirectory) {
+    if (!std::holds_alternative<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+        return StatusCode::OK;
+    }
+    auto status = this->resolveHfLoraFilenames();
+    if (!status.ok()) {
+        return status;
+    }
+    const auto& graphSettings = std::get<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings);
+    for (const auto& adapter : graphSettings.loraAdapters) {
+        if (adapter.sourceType == LoraSourceType::LOCAL_FILE) {
+            std::cout << "LoRA adapter: " << adapter.alias << " using local file: " << adapter.sourceLora << std::endl;
+            continue;
+        }
+        std::string loraDownloadPath;
+        std::string loraUrl;
+        std::string authTokenHF;
+        if (adapter.sourceType == LoraSourceType::HF_REPO) {
+            loraDownloadPath = FileSystem::joinPath({graphDirectory, "loras", adapter.sourceLora});
+            loraUrl = this->GetHfEndpoint() + adapter.sourceLora + "/resolve/main/" + adapter.effectiveSafetensorsFile().value();
+            authTokenHF = this->GetHfToken();
+        } else if (adapter.sourceType == LoraSourceType::DIRECT_URL) {
+            loraDownloadPath = FileSystem::joinPath({graphDirectory, "loras", adapter.alias});
+            loraUrl = adapter.sourceLora;
+        } else {
+            SPDLOG_ERROR("Unknown LoRA source type for adapter: {}", adapter.alias);
+            return StatusCode::INTERNAL_ERROR;
+        }
+        auto loraFilePath = FileSystem::joinPath({loraDownloadPath, adapter.effectiveSafetensorsFile().value()});
+        if (!this->hfSettings.overwriteModels && std::filesystem::exists(loraFilePath)) {
+            std::cout << "LoRA adapter: " << adapter.alias << " already exists, skipping download." << std::endl;
+            continue;
+        }
+        if (!std::filesystem::exists(loraDownloadPath)) {
+            if (!std::filesystem::create_directories(loraDownloadPath)) {
+                SPDLOG_ERROR("Failed to create LoRA directory: {}", loraDownloadPath);
+                return StatusCode::DIRECTORY_NOT_CREATED;
+            }
+        }
+        auto loraTmpFilePath = loraFilePath + ".tmp";
+        std::error_code ec;
+        std::filesystem::remove(loraTmpFilePath, ec);
+        status = downloadFileWithCurl(loraUrl, loraTmpFilePath, authTokenHF);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to download LoRA adapter: {} from: {}", adapter.alias, loraUrl);
+            std::filesystem::remove(loraTmpFilePath, ec);
+            return status;
+        }
+        std::filesystem::rename(loraTmpFilePath, loraFilePath, ec);
+        if (ec) {
+            SPDLOG_ERROR("Failed to rename LoRA temp file: {} -> {}: {}", loraTmpFilePath, loraFilePath, ec.message());
+            std::filesystem::remove(loraTmpFilePath, ec);
+            return StatusCode::INTERNAL_ERROR;
+        }
+        std::cout << "LoRA adapter: " << adapter.alias << " downloaded to: " << loraDownloadPath << std::endl;
+    }
+    return StatusCode::OK;
+}
+
+Status HfPullModelModule::clone() {
     std::string graphDirectory = "";
     std::unique_ptr<IModelDownloader> downloader;
     std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> guardOrError;
     if (this->hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
-        guardOrError = createGuard();
+        guardOrError = createLibGitGuard();
         if (std::holds_alternative<Status>(guardOrError)) {
             return std::get<Status>(guardOrError);
         }
@@ -150,13 +273,18 @@ Status HfPullModelModule::clone() const {
         std::cout << "Draft model: " << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << " downloaded to: " << GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()) << std::endl;
     }
 
+    // Image gen with LoRA adapters case - resolve filenames and download safetensors files
+    status = this->pullLoraAdapters(graphDirectory);
+    if (!status.ok()) {
+        return status;
+    }
+
     GraphExport graphExporter;
-    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings);
+    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings, true);  // when downloading from HF we always create config file, but when using local model with --task we create config in memory without writing to file
     if (!status.ok()) {
         return status;
     }
     std::cout << "Graph: graph.pbtxt created in: " << graphDirectory << std::endl;
-
     return StatusCode::OK;
 }
 

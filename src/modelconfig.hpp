@@ -15,11 +15,9 @@
 //*****************************************************************************
 #pragma once
 
-#include <fstream>
 #include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -30,7 +28,6 @@
 #include <rapidjson/document.h>
 #pragma warning(pop)
 
-#include "anonymous_input_name.hpp"
 #include "layout_configuration.hpp"
 #include "color_format_configuration.hpp"
 #include "precision_configuration.hpp"
@@ -47,7 +44,6 @@ using custom_loader_options_config_t = std::map<std::string, std::string>;
 using float_vec_or_value_t = std::variant<std::vector<float>, float>;
 
 extern const std::string MAPPING_CONFIG_JSON;
-const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
 /**
      * @brief This class represents model configuration
@@ -98,26 +94,6 @@ private:
          * @brief Nireq
          */
     uint32_t nireq;
-
-    /**
-         * @brief Flag determining if model is stateful
-         */
-    bool stateful;
-
-    /**
-         * @brief Flag determining if model will be a subject to sequence cleaner scans
-         */
-    bool idleSequenceCleanup;
-
-    /**
-         * @brief Flag determining if model will use low latency transformation
-         */
-    bool lowLatencyTransformation;
-
-    /**
-         * @brief Number of maximum frames in one sequence
-         */
-    uint32_t maxSequenceNumber;
 
     /**
          * @brief Model cache directory
@@ -192,7 +168,6 @@ private:
     /**
          * @brief Allowed configurable layouts
          */
-    static const std::set<std::string> configAllowedLayouts;
 
     /**
          * @brief custom_loader_options config as map
@@ -239,10 +214,6 @@ public:
         const std::string& targetDevice = "CPU",
         const std::string& configBatchSize = "",
         uint64_t nireq = 0,
-        bool stateful = false,
-        bool idleSequenceCleanup = true,
-        bool lowLatencyTransformation = false,
-        uint32_t maxSequenceNumber = DEFAULT_MAX_SEQUENCE_NUMBER,
         const std::string& cacheDir = "",
         model_version_t version = 0,
         const std::string& localPath = "");
@@ -566,78 +537,6 @@ public:
     }
 
     /**
-     * @brief Get stateful model flag
-     *
-     * @return bool
-     */
-    const bool isStateful() const {
-        return this->stateful;
-    }
-
-    /**
-     * @brief Set stateful model flag
-     *
-     * @return bool
-     */
-    void setStateful(bool stateful) {
-        this->stateful = stateful;
-    }
-
-    /**
-     * @brief Set stateful low latency transformation flag
-     *
-     * @return bool
-     */
-    void setLowLatencyTransformation(bool lowLatencyTransformation) {
-        this->lowLatencyTransformation = lowLatencyTransformation;
-    }
-
-    /**
-     * @brief Get stateful low latency transformation flag
-     *
-     * @return bool
-     */
-    const bool isLowLatencyTransformationUsed() const {
-        return this->lowLatencyTransformation;
-    }
-
-    /**
-     * @brief Get max number of sequences handled concurrently by the model
-     *
-     * @return uint
-     */
-    uint64_t getMaxSequenceNumber() const {
-        return this->maxSequenceNumber;
-    }
-
-    /**
-     * @brief Set max number of sequences handled concurrently by the model
-     *
-     * @return uint
-     */
-    void setMaxSequenceNumber(const uint32_t maxSequenceNumber) {
-        this->maxSequenceNumber = maxSequenceNumber;
-    }
-
-    /**
-     * @brief Get stateful sequence timeout
-     *
-     * @return uint
-     */
-    bool getIdleSequenceCleanup() const {
-        return this->idleSequenceCleanup;
-    }
-
-    /**
-     * @brief Set stateful sequence timeout
-     *
-     * @return uint
-     */
-    void setIdleSequenceCleanup(const bool idleSequenceCleanup) {
-        this->idleSequenceCleanup = idleSequenceCleanup;
-    }
-
-    /**
          * @brief Parses json node for plugin config keys and values
          * 
          * @param json node representing plugin_config
@@ -742,13 +641,7 @@ public:
          * 
          * @return bool
          */
-    bool anyShapeSetToAuto() const {
-        for (const auto& [name, shapeInfo] : getShapes()) {
-            if (shapeInfo.shapeMode == AUTO)
-                return true;
-        }
-        return false;
-    }
+    bool anyShapeSetToAuto() const;
 
     /**
          * @brief Get the shapes
@@ -773,24 +666,9 @@ public:
          * 
          * @return bool
          */
-    bool isShapeAuto(const std::string& name) const {
-        auto it = getShapes().find(name);
-        if (it == getShapes().end()) {
-            it = getShapes().find(ANONYMOUS_INPUT_NAME);
-        }
-        if (it == getShapes().end()) {
-            return false;
-        }
-        return it->second.shapeMode == Mode::AUTO;
-    }
-
-    bool isShapeAnonymous() const {
-        return getShapes().size() == 1 && getShapes().begin()->first == ANONYMOUS_INPUT_NAME;
-    }
-
-    bool isShapeAnonymousFixed() const {
-        return isShapeAnonymous() && !isShapeAuto(ANONYMOUS_INPUT_NAME);
-    }
+    bool isShapeAuto(const std::string& name) const;
+    bool isShapeAnonymous() const;
+    bool isShapeAnonymousFixed() const;
 
     bool isCloudStored() const {
         return getLocalPath() != getBasePath();

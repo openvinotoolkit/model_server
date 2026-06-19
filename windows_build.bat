@@ -41,10 +41,18 @@ IF "%~3"=="--with_tests" (
     set "buildTargets=//src:ovms"
 )
 
+IF "%~4"=="--integrity" (
+    echo Building model server with integrity checks
+    set "buildWithIntegrity=--config=win_integritycheck"
+) ELSE (
+    echo Building model server without integrity checks
+    set "buildWithIntegrity="
+)
+
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 
-set "buildCommand=bazel %bazelStartupCmd% build  %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
+set "buildCommand=bazel %bazelStartupCmd% build  %buildWithIntegrity% %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
 set "setOvmsVersionCmd=python windows_set_ovms_version.py"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
@@ -54,6 +62,11 @@ set "PYTHONHOME=C:\opt\Python312"
 set "envPath=win_environment.log"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
+
+:: Load chosen dependency versions from versions.mk
+for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
+    if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
+)
 
 :: Bazel compilation settings
 set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
@@ -76,7 +89,7 @@ set "PATH=%setPath%"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
-set "opencvBatch=call C:\opt\opencv_4.12.0\setup_vars_opencv4.cmd"
+set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Set required libraries paths

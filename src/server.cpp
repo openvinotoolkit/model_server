@@ -37,6 +37,8 @@
 #include <sysexits.h>
 #elif _WIN32
 #include <csignal>
+#include <cstdio>
+#include <io.h>
 
 #include <ntstatus.h>
 #include <winsock2.h>
@@ -51,12 +53,13 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
+#include "graph_export/graph_export.hpp"
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
-#include "metric_module.hpp"
+#include "metrics/metric_module.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "ovms_exit_codes.hpp"
@@ -65,6 +68,7 @@
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
 #include "servablemanagermodule.hpp"
+#include "shutdown_state.hpp"
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
@@ -77,6 +81,31 @@ using grpc::ServerBuilder;
 
 namespace ovms {
 
+// On Windows the import declarations must be marked dllimport so MSVC binds
+// them to the git2.dll exports rather than (silently) to a duplicate
+// static-archive copy with its own backing storage for g_lfs_cancel_requested.
+#if defined(_WIN32)
+#define OVMS_LIBGIT2_LFS_IMPORT __declspec(dllimport)
+#else
+#define OVMS_LIBGIT2_LFS_IMPORT
+#endif
+extern "C" {
+OVMS_LIBGIT2_LFS_IMPORT void git_lfs_cancel_set(int value);
+OVMS_LIBGIT2_LFS_IMPORT int git_lfs_cancel_get(void);
+}
+
+static void setLfsCancelRequestedFromSignal(int value) {
+    git_lfs_cancel_set(value != 0 ? 1 : 0);
+}
+
+static void requestShutdownFromSignal(int value) {
+    // setShutdownRequestValue is an std::atomic store — async-signal-safe on POSIX
+    // and safe on Windows where CTRL_C_EVENT fires in a dedicated OS thread.
+    // git_lfs_cancel_set is likewise a single atomic store.
+    setShutdownRequestValue(value);
+    setLfsCancelRequestedFromSignal(value);
+}
+
 Server& Server::instance() {
     static Server global;
     return global;
@@ -86,7 +115,12 @@ static void logConfig(const Config& config) {
     std::string project_name(PROJECT_NAME);
     std::string project_version(PROJECT_VERSION);
     SPDLOG_INFO(project_name + " " + project_version);
-    SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
+    SPDLOG_INFO("OpenVINO backend {}", ovms::getOpenVINOVersion());
+    const char* genaiVersion = ovms::getGenAIVersion();
+    if (genaiVersion[0] != '\0') {
+        SPDLOG_INFO("OpenVINO GenAI backend {}", genaiVersion);
+    }
+    SPDLOG_DEBUG("Bazel build flags: {}", BAZEL_BUILD_FLAGS);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.getServerSettings().serverMode == HF_PULL_MODE) {
         SPDLOG_DEBUG("source_model: {}", config.getServerSettings().hfSettings.sourceModel);
@@ -102,12 +136,8 @@ static void logConfig(const Config& config) {
         SPDLOG_DEBUG("nireq: {}", config.nireq());
         SPDLOG_DEBUG("target_device: {}", config.targetDevice());
         SPDLOG_DEBUG("plugin_config: {}", config.pluginConfig());
-        SPDLOG_DEBUG("stateful: {}", config.stateful());
         SPDLOG_DEBUG("metrics_enabled: {}", config.metricsEnabled());
         SPDLOG_DEBUG("metrics_list: {}", config.metricsList());
-        SPDLOG_DEBUG("idle_sequence_cleanup: {}", config.idleSequenceCleanup());
-        SPDLOG_DEBUG("max_sequence_number: {}", config.maxSequenceNumber());
-        SPDLOG_DEBUG("low_latency_transformation: {}", config.lowLatencyTransformation());
     } else {
         SPDLOG_DEBUG("config_path: {}", config.configPath());
     }
@@ -122,20 +152,31 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_TRACE("API key: {}", config.getServerSettings().apiKey);
     SPDLOG_DEBUG("file system poll wait milliseconds: {}", config.filesystemPollWaitMilliseconds());
-    SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
     SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
 }
 
 static void onInterrupt(int status) {
-    Server::instance().setShutdownRequest(1);
+    requestShutdownFromSignal(1);
 }
 
 static void onTerminate(int status) {
-    Server::instance().setShutdownRequest(1);
+    requestShutdownFromSignal(1);
 }
 
 static void onIllegal(int status) {
-    Server::instance().setShutdownRequest(2);
+    requestShutdownFromSignal(2);
+    (void)status;
+    const char msg[] = "SIGILL received: illegal instruction. This may indicate an unsupported CPU or device or an internal error. Terminating.\n";
+#ifdef __linux__
+    ssize_t ret = write(STDERR_FILENO, msg, sizeof(msg) - 1);
+#elif _WIN32
+    int ret = _write(_fileno(stderr), msg, sizeof(msg) - 1);
+#endif
+    (void)ret;
+    // Exit code 128+N is the standard shell convention for signal-terminated
+    // processes (bash, dash, Docker, Kubernetes all follow this).
+    // For SIGILL(4) this gives exit code 132.
+    std::_Exit(128 + SIGILL);
 }
 
 #ifdef __linux__
@@ -237,8 +278,9 @@ void Server::setShutdownRequest(int i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     if (counter) {
-        shutdown_request = i;
-        SPDLOG_TRACE("Ovms shutdown request set to: {}", shutdown_request);
+        setShutdownRequestValue(i);
+        setLfsCancelRequestedFromSignal(i);
+        SPDLOG_TRACE("Ovms shutdown request set to: {}", i);
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }
@@ -252,7 +294,7 @@ int Server::getShutdownStatus() {
         return 0;
     }
 
-    return shutdown_request;
+    return getShutdownRequestValue();
 }
 
 int Server::getExitStatus() {
@@ -263,7 +305,7 @@ int Server::getExitStatus() {
         return 0;
     }
 
-    return ovms_exited;
+    return getExitStatusValue();
 }
 
 void Server::setExitStatus(int i) {
@@ -274,8 +316,8 @@ void Server::setExitStatus(int i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     if (counter) {
-        ovms_exited = i;
-        SPDLOG_TRACE("Ovms exit status set to: {}", ovms_exited);
+        setExitStatusValue(i);
+        SPDLOG_TRACE("Ovms exit status set to: {}", getExitStatusValue());
     } else {
         SPDLOG_ERROR("Server shutdown mutex lock failed.");
     }
@@ -359,17 +401,12 @@ Status Server::startModules(ovms::Config& config) {
         START_MODULE(it);
         return status;
     }
-    if (config.getServerSettings().serverMode == HF_PULL_MODE || config.getServerSettings().serverMode == HF_PULL_AND_START_MODE) {
+    if (config.getServerSettings().serverMode == HF_PULL_MODE) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
-        if (!status.ok()) {
-            return status;
-        }
-        auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
+        auto hfModule = dynamic_cast<HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        // Return from modules only in --pull mode or error, otherwise start the rest of modules
-        if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())
-            return status;
+        return status;
     }
 
 #if (PYTHON_DISABLE == 0)
@@ -397,6 +434,26 @@ Status Server::startModules(ovms::Config& config) {
     if (config.restPort() != 0) {
         INSERT_MODULE(HTTP_SERVER_MODULE_NAME, it);
         START_MODULE(it);
+    }
+    if (config.getServerSettings().serverMode == HF_PULL_AND_START_MODE) {
+        INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
+        START_MODULE(it);
+        auto hfModule = dynamic_cast<HfPullModelModule*>(it->second.get());
+        status = hfModule->clone();
+        // Return only on clone error; otherwise start the rest of modules
+        if (!status.ok())
+            return status;
+    }
+    if (config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
+        // --task with --model_path: create graph in memory without HF download
+        GraphExport graphExporter;
+        const auto& hfSettings = config.getServerSettings().hfSettings;
+        status = graphExporter.createServableConfig(config.modelPath(), hfSettings, false);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to create in-memory graph config: {}", status.string());
+            return status;
+        }
+        SPDLOG_INFO("Graph config created in memory from model_path: {}", config.modelPath());
     }
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
@@ -463,6 +520,7 @@ void Server::shutdownModules() {
         ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
     }
 #endif
+    GraphExport::clearInMemoryGraphContent();
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     std::shared_lock lock(modulesMtx);
@@ -508,11 +566,8 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
             return statusToExitCode(ret);
         }
         while (!getShutdownStatus() &&
-               (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
+               (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE || serverSettings.serverMode == IN_MEMORY_GRAPH_MODE)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-        if (getShutdownStatus() == 2) {
-            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
         }
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Exception; {}", e.what());

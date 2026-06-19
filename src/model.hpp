@@ -27,6 +27,7 @@
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
 #include "modelversion.hpp"
+#include "servable_definition.hpp"
 
 namespace ov {
 class Core;
@@ -34,7 +35,6 @@ class Core;
 
 namespace ovms {
 class FileSystem;
-class GlobalSequencesViewer;
 class ModelInstance;
 struct NotifyReceiver;
 class MetricConfig;
@@ -42,19 +42,12 @@ class MetricRegistry;
 class Status;
 /*     * @brief This class represent inference models
      */
-class Model {
+class Model : public ServableDefinition {
 private:
     /**
      * @brief Mutex for protecting concurrent modifying and accessing modelVersions
      */
     mutable std::shared_mutex modelVersionsMtx;
-
-    /**
-     * @brief Flag indicating whether model is stateful or not
-     */
-    bool stateful;
-
-    GlobalSequencesViewer* globalSequencesViewer;
 
     /**
       * @brief Update default version
@@ -118,9 +111,7 @@ public:
     /**
          * @brief Constructor
          */
-    Model(const std::string& name, bool stateful, GlobalSequencesViewer* globalSequencesViewer) :
-        stateful(stateful),
-        globalSequencesViewer(globalSequencesViewer),
+    Model(const std::string& name) :
         name(name),
         defaultVersion(0),
         subscriptionManager(std::string("model: ") + name) {}
@@ -136,12 +127,8 @@ public:
          * 
          * @return model name
          */
-    const std::string& getName() const {
+    const std::string& getName() const override {
         return name;
-    }
-
-    const bool isStateful() const {
-        return stateful;
     }
 
     /**

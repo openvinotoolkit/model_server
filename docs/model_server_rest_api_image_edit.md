@@ -53,7 +53,7 @@ curl -X POST http://localhost:8000/v3/images/edits \
 |-----|----------|----------|---------|-----|
 | model | ✅ | ✅ | string (required) | Name of the model to use. Name assigned to a MediaPipe graph configured to schedule generation using desired embedding model. **Note**: This can also be omitted to fall back to URI based routing. Read more on routing topic **TODO** |
 | image | ⚠️ | ✅ | string or array of strings (required) | The image to edit. Must be a single image (⚠️**Note**: Array of strings is not supported for now.) |
-| mask | ❌ | ✅ | string | Triggers inpainting pipeline type. An additional image whose fully transparent areas (e.g. where alpha is zero) indicate where `image` should be edited. Not supported for now. |
+| mask | ✅ | ✅ | string | Triggers inpainting pipeline. An additional image where white pixels mark the area to repaint. Send as a multipart file field alongside `image`. |
 | prompt | ✅ | ✅ | string (required) | A text description of the desired image(s). |
 | size | ✅ | ✅ | string or null (default: auto) | The size of the generated images. Must be in WxH format, example: `1024x768`. Default model W/H will be used when using `auto`. |
 | n | ✅ | ✅ | integer or null (default: `1`) | A number of images to generate. If you want to generate multiple images for the same combination of generation parameters and text prompts, you can use this parameter for better performance as internally computations will be performed with batch for Unet / Transformer models and text embeddings tensors will also be computed only once. |

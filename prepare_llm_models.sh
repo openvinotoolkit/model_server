@@ -21,12 +21,12 @@ if [ -z "$1" ]; then
 fi
 
 TEXT_GENERATION_MODEL="HuggingFaceTB/SmolLM2-360M-Instruct"
-FACEBOOK="facebook/opt-125m"
+FACEBOOK_MODEL="facebook/opt-125m"
 TOKENIZER_FILE="openvino_tokenizer.bin"
 LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
-VLM_MODEL="OpenGVLab/InternVL2-1B"
+VLM_MODEL="OpenVINO/InternVL2-1B-int4-ov"
 TTS_MODEL="microsoft/speecht5_tts"
 STT_MODEL="openai/whisper-tiny"
 
@@ -36,8 +36,10 @@ LLAMA3_MODEL="unsloth/Llama-3.1-8B-Instruct"
 HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
 PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
-GPT_OSS="openai/gpt-oss-20b"
+GPT_OSS_MODEL="openai/gpt-oss-20b"
 DEVSTRAL_MODEL="unsloth/Devstral-Small-2507"
+LFM2_MODEL="LiquidAI/LFM2-2.6B"
+GEMMA4_MODEL="OpenVINO/gemma-4-E4B-it-int4-ov"
 
 if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then echo "Prepare models with python > 3.8."; exit 1 ; fi
 
@@ -45,7 +47,7 @@ echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
     export PATH=$PATH:/opt/intel/openvino/python/bin
-    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers einops timm==1.0.22 sentencepiece
+    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0
 else
     python3 -m venv .venv
     . .venv/bin/activate
@@ -65,19 +67,19 @@ if [ ! -f "$1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE" ]; then
   exit 1
 fi
 
-if [ -f "$1/$FACEBOOK/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$FACEBOOK/$TOKENIZER_FILE exists. Skipping downloading models."
+if [ -f "$1/$FACEBOOK_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$FACEBOOK_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py text_generation --source_model "$FACEBOOK" --weight-format int8 --model_repository_path $1
+  python3 demos/common/export_models/export_model.py text_generation --source_model "$FACEBOOK_MODEL" --weight-format int8 --model_repository_path $1
 fi
-if [ ! -f "$1/$FACEBOOK/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Models file $1/$FACEBOOK/$TOKENIZER_FILE does not exist."
+if [ ! -f "$1/$FACEBOOK_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$FACEBOOK_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
-if [ ! -f "$1/$FACEBOOK/chat_template.jinja" ]; then
-    echo "Copying dummy chat template to $FACEBOOK model directory."
-    cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK/chat_template.jinja"
+if [ ! -f "$1/$FACEBOOK_MODEL/chat_template.jinja" ]; then
+    echo "Copying dummy chat template to $FACEBOOK_MODEL model directory."
+    cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK_MODEL/chat_template.jinja"
 fi
 
 if [ -f "$1/$TTS_MODEL/$TOKENIZER_FILE" ]; then
@@ -103,7 +105,8 @@ fi
 if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py text_generation --source_model "$VLM_MODEL" --weight-format int4 --kv_cache_precision u8 --model_repository_path $1
+  hf download "$VLM_MODEL" --local-dir $1/$VLM_MODEL
+  convert_tokenizer OpenGVLab/InternVL2-1B --with_detokenizer -o $1/$VLM_MODEL  # WA to use newer tokenizer model format which supports padding.
 fi
 if [ ! -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$VLM_MODEL/$TOKENIZER_FILE does not exist."
@@ -111,22 +114,12 @@ if [ ! -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
 fi
 
 if [ -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
-  echo "Model file "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" exists. Skipping downloading models."
+  echo "Model file $1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py embeddings_ov --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1 --model_name $EMBEDDING_MODEL/ov
 fi
 if [ ! -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Model file "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" does not exist."
-  exit 1
-fi
-
-if [ -f "$1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" ]; then
-  echo "Model file $1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE exists. Skipping downloading models."
-else
-  python3 demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
-fi
-if [ ! -f "$1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" ]; then
-  echo "[ERROR] Model file $1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE does not exist."
+  echo "[ERROR] Model file $1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
@@ -195,14 +188,14 @@ if [ ! -f "$1/$MISTRAL_MODEL/$TOKENIZER_FILE" ]; then
   exit 1
 fi
 
-if [ -f "$1/$GPT_OSS/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$GPT_OSS/$TOKENIZER_FILE exists. Skipping downloading models."
+if [ -f "$1/$GPT_OSS_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$GPT_OSS_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
-  mkdir -p $1/$GPT_OSS
-  convert_tokenizer $GPT_OSS --with_detokenizer -o $1/$GPT_OSS
+  mkdir -p $1/$GPT_OSS_MODEL
+  convert_tokenizer $GPT_OSS_MODEL --with_detokenizer -o $1/$GPT_OSS_MODEL
 fi
-if [ ! -f "$1/$GPT_OSS/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Models file $1/$GPT_OSS/$TOKENIZER_FILE does not exist."
+if [ ! -f "$1/$GPT_OSS_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$GPT_OSS_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
@@ -214,5 +207,25 @@ else
 fi
 if [ ! -f "$1/$DEVSTRAL_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$DEVSTRAL_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+
+if [ -f "$1/$LFM2_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$LFM2_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  mkdir -p $1/$LFM2_MODEL
+  convert_tokenizer $LFM2_MODEL --with_detokenizer -o $1/$LFM2_MODEL
+fi
+if [ ! -f "$1/$LFM2_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$LFM2_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+if [ -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$GEMMA4_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  hf download "$GEMMA4_MODEL" --local-dir $1/$GEMMA4_MODEL --include *tokenizer*
+fi
+if [ ! -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$GEMMA4_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi

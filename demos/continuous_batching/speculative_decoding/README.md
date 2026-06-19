@@ -1,4 +1,4 @@
-# How to serve LLM Models in Speculative Decoding Pipeline{#ovms_demos_continuous_batching_speculative_decoding}
+# LLM Models in Speculative Decoding Pipeline{#ovms_demos_continuous_batching_speculative_decoding}
 
 Following [OpenVINO GenAI docs](https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai.html#efficient-text-generation-via-speculative-decoding):
 > Speculative decoding (or assisted-generation) enables faster token generation when an additional smaller draft model is used alongside the main model. This reduces the number of infer requests to the main model, increasing performance.
@@ -22,7 +22,7 @@ Currently using [EAGLE3](https://github.com/SafeAILab/EAGLE) requires some speci
 
 For this demo we picked a pair of models from [available models](https://github.com/SafeAILab/EAGLE#eagle-3-models-on-hugging-face):
 - [Qwen/Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B) as a main model
-- [Tengyunw/qwen3_8b_eagle3](https://huggingface.co/Tengyunw/qwen3_8b_eagle3) as a draft model
+- [AngelSlim/Qwen3-8B_eagle3](https://huggingface.co/AngelSlim/Qwen3-8B_eagle3) as a draft model
 
 both in INT4 precision.
 
@@ -34,16 +34,13 @@ Python environment setup:
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 
-# Override optimum-intel with version supporting eagle3
-python -m pip install git+https://github.com/xufang-lisa/optimum-intel.git@xufang/add_eagle3_draft_model_conversion
-
 mkdir models
 ```
 
 Run `export_model.py` script to download and quantize the model:
 
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model Tengyunw/qwen3_8b_eagle3 --draft_eagle3_mode --weight-format int4 --config_file_path models/config.json --model_repository_path models
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model AngelSlim/Qwen3-8B_eagle3 --draft_eagle3_mode --weight-format int4 --config_file_path models/config.json --model_repository_path models
 ```
 
 Draft model inherits all scheduler properties from the main model.
@@ -55,6 +52,12 @@ models
 └── Qwen
     └── Qwen3-8B
         ├── added_tokens.json
+        ├── AngelSlim-Qwen3-8B_eagle3
+        │   ├── config.json
+        │   ├── generation_config.json
+        │   ├── openvino_config.json
+        │   ├── openvino_model.bin
+        │   └── openvino_model.xml
         ├── chat_template.jinja
         ├── config.json
         ├── generation_config.json
@@ -68,14 +71,10 @@ models
         ├── openvino_tokenizer.bin
         ├── openvino_tokenizer.xml
         ├── special_tokens_map.json
-        ├── Tengyunw-qwen3_8b_eagle3
-        │   ├── config.json
-        │   ├── generation_config.json
-        │   ├── openvino_model.bin
-        │   └── openvino_model.xml
         ├── tokenizer_config.json
         ├── tokenizer.json
         └── vocab.json
+
 ```
 
 ## Server Deployment
@@ -153,6 +152,20 @@ Median ITL (ms):                         66.75
 P99 ITL (ms):                            72.11
 ==================================================
 ```
+
+## Setting default generation parameters
+
+The main model's `generation_config.json` (e.g. `models/Qwen/Qwen3-8B/generation_config.json`) is read at server start-up as the default generation configuration for all requests that do not specify a given parameter. It ships with the model weights from Hugging Face, but is fully operator-editable.
+
+For each generation parameter the server applies the following resolution order:
+
+**request body → `generation_config.json` → OVMS built-in default**
+
+For example, to set a deployment-level default for `num_assistant_tokens`:
+```json
+{ "num_assistant_tokens": 7 }
+```
+The built-in fallback is `5`. The same applies to `assistant_confidence_threshold` and all other generation parameters such as `temperature`, `max_new_tokens`, etc.
 
 ## Limitations
 
@@ -289,7 +302,9 @@ curl http://localhost:8000/v1/config
 
 Models used in this demo - `meta-llama/CodeLlama-7b-hf` and `AMD-Llama-135m` are not chat models, so we will use `completions` endpoint to interact with the pipeline.
 
-Below you can see an exemplary unary request (you can switch `stream` parameter to enable streamed response). Compared to calls to regular continuous batching model, this request has additional parameter `num_assistant_tokens` which specifies how many tokens should a draft model generate before main model validates them. 
+Below you can see an exemplary unary request (you can switch `stream` parameter to enable streamed response). Compared to calls to regular continuous batching model, this request has additional parameter `num_assistant_tokens` which specifies how many tokens should a draft model generate before main model validates them.
+
+`num_assistant_tokens` does not have to be sent on every request — see [Setting default generation parameters](#setting-default-generation-parameters) for how to configure a deployment-level default via `generation_config.json`.
 
 ```console
 pip3 install openai
@@ -316,6 +331,8 @@ for chunk in stream:
 ```
 
 Output:
+
+```
 if len(numbers) <= 1:
   return numbers
 else:

@@ -36,7 +36,6 @@ constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
 constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
 constexpr const float DUMMY_ADDITION_VALUE = 1.0;
 const ovms::signed_shape_t DUMMY_MODEL_SHAPE{1, 10};
-// FIXME const ovms::Shape DUMMY_MODEL_SHAPE_META{1, 10};
 
 constexpr const char* DUMMY_FP64_MODEL_INPUT_NAME = "input:0";
 constexpr const char* DUMMY_FP64_MODEL_OUTPUT_NAME = "output:0";

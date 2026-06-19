@@ -26,7 +26,7 @@ The input also includes a side packet with a reference to `STT_NODE_RESOURCES` w
 
 **If it is missing or modified, model server will fail to provide graph with the model**
 
-The calculator produces `std::string` MediaPipe packet with the wave audio file content. Speech Generation calculator has no support for streaming and partial responses.
+The calculator produces `std::string` MediaPipe packet with the wave audio file content. Speech to text calculator supports streaming and partial responses for transcriptions endpoint.
 
 Let's have a look at the example graph definition:
 ```protobuf
@@ -59,8 +59,17 @@ The calculator supports the following `node_options` for tuning the pipeline con
 We recommend using [export script](../../demos/common/export_models/README.md) to prepare models directory structure for serving.
 Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-recognition-models).
 
-### Text to speech calculator limitations
-- Streaming is not supported
+### Speech to text calculator limitations
+- Streaming is not supported for translations endpoint
+
+## Environment Variables
+
+- **OVMS_AUDIO_MAX_FILE_SIZE_BYTES**: Maximum allowed decoded audio buffer size in bytes (default: 1073741824 / 1 GB). Controls the upper bound on memory that a single audio request can allocate for decoded PCM data. If the value is invalid, zero, or empty, the default 1 GB limit is used.
+
+```bash
+# Limit decoded audio buffers to 100 MB
+export OVMS_AUDIO_MAX_FILE_SIZE_BYTES=104857600
+```
 
 ## References
 - [Transcription API](../model_server_rest_api_speech_to_text.md#transcription)

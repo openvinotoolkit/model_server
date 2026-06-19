@@ -219,6 +219,10 @@ build:windows --host_linkopt=/OPT:REF
 build:windows --linkopt=/OPT:ICF
 build:windows --host_linkopt=/OPT:ICF
 
+# Optional build with INTEGRITYCHECK: bazel build --config=win_integritycheck //src:ovms
+build:win_integritycheck --linkopt=/INTEGRITYCHECK
+build:win_integritycheck --host_linkopt=/INTEGRITYCHECK
+
 build:windows --action_env PYTHON_BIN_PATH="C:/opt/Python312/python.exe"
 build:windows --action_env PYTHON_LIB_PATH="C:/opt/Python312/lib/site-packages"
 build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python312/python.exe
@@ -242,7 +246,7 @@ build:windows --define=MEDIAPIPE_DISABLE=0
 
 # Change this path alongside WORKSPACE:"windows_openvino" path for model_api cmake compilation.
 build:windows --action_env OpenVINO_DIR="c:/opt/openvino/runtime/cmake"
-build:windows --action_env OpenCV_DIR="c:/opt/opencv_4.12.0"
+build:windows --action_env OpenCV_DIR="c:/opt/opencv_4.13.0"
 
 build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.12
 

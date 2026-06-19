@@ -32,8 +32,8 @@
 
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
-#include "../filesystem.hpp"
-#include "../localfilesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
@@ -52,23 +52,46 @@
 #endif
 namespace ovms {
 
+static std::string inMemoryGraphContent;
+
+bool GraphExport::hasInMemoryGraphContent() {
+    return !inMemoryGraphContent.empty();
+}
+
+const std::string& GraphExport::getInMemoryGraphContent() {
+    return inMemoryGraphContent;
+}
+
+void GraphExport::clearInMemoryGraphContent() {
+    inMemoryGraphContent.clear();
+}
+
 static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
+static const std::string OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX = "# OVMS_GRAPH_QUEUE_MAX_SIZE: ";
+static const std::string OVMS_GRAPH_QUEUE_SIZE_AUTO = "AUTO";
+
+static std::string buildGraphHeader() {
+    std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX << OVMS_GRAPH_QUEUE_SIZE_AUTO << "\n";
+    return oss.str();
+}
 
 static std::string constructModelsPath(const std::string& modelPath, const std::optional<std::string>& ggufFilenameOpt) {
     std::string modelsPath;
     if (ggufFilenameOpt.has_value()) {
         modelsPath = FileSystem::joinPath({modelPath, ggufFilenameOpt.value()});
-#if _WIN32
-        // On Windows, file paths use backslashes ('\') as separators. However, the graph parser used in this project expects Unix-style paths with forward slashes ('/').
-        // If Windows-style backslashes are present, the parser may fail to locate files or misinterpret the path. To ensure compatibility, we replace all backslashes with forward slashes.
-        // This is safe because Windows APIs accept forward slashes in file paths.
-        if (FileSystem::getOsSeparator() != "/") {
-            std::replace(modelsPath.begin(), modelsPath.end(), '\\', '/');
-        }
-#endif
     } else {
         modelsPath = modelPath;
     }
+#if _WIN32
+    // On Windows, file paths use backslashes ('\') as separators. However, the graph parser used in this project expects Unix-style paths with forward slashes ('/').
+    // If Windows-style backslashes are present, the parser may fail to locate files or misinterpret the path. To ensure compatibility, we replace all backslashes with forward slashes.
+    // This is safe because Windows APIs accept forward slashes in file paths.
+    if (FileSystem::getOsSeparator() != "/") {
+        std::replace(modelsPath.begin(), modelsPath.end(), '\\', '/');
+    }
+#endif
     SPDLOG_TRACE("Models path: {}, modelPath:{}, ggufFilenameOpt:{}", modelsPath, modelPath, ggufFilenameOpt.value_or("std::nullopt"));
     return modelsPath;
 }
@@ -91,22 +114,26 @@ std::string GraphExport::getDraftModelDirectoryPath(const std::string& directory
     }                                                                             \
     auto pluginConfigOpt = std::get<std::optional<std::string>>(pluginConfigOrStatus)
 
-static Status createPbtxtFile(const std::string& directoryPath, const std::string& pbtxtContent) {
+static Status createPbtxtFile(const std::string& directoryPath, const std::string& pbtxtContent, bool writeToFile) {
 #if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
-    SPDLOG_TRACE("Generated pbtxt: {}", pbtxtContent);
+    SPDLOG_TRACE("Created graph config file:\n{}", pbtxtContent);
     bool success = ::google::protobuf::TextFormat::ParseFromString(pbtxtContent, &config);
     if (!success) {
         SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
 #endif
+    if (!writeToFile) {
+        inMemoryGraphContent = pbtxtContent;
+        return StatusCode::OK;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, pbtxtContent);
 }
 
-static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
     if (!std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for text generation.");
         return StatusCode::INTERNAL_ERROR;
@@ -116,7 +143,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -174,6 +201,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             enable_tool_guided_generation: true,)";
     }
+    if (graphSettings.cacheIntervalMultiplier.has_value()) {
+        oss << R"(
+            cache_interval_multiplier: )" << graphSettings.cacheIntervalMultiplier.value() << R"(,)";
+    }
     if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(
             dynamic_split_fuse: false,)";
@@ -198,10 +229,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         }
     }
     })";
-    return createPbtxtFile(directoryPath, oss.str());
+    return createPbtxtFile(directoryPath, oss.str(), writeToFile);
 }
 
-static Status createRerankGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+static Status createRerankGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
     if (!std::holds_alternative<RerankGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for reranking.");
         return StatusCode::INTERNAL_ERROR;
@@ -211,7 +242,7 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     // Windows path creation - graph parser needs forward slashes in paths
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
@@ -242,10 +273,10 @@ node {
         }
     }
 })";
-    return createPbtxtFile(directoryPath, oss.str());
+    return createPbtxtFile(directoryPath, oss.str(), writeToFile);
 }
 
-static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
     if (!std::holds_alternative<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for embeddings.");
         return StatusCode::INTERNAL_ERROR;
@@ -255,7 +286,7 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -289,10 +320,10 @@ node {
     oss << R"(}
     }
 })";
-    return createPbtxtFile(directoryPath, oss.str());
+    return createPbtxtFile(directoryPath, oss.str(), writeToFile);
 }
 
-static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
     if (!std::holds_alternative<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for speech generation.");
         return StatusCode::INTERNAL_ERROR;
@@ -301,7 +332,7 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -339,11 +370,15 @@ node {
     }
 #endif
     // clang-format on
+    if (!writeToFile) {
+        inMemoryGraphContent = oss.str();
+        return StatusCode::OK;
+    }
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
     if (!std::holds_alternative<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for speech to text.");
         return StatusCode::INTERNAL_ERROR;
@@ -352,7 +387,7 @@ static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, 
     auto& exportSettings = hfSettings.exportSettings;
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     std::string modelsPath = constructModelsPath(exportSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
@@ -365,8 +400,14 @@ node {
     << exportSettings.modelName << R"("
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
+    input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
     node_options: {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: ")"
@@ -379,6 +420,16 @@ node {
     }
     oss << R"(}
     }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                    tag_index: "LOOPBACK:0"
+                }
+            }
+        }
+    }
 })";
 #if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
@@ -389,11 +440,15 @@ node {
     }
 #endif
     // clang-format on
+    if (!writeToFile) {
+        inMemoryGraphContent = oss.str();
+        return StatusCode::OK;
+    }
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
     if (!std::holds_alternative<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for image generation.");
         return StatusCode::INTERNAL_ERROR;
@@ -406,7 +461,7 @@ static Status createImageGenerationGraphTemplate(const std::string& directoryPat
     GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(exportSettings);
 
     std::ostringstream oss;
-    oss << OVMS_VERSION_GRAPH_LINE;
+    oss << buildGraphHeader();
     // clang-format off
     oss << R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -467,19 +522,60 @@ node: {
           max_num_inference_steps: )" << graphSettings.maxNumInferenceSteps.value();
     }
 
+    bool targetIsNPU = exportSettings.targetDevice.find("NPU") != std::string::npos;
+
+    for (const auto& adapter : graphSettings.loraAdapters) {
+        std::string loraPath;
+        if (adapter.sourceType == LoraSourceType::LOCAL_FILE) {
+            loraPath = adapter.sourceLora;
+        } else if (!adapter.effectiveSafetensorsFile().has_value()) {
+            SPDLOG_ERROR("LoRA adapter '{}': safetensors filename not resolved. "
+                "For HF repos, use @filename syntax (e.g. org/repo@weights.safetensors) or run with --pull to auto-resolve.",
+                adapter.alias);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        } else if (adapter.sourceType == LoraSourceType::HF_REPO) {
+            loraPath = "loras/" + adapter.sourceLora + "/" + adapter.effectiveSafetensorsFile().value();
+        } else {  // cURL direct link
+            loraPath = "loras/" + adapter.alias + "/" + adapter.effectiveSafetensorsFile().value();
+        }
+        oss << R"(
+          lora_adapters { alias: ")" << adapter.alias << R"(" path: ")" << loraPath << R"(")";
+        if (adapter.alpha.has_value()) {
+            oss << R"( alpha: )" << adapter.alpha.value();
+        }
+        oss << (targetIsNPU ? R"( mode: STATIC)" : R"( mode: DYNAMIC)");
+        oss << R"( })";
+    }
+
+    for (const auto& composite : graphSettings.compositeLoraAdapters) {
+        oss << R"(
+          composite_lora_adapters {
+            alias: ")" << composite.alias << R"("
+)";
+        for (const auto& component : composite.components) {
+            oss << R"(            components { adapter_alias: ")" << component.adapterAlias << R"(")";
+            if (component.alpha != 1.0f) {
+                oss << R"( alpha: )" << component.alpha;
+            }
+            oss << R"( }
+)";
+        }
+        oss << R"(          })";
+    }
+
     oss << R"(
       }
   }
 }
 )";
     // clang-format on
-    return createPbtxtFile(directoryPath, oss.str());
+    return createPbtxtFile(directoryPath, oss.str(), writeToFile);
 }
 
 GraphExport::GraphExport() {
 }
 
-Status GraphExport::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+Status GraphExport::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
     if (directoryPath.empty()) {
         SPDLOG_ERROR("Directory path empty: {}", directoryPath);
         return StatusCode::PATH_INVALID;
@@ -502,17 +598,17 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         }
     }
     if (hfSettings.task == TEXT_GENERATION_GRAPH) {
-        return createTextGenerationGraphTemplate(directoryPath, hfSettings);
+        return createTextGenerationGraphTemplate(directoryPath, hfSettings, writeToFile);
     } else if (hfSettings.task == EMBEDDINGS_GRAPH) {
-        return createEmbeddingsGraphTemplate(directoryPath, hfSettings);
+        return createEmbeddingsGraphTemplate(directoryPath, hfSettings, writeToFile);
     } else if (hfSettings.task == RERANK_GRAPH) {
-        return createRerankGraphTemplate(directoryPath, hfSettings);
+        return createRerankGraphTemplate(directoryPath, hfSettings, writeToFile);
     } else if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
-        return createImageGenerationGraphTemplate(directoryPath, hfSettings);
+        return createImageGenerationGraphTemplate(directoryPath, hfSettings, writeToFile);
     } else if (hfSettings.task == TEXT_TO_SPEECH_GRAPH) {
-        return createTextToSpeechGraphTemplate(directoryPath, hfSettings);
+        return createTextToSpeechGraphTemplate(directoryPath, hfSettings, writeToFile);
     } else if (hfSettings.task == SPEECH_TO_TEXT_GRAPH) {
-        return createSpeechToTextGraphTemplate(directoryPath, hfSettings);
+        return createSpeechToTextGraphTemplate(directoryPath, hfSettings, writeToFile);
     } else if (hfSettings.task == UNKNOWN_GRAPH) {
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;

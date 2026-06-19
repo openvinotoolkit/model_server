@@ -25,18 +25,10 @@
 #include <utility>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6001 4324 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-
 namespace ovms {
 
-class ModelManager;
+class MetricProvider;
+class ServableNameChecker;
 class Status;
 class MediapipeGraphConfig;
 class MediapipeGraphDefinition;
@@ -45,6 +37,7 @@ class PythonBackend;
 
 class MediapipeFactory {
     std::map<std::string, std::shared_ptr<MediapipeGraphDefinition>> definitions;
+    std::map<std::string, std::string> loraAliases;  // alias -> real graph definition name
     mutable std::shared_mutex definitionsMtx;
     PythonBackend* pythonBackend{nullptr};
 
@@ -53,30 +46,25 @@ public:
     MediapipeFactory(PythonBackend* pythonBackend = nullptr);
     Status createDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
-        ModelManager& manager);
+        MetricProvider& metrics,
+        const ServableNameChecker& checker);
 
     bool definitionExists(const std::string& name) const;
 
-private:
-    template <typename RequestType, typename ResponseType>
-    Status createInternal(std::unique_ptr<Pipeline>& pipeline,
-        const std::string& name,
-        const RequestType* request,
-        ResponseType* response,
-        ModelManager& manager) const;
-
 public:
     Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
-        const std::string& name,
-        ModelManager& manager) const;
+        const std::string& name) const;
 
     MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;
+    void registerLoraAlias(const std::string& alias, const std::string& graphName);
+    void clearLoraAliases(const std::string& graphName);
+    bool aliasesConflictExcluding(const std::vector<std::string>& aliases, const std::string& ownGraphName) const;
     Status reloadDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
-        ModelManager& manager);
+        const ServableNameChecker& checker);
 
-    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager);
-    Status revalidatePipelines(ModelManager&);
+    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile);
+    Status revalidatePipelines();
     const std::vector<std::string> getMediapipePipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
     ~MediapipeFactory();

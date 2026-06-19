@@ -50,6 +50,17 @@ std::string_view DrogonMultiPartParser::getFileContentByFieldName(const std::str
     return it->second.fileContent();
 }
 
+std::vector<std::string_view> DrogonMultiPartParser::getFilesArrayByFieldName(const std::string& name) const {
+    const std::vector<drogon::HttpFile>& files = this->parser->getFiles();
+    std::vector<std::string_view> result;
+    for (const drogon::HttpFile& file : files) {
+        if (file.getItemName() == name) {
+            result.push_back(file.fileContent());
+        }
+    }
+    return result;
+}
+
 std::set<std::string> DrogonMultiPartParser::getAllFieldNames() const {
     std::set<std::string> fieldNames;
     auto fileMap = this->parser->getFilesMap();

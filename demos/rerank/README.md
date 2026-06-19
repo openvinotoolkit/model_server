@@ -1,8 +1,8 @@
-# How to serve Rerank models via Cohere API {#ovms_demos_rerank}
+# Documents Reranking via Cohere API {#ovms_demos_rerank}
 
 ## Prerequisites
 
-**Model preparation**: Python 3.9 or higher with pip 
+**Model preparation**: Python 3.10 or higher with pip 
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 

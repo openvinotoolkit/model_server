@@ -30,6 +30,7 @@
 
 #include "pipelines.hpp"
 #include "imagegenutils.hpp"
+#include <openvino/genai/lora_adapter.hpp>
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
@@ -45,10 +46,141 @@ using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_
 
 const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "IMAGE_GEN_NODE_RESOURCES";
 
+static void applyLoraAdapterIfNeeded(const std::string& modelName,
+    const std::unordered_map<std::string, ov::genai::Adapter>& loraAdapters,
+    const std::unordered_map<std::string, std::vector<std::pair<std::string, std::optional<float>>>>& compositeLoraAdapters,
+    const ImageGenPipelineArgs& args,
+    ov::AnyMap& requestOptions,
+    const ovms::LoraAlphaMap& loraAlphasOverride = {}) {
+    if (loraAdapters.empty()) {
+        return;
+    }
+    // Alpha priority chain (per adapter):
+    //   1. Request-level override (lora_alphas in JSON body)
+    //   2. Composite component alpha (if explicitly set in graph config)
+    //   3. Individual adapter alpha (from lora_adapters in graph config)
+    //   4. DEFAULT_ALPHA (1.0)
+    ov::genai::AdapterConfig adapterConfig;
+
+    auto compositeIt = compositeLoraAdapters.find(modelName);
+    if (compositeIt != compositeLoraAdapters.end()) {
+        // Composite adapter — activate multiple adapters
+        for (const auto& [compAlias, compositeAlpha] : compositeIt->second) {
+            auto adapterIt = loraAdapters.find(compAlias);
+            if (adapterIt == loraAdapters.end()) {
+                SPDLOG_LOGGER_WARN(llm_calculator_logger, "Composite LoRA '{}' references unknown adapter '{}', skipping", modelName, compAlias);
+                continue;
+            }
+            float alpha = DEFAULT_ALPHA;
+            auto overrideIt = loraAlphasOverride.find(compAlias);
+            if (overrideIt != loraAlphasOverride.end()) {
+                // 1. Request override
+                alpha = overrideIt->second;
+            } else if (compositeAlpha.has_value()) {
+                // 2. Composite component alpha (explicitly set)
+                alpha = compositeAlpha.value();
+            } else {
+                // 3. Fall back to individual adapter alpha
+                for (const auto& info : args.loraAdapters) {
+                    if (info.alias == compAlias) {
+                        alpha = info.alpha;
+                        break;
+                    }
+                }
+            }
+            adapterConfig.add(adapterIt->second, alpha);
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Composite LoRA '{}': applied adapter '{}' with alpha: {}", modelName, compAlias, alpha);
+        }
+    } else {
+        auto adapterIt = loraAdapters.find(modelName);
+        if (adapterIt != loraAdapters.end()) {
+            float alpha = DEFAULT_ALPHA;
+            auto overrideIt = loraAlphasOverride.find(modelName);
+            if (overrideIt != loraAlphasOverride.end()) {
+                alpha = overrideIt->second;
+            } else {
+                for (const auto& info : args.loraAdapters) {
+                    if (info.alias == modelName) {
+                        alpha = info.alpha;
+                        break;
+                    }
+                }
+            }
+            adapterConfig.add(adapterIt->second, alpha);
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Applied LoRA adapter: {} with alpha: {}", modelName, alpha);
+        } else {
+            // Disable all adapters that were registered at compile time
+            for (const auto& [alias, adapter] : loraAdapters) {
+                adapterConfig.add(adapter, 0.0f);
+            }
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No LoRA adapter matched for model: {}, disabling all adapters", modelName);
+        }
+    }
+    requestOptions[ov::genai::adapters.name()] = adapterConfig;
+}
+
+static absl::Status validateAndApplyLora(
+    const std::string& modelName,
+    const ImageGenerationPipelines& pipe,
+    ov::AnyMap& requestOptions,
+    const ovms::LoraAlphaMap& loraAlphasOverride = {}) {
+    // Validate that lora_alphas keys are allowed for the targeted model
+    if (!loraAlphasOverride.empty() && !pipe.loraAdapters.empty()) {
+        std::vector<std::string> adapterAliases;
+        adapterAliases.reserve(pipe.loraAdapters.size());
+        for (const auto& [alias, _] : pipe.loraAdapters) {
+            adapterAliases.push_back(alias);
+        }
+        auto status = ovms::validateLoraAlphasForModel(modelName, loraAlphasOverride, adapterAliases, pipe.compositeLoraAdapters);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    // Under NPU MODE_STATIC adapters are always active — reject requests
+    // that don't target a valid LoRA alias since the base model is unavailable.
+    if (pipe.npuLoraStaticMode) {
+        if (!pipe.loraAdapters.empty()) {
+            if (!pipe.compositeLoraAdapters.empty()) {
+                if (pipe.compositeLoraAdapters.find(modelName) == pipe.compositeLoraAdapters.end()) {
+                    return absl::InvalidArgumentError(absl::StrCat(
+                        "Model '", modelName, "' uses NPU with statically fused LoRA adapters. "
+                                              "Send requests to the composite LoRA alias name instead."));
+                }
+            } else {
+                if (pipe.loraAdapters.find(modelName) == pipe.loraAdapters.end()) {
+                    return absl::InvalidArgumentError(absl::StrCat(
+                        "Model '", modelName, "' uses NPU with statically fused LoRA. "
+                                              "Send requests to the LoRA alias name instead."));
+                }
+            }
+        }
+    } else {
+        applyLoraAdapterIfNeeded(modelName, pipe.loraAdapters, pipe.compositeLoraAdapters, pipe.args, requestOptions, loraAlphasOverride);
+    }
+    return absl::OkStatus();
+}
+
 static bool progress_bar(size_t step, size_t num_steps, ov::Tensor&) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image Generation Step: {}/{}", step + 1, num_steps);
     return false;
 }
+
+static std::string extractModelName(const ovms::HttpPayload& payload) {
+    if (payload.parsedJson && !payload.parsedJson->HasParseError() && payload.parsedJson->IsObject()) {
+        auto it = payload.parsedJson->FindMember("model");
+        if (it != payload.parsedJson->MemberEnd() && it->value.IsString()) {
+            return it->value.GetString();
+        }
+    }
+    if (payload.multipartParser) {
+        std::string name = payload.multipartParser->getFieldByName("model");
+        if (!name.empty()) {
+            return name;
+        }
+    }
+    return "";
+}
+
 // written out separately to avoid msvc crashing when using try-catch in process method ...
 static absl::Status generateTensor(ov::genai::Text2ImagePipeline& request,
     const std::string& prompt, ov::AnyMap& requestOptions,
@@ -94,7 +226,29 @@ static absl::Status generateTensorImg2Img(ov::genai::Image2ImagePipeline& reques
     return absl::OkStatus();
 }
 // written out separately to avoid msvc crashing when using try-catch in process method ...
-static absl::Status makeTensorFromString(const std::string& filePayload, ov::Tensor& imageTensor) {
+static absl::Status generateTensorInpainting(ov::genai::InpaintingPipeline& request,
+    const std::string& prompt, const ov::Tensor& image, const ov::Tensor& mask, ov::AnyMap& requestOptions,
+    std::unique_ptr<ov::Tensor>& images) {
+    try {
+        requestOptions.insert(ov::genai::callback(progress_bar));
+        images = std::make_unique<ov::Tensor>(request.generate(prompt, image, mask, requestOptions));
+        auto dims = images->get_shape();
+        std::stringstream ss;
+        for (const auto& dim : dims) {
+            ss << dim << " ";
+        }
+        ss << " element type: " << images->get_element_type().get_type_name();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator generated inpainting tensor: {}", ss.str());
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator Inpainting Error: {}", e.what());
+        return absl::InternalError("Error during inpainting generation");
+    } catch (...) {
+        return absl::InternalError("Unknown error during inpainting generation");
+    }
+    return absl::OkStatus();
+}
+// written out separately to avoid msvc crashing when using try-catch in process method ...
+static absl::Status makeTensorFromString(std::string_view filePayload, ov::Tensor& imageTensor) {
     try {
         imageTensor = loadImageStbiFromMemory(filePayload);
     } catch (std::runtime_error& e) {
@@ -140,10 +294,13 @@ public:
         auto pipe = it->second;
 
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+        const std::string modelName = extractModelName(payload);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Request URI: {}", cc->NodeName(), payload.uri);
 
         std::unique_ptr<ov::Tensor> images;  // output
 
         if (absl::StartsWith(payload.uri, "/v3/images/generations")) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Routed to image generations path", cc->NodeName());
             if (payload.parsedJson->HasParseError())
                 return absl::InvalidArgumentError("Failed to parse JSON");
 
@@ -152,15 +309,37 @@ public:
             }
 
             SET_OR_RETURN(std::string, prompt, getPromptField(*payload.parsedJson));
-            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
+            bool hasDynamicAdapters = !pipe->loraAdapters.empty() && !pipe->npuLoraStaticMode;
+            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args, hasDynamicAdapters));
 
-            ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline->clone();
+            // Parse optional lora_alphas from request body
+            auto loraAlphasOverrideOrStatus = ovms::parseLoraAlphasOverride(*payload.parsedJson);
+            if (std::holds_alternative<absl::Status>(loraAlphasOverrideOrStatus)) {
+                return std::get<absl::Status>(loraAlphasOverrideOrStatus);
+            }
+            auto loraAlphasOverride = std::get<ovms::LoraAlphaMap>(loraAlphasOverrideOrStatus);
 
-            auto status = generateTensor(request, prompt, requestOptions, images);
+            auto loraStatus = validateAndApplyLora(modelName, *pipe, requestOptions, loraAlphasOverride);
+            if (!loraStatus.ok()) {
+                return loraStatus;
+            }
+            if (!pipe->text2ImagePipeline)
+                return absl::FailedPreconditionError("Text-to-image pipeline is not available for this model");
+            absl::Status status;
+            if (pipe->loraQueue) {
+                // LoRA active: serialize and use pipeline directly so adapter
+                // state tracking remains consistent across requests.
+                PipelineSlotGuard loraGuard(*pipe->loraQueue);
+                status = generateTensor(*pipe->text2ImagePipeline, prompt, requestOptions, images);
+            } else {
+                auto t2i = pipe->text2ImagePipeline->clone();
+                status = generateTensor(t2i, prompt, requestOptions, images);
+            }
             if (!status.ok()) {
                 return status;
             }
         } else if (absl::StartsWith(payload.uri, "/v3/images/edits")) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Routed to image edits path", cc->NodeName());
             if (payload.multipartParser->hasParseError())
                 return absl::InvalidArgumentError("Failed to parse multipart data");
 
@@ -169,15 +348,54 @@ public:
             RET_CHECK(image.has_value() && !image.value().empty()) << "Image field is missing in multipart body";
 
             ov::Tensor imageTensor;
-            auto status = makeTensorFromString(std::string(image.value()), imageTensor);
+            auto status = makeTensorFromString(image.value(), imageTensor);
             if (!status.ok()) {
                 return status;
             }
 
-            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args));
+            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args, !pipe->loraAdapters.empty() && !pipe->npuLoraStaticMode));
 
-            ov::genai::Image2ImagePipeline request = pipe->image2ImagePipeline->clone();
-            status = generateTensorImg2Img(request, prompt, imageTensor, requestOptions, images);
+            // Parse optional lora_alphas from multipart form field
+            auto loraAlphasOverrideOrStatus = ovms::parseLoraAlphasOverride(*payload.multipartParser);
+            if (std::holds_alternative<absl::Status>(loraAlphasOverrideOrStatus)) {
+                return std::get<absl::Status>(loraAlphasOverrideOrStatus);
+            }
+            auto loraAlphasOverride = std::get<ovms::LoraAlphaMap>(loraAlphasOverrideOrStatus);
+
+            auto loraStatus = validateAndApplyLora(modelName, *pipe, requestOptions, loraAlphasOverride);
+            if (!loraStatus.ok()) {
+                return loraStatus;
+            }
+
+            SET_OR_RETURN(std::optional<std::string_view>, mask, getFileFromPayload(*payload.multipartParser, "mask"));
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Mask present: {}", cc->NodeName(), mask.has_value() && !mask.value().empty());
+
+            if (mask.has_value() && !mask.value().empty()) {
+                if (!pipe->inpaintingPipeline)
+                    return absl::FailedPreconditionError("Inpainting pipeline is not available for this model");
+                // Inpainting path — uses the pre-built InpaintingPipeline that was loaded from disk
+                // during initialization.  Do NOT derive InpaintingPipeline from Image2ImagePipeline
+                ov::Tensor maskTensor;
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: decoding mask tensor", cc->NodeName());
+                status = makeTensorFromString(mask.value(), maskTensor);
+                if (!status.ok()) {
+                    return status;
+                }
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: mask tensor decoded, acquiring inpainting queue slot", cc->NodeName());
+                PipelineSlotGuard inpaintingGuard(*pipe->inpaintingQueue);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: queue slot acquired, invoking generate()", cc->NodeName());
+                status = generateTensorInpainting(*pipe->inpaintingPipeline, prompt, imageTensor, maskTensor, requestOptions, images);
+            } else {
+                if (!pipe->image2ImagePipeline)
+                    return absl::FailedPreconditionError("Image-to-image pipeline is not available for this model");
+                if (pipe->loraQueue) {
+                    PipelineSlotGuard loraGuard(*pipe->loraQueue);
+                    status = generateTensorImg2Img(*pipe->image2ImagePipeline, prompt, imageTensor, requestOptions, images);
+                } else {
+                    auto i2i = pipe->image2ImagePipeline->clone();
+                    status = generateTensorImg2Img(i2i, prompt, imageTensor, requestOptions, images);
+                }
+            }
             if (!status.ok()) {
                 return status;
             }

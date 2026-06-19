@@ -15,22 +15,26 @@
 #
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
-load("//:common_settings.bzl", "ovms_cc_library", "PYBIND_DEPS", "COPTS_PYTHON")
+load("//:common_settings.bzl", "ovms_cc_library", "PYBIND_DEPS")
 
 ovms_cc_library(
     name = "llmcalculator",
-    srcs = ["http_llm_calculator.cc"],
+    srcs = ["http_llm_calculator.cc",
+            "llm_node_initializer.cpp"],
     deps = [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/mediapipe_internal:graph_side_packets",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
         ":genai_servables",
         "//src:httppayload",
-        "//third_party:genai",],
+        "//third_party:genai",
+        "//src/mediapipe_internal:node_initializer",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON,
     alwayslink = 1, # needed, so the calculator can be registered by MediaPipe
 )
 
@@ -45,6 +49,24 @@ mediapipe_proto_library(
 )
 
 ovms_cc_library(
+    name = "openai_api_handler",
+    hdrs = ["apis/openai_api_handler.hpp"],
+    srcs = ["apis/openai_api_handler.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
+        "//src:libovmsprofiler",
+        "//third_party:curl",
+        "//src:image_conversion",
+        "//src/filesystem:libovmsfilesystem",
+        "@stb//:image",
+        ":openai_request",
+        ":output_parsers",
+        "//third_party:genai",],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "openai_completions_api_handler",
     hdrs = ["apis/openai_completions.hpp", "apis/openai_json_response.hpp"],
     srcs = ["apis/openai_completions.cpp"],
@@ -54,13 +76,32 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         "//third_party:curl",
         "//src:image_conversion",
-        "//src:libovmsfilesystem",
+        "//src/filesystem:libovmsfilesystem",
         "@stb//:image",
+        ":openai_api_handler",
         ":openai_request",
         ":output_parsers",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON
+)
+
+ovms_cc_library(
+    name = "openai_responses_handler",
+    hdrs = ["apis/openai_responses.hpp"],
+    srcs = ["apis/openai_responses.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
+        "//src:libovmsprofiler",
+        "//third_party:curl",
+        "//src:image_conversion",
+        "//src/filesystem:libovmsfilesystem",
+        "@stb//:image",
+        ":openai_api_handler",
+        ":openai_request",
+        ":output_parsers",
+        "//third_party:genai",],
+    visibility = ["//visibility:public"],
 )
 
 ovms_cc_library(
@@ -71,7 +112,6 @@ ovms_cc_library(
             "//src/port:rapidjson_document",
             ":apis_tool_schema_wrapper",],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON
 )
 
 ovms_cc_library(
@@ -99,6 +139,12 @@ ovms_cc_library(
     name = "io_processing_utils",
     hdrs = ["io_processing/utils.hpp"],
     srcs = ["io_processing/utils.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        "//src/port:rapidjson_document",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -131,6 +177,55 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "io_processing_lfm2_tool_parser",
+    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "io_processing_gemma4_tool_parser",
+    hdrs = ["io_processing/gemma4/gemma4_tool_parser.hpp", "io_processing/gemma4/gemma4_reasoning_parser.hpp"],
+    srcs = ["io_processing/gemma4/gemma4_tool_parser.cpp", "io_processing/gemma4/gemma4_reasoning_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        ":io_processing_qwen3_reasoning_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_qwen3_reasoning_parser",
+    hdrs = ["io_processing/qwen3/reasoning_parser.hpp"],
+    srcs = ["io_processing/qwen3/reasoning_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
     name = "output_parsers",
     hdrs = [
@@ -139,7 +234,6 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/phi4/tool_parser.hpp",
             "io_processing/devstral/tool_parser.hpp",
             "io_processing/mistral/tool_parser.hpp",
-            "io_processing/qwen3/reasoning_parser.hpp",
             "io_processing/gptoss/reasoning_parser.hpp",
             "io_processing/gptoss/tool_parser.hpp",
             "io_processing/gptoss/harmony.hpp",
@@ -151,7 +245,6 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/phi4/tool_parser.cpp",
             "io_processing/devstral/tool_parser.cpp",
             "io_processing/mistral/tool_parser.cpp",
-            "io_processing/qwen3/reasoning_parser.cpp",
             "io_processing/gptoss/reasoning_parser.cpp",
             "io_processing/gptoss/tool_parser.cpp",
             "io_processing/gptoss/harmony.cpp",
@@ -166,6 +259,9 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":partial_json_builder",
         ":io_processing_base_output_parser",
         ":io_processing_qwen3coder_tool_parser",
+        ":io_processing_lfm2_tool_parser",
+        ":io_processing_gemma4_tool_parser",
+        ":io_processing_qwen3_reasoning_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
     ],
@@ -190,7 +286,6 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON
 )
 
 ovms_cc_library(
@@ -223,25 +318,43 @@ ovms_cc_library(
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:executor_base",
         "//src:libmodelconfigjsonparser",
         "//src:libovmslogging",
         "//src:libovmsstatus",
-        "//src:libovmsmediapipe_utils",
+        "//src/mediapipe_internal:mediapipe_utils",
         "//src:libovmsprofiler",
         "//src:libovmsstring_utils",
-        "//src:libovmsfilesystem",
+        "//src/filesystem:libovmsfilesystem",
         "//src/tokenize:tokenize_parser",
         "llmcalculator_cc_proto",
         ":openai_completions_api_handler",
+        ":openai_responses_handler",
         ":generation_config_builders",
         "//src:httppayload",
         "//src:libhttpclientconnection",
+        "//src:sse_utils",
+        "//src:libovms_systeminfo",
+        "//src:libovms_config",
+        "//src:libovms_ov_utils",
         "//third_party:genai",] + select({
         "//:disable_python": [],
         "//:not_disable_python" : [":py_jinja_template_processor"],
     }),
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON
+)
+
+ovms_cc_library(
+    name = "execution_context_utils",
+    hdrs = ["execution_context_utils.hpp"],
+    srcs = ["execution_context_utils.cpp"],
+    deps = [
+        ":genai_servables",
+        "//src/mediapipe_internal:graph_side_packets",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
 )
 
 ovms_cc_library(
@@ -254,6 +367,5 @@ ovms_cc_library(
             "//src/python:utils",
     ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON
 )
 

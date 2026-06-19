@@ -39,8 +39,8 @@ public:
     ~BuffersQueue();
     void* getBuffer();
     bool returnBuffer(void* buffer);
-    const size_t getSize();
-    const size_t getSingleBufferSize();
+    size_t getSize() const;
+    size_t getSingleBufferSize() const;
 
 private:
     int getBufferId(void* buffer);

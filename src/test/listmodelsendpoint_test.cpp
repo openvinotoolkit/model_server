@@ -79,6 +79,7 @@ TEST_F(ListModelsEndpointTest, simplePositive) {
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);
     ASSERT_EQ(d["object"], "list");
+    ASSERT_EQ(d.MemberCount(), 2);
     ASSERT_TRUE(d["data"].IsArray());
     ASSERT_EQ(d["data"].Size(), 2);
     ASSERT_EQ(d["data"][0]["object"], "model");

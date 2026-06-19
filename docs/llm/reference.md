@@ -2,7 +2,7 @@
 
 ## Overview
 
-With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in it's [GenAI Library](https://github.com/openvinotoolkit/openvino.genai) like:
+With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in its [GenAI Library](https://github.com/openvinotoolkit/openvino.genai) like:
   - Continuous Batching
   - Paged Attention
   - Dynamic Split Fuse
@@ -22,7 +22,7 @@ The servable types are:
 - Visual Language Model Stateful.
 
 First part - Language Model / Visual Language Model - determines whether servable accepts only text or both text and images on the input.
-Seconds part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only on Stateful servable type.
+Second part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only with the Stateful servable type.
 
 User does not have to explicitly select servable type. It is inferred based on model directory contents and selected target device.
 Model directory contents determine if model can work only with text or visual input as well. As for target device, setting it to `NPU` will always pick Stateful servable, while any other device will result in deploying Continuous Batching servable. 
@@ -44,7 +44,7 @@ struct HttpPayload {
     std::shared_ptr<ClientConnection> client;
 };
 ```
-The input json content should be compatible with the [chat completions](../model_server_rest_api_chat.md) or [completions](../model_server_rest_api_completions.md) API.
+The input json content should be compatible with the [chat completions](../model_server_rest_api_chat.md), [completions](../model_server_rest_api_completions.md) or [responses](../model_server_rest_api_responses.md) API.
 
 The input also includes a side packet with a reference to `LLM_NODE_RESOURCES` which is a shared object representing an LLM engine. It loads the model, runs the generation cycles and reports the generated results to the LLM calculator via a generation handler.
 
@@ -339,8 +339,7 @@ In node configuration we set `models_path` indicating location of the directory 
 ├── chat_template.jinja
 ```
 
-Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `chat_template.jinja` are loaded to read information required for chat template processing. Model directory may also contain `generation_config.json` which specifies recommended generation parameters.
-If such file exists, model server will use it to load default generation configuration for processing request to that model.
+Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `chat_template.jinja` are loaded to read information required for chat template processing. Model directory may also contain `generation_config.json`, which is read at server start-up to set default generation parameters for that model.
 
 Additionally, Visual Language Models have encoder and decoder models for text and vision and potentially other auxiliary models.
 
@@ -352,9 +351,26 @@ Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/mas
 
 ## Input preprocessing
 
+### Defining default generation parameters
+
+`generation_config.json` is a file placed in the model directory that, if it exists, is the source of default generation and sampling parameters.
+
+**request body → `generation_config.json` → OVMS built-in default**
+
+Example:
+```json
+{
+  "temperature": 0.7,
+  "top_k": 20,
+  "min_p": 0.05
+}
+```
+
+The file is read once at server start-up. Restart the server after editing it.
+
 ### Completions
 
-When sending a request to `/completions` endpoint, model server adds `bos_token_id` during tokenization, so **there is not need to add `bos_token` to the prompt**.
+When sending a request to `/completions` endpoint, model server adds `bos_token_id` during tokenization, so **there is no need to add `bos_token` to the prompt**.
 
 ### Chat Completions
 

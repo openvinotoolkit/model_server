@@ -18,6 +18,8 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <openvino/runtime/core.hpp>
 #include <rapidjson/document.h>
 
 #include "../get_model_metadata_impl.hpp"

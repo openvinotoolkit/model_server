@@ -21,7 +21,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/dimension.hpp>
+#include <openvino/core/partial_shape.hpp>
+#include <openvino/core/shape.hpp>
 
 namespace ovms {
 class Status;

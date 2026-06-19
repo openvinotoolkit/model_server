@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "../http_rest_api_handler.hpp"
+#include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "rapidjson/document.h"
@@ -784,4 +785,20 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizeBatchWithPadToMaxLen) {
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     AssertTokenizationResult(response, expectedTokens);
+}
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeEmptyNestedArray) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "embeddings_ov", "[[]]", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeMultipleEmptyNestedArrays) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "embeddings_ov", "[[], [], []]", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeMultipleEmptyNestedArraysAndOneNonEmpty) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "embeddings_ov", R"([[], ["hello world"], []])", response, comp, responseComponents, writer, multiPartParser);
+}
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeEmptyWithArrayMultipleLevelsOfNesting) {
+    assertTokenizeWithInvalidTextReturnsError(handler.get(), "embeddings_ov", "[[[[[]]]]]", response, comp, responseComponents, writer, multiPartParser);
 }
