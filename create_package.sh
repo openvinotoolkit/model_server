@@ -101,8 +101,8 @@ cp /opt/opencv/share/licenses/opencv4/* /ovms/release_files/thirdparty-licenses/
 
 # Bundle eSpeak-ng license text when eSpeak artifacts are included.
 # The source repository is checked out under Bazel external trees.
-ESPEAK_LICENSE_SRC=$(find /root/.cache/bazel /ovms -type f \
-	\( -path '*/external/espeak_ng/COPYING*' -o -path '*/external/espeak_ng/LICENSE*' \) \
+ESPEAK_LICENSE_SRC=$(find /ovms/bazel-out/k8-*/bin/external/espeak_ng -type f \
+	\( -name 'COPYING*' -o -name 'LICENSE*' \) \
 	2>/dev/null | head -n 1 || true)
 if [ -n "$ESPEAK_LICENSE_SRC" ] && [ -f "$ESPEAK_LICENSE_SRC" ] ; then
 	cp -v "$ESPEAK_LICENSE_SRC" /ovms/release_files/thirdparty-licenses/espeak-ng.LICENSE.txt
