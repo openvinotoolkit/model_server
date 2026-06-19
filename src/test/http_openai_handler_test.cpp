@@ -2354,14 +2354,14 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkCompletionsIncludesV
     apiHandler->enableVerboseResponse("templated prompt");
 
     rapidjson::Document intermediate;
-    intermediate.Parse(apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE).c_str());
+    intermediate.Parse(serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE).c_str());
     ASSERT_FALSE(intermediate.HasParseError());
     ASSERT_FALSE(intermediate.HasMember("__verbose"));
 
     apiHandler->setVerboseRawText("Hello world");
 
     rapidjson::Document finalChunk;
-    finalChunk.Parse(apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP).c_str());
+    finalChunk.Parse(serializeStreamingChunkFromText(*apiHandler, " world", ov::genai::GenerationFinishReason::STOP).c_str());
     ASSERT_FALSE(finalChunk.HasParseError());
     ASSERT_TRUE(finalChunk.HasMember("__verbose"));
     ASSERT_TRUE(finalChunk["__verbose"].IsObject());
