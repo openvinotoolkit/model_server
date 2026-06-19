@@ -42,9 +42,13 @@ fi
 ESPEAK_REAL=$(find /ovms_release/lib -maxdepth 1 -type f -name 'libespeak-ng.so.*' -printf '%f\n' | sort -V | tail -n 1 || true)
 if [ -n "$ESPEAK_REAL" ]; then
     cd /ovms_release/lib
-    rm -f libespeak-ng.so libespeak-ng.so.1
-    ln -s "$ESPEAK_REAL" libespeak-ng.so.1
-    ln -s "$ESPEAK_REAL" libespeak-ng.so
+    rm -f libespeak-ng.so
+    # If the only real file is the SONAME itself (libespeak-ng.so.1), keep it as-is.
+    if [ "$ESPEAK_REAL" != "libespeak-ng.so.1" ]; then
+        rm -f libespeak-ng.so.1
+        ln -s "$ESPEAK_REAL" libespeak-ng.so.1
+    fi
+    ln -s libespeak-ng.so.1 libespeak-ng.so
     cd - >/dev/null
 fi
 if [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/; fi;
