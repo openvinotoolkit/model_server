@@ -20,10 +20,8 @@ if (Test-Path "$env:OVMS_DIR\python") {
     $env:SCRIPTS="$env:OVMS_DIR\python\Scripts"
     $env:PATH="$env:OVMS_DIR;$env:PYTHONHOME;$env:SCRIPTS;$env:PATH"
 } else {
-    $env:PATH="$env:PATH:$env:OVMS_DIR"
+    $env:PATH="$env:PATH;$env:OVMS_DIR"
 }
-# Point bundled espeak-ng (when packaged) at its data tables.
-if (Test-Path "$env:OVMS_DIR\espeak-ng-data") {
     $env:ESPEAK_DATA_PATH="$env:OVMS_DIR\espeak-ng-data"
 }
 echo "OpenVINO Model Server Environment Initialized"
