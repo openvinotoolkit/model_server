@@ -37,11 +37,10 @@ if [ -n "$ESPEAK_DATA_SRC" ] && [ -d "$ESPEAK_DATA_SRC" ] ; then
     mkdir -p /ovms_release/share
     cp -rL "$ESPEAK_DATA_SRC" /ovms_release/share/ ;
 fi
-# The version matches the espeak-ng tag pinned
-# in third_party/espeak_ng/espeak_ng.bzl (1.52.0);
-# update both places together when bumping espeak-ng.
-ESPEAK_REAL=libespeak-ng.so.1.52.0.1
-if [ -f "/ovms_release/lib/$ESPEAK_REAL" ]; then
+# Resolve the packaged eSpeak shared object dynamically so version bumps
+# do not require touching this script.
+ESPEAK_REAL=$(find /ovms_release/lib -maxdepth 1 -type f -name 'libespeak-ng.so.*' -printf '%f\n' | sort -V | tail -n 1 || true)
+if [ -n "$ESPEAK_REAL" ]; then
     cd /ovms_release/lib
     rm -f libespeak-ng.so libespeak-ng.so.1
     ln -s "$ESPEAK_REAL" libespeak-ng.so.1
