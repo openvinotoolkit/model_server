@@ -419,7 +419,7 @@ COPY --from=pkg /usr/local/lib64/python3.12/site-packages/MarkupSafe-3.0.2.dist-
 COPY --from=pkg /usr/local/lib64/python3.12/site-packages/markupsafe /ovms/python_deps/markupsafe
 
 RUN mkdir -p /licenses && \
-    ln -s /ovms/LICENSE /licenses/LICENSE && \
-    ln -s /ovms/thirdparty-licenses /licenses/thirdparty-licenses
+    cp /ovms/LICENSE /licenses/LICENSE && \
+    cp -r /ovms/thirdparty-licenses /licenses/thirdparty-licenses
 USER ovms
 ENTRYPOINT ["/ovms/bin/ovms"]
