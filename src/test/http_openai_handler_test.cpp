@@ -1108,6 +1108,32 @@ static std::vector<int64_t> createHermes3ToolCallTokens(ov::genai::Tokenizer& to
     return generatedTokens;
 }
 
+// Test helper: wraps the old serializeStreamingChunk(string, reason) behaviour for migration period.
+// Calls outputParser->parseChunk when a parser is present; otherwise builds a trivial content delta.
+static std::string serializeStreamingChunkFromText(ovms::OpenAIApiHandler& handler,
+    const std::string& text,
+    ov::genai::GenerationFinishReason finishReason) {
+    const auto& outputParser = handler.getOutputParser();
+    rapidjson::Document delta;
+    if (outputParser != nullptr) {
+        auto parsed = outputParser->parseChunk(text, {}, handler.areToolsAvailable(), finishReason);
+        if (!parsed.has_value()) {
+            if (finishReason == ov::genai::GenerationFinishReason::NONE)
+                return "";
+            delta = rapidjson::Document{};
+        } else {
+            delta = std::move(*parsed);
+        }
+    } else {
+        delta.SetObject();
+        rapidjson::Document::AllocatorType& alloc = delta.GetAllocator();
+        rapidjson::Value deltaObj(rapidjson::kObjectType);
+        deltaObj.AddMember("content", rapidjson::Value(text.c_str(), alloc), alloc);
+        delta.AddMember("delta", deltaObj, alloc);
+    }
+    return handler.serializeStreamingChunk(std::move(delta), finishReason);
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsIntermediateNullAndFinallyToolCallsFinishReason) {
     std::string json = R"({
     "model": "llama",
@@ -1148,7 +1174,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsIntermediateN
 
     std::vector<std::string> serializedChunks;
     for (const auto& [chunk, finishReason] : stream) {
-        std::string serialized = apiHandler->serializeStreamingChunk(chunk, finishReason);
+        std::string serialized = serializeStreamingChunkFromText(*apiHandler, chunk, finishReason);
         if (!serialized.empty()) {
             serializedChunks.push_back(serialized);
         }
@@ -1207,7 +1233,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsToolCallsFini
 
     std::vector<std::string> serializedChunks;
     for (const auto& [chunk, finishReason] : stream) {
-        std::string serialized = apiHandler->serializeStreamingChunk(chunk, finishReason);
+        std::string serialized = serializeStreamingChunkFromText(*apiHandler, chunk, finishReason);
         if (!serialized.empty()) {
             serializedChunks.push_back(serialized);
         }
@@ -1573,11 +1599,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContains
     ASSERT_EQ(inProgressChunk.find("\"type\":\"response.created\""), std::string::npos) << "Only in_progress event: " << inProgressChunk;
 
     // Phase 3: Empty chunk should produce no output
-    std::string secondChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
+    std::string secondChunk = serializeStreamingChunkFromText(*apiHandler, "", ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(secondChunk.empty()) << "Empty text should produce no output: " << secondChunk;
 
     // Phase 4: First text delta - should include output_item.added + content_part.added + delta
-    std::string deltaChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    std::string deltaChunk = serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(deltaChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << deltaChunk;
     ASSERT_NE(deltaChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << deltaChunk;
     ASSERT_NE(deltaChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << deltaChunk;
@@ -1592,7 +1618,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContains
     ASSERT_LT(contentPartAddedPos, firstDeltaPos) << "content_part.added must come before delta";
 
     // Phase 5: Final chunk with finish reason
-    std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
+    std::string finalChunk = serializeStreamingChunkFromText(*apiHandler, " world", ov::genai::GenerationFinishReason::STOP);
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.done\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.content_part.done\""), std::string::npos) << finalChunk;
@@ -1638,12 +1664,12 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReas
     ASSERT_EQ(inProgressChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "output_item.added should be deferred: " << inProgressChunk;
 
     // Phase 2: Reasoning chunk with <think> tag - should emit reasoning init + delta
-    std::string reasoningChunk = apiHandler->serializeStreamingChunk("<think>", ov::genai::GenerationFinishReason::NONE);
+    std::string reasoningChunk = serializeStreamingChunkFromText(*apiHandler, "<think>", ov::genai::GenerationFinishReason::NONE);
     // <think> tag itself should be consumed by parser, no events
     // (parser returns nullopt for tag tokens)
 
     // Phase 3: Reasoning content
-    std::string reasoningContent = apiHandler->serializeStreamingChunk("Let me think", ov::genai::GenerationFinishReason::NONE);
+    std::string reasoningContent = serializeStreamingChunkFromText(*apiHandler, "Let me think", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(reasoningContent.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should have reasoning output_item.added: " << reasoningContent;
     ASSERT_NE(reasoningContent.find("\"type\":\"reasoning\""), std::string::npos) << "Output item should be reasoning type: " << reasoningContent;
     ASSERT_NE(reasoningContent.find("\"type\":\"response.reasoning_summary_part.added\""), std::string::npos) << reasoningContent;
@@ -1651,18 +1677,18 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReas
     ASSERT_NE(reasoningContent.find("\"delta\":\"Let me think\""), std::string::npos) << reasoningContent;
 
     // Phase 4: More reasoning
-    std::string moreReasoning = apiHandler->serializeStreamingChunk(" harder", ov::genai::GenerationFinishReason::NONE);
+    std::string moreReasoning = serializeStreamingChunkFromText(*apiHandler, " harder", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(moreReasoning.find("\"type\":\"response.reasoning_summary_text.delta\""), std::string::npos) << moreReasoning;
     ASSERT_NE(moreReasoning.find("\"delta\":\" harder\""), std::string::npos) << moreReasoning;
     // Should NOT have another output_item.added
     ASSERT_EQ(moreReasoning.find("\"type\":\"response.output_item.added\""), std::string::npos) << "No repeated init: " << moreReasoning;
 
     // Phase 5: End of reasoning with </think>
-    std::string endThink = apiHandler->serializeStreamingChunk("</think>", ov::genai::GenerationFinishReason::NONE);
+    std::string endThink = serializeStreamingChunkFromText(*apiHandler, "</think>", ov::genai::GenerationFinishReason::NONE);
     // </think> tag consumed by parser
 
     // Phase 6: Content chunk - should close reasoning and open message
-    std::string contentChunk = apiHandler->serializeStreamingChunk("The answer", ov::genai::GenerationFinishReason::NONE);
+    std::string contentChunk = serializeStreamingChunkFromText(*apiHandler, "The answer", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(contentChunk.find("\"type\":\"response.reasoning_summary_text.done\""), std::string::npos) << "Should close reasoning: " << contentChunk;
     ASSERT_NE(contentChunk.find("\"type\":\"response.reasoning_summary_part.done\""), std::string::npos) << contentChunk;
     // Message item should be at output_index 1
@@ -1671,7 +1697,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReas
     ASSERT_NE(contentChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << contentChunk;
 
     // Phase 7: Final chunk
-    std::string finalChunk = apiHandler->serializeStreamingChunk(" is 42", ov::genai::GenerationFinishReason::STOP);
+    std::string finalChunk = serializeStreamingChunkFromText(*apiHandler, " is 42", ov::genai::GenerationFinishReason::STOP);
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.done\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.content_part.done\""), std::string::npos) << finalChunk;
@@ -1704,7 +1730,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkEmptyPrimingDoesNotP
 
     // Empty priming call: should emit only lifecycle events, never output_text.delta,
     // and must not move the parser past the reasoning start tag.
-    std::string primingChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
+    std::string primingChunk = apiHandler->serializeStreamingChunk(rapidjson::Document{}, ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(primingChunk.find("\"type\":\"response.created\""), std::string::npos) << primingChunk;
     ASSERT_NE(primingChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << primingChunk;
     ASSERT_EQ(primingChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
@@ -1714,8 +1740,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkEmptyPrimingDoesNotP
 
     // Now the parser must still recognise the reasoning start tag and route the
     // following text to reasoning, not content.
-    apiHandler->serializeStreamingChunk("<think>", ov::genai::GenerationFinishReason::NONE);
-    std::string reasoningChunk = apiHandler->serializeStreamingChunk("hello", ov::genai::GenerationFinishReason::NONE);
+    serializeStreamingChunkFromText(*apiHandler, "<think>", ov::genai::GenerationFinishReason::NONE);
+    std::string reasoningChunk = serializeStreamingChunkFromText(*apiHandler, "hello", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(reasoningChunk.find("\"type\":\"response.reasoning_summary_text.delta\""), std::string::npos)
         << "Reasoning text must be routed to reasoning_summary_text.delta: " << reasoningChunk;
     ASSERT_EQ(reasoningChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
@@ -1746,7 +1772,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithoutR
     ASSERT_EQ(inProgressChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should be deferred: " << inProgressChunk;
 
     // Content without reasoning - should emit message init events on first content
-    std::string contentChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    std::string contentChunk = serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(contentChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should init message: " << contentChunk;
     ASSERT_NE(contentChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << contentChunk;
     ASSERT_NE(contentChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << contentChunk;
@@ -1755,7 +1781,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithoutR
     ASSERT_EQ(contentChunk.find("\"type\":\"response.reasoning_summary"), std::string::npos) << "No reasoning: " << contentChunk;
 
     // Final chunk
-    std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
+    std::string finalChunk = serializeStreamingChunkFromText(*apiHandler, " world", ov::genai::GenerationFinishReason::STOP);
     ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
 }
 
@@ -1796,10 +1822,10 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesEmitsInc
     apiHandler->serializeStreamingCreatedEvent();
     apiHandler->serializeStreamingInProgressEvent();
     // Delta
-    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE);
 
     // Final chunk with LENGTH finish reason
-    std::string finalChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::LENGTH);
+    std::string finalChunk = serializeStreamingChunkFromText(*apiHandler, "", ov::genai::GenerationFinishReason::LENGTH);
 
     // Should emit response.incomplete instead of response.completed
     ASSERT_NE(finalChunk.find("\"type\":\"response.incomplete\""), std::string::npos) << finalChunk;
@@ -1849,7 +1875,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesEmitsCom
     apiHandler->serializeStreamingCreatedEvent();
     apiHandler->serializeStreamingInProgressEvent();
     // Delta + finish with STOP
-    std::string finalChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::STOP);
+    std::string finalChunk = serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::STOP);
 
     // Should emit response.completed, NOT response.incomplete
     ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
@@ -1948,7 +1974,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventAfterPartialStreaming) 
     // Emit init events and some deltas first
     apiHandler->serializeStreamingCreatedEvent();
     apiHandler->serializeStreamingInProgressEvent();
-    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE);
 
     // Then fail
     std::string failedEvent = apiHandler->serializeFailedEvent("Generation aborted");
@@ -2328,14 +2354,14 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkCompletionsIncludesV
     apiHandler->enableVerboseResponse("templated prompt");
 
     rapidjson::Document intermediate;
-    intermediate.Parse(apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE).c_str());
+    intermediate.Parse(serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE).c_str());
     ASSERT_FALSE(intermediate.HasParseError());
     ASSERT_FALSE(intermediate.HasMember("__verbose"));
 
     apiHandler->setVerboseRawText("Hello world");
 
     rapidjson::Document finalChunk;
-    finalChunk.Parse(apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP).c_str());
+    finalChunk.Parse(serializeStreamingChunkFromText(*apiHandler, " world", ov::genai::GenerationFinishReason::STOP).c_str());
     ASSERT_FALSE(finalChunk.HasParseError());
     ASSERT_TRUE(finalChunk.HasMember("__verbose"));
     ASSERT_TRUE(finalChunk["__verbose"].IsObject());
@@ -5820,6 +5846,7 @@ static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponses
     // Signal that generation is done so preparePartialResponse goes straight to
     // the "finish generation" branch without waiting.
     ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
 
     ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
         *tok, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
@@ -5884,6 +5911,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, vlmLegacyServablePreparePartialResponseResp
     ctx->results.perf_metrics.num_generated_tokens = 6;
     ctx->success = true;
     ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
     ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
         *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
 
@@ -5925,6 +5953,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCom
     ctx->results.perf_metrics.num_generated_tokens = 5;
     ctx->success = true;
     ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
     ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
         *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
 
