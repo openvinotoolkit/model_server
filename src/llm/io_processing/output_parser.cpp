@@ -20,7 +20,7 @@
 #include "../../logging.hpp"
 #include "../../stringutils.hpp"
 #include "output_parser.hpp"
-#include "parser_names.hpp"
+#include "parser_config_validation.hpp"
 #include "llama3/tool_parser.hpp"
 #include "hermes3/tool_parser.hpp"
 #include "phi4/tool_parser.hpp"

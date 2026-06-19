@@ -20,36 +20,36 @@
 #include <openvino/genai/tokenizer.hpp>
 
 #include "../../../llm/io_processing/output_parser.hpp"
-#include "../../../llm/io_processing/parser_names.hpp"
+#include "../../../llm/io_processing/parser_config_validation.hpp"
 #include "../../platform_utils.hpp"
 
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string parserNamesTokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\microsoft\\Phi-4-mini-instruct";
+const std::string parserConfigValidationTokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\microsoft\\Phi-4-mini-instruct";
 #else
-const std::string parserNamesTokenizerPath = "/ovms/src/test/llm_testing/microsoft/Phi-4-mini-instruct";
+const std::string parserConfigValidationTokenizerPath = "/ovms/src/test/llm_testing/microsoft/Phi-4-mini-instruct";
 #endif
 
-static ovms::ToolsSchemas_t PARSER_NAMES_EMPTY_TOOLS_SCHEMA = {};
-static std::unique_ptr<ov::genai::Tokenizer> parserNamesTokenizer;
+static ovms::ToolsSchemas_t PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA = {};
+static std::unique_ptr<ov::genai::Tokenizer> parserConfigValidationTokenizer;
 
-class ParserNamesTest : public ::testing::Test {
+class ParserConfigValidationTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite() {
         try {
-            parserNamesTokenizer = std::make_unique<ov::genai::Tokenizer>(parserNamesTokenizerPath);
+            parserConfigValidationTokenizer = std::make_unique<ov::genai::Tokenizer>(parserConfigValidationTokenizerPath);
         } catch (const std::exception& e) {
             FAIL() << "Failed to initialize tokenizer: " << e.what();
         }
     }
 
     static void TearDownTestSuite() {
-        parserNamesTokenizer.reset();
+        parserConfigValidationTokenizer.reset();
     }
 };
 
-TEST_F(ParserNamesTest, RegistryHasExpectedToolParsers) {
+TEST_F(ParserConfigValidationTest, RegistryHasExpectedToolParsers) {
     const auto& names = getSupportedToolParserNames();
     for (const auto& expected : {"llama3", "hermes3", "phi4", "mistral", "gptoss",
              "qwen3coder", "devstral", "lfm2", "gemma4"}) {
@@ -61,7 +61,7 @@ TEST_F(ParserNamesTest, RegistryHasExpectedToolParsers) {
     EXPECT_FALSE(isSupportedToolParserName(""));
 }
 
-TEST_F(ParserNamesTest, RegistryHasExpectedReasoningParsers) {
+TEST_F(ParserConfigValidationTest, RegistryHasExpectedReasoningParsers) {
     const auto& names = getSupportedReasoningParserNames();
     for (const auto& expected : {"qwen3", "gemma4", "gptoss"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), expected), names.end())
@@ -72,7 +72,7 @@ TEST_F(ParserNamesTest, RegistryHasExpectedReasoningParsers) {
     EXPECT_FALSE(isSupportedReasoningParserName(""));
 }
 
-TEST_F(ParserNamesTest, SupportedNamesStringContainsAllParsers) {
+TEST_F(ParserConfigValidationTest, SupportedNamesStringContainsAllParsers) {
     const std::string toolNames = getSupportedToolParserNamesAsString();
     EXPECT_NE(toolNames.find("hermes3"), std::string::npos);
     EXPECT_NE(toolNames.find("phi4"), std::string::npos);
@@ -81,9 +81,9 @@ TEST_F(ParserNamesTest, SupportedNamesStringContainsAllParsers) {
     EXPECT_NE(reasoningNames.find("gptoss"), std::string::npos);
 }
 
-TEST_F(ParserNamesTest, OutputParserThrowsOnUnknownToolParser) {
+TEST_F(ParserConfigValidationTest, OutputParserThrowsOnUnknownToolParser) {
     try {
-        OutputParser parser(*parserNamesTokenizer, "totally_invalid_parser", "", PARSER_NAMES_EMPTY_TOOLS_SCHEMA);
+        OutputParser parser(*parserConfigValidationTokenizer, "totally_invalid_parser", "", PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA);
         FAIL() << "OutputParser should have thrown for unknown tool parser name";
     } catch (const std::runtime_error& e) {
         const std::string what = e.what();
@@ -94,9 +94,9 @@ TEST_F(ParserNamesTest, OutputParserThrowsOnUnknownToolParser) {
     }
 }
 
-TEST_F(ParserNamesTest, OutputParserThrowsOnUnknownReasoningParser) {
+TEST_F(ParserConfigValidationTest, OutputParserThrowsOnUnknownReasoningParser) {
     try {
-        OutputParser parser(*parserNamesTokenizer, "", "totally_invalid_reasoning", PARSER_NAMES_EMPTY_TOOLS_SCHEMA);
+        OutputParser parser(*parserConfigValidationTokenizer, "", "totally_invalid_reasoning", PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA);
         FAIL() << "OutputParser should have thrown for unknown reasoning parser name";
     } catch (const std::runtime_error& e) {
         const std::string what = e.what();
@@ -107,9 +107,9 @@ TEST_F(ParserNamesTest, OutputParserThrowsOnUnknownReasoningParser) {
     }
 }
 
-TEST_F(ParserNamesTest, OutputParserAcceptsEmptyNames) {
+TEST_F(ParserConfigValidationTest, OutputParserAcceptsEmptyNames) {
     EXPECT_NO_THROW({
-        OutputParser parser(*parserNamesTokenizer, "", "", PARSER_NAMES_EMPTY_TOOLS_SCHEMA);
+        OutputParser parser(*parserConfigValidationTokenizer, "", "", PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA);
         EXPECT_FALSE(parser.isToolParserAvailable());
         EXPECT_FALSE(parser.isReasoningParserAvailable());
     });

@@ -40,7 +40,7 @@
 #include "../../../ov_utils.hpp"
 #include "../../../status.hpp"
 #include "../../../systeminfo.hpp"
-#include "../../io_processing/parser_names.hpp"
+#include "../../io_processing/parser_config_validation.hpp"
 #include "llm_executor.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"

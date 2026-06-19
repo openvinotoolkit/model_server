@@ -34,7 +34,7 @@
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../../status.hpp"
-#include "../../io_processing/parser_names.hpp"
+#include "../../io_processing/parser_config_validation.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
 
