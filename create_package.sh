@@ -99,6 +99,16 @@ if [ -d /opt/intel/openvino/runtime/3rdparty ] ; then find /opt/intel/openvino/r
 if [[ $debug_bazel_flags == *"--copt=-g -c dbg"* ]]; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*libtbb_debug*' -exec cp -vP {} /ovms_release/lib/ \;; fi
 find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 cp /opt/opencv/share/licenses/opencv4/* /ovms/release_files/thirdparty-licenses/
+
+# Bundle eSpeak-ng license text when eSpeak artifacts are included.
+# The source repository is checked out under Bazel external trees.
+ESPEAK_LICENSE_SRC=$(find /root/.cache/bazel /ovms -type f \
+	\( -path '*/external/espeak_ng/COPYING*' -o -path '*/external/espeak_ng/LICENSE*' \) \
+	2>/dev/null | head -n 1 || true)
+if [ -n "$ESPEAK_LICENSE_SRC" ] && [ -f "$ESPEAK_LICENSE_SRC" ] ; then
+	cp -v "$ESPEAK_LICENSE_SRC" /ovms/release_files/thirdparty-licenses/espeak-ng.LICENSE.txt
+fi
+
 if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libOpenCL.so* /ovms_release/lib/ ; fi
 if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL.so* /ovms_release/lib/ ; fi
 

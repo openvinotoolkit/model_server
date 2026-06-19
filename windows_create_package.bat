@@ -143,6 +143,22 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy %cd%\release_files\thirdparty-licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Bundle eSpeak-ng license text when eSpeak artifacts are included.
+set "espeak_license_src="
+for /f "delims=" %%F in ('dir /b /s /a:-d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng\COPYING*" 2^>nul') do (
+    set "espeak_license_src=%%F"
+    goto :copy_espeak_license
+)
+for /f "delims=" %%F in ('dir /b /s /a:-d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng\LICENSE*" 2^>nul') do (
+    set "espeak_license_src=%%F"
+    goto :copy_espeak_license
+)
+:copy_espeak_license
+if defined espeak_license_src (
+    copy /Y "!espeak_license_src!" "%license_dest%espeak-ng.LICENSE.txt"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
 set "curl_dir=curl-!curl_version!-win64-mingw"
 echo Adding curl licenses from !curl_dir!...
 copy C:\opt\!curl_dir!\COPYING.txt %license_dest%LICENSE-CURL.txt
