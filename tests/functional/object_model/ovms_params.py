@@ -25,10 +25,8 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.object_model.ovms_command import OvmsCommand
 from tests.functional.config import logging_level_ovms
 from tests.functional.constants.metrics import MetricsPolicy
-from ovms.constants.models import Muse
 from tests.functional.models.models import ModelInfo
 from tests.functional.models.models_library import ModelsLib
-from tests.functional.object_model.cpu_extension import MuseModelExtension
 from tests.functional.object_model.custom_loader import CustomLoader
 
 logger = get_logger(__name__)
@@ -88,8 +86,11 @@ class OvmsParams(object):
     cache_size: int = None
 
     def __post_init__(self):
-        if self.models is not None and any(isinstance(model, Muse) for model in self.models):
-            self.cpu_extension = MuseModelExtension()
+        if self.models is not None:
+            for model in self.models:
+                if model.cpu_extension is not None:
+                    self.cpu_extension = model.cpu_extension()
+                    break
 
     def get_shape_param(self):
         result = self.shape
