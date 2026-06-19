@@ -11,15 +11,28 @@
  *   - Encoder = accepts imp_tensor_t* directly
  *
  * NO inference logic lives here. Inference helpers belong in the demo/OVMS layer.
+ *
+ * Platform notes:
+ *   Windows — direct GStreamer linking via import libs; D3D11 HW pipeline.
+ *   Linux   — GStreamer loaded at runtime via dlopen (gst_loader.cpp);
+ *             CPU decode pipeline only (VA-API GPU path deferred).
+ *             Image / audio encode-decode functions are Windows-only for now
+ *             and return IMP_ERROR_INTERNAL on Linux.
  */
 
+#ifdef _WIN32
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #ifndef GST_USE_UNSTABLE_API
 #define GST_USE_UNSTABLE_API
 #endif
+#endif  // _WIN32
 
 #include "imp_mpi_impl.h"  // same directory
+
+#ifndef _WIN32
+#include "gst_loader.h"
+#endif
 
 #include <iostream>
 #include <algorithm>
@@ -45,10 +58,13 @@ imp_status_t imp_context_create(imp_context_t** ctx,
                                 ov_compiled_model_t* compiled_model) {
     if (!ctx) return IMP_ERROR_INVALID_ARGUMENT;
 
-    // In this POC, compiled_model is actually a C++ ov::CompiledModel*
-    // cast through the C opaque pointer.
+    // compiled_model is a C++ ov::CompiledModel* cast through the C opaque pointer.
+    // On Linux / CPU-only mode, nullptr is valid — creates a standalone context
+    // with no model dimension hints.
     auto* cm = reinterpret_cast<ov::CompiledModel*>(compiled_model);
+#ifdef _WIN32
     if (!cm) return IMP_ERROR_INVALID_ARGUMENT;
+#endif
 
     auto start = chrono::high_resolution_clock::now();
 
@@ -56,17 +72,21 @@ imp_status_t imp_context_create(imp_context_t** ctx,
 
     // Extract model input dimensions for branch auto-deduction.
     // After NV12 PPP the Y input is [1, H, W, 1].
-    auto inputs = cm->inputs();
-    if (!inputs.empty()) {
-        auto shape = inputs[0].get_shape();
-        if (shape.size() == 4) {
-            c->model_h = static_cast<int>(shape[1]);
-            c->model_w = static_cast<int>(shape[2]);
+    if (cm) {
+        // Extract model input dimensions for branch auto-deduction.
+        // After NV12 PPP the Y input is [1, H, W, 1].
+        auto inputs = cm->inputs();
+        if (!inputs.empty()) {
+            auto shape = inputs[0].get_shape();
+            if (shape.size() == 4) {
+                c->model_h = static_cast<int>(shape[1]);
+                c->model_w = static_cast<int>(shape[2]);
+            }
         }
     }
 
-    c->device_type = IMP_DEVICE_GPU;
-    c->device_name = "GPU";
+    c->device_type = IMP_DEVICE_CPU;
+    c->device_name = cm ? "GPU" : "CPU";
     c->initialized = true;
 
     auto end = chrono::high_resolution_clock::now();
@@ -157,6 +177,12 @@ imp_status_t imp_video_source_set(imp_video_source_t* source,
 void imp_video_source_destroy(imp_video_source_t* source) {
     delete source;
 }
+
+// ============================================================================
+// Windows-only GStreamer video / audio / image pipeline implementations.
+// Linux equivalents live in gst_loader.cpp (dlopen-based).
+// ============================================================================
+#ifdef _WIN32
 
 //////////////////////////////////////////////////////////////////////////////
 // Internal: read NV12 from appsink into frame buffer
@@ -448,6 +474,18 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
     return IMP_OK;
 }
 
+#else  // Linux — delegate to gst_loader.cpp
+
+imp_status_t imp_video_open(imp_video_stream_t** stream,
+                            imp_video_source_t* source,
+                            imp_context_t* ctx,
+                            const imp_video_decode_opts_t* opts) {
+    gst_loader_init();
+    return linux_video_open(stream, source, ctx, opts);
+}
+
+#endif  // _WIN32
+
 //////////////////////////////////////////////////////////////////////////////
 // Video Read Frame — branch-aware
 //////////////////////////////////////////////////////////////////////////////
@@ -455,8 +493,7 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
 imp_status_t imp_video_read_frame(imp_tensor_t** tensor,
                                   imp_video_stream_t* stream,
                                   uint32_t branch_index) {
-    if (!stream || branch_index >= (uint32_t)stream->branches.size())
-        return IMP_ERROR_INVALID_ARGUMENT;
+#ifdef _WIN32
 
     auto& branch = stream->branches[branch_index];
 
@@ -479,6 +516,10 @@ imp_status_t imp_video_read_frame(imp_tensor_t** tensor,
 
     if (tensor) *tensor = &branch.tensor_cache;
     return IMP_OK;
+
+#else  // Linux
+    return linux_video_read_frame(tensor, stream, branch_index);
+#endif
 }
 
 imp_status_t imp_video_read_frame_by_name(imp_tensor_t** tensor,
@@ -518,6 +559,7 @@ imp_status_t imp_video_get_info(imp_video_stream_t* stream,
 }
 
 void imp_video_close(imp_video_stream_t* stream) {
+#ifdef _WIN32
     if (!stream) return;
     if (stream->pipeline) {
         gst_element_set_state(stream->pipeline, GST_STATE_NULL);
@@ -527,11 +569,16 @@ void imp_video_close(imp_video_stream_t* stream) {
         gst_object_unref(stream->pipeline);
     }
     delete stream;
+#else
+    linux_video_close(stream);
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// Video Encoder
+// Video Encoder (Windows-only — Linux stub returns IMP_ERROR_INTERNAL)
 //////////////////////////////////////////////////////////////////////////////
+
+#ifdef _WIN32
 
 imp_status_t imp_video_encoder_create(imp_video_encoder_t** encoder,
                                       uint32_t width, uint32_t height,
@@ -662,6 +709,28 @@ void imp_video_encoder_close(imp_video_encoder_t* encoder) {
     delete encoder;
 }
 
+#else  // Linux stubs for video encoder
+
+imp_status_t imp_video_encoder_create(imp_video_encoder_t** encoder,
+                                      uint32_t width, uint32_t height,
+                                      imp_context_t* ctx,
+                                      const imp_video_encode_opts_t* opts) {
+    (void)encoder; (void)width; (void)height; (void)ctx; (void)opts;
+    return IMP_ERROR_INTERNAL;  // Not yet implemented on Linux
+}
+
+imp_status_t imp_video_encoder_write(imp_video_encoder_t* encoder,
+                                     imp_tensor_t* tensor) {
+    (void)encoder; (void)tensor;
+    return IMP_ERROR_INTERNAL;
+}
+
+void imp_video_encoder_close(imp_video_encoder_t* encoder) {
+    (void)encoder;
+}
+
+#endif  // _WIN32
+
 //////////////////////////////////////////////////////////////////////////////
 // Tensor utilities
 //////////////////////////////////////////////////////////////////////////////
@@ -728,6 +797,22 @@ imp_status_t imp_tensor_get_element_type(imp_tensor_t* tensor,
     return IMP_ERROR_INTERNAL; // TODO: map ov::element::Type
 }
 
+imp_status_t imp_tensor_get_nv12_planes(imp_tensor_t* tensor,
+                                        const uint8_t** y_data,
+                                        const uint8_t** uv_data,
+                                        int* width,
+                                        int* height) {
+    if (!tensor || !y_data || !uv_data || !width || !height)
+        return IMP_ERROR_INVALID_ARGUMENT;
+    if (tensor->format != IMP_FORMAT_NV12 || tensor->device_type != IMP_DEVICE_CPU)
+        return IMP_ERROR_INVALID_ARGUMENT;
+    *y_data  = tensor->y_data;
+    *uv_data = tensor->uv_data;
+    *width   = tensor->width;
+    *height  = tensor->height;
+    return IMP_OK;
+}
+
 void imp_tensor_release(imp_tensor_t* tensor) {
     if (!tensor) return;
     delete tensor;
@@ -752,6 +837,14 @@ imp_status_t imp_hw_encode_supported(imp_context_t* ctx, bool* supported) {
     if (supported) *supported = true;
     return IMP_OK;
 }
+
+// ============================================================================
+// Image decode / encode and audio decode / encode — Windows-only.
+// These functions use direct GStreamer calls that are only available on
+// Windows (D3D11 pipeline, mfh264enc, etc.).  Linux stubs follow at the
+// end of the #ifdef _WIN32 / #else block.
+// ============================================================================
+#ifdef _WIN32
 
 //////////////////////////////////////////////////////////////////////////////
 // Image decode / encode
@@ -2126,3 +2219,127 @@ imp_status_t imp_encode_audio_file(const char* file_path,
     return IMP_OK;
 }
 
+#else  // Linux stubs for image/audio decode-encode and audio stream/encoder
+
+imp_status_t imp_decode_image_file(imp_tensor_t** t, const char* f,
+                                   imp_context_t* c,
+                                   const imp_image_decode_opts_t* o,
+                                   imp_decode_callback_t cb, void* ud) {
+    (void)t; (void)f; (void)c; (void)o; (void)cb; (void)ud;
+    return IMP_ERROR_INTERNAL;  // Not yet implemented on Linux
+}
+
+imp_status_t imp_decode_image(imp_tensor_t** t, const void* d, size_t s,
+                              imp_context_t* c,
+                              const imp_image_decode_opts_t* o,
+                              imp_decode_callback_t cb, void* ud) {
+    (void)t; (void)d; (void)s; (void)c; (void)o; (void)cb; (void)ud;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_decode_audio(imp_tensor_t** t, const void* d, size_t s,
+                              imp_context_t* c,
+                              const imp_audio_decode_opts_t* o,
+                              imp_decode_callback_t cb, void* ud) {
+    (void)t; (void)d; (void)s; (void)c; (void)o; (void)cb; (void)ud;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_decode_audio_file(imp_tensor_t** t, const char* f,
+                                   imp_context_t* c,
+                                   const imp_audio_decode_opts_t* o,
+                                   imp_decode_callback_t cb, void* ud) {
+    (void)t; (void)f; (void)c; (void)o; (void)cb; (void)ud;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_audio_file_info(const char* file_path,
+                                 uint32_t* sample_rate,
+                                 uint32_t* channels,
+                                 double* duration_sec) {
+    (void)file_path; (void)sample_rate; (void)channels; (void)duration_sec;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_audio_open(imp_audio_stream_t** stream,
+                            const char* input_path,
+                            const char* output_path,
+                            const imp_audio_stream_opts_t* opts) {
+    (void)stream; (void)input_path; (void)output_path; (void)opts;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_audio_get_info(imp_audio_stream_t* stream,
+                                imp_audio_info_t* info) {
+    (void)stream; (void)info;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_audio_process(imp_audio_stream_t* stream) {
+    (void)stream;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_audio_get_timing(imp_audio_stream_t* stream,
+                                  double* wall_time_sec,
+                                  double* realtime_factor) {
+    (void)stream; (void)wall_time_sec; (void)realtime_factor;
+    return IMP_ERROR_INTERNAL;
+}
+
+void imp_audio_close(imp_audio_stream_t* stream) {
+    (void)stream;
+}
+
+imp_status_t imp_encode_image(void** d, size_t* s, imp_tensor_t* t,
+                              imp_context_t* c,
+                              const imp_image_encode_opts_t* o,
+                              imp_encode_callback_t cb, void* ud) {
+    (void)d; (void)s; (void)t; (void)c; (void)o; (void)cb; (void)ud;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_encode_image_file(const char* f, imp_tensor_t* t,
+                                   imp_context_t* c,
+                                   const imp_image_encode_opts_t* o,
+                                   imp_encode_callback_t cb, void* ud) {
+    (void)f; (void)t; (void)c; (void)o; (void)cb; (void)ud;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_audio_encoder_create(imp_audio_encoder_t** encoder,
+                                      const imp_audio_encode_opts_t* opts,
+                                      imp_encode_callback_t callback,
+                                      void* user_data) {
+    (void)encoder; (void)opts; (void)callback; (void)user_data;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_audio_encoder_write(imp_audio_encoder_t* encoder,
+                                     imp_tensor_t* tensor) {
+    (void)encoder; (void)tensor;
+    return IMP_ERROR_INTERNAL;
+}
+
+void imp_audio_encoder_close(imp_audio_encoder_t* encoder) {
+    (void)encoder;
+}
+
+imp_status_t imp_encode_audio(void** data,
+                              size_t* data_size,
+                              const float* samples,
+                              size_t num_samples,
+                              const imp_audio_encode_opts_t* opts) {
+    (void)data; (void)data_size; (void)samples; (void)num_samples; (void)opts;
+    return IMP_ERROR_INTERNAL;
+}
+
+imp_status_t imp_encode_audio_file(const char* file_path,
+                                   const float* samples,
+                                   size_t num_samples,
+                                   const imp_audio_encode_opts_t* opts) {
+    (void)file_path; (void)samples; (void)num_samples; (void)opts;
+    return IMP_ERROR_INTERNAL;
+}
+
+#endif  // _WIN32

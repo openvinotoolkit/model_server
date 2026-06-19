@@ -4,14 +4,11 @@
  * NOT part of the public API. These are the C++ structs behind the
  * opaque handles declared in intel_mpi.h.
  *
- * Only intel_mpi.cpp should include this file.
+ * Only intel_mpi.cpp and gst_loader.cpp should include this file.
  */
 
 #ifndef IMP_MPI_IMPL_H
 #define IMP_MPI_IMPL_H
-
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
 
 #include <string>
 #include <vector>
@@ -20,7 +17,10 @@
 #include <cstring>
 #include <chrono>
 
+#ifdef _WIN32
 // Windows + D3D11
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d11.h>
 #include <dxgi.h>
@@ -29,13 +29,28 @@
 #include <openvino/openvino.hpp>
 #include <openvino/runtime/intel_gpu/properties.hpp>
 
-// GStreamer
+// GStreamer (Windows: direct linking via import libs)
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/video/video.h>
 #include <gst/d3d11/gstd3d11.h>
 #include <gst/pbutils/pbutils.h>
+
+#else  // Linux
+
+// OpenVINO C++ API
+#include <openvino/openvino.hpp>
+
+// GStreamer types needed for struct members (pointer-only use).
+// Full headers are only included in gst_loader.cpp where the dlopen
+// wrapper lives.  Using forward declarations here keeps intel_mpi.cpp
+// free of any direct GStreamer symbol references.
+typedef struct _GstElement   GstElement;
+typedef struct _GstBus       GstBus;
+typedef struct _GstMessage   GstMessage;
+
+#endif  // _WIN32
 
 // Public API types
 #include "intel_mpi.h"

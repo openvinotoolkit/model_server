@@ -960,6 +960,22 @@ imp_status_t imp_tensor_get_element_type(imp_tensor_t* tensor,
                                           imp_element_type_t* type);
 
 /**
+ * Get NV12 plane pointers and dimensions for CPU-side NV12 tensors.
+ *
+ * @param tensor     Tensor handle (must be format IMP_FORMAT_NV12, device CPU)
+ * @param y_data     Output: pointer to Y plane (width * height bytes)
+ * @param uv_data    Output: pointer to interleaved UV plane (width * height/2 bytes)
+ * @param width      Output: frame width in pixels
+ * @param height     Output: frame height in pixels
+ * @return IMP_OK on success, IMP_ERROR_INVALID_ARGUMENT if tensor is not NV12/CPU
+ */
+imp_status_t imp_tensor_get_nv12_planes(imp_tensor_t* tensor,
+                                        const uint8_t** y_data,
+                                        const uint8_t** uv_data,
+                                        int* width,
+                                        int* height);
+
+/**
  * Release tensor
  * 
  * @param tensor Tensor handle

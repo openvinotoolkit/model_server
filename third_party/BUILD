@@ -59,3 +59,12 @@ alias(
     }),
     visibility = ["//visibility:public"],
 )
+
+alias(
+    name = "gstreamer",
+    actual = select({
+        "//src:windows": "@windows_gstreamer//:gstreamer",
+        "//conditions:default": "@linux_gstreamer//:gstreamer_headers",
+    }),
+    visibility = ["//visibility:public"],
+)

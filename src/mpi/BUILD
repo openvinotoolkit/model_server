@@ -19,24 +19,26 @@ load("//:common_settings.bzl", "COMMON_LOCAL_DEFINES", "ovms_cc_library")
 package(default_visibility = ["//visibility:public"])
 
 # Intel Media Processing Interface (Intel MPI) library
-# Windows-only for now — wraps GStreamer for HW-accelerated media decode/encode
-# with zero-copy OpenVINO tensor integration.
-#
-# On Linux this target is a no-op (empty lib) so dependents can
-# unconditionally list it without breaking the build.
+# Windows: direct GStreamer linking with D3D11 HW pipeline.
+# Linux:   GStreamer loaded at runtime via dlopen (gst_loader.cpp).
+#          CPU decode only; VA-API GPU path deferred.
 
 cc_library(
     name = "intel_mpi",
     srcs = select({
         "//src:windows": ["intel_mpi.cpp"],
-        "//conditions:default": [],
+        "//conditions:default": ["intel_mpi.cpp", "gst_loader.cpp"],
     }),
     hdrs = select({
         "//src:windows": [
             "intel_mpi.h",
             "imp_mpi_impl.h",
         ],
-        "//conditions:default": ["intel_mpi.h"],
+        "//conditions:default": [
+            "intel_mpi.h",
+            "imp_mpi_impl.h",
+            "gst_loader.h",
+        ],
     }),
     copts = select({
         "//src:windows": [
@@ -52,18 +54,27 @@ cc_library(
             "/wd4244",
             "/wd4996",
         ],
-        "//conditions:default": [],
+        "//conditions:default": [
+            "-std=c++17",
+        ],
     }),
     local_defines = COMMON_LOCAL_DEFINES + select({
         "//src:windows": ["INTEL_MPI_AVAILABLE=1"],
-        "//conditions:default": [],
+        "//conditions:default": ["INTEL_MPI_AVAILABLE=1"],
+    }),
+    linkopts = select({
+        "//src:windows": [],
+        "//conditions:default": ["-ldl"],
     }),
     deps = select({
         "//src:windows": [
             "//third_party:openvino",
             "//third_party:gstreamer",
         ],
-        "//conditions:default": [],
+        "//conditions:default": [
+            "//third_party:openvino",
+            "//third_party:gstreamer",
+        ],
     }),
     visibility = ["//visibility:public"],
 )

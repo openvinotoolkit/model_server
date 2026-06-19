@@ -88,6 +88,102 @@ ARG OPENCV_VERSION=4.13.0
 RUN OPENCV_VERSION=${OPENCV_VERSION} ./install_opencv.sh
 ####### End of OpenCV
 
+################### GSTREAMER BUILD ##########################
+# Build GStreamer from source so we control exact version and plugin set.
+# Legal: gpl=disabled, ugly=disabled — no GPL/patent-risky plugins.
+# Installed to /opt/gstreamer (self-contained, includes glib headers).
+FROM base_build as gstreamer-builder
+ARG GST_VERSION=1.26.2
+ARG JOBS=8
+ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3-pip \
+        python3-venv \
+        flex \
+        bison \
+        libglib2.0-dev \
+        libmount-dev \
+        libpcre2-dev \
+        libffi-dev \
+        libssl-dev \
+        libdrm-dev \
+        nasm \
+        yasm \
+        libavcodec-dev \
+        libavformat-dev \
+        libavutil-dev \
+        libswscale-dev \
+        git \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv /build_venv && \
+    /build_venv/bin/pip install --no-cache-dir meson==1.4.1 ninja==1.11.1.1
+
+ENV PATH="/build_venv/bin:${PATH}"
+
+WORKDIR /src
+RUN git clone --depth 1 --branch ${GST_VERSION} \
+    https://gitlab.freedesktop.org/gstreamer/gstreamer.git
+
+WORKDIR /src/gstreamer
+
+# Install prefix: /opt/gstreamer
+RUN meson setup \
+    -Dexamples=disabled \
+    -Dtests=disabled \
+    -Dgst-examples=disabled \
+    -Ddevtools=disabled \
+    -Dorc=disabled \
+    -Dgpl=disabled \
+    -Dpython=disabled \
+    -Dlibnice=disabled \
+    -Dugly=disabled \
+    -Dgst-plugins-bad:gpl=disabled \
+    -Dgst-plugins-bad:va=disabled \
+    -Dgst-plugins-bad:doc=disabled \
+    -Dgst-plugins-bad:nls=disabled \
+    -Dgst-plugins-bad:directfb=disabled \
+    -Dgst-plugins-bad:openni2=disabled \
+    -Dgst-plugins-bad:fdkaac=disabled \
+    -Dgst-plugins-bad:ladspa=disabled \
+    -Dgst-plugins-bad:assrender=disabled \
+    -Dgst-plugins-bad:bs2b=disabled \
+    -Dgst-plugins-bad:flite=disabled \
+    -Dgst-plugins-bad:rtmp=disabled \
+    -Dgst-plugins-bad:opencv=disabled \
+    -Dgst-plugins-bad:sbc=disabled \
+    -Dgst-plugins-bad:teletext=disabled \
+    -Dgst-plugins-bad:x265=disabled \
+    -Dgst-plugins-bad:webrtcdsp=disabled \
+    -Dgst-plugins-bad:dash=disabled \
+    -Dgst-plugins-bad:openjpeg=disabled \
+    -Dgst-plugins-bad:soundtouch=disabled \
+    -Dgst-plugins-bad:isac=disabled \
+    -Dgst-plugins-base:nls=disabled \
+    -Dgst-plugins-base:gl=disabled \
+    -Dgst-plugins-base:pango=disabled \
+    -Dgst-plugins-base:xvideo=disabled \
+    -Dgst-plugins-good:nls=disabled \
+    -Dgst-plugins-good:libcaca=disabled \
+    -Dgst-plugins-good:lame=disabled \
+    -Dgst-plugins-good:flac=disabled \
+    -Dgst-plugins-good:dv=disabled \
+    -Dgst-plugins-good:adaptivedemux2=disabled \
+    --buildtype=release \
+    --prefix=/opt/gstreamer \
+    --libdir=lib \
+    --libexecdir=bin \
+    build/
+
+RUN ninja -C build/ -j${JOBS} && meson install -C build/
+
+# Copy glib/glib-2.0 headers into the prefix so it is self-contained.
+# glib is a build dependency; its headers live in the system include path.
+RUN cp -r /usr/include/glib-2.0 /opt/gstreamer/include/glib-2.0 && \
+    cp -r /usr/lib/x86_64-linux-gnu/glib-2.0/include/. /opt/gstreamer/include/glib-2.0/
+
 ################### BASE BUILD ##########################
 FROM base_build as build
 ARG BASE_IMAGE
@@ -125,6 +221,11 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             vim && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
+
+# GStreamer built from source — bring in the self-contained prefix.
+# Runtime dlopen picks up /opt/gstreamer/lib at runtime via LD_LIBRARY_PATH or ldconfig.
+COPY --from=gstreamer-builder /opt/gstreamer /opt/gstreamer
+RUN echo /opt/gstreamer/lib > /etc/ld.so.conf.d/gstreamer.conf && ldconfig
 # on ubuntu 24.04 python3.12 is used as default python for ovms build and release
 # TF build needs python3.10 with numpy as it does not support python3.12
 RUN python3.10 -m pip install "numpy<2.0.0" --no-cache-dir
