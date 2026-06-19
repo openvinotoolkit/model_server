@@ -127,14 +127,14 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
                 getProperties()->reasoningParserName);
         }
     } catch (const std::exception& e) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to create API handler: {}", e.what());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to create API handler: {}", e.what());
         return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
     }
 
@@ -278,13 +278,13 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         if (executionContext->inputIds.get_size() > getProperties()->maxModelLength.value()) {
             std::stringstream ss;
             ss << "Number of prompt tokens: " << executionContext->inputIds.get_size() << " exceeds model max length: " << getProperties()->maxModelLength.value();
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
             return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
         }
         if (executionContext->apiHandler->getMaxTokens().has_value() && executionContext->inputIds.get_size() + executionContext->apiHandler->getMaxTokens().value() > getProperties()->maxModelLength.value()) {
             std::stringstream ss;
             ss << "Number of prompt tokens: " << executionContext->inputIds.get_size() << " + max tokens value: " << executionContext->apiHandler->getMaxTokens().value() << " exceeds model max length: " << getProperties()->maxModelLength.value();
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
             return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
         }
     }
