@@ -5846,6 +5846,7 @@ static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponses
     // Signal that generation is done so preparePartialResponse goes straight to
     // the "finish generation" branch without waiting.
     ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
 
     ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
         *tok, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
@@ -5910,6 +5911,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, vlmLegacyServablePreparePartialResponseResp
     ctx->results.perf_metrics.num_generated_tokens = 6;
     ctx->success = true;
     ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
     ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
         *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
 
@@ -5951,6 +5953,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCom
     ctx->results.perf_metrics.num_generated_tokens = 5;
     ctx->success = true;
     ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
     ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
         *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
 
