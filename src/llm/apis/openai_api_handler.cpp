@@ -535,7 +535,6 @@ std::optional<std::string> OpenAIApiHandler::getResponseFormat() const {
     return request.responseFormat;
 }
 
-std::optional<std::string> OpenAIApiHandler::getPrompt() const { return request.prompt; }
 std::optional<int> OpenAIApiHandler::getNumReturnSequences() const { return request.numReturnSequences; }
 StreamOptions OpenAIApiHandler::getStreamOptions() const { return request.streamOptions; }
 

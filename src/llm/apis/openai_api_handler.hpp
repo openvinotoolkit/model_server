@@ -161,7 +161,6 @@ public:
 
     // Accessors (non-virtual)
     const OpenAIRequest& getRequest() const;
-    std::optional<std::string> getPrompt() const;
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
     const std::string& getProcessedJson() const;

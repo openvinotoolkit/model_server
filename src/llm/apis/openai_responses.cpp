@@ -648,14 +648,14 @@ absl::Status OpenAIResponsesHandler::parseInput(std::optional<std::string> allow
     }
 
     if (inputIt->value.IsString()) {
-        request.prompt = inputIt->value.GetString();
-        if (request.prompt.value().empty()) {
+        const std::string inputText(inputIt->value.GetString(), inputIt->value.GetStringLength());
+        if (inputText.empty()) {
             return absl::InvalidArgumentError("input cannot be empty");
         }
 
         request.chatHistory.push_back({});
         request.chatHistory.last()["role"] = "user";
-        request.chatHistory.last()["content"] = request.prompt.value();
+        request.chatHistory.last()["content"] = inputText;
     } else if (inputIt->value.IsArray()) {
         if (inputIt->value.GetArray().Size() == 0) {
             return absl::InvalidArgumentError("input array must not be empty");
@@ -786,7 +786,7 @@ absl::StatusOr<CanonicalRequest> OpenAIResponsesHandler::buildCanonicalRequestIm
             std::cref(request.imageHistory),
             std::move(tools.value()),
             std::move(kwargs.value()),
-            request.prompt,
+            std::nullopt,
             true};
         return CanonicalRequest(std::move(cppPath));
     }

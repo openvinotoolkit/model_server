@@ -75,11 +75,9 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     if (it != doc.MemberEnd()) {
         if (!it->value.IsString()) {
             return absl::InvalidArgumentError("prompt is not a string");
-        } else {
-            request.prompt = it->value.GetString();
         }
     }
-    if (!request.prompt.has_value() || !request.prompt.value().size()) {
+    if (it == doc.MemberEnd() || it->value.GetStringLength() == 0) {
         return absl::Status(absl::StatusCode::kInvalidArgument, "prompt is missing");
     }
     // logprobs: int; 1 value allowed
@@ -279,12 +277,19 @@ absl::StatusOr<CanonicalRequest> OpenAIChatCompletionsHandler::buildCanonicalReq
         if (!kwargs.ok()) {
             return kwargs.status();
         }
+        std::optional<std::string> rawPrompt;
+        if (endpoint == Endpoint::COMPLETIONS) {
+            auto promptIt = doc.FindMember("prompt");
+            if (promptIt != doc.MemberEnd() && promptIt->value.IsString()) {
+                rawPrompt = std::string(promptIt->value.GetString(), promptIt->value.GetStringLength());
+            }
+        }
         CppPath cppPath{
             std::cref(request.chatHistory),
             std::cref(request.imageHistory),
             std::move(tools.value()),
             std::move(kwargs.value()),
-            request.prompt,
+            std::move(rawPrompt),
             true};
         return CanonicalRequest(std::move(cppPath));
     }

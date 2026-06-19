@@ -42,7 +42,6 @@ struct StreamOptions {
 struct OpenAIRequest {
     ov::genai::ChatHistory chatHistory;
     ImageHistory imageHistory;
-    std::optional<std::string> prompt{std::nullopt};
     bool stream{false};
     StreamOptions streamOptions;
     std::string model;

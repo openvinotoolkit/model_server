@@ -763,101 +763,101 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUser
     EXPECT_EQ(chatHistory[0]["role"], "user");
     EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
     if (endpoint() == ovms::Endpoint::CHAT_COMPLETIONS) {
-      // Canonical PyPath should always provide a JSON payload for template processing.
-      EXPECT_FALSE(apiHandler->getProcessedJson().empty());
+        // Canonical PyPath should always provide a JSON payload for template processing.
+        EXPECT_FALSE(apiHandler->getProcessedJson().empty());
     }
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, CanonicalRequestCppPathIsAvailable) {
-  std::string json = createTextRequest("What is OpenVINO?");
-  auto apiHandler = parseCurrentRequest(json);
-  ASSERT_NE(apiHandler, nullptr);
+    std::string json = createTextRequest("What is OpenVINO?");
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
-  auto canonicalRequest = apiHandler->getCanonicalRequest(ovms::RendererType::CPP_TOKENIZER);
-  ASSERT_TRUE(canonicalRequest.ok());
-  ASSERT_TRUE(std::holds_alternative<ovms::CppPath>(*canonicalRequest.value()));
+    auto canonicalRequest = apiHandler->getCanonicalRequest(ovms::RendererType::CPP_TOKENIZER);
+    ASSERT_TRUE(canonicalRequest.ok());
+    ASSERT_TRUE(std::holds_alternative<ovms::CppPath>(*canonicalRequest.value()));
 
-  const auto& cppPath = std::get<ovms::CppPath>(*canonicalRequest.value());
-  EXPECT_EQ(&cppPath.chatHistory.get(), &apiHandler->getChatHistory());
-  EXPECT_EQ(&cppPath.imageHistory.get(), &apiHandler->getImageHistory());
+    const auto& cppPath = std::get<ovms::CppPath>(*canonicalRequest.value());
+    EXPECT_EQ(&cppPath.chatHistory.get(), &apiHandler->getChatHistory());
+    EXPECT_EQ(&cppPath.imageHistory.get(), &apiHandler->getImageHistory());
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, CanonicalRequestPyPathIsAvailable) {
-  std::string json = createTextRequest("What is OpenVINO?");
-  auto apiHandler = parseCurrentRequest(json);
-  ASSERT_NE(apiHandler, nullptr);
+    std::string json = createTextRequest("What is OpenVINO?");
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
-  auto canonicalRequest = apiHandler->getCanonicalRequest(ovms::RendererType::PY_JINJA);
-  ASSERT_TRUE(canonicalRequest.ok());
-  ASSERT_TRUE(std::holds_alternative<ovms::PyPath>(*canonicalRequest.value()));
+    auto canonicalRequest = apiHandler->getCanonicalRequest(ovms::RendererType::PY_JINJA);
+    ASSERT_TRUE(canonicalRequest.ok());
+    ASSERT_TRUE(std::holds_alternative<ovms::PyPath>(*canonicalRequest.value()));
 
-  const auto& pyPath = std::get<ovms::PyPath>(*canonicalRequest.value());
-  EXPECT_FALSE(pyPath.processedJson.get().empty());
+    const auto& pyPath = std::get<ovms::PyPath>(*canonicalRequest.value());
+    EXPECT_FALSE(pyPath.processedJson.get().empty());
 
-  if (endpoint() == ovms::Endpoint::RESPONSES) {
-    rapidjson::Document processedDoc;
-    processedDoc.Parse(pyPath.processedJson.get().c_str());
-    ASSERT_FALSE(processedDoc.HasParseError());
-    ASSERT_TRUE(processedDoc.HasMember("messages"));
-    ASSERT_TRUE(processedDoc["messages"].IsArray());
-    ASSERT_GE(processedDoc["messages"].Size(), 1u);
-  }
+    if (endpoint() == ovms::Endpoint::RESPONSES) {
+        rapidjson::Document processedDoc;
+        processedDoc.Parse(pyPath.processedJson.get().c_str());
+        ASSERT_FALSE(processedDoc.HasParseError());
+        ASSERT_TRUE(processedDoc.HasMember("messages"));
+        ASSERT_TRUE(processedDoc["messages"].IsArray());
+        ASSERT_GE(processedDoc["messages"].Size(), 1u);
+    }
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, LegacyGettersRemainCompatibleWithCanonicalCache) {
-  std::string json = createTextRequest("What is OpenVINO?");
-  auto apiHandler = parseCurrentRequest(json);
-  ASSERT_NE(apiHandler, nullptr);
+    std::string json = createTextRequest("What is OpenVINO?");
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
-  auto& chatHistory = apiHandler->getChatHistory();
-  const auto& imageHistory = apiHandler->getImageHistory();
-  const auto& processedJson = apiHandler->getProcessedJson();
+    auto& chatHistory = apiHandler->getChatHistory();
+    const auto& imageHistory = apiHandler->getImageHistory();
+    const auto& processedJson = apiHandler->getProcessedJson();
 
-  auto cppCanonical = apiHandler->getCanonicalRequest(ovms::RendererType::CPP_TOKENIZER);
-  auto pyCanonical = apiHandler->getCanonicalRequest(ovms::RendererType::PY_JINJA);
-  ASSERT_TRUE(cppCanonical.ok());
-  ASSERT_TRUE(pyCanonical.ok());
+    auto cppCanonical = apiHandler->getCanonicalRequest(ovms::RendererType::CPP_TOKENIZER);
+    auto pyCanonical = apiHandler->getCanonicalRequest(ovms::RendererType::PY_JINJA);
+    ASSERT_TRUE(cppCanonical.ok());
+    ASSERT_TRUE(pyCanonical.ok());
 
-  ASSERT_TRUE(std::holds_alternative<ovms::CppPath>(*cppCanonical.value()));
-  ASSERT_TRUE(std::holds_alternative<ovms::PyPath>(*pyCanonical.value()));
+    ASSERT_TRUE(std::holds_alternative<ovms::CppPath>(*cppCanonical.value()));
+    ASSERT_TRUE(std::holds_alternative<ovms::PyPath>(*pyCanonical.value()));
 
-  const auto& cppPath = std::get<ovms::CppPath>(*cppCanonical.value());
-  const auto& pyPath = std::get<ovms::PyPath>(*pyCanonical.value());
-  EXPECT_EQ(&cppPath.chatHistory.get(), &chatHistory);
-  EXPECT_EQ(&cppPath.imageHistory.get(), &imageHistory);
-  if (!processedJson.empty()) {
-    EXPECT_EQ(&pyPath.processedJson.get(), &processedJson);
-  } else {
-    EXPECT_FALSE(pyPath.processedJson.get().empty());
-  }
+    const auto& cppPath = std::get<ovms::CppPath>(*cppCanonical.value());
+    const auto& pyPath = std::get<ovms::PyPath>(*pyCanonical.value());
+    EXPECT_EQ(&cppPath.chatHistory.get(), &chatHistory);
+    EXPECT_EQ(&cppPath.imageHistory.get(), &imageHistory);
+    if (!processedJson.empty()) {
+        EXPECT_EQ(&pyPath.processedJson.get(), &processedJson);
+    } else {
+        EXPECT_FALSE(pyPath.processedJson.get().empty());
+    }
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, CanonicalRequestCacheReturnsStableAddressPerRenderer) {
-  std::string json = createTextRequest("What is OpenVINO?");
-  auto apiHandler = parseCurrentRequest(json);
-  ASSERT_NE(apiHandler, nullptr);
+    std::string json = createTextRequest("What is OpenVINO?");
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
-  auto cppCanonicalFirst = apiHandler->getCanonicalRequest(ovms::RendererType::CPP_TOKENIZER);
-  auto cppCanonicalSecond = apiHandler->getCanonicalRequest(ovms::RendererType::CPP_TOKENIZER);
-  ASSERT_TRUE(cppCanonicalFirst.ok());
-  ASSERT_TRUE(cppCanonicalSecond.ok());
-  EXPECT_EQ(cppCanonicalFirst.value(), cppCanonicalSecond.value());
+    auto cppCanonicalFirst = apiHandler->getCanonicalRequest(ovms::RendererType::CPP_TOKENIZER);
+    auto cppCanonicalSecond = apiHandler->getCanonicalRequest(ovms::RendererType::CPP_TOKENIZER);
+    ASSERT_TRUE(cppCanonicalFirst.ok());
+    ASSERT_TRUE(cppCanonicalSecond.ok());
+    EXPECT_EQ(cppCanonicalFirst.value(), cppCanonicalSecond.value());
 
-  auto pyCanonicalFirst = apiHandler->getCanonicalRequest(ovms::RendererType::PY_JINJA);
-  auto pyCanonicalSecond = apiHandler->getCanonicalRequest(ovms::RendererType::PY_JINJA);
-  ASSERT_TRUE(pyCanonicalFirst.ok());
-  ASSERT_TRUE(pyCanonicalSecond.ok());
-  EXPECT_EQ(pyCanonicalFirst.value(), pyCanonicalSecond.value());
+    auto pyCanonicalFirst = apiHandler->getCanonicalRequest(ovms::RendererType::PY_JINJA);
+    auto pyCanonicalSecond = apiHandler->getCanonicalRequest(ovms::RendererType::PY_JINJA);
+    ASSERT_TRUE(pyCanonicalFirst.ok());
+    ASSERT_TRUE(pyCanonicalSecond.ok());
+    EXPECT_EQ(pyCanonicalFirst.value(), pyCanonicalSecond.value());
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, CanonicalRequestCppPathContainsTemplateInputs) {
-  if (endpoint() != ovms::Endpoint::CHAT_COMPLETIONS) {
-    GTEST_SKIP() << "Tools/chat_template_kwargs assertions apply to chat/completions flow";
-  }
+    if (endpoint() != ovms::Endpoint::CHAT_COMPLETIONS) {
+        GTEST_SKIP() << "Tools/chat_template_kwargs assertions apply to chat/completions flow";
+    }
 
-  std::string json = createTextRequest(
-      "What is OpenVINO?",
-      R"(,
+    std::string json = createTextRequest(
+        "What is OpenVINO?",
+        R"(,
       "tools": [
         {
           "type": "function",
@@ -875,21 +875,21 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, CanonicalRequestCppPathCont
       ],
       "chat_template_kwargs": {"enable_thinking": true}
       )");
-  auto apiHandler = parseCurrentRequest(json);
-  ASSERT_NE(apiHandler, nullptr);
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
 
-  auto cppCanonical = apiHandler->getCanonicalRequest(ovms::RendererType::CPP_TOKENIZER);
-  ASSERT_TRUE(cppCanonical.ok());
-  ASSERT_TRUE(std::holds_alternative<ovms::CppPath>(*cppCanonical.value()));
+    auto cppCanonical = apiHandler->getCanonicalRequest(ovms::RendererType::CPP_TOKENIZER);
+    ASSERT_TRUE(cppCanonical.ok());
+    ASSERT_TRUE(std::holds_alternative<ovms::CppPath>(*cppCanonical.value()));
 
-  const auto& cppPath = std::get<ovms::CppPath>(*cppCanonical.value());
-  EXPECT_TRUE(cppPath.addGenerationPrompt);
-  ASSERT_TRUE(cppPath.tools.has_value());
-  ASSERT_TRUE(cppPath.chatTemplateKwargs.has_value());
+    const auto& cppPath = std::get<ovms::CppPath>(*cppCanonical.value());
+    EXPECT_TRUE(cppPath.addGenerationPrompt);
+    ASSERT_TRUE(cppPath.tools.has_value());
+    ASSERT_TRUE(cppPath.chatTemplateKwargs.has_value());
 
-  const auto& kwargs = cppPath.chatTemplateKwargs.value();
-  ASSERT_TRUE(kwargs["enable_thinking"].as_bool().has_value());
-  EXPECT_TRUE(kwargs["enable_thinking"].as_bool().value());
+    const auto& kwargs = cppPath.chatTemplateKwargs.value();
+    ASSERT_TRUE(kwargs["enable_thinking"].as_bool().has_value());
+    EXPECT_TRUE(kwargs["enable_thinking"].as_bool().value());
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquivalentMessages) {
@@ -921,7 +921,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquiva
     }
 #else
     if (endpoint() == ovms::Endpoint::RESPONSES) {
-    EXPECT_FALSE(apiHandler->getProcessedJson().empty()) << "Canonical PyPath should provide JSON regardless of Python build mode";
+        EXPECT_FALSE(apiHandler->getProcessedJson().empty()) << "Canonical PyPath should provide JSON regardless of Python build mode";
     }
 #endif
 }
@@ -966,7 +966,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMult
     }
 #else
     if (endpoint() == ovms::Endpoint::RESPONSES) {
-    EXPECT_FALSE(apiHandler->getProcessedJson().empty()) << "Canonical PyPath should provide JSON regardless of Python build mode";
+        EXPECT_FALSE(apiHandler->getProcessedJson().empty()) << "Canonical PyPath should provide JSON regardless of Python build mode";
     }
 #endif
 }
@@ -992,7 +992,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonIncludesToolsW
     }
 #else
     if (endpoint() == ovms::Endpoint::RESPONSES) {
-    EXPECT_FALSE(apiHandler->getProcessedJson().empty()) << "Canonical PyPath should provide JSON regardless of Python build mode";
+        EXPECT_FALSE(apiHandler->getProcessedJson().empty()) << "Canonical PyPath should provide JSON regardless of Python build mode";
     }
 #endif
 }
@@ -5571,7 +5571,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageHistoryIndexMatchesChatHistor
     EXPECT_LT(turnIndex, chatHistory.size());
 }
 
-  TEST_F(HttpOpenAIHandlerParsingTest, VlmImagePromptUtilsRejectsRestrictedImageTag) {
+TEST_F(HttpOpenAIHandlerParsingTest, VlmImagePromptUtilsRejectsRestrictedImageTag) {
     std::string json = R"({
       "model": "llama",
       "messages": [{"role": "user", "content": "prefix <ov_genai_image_0>"}]
@@ -5587,19 +5587,19 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageHistoryIndexMatchesChatHistor
 
     auto status = ovms::vlm::rejectRestrictedImageTags(apiHandler->getChatHistory());
     EXPECT_EQ(status, absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag"));
-  }
+}
 
-  TEST_F(HttpOpenAIHandlerParsingTest, VlmImagePromptUtilsInjectsImageTagsAndCollectsTensors) {
+TEST_F(HttpOpenAIHandlerParsingTest, VlmImagePromptUtilsInjectsImageTagsAndCollectsTensors) {
     const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
-      std::string json = R"({
+    std::string json = R"({
         "model": "llama",
         "messages": [
           {"role":"user","content":[
             {"type":"text","text":"what is in these images?"},
             {"type":"image_url","image_url":{"url":")" +
-          base64Image + R"("}},
+                       base64Image + R"("}},
             {"type":"image_url","image_url":{"url":")" +
-          base64Image + R"("}}
+                       base64Image + R"("}}
           ]}
         ]
       })";
@@ -5625,7 +5625,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageHistoryIndexMatchesChatHistor
     std::string content = chatHistory[0]["content"].as_string().value_or("");
     EXPECT_THAT(content, ::testing::HasSubstr("<ov_genai_image_0>\n<ov_genai_image_1>\n"));
     EXPECT_THAT(content, ::testing::HasSubstr("what is in these images?"));
-  }
+}
 
 // --- Tools normalisation edge cases ---
 

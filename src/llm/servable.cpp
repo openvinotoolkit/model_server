@@ -59,7 +59,6 @@ absl::Status applyTokenizerChatTemplate(
 }
 #endif
 
-
 #if (PYTHON_DISABLE == 0)
 absl::Status applyPythonChatTemplate(
     const PyPath& pyPath,
@@ -124,7 +123,7 @@ absl::Status buildResponsesInputText(
     auto status = applyPythonChatTemplate(*pyPath, properties, inputText);
     if (!status.ok()) {
         return status;
-        }
+    }
 #else
     const auto* cppPath = std::get_if<CppPath>(&canonicalRequest);
     if (cppPath == nullptr) {
@@ -350,8 +349,8 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 
 #if (PYTHON_DISABLE == 0)
     RendererType rendererType = (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES)
-        ? RendererType::PY_JINJA
-        : RendererType::CPP_TOKENIZER;
+                                    ? RendererType::PY_JINJA
+                                    : RendererType::CPP_TOKENIZER;
 #else
     RendererType rendererType = RendererType::CPP_TOKENIZER;
 #endif
