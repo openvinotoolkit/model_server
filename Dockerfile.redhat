@@ -417,11 +417,10 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
 
 ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PATH="$PATH:/ovms/bin"
-# When espeak-ng is built into the OVMS release, the libespeak-ng.so loaded
-# at runtime needs to locate its data tables. They are shipped under
-# /ovms/share/espeak-ng-data; point espeak-ng at that location explicitly so
-# we do not depend on any system /usr/share/espeak-ng-data.
-ENV ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data
+# When espeak-ng data is present in the package, point runtime to it.
+# Keep this conditional to avoid exporting a non-existent path when
+# espeak support is disabled.
+ENTRYPOINT ["/bin/bash", "-c", "if [ -d /ovms/share/espeak-ng-data ]; then export ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data; fi; exec /ovms/bin/ovms \"$@\"", "--"]
 
 COPY --from=pkg /ovms_release /ovms
 COPY --from=pkg /usr/local/lib/python3.12/site-packages/jinja2 /ovms/python_deps/jinja2
@@ -431,4 +430,3 @@ COPY --from=pkg /usr/local/lib64/python3.12/site-packages/markupsafe /ovms/pytho
 
 COPY --from=pkg /licenses /licenses
 USER ovms
-ENTRYPOINT ["/ovms/bin/ovms"]

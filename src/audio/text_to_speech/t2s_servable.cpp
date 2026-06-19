@@ -89,9 +89,10 @@ static ov::Tensor readSpeakerEmbedding(const std::filesystem::path& filePath, co
 }
 
 TtsServable::TtsServable(const std::string& modelDir, const std::string& targetDevice, const google::protobuf::RepeatedPtrField<mediapipe::T2sCalculatorOptions_SpeakerEmbeddings>& graphVoices, const std::string& pluginConfig, const std::string& graphPath) {
+    const std::filesystem::path graphDir = std::filesystem::path(graphPath).parent_path();
     auto fsModelsPath = std::filesystem::path(modelDir);
     if (fsModelsPath.is_relative()) {
-        parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
+        parsedModelsPath = graphDir / fsModelsPath;
     } else {
         parsedModelsPath = fsModelsPath;
     }
@@ -106,7 +107,7 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
     for (const auto& voice : graphVoices) {
         std::filesystem::path voicePath(voice.path());
         if (voicePath.is_relative()) {
-            voicePath = std::filesystem::path(graphPath) / voicePath;
+            voicePath = graphDir / voicePath;
         }
         if (!std::filesystem::exists(voicePath))
             throw std::runtime_error{"Requested voice speaker embeddings file does not exist: " + voicePath.string()};
