@@ -520,7 +520,7 @@ bool OpenAIApiHandler::isStream() const { return request.stream; }
 Endpoint OpenAIApiHandler::getEndpoint() const { return endpoint; }
 std::string OpenAIApiHandler::getModel() const { return request.model; }
 std::string OpenAIApiHandler::getToolChoice() const { return request.toolChoice; }
-const std::unique_ptr<OutputParser>& OpenAIApiHandler::getOutputParser() const { return outputParser; }
+const std::shared_ptr<OutputParser>& OpenAIApiHandler::getOutputParser() const { return outputParser; }
 
 void OpenAIApiHandler::setPromptTokensUsage(size_t promptTokens) {
     usage.promptTokens = promptTokens;

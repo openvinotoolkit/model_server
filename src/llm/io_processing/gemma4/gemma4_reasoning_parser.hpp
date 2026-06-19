@@ -38,7 +38,7 @@ public:
     explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer) :
         Qwen3ReasoningParser(tokenizer) {}
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 
     bool requiresStreamingWithSpecialTokens() const override {
         return true;
