@@ -52,7 +52,7 @@ libopenvino_hetero_plugin.so
 libopenvino_intel_cpu_plugin.so
 libopenvino_intel_gpu_plugin.so
 libopenvino_intel_npu_plugin.so
-libopenvino_ir_frontend.so.2026.2.0
+libopenvino_ir_frontend.so.2026.2.1
 libopenvino_ir_frontend.so.2621->libopenvino_ir_frontend.so.2026.2.1
 libopenvino_jax_frontend.so->libopenvino_jax_frontend.so.2621
 libopenvino_jax_frontend.so.2026.2.1
