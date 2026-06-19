@@ -22,6 +22,7 @@ if (Test-Path "$env:OVMS_DIR\python") {
 } else {
     $env:PATH="$env:PATH;$env:OVMS_DIR"
 }
+if (Test-Path "$env:OVMS_DIR\espeak-ng-data") {
     $env:ESPEAK_DATA_PATH="$env:OVMS_DIR\espeak-ng-data"
 }
 echo "OpenVINO Model Server Environment Initialized"
