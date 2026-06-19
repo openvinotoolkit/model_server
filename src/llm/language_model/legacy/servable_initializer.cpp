@@ -57,7 +57,7 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
 
     if (nodeOptions.has_tool_parser()) {
         properties->toolParserName = nodeOptions.tool_parser();
-        if (!isSupportedToolParserName(properties->toolParserName)) {
+        if (!properties->toolParserName.empty() && !isSupportedToolParserName(properties->toolParserName)) {
             SPDLOG_ERROR("Unsupported tool_parser \"{}\" specified in graph configuration. Supported tool parsers are: {}",
                 properties->toolParserName, getSupportedToolParserNamesAsString());
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
@@ -66,7 +66,7 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
 
     if (nodeOptions.has_reasoning_parser()) {
         properties->reasoningParserName = nodeOptions.reasoning_parser();
-        if (!isSupportedReasoningParserName(properties->reasoningParserName)) {
+        if (!properties->reasoningParserName.empty() && !isSupportedReasoningParserName(properties->reasoningParserName)) {
             SPDLOG_ERROR("Unsupported reasoning_parser \"{}\" specified in graph configuration. Supported reasoning parsers are: {}",
                 properties->reasoningParserName, getSupportedReasoningParserNamesAsString());
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;

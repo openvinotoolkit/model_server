@@ -2870,4 +2870,17 @@ TEST(OvmsGraphCliParserTest, validParserNamesAreAccepted) {
     EXPECT_EQ(graphSettings.reasoningParser.value(), "qwen3");
 }
 
+TEST(OvmsGraphCliParserTest, emptyParserNamesAreAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "", "--reasoning_parser", ""};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.toolParser.has_value());
+    EXPECT_EQ(graphSettings.toolParser.value(), "");
+    ASSERT_TRUE(graphSettings.reasoningParser.has_value());
+    EXPECT_EQ(graphSettings.reasoningParser.value(), "");
+}
+
 #pragma GCC diagnostic pop
