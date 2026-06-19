@@ -144,19 +144,19 @@ public:
                 auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before generation");
                 if (!disconnectStatus.ok())
                     return disconnectStatus;
-                std::optional<ov::Tensor> speakerEmbedding;
+                const ov::Tensor* speakerEmbedding = nullptr;
                 ov::AnyMap properties{{"language", language}, {"speed", speed}};
                 if (voiceName.has_value()) {
                     auto speakerIt = pipe->voices.find(voiceName.value());
                     if (speakerIt != pipe->voices.end()) {
-                        speakerEmbedding.emplace(speakerIt->second);
+                        speakerEmbedding = &speakerIt->second;
                     } else {
                         // SpeechT5 and other models only support pre-loaded speaker embeddings
                         return absl::InvalidArgumentError(absl::StrCat("Requested voice '", voiceName.value(), "' not found in available voices"));
                     }
                 }
-                if (speakerEmbedding.has_value()) {
-                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), speakerEmbedding.value(), properties);
+                if (speakerEmbedding != nullptr) {
+                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), *speakerEmbedding, properties);
                 } else {
                     generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), ov::Tensor(), properties);
                 }
