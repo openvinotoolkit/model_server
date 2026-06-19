@@ -265,12 +265,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             return status;
         }
     }
-    if (jsonChanged) {
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        request.processedJson = buffer.GetString();
-    }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed messages successfully");
     return absl::OkStatus();
 }

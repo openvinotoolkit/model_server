@@ -37,6 +37,7 @@
 #include "apis/openai_responses.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
+#include <variant>
 #include "../tokenize/tokenize_parser.hpp"
 
 namespace ovms {
@@ -45,23 +46,11 @@ namespace {
 
 #if (PYTHON_DISABLE != 0)
 absl::Status applyTokenizerChatTemplate(
-    const std::shared_ptr<GenAiServableExecutionContext>& executionContext,
+    const CppPath& cppPath,
     const std::shared_ptr<GenAiServableProperties>& properties,
     std::string& inputText) {
-    ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
-    constexpr bool addGenerationPrompt = true;
-    auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
-    if (!toolsStatus.ok()) {
-        return toolsStatus.status();
-    }
-    const auto& tools = toolsStatus.value();
-    auto chatTemplateKwargsStatus = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-    if (!chatTemplateKwargsStatus.ok()) {
-        return chatTemplateKwargsStatus.status();
-    }
-    const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
     try {
-        inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+        inputText = properties->tokenizer.apply_chat_template(cppPath.chatHistory.get(), cppPath.addGenerationPrompt, {}, cppPath.tools, cppPath.chatTemplateKwargs);
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
         return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
@@ -70,6 +59,19 @@ absl::Status applyTokenizerChatTemplate(
 }
 #endif
 
+
+#if (PYTHON_DISABLE == 0)
+absl::Status applyPythonChatTemplate(
+    const PyPath& pyPath,
+    const std::shared_ptr<GenAiServableProperties>& properties,
+    std::string& inputText) {
+    bool success = PyJinjaTemplateProcessor::applyChatTemplate(properties->templateProcessor, properties->modelsPath, pyPath.processedJson.get(), inputText);
+    if (!success) {
+        return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+    }
+    return absl::OkStatus();
+}
+#endif
 absl::Status detectImplicitReasoningStartIfNeeded(
     const std::shared_ptr<GenAiServableExecutionContext>& executionContext,
     const std::string& inputText) {
@@ -84,17 +86,28 @@ absl::Status buildChatCompletionsInputText(
     const std::shared_ptr<GenAiServableProperties>& properties,
     std::string& inputText) {
 #if (PYTHON_DISABLE == 0)
-    bool success;
-    if (executionContext->apiHandler->getProcessedJson().size() > 0) {
-        success = PyJinjaTemplateProcessor::applyChatTemplate(properties->templateProcessor, properties->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
-    } else {
-        success = PyJinjaTemplateProcessor::applyChatTemplate(properties->templateProcessor, properties->modelsPath, executionContext->payload.body, inputText);
+    auto canonicalRequest = executionContext->apiHandler->getCanonicalRequest(RendererType::PY_JINJA);
+    if (!canonicalRequest.ok()) {
+        return canonicalRequest.status();
     }
-    if (!success) {
-        return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+    const auto* pyPath = std::get_if<PyPath>(canonicalRequest.value());
+    if (pyPath == nullptr) {
+        return absl::InternalError("Canonical request path mismatch for Python renderer");
+    }
+    auto status = applyPythonChatTemplate(*pyPath, properties, inputText);
+    if (!status.ok()) {
+        return status;
     }
 #else
-    auto status = applyTokenizerChatTemplate(executionContext, properties, inputText);
+    auto canonicalRequest = executionContext->apiHandler->getCanonicalRequest(RendererType::CPP_TOKENIZER);
+    if (!canonicalRequest.ok()) {
+        return canonicalRequest.status();
+    }
+    const auto* cppPath = std::get_if<CppPath>(canonicalRequest.value());
+    if (cppPath == nullptr) {
+        return absl::InternalError("Canonical request path mismatch for C++ renderer");
+    }
+    auto status = applyTokenizerChatTemplate(*cppPath, properties, inputText);
     if (!status.ok()) {
         return status;
     }
@@ -109,29 +122,46 @@ absl::Status buildResponsesInputText(
     const std::shared_ptr<GenAiServableExecutionContext>& executionContext,
     const std::shared_ptr<GenAiServableProperties>& properties,
     std::string& inputText) {
-    if (executionContext->apiHandler->getChatHistory().size() > 0) {
 #if (PYTHON_DISABLE == 0)
-        bool success = PyJinjaTemplateProcessor::applyChatTemplate(properties->templateProcessor, properties->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
-        if (!success) {
-            return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+    auto canonicalRequest = executionContext->apiHandler->getCanonicalRequest(RendererType::PY_JINJA);
+    if (!canonicalRequest.ok()) {
+        return canonicalRequest.status();
+    }
+    const auto* pyPath = std::get_if<PyPath>(canonicalRequest.value());
+    if (pyPath == nullptr) {
+        return absl::InternalError("Canonical request path mismatch for Python renderer");
+    }
+    auto status = applyPythonChatTemplate(*pyPath, properties, inputText);
+    if (!status.ok()) {
+        return status;
         }
 #else
-        auto status = applyTokenizerChatTemplate(executionContext, properties, inputText);
+    auto canonicalRequest = executionContext->apiHandler->getCanonicalRequest(RendererType::CPP_TOKENIZER);
+    if (!canonicalRequest.ok()) {
+        return canonicalRequest.status();
+    }
+    const auto* cppPath = std::get_if<CppPath>(canonicalRequest.value());
+    if (cppPath == nullptr) {
+        return absl::InternalError("Canonical request path mismatch for C++ renderer");
+    }
+    if (cppPath->chatHistory.get().size() > 0) {
+        auto status = applyTokenizerChatTemplate(*cppPath, properties, inputText);
         if (!status.ok()) {
             return status;
         }
-#endif
-        if (inputText.size() == 0) {
-            return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
+    } else {
+        auto prompt = cppPath->rawPrompt;
+        if (!prompt.has_value()) {
+            return absl::Status(absl::StatusCode::kInvalidArgument, "input is missing");
         }
-        return detectImplicitReasoningStartIfNeeded(executionContext, inputText);
+        inputText = prompt.value();
+        return absl::OkStatus();
     }
-    auto prompt = executionContext->apiHandler->getPrompt();
-    if (!prompt.has_value()) {
-        return absl::Status(absl::StatusCode::kInvalidArgument, "input is missing");
+#endif
+    if (inputText.size() == 0) {
+        return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
     }
-    inputText = prompt.value();
-    return absl::OkStatus();
+    return detectImplicitReasoningStartIfNeeded(executionContext, inputText);
 }
 
 absl::Status buildInputTextForEndpoint(

@@ -348,11 +348,9 @@ absl::Status OpenAIApiHandler::parseTools() {
             return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
         }
     }
-    bool jsonChanged = false;
     if (toolChoice == "none") {
         // remove tools from the request
         doc.RemoveMember("tools");
-        jsonChanged = true;
     }
     auto it = doc.FindMember("tools");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
@@ -405,7 +403,6 @@ absl::Status OpenAIApiHandler::parseTools() {
             // If toolChoice is set to a specific function name, we keep only that tool
             if (toolChoice != "auto" && toolChoice != "required" && toolChoice != functionName) {
                 it->value.Erase(&obj);
-                jsonChanged = true;
                 continue;
             }
 
@@ -430,12 +427,6 @@ absl::Status OpenAIApiHandler::parseTools() {
     }
 
     request.toolChoice = toolChoice;
-    if (jsonChanged) {
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        request.processedJson = buffer.GetString();
-    }
     return absl::OkStatus();
 }
 
@@ -511,7 +502,7 @@ absl::StatusOr<const CanonicalRequest*> OpenAIApiHandler::getCanonicalRequest(Re
 const std::string& OpenAIApiHandler::getProcessedJson() const {
     auto canonicalRequest = getCanonicalRequest(RendererType::PY_JINJA);
     if (canonicalRequest.ok()) {
-        const auto* pyPath = std::get_if<PyPath>(*canonicalRequest.value());
+        const auto* pyPath = std::get_if<PyPath>(canonicalRequest.value());
         if (pyPath != nullptr) {
             return pyPath->processedJson.get();
         }

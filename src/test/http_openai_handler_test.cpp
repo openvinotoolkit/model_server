@@ -897,9 +897,8 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquiva
     auto apiHandler = parseCurrentRequest(json);
     ASSERT_NE(apiHandler, nullptr);
 
-    // For Responses, processedJson is always built from chatHistory.
-    // For chat/completions with simple text, processedJson is empty (original body is used instead).
-    // In both cases, the chatHistory should be equivalent.
+    // Canonical PyPath provides processedJson lazily for both endpoints.
+    // In all cases, chatHistory should stay equivalent to parsed input.
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 1);
     EXPECT_EQ(chatHistory[0]["role"], "user");
@@ -907,7 +906,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquiva
 
 #if (PYTHON_DISABLE == 0)
     if (endpoint() == ovms::Endpoint::RESPONSES) {
-        // Responses path builds processedJson with messages array
+        // Responses canonical path builds processedJson with messages array.
         const std::string& processedJson = apiHandler->getProcessedJson();
         ASSERT_FALSE(processedJson.empty()) << "Responses should build processedJson";
         // Verify it contains a messages array with the correct content
