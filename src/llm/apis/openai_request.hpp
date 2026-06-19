@@ -41,7 +41,6 @@ struct StreamOptions {
 // Class that maps OpenAI request content.
 struct OpenAIRequest {
     ov::genai::ChatHistory chatHistory;
-    std::string processedJson;
     ImageHistory imageHistory;
     std::optional<std::string> prompt{std::nullopt};
     bool stream{false};

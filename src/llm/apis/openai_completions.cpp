@@ -289,11 +289,6 @@ absl::StatusOr<CanonicalRequest> OpenAIChatCompletionsHandler::buildCanonicalReq
         return CanonicalRequest(std::move(cppPath));
     }
 
-    if (request.processedJson.size() > 0) {
-        PyPath pyPath{std::cref(request.processedJson)};
-        return CanonicalRequest(std::move(pyPath));
-    }
-
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);

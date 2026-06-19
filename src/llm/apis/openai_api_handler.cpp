@@ -507,7 +507,8 @@ const std::string& OpenAIApiHandler::getProcessedJson() const {
             return pyPath->processedJson.get();
         }
     }
-    return request.processedJson;
+    static const std::string EMPTY_JSON{};
+    return EMPTY_JSON;
 }
 
 const ImageHistory& OpenAIApiHandler::getImageHistory() const {
