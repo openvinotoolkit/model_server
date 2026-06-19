@@ -1,4 +1,4 @@
-#
+
 # Copyright (c) 2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,11 @@
 # limitations under the License.
 #
 
-import base64
+# pylint: disable=arguments-renamed
+# pylint: disable=super-init-not-called
+# pylint: disable=too-many-positional-arguments
+# pylint: disable=unused-argument
+
 import json
 import os
 import re
@@ -174,13 +178,13 @@ class BinaryDummyModelDataset(ModelDataset):
         data = self.get_source_data(shape)
         fname = f'generated_ones_{"x".join([str(x) for x in shape])}.{img_format.lower()}'
         os.makedirs(tmp_file_location, exist_ok=True)
-        cv2.imwrite(os.path.join(tmp_file_location, fname), data)
+        cv2.imwrite(os.path.join(tmp_file_location, fname), data)       # pylint: disable=no-member
         return load_image_data_from_path(os.path.join(tmp_file_location, fname), img_format)
 
 
 @dataclass
 class DefaultBinaryDataset(ModelDataset):
-    _saved_labels_to_path_mapping: str = None
+    _saved_labels_to_path_mapping: dict = None
     image_format: str = None
     image_mode: str = None
     max_num_of_images: int = None
@@ -192,7 +196,7 @@ class DefaultBinaryDataset(ModelDataset):
     def _get_image_label_mapping(self):
         image_list_path = self.get_path()
         image_labels = {}
-        with open(image_list_path, "r") as f:
+        with open(image_list_path, "r", encoding="utf-8") as f:
             for line in f.readlines():
                 path, label = line.strip().split(" ")
                 image_labels[path] = label
@@ -204,7 +208,7 @@ class DefaultBinaryDataset(ModelDataset):
         i = 0
         images = []
         size = shape[-2:] if reshape else None
-        for path, label in labels_to_path_mapping.items():
+        for path, _ in labels_to_path_mapping.items():
             i += 1
             if i <= self.offset:
                 continue

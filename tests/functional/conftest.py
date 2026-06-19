@@ -54,9 +54,9 @@ logger = get_logger(__name__)
 
 if enable_pytest_plugins:
 
-    raise NotImplementedError("OVMS tests not enabled")
+    # raise NotImplementedError("OVMS tests not enabled")
 
-    pytest_plugins = [
+    pytest_plugins = [      # pylint: disable=unreachable
         "tests.functional.fixtures.ovms",
         "tests.functional.fixtures.server",
         "tests.functional.fixtures.api_type",
@@ -119,7 +119,7 @@ if enable_pytest_plugins:
                 hooks.teardown_environment()
                 if machine_is_reserved_for_test_session:
                     hooks.clear_lockfiles()
-        except Exception as e:
+        except Exception as e:      # pylint: disable=broad-exception-caught
             error_msg = str(e)
             print(error_msg)
             sys.exit(error_msg)
@@ -134,7 +134,7 @@ if enable_pytest_plugins:
 
 
 def pytest_sessionstart(session):
-    logger.info("Starting test session in the following folder: {}".format(session.startdir))
+    logger.info(f"Starting test session in the following folder: {session.startdir}")
     log_configuration_variables()
     session.start_time = time.time()
 
@@ -146,7 +146,7 @@ def pytest_collection_modifyitems(session, config, items):
     Support for running tests with component tags.
     Report all test component markers to mongo_reporter.
     """
-    logger.info("Preparing tests for test session in the following folder: {}".format(session.startdir))
+    logger.info(f"Preparing tests for test session in the following folder: {session.startdir}")
 
     if pytest_keyword_filter:
         # Filter case insensitive
@@ -170,7 +170,7 @@ def pytest_collection_modifyitems(session, config, items):
 
 # https://docs.pytest.org/en/6.2.x/reference.html#id58
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
-def pytest_runtest_protocol(item: "Item", nextitem: "Optional[Item]"):
+def pytest_runtest_protocol(item: "Item"):
     """
     Perform the runtest protocol for a single test item.
     The default runtest protocol is this (see individual hooks for full details):

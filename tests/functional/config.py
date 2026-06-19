@@ -65,10 +65,6 @@ test_dir = os.environ.get("TEST_DIR", "/tmp/{}".format(generate_test_object_name
 """TEST_DIR_CACHE -  location where models and test data should be downloaded to and serve as cache for TEST_DIR"""
 test_dir_cache = os.environ.get("TEST_DIR_CACHE", "/tmp/ovms_models_cache")
 
-"""TEST_DIR_CLEANUP - if set to True, TEST_DIR directory will be removed after tests execution"""
-test_dir_cleanup = os.environ.get("TEST_DIR_CLEANUP", "True")
-test_dir_cleanup = test_dir_cleanup.lower() == "true"
-
 """ TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
 ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
 
@@ -327,6 +323,11 @@ performance_test_timeout_minutes = get_int("TT_PERFORMANCE_TEST_TIMEOUT_MINUTES"
 """
 __base_os = os.environ.get("BASE_OS", OsType.Ubuntu24)
 base_os = get_list("TT_BASE_OS", fallback=[__base_os])
+
+"""" BASE_IMAGE - Docker image used during OVMS image creation"""
+base_image = os.environ.get("BASE_IMAGE", None)
+if base_image is not None:
+    assert len(base_os) == 1, "If you wish to iterate by TT_BASE_OS: do not set BASE_IMAGE explicitly."
 
 """ GLOBAL_TEMP_DIR - global temporary directory """
 global_tmp_dir_default = os.path.join("~", "AppData", "Local", "Temp") if OsType.Windows in base_os else "/tmp"

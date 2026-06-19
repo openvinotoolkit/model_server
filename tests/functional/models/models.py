@@ -14,13 +14,16 @@
 # limitations under the License.
 #
 
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-public-methods
+# pylint: disable=unused-argument
+
 import json
 import math
 import os
 import shutil
 import stat
 from dataclasses import dataclass
-from distutils.dir_util import copy_tree, remove_tree
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -228,7 +231,7 @@ class ModelInfo:
             for input_name, shape in input_shape.items():
                 if isinstance(shape, str):
                     result[input_name] = shape
-                elif isinstance(shape, list) or isinstance(shape, tuple):
+                elif isinstance(shape, (list, tuple)):
                     shape_dims_str = f"{','.join([str(shape_dim) for shape_dim in shape])}"
                     result[input_name] = f"({shape_dims_str})"
             self.input_shape_for_ovms = result
@@ -297,7 +300,7 @@ class ModelInfo:
         return self.base_path
 
     def prepare_input_data(self, batch_size=None, random_data=False, input_key=None):
-        result = dict()
+        result = {}
         for input_name, input_data in self.inputs.items():
             if batch_size is not None:
                 input_data["shape"][0] = batch_size
@@ -313,7 +316,7 @@ class ModelInfo:
         return result
 
     def prepare_input_data_from_model_datasets(self, batch_size=None):
-        result = dict()
+        result = {}
         for param_name, param_data in self.inputs.items():
             if batch_size is None:
                 batch_size = self.get_expected_batch_size() if self.batch_size is None else self.batch_size
@@ -342,7 +345,7 @@ class ModelInfo:
             model = self
             if self.inputs is None:
                 model = self.clone()
-            if not any([v["shape"] for v in model.inputs.values()]):
+            if not any(v["shape"] for v in model.inputs.values()):
                 return Ovms.SCALAR_BATCH_SIZE
 
             return [v["shape"] for v in model.inputs.values()][0][0]
@@ -373,7 +376,7 @@ class ModelInfo:
         if model_path_on_host is not None:
             clone.model_path_on_host = model_path_on_host
 
-        copy_tree(self.model_path_on_host, clone.model_path_on_host)
+        shutil.copytree(self.model_path_on_host, clone.model_path_on_host, dirs_exist_ok=True)
         return clone
 
     # REMOTE_SERVER_ADDRESS is not pre-defined, but set "on the fly" in our tests (prepare_remote_k8s_cluster_data),
@@ -412,10 +415,10 @@ class ModelInfo:
 
     def delete(self, container_folder, model_name=None):
         model_name = model_name if model_name is not None else self.name
-        remove_tree(os.path.join(container_folder, Paths.MODELS_PATH_NAME, model_name))
+        shutil.rmtree(os.path.join(container_folder, Paths.MODELS_PATH_NAME, model_name))
 
     def delete_version(self, container_folder):
-        remove_tree(os.path.join(container_folder, Paths.MODELS_PATH_NAME, self.name, str(self.version)))
+        shutil.rmtree(os.path.join(container_folder, Paths.MODELS_PATH_NAME, self.name, str(self.version)))
 
     def restore_input_names(self):
         model = self.clone()
@@ -483,7 +486,8 @@ class ModelInfo:
             else:
                 src_model_path = Path(self.model_path_on_host)
                 # model_name/version_num
-                model_subpath = src_model_path.parts[-2:] if self.model_subpath is None else Path(self.model_subpath).parts
+                model_subpath = src_model_path.parts[-2:] if self.model_subpath is None else \
+                    Path(self.model_subpath).parts
                 target_model_dir = Path(resource_destination, *model_subpath)
             if not os.path.exists(target_model_dir):
                 logger.debug(f"Copying {self.name} to container: {target_model_dir}")
@@ -513,13 +517,13 @@ class ModelInfo:
 
     def change_input_layout(self, new_layout):
         new_layout = new_layout.split(":")[0] if ":" in new_layout else new_layout
-        for input_name, val in self.inputs.items():
+        for _, val in self.inputs.items():
             s = val["shape"]
             new_shape = [s[0], s[2], s[3], s[1]]
             val["shape"] = new_shape
 
-    def change_input_type(self, input, type):
-        self.inputs[input]["dtype"] = type
+    def change_input_type(self, input_name, dtype):
+        self.inputs[input_name]["dtype"] = dtype
 
     def get_regular_models(self):
         return [self]
@@ -570,7 +574,7 @@ class ModelInfo:
 
     @input_shapes.setter
     def input_shapes(self, shape):
-        for k, v in self.inputs.items():
+        for _, v in self.inputs.items():
             v["shape"] = shape
 
     @property
@@ -579,7 +583,7 @@ class ModelInfo:
 
     @input_layouts.setter
     def input_layouts(self, layout):
-        for k, v in self.inputs.items():
+        for _, v in self.inputs.items():
             v["layout"] = layout
 
     @property

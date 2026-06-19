@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from huggingface_hub import HfApi, snapshot_download
 
 from tests.functional.config import huggingface_token
+from tests.functional.utils.assertions import OVHfDownloadException
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import get_dir_latest_mtime, remove_dir_tree, swap_directory
 
@@ -29,7 +30,7 @@ class OVHfDownloader:
 
     def __init__(self, model_type, model_base_path=None):
         if not huggingface_token:
-            raise Exception(
+            raise OVHfDownloadException(
                 "Provide huggingfacace_token with TT_HUGGINGFACE_TOKEN or TT_HUGGINGFACE_TOKEN_FILE_PATH envs"
             )
         self.api = HfApi(token=huggingface_token)

@@ -14,6 +14,7 @@ paramiko==5.0.0
 Pillow==12.2.0
 protobuf==7.35.1
 psutil==7.2.2
+pylint==4.0.6
 pytest==9.1.0
 pytest-timeout==2.4.0
 pytest-xdist==3.8.0

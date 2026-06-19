@@ -24,4 +24,4 @@ class ModelsLibrary:
         return [Qwen3Embedding06BFp16OvHf]
 
 
-ModelsLib = ModelsLibrary()
+ModelsLib = ModelsLibrary()     # pylint: disable=invalid-name

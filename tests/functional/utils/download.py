@@ -29,7 +29,7 @@ def wget_item(dst, cmd):
     proc.set_log_silence()
     proc.policy["log-check-output"]["stderr"] = False
 
-    with SelfDeletingFileLock(f"{dst}.lock", self_delete=True) as fl:
+    with SelfDeletingFileLock(f"{dst}.lock", self_delete=True) as _:
         proc.run_and_check(cmd)
 
 
@@ -45,7 +45,7 @@ def curl_file(url, dst, user, token):
     proc = Process()
     proc.set_log_silence()
     proc.policy["log-check-output"]["stderr"] = False
-    with SelfDeletingFileLock(f"{dst}.lock", self_delete=True) as fl:
+    with SelfDeletingFileLock(f"{dst}.lock", self_delete=True) as _:
         proc.run_and_check(cmd)
 
 

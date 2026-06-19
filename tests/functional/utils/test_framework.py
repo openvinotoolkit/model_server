@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+# pylint: disable=deprecated-argument
+# pylint: disable=too-many-positional-arguments
+
 import os
 import re
 import shutil

@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+# pylint: disable=too-many-positional-arguments
+
 import pytest
 
 from tests.functional.models.models_library import ModelsLib

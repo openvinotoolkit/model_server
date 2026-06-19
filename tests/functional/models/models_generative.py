@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+# pylint: disable=arguments-renamed
+# pylint: disable=too-many-instance-attributes
+
 import os
 import shutil
 
@@ -114,8 +117,7 @@ class RerankModel(GenerativeModel):
     is_rerank: bool = True
     use_subconfig: bool = True
 
-    @staticmethod
-    def get_default_dataset():
+    def get_default_dataset(self):
         return RerankModelDataset
 
 
@@ -170,7 +172,7 @@ class GenerativeModelHuggingFace(GenerativeModel):
         if dataset is not None:
             dataset_obj = dataset if not isinstance(dataset, type) else dataset()
         else:
-            dataset_obj = self.get_default_dataset()()
+            dataset_obj = self.get_default_dataset()()  # pylint: disable=not-callable
         if input_data_type == "string":
             input_data = {self.input_name: dataset_obj.get_string_data()}
         else:

@@ -15,6 +15,7 @@
 #
 
 # pylint: disable=too-many-nested-blocks
+# pylint: disable=too-many-positional-arguments
 # pylint: disable=unused-argument
 
 import base64

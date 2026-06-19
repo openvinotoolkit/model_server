@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-positional-arguments
+
 from openai import NotFoundError
 
 from tests.functional.config import (
