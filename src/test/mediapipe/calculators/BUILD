@@ -96,3 +96,33 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+# Standalone smoke test: decode video with GStreamer + infer with OV directly
+# Run with:
+#   bazel run //src/test/mediapipe/calculators:video_decode_infer_test \
+#     -- /path/to/video.avi /path/to/model.xml
+cc_binary(
+    name = "video_decode_infer_test",
+    srcs = ["video_decode_infer_test.cpp"],
+    copts = COPTS_ADJUSTED,
+    deps = [
+        "//src/mpi:intel_mpi",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "video_decode_infer_calculator",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = ["video_decode_infer_calculator.cc"],
+    copts = COPTS_ADJUSTED,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+

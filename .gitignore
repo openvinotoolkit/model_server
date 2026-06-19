@@ -28,6 +28,7 @@ cppclean_test
 tags
 .venv-style/
 src/test/llm_testing
+gstreamer_task/
 node_modules/
 yarn.*
 out

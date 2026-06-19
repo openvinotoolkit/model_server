@@ -41,23 +41,15 @@ IF "%~3"=="--with_tests" (
     set "buildTargets=//src:ovms"
 )
 
-IF "%~4"=="--integrity" (
-    echo Building model server with integrity checks
-    set "buildWithIntegrity=--config=win_integritycheck"
-) ELSE (
-    echo Building model server without integrity checks
-    set "buildWithIntegrity="
-)
-
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 
-set "buildCommand=bazel %bazelStartupCmd% build  %buildWithIntegrity% %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
+set "buildCommand=bazel %bazelStartupCmd% build  %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=4 --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
 set "setOvmsVersionCmd=python windows_set_ovms_version.py"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\Program Files\gstreamer\1.0\msvc_x86_64\bin;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
 set "envPath=win_environment.log"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"

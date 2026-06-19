@@ -122,6 +122,22 @@ new_local_repository(
     build_file = "@//third_party/boringssl:BUILD",
 )
 
+# GStreamer — built from source in gstreamer-builder Docker stage.
+# Installed to /opt/gstreamer (self-contained: GStreamer + glib headers).
+# Linux: dlopen at runtime (no DT_NEEDED), headers-only for compile.
+# Windows: pre-built installer from gstreamer.freedesktop.org/data/pkg/windows/.
+new_local_repository(
+    name = "linux_gstreamer",
+    path = "/opt/gstreamer",
+    build_file = "@//third_party/gstreamer:gstreamer_linux.BUILD",
+)
+
+new_local_repository(
+    name = "windows_gstreamer",
+    path = "C:\\gstreamer\\1.0\\msvc_x86_64",
+    build_file = "@//third_party/gstreamer:gstreamer_windows.BUILD",
+)
+
 new_local_repository(
     name = "linux_curl",
     path = "/usr/",
