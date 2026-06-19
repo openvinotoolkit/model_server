@@ -20,8 +20,7 @@ from pathlib import Path
 
 from tests.functional.constants.os_type import OsType
 from tests.functional.constants.ovms_type import OvmsType
-from tests.functional.constants.target_device import TargetDevice
-from tests.functional.utils.core import TmpDir
+from tests.functional.utils.core import TmpDir, get_token_value
 from tests.functional.utils.helpers import (
     generate_test_object_name,
     get_bool,
@@ -92,7 +91,7 @@ datasets_path = get_path("TT_DATASETS_PATH", os.path.join("~", "ovms_datasets"))
 
 """ TT_GENERATIVE_MODELS_LOCAL_PATH - local path for converted generative models """
 generative_models_local_path = get_path(
-    "TT_GENERATIVE_MODELS_LOCAL_PATH", os.path.join(models_path, "generative_models_ovms")
+    "TT_GENERATIVE_MODELS_LOCAL_PATH", os.path.join(models_path, "generative_models")
 )
 
 """ TT_CLEAN_ARTIFACTS_DIR """
@@ -423,3 +422,11 @@ divide_target_device_per_worker = get_bool("TT_DIVIDE_TARGET_DEVICE_PER_WORKER",
 
 """ TT_PYTEST_KEYWORD_FILTER """
 pytest_keyword_filter = os.environ.get("TT_PYTEST_KEYWORD_FILTER", None)
+
+""" TT_HUGGINGFACE_TOKEN_FILE_PATH - path to file containing huggingface token """
+huggingface_token_file_path = get_path(
+    "TT_HUGGINGFACE_TOKEN_FILE_PATH", os.path.join("~", "ovms_tokens", "huggingface_token")
+)
+
+""" TT_HUGGINGFACE_TOKEN - huggingface token value. Env var takes priority, then file. """
+huggingface_token = os.environ.get("TT_HUGGINGFACE_TOKEN") or get_token_value(huggingface_token_file_path, "")

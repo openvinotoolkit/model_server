@@ -34,7 +34,6 @@ from tests.functional.utils.inference.serving.openai import OpenAIWrapper, OpenA
 from tests.functional.config import save_image_to_artifacts
 from tests.functional.config import artifacts_dir, pipeline_type
 from tests.functional.models.models_datasets import FeatureExtractionModelDataset
-from tests.functional.utils.generative_ai.utils import GenerativeAIUtils
 
 logger = get_logger(__name__)
 
@@ -558,6 +557,7 @@ class GenerativeAIValidationUtils:
         )
 
         if request_parameters is None:
+            from tests.functional.utils.generative_ai.utils import GenerativeAIUtils
             request_parameters = GenerativeAIUtils.prepare_request_params(OpenAIWrapper.EMBEDDINGS)
 
         def getter(text):

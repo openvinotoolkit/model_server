@@ -30,7 +30,7 @@ from _pytest.mark import Mark, MarkDecorator
 from _pytest.python import Function
 
 from tests.functional import config
-from tests.functional.models.models_library import ModelsLib
+from tests.functional.models.models_library import ModelsLib, ModelsLibrary
 from tests.functional.utils.download import wget_file
 from tests.functional.utils.reservation_manager.args import parse_args
 from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
@@ -54,6 +54,7 @@ from tests.functional.config import (
     req_ids,
     run_ovms_with_opencl_trace,
     run_ovms_with_valgrind,
+    target_devices,
     tests_priority_list,
     tmp_dir,
 )
@@ -99,6 +100,7 @@ from tests.functional.utils.marks import (
     MarkRunType,
     MarkTestParameters,
 )
+from tests.functional.utils.ov_hf_downloader import OVHfDownloader
 from tests.functional.utils.process import PID_STATE_ZOMBIE, Process, get_pid_name, get_pid_status
 from tests.functional.utils.test_framework import change_dir_permissions, get_test_object_prefix, is_xdist_master
 from tests.functional.object_model.ovsa import OvsaCerts
@@ -427,6 +429,26 @@ def prepare_ovms_package():
         setup_capi_wrapper(package_content)
 
 
+def get_models_to_download():
+    models_to_download = []
+    for various_models_name in [name for name, obj in vars(ModelsLibrary).items() if isinstance(obj, property)]:
+        various_models_value = getattr(ModelsLib, various_models_name)
+        if isinstance(various_models_value, dict):
+            for target_device in target_devices:
+                models_to_download.extend(various_models_value[target_device])
+        else:
+            models_to_download.extend(various_models_value)
+    return list(set(models_to_download))
+
+
+def download_models():
+    models_to_download = get_models_to_download()
+    for model_type in models_to_download:
+        if model_type.is_local:
+            ov_hf_downloader = OVHfDownloader(model_type)
+            ov_hf_downloader.check_and_update_hf_model()
+
+
 def get_docker_images(images_to_download):
     images_to_download.add(config.minio_image)
     for target_device, base_os in itertools.product(config.target_devices, config.base_os):
@@ -455,7 +477,7 @@ def download_docker_images():
 
 def download_resources_master():
     print("Download required resources")
-
+    download_models()
     download_docker_images()
 
 

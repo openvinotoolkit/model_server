@@ -54,7 +54,7 @@ class TestEmbeddings:
     def run_embeddings_endpoints_test(
             context: Context, model_type, openai_rest_api_type, endpoint, encoding_format, input_data_type
     ):
-        model, result, port, request_params = GenerativeAIUtils.prepare_llm_resources(
+        model, result, port, request_params = GenerativeAIUtils.prepare_resources(
             context,
             model_type,
             openai_rest_api_type,
@@ -72,7 +72,7 @@ class TestEmbeddings:
             request_parameters=request_params,
         )
 
-        GenerativeAIUtils.unload_llm_model_and_verify(
+        GenerativeAIUtils.unload_model_and_verify(
             model,
             result,
             port,

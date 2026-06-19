@@ -47,7 +47,7 @@ class SimplePythonCustomNodeMediaPipe(MediaPipe):
     def __init__(self, handler_path, node_name="upper_text", loopback=False, initialize_graphs=True, **kwargs):
         self.node_name = node_name
         self.config = {}
-        self.prepare_llm_model_inputs_outputs(model=self, dataset=LanguageModelDataset, kwargs=kwargs)
+        self.prepare_model_inputs_outputs(model=self, dataset=LanguageModelDataset, kwargs=kwargs)
 
         super().__init__(**kwargs)
         self.calculators = [
@@ -65,7 +65,7 @@ class SimplePythonCustomNodeMediaPipe(MediaPipe):
         self.handler_path = handler_path
 
     @staticmethod
-    def prepare_llm_model_inputs_outputs(model, dataset, **kwargs):
+    def prepare_model_inputs_outputs(model, dataset, **kwargs):
         inputs_number = kwargs.get("inputs_number", None)
         model.inputs_number = inputs_number if inputs_number is not None else model.inputs_number
         model.inputs = {
@@ -276,7 +276,7 @@ class SimpleGenerativeNode(SimplePythonCustomNodeMediaPipe):
         self.node_name = node_name
         self.config = {}
         dataset = model.get_default_dataset()
-        self.prepare_llm_model_inputs_outputs(model=self, dataset=dataset, kwargs=kwargs)
+        self.prepare_model_inputs_outputs(model=self, dataset=dataset, kwargs=kwargs)
 
         self.regular_models = []
         self.is_mediapipe = True
@@ -332,7 +332,7 @@ class SimpleImageGeneration(SimpleGenerativeNode):
         self.node_name = node_name
         self.config = {}
         dataset = model.get_default_dataset()
-        self.prepare_llm_model_inputs_outputs(model=self, dataset=dataset, kwargs=kwargs)
+        self.prepare_model_inputs_outputs(model=self, dataset=dataset, kwargs=kwargs)
 
         self.regular_models = []
         self.is_mediapipe = True
