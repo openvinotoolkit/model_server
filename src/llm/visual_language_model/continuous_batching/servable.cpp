@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "../../../config.hpp"
@@ -72,39 +73,36 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
     }
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
-        ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
+        auto canonicalRequest = vlmExecutionContext->apiHandler->getCanonicalRequest(RendererType::CPP_TOKENIZER);
+        if (!canonicalRequest.ok()) {
+            return canonicalRequest.status();
+        }
+        const auto* cppPath = std::get_if<CppPath>(canonicalRequest.value());
+        if (cppPath == nullptr) {
+            return absl::InternalError("Canonical request path mismatch for C++ renderer");
+        }
+        ov::genai::ChatHistory chatHistory = cppPath->chatHistory.get();
 
         auto restrictedTagStatus = vlm::rejectRestrictedImageTags(chatHistory);
         if (!restrictedTagStatus.ok()) {
             return restrictedTagStatus;
         }
 
-        const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
+        const ImageHistory& imageHistory = cppPath->imageHistory.get();
         auto imagePlacementStatus = vlm::injectImageTagsAndCollectTensors(chatHistory, imageHistory, vlmExecutionContext->inputImages);
         if (!imagePlacementStatus.ok()) {
             return imagePlacementStatus;
         }
 
-        constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
-        auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
-        if (!toolsStatus.ok()) {
-            return toolsStatus.status();
-        }
-        const auto& tools = toolsStatus.value();
-        auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-        if (!chatTemplateKwargsStatus.ok()) {
-            return chatTemplateKwargsStatus.status();
-        }
-        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
         if (llm_calculator_logger->should_log(spdlog::level::trace)) {
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory messages: {}", chatHistory.get_messages().to_json_string());
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory.get_tools(): {}", chatHistory.get_tools().to_json_string());
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory.get_extra_context(): {}", chatHistory.get_extra_context().to_json_string());
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM tools: {}", tools.has_value() ? tools->to_json_string() : std::string("<none>"));
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatTemplateKwargs: {}", chatTemplateKwargs.has_value() ? chatTemplateKwargs->to_json_string() : std::string("<none>"));
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM addGenerationPrompt: {}", addGenerationPrompt);
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM tools: {}", cppPath->tools.has_value() ? cppPath->tools->to_json_string() : std::string("<none>"));
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatTemplateKwargs: {}", cppPath->chatTemplateKwargs.has_value() ? cppPath->chatTemplateKwargs->to_json_string() : std::string("<none>"));
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM addGenerationPrompt: {}", cppPath->addGenerationPrompt);
         }
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, cppPath->addGenerationPrompt, {}, cppPath->tools, cppPath->chatTemplateKwargs);
         if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
             vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
         }

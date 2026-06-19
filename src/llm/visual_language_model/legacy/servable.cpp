@@ -19,6 +19,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "../../../logging.hpp"
@@ -281,31 +282,28 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
     }
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
-        ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
+        auto canonicalRequest = vlmExecutionContext->apiHandler->getCanonicalRequest(RendererType::CPP_TOKENIZER);
+        if (!canonicalRequest.ok()) {
+            return canonicalRequest.status();
+        }
+        const auto* cppPath = std::get_if<CppPath>(canonicalRequest.value());
+        if (cppPath == nullptr) {
+            return absl::InternalError("Canonical request path mismatch for C++ renderer");
+        }
+        ov::genai::ChatHistory chatHistory = cppPath->chatHistory.get();
 
         auto restrictedTagStatus = vlm::rejectRestrictedImageTags(chatHistory);
         if (!restrictedTagStatus.ok()) {
             return restrictedTagStatus;
         }
 
-        const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
+        const ImageHistory& imageHistory = cppPath->imageHistory.get();
         auto imagePlacementStatus = vlm::injectImageTagsAndCollectTensors(chatHistory, imageHistory, vlmExecutionContext->inputImages);
         if (!imagePlacementStatus.ok()) {
             return imagePlacementStatus;
         }
 
-        constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
-        auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
-        if (!toolsStatus.ok()) {
-            return toolsStatus.status();
-        }
-        const auto& tools = toolsStatus.value();
-        auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-        if (!chatTemplateKwargsStatus.ok()) {
-            return chatTemplateKwargsStatus.status();
-        }
-        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, cppPath->addGenerationPrompt, {}, cppPath->tools, cppPath->chatTemplateKwargs);
         if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
             vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
         }

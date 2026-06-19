@@ -82,15 +82,12 @@ absl::Status detectImplicitReasoningStartIfNeeded(
 }
 
 absl::Status buildChatCompletionsInputText(
+    const CanonicalRequest& canonicalRequest,
     const std::shared_ptr<GenAiServableExecutionContext>& executionContext,
     const std::shared_ptr<GenAiServableProperties>& properties,
     std::string& inputText) {
 #if (PYTHON_DISABLE == 0)
-    auto canonicalRequest = executionContext->apiHandler->getCanonicalRequest(RendererType::PY_JINJA);
-    if (!canonicalRequest.ok()) {
-        return canonicalRequest.status();
-    }
-    const auto* pyPath = std::get_if<PyPath>(canonicalRequest.value());
+    const auto* pyPath = std::get_if<PyPath>(&canonicalRequest);
     if (pyPath == nullptr) {
         return absl::InternalError("Canonical request path mismatch for Python renderer");
     }
@@ -99,11 +96,7 @@ absl::Status buildChatCompletionsInputText(
         return status;
     }
 #else
-    auto canonicalRequest = executionContext->apiHandler->getCanonicalRequest(RendererType::CPP_TOKENIZER);
-    if (!canonicalRequest.ok()) {
-        return canonicalRequest.status();
-    }
-    const auto* cppPath = std::get_if<CppPath>(canonicalRequest.value());
+    const auto* cppPath = std::get_if<CppPath>(&canonicalRequest);
     if (cppPath == nullptr) {
         return absl::InternalError("Canonical request path mismatch for C++ renderer");
     }
@@ -119,15 +112,12 @@ absl::Status buildChatCompletionsInputText(
 }
 
 absl::Status buildResponsesInputText(
+    const CanonicalRequest& canonicalRequest,
     const std::shared_ptr<GenAiServableExecutionContext>& executionContext,
     const std::shared_ptr<GenAiServableProperties>& properties,
     std::string& inputText) {
 #if (PYTHON_DISABLE == 0)
-    auto canonicalRequest = executionContext->apiHandler->getCanonicalRequest(RendererType::PY_JINJA);
-    if (!canonicalRequest.ok()) {
-        return canonicalRequest.status();
-    }
-    const auto* pyPath = std::get_if<PyPath>(canonicalRequest.value());
+    const auto* pyPath = std::get_if<PyPath>(&canonicalRequest);
     if (pyPath == nullptr) {
         return absl::InternalError("Canonical request path mismatch for Python renderer");
     }
@@ -136,11 +126,7 @@ absl::Status buildResponsesInputText(
         return status;
         }
 #else
-    auto canonicalRequest = executionContext->apiHandler->getCanonicalRequest(RendererType::CPP_TOKENIZER);
-    if (!canonicalRequest.ok()) {
-        return canonicalRequest.status();
-    }
-    const auto* cppPath = std::get_if<CppPath>(canonicalRequest.value());
+    const auto* cppPath = std::get_if<CppPath>(&canonicalRequest);
     if (cppPath == nullptr) {
         return absl::InternalError("Canonical request path mismatch for C++ renderer");
     }
@@ -165,17 +151,24 @@ absl::Status buildResponsesInputText(
 }
 
 absl::Status buildInputTextForEndpoint(
+    const CanonicalRequest& canonicalRequest,
     const std::shared_ptr<GenAiServableExecutionContext>& executionContext,
     const std::shared_ptr<GenAiServableProperties>& properties,
     std::string& inputText) {
     switch (executionContext->endpoint) {
     case Endpoint::CHAT_COMPLETIONS:
-        return buildChatCompletionsInputText(executionContext, properties, inputText);
+        return buildChatCompletionsInputText(canonicalRequest, executionContext, properties, inputText);
     case Endpoint::RESPONSES:
-        return buildResponsesInputText(executionContext, properties, inputText);
+        return buildResponsesInputText(canonicalRequest, executionContext, properties, inputText);
     case Endpoint::COMPLETIONS:
-        inputText = executionContext->apiHandler->getPrompt().value();
-        return absl::OkStatus();
+        if (const auto* cppPath = std::get_if<CppPath>(&canonicalRequest)) {
+            if (!cppPath->rawPrompt.has_value()) {
+                return absl::Status(absl::StatusCode::kInvalidArgument, "input is missing");
+            }
+            inputText = cppPath->rawPrompt.value();
+            return absl::OkStatus();
+        }
+        return absl::InternalError("Canonical request path mismatch for completions endpoint");
     case Endpoint::TOKENIZE:
         return absl::InternalError("Tokenize endpoint should not reach prepareInputs stage");
     }
@@ -341,13 +334,40 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
     }
 
+    auto cppCanonicalRequest = executionContext->apiHandler->getCanonicalRequest(RendererType::CPP_TOKENIZER);
+    if (!cppCanonicalRequest.ok()) {
+        return cppCanonicalRequest.status();
+    }
+    const auto* cppPath = std::get_if<CppPath>(cppCanonicalRequest.value());
+    if (cppPath == nullptr) {
+        return absl::InternalError("Canonical request path mismatch for C++ renderer");
+    }
+
     // Base servable cannot process images
-    if (executionContext->apiHandler->getImageHistory().size() > 0) {
+    if (cppPath->imageHistory.get().size() > 0) {
         return absl::InternalError("This servable supports only text input, but image_url has been provided");
     }
 
+#if (PYTHON_DISABLE == 0)
+    RendererType rendererType = (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES)
+        ? RendererType::PY_JINJA
+        : RendererType::CPP_TOKENIZER;
+#else
+    RendererType rendererType = RendererType::CPP_TOKENIZER;
+#endif
+    const CanonicalRequest* canonicalRequest = cppCanonicalRequest.value();
+#if (PYTHON_DISABLE == 0)
+    if (rendererType == RendererType::PY_JINJA) {
+        auto pyCanonicalRequest = executionContext->apiHandler->getCanonicalRequest(RendererType::PY_JINJA);
+        if (!pyCanonicalRequest.ok()) {
+            return pyCanonicalRequest.status();
+        }
+        canonicalRequest = pyCanonicalRequest.value();
+    }
+#endif
+
     std::string inputText;
-    auto inputTextStatus = buildInputTextForEndpoint(executionContext, properties, inputText);
+    auto inputTextStatus = buildInputTextForEndpoint(*canonicalRequest, executionContext, properties, inputText);
     if (!inputTextStatus.ok()) {
         return inputTextStatus;
     }
