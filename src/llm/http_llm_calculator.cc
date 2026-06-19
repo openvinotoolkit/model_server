@@ -212,8 +212,13 @@ public:
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
             }
         } catch (ov::AssertFailure& e) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed: {}", cc->NodeName(), e.what());
+            return handleGenerationError(cc, e.what());
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed: {}", cc->NodeName(), e.what());
             return handleGenerationError(cc, e.what());
         } catch (...) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed due to unknown error", cc->NodeName());
             return handleGenerationError(cc, "Response generation failed");
         }
         auto now = std::chrono::system_clock::now();

@@ -82,20 +82,25 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     }
 
     legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
-    if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
-        legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
-            legacyExecutionContext->endpoint,
-            std::chrono::system_clock::now(),
-            getProperties()->tokenizer,
-            getProperties()->toolParserName,
-            getProperties()->reasoningParserName);
-    } else {
-        legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
-            legacyExecutionContext->endpoint,
-            std::chrono::system_clock::now(),
-            getProperties()->tokenizer,
-            getProperties()->toolParserName,
-            getProperties()->reasoningParserName);
+    try {
+        if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
+            legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
+                legacyExecutionContext->endpoint,
+                std::chrono::system_clock::now(),
+                getProperties()->tokenizer,
+                getProperties()->toolParserName,
+                getProperties()->reasoningParserName);
+        } else {
+            legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
+                legacyExecutionContext->endpoint,
+                std::chrono::system_clock::now(),
+                getProperties()->tokenizer,
+                getProperties()->toolParserName,
+                getProperties()->reasoningParserName);
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to create API handler: {}", e.what());
+        return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
     auto& config = ovms::Config::instance();
 

@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "../capi_frontend/server_settings.hpp"
+#include "../llm/io_processing/parser_names.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
 
@@ -156,9 +157,17 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
 
         if (result->count("reasoning_parser")) {
             graphSettings.reasoningParser = result->operator[]("reasoning_parser").as<std::string>();
+            if (!isSupportedReasoningParserName(graphSettings.reasoningParser.value())) {
+                throw std::invalid_argument("Unsupported reasoning_parser: \"" + graphSettings.reasoningParser.value() +
+                                            "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
+            }
         }
         if (result->count("tool_parser")) {
             graphSettings.toolParser = result->operator[]("tool_parser").as<std::string>();
+            if (!isSupportedToolParserName(graphSettings.toolParser.value())) {
+                throw std::invalid_argument("Unsupported tool_parser: \"" + graphSettings.toolParser.value() +
+                                            "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
+            }
         }
         graphSettings.enableToolGuidedGeneration = result->operator[]("enable_tool_guided_generation").as<std::string>();
         if (result->count("cache_interval_multiplier")) {

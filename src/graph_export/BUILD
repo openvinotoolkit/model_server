@@ -53,6 +53,7 @@ ovms_cc_library(
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",
+        "@ovms//src/llm:io_processing_parser_names",
         "@com_github_jarro2783_cxxopts//:cxxopts",
     ],
     visibility = ["//visibility:public"],
