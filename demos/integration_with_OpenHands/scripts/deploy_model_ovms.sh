@@ -270,8 +270,8 @@ deploy_ovms() {
 ################################################################################
 
 wait_for_health() {
-    local max_retries=36  # 36 * 100s = 60 minutes
-    local retry_interval=100
+    local max_retries=18  # 18 * 600s
+    local retry_interval=600
 
     echo "Waiting for OVMS LLM graph to initialize (this may take 30-60 seconds)..."
 
