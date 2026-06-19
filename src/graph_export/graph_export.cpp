@@ -346,7 +346,7 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
         std::error_code ec;
         if (std::filesystem::is_directory(voicesDir, ec)) {
             for (const auto& entry : std::filesystem::directory_iterator(voicesDir, ec)) {
-                if (entry.is_regular_file() && entry.path().extension() == ".bin") {
+                if (entry.is_regular_file(ec) && !ec && entry.path().extension() == ".bin") {
                     voiceNames.push_back(entry.path().stem().string());
                 }
             }
