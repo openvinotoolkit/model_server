@@ -196,6 +196,8 @@ This demo provides two equivalent paths to deploy OVMS and OpenHands. Both achie
 
 This approach uses the provided `docker-compose.yml` and `scripts/deploy_model_ovms.sh` to automate repetitive tasks.
 
+**Repository Required:** This workflow uses files contained in this repository (`docker-compose.yml`, `scripts/deploy_model_ovms.sh`, and screenshots). You must clone the repository and navigate to the demo directory before proceeding.
+
 **Prerequisites:**
 - Docker Engine and Docker Compose installed
 - Hugging Face token in `HF_TOKEN` environment variable (for gated models)
@@ -203,14 +205,19 @@ This approach uses the provided `docker-compose.yml` and `scripts/deploy_model_o
 
 **Steps:**
 
-1. **Set your Hugging Face token** (required for gated models like Llama, Mistral):
+1. **Clone the repository and enter the demo directory:**
+   ```bash
+   git clone https://github.com/openvinotoolkit/model_server.git
+   cd model_server/demos/integration_with_OpenHands
+   ```
+
+2. **Set your Hugging Face token** (required for gated models like Llama, Mistral):
    ```bash
    export HF_TOKEN="your_token_here"
    ```
 
-2. **Run the deployment script** with your chosen model:
+3. **Run the deployment script** with your chosen model:
    ```bash
-   cd /path/to/model_server/demos/integration_with_OpenHands
    ./scripts/deploy_model_ovms.sh OpenVINO/qwen3-0.6b-int8-ov
    ```
 
@@ -241,7 +248,9 @@ This approach uses the provided `docker-compose.yml` and `scripts/deploy_model_o
 
 This approach uses Docker commands directly. Understanding this workflow helps you debug issues and customize the deployment.
 
-**Note:** The commands below assume you are in the demo root directory (`model_server/demos/integration_with_OpenHands/`).
+**Repository Not Required:** The commands in this section can be executed from any directory on a Linux system with Docker installed. The workflow is fully self-contained and does not depend on any files from this repository. You only need the repository if you want the helper artifacts, screenshots, or example files.
+
+**Working Directory:** The OpenHands state directory (`.openhands`) will be created relative to your current working directory unless you specify an absolute path in the volume mount.
 
 **Step 1: Set environment variables**
 
