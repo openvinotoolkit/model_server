@@ -1,6 +1,7 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
-torch==2.8.0+cpu
-torchaudio==2.8.0+cpu
+torch==2.12.1+cpu
+torchaudio==2.11.0+cpu
+torchcodec==0.14.0
 soundfile
 speechbrain==1.0.2
 huggingface_hub==0.29.3
