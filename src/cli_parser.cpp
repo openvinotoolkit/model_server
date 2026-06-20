@@ -15,15 +15,23 @@
 //*****************************************************************************
 #include "cli_parser.hpp"
 
+#include <fstream>
 #include <filesystem>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <map>
 #include <utility>
 #include <vector>
 #include <variant>
 
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
+#include <rapidjson/istreamwrapper.h>
+
 #include "capi_frontend/server_settings.hpp"
+#include "logging.hpp"
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
@@ -33,6 +41,8 @@
 #include "ovms_exit_codes.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/localfilesystem.hpp"
+#include "pull_module/hf_env_vars.hpp"
+#include "pull_module/curl_downloader.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -40,6 +50,138 @@ namespace ovms {
 
 constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
 constexpr const char* API_KEY_ENV_VAR{"API_KEY"};
+constexpr const char* MODEL_CONFIG_FILENAME{"config.json"};
+
+namespace {
+
+const std::map<std::string, std::string> architectureToTask = {
+    {"BertForSequenceClassification", "rerank"},
+    {"BertModel", "embeddings"},
+    {"CLIPTextModel", "image_generation"},
+    {"FluxTransformer2DModel", "image_generation"},
+    {"GemmaForCausalLM", "text_generation"},
+    {"Gemma2ForCausalLM", "text_generation"},
+    {"InternVLChatModel", "text_generation"},
+    {"JinaBertModel", "embeddings"},
+    {"LlamaForCausalLM", "text_generation"},
+    {"MPNetModel", "embeddings"},
+    {"MPTForCausalLM", "text_generation"},
+    {"ParlerTTSForConditionalGeneration", "text2speech"},
+    {"Phi3ForCausalLM", "text_generation"},
+    {"Phi3VForCausalLM", "text_generation"},
+    {"Qwen2ForCausalLM", "text_generation"},
+    {"Qwen2ForSequenceClassification", "rerank"},
+    {"Qwen2Model", "embeddings"},
+    {"Qwen2VLForConditionalGeneration", "text_generation"},
+    {"Qwen3ForCausalLM", "text_generation"},
+    {"RobertaForSequenceClassification", "rerank"},
+    {"RobertaModel", "embeddings"},
+    {"SD3Transformer2DModel", "image_generation"},
+    {"SeamlessM4TModel", "speech2text"},
+    {"SeamlessM4Tv2Model", "speech2text"},
+    {"SpeechT5ForTextToSpeech", "text2speech"},
+    {"T5EncoderModel", "embeddings"},
+    {"UNet2DConditionModel", "image_generation"},
+    {"WhisperForConditionalGeneration", "speech2text"},
+    {"XLMRobertaForSequenceClassification", "rerank"},
+    {"XLMRobertaModel", "embeddings"},
+};
+
+std::string getEnvOrDefault(const char* envName, const std::string& defaultValue = "") {
+    const char* envValue = std::getenv(envName);
+    if (envValue == nullptr) {
+        return defaultValue;
+    }
+    return envValue;
+}
+
+std::string ensureTrailingSlash(std::string path) {
+    if (path.empty() || path.back() == '/') {
+        return path;
+    }
+    path.push_back('/');
+    return path;
+}
+
+std::string getTaskForArchitecture(const std::string& architecture) {
+    const auto exactMatch = architectureToTask.find(architecture);
+    if (exactMatch != architectureToTask.end()) {
+        return exactMatch->second;
+    }
+    if (architecture == "WhisperForConditionalGeneration" || architecture.rfind("SeamlessM4T", 0) == 0) {
+        return "speech2text";
+    }
+    if (endsWith(architecture, "ForTextToSpeech")) {
+        return "text2speech";
+    }
+    if (endsWith(architecture, "ForSequenceClassification")) {
+        return "rerank";
+    }
+    if (endsWith(architecture, "Transformer2DModel") || architecture == "UNet2DConditionModel" || architecture == "AutoencoderKL") {
+        return "image_generation";
+    }
+    if (endsWith(architecture, "ForCausalLM") || endsWith(architecture, "ForConditionalGeneration")) {
+        return "text_generation";
+    }
+    if (endsWith(architecture, "EncoderModel") || endsWith(architecture, "Model")) {
+        return "embeddings";
+    }
+    return "";
+}
+
+std::string determineTaskFromArchitectures(const rapidjson::Value& architecturesNode) {
+    if (!architecturesNode.IsArray() || architecturesNode.Empty()) {
+        throw std::logic_error("config.json does not contain a non-empty architectures array");
+    }
+    std::optional<std::string> resolvedTask;
+    for (const auto& architecture : architecturesNode.GetArray()) {
+        if (!architecture.IsString()) {
+            continue;
+        }
+        std::string task = getTaskForArchitecture(architecture.GetString());
+        if (task.empty()) {
+            continue;
+        }
+        if (!resolvedTask.has_value()) {
+            resolvedTask = task;
+            continue;
+        }
+        if (resolvedTask.value() != task) {
+            throw std::logic_error("config.json architectures map to multiple default tasks");
+        }
+    }
+    if (!resolvedTask.has_value()) {
+        throw std::logic_error("config.json architectures do not map to a supported default task");
+    }
+    return resolvedTask.value();
+}
+
+std::string determineTaskFromConfigStream(std::istream& configStream, const std::string& configSourceDescription) {
+    rapidjson::Document configJson;
+    rapidjson::IStreamWrapper wrapper(configStream);
+    configJson.ParseStream(wrapper);
+    if (configJson.HasParseError()) {
+        throw std::logic_error("failed to parse " + configSourceDescription + ": " + std::string(rapidjson::GetParseError_En(configJson.GetParseError())));
+    }
+    if (!configJson.HasMember("architectures")) {
+        throw std::logic_error(configSourceDescription + " does not contain architectures field");
+    }
+    return determineTaskFromArchitectures(configJson["architectures"]);
+}
+
+std::string determineTaskFromConfigContents(const std::string& configContents, const std::string& configSourceDescription) {
+    rapidjson::Document configJson;
+    configJson.Parse(configContents.c_str());
+    if (configJson.HasParseError()) {
+        throw std::logic_error("failed to parse " + configSourceDescription + ": " + std::string(rapidjson::GetParseError_En(configJson.GetParseError())));
+    }
+    if (!configJson.HasMember("architectures")) {
+        throw std::logic_error(configSourceDescription + " does not contain architectures field");
+    }
+    return determineTaskFromArchitectures(configJson["architectures"]);
+}
+
+}  // namespace
 
 std::string getConfigPath(const std::string& configPath) {
     bool isDir = false;
@@ -51,6 +193,55 @@ std::string getConfigPath(const std::string& configPath) {
         return FileSystem::joinPath({configPath, "config.json"});
     }
     return configPath;
+}
+
+std::string CLIParser::determineDefaultTaskParameter(const std::optional<std::string>& modelPath, const std::optional<std::string>& sourceModel, const std::optional<std::string>& modelRepositoryPath) {
+    if (modelPath.has_value() && !modelPath->empty()) {
+        const auto configPath = std::filesystem::path(*modelPath) / MODEL_CONFIG_FILENAME;
+        std::ifstream configFile(configPath);
+        if (!configFile.is_open()) {
+            throw std::logic_error("failed to open model config file: " + configPath.string());
+        }
+        return determineTaskFromConfigStream(configFile, configPath.string());
+    }
+
+    if (!sourceModel.has_value() || sourceModel->empty()) {
+        throw std::logic_error("cannot determine default --task without model_path or source_model");
+    }
+
+    if (modelRepositoryPath.has_value() && !modelRepositoryPath->empty()) {
+        const auto localModelDirectory = std::filesystem::path(*modelRepositoryPath) / *sourceModel;
+        if (std::filesystem::exists(localModelDirectory)) {
+            const auto configPath = localModelDirectory / MODEL_CONFIG_FILENAME;
+            std::ifstream configFile(configPath);
+            if (!configFile.is_open()) {
+                throw std::logic_error("failed to open model config file: " + configPath.string());
+            }
+            return determineTaskFromConfigStream(configFile, configPath.string());
+        }
+    }
+
+    std::string responseBody;
+    const std::string hfEndpoint = ensureTrailingSlash(getEnvOrDefault(HF_ENDPOINT_ENV_VAR, DEFAULT_HF_ENDPOINT));
+    const std::string configUrl = hfEndpoint + *sourceModel + "/resolve/main/" + MODEL_CONFIG_FILENAME;
+    const auto status = fetchUrlToString(configUrl, getEnvOrDefault(HF_TOKEN_ENV_VAR), responseBody);
+    if (!status.ok()) {
+        throw std::logic_error("failed to download model config file from: " + configUrl);
+    }
+    return determineTaskFromConfigContents(responseBody, configUrl);
+}
+
+std::string CLIParser::getEffectiveTaskParameter() const {
+    if (result->count("task")) {
+        const auto task = result->operator[]("task").as<std::string>();
+        SPDLOG_DEBUG("Effective task parameter specified by user: {}", task);
+        return task;
+    }
+    if (inferredTaskParameter.has_value()) {
+        SPDLOG_DEBUG("Effective task parameter using inferred default: {}", inferredTaskParameter.value());
+        return inferredTaskParameter.value();
+    }
+    throw std::logic_error("error parsing options - --task parameter wasn't passed");
 }
 
 std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char** argv) {
@@ -299,7 +490,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
 
         options->add_options("generative task (applies to: pull hf model, single model)")
             ("task",
-                "Specifies the generative task for the local model. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on the provided task-specific options.",
+                "Specifies the generative task for the local model. If not provided, default task value is inferred from model config.json architectures. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on the provided task-specific options.",
                 cxxopts::value<std::string>(),
                 "TASK");
         configOptions->custom_help("");
@@ -335,12 +526,36 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
+        const bool isConfigManagementFlow =
+            result->count("add_to_config") || result->count("remove_from_config") || result->count("list_models");
+        if (!result->count("task") &&
+            !result->count("pull") &&
+            !result->count("source_model") &&
+            result->count("model_path") &&
+            !isConfigManagementFlow) {
+            const std::optional<std::string> modelPath = std::make_optional(result->operator[]("model_path").as<std::string>());
+            const auto configPath = std::filesystem::path(*modelPath) / MODEL_CONFIG_FILENAME;
+            if (std::filesystem::exists(configPath)) {
+                inferredTaskParameter = determineDefaultTaskParameter(modelPath, std::nullopt, std::nullopt);
+                SPDLOG_DEBUG("Default task parameter inferred from model config: {}", inferredTaskParameter.value());
+            }
+        }
+
         // HF pull mode or pull and start mode or starting from local folder with graph created in memory
         if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
             std::vector<std::string> unmatchedOptions;
             GraphExportType task;
-            if (result->count("task")) {
-                task = stringToEnum(result->operator[]("task").as<std::string>());
+            std::string taskValue;
+            if (!result->count("task")) {
+                const std::optional<std::string> modelPath = result->count("model_path") ? std::make_optional(result->operator[]("model_path").as<std::string>()) : std::nullopt;
+                const std::optional<std::string> sourceModel = result->count("source_model") ? std::make_optional(result->operator[]("source_model").as<std::string>()) : std::nullopt;
+                const std::optional<std::string> modelRepositoryPath = result->count("model_repository_path") ? std::make_optional(result->operator[]("model_repository_path").as<std::string>()) : std::nullopt;
+                inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath);
+                SPDLOG_DEBUG("Default task parameter inferred from model config: {}", inferredTaskParameter.value());
+            }
+            taskValue = getEffectiveTaskParameter();
+            task = stringToEnum(taskValue);
+            if (task != UNKNOWN_GRAPH) {
                 switch (task) {
                     case TEXT_GENERATION_GRAPH: {
                         GraphCLIParser cliParser;
@@ -379,12 +594,12 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                         break;
                     }
                     case UNKNOWN_GRAPH: {
-                        ss << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
+                        ss << "error parsing options - --task parameter unsupported value: " + taskValue;
                         return std::make_pair(OVMS_EX_USAGE, ss.str());
                     }
                 }
             } else {
-                ss << "error parsing options - --task parameter wasn't passed";
+                ss << "error parsing options - --task parameter unsupported value: " + taskValue;
                 return std::make_pair(OVMS_EX_USAGE, ss.str());
             }
 
@@ -671,11 +886,14 @@ bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResul
     // parse-time checks that rely on this helper continue to reject combining
     // task-based flows with config-management modes. More specific mode
     // differentiation is handled by isInMemoryGraphMode().
-    return (result->count("pull") || result->count("task"));
+    return (result->count("pull") || result->count("task") || result->count("source_model"));
 }
 
 bool CLIParser::isInMemoryGraphMode(const std::unique_ptr<cxxopts::ParseResult>& result) {
-    return (result->count("task") && !result->count("source_model") && !result->count("pull"));
+    if (result->count("source_model") || result->count("pull")) {
+        return false;
+    }
+    return result->count("task") || inferredTaskParameter.has_value();
 }
 
 void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
@@ -731,10 +949,13 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         // When --task is used with --model_path but without --pull/--source_model,
         // use model_path as the model location (no HF download needed)
         if (!result->count("pull") && !result->count("source_model") && result->count("model_path")) {
-            hfSettings.exportSettings.modelPath = result->operator[]("model_path").as<std::string>();
+            const auto configuredModelPath = std::filesystem::path(result->operator[]("model_path").as<std::string>());
+            hfSettings.exportSettings.modelPath = std::filesystem::absolute(configuredModelPath).lexically_normal().string();
+            SPDLOG_DEBUG("Using local absolute model path for graph export: {}", hfSettings.exportSettings.modelPath);
         }
-        if (result->count("task")) {
-            hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
+        const std::string taskValue = getEffectiveTaskParameter();
+        if (!taskValue.empty()) {
+            hfSettings.task = stringToEnum(taskValue);
             switch (hfSettings.task) {
                 case TEXT_GENERATION_GRAPH: {
                     if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
@@ -785,7 +1006,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                     break;
                 }
                 case UNKNOWN_GRAPH: {
-                    throw std::logic_error("Error: --task parameter unsupported value: " + result->operator[]("task").as<std::string>());
+                    throw std::logic_error("Error: --task parameter unsupported value: " + taskValue);
                     break;
                 }
             }

@@ -363,6 +363,7 @@ ovms_cc_library(
     srcs = ["cli_parser.cpp"],
     deps = [
         "@com_github_jarro2783_cxxopts//:cxxopts",
+        "@com_github_tencent_rapidjson//:rapidjson",
         "libovms_server_settings",
         "libovms_version",
         "//src/filesystem:libovmsfilesystem",
@@ -373,6 +374,8 @@ ovms_cc_library(
         "//src/graph_export:t2s_graph_cli_parser",
         "//src/graph_export:s2t_graph_cli_parser",
         "//src/graph_export:image_generation_graph_cli_parser",
+        "//src/pull_module:curl_downloader",
+        "//src/pull_module:hf_env_vars",
     ],
     visibility = ["//visibility:public",],
 )

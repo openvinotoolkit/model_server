@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
@@ -38,13 +39,16 @@ class CLIParser {
     std::unique_ptr<cxxopts::Options> options;
     std::unique_ptr<cxxopts::ParseResult> result;
     std::variant<GraphCLIParser, RerankGraphCLIParser, EmbeddingsGraphCLIParser, ImageGenerationGraphCLIParser, TextToSpeechGraphCLIParser, SpeechToTextGraphCLIParser> graphOptionsParser;
+    std::optional<std::string> inferredTaskParameter;
 
 public:
     CLIParser() = default;
+    static std::string determineDefaultTaskParameter(const std::optional<std::string>& modelPath, const std::optional<std::string>& sourceModel, const std::optional<std::string>& modelRepositoryPath);
     std::variant<bool, std::pair<int, std::string>> parse(int argc, char** argv);
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
 
 protected:
+    std::string getEffectiveTaskParameter() const;
     void prepareServer(ServerSettingsImpl& serverSettings);
     void prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl& hfSettings);
     void prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName);
