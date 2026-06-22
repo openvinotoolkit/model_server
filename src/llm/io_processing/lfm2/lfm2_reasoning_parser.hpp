@@ -19,7 +19,7 @@
 namespace ovms {
 class Lfm2ReasoningParser : public Qwen3ReasoningParser {
 public:
-
+    Lfm2ReasoningParser() = delete;
     Lfm2ReasoningParser(ov::genai::Tokenizer& tokenizer) : Qwen3ReasoningParser(tokenizer) {}
 
     bool requiresStreamingWithSpecialTokens() const override {

@@ -230,7 +230,7 @@ ovms_cc_library(
     name = "io_processing_lfm2_reasoning_parser",
     hdrs = ["io_processing/lfm2/lfm2_reasoning_parser.hpp"],
     deps = [
-        "io_processing_qwen3_reasoning_parser"
+        ":io_processing_qwen3_reasoning_parser"
     ],
     visibility = ["//visibility:public"],
 )
