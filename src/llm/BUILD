@@ -122,6 +122,27 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "chat_template_analyzer",
+    hdrs = ["chat_template_caps.hpp",
+            "chat_template_analyzer.hpp"],
+    srcs = ["chat_template_analyzer.cpp"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "input_workarounds",
+    hdrs = ["input_workarounds.hpp",
+            "chat_template_caps.hpp"],
+    srcs = ["input_workarounds.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library(
     name = "partial_json_builder",
     hdrs = ["io_processing/partial_json_builder.hpp"],
@@ -333,6 +354,8 @@ ovms_cc_library(
         ":openai_completions_api_handler",
         ":openai_responses_handler",
         ":generation_config_builders",
+        ":chat_template_analyzer",
+        ":input_workarounds",
         "//src:httppayload",
         "//src:libhttpclientconnection",
         "//src:sse_utils",

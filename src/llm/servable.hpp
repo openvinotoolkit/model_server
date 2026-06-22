@@ -36,6 +36,7 @@
 #include "../http_payload.hpp"
 #include "../sse_utils.hpp"
 #include "apis/openai_api_handler.hpp"
+#include "chat_template_caps.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
@@ -161,6 +162,9 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
+    // Chat template analysis
+    ChatTemplateCaps chatTemplateCaps;
+    std::string detectedModelFamily;
     // Sampling
     DecodingMethod decodingMethod;
     std::optional<uint32_t> maxTokensLimit;

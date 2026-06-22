@@ -2510,6 +2510,7 @@ cc_test(
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
                 ":test_llm_output_parser_tests",
+                ":test_chat_template_workarounds",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -3030,6 +3031,23 @@ cc_library(
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
         "//src/llm:output_parsers",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "test_chat_template_workarounds",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = [
+        "test/llm/chat_template_analyzer_test.cpp",
+        "test/llm/input_workarounds_test.cpp",
+    ],
+    deps = [
+        "@com_google_googletest//:gtest",
+        "//src/llm:chat_template_analyzer",
+        "//src/llm:input_workarounds",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

@@ -36,6 +36,7 @@
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "apis/openai_responses.hpp"
+#include "input_workarounds.hpp"
 #include "ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
@@ -184,15 +185,38 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         return absl::InternalError("This servable supports only text input, but image_url has been provided");
     }
 
+    // Apply input workarounds based on detected chat template capabilities.
+    // This modifies the request JSON before chat template application.
+    // Currently effective only on the Python Jinja path; GenAI C++ path workarounds
+    // will be added during the pre-processing refactoring.
+    auto applyInputWorkarounds = [this](const std::string& jsonBody) -> std::string {
+        const auto& caps = getProperties()->chatTemplateCaps;
+        if (!caps.requiresObjectArguments && !caps.requiresNonNullContent) {
+            return jsonBody;  // no workarounds needed
+        }
+        rapidjson::Document doc;
+        doc.Parse(jsonBody.c_str());
+        if (doc.HasParseError()) {
+            return jsonBody;
+        }
+        input_workarounds::applyToJson(caps, getProperties()->detectedModelFamily, doc);
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        doc.Accept(writer);
+        return buffer.GetString();
+    };
+
     std::string inputText;
     switch (executionContext->endpoint) {
     case Endpoint::CHAT_COMPLETIONS: {
 #if (PYTHON_DISABLE == 0)
         bool success;
         if (executionContext->apiHandler->getProcessedJson().size() > 0) {
-            success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
+            std::string modifiedJson = applyInputWorkarounds(executionContext->apiHandler->getProcessedJson());
+            success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, modifiedJson, inputText);
         } else {
-            success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->payload.body, inputText);
+            std::string modifiedJson = applyInputWorkarounds(executionContext->payload.body);
+            success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, modifiedJson, inputText);
         }
         if (!success) {
             return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
@@ -228,7 +252,8 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     case Endpoint::RESPONSES: {
         if (executionContext->apiHandler->getChatHistory().size() > 0) {
 #if (PYTHON_DISABLE == 0)
-            bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
+            std::string modifiedJson = applyInputWorkarounds(executionContext->apiHandler->getProcessedJson());
+            bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, modifiedJson, inputText);
             if (!success) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
             }

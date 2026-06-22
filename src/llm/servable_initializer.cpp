@@ -39,6 +39,7 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
+#include "chat_template_analyzer.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
@@ -77,6 +78,24 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
             }
         } else {
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
+        }
+    }
+
+    // Analyze the chat template to detect capabilities and model family
+    std::string templateSource = properties->tokenizer.get_chat_template();
+    if (!templateSource.empty()) {
+        auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
+        properties->chatTemplateCaps = analysisResult.caps;
+        properties->detectedModelFamily = analysisResult.detectedModelFamily;
+        // Auto-detect tool parser if not explicitly configured
+        if (properties->toolParserName.empty() && analysisResult.detectedToolParser.has_value()) {
+            properties->toolParserName = analysisResult.detectedToolParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
+        }
+        // Auto-detect reasoning parser if not explicitly configured
+        if (properties->reasoningParserName.empty() && analysisResult.detectedReasoningParser.has_value()) {
+            properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
         }
     }
 }
