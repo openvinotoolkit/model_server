@@ -31,7 +31,6 @@ from tests.functional.utils.helpers import (
     validate_supported_values,
 )
 
-
 try:
     # In user_config.py, user might export custom environment variables
     import user_config

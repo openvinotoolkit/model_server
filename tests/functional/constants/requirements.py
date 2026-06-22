@@ -32,7 +32,6 @@ class Requirements:
     dag = "CVS-31796_CVS-36434_CVS-41115 DAG"
     model_cache = "CVS-62829 model_cache"
     cloud = "CVS-31243 cloud"
-    stateful = "CVS-33882 stateful"
     reshape = "CVS-35266 reshape"
     dynamic_shape = "CVS-56655 dynamic shapes"
     auto_plugin = "CVS-73689 Auto plugin support"
@@ -54,8 +53,6 @@ class Requirements:
     documentation = "CVS-35266 documentation"
     binary_input = "CVS-30320 binary input format"
     cpu_extension = "CVS-68750 cpu extension"
-
-    operator = "CVS-56873 operator"
 
     models_enabling = "CVS-105320 models enabling"
     triton_async = "CVS-114801 triton async"

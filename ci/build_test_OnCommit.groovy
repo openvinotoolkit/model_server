@@ -1,6 +1,7 @@
 def image_build_needed = "false"
 def win_image_build_needed = "false"
 def client_test_needed = "false"
+def functional_tests_changed = "false"
 def export_models_changed = "false"
 def test_doc_files_linux = ""
 def test_doc_files_windows = ""
@@ -69,6 +70,9 @@ pipeline {
               }
               if (git_diff =~ /(\n|^)client/) {
                   client_test_needed = "true"
+              }
+              if (git_diff =~ /(\n|^)tests\/functional/) {
+                  functional_tests_changed = "true"
               }
               if (git_diff =~ /(\n|^)(demos\/common\/export_models\/|prepare_llm_models\.sh$)/) {
                   export_models_changed = "true"
@@ -299,14 +303,24 @@ pipeline {
               agent {
                 label "${agent_name_linux}"
               }
-              when { expression { image_build_needed == "true" } }
+              when { expression { image_build_needed == "true" || functional_tests_changed == "true" } }
               steps {
                 script {
                   dir ('internal_tests'){
                     checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh "pwd"
                     def pwd = sh(returnStdout:true, script: "pwd").strip()
-                    sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional && TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                    def cmd_venv = "make create-venv"
+                    def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
+                    def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10"
+                    def cmd_run_tests = "make tests"
+                    def cmd = ""
+                    if (image_build_needed == "true") {
+                      cmd = "${cmd_venv} && ${cmd_links} && ${cmd_export} TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_run_tests}"
+                    } else {
+                      cmd = "${cmd_venv} && ${cmd_links} && ${cmd_export} ${cmd_run_tests}"
+                    }
+                    sh cmd
                   }
                 }
               }            
