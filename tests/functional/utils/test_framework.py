@@ -21,6 +21,7 @@ import os
 import re
 import shutil
 import stat
+import sys
 import traceback
 
 import pytest
@@ -282,8 +283,14 @@ def _make_path_writable_and_retry(func, path, _exc_info):
 
 def remove_dir_tree(dir_path, ignore_errors=False):
     """Remove a directory tree, retrying failed paths after making them writable."""
+    # shutil.rmtree accepts the `onexc` callback only on Python 3.12+; older
+    # interpreters expect `onerror`. Both invoke the same (func, path, *) callback.
+    if sys.version_info >= (3, 12):
+        rmtree_kwargs = {"onexc": _make_path_writable_and_retry}
+    else:
+        rmtree_kwargs = {"onerror": _make_path_writable_and_retry}
     try:
-        shutil.rmtree(dir_path, onerror=_make_path_writable_and_retry)
+        shutil.rmtree(dir_path, **rmtree_kwargs)
     except OSError:
         if not ignore_errors:
             raise

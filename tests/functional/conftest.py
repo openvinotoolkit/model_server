@@ -54,7 +54,7 @@ logger = get_logger(__name__)
 
 if enable_pytest_plugins:
 
-    # raise NotImplementedError("OVMS tests not enabled")
+    raise NotImplementedError("OVMS tests not enabled")
 
     pytest_plugins = [      # pylint: disable=unreachable
         "tests.functional.fixtures.ovms",
