@@ -85,6 +85,13 @@ _SHARED_LIB_COPTS_WINDOWS = [
     "/wd6326",
     "/wd6385",
     "/wd6294",
+    "/wd4005",  # Suppress macro redefinition warning (GLOG_NO_ABBREVIATED_SEVERITIES from mediapipe/glog)
+    "/wd4309",  # Suppress truncation of constant value warning (mediapipe circular_buffer.h)
+    "/wd4456",  # Suppress variable shadowing warning (mediapipe graph_profiler.h)
+    "/wd6001",  # Suppress uninitialized memory warnings (absl/strings and mediapipe)
+    "/wd6246",  # Suppress local declaration hides previous declaration (mediapipe graph_profiler.h)
+    "/wd6386",  # Suppress buffer overrun warnings (absl/strings/internal/cord_rep_flat.h)
+    "/wd6011",  # Suppress NULL pointer dereference warnings (mediapipe packet.h)
     "/guard:cf",
     "/utf-8",
 ]
@@ -396,9 +403,14 @@ cc_binary(
         "utils",
     ],
     copts = COPTS_SO,
-    linkopts = LINKOPTS_SO + [
-        "-Wl,-z,nodlopen",  # Prevent dlopen on this library (pybind11 requirement)
-    ],
+    linkopts = LINKOPTS_SO + select({
+        "//src:windows": [
+            "/FORCE:MULTIPLE",  # Allow multiple symbol definitions for glog (linked in both this DLL and main binary)
+        ],
+        "//conditions:default": [
+            "-Wl,-z,nodlopen",  # Prevent dlopen on this library (pybind11 requirement)
+        ],
+    }),
     local_defines = COMMON_LOCAL_DEFINES,
     visibility = ["//visibility:public"],
 )
