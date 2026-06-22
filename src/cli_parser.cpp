@@ -181,6 +181,15 @@ std::string determineTaskFromConfigContents(const std::string& configContents, c
     return determineTaskFromArchitectures(configJson["architectures"]);
 }
 
+bool graphPbtxtExists(const std::string& modelPath) {
+    const auto graphPath = std::filesystem::path(modelPath) / "graph.pbtxt";
+    return std::filesystem::exists(graphPath);
+}
+
+bool hasTaskSpecificParameters(const std::vector<std::string>& unmatchedOptions) {
+    return !unmatchedOptions.empty();
+}
+
 }  // namespace
 
 std::string getConfigPath(const std::string& configPath) {
@@ -536,8 +545,17 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             const std::optional<std::string> modelPath = std::make_optional(result->operator[]("model_path").as<std::string>());
             const auto configPath = std::filesystem::path(*modelPath) / MODEL_CONFIG_FILENAME;
             if (std::filesystem::exists(configPath)) {
-                inferredTaskParameter = determineDefaultTaskParameter(modelPath, std::nullopt, std::nullopt);
-                SPDLOG_DEBUG("Default task parameter inferred from model config: {}", inferredTaskParameter.value());
+                // Check if task-specific parameters are provided or if graph.pbtxt is missing
+                bool hasUnmatchedOptions = ::ovms::hasTaskSpecificParameters(result->unmatched());
+                bool graphExists = ::ovms::graphPbtxtExists(*modelPath);
+                
+                // Infer task if:
+                // 1. Task-specific parameters are provided (unmatched options), OR
+                // 2. graph.pbtxt doesn't exist (need to create in-memory graph)
+                // Otherwise, if graph.pbtxt exists and no task parameters, use the filesystem graph
+                if (hasUnmatchedOptions || !graphExists) {
+                    inferredTaskParameter = determineDefaultTaskParameter(modelPath, std::nullopt, std::nullopt);
+                }
             }
         }
 
@@ -550,8 +568,25 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 const std::optional<std::string> modelPath = result->count("model_path") ? std::make_optional(result->operator[]("model_path").as<std::string>()) : std::nullopt;
                 const std::optional<std::string> sourceModel = result->count("source_model") ? std::make_optional(result->operator[]("source_model").as<std::string>()) : std::nullopt;
                 const std::optional<std::string> modelRepositoryPath = result->count("model_repository_path") ? std::make_optional(result->operator[]("model_repository_path").as<std::string>()) : std::nullopt;
-                inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath);
-                SPDLOG_DEBUG("Default task parameter inferred from model config: {}", inferredTaskParameter.value());
+                
+                // For source_model (HF pull mode), always infer the task
+                // For model_path in in-memory graph mode, check if task should be inferred based on parameters and graph.pbtxt
+                bool shouldInferTask = false;
+                if (sourceModel.has_value() && !sourceModel->empty()) {
+                    // Always infer task when pulling from HuggingFace
+                    shouldInferTask = true;
+                } else if (modelPath.has_value() && !modelPath->empty()) {
+                    // For local model_path, infer task if:
+                    // 1. Unmatched options (task-specific parameters) are present, OR
+                    // 2. graph.pbtxt doesn't exist (need to create in-memory graph)
+                    bool hasUnmatchedOptions = ::ovms::hasTaskSpecificParameters(result->unmatched());
+                    bool graphExists = ::ovms::graphPbtxtExists(*modelPath);
+                    shouldInferTask = hasUnmatchedOptions || !graphExists;
+                }
+                
+                if (shouldInferTask) {
+                    inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath);
+                }
             }
             taskValue = getEffectiveTaskParameter();
             task = stringToEnum(taskValue);
@@ -954,6 +989,9 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             SPDLOG_DEBUG("Using local absolute model path for graph export: {}", hfSettings.exportSettings.modelPath);
         }
         const std::string taskValue = getEffectiveTaskParameter();
+        if (inferredTaskParameter.has_value()) {
+            SPDLOG_INFO("Identified default task '{}' from model config", inferredTaskParameter.value());
+        }
         if (!taskValue.empty()) {
             hfSettings.task = stringToEnum(taskValue);
             switch (hfSettings.task) {
