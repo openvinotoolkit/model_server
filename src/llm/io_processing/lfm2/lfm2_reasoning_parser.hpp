@@ -14,17 +14,31 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "../qwen3/reasoning_parser.hpp"
+#include "../base_output_parser.hpp"
 
 namespace ovms {
-class Lfm2ReasoningParser : public Qwen3ReasoningParser {
+class Lfm2ReasoningParser : public BaseOutputParser {
+protected:
+    const std::string parsingStartTag = "<think>";
+    const std::string parsingEndTag = "</think>";
+
 public:
     Lfm2ReasoningParser() = delete;
-    explicit Lfm2ReasoningParser(ov::genai::Tokenizer& tokenizer) : Qwen3ReasoningParser(tokenizer) {}
+    explicit Lfm2ReasoningParser(ov::genai::Tokenizer& tokenizer) :
+        BaseOutputParser(tokenizer) {}
 
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
+    const std::vector<std::string>& getParsingStartTags() const override {
+        static const std::vector<std::string> parsingStartTags{this->parsingStartTag};
+        return parsingStartTags;
     }
-
+    const std::vector<std::string>& getSpecialParsingStartTags() const override {
+        static const std::vector<std::string> specialParsingStartTags{};
+        return specialParsingStartTags;
+    }
+    const std::string& getParsingEndTag() const override {
+        return parsingEndTag;
+    }
 };
 }

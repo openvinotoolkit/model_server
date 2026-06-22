@@ -229,8 +229,15 @@ ovms_cc_library(
 ovms_cc_library(
     name = "io_processing_lfm2_reasoning_parser",
     hdrs = ["io_processing/lfm2/lfm2_reasoning_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_reasoning_parser.cpp"],
     deps = [
-        ":io_processing_qwen3_reasoning_parser"
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
     ],
     visibility = ["//visibility:public"],
 )
