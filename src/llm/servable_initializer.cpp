@@ -56,13 +56,16 @@ static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
 #if (PYTHON_DISABLE == 0)
-    ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
-    loadPyTemplateProcessor(properties, extraGenInfo);
-#else
-    if (properties->tokenizer.get_chat_template().empty()) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
-    }
+    if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
+        ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
+        loadPyTemplateProcessor(properties, extraGenInfo);
+    } else
 #endif
+    {
+        if (properties->tokenizer.get_chat_template().empty()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
+        }
+    }
 
     // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
     // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
@@ -87,6 +90,20 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
         properties->chatTemplateCaps = analysisResult.caps;
         properties->detectedModelFamily = analysisResult.detectedModelFamily;
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template analysis: detectedModelFamily={}, "
+            "supportsSystemRole={}, supportsTools={}, supportsToolCalls={}, supportsToolResponses={}, "
+            "requiresObjectArguments={}, requiresNonNullContent={}, requiresTypedContent={}, "
+            "supportsParallelToolCalls={}, supportsToolCallId={}",
+            analysisResult.detectedModelFamily.empty() ? "(none)" : analysisResult.detectedModelFamily,
+            analysisResult.caps.supportsSystemRole,
+            analysisResult.caps.supportsTools,
+            analysisResult.caps.supportsToolCalls,
+            analysisResult.caps.supportsToolResponses,
+            analysisResult.caps.requiresObjectArguments,
+            analysisResult.caps.requiresNonNullContent,
+            analysisResult.caps.requiresTypedContent,
+            analysisResult.caps.supportsParallelToolCalls,
+            analysisResult.caps.supportsToolCallId);
         // Auto-detect tool parser if not explicitly configured
         if (properties->toolParserName.empty() && analysisResult.detectedToolParser.has_value()) {
             properties->toolParserName = analysisResult.detectedToolParser.value();
@@ -169,14 +186,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     std::string chatTemplate = properties->tokenizer.get_original_chat_template();
     std::string bosToken = properties->tokenizer.get_bos_token();
     std::string eosToken = properties->tokenizer.get_eos_token();
-    if (bosToken.empty()) {
-        SPDLOG_ERROR("BOS token was not found in model files.");
-        return;
-    }
-    if (eosToken.empty()) {
-        SPDLOG_ERROR("EOS token was not found in model files.");
-        return;
-    }
     if (chatTemplate.empty()) {
         SPDLOG_ERROR("Chat template was not found in model files.");
         return;

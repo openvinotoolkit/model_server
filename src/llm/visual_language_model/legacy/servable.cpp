@@ -35,6 +35,10 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
+
 #include "../../../config.hpp"
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
@@ -317,7 +321,6 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
     }
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
-        input_workarounds::applyToHistory(getProperties()->chatTemplateCaps, getProperties()->detectedModelFamily, chatHistory);
 
         for (size_t i = 0; i < chatHistory.size(); i++) {
             const auto& message = chatHistory[i];
@@ -340,18 +343,77 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
         }
 
-        constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
-        auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
-        if (!toolsStatus.ok()) {
-            return toolsStatus.status();
+#if (PYTHON_DISABLE == 0)
+        if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
+            std::string jsonForTemplate;
+            if (vlmExecutionContext->apiHandler->getProcessedJson().size() > 0) {
+                jsonForTemplate = vlmExecutionContext->apiHandler->getProcessedJson();
+            } else {
+                jsonForTemplate = vlmExecutionContext->payload.body;
+            }
+            // Inject image tags into the JSON messages for Python Jinja template processing
+            if (!imageTags.empty()) {
+                rapidjson::Document jsonDoc;
+                jsonDoc.Parse(jsonForTemplate.c_str());
+                if (!jsonDoc.HasParseError() && jsonDoc.IsObject() && jsonDoc.HasMember("messages") && jsonDoc["messages"].IsArray()) {
+                    auto& messages = jsonDoc["messages"];
+                    for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
+                        if (chatTurnIndex < messages.Size()) {
+                            auto& msg = messages[chatTurnIndex];
+                            if (msg.IsObject() && msg.HasMember("content") && msg["content"].IsString()) {
+                                std::string newContent = imageTagString + msg["content"].GetString();
+                                msg["content"].SetString(newContent.c_str(), newContent.length(), jsonDoc.GetAllocator());
+                            }
+                        }
+                    }
+                    rapidjson::StringBuffer buffer;
+                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                    jsonDoc.Accept(writer);
+                    jsonForTemplate = buffer.GetString();
+                }
+            }
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "VLM Legacy: Applying chat template using Python Jinja processor");
+            // Apply input workarounds on the JSON for the Jinja path
+            {
+                rapidjson::Document workaroundDoc;
+                workaroundDoc.Parse(jsonForTemplate.c_str());
+                if (!workaroundDoc.HasParseError()) {
+                    input_workarounds::applyToJson(getProperties()->chatTemplateCaps, getProperties()->detectedModelFamily, workaroundDoc);
+                    rapidjson::StringBuffer wBuf;
+                    rapidjson::Writer<rapidjson::StringBuffer> wWriter(wBuf);
+                    workaroundDoc.Accept(wWriter);
+                    jsonForTemplate = wBuf.GetString();
+                }
+            }
+            bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, jsonForTemplate, vlmExecutionContext->inputText);
+            if (!success) {
+                return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
+            }
+        } else
+#endif
+        {
+            input_workarounds::applyToHistory(getProperties()->chatTemplateCaps, getProperties()->detectedModelFamily, chatHistory);
+            constexpr bool addGenerationPrompt = true;
+            auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
+            if (!toolsStatus.ok()) {
+                return toolsStatus.status();
+            }
+            const auto& tools = toolsStatus.value();
+            auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+            if (!chatTemplateKwargsStatus.ok()) {
+                return chatTemplateKwargsStatus.status();
+            }
+            const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+            try {
+                vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
+                return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
+            }
         }
-        const auto& tools = toolsStatus.value();
-        auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-        if (!chatTemplateKwargsStatus.ok()) {
-            return chatTemplateKwargsStatus.status();
+        if (vlmExecutionContext->inputText.empty()) {
+            return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
         }
-        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
         if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
             vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
         }

@@ -17,6 +17,10 @@
 
 #include <string>
 
+#include <spdlog/spdlog.h>
+
+#include "../logging.hpp"
+
 namespace ovms {
 namespace input_workarounds {
 
@@ -68,6 +72,10 @@ void ensureNonNullContentJson(rapidjson::Document& doc) {
 }
 
 void applyToJson(const ChatTemplateCaps& caps, const std::string& modelFamily, rapidjson::Document& doc) {
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Applying input workarounds (JSON path) for model family '{}': "
+        "requiresObjectArguments={}, requiresNonNullContent={}",
+        modelFamily.empty() ? "(none)" : modelFamily,
+        caps.requiresObjectArguments, caps.requiresNonNullContent);
     if (caps.requiresObjectArguments) {
         funcArgsToObjectJson(doc);
     }
@@ -128,6 +136,10 @@ void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory) {
 }
 
 void applyToHistory(const ChatTemplateCaps& caps, const std::string& modelFamily, ov::genai::ChatHistory& chatHistory) {
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Applying input workarounds (ChatHistory path) for model family '{}': "
+        "requiresObjectArguments={}, requiresNonNullContent={}",
+        modelFamily.empty() ? "(none)" : modelFamily,
+        caps.requiresObjectArguments, caps.requiresNonNullContent);
     if (caps.requiresObjectArguments) {
         funcArgsToObjectHistory(chatHistory);
     }

@@ -61,6 +61,11 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     if (nodeOptions.has_reasoning_parser()) {
         properties->reasoningParserName = nodeOptions.reasoning_parser();
     }
+    if (nodeOptions.has_chat_template_mode()) {
+        properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
+                                           ? ChatTemplateMode::JINJA
+                                           : ChatTemplateMode::MINJA;
+    }
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
