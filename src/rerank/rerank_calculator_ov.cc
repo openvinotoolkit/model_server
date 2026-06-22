@@ -62,7 +62,7 @@ class RerankCalculatorOV : public CalculatorBase {
     static const std::string RERANK_MODEL_TOKEN_TYPE_IDS_NAME;
     static constexpr size_t NUMBER_OF_SPECIAL_TOKENS = 4;
 
-    mediapipe::Timestamp timestamp{0};
+
     std::chrono::time_point<std::chrono::system_clock> created;
 
     int64_t bos_token{0};
@@ -302,7 +302,7 @@ public:
                 auto tokens = rerank_session->getTokenizer().encode(*strings, tokenizeRequest.parameters);
                 StringBuffer buffer;
                 status = TokenizeParser::parseTokenizeResponse(buffer, tokens, tokenizeRequest.parameters);
-                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
+                cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), cc->InputTimestamp());
                 return absl::OkStatus();
             } else {
                 SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Rerank tokenize input is of not supported type");
@@ -340,7 +340,7 @@ public:
             if (!status.ok()) {
                 return status;
             }
-            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), cc->InputTimestamp());
             return absl::OkStatus();
         } catch (ov::AssertFailure& e) {
             SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "OpenVINO Assert Failure: {}", e.what());
