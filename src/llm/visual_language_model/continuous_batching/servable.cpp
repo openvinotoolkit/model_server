@@ -136,7 +136,7 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
             if (!success) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
             }
-        } else
+        } else  // NOLINT(readability/braces)
 #endif
         {
             constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded

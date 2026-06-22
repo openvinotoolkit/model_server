@@ -198,7 +198,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             if (!success) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
             }
-        } else
+        } else  // NOLINT(readability/braces)
 #endif
         {
             ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
@@ -236,7 +236,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
                 if (!success) {
                     return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
                 }
-            } else
+            } else  // NOLINT(readability/braces)
 #endif
             {
                 ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
