@@ -226,6 +226,15 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
+ovms_cc_library(
+    name = "io_processing_lfm2_reasoning_parser",
+    hdrs = ["io_processing/lfm2/lfm2_reasoning_parser.hpp"],
+    deps = [
+        "io_processing_qwen3_reasoning_parser"
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
     name = "output_parsers",
     hdrs = [
@@ -262,6 +271,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":io_processing_lfm2_tool_parser",
         ":io_processing_gemma4_tool_parser",
         ":io_processing_qwen3_reasoning_parser",
+        ":io_processing_lfm2_reasoning_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
     ],
