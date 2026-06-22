@@ -17,6 +17,7 @@
 
 #include <string>
 
+#include <openvino/genai/tokenizer.hpp>
 #include <rapidjson/document.h>
 
 #include "chat_template_caps.hpp"
@@ -36,11 +37,24 @@ void funcArgsToObjectJson(rapidjson::Document& doc);
 // Some templates require content="" rather than content=null.
 void ensureNonNullContentJson(rapidjson::Document& doc);
 
+// --- Individual workaround functions (ChatHistory path) ---
+// Operates on ov::genai::ChatHistory for the GenAI C++ tokenizer path.
+
+// Convert tool_call arguments from string to object in ChatHistory.
+void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory);
+
+// Ensure assistant messages with tool_calls have non-null content in ChatHistory.
+void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory);
+
 // --- Aggregate application ---
 
 // Apply all relevant workarounds to the JSON document (Python Jinja path).
 // Modifies the document in-place based on detected capabilities.
 void applyToJson(const ChatTemplateCaps& caps, const std::string& modelFamily, rapidjson::Document& doc);
+
+// Apply all relevant workarounds to the ChatHistory (GenAI C++ tokenizer path).
+// Modifies the chat history in-place based on detected capabilities.
+void applyToHistory(const ChatTemplateCaps& caps, const std::string& modelFamily, ov::genai::ChatHistory& chatHistory);
 
 }  // namespace input_workarounds
 }  // namespace ovms

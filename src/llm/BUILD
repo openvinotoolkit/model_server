@@ -139,6 +139,7 @@ ovms_cc_library(
     srcs = ["input_workarounds.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//third_party:genai",
     ],
     visibility = ["//visibility:public"],
 )

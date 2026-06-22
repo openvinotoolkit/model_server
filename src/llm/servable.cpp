@@ -223,6 +223,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         }
 #else
         ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
+        input_workarounds::applyToHistory(getProperties()->chatTemplateCaps, getProperties()->detectedModelFamily, chatHistory);
         constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
         auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
         if (!toolsStatus.ok()) {
@@ -259,6 +260,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             }
 #else
             ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
+            input_workarounds::applyToHistory(getProperties()->chatTemplateCaps, getProperties()->detectedModelFamily, chatHistory);
             constexpr bool addGenerationPrompt = true;
             auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
             if (!toolsStatus.ok()) {

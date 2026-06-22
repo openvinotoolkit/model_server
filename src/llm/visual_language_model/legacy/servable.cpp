@@ -38,6 +38,7 @@
 #include "../../../config.hpp"
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
+#include "../../input_workarounds.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)
@@ -316,6 +317,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
     }
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
+        input_workarounds::applyToHistory(getProperties()->chatTemplateCaps, getProperties()->detectedModelFamily, chatHistory);
 
         for (size_t i = 0; i < chatHistory.size(); i++) {
             const auto& message = chatHistory[i];

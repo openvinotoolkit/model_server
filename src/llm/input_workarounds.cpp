@@ -17,10 +17,10 @@
 
 #include <string>
 
-#include <rapidjson/document.h>
-
 namespace ovms {
 namespace input_workarounds {
+
+// --- JSON path implementations ---
 
 void funcArgsToObjectJson(rapidjson::Document& doc) {
     if (!doc.HasMember("messages") || !doc["messages"].IsArray()) {
@@ -73,6 +73,66 @@ void applyToJson(const ChatTemplateCaps& caps, const std::string& modelFamily, r
     }
     if (caps.requiresNonNullContent) {
         ensureNonNullContentJson(doc);
+    }
+}
+
+// --- ChatHistory path implementations ---
+
+void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory) {
+    for (size_t msgIdx = 0; msgIdx < chatHistory.size(); ++msgIdx) {
+        auto message = chatHistory[msgIdx];
+        if (!message.contains("tool_calls")) {
+            continue;
+        }
+        auto toolCalls = message["tool_calls"];
+        if (!toolCalls.is_array()) {
+            continue;
+        }
+        for (size_t i = 0; i < toolCalls.size(); ++i) {
+            auto toolCall = toolCalls[i];
+            if (!toolCall.is_object() || !toolCall.contains("function")) {
+                continue;
+            }
+            auto function = toolCall["function"];
+            if (!function.is_object() || !function.contains("arguments")) {
+                continue;
+            }
+            auto args = function["arguments"];
+            if (!args.is_string()) {
+                continue;
+            }
+            std::string argsStr = args.get_string();
+            // Parse and replace string arguments with the parsed JSON object
+            try {
+                function["arguments"] = ov::genai::JsonContainer::from_json_string(argsStr);
+            } catch (...) {
+                // If parsing fails, leave as-is
+                continue;
+            }
+        }
+    }
+}
+
+void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory) {
+    for (size_t msgIdx = 0; msgIdx < chatHistory.size(); ++msgIdx) {
+        auto message = chatHistory[msgIdx];
+        if (!message.contains("tool_calls")) {
+            continue;
+        }
+        if (!message.contains("content")) {
+            message["content"] = "";
+        } else if (message["content"].is_null()) {
+            message["content"] = "";
+        }
+    }
+}
+
+void applyToHistory(const ChatTemplateCaps& caps, const std::string& modelFamily, ov::genai::ChatHistory& chatHistory) {
+    if (caps.requiresObjectArguments) {
+        funcArgsToObjectHistory(chatHistory);
+    }
+    if (caps.requiresNonNullContent) {
+        ensureNonNullContentHistory(chatHistory);
     }
 }
 

@@ -21,7 +21,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "../../../llm/input_workarounds.hpp"
+#include "../../llm/input_workarounds.hpp"
 
 using namespace ovms;
 

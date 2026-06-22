@@ -18,7 +18,7 @@
 
 #include <gtest/gtest.h>
 
-#include "../../../llm/chat_template_analyzer.hpp"
+#include "../../llm/chat_template_analyzer.hpp"
 
 using namespace ovms;
 
