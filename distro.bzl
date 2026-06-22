@@ -42,3 +42,29 @@ def distro_flag():
         name = "not_ubuntu_build",
         negate = ":ubuntu_build",
     )
+
+# Controls whether espeak-ng is built from source (via Bazel) and bundled
+# into the OVMS release. When "off", no espeak-ng artifacts are produced
+# and the runtime will not have phonemization fallback available.
+def espeak_flag():
+    string_flag(
+        name = "espeak",
+        values = ["on", "off"],
+        build_setting_default = "on",
+    )
+    native.config_setting(
+        name = "espeak_on",
+        flag_values = {
+            "espeak": "on",
+        },
+    )
+    native.config_setting(
+        name = "espeak_off",
+        flag_values = {
+            "espeak": "off",
+        },
+    )
+    more_selects.config_setting_negation(
+        name = "not_espeak_on",
+        negate = ":espeak_on",
+    )

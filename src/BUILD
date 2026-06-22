@@ -353,7 +353,6 @@ ovms_cc_library(
         "libovms_cliparser",
         "libovms_systeminfo",
         "ovms_exit_codes",
-        "//src/utils:env_guard",
     ],
     visibility = ["//visibility:public",],
     additional_copts = COPTS_DROGON,
@@ -934,6 +933,7 @@ ovms_cc_library(
     hdrs = ["logging.hpp"],
     srcs = ["logging.cpp"],
     deps = [
+        "//src/utils:env_guard",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
     ],
@@ -2204,6 +2204,12 @@ cc_binary(
             "//src/python/binding:pyovms.so",
         ],
         "//:disable_python": []
+    }) + select({
+        "//:espeak_on": [
+            "//third_party:espeak_ng",
+            "//third_party:espeak_ng_data",
+        ],
+        "//:espeak_off": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )

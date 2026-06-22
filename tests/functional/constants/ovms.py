@@ -18,7 +18,6 @@ import os
 import re
 
 from enum import Enum
-from pathlib import Path
 from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 
 from tests.functional.constants.os_type import OsType
@@ -227,7 +226,6 @@ class CurrentOvmsType:
     is_docker_type = lambda: CurrentOvmsType.ovms_type in [OvmsType.DOCKER]
     is_binary_type = lambda: CurrentOvmsType.ovms_type in [OvmsType.BINARY]
     is_binary_docker_type = lambda: CurrentOvmsType.ovms_type in [OvmsType.BINARY_DOCKER]
-    is_kubernetes_type = lambda: CurrentOvmsType.ovms_type in [OvmsType.KUBERNETES]
     is_docker_cmd_line_type = lambda: CurrentOvmsType.ovms_type in [OvmsType.DOCKER_CMD_LINE]
     is_none_type = lambda: CurrentOvmsType.ovms_type in [OvmsType.NONE]
 

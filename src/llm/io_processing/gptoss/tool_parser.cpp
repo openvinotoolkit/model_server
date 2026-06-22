@@ -80,7 +80,7 @@ void GptOssToolParser::clearState() {
     functionNameCache.clear();
 }
 
-std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Processing Chunk [{}]", newChunk);
 
     std::string chunk = newChunk;

@@ -497,6 +497,10 @@ libgit2_engine()
 load("@ovms//third_party/drogon:drogon.bzl", "drogon_cpp")
 drogon_cpp()
 
+### espeak-ng (built from source via Bazel; gated by --//:espeak flag)
+load("@ovms//third_party/espeak_ng:espeak_ng.bzl", "espeak_ng")
+espeak_ng()
+
 # Azure Storage SDK
 new_local_repository(
     name = "azure",
