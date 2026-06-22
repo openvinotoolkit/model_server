@@ -1,17 +1,22 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git@d4dd21a3aa89c0671d85b704847ac06a378e761c
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git@7a109befdfd4f9b94351135b17505efa28698210
 accelerate
 datasets
 diffusers  # for image generation
 einops
 nncf
 numpy
-openvino-tokenizers==2026.3.0.dev20260611
-openvino==2026.3.0.dev20260611
+openvino-tokenizers==2026.3.0.dev20260609
+openvino==2026.3.0.dev20260609
 pillow
 sentence_transformers==5.3.0
 sentencepiece  # Required by: transformers`
 torchvision
 requests
+# Kokoro TTS export (text2speech --model_type kokoro).
+# typer must stay <0.12 because kokoro -> misaki -> spacy imports `typer.main`,
+# which was removed in typer 0.12.
+kokoro==0.9.4
+typer<0.12
