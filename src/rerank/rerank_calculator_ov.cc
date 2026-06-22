@@ -62,7 +62,6 @@ class RerankCalculatorOV : public CalculatorBase {
     static const std::string RERANK_MODEL_TOKEN_TYPE_IDS_NAME;
     static constexpr size_t NUMBER_OF_SPECIAL_TOKENS = 4;
 
-
     std::chrono::time_point<std::chrono::system_clock> created;
 
     int64_t bos_token{0};
