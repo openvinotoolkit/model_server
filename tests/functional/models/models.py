@@ -81,11 +81,7 @@ class ModelInfo:
     plugin_config: object = None
     transpose_axes: str = None
     custom_loader: CustomLoader = None
-    is_stateful: bool = False
     expected_batch_size: int = None
-    max_sequence_number: int = None
-    idle_sequence_cleanup: bool = None
-    low_latency_transformation: bool = None
     base_path: str = None
     model_path_on_host = None
     model_type: ModelType = ModelType.IR
@@ -158,10 +154,6 @@ class ModelInfo:
             "model_version_policy",
             "nireq",
             "plugin_config",
-            "stateful",
-            "max_sequence_number",
-            "idle_sequence_cleanup",
-            "low_latency_transformation",
             "allow_cache",
         ]
 
@@ -216,9 +208,6 @@ class ModelInfo:
         config_layout = self._calculate_layout_for_config()
         if config_layout:
             config["layout"] = config_layout
-
-        if self.is_stateful:
-            config["stateful"] = True
 
         return {"config": config}
 
@@ -378,9 +367,6 @@ class ModelInfo:
 
         shutil.copytree(self.model_path_on_host, clone.model_path_on_host, dirs_exist_ok=True)
         return clone
-
-    # REMOTE_SERVER_ADDRESS is not pre-defined, but set "on the fly" in our tests (prepare_remote_k8s_cluster_data),
-    # based on the remote_ip read from the loaded kubeconfig_file (get_ip_from_kubeconfig_file).
 
     def create_new_version(self, container_folder, new_version, copy_from_host_path=False, model_name=None):
         model_name = model_name if model_name is not None else self.name

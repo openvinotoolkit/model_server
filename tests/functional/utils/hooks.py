@@ -131,7 +131,6 @@ TIMEOUT_MULTIPLIER: dict = {
     TargetDevice.NPU: 1.5,
     "TRACE_TOOLS": 2,
     "AUTO_HETERO_MULTI": 3,
-    OvmsType.KUBERNETES: 1.5,
 }
 
 CURRENT_TARGET_DEVICE_DICT = {}
@@ -462,7 +461,7 @@ def get_docker_images(images_to_download):
 
 def download_docker_images():
     docker_ovms_types = [
-        OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE, OvmsType.KUBERNETES, OvmsType.BINARY_DOCKER, OvmsType.CAPI_DOCKER
+        OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE, OvmsType.BINARY_DOCKER, OvmsType.CAPI_DOCKER
     ]
     if not any(_ovms_type in docker_ovms_types for _ovms_type in config.ovms_types):
         return
@@ -967,10 +966,7 @@ def apply_conditional_run_type_marks(item):
 
 def set_timeout_per_test_type(item, test_type):
     if item.get_closest_marker("timeout") is None:
-        ovms_type = item.callspec.params.get(OVMS_TYPE_PARAM_NAME, None)
         value = timeout_dict[test_type]
-        if ovms_type == OvmsType.KUBERNETES:
-            value *= TIMEOUT_MULTIPLIER[OvmsType.KUBERNETES]
         if any([test_type == MarkRunType.TEST_MARK_REGRESSION,
                 test_type == MarkRunType.TEST_MARK_ON_COMMIT,
             ]):
