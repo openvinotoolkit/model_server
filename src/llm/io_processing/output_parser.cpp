@@ -20,6 +20,7 @@
 #include "../../logging.hpp"
 #include "../../stringutils.hpp"
 #include "output_parser.hpp"
+#include "parser_config_validation.hpp"
 #include "llama3/tool_parser.hpp"
 #include "hermes3/tool_parser.hpp"
 #include "phi4/tool_parser.hpp"
@@ -196,7 +197,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
-        throw std::runtime_error("Unsupported tool parser: " + toolParserName);
+        throw std::runtime_error("Unsupported tool parser: \"" + toolParserName +
+                                 "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
     }
 
     if (reasoningParserName == "qwen3") {
@@ -206,7 +208,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (reasoningParserName == "gptoss") {
         reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
-        throw std::runtime_error("Unsupported reasoning parser: " + reasoningParserName);
+        throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
+                                 "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
     }
 
     if (toolParser && reasoningParser) {

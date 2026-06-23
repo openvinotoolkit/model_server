@@ -34,6 +34,7 @@
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../../status.hpp"
+#include "../../io_processing/parser_config_validation.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
 
@@ -56,10 +57,20 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
 
     if (nodeOptions.has_tool_parser()) {
         properties->toolParserName = nodeOptions.tool_parser();
+        if (!properties->toolParserName.empty() && !isSupportedToolParserName(properties->toolParserName)) {
+            SPDLOG_ERROR("Unsupported tool_parser \"{}\" specified in graph configuration. Supported tool parsers are: {}",
+                properties->toolParserName, getSupportedToolParserNamesAsString());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
     }
 
     if (nodeOptions.has_reasoning_parser()) {
         properties->reasoningParserName = nodeOptions.reasoning_parser();
+        if (!properties->reasoningParserName.empty() && !isSupportedReasoningParserName(properties->reasoningParserName)) {
+            SPDLOG_ERROR("Unsupported reasoning_parser \"{}\" specified in graph configuration. Supported reasoning parsers are: {}",
+                properties->reasoningParserName, getSupportedReasoningParserNamesAsString());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
     }
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
