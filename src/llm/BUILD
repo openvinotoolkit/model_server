@@ -162,6 +162,16 @@ ovms_cc_library(
     ],
 )
 ovms_cc_library(
+    name = "io_processing_parser_config_validation",
+    hdrs = ["io_processing/parser_config_validation.hpp"],
+    srcs = ["io_processing/parser_config_validation.cpp"],
+    deps = [
+        "//src:libovmsstring_utils",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "io_processing_qwen3coder_tool_parser",
     hdrs = ["io_processing/qwen3coder/qwen3coder_tool_parser.hpp"],
     srcs = ["io_processing/qwen3coder/qwen3coder_tool_parser.cpp"],
@@ -284,6 +294,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         "//third_party:genai",
         ":partial_json_builder",
         ":io_processing_base_output_parser",
+        ":io_processing_parser_config_validation",
         ":io_processing_qwen3coder_tool_parser",
         ":io_processing_lfm2_tool_parser",
         ":io_processing_lfm25_tool_parser",

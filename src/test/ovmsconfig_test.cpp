@@ -27,6 +27,7 @@
 #include "../utils/env_guard.hpp"
 #include "../config.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "../graph_export/graph_cli_parser.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
@@ -1106,9 +1107,9 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
         (char*)"--draft_source_model",
         (char*)"/draft/model/source",
         (char*)"--reasoning_parser",
-        (char*)"reasoningParserName",
+        (char*)"qwen3",
         (char*)"--tool_parser",
-        (char*)"toolParserName",
+        (char*)"hermes3",
         (char*)"--enable_tool_guided_generation",
         (char*)"true",
         (char*)"--model_distribution_policy",
@@ -1139,8 +1140,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.value(), 16);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.value(), "/draft/model/source");
-    ASSERT_EQ(graphSettings.reasoningParser.value(), "reasoningParserName");
-    ASSERT_EQ(graphSettings.toolParser.value(), "toolParserName");
+    ASSERT_EQ(graphSettings.reasoningParser.value(), "qwen3");
+    ASSERT_EQ(graphSettings.toolParser.value(), "hermes3");
     ASSERT_EQ(graphSettings.enableToolGuidedGeneration, "true");
     ASSERT_EQ(exportSettings.pluginConfig.modelDistributionPolicy.has_value(), true);
     ASSERT_EQ(exportSettings.pluginConfig.modelDistributionPolicy.value(), "TENSOR_PARALLEL");
@@ -2820,6 +2821,66 @@ TEST(OvmsConfigManipulationTest, positiveDisableModel) {
     auto& modelSettings = config.getModelSettings();
     ASSERT_EQ(modelSettings.modelName, modelName);
     ASSERT_EQ(modelSettings.configPath, configPath);
+}
+
+TEST(OvmsGraphCliParserTest, invalidToolParserNameThrowsInvalidArgument) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "nonexistent_parser"};
+    parser.parse(args);
+    EXPECT_THROW({
+        try {
+            parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+        } catch (const std::invalid_argument& e) {
+            EXPECT_NE(std::string(e.what()).find("Unsupported tool_parser"), std::string::npos);
+            EXPECT_NE(std::string(e.what()).find("nonexistent_parser"), std::string::npos);
+            throw;
+        }
+    },
+        std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, invalidReasoningParserNameThrowsInvalidArgument) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--reasoning_parser", "nonexistent_parser"};
+    parser.parse(args);
+    EXPECT_THROW({
+        try {
+            parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+        } catch (const std::invalid_argument& e) {
+            EXPECT_NE(std::string(e.what()).find("Unsupported reasoning_parser"), std::string::npos);
+            EXPECT_NE(std::string(e.what()).find("nonexistent_parser"), std::string::npos);
+            throw;
+        }
+    },
+        std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, validParserNamesAreAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "hermes3", "--reasoning_parser", "qwen3"};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.toolParser.has_value());
+    EXPECT_EQ(graphSettings.toolParser.value(), "hermes3");
+    ASSERT_TRUE(graphSettings.reasoningParser.has_value());
+    EXPECT_EQ(graphSettings.reasoningParser.value(), "qwen3");
+}
+
+TEST(OvmsGraphCliParserTest, emptyParserNamesAreAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "", "--reasoning_parser", ""};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.toolParser.has_value());
+    EXPECT_EQ(graphSettings.toolParser.value(), "");
+    ASSERT_TRUE(graphSettings.reasoningParser.has_value());
+    EXPECT_EQ(graphSettings.reasoningParser.value(), "");
 }
 
 #pragma GCC diagnostic pop
