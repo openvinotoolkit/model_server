@@ -548,7 +548,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 // Check if task-specific parameters are provided or if graph.pbtxt is missing
                 bool hasUnmatchedOptions = ::ovms::hasTaskSpecificParameters(result->unmatched());
                 bool graphExists = ::ovms::graphPbtxtExists(*modelPath);
-                
+        
                 // Infer task if:
                 // 1. Task-specific parameters are provided (unmatched options), OR
                 // 2. graph.pbtxt doesn't exist (need to create in-memory graph)
