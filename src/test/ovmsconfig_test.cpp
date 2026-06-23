@@ -402,7 +402,10 @@ TEST_F(OvmsConfigDeathTest, hfNoTaskParameter) {
         "/some/path",
     };
     int arg_count = 6;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - --task parameter wasn't passed");
+    // With automatic task inference, the code now tries to detect the task from the model
+    // config (local or HF). Since the local repo path does not contain the model the code
+    // falls back to fetching from HuggingFace, which fails in an isolated test environment.
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "failed to download model config file from");
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
@@ -880,7 +883,10 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTask) {
         "/some/path",
     };
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--source_model should be used combined with --task");
+    // With automatic task inference, source_model now triggers task detection from the model
+    // config. Since /some/path/some/model does not exist the code attempts an HF network fetch
+    // which fails in an isolated test environment.
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "failed to download model config file from");
 }
 
 TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
@@ -2820,6 +2826,100 @@ TEST(OvmsConfigManipulationTest, positiveDisableModel) {
     auto& modelSettings = config.getModelSettings();
     ASSERT_EQ(modelSettings.modelName, modelName);
     ASSERT_EQ(modelSettings.configPath, configPath);
+}
+
+// ===================== Inferred Default Task Tests =====================
+// Fixture providing resolved paths to pre-built test model directories.
+class OvmsInferredTaskTest : public ::testing::Test {
+protected:
+    static std::string resolveTestModelPath(const std::string& modelDirName) {
+        const std::string relPath = std::string("src/test/models_config_json/") + modelDirName;
+        auto current = std::filesystem::current_path();
+        auto candidate = std::filesystem::weakly_canonical(current / ".." / ".." / relPath);
+        if (std::filesystem::exists(candidate))
+            return candidate.string();
+        auto search = current;
+        while (search != search.parent_path()) {
+            auto c = search / relPath;
+            if (std::filesystem::exists(c))
+                return c.string();
+            search = search.parent_path();
+        }
+        return candidate.string();
+    }
+
+    static std::string resolveTestModelsRepoPath() {
+        return resolveTestModelPath("..");  // parent of any model dir is the repo root
+    }
+};
+
+// Scenario 1: --source_model with no explicit --task and a locally available repo copy.
+// The task must be detected from the model config.json and the server must start.
+TEST_F(OvmsInferredTaskTest, positiveSourceModelInferTaskFromLocalRepo) {
+    const std::string repoPath = resolveTestModelPath("..");  // src/test/models_config_json/
+    const std::filesystem::path llamaConfig = std::filesystem::path(repoPath) / "llama" / "config.json";
+    if (!std::filesystem::exists(llamaConfig)) {
+        GTEST_SKIP() << "Test prerequisite missing: " << llamaConfig.string();
+    }
+    const std::string sourceModel = "llama";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model", (char*)sourceModel.c_str(),
+        (char*)"--model_repository_path", (char*)repoPath.c_str(),
+        (char*)"--rest_port", (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+}
+
+// Scenario 2: --model_path points to a directory that has config.json but NO graph.pbtxt.
+// The task must be inferred and the server must start in IN_MEMORY_GRAPH_MODE.
+TEST_F(OvmsInferredTaskTest, positiveModelPathNoGraphPbtxtInferTask) {
+    const std::string modelPath = resolveTestModelPath("llama");
+    const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        GTEST_SKIP() << "Test prerequisite missing: " << configJson.string();
+    }
+    // Verify the test fixture truly has no graph.pbtxt so the scenario is meaningful.
+    ASSERT_FALSE(std::filesystem::exists(std::filesystem::path(modelPath) / "graph.pbtxt"))
+        << "Unexpected graph.pbtxt in test model dir " << modelPath;
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path", (char*)modelPath.c_str(),
+        (char*)"--model_name", (char*)"llama",
+        (char*)"--rest_port", (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::IN_MEMORY_GRAPH_MODE);
+}
+
+// Scenario 3: --model_path (LLM/text_generation model) with no explicit --task but with
+// an embeddings-specific parameter (--pooling). Task is inferred as text_generation and
+// --pooling is not a recognised text_generation option, so parsing must fail.
+TEST_F(OvmsConfigDeathTest, negativeModelPathInferredTaskWithMismatchedParam) {
+    auto current = std::filesystem::current_path();
+    const std::string modelPath = std::filesystem::weakly_canonical(
+        current / ".." / ".." / "src/test/models_config_json/llama").string();
+    if (!std::filesystem::exists(std::filesystem::path(modelPath) / "config.json")) {
+        GTEST_SKIP() << "Test prerequisite missing: " << modelPath << "/config.json";
+    }
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path", (char*)modelPath.c_str(),
+        (char*)"--model_name", (char*)"llama",
+        (char*)"--rest_port", (char*)"8080",
+        (char*)"--pooling", (char*)"LAST",  // embeddings-only param, invalid for text_generation
+    };
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv),
+                ::testing::ExitedWithCode(OVMS_EX_USAGE),
+                "task: text_generation - error parsing options - unmatched arguments");
 }
 
 #pragma GCC diagnostic pop

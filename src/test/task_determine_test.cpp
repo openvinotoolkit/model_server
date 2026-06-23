@@ -50,6 +50,7 @@ const std::vector<std::pair<std::string, std::string>> CLIParserDetermineTaskTes
     {"whisper", "speech2text"},
     {"seamlessm4t", "speech2text"},
     {"qwen3_6", "text_generation"},
+    {"invalid_architecture", ""}  // This model has an unsupported architecture and should throw an exception
 };
 
 INSTANTIATE_TEST_SUITE_P(
