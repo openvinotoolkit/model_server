@@ -4946,8 +4946,8 @@ TEST_F(IsolatedServableTests, PromtSizeExceedsDefaultMaxPromptLenNPU) {
     std::vector<float> randomData(dataSize);
     std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
-    executionContext.inputIds = tensor;
-    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    executionContext.inputRequest.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputRequest.inputIds);
     ASSERT_EQ(status, absl::InvalidArgumentError("Input length exceeds the maximum allowed length"));
 }
 
@@ -4960,8 +4960,8 @@ TEST_F(IsolatedServableTests, PromtSizeExceedsNonDefaultMaxPromptLenNPU) {
     std::vector<float> randomData(dataSize);
     std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
-    executionContext.inputIds = tensor;
-    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    executionContext.inputRequest.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputRequest.inputIds);
     ASSERT_EQ(status, absl::InvalidArgumentError("Input length exceeds the maximum allowed length"));
 }
 
@@ -4974,8 +4974,8 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
     std::vector<float> randomData(dataSize);
     std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
-    executionContext.inputIds = tensor;
-    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    executionContext.inputRequest.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputRequest.inputIds);
     ASSERT_EQ(status, absl::OkStatus());
 }
 

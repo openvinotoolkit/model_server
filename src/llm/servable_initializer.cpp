@@ -82,6 +82,14 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
         }
     }
+
+    // Populate the InputProcessorContext from the now-fully-initialized properties.
+    properties->inputProcessorContext.tokenizer = properties->tokenizer;
+    properties->inputProcessorContext.config.useMinja = (properties->chatTemplateMode != ChatTemplateMode::JINJA);
+#if (PYTHON_DISABLE == 0)
+    properties->inputProcessorContext.templateProcessor = &properties->templateProcessor;
+    properties->inputProcessorContext.modelsPath = properties->modelsPath;
+#endif
 }
 
 #if (PYTHON_DISABLE == 0)

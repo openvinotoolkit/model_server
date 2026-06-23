@@ -36,7 +36,9 @@
 #include "../http_payload.hpp"
 #include "../sse_utils.hpp"
 #include "apis/openai_api_handler.hpp"
-#include "io_processing/generation_config_builder.hpp"
+#include "io_processing/base_generation_config_builder.hpp"
+#include "io_processing/input_processor_context.hpp"
+#include "io_processing/input_request.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
 #endif
@@ -132,10 +134,8 @@ struct GenAiServableExecutionContext {
     HttpPayload payload;
     Endpoint endpoint;
     std::shared_ptr<OpenAIApiHandler> apiHandler;
-    std::shared_ptr<GenerationConfigBuilder> generationConfigBuilder;
-    // Single tensor with inputIds for the model. This is considered general for all pipelines,
-    // but depending on particular pipeline implementation it might be not required or on the other hand, insufficient.
-    ov::Tensor inputIds;
+    // Populated in parseRequest(); carries all GenAI inputs including the generation config.
+    InputRequest inputRequest;
     // Required for generating output and handle request on the calculator side
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::string response;
@@ -180,9 +180,12 @@ struct GenAiServableProperties {
     ov::genai::Tokenizer tokenizer;
     // Specific pipeline properties
     bool eagle3Mode = false;
+    // Controls which steps InputProcessor builds for this servable type.
+    // Aggregated per-deployment context for InputProcessor.
+    InputProcessorContext inputProcessorContext;
 
 #if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor templateProcessor;
+    mutable PyJinjaTemplateProcessor templateProcessor;
 #endif
 };
 
@@ -227,7 +230,7 @@ public:
     virtual absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     /*
-    prepareInputs method implementation MUST fill executionContext inputIds field.
+    prepareInputs method implementation MUST fill executionContext inputRequest.inputIds field.
     Base implementation applies chat template to the payload body and encodes it with tokenizer.
     */
     virtual absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext);

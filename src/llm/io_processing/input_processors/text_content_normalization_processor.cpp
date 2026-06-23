@@ -1,0 +1,47 @@
+//*****************************************************************************
+// Copyright 2026 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+
+#include "text_content_normalization_processor.hpp"
+
+#include <string>
+#include <variant>
+
+namespace ovms {
+
+absl::Status TextContentNormalizationProcessor::process(InputRequest& req) {
+    ov::genai::ChatHistory& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
+    for (size_t i = 0; i < chatHistory.size(); i++) {
+        const auto content = chatHistory[i]["content"];
+        if (!content.is_array()) {
+            continue;
+        }
+        std::string combined;
+        for (size_t j = 0; j < content.size(); j++) {
+            const auto part = content[j];
+            if (part["type"].as_string().value_or("") != "text") {
+                continue;
+            }
+            if (!combined.empty()) {
+                combined += "\n";
+            }
+            combined += part["text"].as_string().value_or("");
+        }
+        chatHistory[i]["content"] = combined;
+    }
+    return absl::OkStatus();
+}
+
+}  // namespace ovms

@@ -41,6 +41,7 @@
 #if (PYTHON_DISABLE == 0)
 #include "../../py_jinja_template_processor.hpp"
 #endif
+#include "../../io_processing/generation_config_builder.hpp"
 #include "servable.hpp"
 
 namespace ovms {
@@ -125,18 +126,11 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
             getProperties()->tokenizer,
             [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
     }
-    legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
+    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
         getProperties()->decodingMethod);
-    legacyExecutionContext->generationConfigBuilder->parseConfigFromRequest(legacyExecutionContext->apiHandler->getRequest());
-    legacyExecutionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
-    try {
-        legacyExecutionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
-    } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
-        legacyExecutionContext->generationConfigBuilder->unsetStructuredOutputConfig();
-    }
+    legacyExecutionContext->inputRequest = legacyExecutionContext->apiHandler->extractInputRequest(configBuilder);
     return absl::OkStatus();
 }
 
@@ -147,7 +141,7 @@ absl::Status LegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutio
         return status;
     }
     // Additional validation layer for NPU specific properties
-    status = validateInputComplianceWithProperties(executionContext->inputIds);
+    status = validateInputComplianceWithProperties(executionContext->inputRequest.inputIds);
     return status;
 }
 

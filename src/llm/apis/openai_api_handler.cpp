@@ -31,6 +31,7 @@
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
 #include "../../filesystem/filesystem.hpp"
+#include "../io_processing/generation_config_builder.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
@@ -286,7 +287,7 @@ absl::Status OpenAIApiHandler::parseResponseFormat() {
 
 // --- Shared parsing methods ---
 
-absl::Status OpenAIApiHandler::ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged) {
+absl::Status OpenAIApiHandler::ensureArgumentsInToolCalls(Value& messageObj) {
     auto& allocator = doc.GetAllocator();
     auto toolCallsIt = messageObj.FindMember("tool_calls");
     if (toolCallsIt != messageObj.MemberEnd() && toolCallsIt->value.IsArray()) {
@@ -307,7 +308,6 @@ absl::Status OpenAIApiHandler::ensureArgumentsInToolCalls(Value& messageObj, boo
                 rapidjson::Value argumentsValue;
                 argumentsValue.SetString("{}", allocator);
                 functionIt->value.GetObject().AddMember(argumentsKey, argumentsValue, allocator);
-                jsonChanged = true;
             }
         }
     }
@@ -348,11 +348,9 @@ absl::Status OpenAIApiHandler::parseTools() {
             return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
         }
     }
-    bool jsonChanged = false;
     if (toolChoice == "none") {
         // remove tools from the request
         doc.RemoveMember("tools");
-        jsonChanged = true;
     }
     auto it = doc.FindMember("tools");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
@@ -405,7 +403,6 @@ absl::Status OpenAIApiHandler::parseTools() {
             // If toolChoice is set to a specific function name, we keep only that tool
             if (toolChoice != "auto" && toolChoice != "required" && toolChoice != functionName) {
                 it->value.Erase(&obj);
-                jsonChanged = true;
                 continue;
             }
 
@@ -430,12 +427,6 @@ absl::Status OpenAIApiHandler::parseTools() {
     }
 
     request.toolChoice = toolChoice;
-    if (jsonChanged) {
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        request.processedJson = buffer.GetString();
-    }
     return absl::OkStatus();
 }
 
@@ -492,16 +483,40 @@ const OpenAIRequest& OpenAIApiHandler::getRequest() const {
     return request;
 }
 
-const std::string& OpenAIApiHandler::getProcessedJson() const {
-    return request.processedJson;
-}
-
-const ImageHistory& OpenAIApiHandler::getImageHistory() const {
-    return request.imageHistory;
-}
-
 ov::genai::ChatHistory& OpenAIApiHandler::getChatHistory() {
     return request.chatHistory;
+}
+
+InputRequest OpenAIApiHandler::extractInputRequest(GenerationConfigBuilder& configBuilder) {
+    configBuilder.parseConfigFromRequest(request);
+    configBuilder.adjustConfigForDecodingMethod();
+    try {
+        configBuilder.validateStructuredOutputConfig(tokenizer);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
+        configBuilder.unsetStructuredOutputConfig();
+    }
+    InputRequest req;
+    req.generationConfig = configBuilder.getConfig();
+    if (endpoint == Endpoint::COMPLETIONS) {
+        req.input = request.prompt.value_or("");
+    } else {
+        // CHAT_COMPLETIONS and RESPONSES both use ChatHistory.
+        // Copied (not moved) so the handler retains its own copy for response serialization.
+        req.input = request.chatHistory;
+        // Populate tools and chat_template_kwargs on the copied ChatHistory so
+        // ChatTemplateProcessor can access them via get_tools()/get_extra_context().
+        auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
+        auto toolsResult = parseToolsToJsonContainer();
+        if (toolsResult.ok() && toolsResult.value().has_value()) {
+            chatHistory.set_tools(toolsResult.value().value());
+        }
+        auto kwargsResult = parseChatTemplateKwargsToJsonContainer();
+        if (kwargsResult.ok() && kwargsResult.value().has_value()) {
+            chatHistory.set_extra_context(kwargsResult.value().value());
+        }
+    }
+    return req;
 }
 
 std::optional<int> OpenAIApiHandler::getMaxTokens() const {
