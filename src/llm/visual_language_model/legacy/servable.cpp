@@ -385,16 +385,16 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
 #endif
         {
             constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
-            auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
-            if (!toolsStatus.ok()) {
-                return toolsStatus.status();
+            auto toolParsingResult = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
+            if (!toolParsingResult.ok()) {
+                return toolParsingResult.status();
             }
-            const auto& tools = toolsStatus.value();
-            auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-            if (!chatTemplateKwargsStatus.ok()) {
-                return chatTemplateKwargsStatus.status();
+            const auto& tools = toolParsingResult.value();
+            auto chatTemplateKwargsParsingResult = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+            if (!chatTemplateKwargsParsingResult.ok()) {
+                return chatTemplateKwargsParsingResult.status();
             }
-            const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+            const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
             try {
                 vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
             } catch (const std::exception& e) {

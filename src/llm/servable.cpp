@@ -203,16 +203,16 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         {
             ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
             constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
-            auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
-            if (!toolsStatus.ok()) {
-                return toolsStatus.status();
+            auto toolParsingResult = executionContext->apiHandler->parseToolsToJsonContainer();
+            if (!toolParsingResult.ok()) {
+                return toolParsingResult.status();
             }
-            const auto& tools = toolsStatus.value();
-            auto chatTemplateKwargsStatus = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-            if (!chatTemplateKwargsStatus.ok()) {
-                return chatTemplateKwargsStatus.status();
+            const auto& tools = toolParsingResult.value();
+            auto chatTemplateKwargsParsingResult = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+            if (!chatTemplateKwargsParsingResult.ok()) {
+                return chatTemplateKwargsParsingResult.status();
             }
-            const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+            const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
             try {
                 inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
             } catch (const std::exception& e) {
@@ -241,16 +241,16 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             {
                 ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
                 constexpr bool addGenerationPrompt = true;
-                auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
-                if (!toolsStatus.ok()) {
-                    return toolsStatus.status();
+                auto toolParsingResult = executionContext->apiHandler->parseToolsToJsonContainer();
+                if (!toolParsingResult.ok()) {
+                    return toolParsingResult.status();
                 }
-                const auto& tools = toolsStatus.value();
-                auto chatTemplateKwargsStatus = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-                if (!chatTemplateKwargsStatus.ok()) {
-                    return chatTemplateKwargsStatus.status();
+                const auto& tools = toolParsingResult.value();
+                auto chatTemplateKwargsParsingResult = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+                if (!chatTemplateKwargsParsingResult.ok()) {
+                    return chatTemplateKwargsParsingResult.status();
                 }
-                const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+                const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
                 try {
                     inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
                 } catch (const std::exception& e) {
