@@ -149,21 +149,21 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
             if (!success) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
             }
-        } else
+        } else  // NOLINT(readability/braces)
 #endif
         {
             input_workarounds::applyToHistory(getProperties()->chatTemplateCaps, getProperties()->detectedModelFamily, chatHistory);
             constexpr bool addGenerationPrompt = true;
-            auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
-            if (!toolsStatus.ok()) {
-                return toolsStatus.status();
+            auto toolParsingResult = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
+            if (!toolParsingResult.ok()) {
+                return toolParsingResult.status();
             }
-            const auto& tools = toolsStatus.value();
-            auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-            if (!chatTemplateKwargsStatus.ok()) {
-                return chatTemplateKwargsStatus.status();
+            const auto& tools = toolParsingResult.value();
+            auto chatTemplateKwargsParsingResult = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+            if (!chatTemplateKwargsParsingResult.ok()) {
+                return chatTemplateKwargsParsingResult.status();
             }
-            const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+            const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
             if (llm_calculator_logger->should_log(spdlog::level::trace)) {
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory messages: {}", chatHistory.get_messages().to_json_string());
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory.get_tools(): {}", chatHistory.get_tools().to_json_string());

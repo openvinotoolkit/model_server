@@ -88,26 +88,31 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     }
 
     legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
-    if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
-        legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
-            legacyExecutionContext->endpoint,
-            std::chrono::system_clock::now(),
-            getProperties()->tokenizer,
-            getProperties()->toolParserName,
-            getProperties()->reasoningParserName);
-    } else {
-        legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
-            legacyExecutionContext->endpoint,
-            std::chrono::system_clock::now(),
-            getProperties()->tokenizer,
-            getProperties()->toolParserName,
-            getProperties()->reasoningParserName);
+    try {
+        if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
+            legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
+                legacyExecutionContext->endpoint,
+                std::chrono::system_clock::now(),
+                getProperties()->tokenizer,
+                getProperties()->toolParserName,
+                getProperties()->reasoningParserName);
+        } else {
+            legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
+                legacyExecutionContext->endpoint,
+                std::chrono::system_clock::now(),
+                getProperties()->tokenizer,
+                getProperties()->toolParserName,
+                getProperties()->reasoningParserName);
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to create API handler: {}", e.what());
+        return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
     }
 
@@ -389,21 +394,21 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             if (!success) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
             }
-        } else
+        } else  // NOLINT(readability/braces)
 #endif
         {
             input_workarounds::applyToHistory(getProperties()->chatTemplateCaps, getProperties()->detectedModelFamily, chatHistory);
             constexpr bool addGenerationPrompt = true;
-            auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
-            if (!toolsStatus.ok()) {
-                return toolsStatus.status();
+            auto toolParsingResult = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
+            if (!toolParsingResult.ok()) {
+                return toolParsingResult.status();
             }
-            const auto& tools = toolsStatus.value();
-            auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-            if (!chatTemplateKwargsStatus.ok()) {
-                return chatTemplateKwargsStatus.status();
+            const auto& tools = toolParsingResult.value();
+            auto chatTemplateKwargsParsingResult = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+            if (!chatTemplateKwargsParsingResult.ok()) {
+                return chatTemplateKwargsParsingResult.status();
             }
-            const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+            const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
             try {
                 vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
             } catch (const std::exception& e) {

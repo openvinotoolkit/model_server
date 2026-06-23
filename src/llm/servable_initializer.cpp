@@ -59,7 +59,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
     if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
         ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
         loadPyTemplateProcessor(properties, extraGenInfo);
-    } else
+    } else  // NOLINT(readability/braces)
 #endif
     {
         if (properties->tokenizer.get_chat_template().empty()) {
