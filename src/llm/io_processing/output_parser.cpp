@@ -31,7 +31,8 @@
 #include "gemma4/gemma4_reasoning_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
 #include "lfm2/lfm2_tool_parser.hpp"
-#include "lfm2/lfm2_reasoning_parser.hpp"
+#include "lfm2/lfm25_tool_parser.hpp"
+#include "lfm2/lfm25_reasoning_parser.hpp"
 #include "gemma4/gemma4_tool_parser.hpp"
 
 namespace ovms {
@@ -194,6 +195,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<DevstralToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "lfm2") {
         toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
+    } else if (toolParserName == "lfm2.5") {
+        toolParser = std::make_unique<Lfm25ToolParser>(tokenizer);
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
@@ -206,8 +209,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Gemma4ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "gptoss") {
         reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
-    } else if (reasoningParserName == "lfm2") {
-        reasoningParser = std::make_unique<Lfm2ReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "lfm2.5") {
+        reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: " + reasoningParserName);
     }

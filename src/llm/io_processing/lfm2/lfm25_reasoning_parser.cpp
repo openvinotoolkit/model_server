@@ -21,35 +21,36 @@
 #include "src/port/rapidjson_document.hpp"
 
 #include "../../../logging.hpp"
-#include "lfm2_reasoning_parser.hpp"
+#include "lfm25_reasoning_parser.hpp"
 #include "../utils.hpp"
 
 namespace ovms {
-void Lfm2ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
+void Lfm25ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     auto startReasoningIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningStartTokenId);
     auto endReasoningIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId);
 
     if (startReasoningIt == generatedTokens.end() || endReasoningIt == generatedTokens.end() || startReasoningIt >= endReasoningIt) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Lfm2ReasoningParser: Reasoning start or end token not found in the generated tokens, or in wrong order. Start token found: {}, End token found: {}, Start position: {}, End position: {}",
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Lfm25ReasoningParser: Reasoning start or end token not found in the generated tokens, or in wrong order. Start token found: {}, End token found: {}, Start position: {}, End position: {}",
             startReasoningIt != generatedTokens.end(), endReasoningIt != generatedTokens.end(), std::distance(generatedTokens.begin(), startReasoningIt), std::distance(generatedTokens.begin(), endReasoningIt));
         return;
     }
 
-    std::string reasoningContent = tokenizer.decode(std::vector<int64_t>(startReasoningIt + 1, endReasoningIt));
-    std::string remainingContent = tokenizer.decode(std::vector<int64_t>(endReasoningIt + 1, generatedTokens.end()));
+    auto startPos = std::distance(generatedTokens.begin(), startReasoningIt);
+    auto endPos = std::distance(generatedTokens.begin(), endReasoningIt);
 
+    std::string reasoningContent = tokenizer.decode(std::vector<int64_t>(startPos + generatedTokens.begin() + 1, endPos + generatedTokens.begin()), ov::genai::skip_special_tokens(true));
+    
     parsedOutput.reasoning = reasoningContent;
-    parsedOutput.content = remainingContent;
 }
 
-std::optional<rapidjson::Document> Lfm2ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> Lfm25ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) {
     if (tokens.empty()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty tokens for Lfm2ReasoningParser");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty tokens for Lfm25ReasoningParser");
         return std::nullopt;
     }
 
-    if (std::find(tokens.begin(), tokens.end(), reasoningStartTokenId) == tokens.end() &&
-        std::find(tokens.begin(), tokens.end(), reasoningEndTokenId) == tokens.end()) {
+    if (std::find(tokens.begin(), tokens.end(), reasoningStartTokenId) != tokens.end() ||
+        std::find(tokens.begin(), tokens.end(), reasoningEndTokenId) != tokens.end()) {
         return std::nullopt;
     } else {
         rapidjson::StringBuffer buffer;

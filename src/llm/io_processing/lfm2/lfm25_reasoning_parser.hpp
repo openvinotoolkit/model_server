@@ -17,17 +17,17 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-class Lfm2ReasoningParser : public BaseOutputParser {
+class Lfm25ReasoningParser : public BaseOutputParser {
 protected:
     const std::string parsingStartTag = "<think>";
     const std::string parsingEndTag = "</think>";
 
-    const int64_t reasoningStartTokenId = 50280;
-    const int64_t reasoningEndTokenId = 50281;
+    const int64_t reasoningStartTokenId = 124901; // <think>
+    const int64_t reasoningEndTokenId = 124902;   // </think>
 
 public:
-    Lfm2ReasoningParser() = delete;
-    explicit Lfm2ReasoningParser(ov::genai::Tokenizer& tokenizer) :
+    Lfm25ReasoningParser() = delete;
+    explicit Lfm25ReasoningParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
@@ -42,6 +42,11 @@ public:
     }
     const std::string& getParsingEndTag() const override {
         return parsingEndTag;
+    }
+
+    // It may be removed after changing logic in Lfm2ToolParser to use tokens in streaming instead of chunk content, both tool parser and reasoning parser need to have the same value for this function  
+    bool requiresStreamingWithSpecialTokens() const override {
+        return true;
     }
 };
 }
