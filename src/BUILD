@@ -2161,6 +2161,19 @@ cc_binary(
     linkstatic = True,
 )
 
+cc_binary(
+    name = "num_streams_repro",
+    srcs = [
+        "num_streams_repro.cpp",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COMMON_STATIC_LIBS_COPTS,
+    deps = [
+        "//third_party:openvino",
+    ],
+    linkstatic = True,
+)
+
 
 
 cc_binary(
@@ -2276,6 +2289,7 @@ cc_test(
         "test/tensor_conversion_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
+        "test/task_determine_test.cpp",
         "test/test_http_utils.hpp",
         "test/tfs_rest_parser_binary_inputs_test.cpp",
         "test/tfs_rest_parser_column_test.cpp",

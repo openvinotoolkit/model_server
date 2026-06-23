@@ -1,0 +1,5 @@
+{
+  "architectures": ["FluxTransformer2DModel"],
+  "model_type": "flux",
+  "hidden_size": 3072
+}

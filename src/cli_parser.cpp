@@ -568,7 +568,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 const std::optional<std::string> modelPath = result->count("model_path") ? std::make_optional(result->operator[]("model_path").as<std::string>()) : std::nullopt;
                 const std::optional<std::string> sourceModel = result->count("source_model") ? std::make_optional(result->operator[]("source_model").as<std::string>()) : std::nullopt;
                 const std::optional<std::string> modelRepositoryPath = result->count("model_repository_path") ? std::make_optional(result->operator[]("model_repository_path").as<std::string>()) : std::nullopt;
-                
+
                 // For source_model (HF pull mode), always infer the task
                 // For model_path in in-memory graph mode, check if task should be inferred based on parameters and graph.pbtxt
                 bool shouldInferTask = false;
@@ -583,7 +583,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                     bool graphExists = ::ovms::graphPbtxtExists(*modelPath);
                     shouldInferTask = hasUnmatchedOptions || !graphExists;
                 }
-                
+
                 if (shouldInferTask) {
                     inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath);
                 }
