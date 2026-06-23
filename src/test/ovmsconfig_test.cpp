@@ -2864,9 +2864,12 @@ TEST_F(OvmsInferredTaskTest, positiveSourceModelInferTaskFromLocalRepo) {
     const std::string sourceModel = "llama";
     char* n_argv[] = {
         (char*)"ovms",
-        (char*)"--source_model", (char*)sourceModel.c_str(),
-        (char*)"--model_repository_path", (char*)repoPath.c_str(),
-        (char*)"--rest_port", (char*)"8080",
+        (char*)"--source_model",
+        (char*)sourceModel.c_str(),
+        (char*)"--model_repository_path",
+        (char*)repoPath.c_str(),
+        (char*)"--rest_port",
+        (char*)"8080",
     };
     int arg_count = 7;
     ConstructorEnabledConfig config;
@@ -2888,9 +2891,12 @@ TEST_F(OvmsInferredTaskTest, positiveModelPathNoGraphPbtxtInferTask) {
         << "Unexpected graph.pbtxt in test model dir " << modelPath;
     char* n_argv[] = {
         (char*)"ovms",
-        (char*)"--model_path", (char*)modelPath.c_str(),
-        (char*)"--model_name", (char*)"llama",
-        (char*)"--rest_port", (char*)"8080",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--model_name",
+        (char*)"llama",
+        (char*)"--rest_port",
+        (char*)"8080",
     };
     int arg_count = 7;
     ConstructorEnabledConfig config;
@@ -2905,7 +2911,8 @@ TEST_F(OvmsInferredTaskTest, positiveModelPathNoGraphPbtxtInferTask) {
 TEST_F(OvmsConfigDeathTest, negativeModelPathInferredTaskWithMismatchedParam) {
     auto current = std::filesystem::current_path();
     const std::string modelPath = std::filesystem::weakly_canonical(
-        current / ".." / ".." / "src/test/models_config_json/llama").string();
+        current / ".." / ".." / "src/test/models_config_json/llama")
+                                      .string();
     if (!std::filesystem::exists(std::filesystem::path(modelPath) / "config.json")) {
         GTEST_SKIP() << "Test prerequisite missing: " << modelPath << "/config.json";
     }
@@ -2918,8 +2925,8 @@ TEST_F(OvmsConfigDeathTest, negativeModelPathInferredTaskWithMismatchedParam) {
     };
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv),
-                ::testing::ExitedWithCode(OVMS_EX_USAGE),
-                "task: text_generation - error parsing options - unmatched arguments");
+        ::testing::ExitedWithCode(OVMS_EX_USAGE),
+        "task: text_generation - error parsing options - unmatched arguments");
 }
 
 #pragma GCC diagnostic pop
