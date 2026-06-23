@@ -16,37 +16,15 @@
 
 import random
 import sys
-import time
-import pytest
 
-from tests.functional.config import enable_pytest_plugins, machine_is_reserved_for_test_session, pytest_keyword_filter
-from tests.functional.constants.components import OvmsComponents
+from tests.functional.config import enable_pytest_plugins, pytest_keyword_filter, machine_is_reserved_for_test_session
 from tests.functional.constants.ovms import (
-    BASE_OS_PARAM_NAME,
     CURRENT_TARGET_DEVICE_DICT_ARGUMENT,
-    OVMS_TYPE_PARAM_NAME,
-    TARGET_DEVICE_PARAM_NAME,
     TMP_REPOS_DIR_ARGUMENT,
-    USES_MAPPING_PARAM_NAME,
 )
 from tests.functional.utils import hooks
-from tests.functional.utils.hooks import (
-    log_configuration_variables,
-    parametrize_all_models,
-    parametrize_base_os,
-    parametrize_input_shape,
-    parametrize_iteration_info,
-    parametrize_many_models,
-    parametrize_model_aux_type,
-    parametrize_model_type,
-    parametrize_ovms_type,
-    parametrize_plugin_config,
-    parametrize_target_device,
-    parametrize_uses_mapping,
-    validate_port_pool,
-)
 from tests.functional.utils.logger import OvmsFileHandler, get_logger
-from tests.functional.utils.marks import MarksRegistry, MarkTestParameters
+from tests.functional.utils.marks import MarksRegistry
 from tests.functional.utils.test_framework import is_xdist_master
 
 logger = get_logger(__name__)
@@ -86,7 +64,7 @@ if enable_pytest_plugins:
 
         if is_xdist_master():
             hooks.setup_tmp_repos_dir(config)
-            validate_port_pool(config)
+            hooks.validate_port_pool(config)
             # master thread pytest_configure call. No xdist worker process spawned yet.
             hooks.init_environment(config)
             hooks.clear_ovms_capi_artifacts()
@@ -133,99 +111,70 @@ if enable_pytest_plugins:
     MarksRegistry.MARK_ENUMS.extend([OvmsComponents])
 
 
-def pytest_sessionstart(session):
-    logger.info(f"Starting test session in the following folder: {session.startdir}")
-    log_configuration_variables()
-    session.start_time = time.time()
+    def pytest_sessionstart(session):
+        hooks.get_session_start_info(session)
 
 
-# https://docs.pytest.org/en/6.2.x/reference.html#id57
-@pytest.hookimpl(hookwrapper=True)
-def pytest_collection_modifyitems(session, config, items):
-    """
-    Support for running tests with component tags.
-    Report all test component markers to mongo_reporter.
-    """
-    logger.info(f"Preparing tests for test session in the following folder: {session.startdir}")
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_collection_modifyitems(session, config, items):
+        """
+        Support for running tests with component tags.
+        Report all test component markers to mongo_reporter.
+        """
+        logger.info(f"Preparing tests for test session in the following folder: {session.startdir}")
 
-    if pytest_keyword_filter:
-        # Filter case insensitive
-        deselected = [_item for _item in items if pytest_keyword_filter.lower() not in _item.name.lower()]
+        if pytest_keyword_filter:
+            # Filter case insensitive
+            deselected = [_item for _item in items if pytest_keyword_filter.lower() not in _item.name.lower()]
+            if deselected:
+                hooks.deselect_items(items, config, deselected)
+
+        yield  # deselect items in default hook way via keyword ('-k')
+
+        if config.option.collectonly:
+            hooks.log_skip_statistic(items)
+
+        deselected = hooks.preprocess_collected_items(items)
         if deselected:
             hooks.deselect_items(items, config, deselected)
 
-    yield  # deselect items in default hook way via keyword ('-k')
+        hooks.set_divide_target_device_per_worker(items)
 
-    if config.option.collectonly:
-        hooks.log_skip_statistic(items)
-
-    deselected = hooks.preprocess_collected_items(items)
-    if deselected:
-        hooks.deselect_items(items, config, deselected)
-
-    hooks.set_divide_target_device_per_worker(items)
-
-    random.Random(7).shuffle(items)
+        random.Random(7).shuffle(items)
 
 
-# https://docs.pytest.org/en/6.2.x/reference.html#id58
-@pytest.hookimpl(hookwrapper=True, tryfirst=True)
-def pytest_runtest_protocol(item: "Item"):
-    """
-    Perform the runtest protocol for a single test item.
-    The default runtest protocol is this (see individual hooks for full details):
-        pytest_runtest_logstart(nodeid, location)
-        Setup phase:
-                call = pytest_runtest_setup(item) (wrapped in CallInfo(when="setup"))
-                report = pytest_runtest_makereport(item, call)
-                pytest_runtest_logreport(report)
-                pytest_exception_interact(call, report) if an interactive exception occurred
-        Call phase, if the setup passed and the setuponly pytest option is not set:
-                call = pytest_runtest_call(item) (wrapped in CallInfo(when="call"))
-                report = pytest_runtest_makereport(item, call)
-                pytest_runtest_logreport(report)
-                pytest_exception_interact(call, report) if an interactive exception occurred
-        Teardown phase:
-                call = pytest_runtest_teardown(item, nextitem) (wrapped in CallInfo(when="teardown"))
-                report = pytest_runtest_makereport(item, call)
-                pytest_runtest_logreport(report)
-                pytest_exception_interact(call, report) if an interactive exception occurred
-        pytest_runtest_logfinish(nodeid, location)
-    """
-    __root_logger = get_logger(None)
-    if not item.keywords.get("skip"):
-        fh = OvmsFileHandler(item)
-        __root_logger.addHandler(fh)
-    yield
-    if not item.keywords.get("skip"):
-        fh.close()
-        __root_logger.removeHandler(fh)
+    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
+    def pytest_runtest_protocol(item: "Item"):
+        """
+         Perform the runtest protocol for a single test item.
+         The default runtest protocol is this (see individual hooks for full details):
+             pytest_runtest_logstart(nodeid, location)
+             Setup phase:
+                     call = pytest_runtest_setup(item) (wrapped in CallInfo(when="setup"))
+                     report = pytest_runtest_makereport(item, call)
+                     pytest_runtest_logreport(report)
+                     pytest_exception_interact(call, report) if an interactive exception occurred
+             Call phase, if the setup passed and the setuponly pytest option is not set:
+                     call = pytest_runtest_call(item) (wrapped in CallInfo(when="call"))
+                     report = pytest_runtest_makereport(item, call)
+                     pytest_runtest_logreport(report)
+                     pytest_exception_interact(call, report) if an interactive exception occurred
+             Teardown phase:
+                     call = pytest_runtest_teardown(item, nextitem) (wrapped in CallInfo(when="teardown"))
+                     report = pytest_runtest_makereport(item, call)
+                     pytest_runtest_logreport(report)
+                     pytest_exception_interact(call, report) if an interactive exception occurred
+             pytest_runtest_logfinish(nodeid, location)
+         """
+        __root_logger = get_logger(None)
+        if not item.keywords.get("skip"):
+            fh = OvmsFileHandler(item)
+            __root_logger.addHandler(fh)
+        yield
+        if not item.keywords.get("skip"):
+            fh.close()
+            __root_logger.removeHandler(fh)
 
 
-def pytest_generate_tests(metafunc):
-    if OVMS_TYPE_PARAM_NAME in metafunc.fixturenames:
-        parametrize_ovms_type(metafunc)
-
-    if USES_MAPPING_PARAM_NAME in metafunc.fixturenames:
-        parametrize_uses_mapping(metafunc)
-
-    if BASE_OS_PARAM_NAME in metafunc.fixturenames:
-        parametrize_base_os(metafunc)
-
-    if MarkTestParameters.MODEL_TYPE in metafunc.fixturenames:
-        parametrize_model_type(metafunc)
-    elif MarkTestParameters.ALL_MODELS in metafunc.fixturenames:
-        parametrize_all_models(metafunc)
-    elif MarkTestParameters.MANY_MODELS in metafunc.fixturenames:
-        parametrize_many_models(metafunc)
-    elif MarkTestParameters.ITERATION_INFO in metafunc.fixturenames:
-        parametrize_iteration_info(metafunc)
-    elif MarkTestParameters.INPUT_SHAPE in metafunc.fixturenames:
-        parametrize_input_shape(metafunc)
-    elif MarkTestParameters.PLUGIN_CONFIG in metafunc.fixturenames:
-        parametrize_plugin_config(metafunc)
-    elif TARGET_DEVICE_PARAM_NAME in metafunc.fixturenames:
-        parametrize_target_device(metafunc)
-
-    if MarkTestParameters.MODEL_AUX_TYPE in metafunc.fixturenames:
-        parametrize_model_aux_type(metafunc)
+    def pytest_generate_tests(metafunc):
+        hooks.parametrize_tests(metafunc)

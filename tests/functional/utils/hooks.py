@@ -19,6 +19,7 @@ import os
 import re
 import shutil
 import sys
+import time
 import warnings
 import pytest
 
@@ -772,7 +773,7 @@ def mute_warnings():
 def setup_nginx():
     if not is_nginx_mtls:
         return
-    print("Setup ngnix certificates")
+    print("Setup nginx certificates")
     if is_xdist_master():
         OvsaCerts.generate_ovsa_certs(skip_if_valid=not force_generate_new_ssl_certs)
     OvsaCerts.init_ovsa_certs()
@@ -1112,3 +1113,38 @@ def log_skip_statistic(items):
     issue_stats, other_tests = calc_statistics(items)
     log_labeled_stats(issue_stats)
     log_others(other_tests)
+
+
+def get_session_start_info(session):
+    logger.info(f"Starting test session in the following folder: {session.startdir}")
+    log_configuration_variables()
+    session.start_time = time.time()
+
+
+def parametrize_tests(metafunc):
+    if OVMS_TYPE_PARAM_NAME in metafunc.fixturenames:
+        parametrize_ovms_type(metafunc)
+
+    if USES_MAPPING_PARAM_NAME in metafunc.fixturenames:
+        parametrize_uses_mapping(metafunc)
+
+    if BASE_OS_PARAM_NAME in metafunc.fixturenames:
+        parametrize_base_os(metafunc)
+
+    if MarkTestParameters.MODEL_TYPE in metafunc.fixturenames:
+        parametrize_model_type(metafunc)
+    elif MarkTestParameters.ALL_MODELS in metafunc.fixturenames:
+        parametrize_all_models(metafunc)
+    elif MarkTestParameters.MANY_MODELS in metafunc.fixturenames:
+        parametrize_many_models(metafunc)
+    elif MarkTestParameters.ITERATION_INFO in metafunc.fixturenames:
+        parametrize_iteration_info(metafunc)
+    elif MarkTestParameters.INPUT_SHAPE in metafunc.fixturenames:
+        parametrize_input_shape(metafunc)
+    elif MarkTestParameters.PLUGIN_CONFIG in metafunc.fixturenames:
+        parametrize_plugin_config(metafunc)
+    elif TARGET_DEVICE_PARAM_NAME in metafunc.fixturenames:
+        parametrize_target_device(metafunc)
+
+    if MarkTestParameters.MODEL_AUX_TYPE in metafunc.fixturenames:
+        parametrize_model_aux_type(metafunc)

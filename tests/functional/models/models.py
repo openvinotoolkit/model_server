@@ -98,6 +98,7 @@ class ModelInfo:
     use_subconfig: bool = False
     xml_name: str = None
     onnx_name: str = None
+    is_generative: bool = False
     is_llm: bool = False
     is_vision_language: bool = False
     is_hf_direct_load: bool = False  # model can be loaded directly from HuggingFace without conversion with optimum-cli
