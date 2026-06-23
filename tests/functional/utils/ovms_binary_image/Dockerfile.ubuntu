@@ -22,7 +22,7 @@ FROM $OVMS_IMAGE as ovms_image
 FROM $OVMS_TEST_IMAGE as ovms_test_image
 FROM $BASE_IMAGE as base_image
 
-ARG OVMS_DEPENDENCIES="libcurl4-openssl-dev libpugixml1v5 libtbb2 libxml12"
+ARG OVMS_DEPENDENCIES="libcurl4-openssl-dev libpugixml1v5 libtbb12 libxml2"
 RUN apt-get update && apt-get install -y --no-install-recommends ${OVMS_DEPENDENCIES} && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /

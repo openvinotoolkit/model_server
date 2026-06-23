@@ -323,7 +323,7 @@ performance_test_timeout_minutes = get_int("TT_PERFORMANCE_TEST_TIMEOUT_MINUTES"
 __base_os = os.environ.get("BASE_OS", OsType.Ubuntu24)
 base_os = get_list("TT_BASE_OS", fallback=[__base_os])
 
-"""" BASE_IMAGE - Docker image used during OVMS image creation"""
+""" BASE_IMAGE - Docker image used during OVMS image creation """
 base_image = os.environ.get("BASE_IMAGE", None)
 if base_image is not None:
     assert len(base_os) == 1, "If you wish to iterate by TT_BASE_OS: do not set BASE_IMAGE explicitly."

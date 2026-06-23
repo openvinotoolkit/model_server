@@ -86,7 +86,7 @@ if enable_pytest_plugins:
 
     def pytest_unconfigure(config):
         if getattr(config, "configured", None) is not True:
-            # Check if pytest_configure() was done successfuly, if not: logger would be in invalid state so disable.
+            # Check if pytest_configure() was done successfully, if not: logger would be in invalid state so disable.
             for _logger in logger.manager.loggerDict.values():
                 _logger.disabled = True
 

@@ -83,7 +83,7 @@ class OvmsParams(object):
     def __post_init__(self):
         if self.models is not None:
             for model in self.models:
-                if model.cpu_extension is not None:
+                if getattr(model, "cpu_extension", None) is not None:
                     self.cpu_extension = model.cpu_extension()
                     break
 

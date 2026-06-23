@@ -593,7 +593,7 @@ class ModelInfo:
         return False
 
     @staticmethod
-    def rename_input_ouput_data(data, src_name, dst_name):
+    def rename_input_output_data(data, src_name, dst_name):
         data[dst_name] = data[src_name]
         del data[src_name]
         return data

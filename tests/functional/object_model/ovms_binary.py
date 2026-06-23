@@ -100,7 +100,7 @@ def start_binary_ovms(
     cpu_extension_path = None
     if parameters.models is not None:
         for model in parameters.models:
-            if model.cpu_extension is not None:
+            if getattr(model, "cpu_extension", None) is not None:
                 cpu_extension = model.cpu_extension()
                 cpu_extension_path = cpu_extension.lib_path[1:]
     if parameters.cpu_extension:
