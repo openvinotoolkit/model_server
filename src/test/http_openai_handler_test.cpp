@@ -4022,9 +4022,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_ParsesToolsJsonContai
         std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
 
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    auto toolsStatus = apiHandler->parseToolsToJsonContainer();
-    ASSERT_TRUE(toolsStatus.ok());
-    const auto& tools = toolsStatus.value();
+    auto toolParsingResult = apiHandler->parseToolsToJsonContainer();
+    ASSERT_TRUE(toolParsingResult.ok());
+    const auto& tools = toolParsingResult.value();
     ASSERT_TRUE(tools.has_value());
     EXPECT_TRUE(tools->is_array());
     ASSERT_EQ(tools->size(), 1);
