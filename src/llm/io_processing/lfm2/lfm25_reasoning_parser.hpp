@@ -22,8 +22,8 @@ protected:
     const std::string parsingStartTag = "<think>";
     const std::string parsingEndTag = "</think>";
 
-    const int64_t reasoningStartTokenId = 124901; // <think>
-    const int64_t reasoningEndTokenId = 124902;   // </think>
+    const int64_t reasoningStartTokenId = 124901;  // <think>
+    const int64_t reasoningEndTokenId = 124902;    // </think>
 
 public:
     Lfm25ReasoningParser() = delete;

@@ -167,8 +167,6 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
 TEST_F(LFM2OutputParserTest, ParseToolCallWithObjectArguments) {
     std::string inputWithProperClosure = "<|tool_call_start|>[dummy(config={'name': 'astro_config', 'value': 99})]<|tool_call_end|>";
 
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
@@ -188,8 +186,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithObjectArguments) {
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArguments) {
     std::string inputWithProperClosure = "<|tool_call_start|>[test1(arg1=\"data1, data2\")]<|tool_call_end|>";
 
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
+
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;

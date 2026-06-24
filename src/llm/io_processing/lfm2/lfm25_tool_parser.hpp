@@ -14,33 +14,55 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "./lfm2_tool_parser.hpp"
+#include "./lfm2_utils.hpp"
 
 namespace ovms {
-class Lfm25ToolParser : public Lfm2ToolParser {
+class Lfm25ToolParser : public BaseOutputParser {
 protected:
-    static const int64_t toolCallStartTokenId = 124905; // <|tool_call_start|>
-    static const int64_t toolCallEndTokenId = 124906;   // <|tool_call_end|>
-    static const int64_t reasoningEndTokenId = 124902;   // </think>
+    static const std::string TOOL_CALL_START_TAG;
+    static const std::string TOOL_CALL_END_TAG;
+
+    static const int64_t toolCallStartTokenId;
+    static const int64_t toolCallEndTokenId;
+    static const int64_t reasoningEndTokenId;
 public:
     Lfm25ToolParser() = delete;
     explicit Lfm25ToolParser(ov::genai::Tokenizer& tokenizer) :
-        Lfm2ToolParser(tokenizer, toolCallStartTokenId, toolCallEndTokenId) {}
+        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override {
-        Lfm2ToolParser::parse(parsedOutput, generatedTokens);
+    bool parseNewContent();
 
-        auto contentTokens = std::vector<int64_t>(generatedTokens.begin(), generatedTokens.end());
-        auto reasoningEnd = std::find(contentTokens.begin(), contentTokens.end(), reasoningEndTokenId);
-        if (reasoningEnd != contentTokens.end()) {
-            contentTokens.erase(contentTokens.begin(), reasoningEnd + 1);
-        }
-        auto toolCallStart = std::find(contentTokens.begin(), contentTokens.end(), toolCallStartTokenId);
-        auto toolCallEnd = std::find(contentTokens.begin(), contentTokens.end(), toolCallEndTokenId);
-        if (toolCallStart != contentTokens.end() && toolCallEnd != contentTokens.end() && toolCallStart < toolCallEnd) {
-            contentTokens.erase(toolCallStart, toolCallEnd + 1);
-        }
-        parsedOutput.content = tokenizer.decode(contentTokens, ov::AnyMap{ov::genai::skip_special_tokens(true)});
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+    const std::vector<std::string>& getParsingStartTags() const override {
+        static const std::vector<std::string> parsingStartTags = {TOOL_CALL_START_TAG};
+        return parsingStartTags;
     }
+
+    const std::vector<std::string>& getSpecialParsingStartTags() const override {
+        static const std::vector<std::string> beginningOnlyTags = {};
+        return beginningOnlyTags;
+    }
+
+    const std::vector<std::string>& getSpecialTagsToErase() const override {
+        static const std::vector<std::string> tagsToErase = {EOS_TOKEN_STR};
+        return tagsToErase;
+    }
+
+    const std::string& getParsingEndTag() const override {
+        return TOOL_CALL_END_TAG;
+    }
+
+    bool requiresStreamingWithSpecialTokens() const override {
+        return true;
+    }
+
+private:
+    std::string streamingContent;
+    size_t streamingPosition{0};
+    State currentState{State::Content};
+    ToolCall toolCall;
+
+    int toolCallIndex{TOOL_CALL_INDEX_START};
 };
 }

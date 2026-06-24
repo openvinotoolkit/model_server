@@ -39,6 +39,7 @@ MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 GPT_OSS_MODEL="openai/gpt-oss-20b"
 DEVSTRAL_MODEL="unsloth/Devstral-Small-2507"
 LFM2_MODEL="LiquidAI/LFM2-2.6B"
+LFM25_MODEL="LiquidAI/LFM2.5-8B-A1B"
 GEMMA4_MODEL="OpenVINO/gemma-4-E4B-it-int4-ov"
 
 if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then echo "Prepare models with python > 3.8."; exit 1 ; fi
@@ -82,25 +83,6 @@ if [ ! -f "$1/$FACEBOOK_MODEL/chat_template.jinja" ]; then
     cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK_MODEL/chat_template.jinja"
 fi
 
-if [ -f "$1/$TTS_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$TTS_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
-else
-  python3 demos/common/export_models/export_model.py text2speech --source_model "$TTS_MODEL" --weight-format int4 --model_repository_path $1 --vocoder microsoft/speecht5_hifigan
-fi
-if [ ! -f "$1/$TTS_MODEL/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Model file $1/$TTS_MODEL/$TOKENIZER_FILE does not exist."
-  exit 1
-fi
-
-if [ -f "$1/$STT_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$STT_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
-else
-  python3 demos/common/export_models/export_model.py speech2text --source_model "$STT_MODEL" --weight-format int4 --model_repository_path $1
-fi
-if [ ! -f "$1/$STT_MODEL/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Model file $1/$STT_MODEL/$TOKENIZER_FILE does not exist."
-  exit 1
-fi
 
 if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
@@ -218,6 +200,16 @@ else
 fi
 if [ ! -f "$1/$LFM2_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$LFM2_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+if [ -f "$1/$LFM25_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$LFM25_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  mkdir -p $1/$LFM25_MODEL
+  convert_tokenizer $LFM25_MODEL --with_detokenizer -o $1/$LFM25_MODEL
+fi
+if [ ! -f "$1/$LFM25_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$LFM25_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 if [ -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then

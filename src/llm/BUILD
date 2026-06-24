@@ -189,9 +189,9 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "io_processing_lfm2_tool_parser",
-    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
-    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
+    name = "io_processing_lfm2_utils",
+    hdrs = ["io_processing/lfm2/lfm2_utils.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_utils.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_document",
@@ -205,10 +205,23 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "io_processing_lfm2_tool_parser",
+    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
+    deps = [
+        ":io_processing_lfm2_utils",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+
+ovms_cc_library(
     name = "io_processing_lfm25_tool_parser",
     hdrs = ["io_processing/lfm2/lfm25_tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm25_tool_parser.cpp"],
     deps = [
-        ":io_processing_lfm2_tool_parser",
+        ":io_processing_lfm2_utils",
+        "//src:libovmslogging",
     ],
     visibility = ["//visibility:public"],
 )
