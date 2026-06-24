@@ -88,6 +88,16 @@ TEST_P(CLIParserDetermineTaskTest, DetermineTaskFromConfigStream) {
     ASSERT_TRUE(std::filesystem::exists(modelPath / "config.json"))
         << "Config file not found: " << (modelPath / "config.json").string();
 
+    if (expectedTask.empty()) {
+        EXPECT_THROW(
+            ovms::CLIParser::determineDefaultTaskParameter(
+                std::make_optional(modelPath.string()),
+                std::nullopt,
+                std::nullopt),
+            std::logic_error);
+        return;
+    }
+
     std::string result = ovms::CLIParser::determineDefaultTaskParameter(
         std::make_optional(modelPath.string()),
         std::nullopt,
