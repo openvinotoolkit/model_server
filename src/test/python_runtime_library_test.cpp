@@ -53,7 +53,7 @@ public:
 #ifdef _WIN32
             LoadLibraryA(path.string().c_str())
 #else
-        dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL)
+            dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL)
 #endif
         ) {
     }
