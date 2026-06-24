@@ -33,10 +33,12 @@ IF "%~2"=="--with_python" (
     set "bazelBuildArgs=--config=win_mp_on_py_on --action_env OpenVINO_DIR=%openvino_dir%"
     set "testTargets=//src:ovms_test //src:python_runtime_library_test"
     set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter! >> win_full_test.log 2>&1"
+    set "runNoLibpythonSmokeTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures --test_output=errors //src:ovms_no_libpython_smoke_test >> win_full_test.log 2>&1"
 ) ELSE (
     set "bazelBuildArgs=--config=win_mp_on_py_off --action_env OpenVINO_DIR=%openvino_dir%"
     set "testTargets=//src:ovms_test"
     set "runPythonRuntimeTest="
+    set "runNoLibpythonSmokeTest="
 )
 
 IF "%~3"=="" (
@@ -126,6 +128,10 @@ if !errorlevel! neq 0 goto :exit_build_error
 IF "%~2"=="--with_python" (
     echo Running: %runPythonRuntimeTest%
     %runPythonRuntimeTest%
+    if !errorlevel! neq 0 goto :exit_build_error
+
+    echo Running: %runNoLibpythonSmokeTest%
+    %runNoLibpythonSmokeTest%
     if !errorlevel! neq 0 goto :exit_build_error
 )
 

@@ -890,7 +890,18 @@ ovms_cc_library(
                     ],
                 }),
     visibility = ["//visibility:public",],
-    additional_copts = COPTS_DROGON + COPTS_OV_TRACE,
+    additional_copts = COPTS_DROGON + COPTS_OV_TRACE + select({
+                "//conditions:default": [],
+                "//src:windows" : [
+                    "/wd4005",  # GLOG_NO_ABBREVIATED_SEVERITIES redefined in mediapipe/glog headers
+                    "/wd4309",  # mediapipe profiler constant truncation warning
+                    "/wd4456",  # mediapipe profiler variable shadowing warning
+                    "/wd6001",  # external headers: uninitialized memory warnings
+                    "/wd6246",  # external headers: shadowing warning details
+                    "/wd6386",  # external headers: buffer overrun analysis warnings
+                    "/wd6011",  # external headers: null dereference analysis warnings
+                ],
+            }),
     additional_linkopts = select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
