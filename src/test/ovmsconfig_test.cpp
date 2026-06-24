@@ -2853,7 +2853,7 @@ TEST(OvmsConfigManipulationTest, positiveDisableModel) {
 // ===================== Inferred Default Task Tests =====================
 // Fixture providing resolved paths to pre-built test model directories.
 class OvmsInferredTaskTest : public ::testing::Test {
-protected:
+public:
     static std::string resolveTestModelPath(const std::string& modelDirName) {
         const std::string relPath = std::string("src/test/models_config_json/") + modelDirName;
         auto current = std::filesystem::current_path();
@@ -2871,17 +2871,29 @@ protected:
     }
 
     static std::string resolveTestModelsRepoPath() {
-        return resolveTestModelPath("..");  // parent of any model dir is the repo root
+        const std::string relPath = "src/test/models_config_json";
+        auto current = std::filesystem::current_path();
+        auto candidate = std::filesystem::weakly_canonical(current / ".." / ".." / relPath);
+        if (std::filesystem::exists(candidate))
+            return candidate.string();
+        auto search = current;
+        while (search != search.parent_path()) {
+            auto c = search / relPath;
+            if (std::filesystem::exists(c))
+                return c.string();
+            search = search.parent_path();
+        }
+        return candidate.string();
     }
 };
 
 // Scenario 1: --source_model with no explicit --task and a locally available repo copy.
 // The task must be detected from the model config.json and the server must start.
 TEST_F(OvmsInferredTaskTest, positiveSourceModelInferTaskFromLocalRepo) {
-    const std::string repoPath = resolveTestModelPath("..");  // src/test/models_config_json/
+    const std::string repoPath = resolveTestModelsRepoPath();
     const std::filesystem::path llamaConfig = std::filesystem::path(repoPath) / "llama" / "config.json";
     if (!std::filesystem::exists(llamaConfig)) {
-        GTEST_SKIP() << "Test prerequisite missing: " << llamaConfig.string();
+        FAIL() << "Test prerequisite missing: " << llamaConfig.string();
     }
     const std::string sourceModel = "llama";
     char* n_argv[] = {
@@ -2906,7 +2918,7 @@ TEST_F(OvmsInferredTaskTest, positiveModelPathNoGraphPbtxtInferTask) {
     const std::string modelPath = resolveTestModelPath("llama");
     const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";
     if (!std::filesystem::exists(configJson)) {
-        GTEST_SKIP() << "Test prerequisite missing: " << configJson.string();
+        FAIL() << "Test prerequisite missing: " << configJson.string();
     }
     // Verify the test fixture truly has no graph.pbtxt so the scenario is meaningful.
     ASSERT_FALSE(std::filesystem::exists(std::filesystem::path(modelPath) / "graph.pbtxt"))
@@ -2934,7 +2946,7 @@ TEST_F(OvmsInferredTaskTest, positiveSourceModelInferEmbeddingsForQuestionableAr
     const std::string sourceModel = "Qwen3-Embedding-0.6B";
     const std::filesystem::path configJson = std::filesystem::path(repoPath) / sourceModel / "config.json";
     if (!std::filesystem::exists(configJson)) {
-        GTEST_SKIP() << "Test prerequisite missing: " << configJson.string();
+        FAIL() << "Test prerequisite missing: " << configJson.string();
     }
     char* n_argv[] = {
         (char*)"ovms",
@@ -2957,7 +2969,7 @@ TEST_F(OvmsInferredTaskTest, positiveModelPathInferRerankForQuestionableArchitec
     const std::string modelPath = resolveTestModelPath("Qwen3-Reranker-0.6B");
     const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";
     if (!std::filesystem::exists(configJson)) {
-        GTEST_SKIP() << "Test prerequisite missing: " << configJson.string();
+        FAIL() << "Test prerequisite missing: " << configJson.string();
     }
     ASSERT_FALSE(std::filesystem::exists(std::filesystem::path(modelPath) / "graph.pbtxt"))
         << "Unexpected graph.pbtxt in test model dir " << modelPath;
@@ -2999,7 +3011,7 @@ TEST_F(OvmsInferredTaskTest, positiveSourceModelInferText2SpeechForNullArchitect
     const std::string sourceModel = "Kokoro";
     const std::filesystem::path configJson = std::filesystem::path(repoPath) / sourceModel / "config.json";
     if (!std::filesystem::exists(configJson)) {
-        GTEST_SKIP() << "Test prerequisite missing: " << configJson.string();
+        FAIL() << "Test prerequisite missing: " << configJson.string();
     }
     char* n_argv[] = {
         (char*)"ovms",
@@ -3037,12 +3049,9 @@ TEST_F(OvmsConfigDeathTest, negativeSourceModelNullArchitecturesWithoutSpecialFi
 // an embeddings-specific parameter (--pooling). Task is inferred as text_generation and
 // --pooling is not a recognised text_generation option, so parsing must fail.
 TEST_F(OvmsConfigDeathTest, negativeModelPathInferredTaskWithMismatchedParam) {
-    auto current = std::filesystem::current_path();
-    const std::string modelPath = std::filesystem::weakly_canonical(
-        current / ".." / ".." / "src/test/models_config_json/llama")
-                                      .string();
+    const std::string modelPath = OvmsInferredTaskTest::resolveTestModelPath("llama");
     if (!std::filesystem::exists(std::filesystem::path(modelPath) / "config.json")) {
-        GTEST_SKIP() << "Test prerequisite missing: " << modelPath << "/config.json";
+        FAIL() << "Test prerequisite missing: " << modelPath << "/config.json";
     }
     char* n_argv[] = {
         (char*)"ovms",

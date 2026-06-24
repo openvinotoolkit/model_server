@@ -2162,21 +2162,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "num_streams_repro",
-    srcs = [
-        "num_streams_repro.cpp",
-    ],
-    linkopts = LINKOPTS_ADJUSTED,
-    copts = COMMON_STATIC_LIBS_COPTS,
-    deps = [
-        "//third_party:openvino",
-    ],
-    linkstatic = True,
-)
-
-
-
-cc_binary(
     name = "optimum-cli",
     srcs = [
         "test/optimum_cli_mock.cpp",
@@ -2484,7 +2469,7 @@ cc_test(
         "//src:libcustom_node_image_transformation.so",
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
-    ],
+    ] + glob(["test/models_config_json/**"]),
     deps = [
             "optimum-cli",
             "//src:ovms_lib",

@@ -57,6 +57,7 @@ const std::vector<std::pair<std::string, std::string>> CLIParserDetermineTaskTes
     {"bge_reranker", "rerank"},
     {"sdxl", "image_generation"},
     {"flux_pipeline", "image_generation"},
+    {"qwen3_multi_arch", "speech2text"},
     {"invalid_architecture", ""}  // This model has an unsupported architecture and should throw an exception
 };
 
