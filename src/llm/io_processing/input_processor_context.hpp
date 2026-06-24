@@ -33,7 +33,6 @@ struct InputProcessorContext {
     ov::genai::Tokenizer tokenizer;
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor* templateProcessor = nullptr;
-    std::string modelsPath;
 #endif
 };
 

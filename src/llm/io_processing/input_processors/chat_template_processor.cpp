@@ -26,13 +26,13 @@ namespace ovms {
 
 #if (PYTHON_DISABLE == 0)
 ChatTemplateProcessor::ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer,
-    PyJinjaTemplateProcessor* templateProcessor,
-    const std::string& modelsPath,
-    bool useMinja) :
+    PyJinjaTemplateProcessor& templateProcessor) :
     tokenizer(&tokenizer),
-    templateProcessor(templateProcessor),
-    modelsPath(modelsPath),
-    useMinja(useMinja) {}
+    templateProcessor(templateProcessor) {}
+
+ChatTemplateProcessor::ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer) :
+    tokenizer(&tokenizer),
+    templateProcessor(std::nullopt) {}
 
 std::string ChatTemplateProcessor::serializeForPyJinja(const ov::genai::ChatHistory& chatHistory) {
     // Build the minimal JSON object that PyJinjaTemplateProcessor::applyChatTemplate expects:
@@ -59,15 +59,11 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
     const ov::genai::ChatHistory& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
 
 #if (PYTHON_DISABLE == 0)
-    if (!useMinja) {
-        if (templateProcessor == nullptr) {
-            return absl::Status(absl::StatusCode::kInternal,
-                "ChatTemplateProcessor: Python Jinja template processor not initialized");
-        }
+    if (templateProcessor.has_value()) {
         const std::string jsonBody = serializeForPyJinja(chatHistory);
         std::string promptText;
         const bool success = PyJinjaTemplateProcessor::applyChatTemplate(
-            *templateProcessor, modelsPath, jsonBody, promptText);
+            templateProcessor.value().get(), jsonBody, promptText);
         if (!success) {
             return absl::Status(absl::StatusCode::kInvalidArgument, promptText);
         }

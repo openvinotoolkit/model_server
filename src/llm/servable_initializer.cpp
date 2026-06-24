@@ -88,7 +88,6 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
     properties->inputProcessorContext.config.useMinja = (properties->chatTemplateMode != ChatTemplateMode::JINJA);
 #if (PYTHON_DISABLE == 0)
     properties->inputProcessorContext.templateProcessor = &properties->templateProcessor;
-    properties->inputProcessorContext.modelsPath = properties->modelsPath;
 #endif
 }
 

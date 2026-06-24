@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <functional>
+#include <optional>
 #include <string>
 
 #include <openvino/genai/tokenizer.hpp>
@@ -29,15 +31,19 @@ namespace ovms {
 
 // Applies the chat template to ChatHistory, producing req.promptText.
 // Active when: input is ChatHistory variant (CHAT_COMPLETIONS and RESPONSES).
-// Python path (PYTHON_DISABLE==0): serialises ChatHistory to JSON and calls PyJinjaTemplateProcessor.
-// Native path (PYTHON_DISABLE==1): calls tokenizer.apply_chat_template().
+//
+// Under PYTHON_DISABLE==0 two constructors select the path:
+//   - PyJinja constructor (takes PyJinjaTemplateProcessor&): uses the Python Jinja engine.
+//   - Minja  constructor (tokenizer only): calls tokenizer.apply_chat_template().
+// Under PYTHON_DISABLE==1 only the native tokenizer.apply_chat_template() path exists.
 class ChatTemplateProcessor : public BaseInputProcessor {
 public:
 #if (PYTHON_DISABLE == 0)
+    // PyJinja path: templateProcessor must be valid (guaranteed by non-null reference param).
     ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer,
-        PyJinjaTemplateProcessor* templateProcessor,
-        const std::string& modelsPath,
-        bool useMinja = false);
+        PyJinjaTemplateProcessor& templateProcessor);
+    // Minja / native-OV path: no PyJinja processor needed.
+    explicit ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer);
 #else
     explicit ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer);
 #endif
@@ -47,9 +53,8 @@ public:
 private:
     const ov::genai::Tokenizer* tokenizer;  // non-owning; lifetime tied to InputProcessorContext
 #if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor* templateProcessor;  // non-owning, nullable; null treated as useMinja=true
-    std::string modelsPath;
-    bool useMinja;
+    // Present only on the PyJinja path; nullopt → use tokenizer.apply_chat_template().
+    std::optional<std::reference_wrapper<PyJinjaTemplateProcessor>> templateProcessor;
     // Serialises chatHistory to {"messages":[...], "tools":[...], "chat_template_kwargs":{...}}
     // for the Python Jinja template engine.
     static std::string serializeForPyJinja(const ov::genai::ChatHistory& chatHistory);

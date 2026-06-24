@@ -48,11 +48,14 @@ InputProcessor::InputProcessor(const InputProcessorContext& context,
 
     if (isChatPath) {
 #if (PYTHON_DISABLE == 0)
-        processors.emplace_back(std::make_unique<ChatTemplateProcessor>(
-            context.tokenizer,
-            context.templateProcessor,
-            context.modelsPath,
-            context.config.useMinja));
+        // Select the path at construction time. If !useMinja but templateProcessor is null
+        // (shouldn't happen on a properly initialized servable), fall back to the native path.
+        if (!context.config.useMinja && context.templateProcessor != nullptr) {
+            processors.emplace_back(std::make_unique<ChatTemplateProcessor>(
+                context.tokenizer, *context.templateProcessor));
+        } else {
+            processors.emplace_back(std::make_unique<ChatTemplateProcessor>(context.tokenizer));
+        }
 #else
         processors.emplace_back(std::make_unique<ChatTemplateProcessor>(context.tokenizer));
 #endif
