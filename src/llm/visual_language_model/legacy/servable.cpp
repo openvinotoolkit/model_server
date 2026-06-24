@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <chrono>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -390,7 +391,11 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
                     jsonForTemplate = wBuf.GetString();
                 }
             }
+            auto tplStart = std::chrono::steady_clock::now();
             bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, jsonForTemplate, vlmExecutionContext->inputText);
+            auto tplEnd = std::chrono::steady_clock::now();
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "applyChatTemplate Jinja (vlm-legacy): {} us",
+                std::chrono::duration_cast<std::chrono::microseconds>(tplEnd - tplStart).count());
             if (!success) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
             }
@@ -410,7 +415,11 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             }
             const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
             try {
+                auto tplStart = std::chrono::steady_clock::now();
                 vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+                auto tplEnd = std::chrono::steady_clock::now();
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "apply_chat_template (vlm-legacy): {} us",
+                    std::chrono::duration_cast<std::chrono::microseconds>(tplEnd - tplStart).count());
             } catch (const std::exception& e) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
                 return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");

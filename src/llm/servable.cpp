@@ -212,6 +212,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 #if (PYTHON_DISABLE == 0)
         if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
             bool success;
+            auto tplStart = std::chrono::steady_clock::now();
             if (executionContext->apiHandler->getProcessedJson().size() > 0) {
                 std::string modifiedJson = applyInputWorkarounds(executionContext->apiHandler->getProcessedJson());
                 success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, modifiedJson, inputText);
@@ -219,6 +220,9 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
                 std::string modifiedJson = applyInputWorkarounds(executionContext->payload.body);
                 success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, modifiedJson, inputText);
             }
+            auto tplEnd = std::chrono::steady_clock::now();
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "applyChatTemplate Jinja (chat): {} us",
+                std::chrono::duration_cast<std::chrono::microseconds>(tplEnd - tplStart).count());
             if (!success) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
             }
@@ -239,7 +243,11 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             }
             const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
             try {
+                auto tplStart = std::chrono::steady_clock::now();
                 inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+                auto tplEnd = std::chrono::steady_clock::now();
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "apply_chat_template (chat): {} us",
+                    std::chrono::duration_cast<std::chrono::microseconds>(tplEnd - tplStart).count());
             } catch (const std::exception& e) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
                 return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
@@ -258,7 +266,11 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 #if (PYTHON_DISABLE == 0)
             if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
                 std::string modifiedJson = applyInputWorkarounds(executionContext->apiHandler->getProcessedJson());
+                auto tplStart = std::chrono::steady_clock::now();
                 bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, modifiedJson, inputText);
+                auto tplEnd = std::chrono::steady_clock::now();
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "applyChatTemplate Jinja (responses): {} us",
+                    std::chrono::duration_cast<std::chrono::microseconds>(tplEnd - tplStart).count());
                 if (!success) {
                     return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
                 }
@@ -279,7 +291,11 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
                 }
                 const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
                 try {
+                    auto tplStart = std::chrono::steady_clock::now();
                     inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+                    auto tplEnd = std::chrono::steady_clock::now();
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "apply_chat_template (responses): {} us",
+                        std::chrono::duration_cast<std::chrono::microseconds>(tplEnd - tplStart).count());
                 } catch (const std::exception& e) {
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
                     return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");

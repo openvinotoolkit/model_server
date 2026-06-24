@@ -16,6 +16,7 @@
 
 #include "servable.hpp"
 
+#include <chrono>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -145,7 +146,11 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
                     jsonForTemplate = wBuf.GetString();
                 }
             }
+            auto tplStart = std::chrono::steady_clock::now();
             bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, jsonForTemplate, vlmExecutionContext->inputText);
+            auto tplEnd = std::chrono::steady_clock::now();
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "applyChatTemplate Jinja (vlm-cb): {} us",
+                std::chrono::duration_cast<std::chrono::microseconds>(tplEnd - tplStart).count());
             if (!success) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
             }
@@ -173,7 +178,11 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM addGenerationPrompt: {}", addGenerationPrompt);
             }
             try {
+                auto tplStart = std::chrono::steady_clock::now();
                 vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+                auto tplEnd = std::chrono::steady_clock::now();
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "apply_chat_template (vlm-cb): {} us",
+                    std::chrono::duration_cast<std::chrono::microseconds>(tplEnd - tplStart).count());
             } catch (const std::exception& e) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
                 return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
