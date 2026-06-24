@@ -173,7 +173,11 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
         getProperties()->decodingMethod);
-    legacyExecutionContext->inputRequest = legacyExecutionContext->apiHandler->extractInputRequest(configBuilder);
+    auto inputRequestResult = legacyExecutionContext->apiHandler->extractInputRequest(configBuilder);
+    if (!inputRequestResult.ok()) {
+        return inputRequestResult.status();
+    }
+    legacyExecutionContext->inputRequest = std::move(*inputRequestResult);
     return absl::OkStatus();
 }
 

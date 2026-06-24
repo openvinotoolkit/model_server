@@ -50,7 +50,7 @@ InputProcessor::InputProcessor(const InputProcessorContext& context,
 #if (PYTHON_DISABLE == 0)
         processors.emplace_back(std::make_unique<ChatTemplateProcessor>(
             context.tokenizer,
-            *context.templateProcessor,
+            context.templateProcessor,
             context.modelsPath,
             context.config.useMinja));
 #else

@@ -22,15 +22,17 @@
 namespace ovms {
 
 // Encodes req.promptText into req.inputIds using the servable tokenizer.
-// Active when: !config.isVLM (LM paths only).
+// Active when: all paths (LM chat, LM completions, VLM chat). For VLM the resulting
+// inputIds are used for max-length checks and prompt token usage statistics only;
+// the VLM pipeline tokenizes internally and does not receive inputIds.
 // addSpecialTokens: false for chat path (template already added them), true for completions.
 class TokenizationProcessor : public BaseInputProcessor {
 public:
-    TokenizationProcessor(ov::genai::Tokenizer tokenizer, bool addSpecialTokens);
+    TokenizationProcessor(const ov::genai::Tokenizer& tokenizer, bool addSpecialTokens);
     absl::Status process(InputRequest& req) override;
 
 private:
-    ov::genai::Tokenizer tokenizer;
+    const ov::genai::Tokenizer* tokenizer;  // non-owning; lifetime tied to InputProcessorContext
     bool addSpecialTokens;
 };
 

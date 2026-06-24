@@ -2510,6 +2510,7 @@ cc_test(
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
                 ":test_llm_output_parser_tests",
+                ":test_llm_input_processing_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -3030,6 +3031,20 @@ cc_library(
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
         "//src/llm:output_parsers",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "test_llm_input_processing_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = glob(["test/llm/input_processing/*_test.cpp"]),
+    deps = [
+        "@com_google_googletest//:gtest",
+        ":test_platform_utils",
+        "//src/llm:io_processing_input_processors",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

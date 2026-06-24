@@ -34,20 +34,20 @@ namespace ovms {
 class ChatTemplateProcessor : public BaseInputProcessor {
 public:
 #if (PYTHON_DISABLE == 0)
-    ChatTemplateProcessor(ov::genai::Tokenizer tokenizer,
-        PyJinjaTemplateProcessor& templateProcessor,
+    ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer,
+        PyJinjaTemplateProcessor* templateProcessor,
         const std::string& modelsPath,
         bool useMinja = false);
 #else
-    explicit ChatTemplateProcessor(ov::genai::Tokenizer tokenizer);
+    explicit ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer);
 #endif
 
     absl::Status process(InputRequest& req) override;
 
 private:
-    ov::genai::Tokenizer tokenizer;
+    const ov::genai::Tokenizer* tokenizer;  // non-owning; lifetime tied to InputProcessorContext
 #if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor& templateProcessor;
+    PyJinjaTemplateProcessor* templateProcessor;  // non-owning, nullable; null treated as useMinja=true
     std::string modelsPath;
     bool useMinja;
     // Serialises chatHistory to {"messages":[...], "tools":[...], "chat_template_kwargs":{...}}

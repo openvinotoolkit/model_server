@@ -170,7 +170,7 @@ public:
     // Builds a complete InputRequest: runs the full generation config pipeline
     // (parse → adjust → validate) on the provided builder using this handler's
     // request and tokenizer, then populates input from the parsed request.
-    InputRequest extractInputRequest(GenerationConfigBuilder& configBuilder);
+    absl::StatusOr<InputRequest> extractInputRequest(GenerationConfigBuilder& configBuilder);
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {

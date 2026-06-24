@@ -20,12 +20,12 @@
 
 namespace ovms {
 
-TokenizationProcessor::TokenizationProcessor(ov::genai::Tokenizer tokenizer, bool addSpecialTokens) :
-    tokenizer(std::move(tokenizer)),
+TokenizationProcessor::TokenizationProcessor(const ov::genai::Tokenizer& tokenizer, bool addSpecialTokens) :
+    tokenizer(&tokenizer),
     addSpecialTokens(addSpecialTokens) {}
 
 absl::Status TokenizationProcessor::process(InputRequest& req) {
-    req.inputIds = tokenizer.encode(req.promptText,
+    req.inputIds = tokenizer->encode(req.promptText,
                                 ov::genai::add_special_tokens(addSpecialTokens))
                        .input_ids;
     return absl::OkStatus();

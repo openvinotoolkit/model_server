@@ -487,7 +487,7 @@ ov::genai::ChatHistory& OpenAIApiHandler::getChatHistory() {
     return request.chatHistory;
 }
 
-InputRequest OpenAIApiHandler::extractInputRequest(GenerationConfigBuilder& configBuilder) {
+absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationConfigBuilder& configBuilder) {
     configBuilder.parseConfigFromRequest(request);
     configBuilder.adjustConfigForDecodingMethod();
     try {
@@ -508,11 +508,17 @@ InputRequest OpenAIApiHandler::extractInputRequest(GenerationConfigBuilder& conf
         // ChatTemplateProcessor can access them via get_tools()/get_extra_context().
         auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
         auto toolsResult = parseToolsToJsonContainer();
-        if (toolsResult.ok() && toolsResult.value().has_value()) {
+        if (!toolsResult.ok()) {
+            return toolsResult.status();
+        }
+        if (toolsResult.value().has_value()) {
             chatHistory.set_tools(toolsResult.value().value());
         }
         auto kwargsResult = parseChatTemplateKwargsToJsonContainer();
-        if (kwargsResult.ok() && kwargsResult.value().has_value()) {
+        if (!kwargsResult.ok()) {
+            return kwargsResult.status();
+        }
+        if (kwargsResult.value().has_value()) {
             chatHistory.set_extra_context(kwargsResult.value().value());
         }
     }

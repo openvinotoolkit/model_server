@@ -164,7 +164,11 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
         getProperties()->decodingMethod);
-    executionContext->inputRequest = executionContext->apiHandler->extractInputRequest(configBuilder);
+    auto inputRequestResult = executionContext->apiHandler->extractInputRequest(configBuilder);
+    if (!inputRequestResult.ok()) {
+        return inputRequestResult.status();
+    }
+    executionContext->inputRequest = std::move(*inputRequestResult);
     return absl::OkStatus();
 }
 
@@ -209,7 +213,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             std::stringstream ss;
             ss << "Number of prompt tokens: " << req.inputIds.get_size()
                << " exceeds model max length: " << getProperties()->maxModelLength.value();
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, ss.str());
             return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
         }
         if (executionContext->apiHandler->getMaxTokens().has_value() &&
@@ -219,7 +223,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             ss << "Number of prompt tokens: " << req.inputIds.get_size()
                << " + max tokens value: " << executionContext->apiHandler->getMaxTokens().value()
                << " exceeds model max length: " << getProperties()->maxModelLength.value();
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, ss.str());
             return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
         }
     }

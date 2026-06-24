@@ -25,11 +25,11 @@
 namespace ovms {
 
 #if (PYTHON_DISABLE == 0)
-ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer tokenizer,
-    PyJinjaTemplateProcessor& templateProcessor,
+ChatTemplateProcessor::ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer,
+    PyJinjaTemplateProcessor* templateProcessor,
     const std::string& modelsPath,
     bool useMinja) :
-    tokenizer(std::move(tokenizer)),
+    tokenizer(&tokenizer),
     templateProcessor(templateProcessor),
     modelsPath(modelsPath),
     useMinja(useMinja) {}
@@ -51,8 +51,8 @@ std::string ChatTemplateProcessor::serializeForPyJinja(const ov::genai::ChatHist
 }
 
 #else
-ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer tokenizer) :
-    tokenizer(std::move(tokenizer)) {}
+ChatTemplateProcessor::ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer) :
+    tokenizer(&tokenizer) {}
 #endif
 
 absl::Status ChatTemplateProcessor::process(InputRequest& req) {
@@ -60,10 +60,14 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
 
 #if (PYTHON_DISABLE == 0)
     if (!useMinja) {
+        if (templateProcessor == nullptr) {
+            return absl::Status(absl::StatusCode::kInternal,
+                "ChatTemplateProcessor: Python Jinja template processor not initialized");
+        }
         const std::string jsonBody = serializeForPyJinja(chatHistory);
         std::string promptText;
         const bool success = PyJinjaTemplateProcessor::applyChatTemplate(
-            templateProcessor, modelsPath, jsonBody, promptText);
+            *templateProcessor, modelsPath, jsonBody, promptText);
         if (!success) {
             return absl::Status(absl::StatusCode::kInvalidArgument, promptText);
         }
@@ -78,7 +82,7 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         const std::optional<ov::genai::JsonContainer> optKwargs =
             kwargs.empty() ? std::nullopt : std::make_optional(kwargs);
         try {
-            req.promptText = tokenizer.apply_chat_template(
+            req.promptText = tokenizer->apply_chat_template(
                 chatHistory, addGenerationPrompt, {}, optTools, optKwargs);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());

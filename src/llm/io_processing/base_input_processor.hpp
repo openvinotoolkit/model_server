@@ -15,10 +15,14 @@
 //*****************************************************************************
 #pragma once
 
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
+#endif
 #include "absl/status/status.h"
+#ifdef _MSC_VER
 #pragma warning(pop)
+#endif
 
 #include "input_request.hpp"
 
