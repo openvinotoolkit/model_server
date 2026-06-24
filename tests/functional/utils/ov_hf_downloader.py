@@ -48,7 +48,7 @@ class OVHfDownloader:
 
         if local_latest_dt and repo_info.last_modified <= local_latest_dt:
             print(f"No files to update for model: {self.model_name}")
-            return
+            return False
 
         print(f"Download OVHf model: {self.model_name}")
         staging_path = self.model_local_path + "_staging"
@@ -56,6 +56,7 @@ class OVHfDownloader:
             remove_dir_tree(staging_path)
         self.download_model(model_dir=staging_path)
         swap_directory(self.model_local_path, staging_path)
+        return True
 
     def download_model(self, model_name=None, model_dir=None, force_download=False):
         snapshot_download(
