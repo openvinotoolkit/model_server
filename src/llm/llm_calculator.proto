@@ -137,4 +137,17 @@ message LLMCalculatorOptions {
     optional SparseAttentionConfig sparse_attention_config = 24;
 
     optional uint64 cache_interval_multiplier = 25;
+
+    enum ChatTemplateMode {
+      // Use GenAI's apply_chat_template (minja-based).
+      // The only option for builds without Python.
+      // For builds with Python, selectible for LLM pipelines, default for VLM pipelines.
+      MINJA = 0;
+      // Use Python Jinja2 module for chat template processing.
+      // For builds with Python, default for LLM pipelines, selectible for VLM pipelines.
+      // TODO(dkalinow): once we have server-side workaround, make it default for VLM as well
+      JINJA = 1;
+    }
+
+    optional ChatTemplateMode chat_template_mode = 26;
 }
