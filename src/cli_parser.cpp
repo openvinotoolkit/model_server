@@ -553,7 +553,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 // 2. graph.pbtxt doesn't exist (need to create in-memory graph)
                 // Otherwise, if graph.pbtxt exists and no task parameters, use the filesystem graph
                 if (hasUnmatchedOptions || !graphExists) {
-                    inferredTaskParameter = determineDefaultTaskParameter(modelPath, std::nullopt, std::nullopt);
+                    try {
+                        inferredTaskParameter = determineDefaultTaskParameter(modelPath, std::nullopt, std::nullopt);
+                    } catch (const std::exception& e) {
+                        SPDLOG_DEBUG("Default task inference skipped for model_path '{}': {}", modelPath.value_or(""), e.what());
+                    }
                 }
             }
         }
@@ -584,7 +588,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 }
 
                 if (shouldInferTask) {
-                    inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath);
+                    try {
+                        inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath);
+                    } catch (const std::exception& e) {
+                        SPDLOG_DEBUG("Default task inference skipped for source_model '{}': {}", sourceModel.value_or(""), e.what());
+                    }
                 }
             }
             taskValue = getEffectiveTaskParameter();

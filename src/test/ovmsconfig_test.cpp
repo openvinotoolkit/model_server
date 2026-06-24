@@ -402,10 +402,7 @@ TEST_F(OvmsConfigDeathTest, hfNoTaskParameter) {
         "/some/path",
     };
     int arg_count = 6;
-    // With automatic task inference, the code now tries to detect the task from the model
-    // config (local or HF). Since the local repo path does not contain the model the code
-    // falls back to fetching from HuggingFace, which fails in an isolated test environment.
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "failed to download model config file from");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
@@ -883,10 +880,35 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTask) {
         "/some/path",
     };
     int arg_count = 5;
-    // With automatic task inference, source_model now triggers task detection from the model
-    // config. Since /some/path/some/model does not exist the code attempts an HF network fetch
-    // which fails in an isolated test environment.
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "failed to download model config file from");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
+}
+
+TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskInvalidArchitectureLocal) {
+    auto currentPath = std::filesystem::current_path();
+    auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "invalid_architecture",
+        "--model_repository_path",
+        (char*)repoPath.c_str(),
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
+}
+
+TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskNoArchitecturesLocal) {
+    auto currentPath = std::filesystem::current_path();
+    auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "no_architectures",
+        "--model_repository_path",
+        (char*)repoPath.c_str(),
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
 }
 
 TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
