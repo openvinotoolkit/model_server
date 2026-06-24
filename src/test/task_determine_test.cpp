@@ -50,6 +50,13 @@ const std::vector<std::pair<std::string, std::string>> CLIParserDetermineTaskTes
     {"whisper", "speech2text"},
     {"seamlessm4t", "speech2text"},
     {"qwen3_6", "text_generation"},
+    {"qwen3_asr", "speech2text"},
+    {"lfm", "text_generation"},
+    {"trinity", "text_generation"},
+    {"gemma4", "text_generation"},
+    {"bge_reranker", "rerank"},
+    {"sdxl", "image_generation"},
+    {"flux_pipeline", "image_generation"},
     {"invalid_architecture", ""}  // This model has an unsupported architecture and should throw an exception
 };
 
@@ -85,8 +92,8 @@ TEST_P(CLIParserDetermineTaskTest, DetermineTaskFromConfigStream) {
         << "Model directory not found: " << modelDirName
         << " (tried: " << (currentPath / ".." / ".." / modelDirName).string()
         << ", current_path: " << currentPath.string() << ")";
-    ASSERT_TRUE(std::filesystem::exists(modelPath / "config.json"))
-        << "Config file not found: " << (modelPath / "config.json").string();
+    ASSERT_TRUE(std::filesystem::exists(modelPath / "config.json") || std::filesystem::exists(modelPath / "model_index.json"))
+        << "Neither config.json nor model_index.json found in: " << modelPath.string();
 
     if (expectedTask.empty()) {
         EXPECT_THROW(

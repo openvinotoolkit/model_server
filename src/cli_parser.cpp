@@ -59,6 +59,7 @@ namespace ovms {
 constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
 constexpr const char* API_KEY_ENV_VAR{"API_KEY"};
 constexpr const char* MODEL_CONFIG_FILENAME{"config.json"};
+constexpr const char* MODEL_INDEX_FILENAME{"model_index.json"};
 
 namespace {
 
@@ -73,6 +74,7 @@ const std::map<std::string, std::string> architectureToTask = {
     {"ParlerTTSForConditionalGeneration", "text2speech"},
     {"Qwen2ForSequenceClassification", "rerank"},
     {"Qwen2Model", "embeddings"},
+    {"Qwen3ASRForConditionalGeneration", "speech2text"},
     {"RobertaForSequenceClassification", "rerank"},
     {"RobertaModel", "embeddings"},
     {"SD3Transformer2DModel", "image_generation"},
@@ -86,6 +88,7 @@ const std::map<std::string, std::string> architectureToTask = {
     {"XLMRobertaModel", "embeddings"},
 };
 
+// architecture: {default task, {task, pattern}}
 const std::map<std::string, std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> questionableArchitectureTaskKeywords = {
     {"Qwen3ForCausalLM", {"text_generation", {{"rerank", "rerank"}, {"embeddings", "embed"}}}},
 };
@@ -178,6 +181,14 @@ std::string determineTaskFromArchitectures(const rapidjson::Value& architectures
     return resolvedTask.value();
 }
 
+std::string determineTaskFromNullArchitectures(const rapidjson::Document& configJson, const std::string& configSourceDescription) {
+    // Check for special field patterns when architectures is null
+    if (configJson.HasMember("n_mels")) {
+        return "text2speech";
+    }
+    throw std::logic_error(configSourceDescription + " has null architectures and does not contain recognized special fields for task detection");
+}
+
 std::string determineTaskFromConfigStream(std::istream& configStream, const std::string& configSourceDescription, const std::string& modelIdentifier) {
     rapidjson::Document configJson;
     rapidjson::IStreamWrapper wrapper(configStream);
@@ -188,7 +199,11 @@ std::string determineTaskFromConfigStream(std::istream& configStream, const std:
     if (!configJson.HasMember("architectures")) {
         throw std::logic_error(configSourceDescription + " does not contain architectures field");
     }
-    return determineTaskFromArchitectures(configJson["architectures"], modelIdentifier);
+    const auto& architecturesNode = configJson["architectures"];
+    if (architecturesNode.IsNull()) {
+        return determineTaskFromNullArchitectures(configJson, configSourceDescription);
+    }
+    return determineTaskFromArchitectures(architecturesNode, modelIdentifier);
 }
 
 std::string determineTaskFromConfigContents(const std::string& configContents, const std::string& configSourceDescription, const std::string& modelIdentifier) {
@@ -200,7 +215,28 @@ std::string determineTaskFromConfigContents(const std::string& configContents, c
     if (!configJson.HasMember("architectures")) {
         throw std::logic_error(configSourceDescription + " does not contain architectures field");
     }
-    return determineTaskFromArchitectures(configJson["architectures"], modelIdentifier);
+    const auto& architecturesNode = configJson["architectures"];
+    if (architecturesNode.IsNull()) {
+        return determineTaskFromNullArchitectures(configJson, configSourceDescription);
+    }
+    return determineTaskFromArchitectures(architecturesNode, modelIdentifier);
+}
+
+std::string determineTaskFromModelIndex(std::istream& indexStream, const std::string& indexSourceDescription) {
+    rapidjson::Document indexJson;
+    rapidjson::IStreamWrapper wrapper(indexStream);
+    indexJson.ParseStream(wrapper);
+    if (indexJson.HasParseError()) {
+        throw std::logic_error("failed to parse " + indexSourceDescription + ": " + std::string(rapidjson::GetParseError_En(indexJson.GetParseError())));
+    }
+    if (!indexJson.HasMember("_class_name") || !indexJson["_class_name"].IsString()) {
+        throw std::logic_error(indexSourceDescription + " does not contain a valid _class_name field");
+    }
+    const std::string className = indexJson["_class_name"].GetString();
+    if (className.find("StableDiffusion") != std::string::npos || className.find("Flux") != std::string::npos) {
+        return "image_generation";
+    }
+    throw std::logic_error(indexSourceDescription + " _class_name '" + className + "' does not map to a supported default task");
 }
 
 bool graphPbtxtExists(const std::string& modelPath) {
@@ -230,10 +266,15 @@ std::string CLIParser::determineDefaultTaskParameter(const std::optional<std::st
     if (modelPath.has_value() && !modelPath->empty()) {
         const auto configPath = std::filesystem::path(*modelPath) / MODEL_CONFIG_FILENAME;
         std::ifstream configFile(configPath);
-        if (!configFile.is_open()) {
-            throw std::logic_error("failed to open model config file: " + configPath.string());
+        if (configFile.is_open()) {
+            return determineTaskFromConfigStream(configFile, configPath.string(), *modelPath);
         }
-        return determineTaskFromConfigStream(configFile, configPath.string(), *modelPath);
+        const auto indexPath = std::filesystem::path(*modelPath) / MODEL_INDEX_FILENAME;
+        std::ifstream indexFile(indexPath);
+        if (indexFile.is_open()) {
+            return determineTaskFromModelIndex(indexFile, indexPath.string());
+        }
+        throw std::logic_error("failed to open model config file: " + configPath.string() + " or " + indexPath.string());
     }
 
     if (!sourceModel.has_value() || sourceModel->empty()) {
@@ -245,10 +286,15 @@ std::string CLIParser::determineDefaultTaskParameter(const std::optional<std::st
         if (std::filesystem::exists(localModelDirectory)) {
             const auto configPath = localModelDirectory / MODEL_CONFIG_FILENAME;
             std::ifstream configFile(configPath);
-            if (!configFile.is_open()) {
-                throw std::logic_error("failed to open model config file: " + configPath.string());
+            if (configFile.is_open()) {
+                return determineTaskFromConfigStream(configFile, configPath.string(), *sourceModel);
             }
-            return determineTaskFromConfigStream(configFile, configPath.string(), *sourceModel);
+            const auto indexPath = localModelDirectory / MODEL_INDEX_FILENAME;
+            std::ifstream indexFile(indexPath);
+            if (indexFile.is_open()) {
+                return determineTaskFromModelIndex(indexFile, indexPath.string());
+            }
+            throw std::logic_error("failed to open model config file: " + configPath.string() + " or " + indexPath.string());
         }
     }
 
@@ -566,7 +612,8 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             !isConfigManagementFlow) {
             const std::optional<std::string> modelPath = std::make_optional(result->operator[]("model_path").as<std::string>());
             const auto configPath = std::filesystem::path(*modelPath) / MODEL_CONFIG_FILENAME;
-            if (std::filesystem::exists(configPath)) {
+            const auto indexPath = std::filesystem::path(*modelPath) / MODEL_INDEX_FILENAME;
+            if (std::filesystem::exists(configPath) || std::filesystem::exists(indexPath)) {
                 // Check if task-specific parameters are provided or if graph.pbtxt is missing
                 bool hasUnmatchedOptions = ::ovms::hasTaskSpecificParameters(result->unmatched());
                 bool graphExists = ::ovms::graphPbtxtExists(*modelPath);

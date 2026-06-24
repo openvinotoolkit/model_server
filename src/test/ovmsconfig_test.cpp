@@ -2993,7 +2993,47 @@ TEST_F(OvmsConfigDeathTest, negativeSourceModelQuestionableArchitectureWithoutPa
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
 }
 
-// Scenario 6: --model_path (LLM/text_generation model) with no explicit --task but with
+// Scenario 6: Null architectures with n_mels field should infer text2speech task.
+TEST_F(OvmsInferredTaskTest, positiveSourceModelInferText2SpeechForNullArchitecturesWithNMels) {
+    const std::string repoPath = resolveTestModelsRepoPath();
+    const std::string sourceModel = "Kokoro";
+    const std::filesystem::path configJson = std::filesystem::path(repoPath) / sourceModel / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        GTEST_SKIP() << "Test prerequisite missing: " << configJson.string();
+    }
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model",
+        (char*)sourceModel.c_str(),
+        (char*)"--model_repository_path",
+        (char*)repoPath.c_str(),
+        (char*)"--rest_port",
+        (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+}
+
+// Scenario 6b: Null architectures without special fields should fail.
+TEST_F(OvmsConfigDeathTest, negativeSourceModelNullArchitecturesWithoutSpecialFields) {
+    auto currentPath = std::filesystem::current_path();
+    auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
+    const std::string sourceModel = "NullArch";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model",
+        (char*)sourceModel.c_str(),
+        (char*)"--model_repository_path",
+        (char*)repoPath.c_str(),
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
+}
+
+// Scenario 7: --model_path (LLM/text_generation model) with no explicit --task but with
 // an embeddings-specific parameter (--pooling). Task is inferred as text_generation and
 // --pooling is not a recognised text_generation option, so parsing must fail.
 TEST_F(OvmsConfigDeathTest, negativeModelPathInferredTaskWithMismatchedParam) {
