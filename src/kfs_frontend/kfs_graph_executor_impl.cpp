@@ -837,38 +837,38 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
                     }
                 }
                 if (status.ok()) {
-                if (request->raw_input_contents_size() <= static_cast<int>(inputIndex)) {
-                    status = Status(StatusCode::NOT_IMPLEMENTED,
-                        "OVMS_PY_TENSOR requires data in raw_input_contents");
-                } else {
-                    const auto& rawBuf = request->raw_input_contents().at(inputIndex);
-                    // Validate that the shape-implied buffer size matches the actual data.
-                    // Custom datatypes (unrecognised by KFSDataTypeSize → 0) skip the byte
-                    // size check but are passed through; the Python handler owns that validation.
-                    if (dtypeSize > 0) {
-                        size_t expectedBytes = 1;
-                        // sizeValid is always true here (overflow was checked above already)
-                        computeExpectedBufferSizeReturnFalseIfOverflow(shapeVec, dtypeSize, expectedBytes);
-                        if (rawBuf.size() != expectedBytes) {
-                            std::stringstream ss;
-                            ss << "Expected: " << expectedBytes << " bytes; Actual: "
-                               << rawBuf.size() << " bytes; input name: " << inputName;
-                            status = Status(StatusCode::INVALID_CONTENT_SIZE, ss.str());
+                    if (request->raw_input_contents_size() <= static_cast<int>(inputIndex)) {
+                        status = Status(StatusCode::NOT_IMPLEMENTED,
+                            "OVMS_PY_TENSOR requires data in raw_input_contents");
+                    } else {
+                        const auto& rawBuf = request->raw_input_contents().at(inputIndex);
+                        // Validate that the shape-implied buffer size matches the actual data.
+                        // Custom datatypes (unrecognised by KFSDataTypeSize → 0) skip the byte
+                        // size check but are passed through; the Python handler owns that validation.
+                        if (dtypeSize > 0) {
+                            size_t expectedBytes = 1;
+                            // sizeValid is always true here (overflow was checked above already)
+                            computeExpectedBufferSizeReturnFalseIfOverflow(shapeVec, dtypeSize, expectedBytes);
+                            if (rawBuf.size() != expectedBytes) {
+                                std::stringstream ss;
+                                ss << "Expected: " << expectedBytes << " bytes; Actual: "
+                                   << rawBuf.size() << " bytes; input name: " << inputName;
+                                status = Status(StatusCode::INVALID_CONTENT_SIZE, ss.str());
+                            }
                         }
+                        if (status.ok()) {
+                            const int rc = bridge->deserializeAndPush(
+                                inputName.c_str(),
+                                rawBuf.data(), rawBuf.size(),
+                                shapeVec.data(), shapeVec.size(),
+                                requestInputItr->datatype().c_str(),
+                                &graph, timestamp.Value());
+                            status = (rc == 0)
+                                         ? StatusCode::OK
+                                         : Status(static_cast<StatusCode>(-rc),
+                                               "KFS Python tensor bridge deserialization failed");
+                        }  // if (status.ok())
                     }
-                    if (status.ok()) {
-                    const int rc = bridge->deserializeAndPush(
-                        inputName.c_str(),
-                        rawBuf.data(), rawBuf.size(),
-                        shapeVec.data(), shapeVec.size(),
-                        requestInputItr->datatype().c_str(),
-                        &graph, timestamp.Value());
-                    status = (rc == 0)
-                                 ? StatusCode::OK
-                                 : Status(static_cast<StatusCode>(-rc),
-                                       "KFS Python tensor bridge deserialization failed");
-                    }  // if (status.ok())
-                }
                 }  // if (status.ok()) after overflow check
             }
         }
