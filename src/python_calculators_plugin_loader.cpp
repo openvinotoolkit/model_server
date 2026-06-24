@@ -32,7 +32,6 @@
 #elif _WIN32
 #include <windows.h>
 #include <system_error>
-#include <vector>
 #endif
 
 #include "src/logging.hpp"
