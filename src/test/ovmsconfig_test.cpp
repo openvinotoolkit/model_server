@@ -2927,7 +2927,73 @@ TEST_F(OvmsInferredTaskTest, positiveModelPathNoGraphPbtxtInferTask) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::IN_MEMORY_GRAPH_MODE);
 }
 
-// Scenario 3: --model_path (LLM/text_generation model) with no explicit --task but with
+// Scenario 3: Questionable architecture requires additional model naming rules.
+// source_model with "embed" should infer embeddings for Qwen3ForCausalLM.
+TEST_F(OvmsInferredTaskTest, positiveSourceModelInferEmbeddingsForQuestionableArchitecture) {
+    const std::string repoPath = resolveTestModelsRepoPath();
+    const std::string sourceModel = "Qwen3-Embedding-0.6B";
+    const std::filesystem::path configJson = std::filesystem::path(repoPath) / sourceModel / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        GTEST_SKIP() << "Test prerequisite missing: " << configJson.string();
+    }
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model",
+        (char*)sourceModel.c_str(),
+        (char*)"--model_repository_path",
+        (char*)repoPath.c_str(),
+        (char*)"--rest_port",
+        (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::EMBEDDINGS_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+}
+
+// Scenario 4: model_path with "rerank" in path should infer rerank for Qwen3ForCausalLM.
+TEST_F(OvmsInferredTaskTest, positiveModelPathInferRerankForQuestionableArchitecture) {
+    const std::string modelPath = resolveTestModelPath("Qwen3-Reranker-0.6B");
+    const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        GTEST_SKIP() << "Test prerequisite missing: " << configJson.string();
+    }
+    ASSERT_FALSE(std::filesystem::exists(std::filesystem::path(modelPath) / "graph.pbtxt"))
+        << "Unexpected graph.pbtxt in test model dir " << modelPath;
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--model_name",
+        (char*)"qwen3-reranker",
+        (char*)"--rest_port",
+        (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::RERANK_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::IN_MEMORY_GRAPH_MODE);
+}
+
+// Scenario 5: Questionable architecture without identifying keywords must not infer task.
+TEST_F(OvmsConfigDeathTest, negativeSourceModelQuestionableArchitectureWithoutPattern) {
+    auto currentPath = std::filesystem::current_path();
+    auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
+    const std::string sourceModel = "Qwen3-8B";
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        (char*)sourceModel.c_str(),
+        "--model_repository_path",
+        (char*)repoPath.c_str(),
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
+}
+
+// Scenario 6: --model_path (LLM/text_generation model) with no explicit --task but with
 // an embeddings-specific parameter (--pooling). Task is inferred as text_generation and
 // --pooling is not a recognised text_generation option, so parsing must fail.
 TEST_F(OvmsConfigDeathTest, negativeModelPathInferredTaskWithMismatchedParam) {

@@ -86,6 +86,10 @@ const std::map<std::string, std::string> architectureToTask = {
     {"XLMRobertaModel", "embeddings"},
 };
 
+const std::map<std::string, std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> questionableArchitectureTaskKeywords = {
+    {"Qwen3ForCausalLM", {"text_generation", {{"rerank", "rerank"}, {"embeddings", "embed"}}}},
+};
+
 std::string getEnvOrDefault(const char* envName, const std::string& defaultValue = "") {
     const char* envValue = std::getenv(envName);
     if (envValue == nullptr) {
@@ -128,16 +132,35 @@ std::string getTaskForArchitecture(const std::string& architecture) {
     return "";
 }
 
-std::string determineTaskFromArchitectures(const rapidjson::Value& architecturesNode) {
+std::string getTaskForQuestionableArchitecture(const std::string& architecture, const std::string& normalizedModelIdentifier) {
+    const auto architectureRules = questionableArchitectureTaskKeywords.find(architecture);
+    if (architectureRules == questionableArchitectureTaskKeywords.end()) {
+        return "";
+    }
+    const auto& [defaultTask, patternRules] = architectureRules->second;
+    for (const auto& [task, keyword] : patternRules) {
+        if (normalizedModelIdentifier.find(keyword) != std::string::npos) {
+            return task;
+        }
+    }
+    return defaultTask;
+}
+
+std::string determineTaskFromArchitectures(const rapidjson::Value& architecturesNode, const std::string& modelIdentifier) {
     if (!architecturesNode.IsArray() || architecturesNode.Empty()) {
         throw std::logic_error("config.json does not contain a non-empty architectures array");
     }
+    const std::string normalizedModelIdentifier = toLower(modelIdentifier);
     std::optional<std::string> resolvedTask;
     for (const auto& architecture : architecturesNode.GetArray()) {
         if (!architecture.IsString()) {
             continue;
         }
-        std::string task = getTaskForArchitecture(architecture.GetString());
+        const std::string architectureName = architecture.GetString();
+        std::string task = getTaskForQuestionableArchitecture(architectureName, normalizedModelIdentifier);
+        if (task.empty() && questionableArchitectureTaskKeywords.find(architectureName) == questionableArchitectureTaskKeywords.end()) {
+            task = getTaskForArchitecture(architectureName);
+        }
         if (task.empty()) {
             continue;
         }
@@ -155,7 +178,7 @@ std::string determineTaskFromArchitectures(const rapidjson::Value& architectures
     return resolvedTask.value();
 }
 
-std::string determineTaskFromConfigStream(std::istream& configStream, const std::string& configSourceDescription) {
+std::string determineTaskFromConfigStream(std::istream& configStream, const std::string& configSourceDescription, const std::string& modelIdentifier) {
     rapidjson::Document configJson;
     rapidjson::IStreamWrapper wrapper(configStream);
     configJson.ParseStream(wrapper);
@@ -165,10 +188,10 @@ std::string determineTaskFromConfigStream(std::istream& configStream, const std:
     if (!configJson.HasMember("architectures")) {
         throw std::logic_error(configSourceDescription + " does not contain architectures field");
     }
-    return determineTaskFromArchitectures(configJson["architectures"]);
+    return determineTaskFromArchitectures(configJson["architectures"], modelIdentifier);
 }
 
-std::string determineTaskFromConfigContents(const std::string& configContents, const std::string& configSourceDescription) {
+std::string determineTaskFromConfigContents(const std::string& configContents, const std::string& configSourceDescription, const std::string& modelIdentifier) {
     rapidjson::Document configJson;
     configJson.Parse(configContents.c_str());
     if (configJson.HasParseError()) {
@@ -177,7 +200,7 @@ std::string determineTaskFromConfigContents(const std::string& configContents, c
     if (!configJson.HasMember("architectures")) {
         throw std::logic_error(configSourceDescription + " does not contain architectures field");
     }
-    return determineTaskFromArchitectures(configJson["architectures"]);
+    return determineTaskFromArchitectures(configJson["architectures"], modelIdentifier);
 }
 
 bool graphPbtxtExists(const std::string& modelPath) {
@@ -210,7 +233,7 @@ std::string CLIParser::determineDefaultTaskParameter(const std::optional<std::st
         if (!configFile.is_open()) {
             throw std::logic_error("failed to open model config file: " + configPath.string());
         }
-        return determineTaskFromConfigStream(configFile, configPath.string());
+        return determineTaskFromConfigStream(configFile, configPath.string(), *modelPath);
     }
 
     if (!sourceModel.has_value() || sourceModel->empty()) {
@@ -225,7 +248,7 @@ std::string CLIParser::determineDefaultTaskParameter(const std::optional<std::st
             if (!configFile.is_open()) {
                 throw std::logic_error("failed to open model config file: " + configPath.string());
             }
-            return determineTaskFromConfigStream(configFile, configPath.string());
+            return determineTaskFromConfigStream(configFile, configPath.string(), *sourceModel);
         }
     }
 
@@ -236,7 +259,7 @@ std::string CLIParser::determineDefaultTaskParameter(const std::optional<std::st
     if (!status.ok()) {
         throw std::logic_error("failed to download model config file from: " + configUrl);
     }
-    return determineTaskFromConfigContents(responseBody, configUrl);
+    return determineTaskFromConfigContents(responseBody, configUrl, *sourceModel);
 }
 
 std::string CLIParser::getEffectiveTaskParameter() const {
