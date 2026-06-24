@@ -58,9 +58,8 @@ static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template
 // Dry-run probes: render the chat template with synthetic inputs to empirically
 // detect what the template requires. This is model-agnostic and tests actual
 // template behavior rather than relying solely on string pattern matching.
-// Only probes for the two caps that have corresponding workarounds:
+// Probes for:
 //   - requiresObjectArguments (workaround: string→object conversion of tool_call arguments)
-//   - requiresNonNullContent  (workaround: null→"" for content field in tool_call messages)
 static void probeChatTemplateCaps(std::shared_ptr<GenAiServableProperties> properties) {
     if (properties->tokenizer.get_chat_template().empty()) {
         return;
@@ -70,16 +69,30 @@ static void probeChatTemplateCaps(std::shared_ptr<GenAiServableProperties> prope
     const std::string argNeedle = "probe_needle_xK9m";
 
     // --- Probe: requiresObjectArguments ---
-    // Render with object arguments (not the OpenAI spec default of string).
-    // If the template renders the needle natively (without JSON-quoting it),
-    // the template prefers objects → enable string→object workaround.
+    // Following llama.cpp minja approach: render with both string args (JSON-serialized)
+    // and object args, then check if the output contains the needle in a native/structured
+    // format. If object args produce structured output but string args don't, the template
+    // natively handles objects → enable string→object workaround.
+    std::string strArgsOutput;
     std::string objArgsOutput;
+    bool strArgsSuccess = false;
     bool objArgsSuccess = false;
 
 #if (PYTHON_DISABLE == 0)
     if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->templateProcessor.chatTemplate != nullptr) {
         // Probe via Python Jinja — this path has NO polyfills, tests raw template behavior
+        std::string strArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]}]})";
         std::string objArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":{")" + argNeedle + R"(":"val"}}}]}]})";
+
+        try {
+            auto t0 = std::chrono::steady_clock::now();
+            strArgsSuccess = PyJinjaTemplateProcessor::applyChatTemplate(properties->templateProcessor, properties->modelsPath, strArgsJson, strArgsOutput);
+            auto t1 = std::chrono::steady_clock::now();
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (string args): {} us",
+                std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (string args): exception: {}", e.what());
+        } catch (...) {}
 
         try {
             auto t0 = std::chrono::steady_clock::now();
@@ -93,7 +106,22 @@ static void probeChatTemplateCaps(std::shared_ptr<GenAiServableProperties> prope
     } else  // NOLINT(readability/braces)
 #endif
     {
-        // Probe via GenAI's apply_chat_template (minja path — no polyfills in our GenAI version)
+        // Probe via GenAI's apply_chat_template (minja path)
+        try {
+            ov::genai::ChatHistory history;
+            history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
+            history.push_back(ov::genai::JsonContainer::from_json_string(
+                R"({"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]})"));
+            auto t0 = std::chrono::steady_clock::now();
+            strArgsOutput = properties->tokenizer.apply_chat_template(history, false);
+            auto t1 = std::chrono::steady_clock::now();
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): {} us",
+                std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
+            strArgsSuccess = true;
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): exception: {}", e.what());
+        } catch (...) {}
+
         try {
             ov::genai::ChatHistory history;
             history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
@@ -110,19 +138,24 @@ static void probeChatTemplateCaps(std::shared_ptr<GenAiServableProperties> prope
         } catch (...) {}
     }
 
-    bool objArgsRenderNeedle = objArgsSuccess && (objArgsOutput.find(argNeedle) != std::string::npos);
-    // If needle appears with JSON quotes, the template just dumped the object as a JSON string — not native handling
-    std::string quotedNeedle = "\"" + argNeedle + "\"";
-    bool objArgsDumpsRawJson = objArgsRenderNeedle && (objArgsOutput.find(quotedNeedle) != std::string::npos);
+    auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
+        return output.find("\"" + argNeedle + "\": ") != std::string::npos ||     // JSON key: "needle":
+               output.find("'" + argNeedle + "': ") != std::string::npos ||       // Python dict: 'needle':
+               output.find("<parameter=" + argNeedle + ">") != std::string::npos || // Qwen3-Coder XML
+               output.find(argNeedle + ":<|") != std::string::npos;               // Gemma4: needle:<|\"|
+    };
 
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe requiresObjectArguments: objRenders={}, objDumpsRaw={}",
-        objArgsRenderNeedle, objArgsDumpsRawJson);
+    bool strArgsRendersNative = strArgsSuccess && rendersNativeArgs(strArgsOutput);
+    bool objArgsRendersNative = objArgsSuccess && rendersNativeArgs(objArgsOutput);
+
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe requiresObjectArguments: strRendersNative={}, objRendersNative={}",
+        strArgsRendersNative, objArgsRendersNative);
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe strArgs output: {}", strArgsOutput);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe objArgs output: {}", objArgsOutput);
 
-    if (objArgsRenderNeedle) {
-        // Template rendered the needle. If it did NOT JSON-quote it, the template
-        // natively understands object arguments → enable the workaround.
-        bool probeResult = !objArgsDumpsRawJson;
+    if (strArgsRendersNative || objArgsRendersNative) {
+        // If the template natively handles object arguments, always prefer objects.
+        bool probeResult = objArgsRendersNative;
 
         if (probeResult != properties->chatTemplateCaps.requiresObjectArguments) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Dry-run probe overrides requiresObjectArguments: {} -> {}",
@@ -130,102 +163,13 @@ static void probeChatTemplateCaps(std::shared_ptr<GenAiServableProperties> prope
         }
         properties->chatTemplateCaps.requiresObjectArguments = probeResult;
     } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe: template does not render tool_call arguments, keeping string-matching result for requiresObjectArguments");
-    }
-
-    // --- Probe: requiresNonNullContent ---
-    // Render with null content + tool_calls, and with empty string content + tool_calls.
-    // If null content causes the template to fail or drop a user needle, but empty string works, then
-    // the template requires non-null content.
-    const std::string userNeedle = "probe_user_Qw3r";
-    std::string nullContentOutput;
-    std::string emptyContentOutput;
-    bool nullContentSuccess = false;
-    bool emptyContentSuccess = false;
-
-#if (PYTHON_DISABLE == 0)
-    if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->templateProcessor.chatTemplate != nullptr) {
-        std::string nullContentJson = R"({"messages":[{"role":"user","content":")" + userNeedle + R"("},{"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{}"}}]},{"role":"user","content":")" + userNeedle + R"("}]})";
-        std::string emptyContentJson = R"({"messages":[{"role":"user","content":")" + userNeedle + R"("},{"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{}"}}]},{"role":"user","content":")" + userNeedle + R"("}]})";
-
-        try {
-            auto t0 = std::chrono::steady_clock::now();
-            nullContentSuccess = PyJinjaTemplateProcessor::applyChatTemplate(properties->templateProcessor, properties->modelsPath, nullContentJson, nullContentOutput);
-            auto t1 = std::chrono::steady_clock::now();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (null content): {} us",
-                std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (null content): exception: {}", e.what());
-        } catch (...) {}
-
-        try {
-            auto t0 = std::chrono::steady_clock::now();
-            emptyContentSuccess = PyJinjaTemplateProcessor::applyChatTemplate(properties->templateProcessor, properties->modelsPath, emptyContentJson, emptyContentOutput);
-            auto t1 = std::chrono::steady_clock::now();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (empty content): {} us",
-                std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (empty content): exception: {}", e.what());
-        } catch (...) {}
-    } else  // NOLINT(readability/braces)
-#endif
-    {
-        try {
-            ov::genai::ChatHistory history;
-            history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":")" + userNeedle + R"("})"));
-            history.push_back(ov::genai::JsonContainer::from_json_string(
-                R"({"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{}"}}]})"));
-            history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":")" + userNeedle + R"("})"));
-            auto t0 = std::chrono::steady_clock::now();
-            nullContentOutput = properties->tokenizer.apply_chat_template(history, false);
-            auto t1 = std::chrono::steady_clock::now();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (null content): {} us",
-                std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-            nullContentSuccess = true;
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (null content): exception: {}", e.what());
-        } catch (...) {}
-
-        try {
-            ov::genai::ChatHistory history;
-            history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":")" + userNeedle + R"("})"));
-            history.push_back(ov::genai::JsonContainer::from_json_string(
-                R"({"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{}"}}]})"));
-            history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":")" + userNeedle + R"("})"));
-            auto t0 = std::chrono::steady_clock::now();
-            emptyContentOutput = properties->tokenizer.apply_chat_template(history, false);
-            auto t1 = std::chrono::steady_clock::now();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (empty content): {} us",
-                std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-            emptyContentSuccess = true;
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (empty content): exception: {}", e.what());
-        } catch (...) {}
-    }
-
-    bool nullContentRendersUserNeedle = nullContentSuccess && (nullContentOutput.find(userNeedle) != std::string::npos);
-    bool emptyContentRendersUserNeedle = emptyContentSuccess && (emptyContentOutput.find(userNeedle) != std::string::npos);
-
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe requiresNonNullContent: nullRenders={}, emptyRenders={}",
-        nullContentRendersUserNeedle, emptyContentRendersUserNeedle);
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe nullContent output: {}", nullContentOutput);
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe emptyContent output: {}", emptyContentOutput);
-
-    if (emptyContentRendersUserNeedle) {
-        bool probeResult = !nullContentRendersUserNeedle;
-        if (probeResult != properties->chatTemplateCaps.requiresNonNullContent) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Dry-run probe overrides requiresNonNullContent: {} -> {} (nullContent={}, emptyContent={})",
-                properties->chatTemplateCaps.requiresNonNullContent, probeResult, nullContentRendersUserNeedle, emptyContentRendersUserNeedle);
-        }
-        properties->chatTemplateCaps.requiresNonNullContent = probeResult;
-    } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe: could not determine requiresNonNullContent, keeping string-matching result");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe: template does not render tool_call arguments in native format, keeping string-matching result for requiresObjectArguments");
     }
 
     auto probeEnd = std::chrono::steady_clock::now();
     auto probeDurationUs = std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count();
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe completed in {} us. Final results: requiresObjectArguments={}, requiresNonNullContent={}",
-        probeDurationUs, properties->chatTemplateCaps.requiresObjectArguments, properties->chatTemplateCaps.requiresNonNullContent);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe completed in {} us. Final result: requiresObjectArguments={}",
+        probeDurationUs, properties->chatTemplateCaps.requiresObjectArguments);
 }
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
