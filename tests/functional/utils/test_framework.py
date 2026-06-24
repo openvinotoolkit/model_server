@@ -279,8 +279,8 @@ def _make_path_writable_and_retry(func, path, _exc_info):
 
 def remove_dir_tree(dir_path, ignore_errors=False):
     """Remove a directory tree, retrying failed paths after making them writable."""
-    # shutil.rmtree accepts the `onexc` callback only on Python 3.12+; older
-    # interpreters expect `onerror`. Both invoke the same (func, path, *) callback.
+    # shutil.rmtree accepts the `onexc` callback only on Python 3.12+;
+    # older interpreters expect `onerror`. Both invoke the same (func, path, *) callback.
     if sys.version_info >= (3, 12):
         rmtree_kwargs = {"onexc": _make_path_writable_and_retry}
     else:
@@ -297,14 +297,15 @@ def swap_directory(target_path, staging_path, backup_path=None):
     old_path = target_path + "_old"
     if os.path.exists(old_path):
         remove_dir_tree(old_path)
-    target_moved = False
+    parent_dir = os.path.dirname(target_path)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
     if os.path.exists(target_path):
         os.rename(target_path, old_path)
-        target_moved = True
     try:
         os.rename(staging_path, target_path)
     except OSError:
-        if target_moved and os.path.exists(old_path) and not os.path.exists(target_path):
+        if os.path.exists(old_path) and not os.path.exists(target_path):
             try:
                 os.rename(old_path, target_path)
             except OSError:
