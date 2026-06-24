@@ -28,11 +28,11 @@ namespace ovms {
 // addSpecialTokens: false for chat path (template already added them), true for completions.
 class TokenizationProcessor : public BaseInputProcessor {
 public:
-    TokenizationProcessor(const ov::genai::Tokenizer& tokenizer, bool addSpecialTokens);
+    TokenizationProcessor(ov::genai::Tokenizer& tokenizer, bool addSpecialTokens);
     absl::Status process(InputRequest& req) override;
 
 private:
-    const ov::genai::Tokenizer* tokenizer;  // non-owning; lifetime tied to InputProcessorContext
+    ov::genai::Tokenizer* tokenizer;  // non-owning; lifetime tied to InputProcessorContext
     bool addSpecialTokens;
 };
 

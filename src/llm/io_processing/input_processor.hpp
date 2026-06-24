@@ -32,7 +32,7 @@ namespace ovms {
 // and the active InputPayload variant. The chain composition is an implementation detail.
 class InputProcessor {
 public:
-    InputProcessor(const InputProcessorContext& context,
+    InputProcessor(InputProcessorContext& context,
         const InputRequest& req);
 
     // Execute the chain in order. Returns the first non-OK status encountered.

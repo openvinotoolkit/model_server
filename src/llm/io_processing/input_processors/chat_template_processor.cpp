@@ -25,12 +25,12 @@
 namespace ovms {
 
 #if (PYTHON_DISABLE == 0)
-ChatTemplateProcessor::ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer,
+ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
     PyJinjaTemplateProcessor& templateProcessor) :
     tokenizer(&tokenizer),
     templateProcessor(templateProcessor) {}
 
-ChatTemplateProcessor::ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer) :
+ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
     tokenizer(&tokenizer),
     templateProcessor(std::nullopt) {}
 
@@ -51,7 +51,7 @@ std::string ChatTemplateProcessor::serializeForPyJinja(const ov::genai::ChatHist
 }
 
 #else
-ChatTemplateProcessor::ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer) :
+ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
     tokenizer(&tokenizer) {}
 #endif
 

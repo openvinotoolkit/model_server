@@ -29,7 +29,7 @@
 
 namespace ovms {
 
-InputProcessor::InputProcessor(const InputProcessorContext& context,
+InputProcessor::InputProcessor(InputProcessorContext& context,
     const InputRequest& req) {
     const bool isChatPath = std::holds_alternative<ov::genai::ChatHistory>(req.input);
     // Chat template already adds special tokens; completions path needs them added by the tokenizer.

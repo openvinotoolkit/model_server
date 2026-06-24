@@ -20,7 +20,7 @@
 
 namespace ovms {
 
-TokenizationProcessor::TokenizationProcessor(const ov::genai::Tokenizer& tokenizer, bool addSpecialTokens) :
+TokenizationProcessor::TokenizationProcessor(ov::genai::Tokenizer& tokenizer, bool addSpecialTokens) :
     tokenizer(&tokenizer),
     addSpecialTokens(addSpecialTokens) {}
 

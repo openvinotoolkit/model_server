@@ -40,18 +40,18 @@ class ChatTemplateProcessor : public BaseInputProcessor {
 public:
 #if (PYTHON_DISABLE == 0)
     // PyJinja path: templateProcessor must be valid (guaranteed by non-null reference param).
-    ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer,
+    ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
         PyJinjaTemplateProcessor& templateProcessor);
     // Minja / native-OV path: no PyJinja processor needed.
-    explicit ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer);
+    explicit ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer);
 #else
-    explicit ChatTemplateProcessor(const ov::genai::Tokenizer& tokenizer);
+    explicit ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer);
 #endif
 
     absl::Status process(InputRequest& req) override;
 
 private:
-    const ov::genai::Tokenizer* tokenizer;  // non-owning; lifetime tied to InputProcessorContext
+    ov::genai::Tokenizer* tokenizer;  // non-owning; lifetime tied to InputProcessorContext
 #if (PYTHON_DISABLE == 0)
     // Present only on the PyJinja path; nullopt → use tokenizer.apply_chat_template().
     std::optional<std::reference_wrapper<PyJinjaTemplateProcessor>> templateProcessor;

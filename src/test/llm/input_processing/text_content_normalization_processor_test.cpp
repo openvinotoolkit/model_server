@@ -48,11 +48,11 @@ TEST(TextContentNormalizationProcessorTest, StringContentPassedThrough) {
 
 TEST(TextContentNormalizationProcessorTest, SingleTextPartFlattened) {
     ov::genai::ChatHistory history;
-    ov::genai::ChatHistory::value_type msg = {{"role", "user"}};
-    ov::genai::JsonContainer parts = ov::genai::JsonContainer::parse(
+    ov::AnyMap msg = {{"role", std::string("user")}};
+    ov::genai::JsonContainer parts = ov::genai::JsonContainer::from_json_string(
         R"([{"type":"text","text":"hello"}])");
     msg["content"] = parts;
-    history.push_back(std::move(msg));
+    history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
     TextContentNormalizationProcessor processor;
@@ -65,11 +65,11 @@ TEST(TextContentNormalizationProcessorTest, SingleTextPartFlattened) {
 
 TEST(TextContentNormalizationProcessorTest, MultipleTextPartsJoinedWithNewline) {
     ov::genai::ChatHistory history;
-    ov::genai::ChatHistory::value_type msg = {{"role", "user"}};
-    ov::genai::JsonContainer parts = ov::genai::JsonContainer::parse(
+    ov::AnyMap msg = {{"role", std::string("user")}};
+    ov::genai::JsonContainer parts = ov::genai::JsonContainer::from_json_string(
         R"([{"type":"text","text":"first"},{"type":"text","text":"second"}])");
     msg["content"] = parts;
-    history.push_back(std::move(msg));
+    history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
     TextContentNormalizationProcessor processor;
@@ -83,11 +83,11 @@ TEST(TextContentNormalizationProcessorTest, MultipleTextPartsJoinedWithNewline) 
 TEST(TextContentNormalizationProcessorTest, NonTextPartsIgnored) {
     // image_url entries alongside text: only text parts should contribute to combined string.
     ov::genai::ChatHistory history;
-    ov::genai::ChatHistory::value_type msg = {{"role", "user"}};
-    ov::genai::JsonContainer parts = ov::genai::JsonContainer::parse(
+    ov::AnyMap msg = {{"role", std::string("user")}};
+    ov::genai::JsonContainer parts = ov::genai::JsonContainer::from_json_string(
         R"([{"type":"image_url","image_url":{"url":"http://example.com/img.png"}},{"type":"text","text":"describe this"}])");
     msg["content"] = parts;
-    history.push_back(std::move(msg));
+    history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
     TextContentNormalizationProcessor processor;
