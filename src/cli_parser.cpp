@@ -26,9 +26,17 @@
 #include <vector>
 #include <variant>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+// Suppress warning originating from third-party RapidJSON internals on MSVC.
+#pragma warning(disable : 6313)
+#endif
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #include "capi_frontend/server_settings.hpp"
 #include "logging.hpp"
