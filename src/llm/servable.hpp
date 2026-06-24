@@ -185,7 +185,7 @@ struct GenAiServableProperties {
     InputProcessorContext inputProcessorContext;
 
 #if (PYTHON_DISABLE == 0)
-    mutable PyJinjaTemplateProcessor templateProcessor;
+    PyJinjaTemplateProcessor templateProcessor;
 #endif
 };
 

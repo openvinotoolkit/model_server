@@ -188,7 +188,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             if (content.is_array()) {
                 for (size_t j = 0; j < content.size(); j++) {
                     if (content[j]["type"].as_string().value_or("") == "image_url") {
-                        return absl::InternalError("This servable supports only text input, but image_url has been provided");
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but image_url has been provided");
                     }
                 }
             }
