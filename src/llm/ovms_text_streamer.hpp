@@ -49,11 +49,14 @@ namespace ovms {
 // fires the callback unconditionally, preserving existing behavior.
 class OVMSTextStreamer : public ov::genai::TextStreamer {
 public:
-    // Callback receives a Document and returns the streaming status.
+    // Callback receives a Document and the isLast flag, and returns the streaming status.
     // Document shape is always {"delta":{...}} matching the OpenAI delta format.
     // For the finish-only case (nullopt from parseChunk + STOP finishReason),
     // an empty Document{} is passed so the caller can emit the finish_reason chunk.
-    using Callback = std::function<ov::genai::StreamingStatus(rapidjson::Document)>;
+    // isLast is true when finish_reason != NONE — callers that push into a DeltaChannel
+    // should forward this flag to DeltaChannel::push() so the final document and the
+    // completion signal are observed atomically (no separate signalComplete() needed).
+    using Callback = std::function<ov::genai::StreamingStatus(rapidjson::Document, bool /*isLast*/)>;
 
     // outputParser may be nullptr (e.g. for the unary VLM path).
     // TODO(phase3): rework ownership — OVMSTextStreamer should not need to keep

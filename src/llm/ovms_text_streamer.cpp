@@ -196,14 +196,15 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
         delta = std::move(doc);
     }
 
+    const bool isLast = (finish_reason != ov::genai::GenerationFinishReason::NONE);
     if (delta.has_value()) {
-        return m_callback(std::move(*delta));
+        return m_callback(std::move(*delta), isLast);
     }
-    if (finish_reason != ov::genai::GenerationFinishReason::NONE) {
-        // Parser produced no delta for the final flush (e.g. generation ended
-        // on a special token the parser absorbed). Still fire the callback with
-        // an empty Document so preparePartialResponse can emit the finish_reason.
-        return m_callback(rapidjson::Document{});
+    if (isLast) {
+        // Parser produced no delta for the final flush (e.g. generation ended on a
+        // special token the parser absorbed). Still fire the callback with an empty
+        // Document so the caller can emit the finish_reason chunk.
+        return m_callback(rapidjson::Document{}, true);
     }
     return ov::genai::StreamingStatus::RUNNING;
 }
