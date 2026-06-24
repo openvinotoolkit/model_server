@@ -2561,6 +2561,8 @@ cc_test(
                 "//src/python:python_headers_only",
                 "//src/python:pythonnoderesources",
                 "//src/python:pythonexecutorcalculator",
+                "//src/python:pytensorovtensorconvertercalculator",
+                "//src/python:kfs_python_tensor_bridge_runtime",
                 "//src/python:libovmspythonmodule",
             ],
             "//:disable_python": [],

@@ -119,8 +119,9 @@ static int kfsBridgeExtractPacketData(
         const auto& wrapper = packet->Get<ovms::PyObjectWrapper<py::object>>();
 
         std::string datatype = wrapper.getProperty<std::string>("datatype");
+        // pyovms.Tensor exposes shape as a readonly tuple.
         std::vector<py::ssize_t> userShape =
-            wrapper.getProperty<std::vector<py::ssize_t>>("userShape");
+            wrapper.getProperty<std::vector<py::ssize_t>>("shape");
         size_t size = wrapper.getProperty<size_t>("size");
         void* ptr = wrapper.getProperty<void*>("ptr");
 

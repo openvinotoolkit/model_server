@@ -188,6 +188,7 @@ ovms_cc_library(
         "pythonbackend",
     ],
     visibility = ["//src:__pkg__"],
+    alwayslink = 1,
     data = ["//src/python/binding:pyovms.so"],
 )
 
@@ -369,6 +370,28 @@ ovms_cc_library(
         "//src:libovmslogging",
     ],
     visibility = ["//visibility:public"],
+)
+
+# Runtime implementation of the KFS OVMS_PY_TENSOR bridge vtable.
+# Linking this into ovms_test allows Windows tests to resolve
+# OVMS_getKfsPyTensorBridgeVTable from the current process, mirroring
+# Linux RTLD_DEFAULT behavior and avoiding plugin DLL loading in unit tests.
+ovms_cc_library(
+    name = "kfs_python_tensor_bridge_runtime",
+    srcs = [
+        "kfs_python_tensor_bridge_impl.cpp",
+    ],
+    deps = PYBIND_HEADERS_ONLY + [
+        "//src:kfs_python_tensor_bridge_hdrs",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "pythonbackend",
+        "utils",
+    ],
+    copts = COPTS_SO,
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
 )
 
 # Plugin shared library containing MediaPipe Python calculators

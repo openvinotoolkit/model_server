@@ -50,7 +50,7 @@ void PythonNodeResources::finalize() {
                 return;
             }
 
-            ovmsPythonModel.get()->attr("finalize")();
+            ovmsPythonModel.get()->attr("finalize")(initializeKwargs);
         } catch (const pybind11::error_already_set& e) {
             SPDLOG_ERROR("Failed to process python node finalize method. {}  Python node handler_path: {} ", e.what(), this->handlerPath);
             return;
@@ -159,6 +159,7 @@ Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNode
         nodeResources->ovmsPythonModel = std::make_unique<py::object>(OvmsPythonModel());
         if (py::hasattr(*nodeResources->ovmsPythonModel, "initialize")) {
             py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig, basePath);
+            nodeResources->initializeKwargs = kwargsParam;  // Store kwargs for finalize
             nodeResources->ovmsPythonModel->attr("initialize")(kwargsParam);
         } else {
             SPDLOG_DEBUG("OvmsPythonModel class defined in {} does not implement initialize method.", nodeOptions.handler_path());
