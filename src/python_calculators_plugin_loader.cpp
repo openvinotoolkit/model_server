@@ -17,9 +17,15 @@
 #include "python_calculators_plugin_loader.hpp"
 #include "kfs_python_tensor_bridge.hpp"
 
+#include <cstdlib>
+#include <filesystem>
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
+
+#if MEDIAPIPE_DISABLE == 0
+#include "mediapipe/framework/calculator_framework.h"
+#endif
 
 #ifdef __linux__
 #include <dlfcn.h>
@@ -54,7 +60,31 @@ bool loadPythonCalculatorsPlugin() {
         return true;
     }
 
+#if MEDIAPIPE_DISABLE == 0
+    if (const auto& registeredCalculators = mediapipe::CalculatorBaseRegistry::GetRegisteredNames();
+        registeredCalculators.find("PythonExecutorCalculator") != registeredCalculators.end()) {
+        SPDLOG_INFO("PythonExecutorCalculator is already registered, skipping plugin loading");
+        return true;
+    }
+#endif
+
 #ifdef __linux__
+    auto* alreadyLoadedRegisterFn = reinterpret_cast<RegisterPythonCalculatorsFn>(dlsym(RTLD_DEFAULT, "registerPythonCalculators"));
+    if (alreadyLoadedRegisterFn != nullptr) {
+        registerPythonCalculatorsFn = alreadyLoadedRegisterFn;
+
+        auto* getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(dlsym(RTLD_DEFAULT, "OVMS_getKfsPyTensorBridgeVTable"));
+        if (getKfsBridgeFn != nullptr) {
+            if (auto* vtable = getKfsBridgeFn(); vtable != nullptr) {
+                setKfsPyTensorBridgeVTable(vtable);
+                SPDLOG_INFO("KFS Python tensor bridge activated from already loaded python calculators plugin");
+            }
+        }
+
+        SPDLOG_INFO("Python calculators plugin already present in the process, skipping dlopen");
+        return true;
+    }
+
     std::vector<std::string> candidates{
         "libpython_calculators.so",
         "./libpython_calculators.so",
@@ -62,6 +92,29 @@ bool loadPythonCalculatorsPlugin() {
         "./src/python/libpython_calculators.so",
         "bazel-bin/src/python/libpython_calculators.so",
         "./bazel-bin/src/python/libpython_calculators.so"};
+
+    if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr && testSrcDir[0] != '\0') {
+        const std::string srcDir(testSrcDir);
+        const char* testWorkspace = std::getenv("TEST_WORKSPACE");
+        if (testWorkspace != nullptr && testWorkspace[0] != '\0') {
+            candidates.emplace_back(srcDir + "/" + testWorkspace + "/src/python/libpython_calculators.so");
+            candidates.emplace_back(srcDir + "/" + testWorkspace + "/bazel-bin/src/python/libpython_calculators.so");
+        }
+        candidates.emplace_back(srcDir + "/_main/src/python/libpython_calculators.so");
+        candidates.emplace_back(srcDir + "/_main/bazel-bin/src/python/libpython_calculators.so");
+        candidates.emplace_back(srcDir + "/model_server/src/python/libpython_calculators.so");
+        candidates.emplace_back(srcDir + "/model_server/bazel-bin/src/python/libpython_calculators.so");
+    }
+
+    try {
+        const auto testBinaryPath = std::filesystem::canonical("/proc/self/exe");
+        const auto runfilesDir = testBinaryPath.string() + ".runfiles";
+        candidates.emplace_back(std::filesystem::path(runfilesDir) / "src/python/libpython_calculators.so");
+        candidates.emplace_back(std::filesystem::path(runfilesDir) / "ovms/src/python/libpython_calculators.so");
+        candidates.emplace_back(std::filesystem::path(runfilesDir) / "_main/src/python/libpython_calculators.so");
+        candidates.emplace_back(std::filesystem::path(runfilesDir) / "model_server/src/python/libpython_calculators.so");
+    } catch (...) {
+    }
 
     for (const auto& candidate : candidates) {
         pythonCalculatorsHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_LOCAL);

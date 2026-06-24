@@ -206,6 +206,7 @@ ovms_cc_library(
         "//src:libovmslogging",
     ],
     visibility = ["//src:__pkg__"],
+    alwayslink = 1,
     data = ["//src/python/binding:pyovms.so"],
 )
 

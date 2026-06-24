@@ -2549,6 +2549,7 @@ cc_test(
             "//:not_disable_python": PYBIND_HEADERS_ONLY + [
                 "//src/python:python_headers_only",
                 "//src/python:pythonnoderesources",
+                "//src/python:pythonexecutorcalculator",
                 "//src/python:libovmspythonmodule",
             ],
             "//:disable_python": [],
