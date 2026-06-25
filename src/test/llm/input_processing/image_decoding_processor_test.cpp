@@ -123,6 +123,81 @@ TEST(ImageDecodingProcessorTest, MultipleTextPartsJoinedWithNewline) {
     EXPECT_EQ(resultHistory[0]["content"].as_string().value_or(""), "Before image.\nAfter image.");
 }
 
-// Note: tests that actually decode image URLs or base64 data require network
-// access or local image fixtures and are covered by integration tests in
-// src/test/llm/visual_language_model/.
+// --- URL / path validation tests -----------------------------------------
+
+// Helper: build a chat request whose single message has a content array with
+// one image_url part pointing at the given URL.
+static InputRequest makeImageUrlRequest(const std::string& url) {
+    std::string contentJson =
+        R"([{"type":"image_url","image_url":{"url":")" + url + R"("}}])";
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(contentJson);
+    history.push_back(msg);
+    return makeChatRequest(history);
+}
+
+TEST(ImageDecodingProcessorTest, Base64InvalidDataRejected) {
+    InputRequest req = makeImageUrlRequest("data:image/jpeg;base64,NOT_VALID_BASE64!!!");
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Invalid base64 string in request");
+}
+
+TEST(ImageDecodingProcessorTest, HttpUrlDomainNotInAllowList) {
+    InputRequest req = makeImageUrlRequest("http://evil.com/image.jpg");
+    ImageDecodingProcessor processor(std::nullopt, std::vector<std::string>{"safe.com"});
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Given url does not match any allowed domain from allowed_media_domains");
+}
+
+TEST(ImageDecodingProcessorTest, HttpUrlWithNoAllowedDomainsConfiguredRejected) {
+    InputRequest req = makeImageUrlRequest("http://any.com/image.jpg");
+    // No allowed domains configured — all HTTP URLs must be rejected.
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Given url does not match any allowed domain from allowed_media_domains");
+}
+
+TEST(ImageDecodingProcessorTest, LocalFilesystemDisabledRejected) {
+    InputRequest req = makeImageUrlRequest("/some/image.png");
+    // No allowedLocalMediaPath configured — local filesystem access is disabled.
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Loading images from local filesystem is disabled.");
+}
+
+TEST(ImageDecodingProcessorTest, LocalPathTraversalWithDotDotRejected) {
+    InputRequest req = makeImageUrlRequest("../escape/image.png");
+    ImageDecodingProcessor processor(std::string("/allowed/path"), std::nullopt);
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(ImageDecodingProcessorTest, LocalPathOutsideAllowedDirectoryRejected) {
+    InputRequest req = makeImageUrlRequest("/outside/image.png");
+    ImageDecodingProcessor processor(std::string("/allowed/path"), std::nullopt);
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Given filepath is not subpath of allowed_local_media_path");
+}
+
+TEST(ImageDecodingProcessorTest, LocalPathInsideAllowedDirectoryButFileNotFound) {
+    InputRequest req = makeImageUrlRequest("/allowed/path/nonexistent.png");
+    ImageDecodingProcessor processor(std::string("/allowed/path"), std::nullopt);
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Image file parsing failed");
+}
