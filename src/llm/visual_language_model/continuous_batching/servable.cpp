@@ -102,7 +102,7 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
 
 #if (PYTHON_DISABLE == 0)
         bool templateApplied = false;
-        if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
+    if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
             std::string jsonForTemplate;
             if (vlmExecutionContext->apiHandler->getProcessedJson().size() > 0) {
                 jsonForTemplate = vlmExecutionContext->apiHandler->getProcessedJson();
@@ -130,12 +130,9 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
                     jsonForTemplate = buffer.GetString();
                 }
             }
-            auto runtimeStatus = tryApplyChatTemplateRuntime(
-                getProperties()->modelsPath,
+            auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
+                getProperties()->preparedChatTemplate,
                 jsonForTemplate,
-                getProperties()->tokenizer.get_original_chat_template(),
-                getProperties()->tokenizer.get_bos_token(),
-                getProperties()->tokenizer.get_eos_token(),
                 vlmExecutionContext->inputText);
             if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);

@@ -37,9 +37,7 @@
 #include "../sse_utils.hpp"
 #include "apis/openai_api_handler.hpp"
 #include "io_processing/generation_config_builder.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "py_jinja_template_processor.hpp"
-#endif
+#include "runtime_chat_template.hpp"
 
 namespace ovms {
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
@@ -72,6 +70,11 @@ enum class GenerationPhase {
 enum class ChatTemplateMode {
     MINJA,  // Use GenAI's apply_chat_template (minja-based)
     JINJA,  // Use Python Jinja2 module for chat template processing
+};
+
+enum class ChatTemplateBackend {
+    TOKENIZER,
+    PYTHON_RUNTIME,
 };
 
 // Thread-safe channel for parsed streaming deltas.
@@ -158,10 +161,11 @@ struct GenAiServableProperties {
     bool enableToolGuidedGeneration = false;
 #if (PYTHON_DISABLE == 0)
     ChatTemplateMode chatTemplateMode = ChatTemplateMode::JINJA;
-    PyJinjaTemplateProcessor templateProcessor;
 #else
     ChatTemplateMode chatTemplateMode = ChatTemplateMode::MINJA;
 #endif
+    ChatTemplateBackend chatTemplateBackend = ChatTemplateBackend::TOKENIZER;
+    PreparedRuntimeChatTemplate preparedChatTemplate;
     // Sampling
     DecodingMethod decodingMethod;
     std::optional<uint32_t> maxTokensLimit;

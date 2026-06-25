@@ -51,13 +51,20 @@ using namespace ovms;
 namespace {
 
 bool ApplyChatTemplateWithRuntime(GenAiServableProperties& properties, const std::string& requestBody, std::string& output) {
-    auto status = tryApplyChatTemplateRuntime(
+    PreparedRuntimeChatTemplate preparedTemplate;
+    std::string prepareOutput;
+    auto prepareStatus = prepareRuntimeChatTemplate(
         properties.modelsPath,
-        requestBody,
-        properties.tokenizer.get_original_chat_template(),
+        properties.tokenizer.get_chat_template(),
         properties.tokenizer.get_bos_token(),
         properties.tokenizer.get_eos_token(),
-        output);
+        preparedTemplate,
+        prepareOutput);
+    if (prepareStatus != RuntimeChatTemplatePrepareStatus::PREPARED) {
+        output = prepareOutput;
+        return false;
+    }
+    auto status = tryApplyPreparedChatTemplateRuntime(preparedTemplate, requestBody, output);
     return status == RuntimeChatTemplateStatus::APPLIED;
 }
 

@@ -19,10 +19,59 @@
 
 namespace ovms {
 
+enum class RuntimeChatTemplatePrepareStatus {
+    PREPARED,
+    UNAVAILABLE,
+    ERROR,
+};
+
+struct PreparedRuntimeChatTemplate;
+
+RuntimeChatTemplatePrepareStatus prepareRuntimeChatTemplate(
+    const std::string& modelsPath,
+    const std::string& chatTemplate,
+    const std::string& bosToken,
+    const std::string& eosToken,
+    PreparedRuntimeChatTemplate& preparedTemplate,
+    std::string& output);
+
 enum class RuntimeChatTemplateStatus {
     APPLIED,
     UNAVAILABLE,
     ERROR,
+};
+
+RuntimeChatTemplateStatus tryApplyPreparedChatTemplateRuntime(
+    const PreparedRuntimeChatTemplate& preparedTemplate,
+    const std::string& requestBody,
+    std::string& output);
+
+struct PreparedRuntimeChatTemplate {
+    PreparedRuntimeChatTemplate() = default;
+    PreparedRuntimeChatTemplate(const PreparedRuntimeChatTemplate&) = delete;
+    PreparedRuntimeChatTemplate& operator=(const PreparedRuntimeChatTemplate&) = delete;
+    PreparedRuntimeChatTemplate(PreparedRuntimeChatTemplate&& other) noexcept;
+    PreparedRuntimeChatTemplate& operator=(PreparedRuntimeChatTemplate&& other) noexcept;
+    ~PreparedRuntimeChatTemplate();
+
+    bool isPrepared() const;
+    void reset();
+
+private:
+    void* handle = nullptr;
+    void (*destroyFn)(void*) = nullptr;
+
+    friend RuntimeChatTemplatePrepareStatus prepareRuntimeChatTemplate(
+        const std::string& modelsPath,
+        const std::string& chatTemplate,
+        const std::string& bosToken,
+        const std::string& eosToken,
+        PreparedRuntimeChatTemplate& preparedTemplate,
+        std::string& output);
+    friend RuntimeChatTemplateStatus tryApplyPreparedChatTemplateRuntime(
+        const PreparedRuntimeChatTemplate& preparedTemplate,
+        const std::string& requestBody,
+        std::string& output);
 };
 
 RuntimeChatTemplateStatus tryApplyChatTemplateRuntime(

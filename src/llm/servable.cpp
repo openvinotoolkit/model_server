@@ -207,24 +207,34 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         }
         return absl::OkStatus();
     };
+#if (PYTHON_DISABLE == 0)
+    auto applyWithPreparedRuntime = [&](const std::string& requestBody, std::string& outText) -> absl::StatusOr<bool> {
+        if (getProperties()->chatTemplateMode != ChatTemplateMode::JINJA ||
+            getProperties()->chatTemplateBackend != ChatTemplateBackend::PYTHON_RUNTIME) {
+            return false;
+        }
+        auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
+            getProperties()->preparedChatTemplate,
+            requestBody,
+            outText);
+        if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
+            return absl::Status(absl::StatusCode::kInvalidArgument, outText);
+        }
+        return runtimeStatus == RuntimeChatTemplateStatus::APPLIED;
+    };
+#endif
 
     switch (executionContext->endpoint) {
     case Endpoint::CHAT_COMPLETIONS: {
 #if (PYTHON_DISABLE == 0)
         bool templateApplied = false;
-        if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
+        if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
             const std::string requestBody = (executionContext->apiHandler->getProcessedJson().size() > 0) ? executionContext->apiHandler->getProcessedJson() : executionContext->payload.body;
-            auto runtimeStatus = tryApplyChatTemplateRuntime(
-                getProperties()->modelsPath,
-                requestBody,
-                getProperties()->tokenizer.get_original_chat_template(),
-                getProperties()->tokenizer.get_bos_token(),
-                getProperties()->tokenizer.get_eos_token(),
-                inputText);
-            if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
-                return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+            auto runtimeStatus = applyWithPreparedRuntime(requestBody, inputText);
+            if (!runtimeStatus.ok()) {
+                return runtimeStatus.status();
             }
-            templateApplied = (runtimeStatus == RuntimeChatTemplateStatus::APPLIED);
+            templateApplied = runtimeStatus.value();
         }
         if (!templateApplied) {
             auto tokenizerStatus = applyWithTokenizer(inputText);
@@ -250,18 +260,12 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         if (executionContext->apiHandler->getChatHistory().size() > 0) {
 #if (PYTHON_DISABLE == 0)
             bool templateApplied = false;
-            if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
-                auto runtimeStatus = tryApplyChatTemplateRuntime(
-                    getProperties()->modelsPath,
-                    executionContext->apiHandler->getProcessedJson(),
-                    getProperties()->tokenizer.get_original_chat_template(),
-                    getProperties()->tokenizer.get_bos_token(),
-                    getProperties()->tokenizer.get_eos_token(),
-                    inputText);
-                if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
-                    return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+            if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
+                auto runtimeStatus = applyWithPreparedRuntime(executionContext->apiHandler->getProcessedJson(), inputText);
+                if (!runtimeStatus.ok()) {
+                    return runtimeStatus.status();
                 }
-                templateApplied = (runtimeStatus == RuntimeChatTemplateStatus::APPLIED);
+                templateApplied = runtimeStatus.value();
             }
             if (!templateApplied) {
                 auto tokenizerStatus = applyWithTokenizer(inputText);

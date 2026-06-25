@@ -331,10 +331,7 @@ ovms_cc_library(
             "visual_language_model/legacy/servable_initializer.cpp",
                 "visual_language_model/legacy/legacy_executor.cpp"],
     deps = select({
-                "//:not_disable_python": PYBIND_HEADERS_ONLY + [
-                    "//src/python:python_headers_only",
-                    ":py_jinja_template_processor_header",
-                ],
+                "//:not_disable_python": [],
             "//:disable_python": []
         }) + [
         "//third_party:openvino",
@@ -370,9 +367,7 @@ ovms_cc_library(
     hdrs = ["execution_context_utils.hpp"],
     srcs = ["execution_context_utils.cpp"],
     deps = select({
-            "//:not_disable_python": [
-                ":py_jinja_template_processor_header",
-            ],
+            "//:not_disable_python": [],
             "//:disable_python": []
         }) + [
         ":genai_servables",
@@ -409,7 +404,7 @@ ovms_cc_library(
             "//:not_disable_python": PYBIND_HEADERS_ONLY,
             "//:disable_python": []
         }) + [
-        "//src/python:utils",
+        "//src/python:python_headers_only",
     ],
     visibility = ["//visibility:public"],
 )
