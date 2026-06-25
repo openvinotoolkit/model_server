@@ -141,8 +141,8 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     }
 
     if (executionContext->apiHandler->isStream()) {
-        auto ovmsCallback = [& ctx = *executionContext](rapidjson::Document delta) -> ov::genai::StreamingStatus {
-            ctx.deltaChannel.push(std::move(delta));
+        auto ovmsCallback = [& ctx = *executionContext](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
+            ctx.deltaChannel.push(std::move(delta), isLast);
             return ov::genai::StreamingStatus::RUNNING;
         };
         ov::AnyMap streamerConfig;
