@@ -27,7 +27,7 @@ const int64_t Lfm25ToolParser::reasoningEndTokenId = 124902;  // </think>
 bool Lfm25ToolParser::parseNewContent() {
     switch (currentState) {
     case State::Content: {
-        return parseInContentState(this->streamingContent, this->streamingPosition, TOOL_CALL_START_TAG, TOOL_CALL_END_TAG);
+        return parseInContentState(this->streamingContent, this->streamingPosition, this->currentState, TOOL_CALL_START_TAG, TOOL_CALL_END_TAG);
     }
     case State::ToolCallStarted: {
         auto wasParsedCorrectly = parseInToolCallState(this->streamingContent, this->toolCall, this->streamingPosition, this->currentState);

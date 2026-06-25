@@ -26,7 +26,7 @@ const int64_t Lfm2ToolParser::eotTokenId = 11;
 bool Lfm2ToolParser::parseNewContent() {
     switch (currentState) {
     case State::Content: {
-        return parseInContentState(this->streamingContent, this->streamingPosition, TOOL_CALL_START_TAG, TOOL_CALL_END_TAG);
+        return parseInContentState(this->streamingContent, this->streamingPosition, this->currentState, TOOL_CALL_START_TAG, TOOL_CALL_END_TAG);
     }
     case State::ToolCallStarted: {
         auto wasParsedCorrectly = parseInToolCallState(this->streamingContent, this->toolCall, this->streamingPosition, this->currentState);

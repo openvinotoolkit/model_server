@@ -47,7 +47,7 @@ std::string normalizeArgStr(const std::string& arg);
 void writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
 Argument parseSingleArgument(const std::string& argumentStr);
 std::vector<Argument> parseArguments(const std::string& argumentsStr);
-bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, const std::string& toolCallStartTag, const std::string& toolCallEndTag);
+bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const std::string& toolCallStartTag, const std::string& toolCallEndTag);
 bool parseInToolCallState(const std::string& streamingContent, ToolCall& toolCall, size_t& streamingPosition, State& currentState);
 bool parseToolCallParametersState(const std::string& streamingContent, ToolCall& toolCall, size_t& streamingPosition, State& currentState);
 bool parseInToolCallEndedState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const std::string& toolCallEndTag);

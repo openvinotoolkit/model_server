@@ -31,6 +31,7 @@ const std::vector<std::string>& getSupportedToolParserNames() {
         "qwen3coder",
         "devstral",
         "lfm2",
+        "lfm2.5",
         "gemma4",
     };
     return names;
@@ -41,6 +42,7 @@ const std::vector<std::string>& getSupportedReasoningParserNames() {
         "qwen3",
         "gemma4",
         "gptoss",
+        "lfm2.5",
     };
     return names;
 }

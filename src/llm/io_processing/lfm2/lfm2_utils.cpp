@@ -191,7 +191,7 @@ std::vector<Argument> parseArguments(const std::string& argumentsStr) {
     return parsedArgs;
 }
 
-bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, const std::string& toolCallStartTag, const std::string& toolCallEndTag) {
+bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const std::string& toolCallStartTag, const std::string& toolCallEndTag) {
     size_t toolCallStartTagPos = streamingContent.find(toolCallStartTag, streamingPosition);
     size_t toolCallEndTagPos = streamingContent.find(toolCallEndTag, streamingPosition);
     if (toolCallEndTagPos != std::string::npos && toolCallStartTagPos == std::string::npos) {
@@ -204,6 +204,7 @@ bool parseInContentState(const std::string& streamingContent, size_t& streamingP
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Content found before tool call start tag at position: {}", toolCallStartTagPos);
             return true;
         }
+        currentState = State::ToolCallStarted;
         streamingPosition = toolCallStartTagPos + toolCallStartTag.length();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected start of tool call at position: {}", toolCallStartTagPos);
         return false;
@@ -367,6 +368,9 @@ void parseUnaryResponse(ParsedOutput& parsedOutput, const std::vector<int64_t>& 
                     toolListStr.clear();
                 }
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed single tool string {}", singleTool);
+            } else {
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "No more tool calls found in tool list string: {}", toolListStr);
+                break;
             }
 
             if (!singleTool.empty()) {
