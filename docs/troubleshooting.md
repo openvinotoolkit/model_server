@@ -67,10 +67,7 @@ Python support is optional in Model Server. The following issues may occur when 
 - **Cause**: Python module `pyovms` cannot be found or imported
 - **Symptoms**: Server terminates; error mentions missing or broken `pyovms` module
 - **Resolution**:
-  - Set `PYTHONPATH` to include the Python libraries directory from OVMS package:
-    ```bash
-    export PYTHONPATH=${OVMS_PACKAGE_PATH}/lib/python:$PYTHONPATH
-    ```
+  - Set `PYTHONPATH` to include the Python libraries directory from OVMS package (for example, prepend `${OVMS_PACKAGE_PATH}/lib/python` to `PYTHONPATH`).
   - Verify: `python3 -c "import pyovms; print(pyovms.__file__)"`
   - Check that Python dependencies are installed: `pip3 install Jinja2==3.1.6 MarkupSafe==3.0.2`
   - If using Python nodes: `pip3 install numpy`
@@ -101,17 +98,9 @@ Python support is optional in Model Server. The following issues may occur when 
   - Follow Python setup steps above (PYTHONPATH, dependencies)
 
 ### Verify Python Support Status
-```bash
-# Check if Python libraries are available
-ldd ${OVMS_BIN} | grep -i python
-
-# Check if Python calculators plugin loaded successfully
-# Look in server logs for "KFS Python tensor bridge activated" or 
-# "Python calculators plugin libpython_calculators.so failed to load"
-
-# Try a Python node graph request (will fail gracefully if Python unavailable)
-# Error message will indicate whether Python support is available
-```
+- Use `ldd ${OVMS_BIN}` and confirm Python-related libraries are present.
+- Check server logs for `KFS Python tensor bridge activated` or `Python calculators plugin libpython_calculators.so failed to load`.
+- Submit a Python node graph request; when Python support is unavailable, the request fails gracefully with a clear error.
 
 ## Client Request Issues
 - When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors in the request handling.

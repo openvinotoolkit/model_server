@@ -68,7 +68,8 @@ set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
 :msvc_error
 echo [ERROR] Required MSVC compiler not installed
-goto :exit_build_error
+echo [ERROR] windows_test.bat failed before test parsing stage.
+exit /b 1
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
 set BAZEL_VS=%VS_2022_BT%
@@ -123,16 +124,25 @@ echo [INFO] install_ovms_service.bat unit tests passed.
 :: Start unit test
 echo Running: %runTest%
 %runTest%
-if !errorlevel! neq 0 goto :exit_build_error
+if !errorlevel! neq 0 (
+    echo [ERROR] windows_test.bat failed before test parsing stage.
+    exit /b 1
+)
 
 IF "%~2"=="--with_python" (
     echo Running: %runPythonRuntimeTest%
     %runPythonRuntimeTest%
-    if !errorlevel! neq 0 goto :exit_build_error
+    if !errorlevel! neq 0 (
+        echo [ERROR] windows_test.bat failed before test parsing stage.
+        exit /b 1
+    )
 
     echo Running: %runNoLibpythonSmokeTest%
     %runNoLibpythonSmokeTest%
-    if !errorlevel! neq 0 goto :exit_build_error
+    if !errorlevel! neq 0 (
+        echo [ERROR] windows_test.bat failed before test parsing stage.
+        exit /b 1
+    )
 )
 
 :: Cut tests log to results
@@ -165,8 +175,3 @@ if !parseExitCode! neq 0 exit /b !parseExitCode!
 
 echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
 exit /b 0
-
-:exit_build_error
-echo [ERROR] windows_test.bat failed before test parsing stage.
-exit /b 1
-endlocal
