@@ -69,6 +69,11 @@ enum class GenerationPhase {
     OUTPUT_TOKEN_PROCESSING,
 };
 
+enum class ChatTemplateMode {
+    MINJA,  // Use GenAI's apply_chat_template (minja-based)
+    JINJA,  // Use Python Jinja2 module for chat template processing
+};
+
 // Thread-safe channel for parsed streaming deltas.
 // The producer (OVMSTextStreamer callback, possibly on a background executor thread)
 // calls push(); the consumer (preparePartialResponse, always on the calculator thread)
@@ -161,6 +166,11 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
+#if (PYTHON_DISABLE == 0)
+    ChatTemplateMode chatTemplateMode = ChatTemplateMode::JINJA;
+#else
+    ChatTemplateMode chatTemplateMode = ChatTemplateMode::MINJA;
+#endif
     // Sampling
     DecodingMethod decodingMethod;
     std::optional<uint32_t> maxTokensLimit;
