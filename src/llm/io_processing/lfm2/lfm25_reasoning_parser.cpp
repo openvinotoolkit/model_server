@@ -39,7 +39,7 @@ void Lfm25ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<i
     auto endPos = std::distance(generatedTokens.begin(), endReasoningIt);
 
     std::string reasoningContent = tokenizer.decode(std::vector<int64_t>(startPos + generatedTokens.begin() + 1, endPos + generatedTokens.begin()), ov::genai::skip_special_tokens(true));
-    
+
     parsedOutput.reasoning = reasoningContent;
 }
 

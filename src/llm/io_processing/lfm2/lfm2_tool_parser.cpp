@@ -20,8 +20,8 @@ namespace ovms {
 const std::string Lfm2ToolParser::TOOL_CALL_START_TAG = "<|tool_call_start|>";
 const std::string Lfm2ToolParser::TOOL_CALL_END_TAG = "<|tool_call_end|>";
 
-const int64_t Lfm2ToolParser::botTokenId = 10;     // <|tool_call_start|>
-const int64_t Lfm2ToolParser::eotTokenId = 11;     // <|tool_call_end|>
+const int64_t Lfm2ToolParser::botTokenId = 10;  // <|tool_call_start|>
+const int64_t Lfm2ToolParser::eotTokenId = 11;  // <|tool_call_end|>
 
 bool Lfm2ToolParser::parseNewContent() {
     switch (this->currentState) {

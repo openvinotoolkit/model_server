@@ -404,4 +404,4 @@ void parseUnaryResponse(ParsedOutput& parsedOutput, const std::vector<int64_t>& 
 
     parsedOutput.content = tokenizer.decode(contentWithoutToolCalls, ov::AnyMap{ov::genai::skip_special_tokens(true)});
 }
-} // namespace ovms
+}  // namespace ovms

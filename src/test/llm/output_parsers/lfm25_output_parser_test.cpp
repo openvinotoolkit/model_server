@@ -836,7 +836,7 @@ TEST_F(LFM25OutputParserTest, ParseToolCallWithReasoning) {
     std::string input = R"(<think>User wants me to translate string "zażółć gęślą jaźń" from polish. Polish parameter language signature is "pl". I should use function translate. [...]</think><|tool_call_start|>[translate(text="zażółć gęślą jaźń", lang="pl")]<|tool_call_end|>)";
     auto generatedTensor = lfm25Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    
+
     std::cout << std::endl;
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");

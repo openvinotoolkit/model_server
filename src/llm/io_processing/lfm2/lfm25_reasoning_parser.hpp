@@ -44,9 +44,9 @@ public:
         return parsingEndTag;
     }
 
-    // It may be removed after changing logic in Lfm2ToolParser to use tokens in streaming instead of chunk content, both tool parser and reasoning parser need to have the same value for this function  
+    // It may be removed after changing logic in Lfm2ToolParser to use tokens in streaming instead of chunk content, both tool parser and reasoning parser need to have the same value for this function
     bool requiresStreamingWithSpecialTokens() const override {
         return true;
     }
 };
-}
+}  // namespace ovms

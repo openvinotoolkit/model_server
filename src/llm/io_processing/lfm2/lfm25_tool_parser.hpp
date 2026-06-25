@@ -25,6 +25,7 @@ protected:
     static const int64_t toolCallStartTokenId;
     static const int64_t toolCallEndTokenId;
     static const int64_t reasoningEndTokenId;
+
 public:
     Lfm25ToolParser() = delete;
     explicit Lfm25ToolParser(ov::genai::Tokenizer& tokenizer) :
@@ -62,7 +63,7 @@ private:
     ToolCall toolCall;
 
     int toolCallIndex{TOOL_CALL_INDEX_START};
-    
+
     bool parseNewContent();
 };
-}
+}  // namespace ovms
