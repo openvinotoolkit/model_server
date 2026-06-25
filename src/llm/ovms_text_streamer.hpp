@@ -52,7 +52,7 @@ public:
     // Callback receives a Document and the isLast flag, and returns the streaming status.
     // Document shape is always {"delta":{...}} matching the OpenAI delta format.
     // For the finish-only case (nullopt from parseChunk + STOP finishReason),
-    // an empty Document{} is passed so the caller can emit the finish_reason chunk.
+    // an empty *object* Document (SetObject()) is passed so the caller can emit the finish_reason chunk.
     // isLast is true when finish_reason != NONE — callers that push into a DeltaChannel
     // should forward this flag to DeltaChannel::push() so the final document and the
     // completion signal are observed atomically (no separate signalComplete() needed).

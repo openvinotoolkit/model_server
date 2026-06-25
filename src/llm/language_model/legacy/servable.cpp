@@ -123,7 +123,12 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     } else {
         legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(
             getProperties()->tokenizer,
-            [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+            [& ctx = *legacyExecutionContext](std::string) -> ov::genai::StreamingStatus {
+                if (ctx.clientDisconnected.load()) {
+                    return ov::genai::StreamingStatus::CANCEL;
+                }
+                return ov::genai::StreamingStatus::RUNNING;
+            });
     }
     legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,

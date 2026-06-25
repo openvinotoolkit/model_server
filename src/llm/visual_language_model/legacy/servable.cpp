@@ -156,6 +156,9 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
         auto unaryCallback = [& ctx = *legacyExecutionContext](rapidjson::Document delta, bool /*isLast*/) -> ov::genai::StreamingStatus {
+            if (ctx.clientDisconnected.load()) {
+                return ov::genai::StreamingStatus::CANCEL;
+            }
             if (delta.HasMember("delta") && delta["delta"].IsObject() &&
                 delta["delta"].HasMember("content") && delta["delta"]["content"].IsString()) {
                 ctx.accumulatedUnaryText += delta["delta"]["content"].GetString();
