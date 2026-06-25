@@ -198,7 +198,7 @@ If you deployed the **with-Python package** but Python libraries are missing at 
 - This is a **graceful degradation** - server continues running
 - **Impact**: Python nodes cannot be loaded, but non-Python models work fine
 - **Fix**: Ensure `libpython_calculators.so` is in library search path
-- **Check**: Verify with `ldd ${OVMS_BIN} | grep python`
+- **Check**: Verify server logs for plugin load diagnostics and Python feature availability
 
 ### Fallback Behavior
 
@@ -215,15 +215,16 @@ Model Server gracefully handles missing Python libraries:
 Check if your deployment has Python support:
 
 ```bash
-# Method 1: Check binary dependencies
-ldd ${OVMS_BIN} | grep -i python
+# Method 1: Start OVMS and inspect logs
+# Look for Python runtime/plugin initialization messages and any fallback warnings.
 
 # Method 2: Try to load a Python node graph
-# If server starts but Python graphs fail with clear errors → Python available
-# If server won't start → libpython.so missing
+# If Python runtime and plugin are available, the graph loads.
+# If unavailable, OVMS keeps running and returns a clear "Python not available" style error for Python features.
 
-# Method 3: Check library listing
-ls -la ${OVMS_LIB_PATH}/libpython* 2>/dev/null || echo "No Python libs"
+# Method 3: Verify package/runtime files
+# Confirm OVMS Python package files exist in ${OVMS_PACKAGE_PATH}/lib/python
+# and optional plugin library exists in ${OVMS_LIB_PATH}.
 ```
 
 ### Migration Between Configurations

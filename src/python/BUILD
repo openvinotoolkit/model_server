@@ -431,9 +431,7 @@ cc_binary(
         "//src:windows": [
             "/FORCE:MULTIPLE",  # Allow multiple symbol definitions for glog (linked in both this DLL and main binary)
         ],
-        "//conditions:default": [
-            "-Wl,-z,nodlopen",  # Prevent dlopen on this library (pybind11 requirement)
-        ],
+        "//conditions:default": [],
     }),
     local_defines = COMMON_LOCAL_DEFINES,
     visibility = ["//visibility:public"],

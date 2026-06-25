@@ -53,9 +53,9 @@ models/
 
 Python support is optional in Model Server. The following issues may occur when using Python features (Python nodes, LLM models with Jinja2 templates):
 
-### Server Fails to Start with "Failed to initialize Python interpreter"
+### Python Runtime Initialization Fails (Server Continues with Python Features Disabled)
 - **Cause**: System Python library (`libpython.so`) is not found
-- **Symptoms**: Server terminates immediately at startup; error in logs mentions missing `libpython3.x.so`
+- **Symptoms**: Server starts, but Python features are unavailable; logs mention Python runtime initialization failure and fallback
 - **Resolution**:
   - Verify you deployed a with-Python package, not without-Python package
   - Install system Python development libraries:
@@ -63,9 +63,9 @@ Python support is optional in Model Server. The following issues may occur when 
     - **RHEL/CentOS**: `sudo yum install python312-devel`
   - Verify: `find /usr -name "libpython*.so*" -type f`
 
-### Server Fails to Start with "Failed to create Python backend"
+### Python Backend Creation Fails (Server Continues with Python Features Disabled)
 - **Cause**: Python module `pyovms` cannot be found or imported
-- **Symptoms**: Server terminates; error mentions missing or broken `pyovms` module
+- **Symptoms**: Server starts, but Python features are unavailable; logs mention missing or broken `pyovms` module
 - **Resolution**:
   - Set `PYTHONPATH` to include the Python libraries directory from OVMS package (for example, prepend `${OVMS_PACKAGE_PATH}/lib/python` to `PYTHONPATH`).
   - Verify: `python3 -c "import pyovms; print(pyovms.__file__)"`
@@ -98,9 +98,9 @@ Python support is optional in Model Server. The following issues may occur when 
   - Follow Python setup steps above (PYTHONPATH, dependencies)
 
 ### Verify Python Support Status
-- Use `ldd ${OVMS_BIN}` and confirm Python-related libraries are present.
 - Check server logs for `KFS Python tensor bridge activated` or `Python calculators plugin libpython_calculators.so failed to load`.
 - Submit a Python node graph request; when Python support is unavailable, the request fails gracefully with a clear error.
+- Confirm OVMS Python package files exist (for with-Python package), for example under `${OVMS_PACKAGE_PATH}/lib/python`.
 
 ## Client Request Issues
 - When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors in the request handling.
