@@ -138,7 +138,7 @@ Example model families that work well:
 
 Tool parsers enable structured output for function calling. When OpenHands needs to execute a tool (e.g., running code, reading files), it expects the LLM to return structured JSON that specifies the tool name and arguments. The tool parser converts model outputs into this format.
 
-- **Without tool parser:** The model may hallucinate tool calls or return unstructured text
+- **Without tool parser:** The model does not generate tool calls in the expected structured format, causing tool call extraction to fail.
 - **With correct tool parser:** Reliable tool extraction for agent behavior
 
 ### OVMS `--source_model` Workflow
@@ -171,7 +171,8 @@ ${HOME}/ovms-openhands/models/
 └── qwen3-0.6b-int8-ov/
     ├── openvino_model.xml       # OpenVINO model structure
     ├── openvino_model.bin       # Model weights
-    └── graph.pbtxt              # MediaPipe LLM graph configuration
+    ├── graph.pbtxt              # MediaPipe LLM graph configuration
+    └── .......
 ```
 
 ### Using Helper Scripts (Optional)
@@ -239,7 +240,7 @@ This approach uses the provided `docker-compose.yml` and `scripts/deploy_model_o
 # Specify device, parser, or cache directory
 ./scripts/deploy_model_ovms.sh OpenVINO/qwen3-0.6b-int8-ov \
     --device CPU \
-    --parser qwen \
+    --parser hermes3 \
     --cache-dir ~/custom-models
 
 # Skip health check for faster feedback
