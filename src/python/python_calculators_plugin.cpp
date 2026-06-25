@@ -27,14 +27,22 @@ class PythonExecutorCalculator;
 
 namespace ovms {
 
+#if defined(_WIN32)
+#define PYTHON_CALCULATORS_EXPORT __declspec(dllexport)
+#else
+#define PYTHON_CALCULATORS_EXPORT __attribute__((visibility("default")))
+#endif
+
 // Entry point function called by the main binary to register all Python calculators
 // This function is exported and called via dlsym after loading the plugin
-extern "C" void registerPythonCalculators() {
+extern "C" PYTHON_CALCULATORS_EXPORT void registerPythonCalculators() {
     // The REGISTER_CALCULATOR macro creates static initializers that run
     // when this .so is loaded. By the time this function is called, those
     // initializers have already executed and registered the calculators.
     // This function serves as an explicit synchronization point.
     // No additional code needed here - the work is done by static initializers.
 }
+
+#undef PYTHON_CALCULATORS_EXPORT
 
 }  // namespace ovms
