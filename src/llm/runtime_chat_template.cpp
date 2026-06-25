@@ -32,7 +32,7 @@
 namespace ovms {
 namespace {
 
-using CreatePreparedChatTemplateRuntimeFn = bool (*) (
+using CreatePreparedChatTemplateRuntimeFn = bool (*)(
     const char* modelsPath,
     const char* chatTemplate,
     const char* bosToken,
@@ -40,7 +40,7 @@ using CreatePreparedChatTemplateRuntimeFn = bool (*) (
     void** preparedHandle,
     const char** output);
 
-using ApplyPreparedChatTemplateRuntimeFn = bool (*) (
+using ApplyPreparedChatTemplateRuntimeFn = bool (*)(
     void* preparedHandle,
     const char* requestBody,
     const char** output);

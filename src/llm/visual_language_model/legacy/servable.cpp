@@ -347,7 +347,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
 
 #if (PYTHON_DISABLE == 0)
         bool templateApplied = false;
-    if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
+        if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
             std::string jsonForTemplate;
             if (vlmExecutionContext->apiHandler->getProcessedJson().size() > 0) {
                 jsonForTemplate = vlmExecutionContext->apiHandler->getProcessedJson();
@@ -385,13 +385,13 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             templateApplied = (runtimeStatus == RuntimeChatTemplateStatus::APPLIED);
         } else  // NOLINT(readability/braces)
 #endif
-        if (
+            if (
 #if (PYTHON_DISABLE == 0)
-            !templateApplied
+                !templateApplied
 #else
             true
 #endif
-        ) {
+            ) {
             constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
             auto toolParsingResult = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
             if (!toolParsingResult.ok()) {
