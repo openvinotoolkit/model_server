@@ -60,7 +60,7 @@ services:
       LLM_TEMPERATURE: "0.0"
       # Generation circuit breaker - prevents runaway agent loops.
       # Increase for complex tasks, but keep conservative for stability.
-      LLM_MAX_OUTPUT_TOKENS: "500"
+      LLM_MAX_OUTPUT_TOKENS: "5000"
       # Context window limit - adjust based on model's actual capacity.
       # Some modern models support 32k+ tokens.
       LLM_MAX_INPUT_TOKENS: "4096"
