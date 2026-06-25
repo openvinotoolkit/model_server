@@ -155,11 +155,82 @@ TEST_F(ChatTemplateEndToEndTest, GptOss_ToolCallWithStringArgs) {
     run(false);
 
     ASSERT_TRUE(applySuccess);
-    // The template should have rendered the arguments natively (not as escaped JSON string)
-    // After workaround: arguments were converted from string to object
-    EXPECT_NE(appliedOutput.find("get_weather"), std::string::npos)
-        << "Template output should contain the function name";
-    // With object args rendered natively, we expect unescaped key names
-    EXPECT_NE(appliedOutput.find("location"), std::string::npos)
-        << "Template output should contain argument keys rendered natively";
+
+    std::string expectedOutput = R"(<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.
+Knowledge cutoff: 2024-06
+Current date: 2026-06-25
+
+Reasoning: medium
+
+# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|><|start|>user<|message|>What's the weather in Paris?<|end|><|start|>assistant to=functions.get_weather <|channel|>commentary json<|message|>{"location": "Paris", "unit": "celsius"}<|end|>)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+// =============================================================================
+// Example: Qwen3.6-35B-A3B-int4-ov with tool call containing string arguments
+// The probe should detect requiresObjectArguments=true, workaround should convert
+// string args to object, and the final template should render them natively.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, Qwen36_ToolCallWithStringArgs) {
+    // Load the real qwen chat template
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen36.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen36 template";
+
+    // Simulate a request with tool_calls where arguments are a JSON string
+    // (as sent by most OpenAI-compatible clients)
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(false);
+
+    ASSERT_TRUE(applySuccess);
+
+    std::string expectedOutput = R"(<|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+<tool_call>
+<function=get_weather>
+<parameter=location>
+Paris
+</parameter>
+<parameter=unit>
+celsius
+</parameter>
+</function>
+</tool_call><|im_end|>
+)";
+     EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+// =============================================================================
+// Example: Gemma4 with tool call containing string arguments
+// The probe should detect requiresObjectArguments=true via the needle:<| pattern,
+// workaround should convert string args to object, and template should render
+// them in Gemma's native key:<|"|>value<|"|> format.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, Gemma4_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_gemma.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load gemma template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(false);
+
+    ASSERT_TRUE(applySuccess);
+
+    // FIXME: Why is </s> here? because of facebook-opt125?
+    std::string expectedOutput = R"(</s><|turn>user
+What's the weather in Paris?<turn|>
+<|turn>model
+<|tool_call>call:get_weather{location:<|"|>Paris<|"|>,unit:<|"|>celsius<|"|>}<tool_call|><|tool_response>)";
+     EXPECT_EQ(appliedOutput, expectedOutput);
 }

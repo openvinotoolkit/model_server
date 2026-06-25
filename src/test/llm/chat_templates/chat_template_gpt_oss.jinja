@@ -321,8 +321,6 @@
                 {{- "<|start|>assistant to=" }}
                 {{- "functions." + tool_call.name + " <|channel|>commentary " }}
                 {{- (tool_call.content_type if tool_call.content_type is defined else "json") + "<|message|>" }}
-                {#- Original: {{- tool_call.arguments|tojson }} #}
-                {#- No need to escape: #}
                 {{- tool_call.arguments|tojson }}
                 {#- Original: {{- "<|call|>" }} #}
                 {#- https://cookbook.openai.com/articles/openai-harmony#handling-tool-calls #}
