@@ -45,6 +45,7 @@
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../kfs_python_tensor_bridge.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -2860,16 +2861,21 @@ TEST_F(MediapipeSerialization, MPImageTensor) {
 }
 
 TEST_F(MediapipeSerialization, OVMSPyTensorWithoutRuntimeBridge) {
-    // This test process does not load the runtime Python calculators plugin,
-    // therefore OVMS_PY_TENSOR serialization path must fail explicitly.
+    // Force bridge absence explicitly so this test is independent from global
+    // process state and test execution order.
+    const auto* originalBridge = getKfsPyTensorBridgeVTable();
+    setKfsPyTensorBridgeVTable(nullptr);
+
     ::mediapipe::Packet packet = ::mediapipe::MakePacket<int>(1);
-    ASSERT_EQ(
+    auto status =
         onPacketReadySerializeImpl(
             "1", "py_response", "1", "py_response",
             mediapipe_packet_type_enum::OVMS_PY_TENSOR,
             packet,
-            mp_response),
-        StatusCode::NOT_IMPLEMENTED);
+            mp_response);
+
+    setKfsPyTensorBridgeVTable(originalBridge);
+    ASSERT_EQ(status, StatusCode::NOT_IMPLEMENTED);
 }
 
 TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {

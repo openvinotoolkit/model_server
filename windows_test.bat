@@ -131,7 +131,7 @@ if !errorlevel! neq 0 (
 
 IF "%~2"=="--with_python" (
     echo Running: %runPythonRuntimeTest%
-    %runPythonRuntimeTest%
+    %runPythonRuntimeTest% >> win_full_test.log 2>&1
     if !errorlevel! neq 0 (
         echo [ERROR] windows_test.bat failed before test parsing stage.
         exit /b 1
