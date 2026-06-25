@@ -42,6 +42,7 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
 #include "chat_template_analyzer.hpp"
+#include "chat_template_probe.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
@@ -61,31 +62,23 @@ static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template
 // template behavior rather than relying solely on string pattern matching.
 // Probes for:
 //   - requiresObjectArguments (workaround: string→object conversion of tool_call arguments)
-static void probeChatTemplateCaps(std::shared_ptr<GenAiServableProperties> properties) {
+static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServableProperties> properties) {
     if (properties->tokenizer.get_chat_template().empty()) {
         return;
     }
-    // Only probe if the template supports tool calls — templates that don't handle tools
     if (!properties->chatTemplateCaps.supportsToolCalls) {
         return;
     }
 
-    auto probeStart = std::chrono::steady_clock::now();
-    const std::string argNeedle = "probe_needle_xK9m";
-
-    // --- Probe: requiresObjectArguments ---
-    // Following llama.cpp minja approach: render with both string args (JSON-serialized)
-    // and object args, then check if the output contains the needle in a native/structured
-    // format. If object args produce structured output but string args don't, the template
-    // natively handles objects → enable string→object workaround.
-    std::string strArgsOutput;
-    std::string objArgsOutput;
-    bool strArgsSuccess = false;
-    bool objArgsSuccess = false;
-
 #if (PYTHON_DISABLE == 0)
     if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->templateProcessor.chatTemplate != nullptr) {
         // Probe via Python Jinja — this path has NO polyfills, tests raw template behavior
+        const std::string argNeedle = "probe_needle_xK9m";
+        std::string strArgsOutput;
+        std::string objArgsOutput;
+        bool strArgsSuccess = false;
+        bool objArgsSuccess = false;
+
         std::string strArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]}]})";
         std::string objArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":{")" + argNeedle + R"(":"val"}}}]}]})";
 
@@ -108,90 +101,34 @@ static void probeChatTemplateCaps(std::shared_ptr<GenAiServableProperties> prope
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (object args): exception: {}", e.what());
         } catch (...) {}
-    } else  // NOLINT(readability/braces)
-#endif
-    {
-        // Probe via GenAI's apply_chat_template (minja path) — run in parallel
-        auto strArgsFuture = std::async(std::launch::async, [&properties, &argNeedle]() -> std::pair<bool, std::string> {
-            try {
-                ov::genai::ChatHistory history;
-                history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
-                history.push_back(ov::genai::JsonContainer::from_json_string(
-                    R"({"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]})"));
-                auto t0 = std::chrono::steady_clock::now();
-                std::string output = properties->tokenizer.apply_chat_template(history, false);
-                auto t1 = std::chrono::steady_clock::now();
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): {} us",
-                    std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-                return {true, std::move(output)};
-            } catch (const std::exception& e) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): exception: {}", e.what());
-                return {false, ""};
-            } catch (...) {
-                return {false, ""};
+
+        auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
+            return output.find("\"" + argNeedle + "\": ") != std::string::npos ||
+                   output.find("'" + argNeedle + "': ") != std::string::npos ||
+                   output.find("<parameter=" + argNeedle + ">") != std::string::npos ||
+                   output.find(argNeedle + ":<|") != std::string::npos;
+        };
+
+        bool strArgsRendersNative = strArgsSuccess && rendersNativeArgs(strArgsOutput);
+        bool objArgsRendersNative = objArgsSuccess && rendersNativeArgs(objArgsOutput);
+
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe requiresObjectArguments: strRendersNative={}, objRendersNative={}",
+            strArgsRendersNative, objArgsRendersNative);
+
+        if (strArgsRendersNative || objArgsRendersNative) {
+            bool probeResult = objArgsRendersNative;
+            if (probeResult != properties->chatTemplateCaps.requiresObjectArguments) {
+                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Dry-run probe overrides requiresObjectArguments: {} -> {}",
+                    properties->chatTemplateCaps.requiresObjectArguments, probeResult);
             }
-        });
-
-        auto objArgsFuture = std::async(std::launch::async, [&properties, &argNeedle]() -> std::pair<bool, std::string> {
-            try {
-                ov::genai::ChatHistory history;
-                history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
-                history.push_back(ov::genai::JsonContainer::from_json_string(
-                    R"({"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":{")" + argNeedle + R"(":"val"}}}]})"));
-                auto t0 = std::chrono::steady_clock::now();
-                std::string output = properties->tokenizer.apply_chat_template(history, false);
-                auto t1 = std::chrono::steady_clock::now();
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (object args): {} us",
-                    std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-                return {true, std::move(output)};
-            } catch (const std::exception& e) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (object args): exception: {}", e.what());
-                return {false, ""};
-            } catch (...) {
-                return {false, ""};
-            }
-        });
-
-        auto [strOk, strOut] = strArgsFuture.get();
-        auto [objOk, objOut] = objArgsFuture.get();
-        strArgsSuccess = strOk;
-        objArgsSuccess = objOk;
-        strArgsOutput = std::move(strOut);
-        objArgsOutput = std::move(objOut);
-    }
-
-    auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
-        return output.find("\"" + argNeedle + "\": ") != std::string::npos ||     // JSON key: "needle":
-               output.find("'" + argNeedle + "': ") != std::string::npos ||       // Python dict: 'needle':
-               output.find("<parameter=" + argNeedle + ">") != std::string::npos || // Qwen3-Coder XML
-               output.find(argNeedle + ":<|") != std::string::npos;               // Gemma4: needle:<|\"|
-    };
-
-    bool strArgsRendersNative = strArgsSuccess && rendersNativeArgs(strArgsOutput);
-    bool objArgsRendersNative = objArgsSuccess && rendersNativeArgs(objArgsOutput);
-
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe requiresObjectArguments: strRendersNative={}, objRendersNative={}",
-        strArgsRendersNative, objArgsRendersNative);
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe strArgs output: {}", strArgsOutput);
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe objArgs output: {}", objArgsOutput);
-
-    if (strArgsRendersNative || objArgsRendersNative) {
-        // If the template natively handles object arguments, always prefer objects.
-        bool probeResult = objArgsRendersNative;
-
-        if (probeResult != properties->chatTemplateCaps.requiresObjectArguments) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Dry-run probe overrides requiresObjectArguments: {} -> {}",
-                properties->chatTemplateCaps.requiresObjectArguments, probeResult);
+            properties->chatTemplateCaps.requiresObjectArguments = probeResult;
         }
-        properties->chatTemplateCaps.requiresObjectArguments = probeResult;
-    } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe: template does not render tool_call arguments in native format, keeping string-matching result for requiresObjectArguments");
+        return;
     }
+#endif
 
-    auto probeEnd = std::chrono::steady_clock::now();
-    auto probeDurationUs = std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count();
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe completed in {} us. Final result: requiresObjectArguments={}",
-        probeDurationUs, properties->chatTemplateCaps.requiresObjectArguments);
+    // Minja path — use the shared probe component
+    probeChatTemplateCaps(properties->tokenizer, properties->chatTemplateCaps);
 }
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
@@ -257,7 +194,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 
         // Dry-run probes: empirically verify requiresObjectArguments and requiresNonNullContent
         // by rendering synthetic messages through GenAI's minja and checking the output.
-        probeChatTemplateCaps(properties);
+        probeServableChatTemplateCaps(properties);
     }
 }
 

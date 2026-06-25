@@ -133,6 +133,18 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "chat_template_probe",
+    hdrs = ["chat_template_probe.hpp",
+            "chat_template_caps.hpp"],
+    srcs = ["chat_template_probe.cpp"],
+    deps = [
+        "//third_party:genai",
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "input_workarounds",
     hdrs = ["input_workarounds.hpp",
             "chat_template_caps.hpp"],
@@ -368,6 +380,7 @@ ovms_cc_library(
         ":openai_responses_handler",
         ":generation_config_builders",
         ":chat_template_analyzer",
+        ":chat_template_probe",
         ":input_workarounds",
         "//src:httppayload",
         "//src:libhttpclientconnection",
