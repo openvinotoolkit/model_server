@@ -239,7 +239,7 @@ def clear_ovms_capi_artifacts():
             proc.run_and_check(f"rmdir /S /Q {c_api_wrapper_dir}")
     else:
         proc.run_and_check("make clean", cwd=Paths.OVMS_TEST_CAPI_WRAPPER_DIR)
-        proc.run_and_check(f"rm -rf {c_api_wrapper_dir}")
+        proc.run_and_check(f"sudo rm -rf {c_api_wrapper_dir}")
 
 
 def setup_artifacts_dir():
