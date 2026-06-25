@@ -162,6 +162,131 @@ static Status kfsPyTensorBridgeUnavailable(const std::string& streamName) {
     return Status(StatusCode::NOT_IMPLEMENTED, details);
 }
 
+static Status validateInputContent(const KFSTensorInputProto& proto, const size_t expectedBytes, const std::string& requestedName, const KFSRequest& request);
+
+static Status serializeKfsTypedContentToRawBuffer(
+    const KFSRequest::InferInputTensor& input,
+    const size_t expectedBytes,
+    const std::string& inputName,
+    const KFSRequest& request,
+    std::vector<uint8_t>& outBuffer) {
+    OVMS_RETURN_ON_FAIL(validateInputContent(input, expectedBytes, inputName, request));
+
+    const size_t dtypeSize = KFSDataTypeSize(input.datatype());
+    if (dtypeSize == 0) {
+        std::stringstream ss;
+        ss << "OVMS_PY_TENSOR typed InferInputTensor.contents is unsupported for datatype: "
+           << input.datatype() << "; input name: " << inputName;
+        return Status(StatusCode::NOT_IMPLEMENTED, ss.str());
+    }
+
+    outBuffer.resize(expectedBytes);
+    uint8_t* dst = outBuffer.data();
+    size_t offset = 0;
+
+    const auto precision = KFSPrecisionToOvmsPrecision(input.datatype());
+    const auto& contents = input.contents();
+
+    switch (precision) {
+    case Precision::FP64: {
+        for (const auto value : contents.fp64_contents()) {
+            const double casted = static_cast<double>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    case Precision::FP32: {
+        for (const auto value : contents.fp32_contents()) {
+            const float casted = static_cast<float>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    case Precision::U64: {
+        for (const auto value : contents.uint64_contents()) {
+            const uint64_t casted = static_cast<uint64_t>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    case Precision::U32: {
+        for (const auto value : contents.uint_contents()) {
+            const uint32_t casted = static_cast<uint32_t>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    case Precision::U16: {
+        for (const auto value : contents.uint_contents()) {
+            const uint16_t casted = static_cast<uint16_t>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    case Precision::U8: {
+        for (const auto value : contents.uint_contents()) {
+            const uint8_t casted = static_cast<uint8_t>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    case Precision::I64: {
+        for (const auto value : contents.int64_contents()) {
+            const int64_t casted = static_cast<int64_t>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    case Precision::I32: {
+        for (const auto value : contents.int_contents()) {
+            const int32_t casted = static_cast<int32_t>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    case Precision::I16: {
+        for (const auto value : contents.int_contents()) {
+            const int16_t casted = static_cast<int16_t>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    case Precision::I8: {
+        for (const auto value : contents.int_contents()) {
+            const int8_t casted = static_cast<int8_t>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    case Precision::BOOL: {
+        for (const auto value : contents.bool_contents()) {
+            const bool casted = static_cast<bool>(value);
+            std::memcpy(dst + offset, &casted, sizeof(casted));
+            offset += sizeof(casted);
+        }
+        break;
+    }
+    default: {
+        std::stringstream ss;
+        ss << "OVMS_PY_TENSOR typed InferInputTensor.contents is unsupported for datatype: "
+           << input.datatype() << "; input name: " << inputName;
+        return Status(StatusCode::NOT_IMPLEMENTED, ss.str());
+    }
+    }
+
+    return StatusCode::OK;
+}
+
 template <>
 Status receiveAndSerializePacket<tensorflow::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
@@ -837,11 +962,37 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
                     }
                 }
                 if (status.ok()) {
-                    if (request->raw_input_contents_size() <= static_cast<int>(inputIndex)) {
-                        status = Status(StatusCode::NOT_IMPLEMENTED,
-                            "OVMS_PY_TENSOR requires data in raw_input_contents");
+                    const std::string* rawBufPtr = nullptr;
+                    std::vector<uint8_t> typedContentsBuffer;
+
+                    if (request->raw_input_contents_size() > static_cast<int>(inputIndex)) {
+                        rawBufPtr = &request->raw_input_contents().at(inputIndex);
+                    } else if (dtypeSize > 0) {
+                        size_t expectedBytes = 1;
+                        // sizeValid is always true here (overflow was checked above already)
+                        computeExpectedBufferSizeReturnFalseIfOverflow(shapeVec, dtypeSize, expectedBytes);
+                        status = serializeKfsTypedContentToRawBuffer(
+                            *requestInputItr,
+                            expectedBytes,
+                            inputName,
+                            *request,
+                            typedContentsBuffer);
                     } else {
-                        const auto& rawBuf = request->raw_input_contents().at(inputIndex);
+                        status = Status(StatusCode::NOT_IMPLEMENTED,
+                            "OVMS_PY_TENSOR requires raw_input_contents for non-standard datatype");
+                    }
+
+                    if (status.ok()) {
+                        const char* dataPtr = nullptr;
+                        size_t dataSize = 0;
+                        if (rawBufPtr != nullptr) {
+                            dataPtr = rawBufPtr->data();
+                            dataSize = rawBufPtr->size();
+                        } else {
+                            dataPtr = reinterpret_cast<const char*>(typedContentsBuffer.data());
+                            dataSize = typedContentsBuffer.size();
+                        }
+
                         // Validate that the shape-implied buffer size matches the actual data.
                         // Custom datatypes (unrecognised by KFSDataTypeSize → 0) skip the byte
                         // size check but are passed through; the Python handler owns that validation.
@@ -849,17 +1000,17 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
                             size_t expectedBytes = 1;
                             // sizeValid is always true here (overflow was checked above already)
                             computeExpectedBufferSizeReturnFalseIfOverflow(shapeVec, dtypeSize, expectedBytes);
-                            if (rawBuf.size() != expectedBytes) {
+                            if (dataSize != expectedBytes) {
                                 std::stringstream ss;
                                 ss << "Expected: " << expectedBytes << " bytes; Actual: "
-                                   << rawBuf.size() << " bytes; input name: " << inputName;
+                                   << dataSize << " bytes; input name: " << inputName;
                                 status = Status(StatusCode::INVALID_CONTENT_SIZE, ss.str());
                             }
                         }
                         if (status.ok()) {
                             const int rc = bridge->deserializeAndPush(
                                 inputName.c_str(),
-                                rawBuf.data(), rawBuf.size(),
+                                dataPtr, dataSize,
                                 shapeVec.data(), shapeVec.size(),
                                 requestInputItr->datatype().c_str(),
                                 &graph, timestamp.Value());
