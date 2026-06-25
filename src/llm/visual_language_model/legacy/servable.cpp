@@ -35,6 +35,10 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
+
 #include "../../../config.hpp"
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
@@ -83,26 +87,31 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     }
 
     legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
-    if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
-        legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
-            legacyExecutionContext->endpoint,
-            std::chrono::system_clock::now(),
-            getProperties()->tokenizer,
-            getProperties()->toolParserName,
-            getProperties()->reasoningParserName);
-    } else {
-        legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
-            legacyExecutionContext->endpoint,
-            std::chrono::system_clock::now(),
-            getProperties()->tokenizer,
-            getProperties()->toolParserName,
-            getProperties()->reasoningParserName);
+    try {
+        if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
+            legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
+                legacyExecutionContext->endpoint,
+                std::chrono::system_clock::now(),
+                getProperties()->tokenizer,
+                getProperties()->toolParserName,
+                getProperties()->reasoningParserName);
+        } else {
+            legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
+                legacyExecutionContext->endpoint,
+                std::chrono::system_clock::now(),
+                getProperties()->tokenizer,
+                getProperties()->toolParserName,
+                getProperties()->reasoningParserName);
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to create API handler: {}", e.what());
+        return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
     }
 
@@ -338,18 +347,64 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
         }
 
-        constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
-        auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
-        if (!toolsStatus.ok()) {
-            return toolsStatus.status();
+#if (PYTHON_DISABLE == 0)
+        if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
+            std::string jsonForTemplate;
+            if (vlmExecutionContext->apiHandler->getProcessedJson().size() > 0) {
+                jsonForTemplate = vlmExecutionContext->apiHandler->getProcessedJson();
+            } else {
+                jsonForTemplate = vlmExecutionContext->payload.body;
+            }
+            // Inject image tags into the JSON messages for Python Jinja template processing
+            if (!imageTags.empty()) {
+                rapidjson::Document jsonDoc;
+                jsonDoc.Parse(jsonForTemplate.c_str());
+                if (!jsonDoc.HasParseError() && jsonDoc.IsObject() && jsonDoc.HasMember("messages") && jsonDoc["messages"].IsArray()) {
+                    auto& messages = jsonDoc["messages"];
+                    for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
+                        if (chatTurnIndex < messages.Size()) {
+                            auto& msg = messages[chatTurnIndex];
+                            if (msg.IsObject() && msg.HasMember("content") && msg["content"].IsString()) {
+                                std::string newContent = imageTagString + msg["content"].GetString();
+                                msg["content"].SetString(newContent.c_str(), newContent.length(), jsonDoc.GetAllocator());
+                            }
+                        }
+                    }
+                    rapidjson::StringBuffer buffer;
+                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                    jsonDoc.Accept(writer);
+                    jsonForTemplate = buffer.GetString();
+                }
+            }
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "VLM Legacy: Applying chat template using Python Jinja processor");
+            bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, jsonForTemplate, vlmExecutionContext->inputText);
+            if (!success) {
+                return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
+            }
+        } else  // NOLINT(readability/braces)
+#endif
+        {
+            constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
+            auto toolParsingResult = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
+            if (!toolParsingResult.ok()) {
+                return toolParsingResult.status();
+            }
+            const auto& tools = toolParsingResult.value();
+            auto chatTemplateKwargsParsingResult = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+            if (!chatTemplateKwargsParsingResult.ok()) {
+                return chatTemplateKwargsParsingResult.status();
+            }
+            const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
+            try {
+                vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
+                return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
+            }
         }
-        const auto& tools = toolsStatus.value();
-        auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-        if (!chatTemplateKwargsStatus.ok()) {
-            return chatTemplateKwargsStatus.status();
+        if (vlmExecutionContext->inputText.empty()) {
+            return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
         }
-        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
         if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
             vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
         }

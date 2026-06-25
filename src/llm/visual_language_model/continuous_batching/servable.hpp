@@ -42,6 +42,10 @@ class VisualLanguageModelServable : public ContinuousBatchingServable {
 public:
     VisualLanguageModelServable() {
         properties = std::make_shared<VisualLanguageModelServableProperties>();
+#if (PYTHON_DISABLE == 0)
+        // TODO(dkalinow): once we have server-side workaround, set default back to JINJA
+        properties->chatTemplateMode = ChatTemplateMode::MINJA;
+#endif
     }
 
     // Overriding ContinuousBatchingServable method
