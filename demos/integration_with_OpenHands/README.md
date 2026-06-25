@@ -104,7 +104,8 @@ ${HOME}/ovms-openhands/
     └── <model-id>/
         ├── openvino_model.xml
         ├── openvino_model.bin
-        └── graph.pbtxt
+        ├── graph.pbtxt
+        └── .......
 ```
 
 This keeps the repository lightweight and allows model reuse across OVMS deployments.
@@ -126,9 +127,10 @@ Example model families that work well:
 
 | Model Family | Tool Parser | Notes                                  |
 |--------------|-------------|----------------------------------------|
-| Qwen 3       | `hermes3`   | Strong coding performance, various sizes |
-| Llama 3      | `hermes3`   | Good general instruction following   |
-| Mistral      | `hermes3`   | Efficient inference                  |
+| Qwen 3 Coder | `qwen3coder`| Strong coding performance, various sizes |
+| Qwen 3       | `hermes3`   | Recommended for low end systems  |
+| Llama 3      | `llama3`    | Good general instruction following   |
+| Mistral      | `mistral`   | Efficient inference                  |
 
 > **Note:** Documentation examples use OpenVINO-exported models from the OpenVINO Hugging Face organization. The documented workflow is validated using `OpenVINO/qwen3-0.6b-int8-ov`. Other compatible models may also be used. The example model is chosen because it provides a lightweight validation path.
 

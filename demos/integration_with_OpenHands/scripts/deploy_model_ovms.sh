@@ -51,12 +51,16 @@ OVMS_REST_PORT="8000"
 
 # Tool parser mapping: model family patterns to parser names
 declare -A TOOL_PARSERS=(
-    ["Qwen"]="hermes3"
-    ["qwen"]="hermes3"
-    ["Llama3"]="hermes3"
-    ["llama3"]="hermes3"
-    ["Mistral"]="hermes3"
-    ["mistral"]="hermes3"
+    ["Qwen3"]="hermes3"
+    ["qwen3"]="hermes3"
+    ["Qwen3-Coder"]="qwen3coder"
+    ["qwen3-coder"]="qwen3coder"
+    ["Llama3"]="llama3"
+    ["llama3"]="llama3"
+    ["Mistral"]="mistral"
+    ["mistral"]="mistral"
+    ["Phi4"]="phi4"
+    ["phi4"]="phi4"
 )
 
 ################################################################################
