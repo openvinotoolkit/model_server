@@ -1227,8 +1227,6 @@ class MediaPipe(Pipeline):
 class SimpleMediaPipe(MediaPipe):
     def __init__(self, model=None, demultiply_count=None, **kwargs):
         pipeline = SimplePipeline
-        if model is None:
-            model = Resnet()
         super().__init__(model, pipeline, demultiply_count, **kwargs)
         self.calculators = [OpenVINOModelServerSessionCalculator(model=self), OpenVINOInferenceCalculator(model=self)]
         self._initialize([model])
