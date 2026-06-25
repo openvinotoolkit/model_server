@@ -236,7 +236,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         if (!lastMessage.contains("content")) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Message does not have content field which might be an issue for some chat templates. Adding empty content.");
             lastMessage["content"] = "";
-            obj.AddMember("content", Value().SetString("", doc.GetAllocator()), doc.GetAllocator());
         }
         // If message has tool calls, make sure each tool call has "arguments" field
         auto status = ensureArgumentsInToolCalls(obj);

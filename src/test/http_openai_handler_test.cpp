@@ -1268,6 +1268,39 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseVLMSupportsToolCallsF
     ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesMultipleInputTextPartsPreservedAsContentArray) {
+    // When a single Responses input item has multiple input_text content entries,
+    // ChatHistorySink builds a content array with one {"type":"text"} entry per part.
+    // TextContentNormalizationProcessor then joins them with '\n'.
+    std::string json = R"({
+    "model": "llama",
+    "input": [{
+      "role": "user",
+      "content": [
+        {"type": "input_text", "text": "First part."},
+        {"type": "input_text", "text": "Second part."}
+      ]
+    }]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // After parsing, chatHistory content is a two-element array — both text parts are preserved.
+    auto content = apiHandler->getChatHistory()[0]["content"];
+    ASSERT_TRUE(content.is_array());
+    ASSERT_EQ(content.size(), 2u);
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[0]["text"].as_string().value_or(""), "First part.");
+    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[1]["text"].as_string().value_or(""), "Second part.");
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsOutputText) {
     std::string json = R"({
     "model": "llama",
@@ -2418,6 +2451,34 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid message structure - content array is empty"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesWithNoContentFieldAddsEmptyStringToChatHistory) {
+    // Assistant turns that carry only tool_calls legitimately omit the "content" field.
+    // parseMessages injects an empty-string content entry so chat templates always see
+    // the field.  Verifies the JsonContainer proxy write-through: lastMessage["content"] = ""
+    // on the value returned by chatHistory.last() DOES persist in chatHistory.
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "assistant",
+        "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "f", "arguments": "{}"}}]
+      },
+      {"role": "tool", "tool_call_id": "c1", "content": "result"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 2u);
+    // The assistant turn had no "content" key — parseMessages must have injected "".
+    EXPECT_TRUE(chatHistory[0].contains("content"));
+    EXPECT_EQ(chatHistory[0]["content"].as_string().value_or("MISSING"), "");
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesMultipleTextItemsPreservesContentArray) {
