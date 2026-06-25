@@ -98,6 +98,7 @@ Python support is optional in Model Server. The following issues may occur when 
   - Follow Python setup steps above (PYTHONPATH, dependencies)
 
 ### Verify Python Support Status
+- OVMS loads Python runtime dynamically, so `ldd ${OVMS_BIN}` may not list Python-related libraries; instead verify `${OVMS_LIB_PATH}/libovmspython.*` is present and check logs for `Python runtime library loaded successfully` / `Python calculators plugin loaded successfully`.
 - Check server logs for `KFS Python tensor bridge activated` or `Python calculators plugin libpython_calculators.so failed to load`.
 - Submit a Python node graph request; when Python support is unavailable, the request fails gracefully with a clear error.
 - Confirm OVMS Python package files exist (for with-Python package), for example under `${OVMS_PACKAGE_PATH}/lib/python`.

@@ -1184,13 +1184,13 @@ Status onPacketReadySerializeImpl(
             status = kfsPyTensorBridgeUnavailable(packetName);
         } else {
             char dtypeBuf[128] = {};
-            int64_t shapeBuf[16] = {};
+            std::vector<int64_t> shapeBuf(128);
             size_t shapeLen = 0;
             const void* dataPtr = nullptr;
             size_t dataSize = 0;
             const int rc = bridge->extractPacketData(
                 &packet, dtypeBuf, sizeof(dtypeBuf),
-                shapeBuf, 16, &shapeLen,
+                shapeBuf.data(), shapeBuf.size(), &shapeLen,
                 &dataPtr, &dataSize);
             if (rc != 0) {
                 status = Status(static_cast<StatusCode>(-rc),
