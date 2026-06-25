@@ -399,7 +399,7 @@ void parseUnaryResponse(ParsedOutput& parsedOutput, const std::vector<int64_t>& 
     if (reasoningEndTokenId.has_value()) {
         auto reasoningEndIt = std::find(contentWithoutToolCalls.begin(), contentWithoutToolCalls.end(), reasoningEndTokenId.value());
         if (reasoningEndIt != contentWithoutToolCalls.end()) {
-            contentWithoutToolCalls.erase(reasoningEndIt, contentWithoutToolCalls.end());
+            contentWithoutToolCalls.erase(contentWithoutToolCalls.begin(), reasoningEndIt + 1);
         }
     }
 
