@@ -18,6 +18,7 @@ import os
 import re
 import shutil
 import stat
+import sys
 import traceback
 
 import pytest
@@ -55,7 +56,6 @@ class FrameworkMessages:
     NOT_SUPPORTED_IN_SAFARI = "Not possible to automate on Safari browser"
     NOT_EXECUTED = "NOT EXECUTED"
     OVMS_C_REPO_ABSENT = "OVMS-C REPO ABSENT"
-    OVMS_O_REPO_ABSENT = "OVMS-O REPO ABSENT"
     FUZZING_TESTS_NOT_ENABLED = "FUZZING TESTS NOT ENABLED"
     UAT_TESTS_NOT_ENABLED = "UAT TESTS NOT ENABLED"
     OV_TESTS_NOT_ENABLED = "OV TESTS NOT ENABLED"
@@ -68,9 +68,6 @@ class FrameworkMessages:
     LANGUAGE_MODELS_DISABLED = "LANGUAGE MODELS DISABLED"
     MEDIAPIPE_DISABLED = "MEDIAPIPE DISABLED"
     PYTHON_DISABLED = "PYTHON DISABLED"
-    OPENSHIFT_SERVICE_MESH_ENABLED = "OPENSHIFT SERVICE MESH ENABLED"
-    OPENSHIFT_SERVICE_MESH_DISABLED = "OPENSHIFT SERVICE MESH DISABLED"
-    ADD_NOTEBOOK_K8S_DISABLED = "ADD NOTEBOOK K8S DISABLED"
     BUILD_AND_VERIFY_PACKAGE_DISABLED = "BUILD_AND_VERIFY_PACKAGE_DISABLED"
     VLLM_TESTS_NOT_ENABLED = "vLLM TESTS NOT ENABLED"
     NGINX_IMAGE_NOT_SUPPORTED = "NGINX IMAGE NOT SUPPORTED"
@@ -279,8 +276,14 @@ def _make_path_writable_and_retry(func, path, _exc_info):
 
 def remove_dir_tree(dir_path, ignore_errors=False):
     """Remove a directory tree, retrying failed paths after making them writable."""
+    # shutil.rmtree accepts the `onexc` callback only on Python 3.12+;
+    # older interpreters expect `onerror`. Both invoke the same (func, path, *) callback.
+    if sys.version_info >= (3, 12):
+        rmtree_kwargs = {"onexc": _make_path_writable_and_retry}
+    else:
+        rmtree_kwargs = {"onerror": _make_path_writable_and_retry}
     try:
-        shutil.rmtree(dir_path, onexc=_make_path_writable_and_retry)
+        shutil.rmtree(dir_path, **rmtree_kwargs)
     except OSError:
         if not ignore_errors:
             raise
@@ -291,14 +294,15 @@ def swap_directory(target_path, staging_path, backup_path=None):
     old_path = target_path + "_old"
     if os.path.exists(old_path):
         remove_dir_tree(old_path)
-    target_moved = False
+    parent_dir = os.path.dirname(target_path)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
     if os.path.exists(target_path):
         os.rename(target_path, old_path)
-        target_moved = True
     try:
         os.rename(staging_path, target_path)
     except OSError:
-        if target_moved and os.path.exists(old_path) and not os.path.exists(target_path):
+        if os.path.exists(old_path) and not os.path.exists(target_path):
             try:
                 os.rename(old_path, target_path)
             except OSError:

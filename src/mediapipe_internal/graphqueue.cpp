@@ -48,59 +48,100 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
         std::unordered_map<std::string, std::shared_ptr<ObserverHolder>> observers;
         for (auto& name : config.output_stream()) {
             std::string streamName = getStreamName(name);
-            auto holder = std::make_shared<ObserverHolder>();
-            holder->current = std::make_shared<NullOutputStreamObserver>();
-            observers[streamName] = holder;
+            auto observerHolder = std::make_shared<ObserverHolder>();
+            observerHolder->current = std::make_shared<NullOutputStreamObserver>();
+            observers[streamName] = observerHolder;
         }
 
         auto graphHelper = std::make_shared<GraphHelper>(std::move(observers));
-        graphHelper->graph = std::make_unique<::mediapipe::CalculatorGraph>();
-        graphHelper->currentTimestamp = ::mediapipe::Timestamp(0);
-
-        auto absStatus = graphHelper->graph->Initialize(config);
+        for (const auto& [nodeName, _] : sidePacketMaps->genAiServableMap) {
+            graphHelper->genAiExecutionContextMap[nodeName] = std::make_shared<GenAiExecutionContextHolder>();
+        }
+        auto absStatus = graphHelper->initialize(config, *sidePacketMaps);
         if (!absStatus.ok()) {
             SPDLOG_ERROR("Graph queue initialization failed: {}", absStatus.ToString());
             throw std::runtime_error(absStatus.ToString());
         }
-        for (const auto& [streamName, holder] : graphHelper->outStreamObservers) {
-            // Lambda captures holder (shared_ptr) by value — safe regardless of map layout
-            absStatus = graphHelper->graph->ObserveOutputStream(streamName, [holder](const ::mediapipe::Packet& packet) -> absl::Status { return holder->current->handlePacket(packet); });
-            if (!absStatus.ok()) {
-                SPDLOG_ERROR("Graph queue ObserveOutputStream failed: {}", absStatus.ToString());
-                throw std::runtime_error(absStatus.ToString());
-            }
-        }
-        for (const auto& [nodeName, _] : sidePacketMaps->genAiServableMap) {
-            graphHelper->genAiExecutionContextMap[nodeName] = std::make_shared<GenAiExecutionContextHolder>();
-        }
-        std::map<std::string, mediapipe::Packet> inputSidePackets;
-        buildInputSidePackets(inputSidePackets, *sidePacketMaps);
-        // Override execution context with per-graph instance
-        inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(graphHelper->genAiExecutionContextMap).At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
-        absStatus = graphHelper->graph->StartRun(inputSidePackets);
-        if (!absStatus.ok()) {
-            SPDLOG_ERROR("Graph queue StartRun failed: {}", absStatus.ToString());
-            throw std::runtime_error(absStatus.ToString());
-        }
-        inferRequests.emplace_back(std::move(graphHelper));
+        this->inferRequests.emplace_back(std::move(graphHelper));
     }
 }
-GraphQueue::~GraphQueue() {
-    for (auto& graphHelper : inferRequests) {
-        auto absStatus = graphHelper->graph->WaitUntilIdle();
-        if (!absStatus.ok()) {
-            SPDLOG_DEBUG("Graph queue WaitUntilIdle error: {}", absStatus.ToString());
-        }
-        absStatus = graphHelper->graph->CloseAllPacketSources();
-        if (!absStatus.ok()) {
-            SPDLOG_DEBUG("Graph queue CloseAllPacketSources error: {}", absStatus.ToString());
-        }
-        absStatus = graphHelper->graph->WaitUntilDone();
-        if (!absStatus.ok()) {
-            SPDLOG_DEBUG("Graph queue WaitUntilDone error: {}", absStatus.ToString());
-        }
-        graphHelper->graph->Cancel();
-        graphHelper->graph.reset();
+GraphHelper::~GraphHelper() {
+    if (!graph) {
+        return;
     }
+    auto absStatus = graph->WaitUntilIdle();
+    if (!absStatus.ok()) {
+        SPDLOG_DEBUG("GraphHelper WaitUntilIdle error: {}", absStatus.ToString());
+    }
+    absStatus = graph->CloseAllPacketSources();
+    if (!absStatus.ok()) {
+        SPDLOG_DEBUG("GraphHelper CloseAllPacketSources error: {}", absStatus.ToString());
+    }
+    absStatus = graph->WaitUntilDone();
+    if (!absStatus.ok()) {
+        SPDLOG_DEBUG("GraphHelper WaitUntilDone error: {}", absStatus.ToString());
+    }
+    graph->Cancel();
 }
+
+absl::Status GraphHelper::initialize(const ::mediapipe::CalculatorGraphConfig& config, const GraphSidePackets& sidePacketMaps) {
+    this->graph = std::make_unique<::mediapipe::CalculatorGraph>();
+    this->currentTimestamp = ::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE);
+    auto absStatus = this->graph->Initialize(config);
+    if (!absStatus.ok()) {
+        SPDLOG_ERROR("Graph initialize failed: {}", absStatus.ToString());
+        return absStatus;
+    }
+    for (const auto& [streamName, observerHolder] : this->outStreamObservers) {
+        absStatus = this->graph->ObserveOutputStream(streamName, [observerHolder](const ::mediapipe::Packet& packet) -> absl::Status {
+            return observerHolder->current->handlePacket(packet);
+        });
+        if (!absStatus.ok()) {
+            SPDLOG_ERROR("Graph ObserveOutputStream failed: {}", absStatus.ToString());
+            return absStatus;
+        }
+    }
+    std::map<std::string, mediapipe::Packet> inputSidePackets;
+    buildInputSidePackets(inputSidePackets, sidePacketMaps);
+    inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] =
+        mediapipe::MakePacket<GenAiExecutionContextMap>(this->genAiExecutionContextMap)
+            .At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
+    absStatus = this->graph->StartRun(inputSidePackets);
+    if (!absStatus.ok()) {
+        SPDLOG_ERROR("Graph StartRun failed: {}", absStatus.ToString());
+        return absStatus;
+    }
+    return absl::OkStatus();
+}
+
+void GraphHelper::reinitialize(const ::mediapipe::CalculatorGraphConfig& config, const GraphSidePackets& sidePacketMaps) {
+    SPDLOG_DEBUG("Reinitializing graph after error");
+    // Tear down the old graph (best-effort, errors expected since graph is in bad state)
+    if (this->graph) {
+        auto absStatus = this->graph->CloseAllPacketSources();
+        if (!absStatus.ok()) {
+            SPDLOG_DEBUG("reinitialize: CloseAllPacketSources: {}", absStatus.ToString());
+        }
+        absStatus = this->graph->WaitUntilDone();
+        if (!absStatus.ok()) {
+            SPDLOG_DEBUG("reinitialize: WaitUntilDone: {}", absStatus.ToString());
+        }
+        this->graph->Cancel();
+    }
+    // Reset observers to null sentinel
+    for (const auto& [streamName, observerHolder] : this->outStreamObservers) {
+        observerHolder->current = std::make_shared<NullOutputStreamObserver>();
+    }
+    // Reset execution contexts
+    for (auto& [nodeName, ctx] : this->genAiExecutionContextMap) {
+        ctx->reset();
+    }
+    auto absStatus = initialize(config, sidePacketMaps);
+    if (!absStatus.ok()) {
+        SPDLOG_ERROR("Graph reinitialize failed: {}", absStatus.ToString());
+        return;
+    }
+    SPDLOG_DEBUG("Graph reinitialized successfully");
+}
+GraphQueue::~GraphQueue() = default;
 }  // namespace ovms

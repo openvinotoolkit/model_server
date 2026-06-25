@@ -16,6 +16,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #pragma warning(push)
@@ -36,6 +37,7 @@
 #include "apis/openai_completions.hpp"
 #include "apis/openai_responses.hpp"
 #include "runtime_chat_template.hpp"
+#include "ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
 #include "../tokenize/tokenize_parser.hpp"
@@ -128,22 +130,20 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
                 getProperties()->reasoningParserName);
         }
     } catch (const std::exception& e) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to create API handler: {}", e.what());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to create API handler: {}", e.what());
         return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
     }
 
     if (executionContext->apiHandler->isStream()) {
-        executionContext->lastStreamerCallbackOutput = "";  // initialize with empty string
-        auto callback = [& lastStreamerCallbackOutput = executionContext->lastStreamerCallbackOutput](std::string text) {
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
-            lastStreamerCallbackOutput = text;
+        auto ovmsCallback = [& ctx = *executionContext](rapidjson::Document delta) -> ov::genai::StreamingStatus {
+            ctx.deltaChannel.push(std::move(delta));
             return ov::genai::StreamingStatus::RUNNING;
         };
         ov::AnyMap streamerConfig;
@@ -152,7 +152,12 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
             !executionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
-        executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
+        executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+            getProperties()->tokenizer,
+            executionContext->apiHandler->getOutputParser(),
+            executionContext->apiHandler->areToolsAvailable(),
+            std::move(ovmsCallback),
+            streamerConfig);
     }
     executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
@@ -206,18 +211,22 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     switch (executionContext->endpoint) {
     case Endpoint::CHAT_COMPLETIONS: {
 #if (PYTHON_DISABLE == 0)
-        const std::string requestBody = (executionContext->apiHandler->getProcessedJson().size() > 0) ? executionContext->apiHandler->getProcessedJson() : executionContext->payload.body;
-        auto runtimeStatus = tryApplyChatTemplateRuntime(
-            getProperties()->modelsPath,
-            requestBody,
-            getProperties()->tokenizer.get_original_chat_template(),
-            getProperties()->tokenizer.get_bos_token(),
-            getProperties()->tokenizer.get_eos_token(),
-            inputText);
-        if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
-            return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+        bool templateApplied = false;
+        if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
+            const std::string requestBody = (executionContext->apiHandler->getProcessedJson().size() > 0) ? executionContext->apiHandler->getProcessedJson() : executionContext->payload.body;
+            auto runtimeStatus = tryApplyChatTemplateRuntime(
+                getProperties()->modelsPath,
+                requestBody,
+                getProperties()->tokenizer.get_original_chat_template(),
+                getProperties()->tokenizer.get_bos_token(),
+                getProperties()->tokenizer.get_eos_token(),
+                inputText);
+            if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
+                return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+            }
+            templateApplied = (runtimeStatus == RuntimeChatTemplateStatus::APPLIED);
         }
-        if (runtimeStatus == RuntimeChatTemplateStatus::UNAVAILABLE) {
+        if (!templateApplied) {
             auto tokenizerStatus = applyWithTokenizer(inputText);
             if (!tokenizerStatus.ok()) {
                 return tokenizerStatus;
@@ -240,17 +249,21 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     case Endpoint::RESPONSES: {
         if (executionContext->apiHandler->getChatHistory().size() > 0) {
 #if (PYTHON_DISABLE == 0)
-            auto runtimeStatus = tryApplyChatTemplateRuntime(
-                getProperties()->modelsPath,
-                executionContext->apiHandler->getProcessedJson(),
-                getProperties()->tokenizer.get_original_chat_template(),
-                getProperties()->tokenizer.get_bos_token(),
-                getProperties()->tokenizer.get_eos_token(),
-                inputText);
-            if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
-                return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+            bool templateApplied = false;
+            if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
+                auto runtimeStatus = tryApplyChatTemplateRuntime(
+                    getProperties()->modelsPath,
+                    executionContext->apiHandler->getProcessedJson(),
+                    getProperties()->tokenizer.get_original_chat_template(),
+                    getProperties()->tokenizer.get_bos_token(),
+                    getProperties()->tokenizer.get_eos_token(),
+                    inputText);
+                if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
+                    return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+                }
+                templateApplied = (runtimeStatus == RuntimeChatTemplateStatus::APPLIED);
             }
-            if (runtimeStatus == RuntimeChatTemplateStatus::UNAVAILABLE) {
+            if (!templateApplied) {
                 auto tokenizerStatus = applyWithTokenizer(inputText);
                 if (!tokenizerStatus.ok()) {
                     return tokenizerStatus;
@@ -293,13 +306,13 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         if (executionContext->inputIds.get_size() > getProperties()->maxModelLength.value()) {
             std::stringstream ss;
             ss << "Number of prompt tokens: " << executionContext->inputIds.get_size() << " exceeds model max length: " << getProperties()->maxModelLength.value();
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
             return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
         }
         if (executionContext->apiHandler->getMaxTokens().has_value() && executionContext->inputIds.get_size() + executionContext->apiHandler->getMaxTokens().value() > getProperties()->maxModelLength.value()) {
             std::stringstream ss;
             ss << "Number of prompt tokens: " << executionContext->inputIds.get_size() << " + max tokens value: " << executionContext->apiHandler->getMaxTokens().value() << " exceeds model max length: " << getProperties()->maxModelLength.value();
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
             return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
         }
     }
@@ -327,46 +340,83 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
         executionContext->apiHandler->appendVerboseRawTokens(generationOutput.generated_ids);
     }
 
-    std::stringstream ss;
-    executionContext->textStreamer->write(generationOutput.generated_ids);
-    ss << executionContext->lastStreamerCallbackOutput;
-    // OpenVINO GenAI TextStreamer dose not trigger callback if text is empty: https://github.com/openvinotoolkit/openvino.genai/blob/434c2a9494fb1ee83ca7a36fe8315cfc2691c232/src/cpp/src/text_streamer.cpp#L102-L108
-    // Reset lastStreamerCallbackOutput as "" to avoid repeated sending previous text if lastStreamerCallbackOutput not updated by callback
-    executionContext->lastStreamerCallbackOutput = "";
-
-    std::string lastTextChunk = ss.str();
-
     bool isFirstToken = GenerationPhase::INPUT_TOKEN_PROCESSING == executionContext->generationPhase;
     if (isFirstToken) {
         executionContext->generationPhase = GenerationPhase::OUTPUT_TOKEN_PROCESSING;
     }
 
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
-    if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
-        // For RESPONSES endpoint, always call serializeStreamingChunk so that
-        // output item initialization events (output_item.added, content_part.added)
-        // are emitted on the first chunk, even before the tokenizer produces text.
-        if (lastTextChunk.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
-            std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
-            if (!serializedChunk.empty()) {
-                executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
+    const bool isFinishing = (finishReason != ov::genai::GenerationFinishReason::NONE);
+
+    // OVMSTextStreamer::write() fires the callback for each flush event, pushing
+    // Documents into executionContext->deltaChannel.
+    executionContext->textStreamer->write(generationOutput.generated_ids);
+
+    if (isFinishing) {
+        OVMS_PROFILE_SCOPE("Generation of last streaming response");
+        // end() flushes held-back tokens and calls parseChunk(STOP). Any resulting
+        // Document is pushed into deltaChannel by the callback.
+        executionContext->textStreamer->end();
+    }
+
+    // Drain all deltas accumulated during this write()/end() cycle.
+    std::vector<rapidjson::Document> deltas = executionContext->deltaChannel.drain();
+    const size_t count = deltas.size();
+
+    if (!isFinishing) {
+        // For RESPONSES endpoint, always call serializeStreamingChunk so lifecycle
+        // events (output_item.added, content_part.added) are emitted on the first
+        // call, even before the tokenizer produces text.
+        if (count > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
+            // Emit each delta. All are mid-stream so finishReason is NONE.
+            for (size_t i = 0; i < count; ++i) {
+                std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
+                    std::move(deltas[i]),
+                    ov::genai::GenerationFinishReason::NONE);
+                if (!serialized.empty()) {
+                    executionContext->response += wrapTextInServerSideEventMessage(serialized);
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", serialized);
+                }
+            }
+            if (count == 0) {
+                // No delta generated yet — emit lifecycle events (response.created, response.in_progress)
+                // for the RESPONSES endpoint before any content arrives.
+                if (!executionContext->lifecyclePrimed) {
+                    std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
+                        rapidjson::Document{}, ov::genai::GenerationFinishReason::NONE);
+                    if (!serialized.empty()) {
+                        executionContext->response += wrapTextInServerSideEventMessage(serialized);
+                        executionContext->lifecyclePrimed = true;
+                    }
+                }
             }
         } else if (isFirstToken) {
             std::string serializedChunk = executionContext->apiHandler->serializeStreamingHandshakeChunk();
-            executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+            if (!serializedChunk.empty()) {
+                executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+            }
         }
         executionContext->sendLoopbackSignal = true;
-    } else {  // finish generation
-        OVMS_PROFILE_SCOPE("Generation of last streaming response");
-        executionContext->textStreamer->end();
-        // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
-        if (!executionContext->lastStreamerCallbackOutput.empty()) {
-            lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
-        }
-        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
-        if (!serializedChunk.empty()) {
-            executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+    } else {
+        // Finishing: emit all pending deltas; the last one gets the real finishReason.
+        if (count > 0) {
+            for (size_t i = 0; i < count; ++i) {
+                const bool isLast = (i == count - 1);
+                std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
+                    std::move(deltas[i]),
+                    isLast ? finishReason : ov::genai::GenerationFinishReason::NONE);
+                if (!serialized.empty()) {
+                    executionContext->response += wrapTextInServerSideEventMessage(serialized);
+                }
+            }
+        } else {
+            // No delta produced (generation ended on a swallowed token).
+            // Still emit a chunk carrying the finish_reason with an empty Document.
+            std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
+                rapidjson::Document{}, finishReason);
+            if (!serialized.empty()) {
+                executionContext->response += wrapTextInServerSideEventMessage(serialized);
+            }
         }
         if (executionContext->apiHandler->getStreamOptions().includeUsage) {
             std::string usageChunk = executionContext->apiHandler->serializeStreamingUsageChunk();
@@ -374,12 +424,11 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
                 executionContext->response += wrapTextInServerSideEventMessage(usageChunk);
             }
         }
-
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
-
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }
+
     return absl::OkStatus();
 }
 

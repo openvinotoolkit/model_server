@@ -443,6 +443,9 @@ protected:
     static constexpr int HF_PULL_POLL_INTERVAL_MS = 100;
     // Max consecutive non-benign filesystem probe errors before failing diagnostics.
     static constexpr int HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS = 15;
+    // Retry pull on recoverable network/LFS interruption signatures.
+    static constexpr int HF_PULL_MAX_ATTEMPTS = 3;
+    static constexpr int HF_PULL_RETRY_DELAY_MS = 10000;
 
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
@@ -458,6 +461,105 @@ protected:
     std::string tokenizerJsonPath;
     std::string graphPath;
     std::string gitDirPath;
+
+    std::string getModelBasePathForSource(const std::string& sourceModel, const std::string& repositoryRoot) const {
+        return ovms::IModelDownloader::getGraphDirectory(repositoryRoot, sourceModel);
+    }
+
+    bool looksLikeRecoverableNetworkFailure(const std::string& sourceModel, const std::string& repositoryRoot) const {
+        const std::string modelBase = getModelBasePathForSource(sourceModel, repositoryRoot);
+        std::error_code ec;
+        const bool modelBaseExists = std::filesystem::exists(modelBase, ec);
+        if (ec || !modelBaseExists)
+            return false;
+
+        // Interrupted network/LFS transfers usually leave partial files or marker traces.
+        const bool hasRepoMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(repositoryRoot), ec);
+        if (ec)
+            return false;
+        const bool hasModelMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(modelBase), ec);
+        if (ec)
+            return false;
+        if (hasRepoMarker || hasModelMarker)
+            return true;
+
+        const std::string lfsErrorPath = ovms::FileSystem::appendSlash(modelBase) + "lfs_error.txt";
+        const bool hasLfsErrorMarker = std::filesystem::exists(lfsErrorPath, ec);
+        if (ec)
+            return false;
+        if (hasLfsErrorMarker)
+            return true;
+
+        const std::string modelPartPath = ovms::FileSystem::appendSlash(modelBase) + "openvino_model.binlfs_part";
+        const bool hasPartFile = std::filesystem::exists(modelPartPath, ec);
+        if (ec)
+            return false;
+        if (hasPartFile)
+            return true;
+
+        const std::string modelBin = ovms::FileSystem::appendSlash(modelBase) + "openvino_model.bin";
+        const bool modelExists = std::filesystem::exists(modelBin, ec);
+        if (ec)
+            return false;
+        if (!modelExists)
+            return true;
+
+        const std::uintmax_t modelSize = std::filesystem::file_size(modelBin, ec);
+        if (ec)
+            return false;
+        if (modelSize == 0)
+            return true;
+
+        if (sourceModel == this->modelName) {
+            return modelSize < OPENVINO_MODEL_BIN_FULL_SIZE_BYTES;
+        }
+        return false;
+    }
+
+    int RunPullHfModelAndGetCode(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask, const std::string* logPath) {
+        server.setShutdownRequest(0);
+        std::vector<std::string> args = {
+            "ovms",
+            "--pull",
+            "--source_model",
+            sourceModel,
+            "--model_repository_path",
+            modelRepositoryPath,
+            "--task",
+            pullTask,
+        };
+        if (logPath != nullptr) {
+            args.push_back("--log_path");
+            args.push_back(*logPath);
+        }
+        std::vector<char*> argv;
+        argv.reserve(args.size());
+        for (auto& a : args) {
+            argv.push_back(a.data());
+        }
+        const int exitCode = server.start(static_cast<int>(argv.size()), argv.data());
+        server.setShutdownRequest(1);
+        server.setShutdownRequest(0);
+        return exitCode;
+    }
+
+    int runPullWithRetries(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask, const std::string* logPath, int expected_code) {
+        int lastExitCode = EXIT_FAILURE;
+        for (int attempt = 1; attempt <= HF_PULL_MAX_ATTEMPTS; ++attempt) {
+            lastExitCode = RunPullHfModelAndGetCode(sourceModel, modelRepositoryPath, pullTask, logPath);
+            if (lastExitCode == expected_code) {
+                return lastExitCode;
+            }
+
+            const bool recoverable = looksLikeRecoverableNetworkFailure(sourceModel, modelRepositoryPath);
+            if (!recoverable || (attempt == HF_PULL_MAX_ATTEMPTS)) {
+                return lastExitCode;
+            }
+            SPDLOG_WARN("HF pull attempt {} failed with exit code {} and recoverable network/LFS signatures detected. Retrying.", attempt, lastExitCode);
+            std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_RETRY_DELAY_MS));
+        }
+        return lastExitCode;
+    }
 
     void SetUp() override {
         TestWithTempDir::SetUp();
@@ -476,21 +578,47 @@ protected:
     }
 
     void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, nullptr, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
     // Variant that captures output to a log file for assertions
     void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, LogFileGuard& logFile, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
+            const std::string& logPath = logFile.getPath();
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, &logPath, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
         ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, logFile.getPath(), expected_code, timeoutSeconds);
     }
 
     void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            (void)draftModel;
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, nullptr, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
         ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
     // Variant with draft model that captures output to a log file for assertions
     void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, LogFileGuard& logFile, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            (void)draftModel;
+            ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
+            const std::string& logPath = logFile.getPath();
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, &logPath, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
         ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
         ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, logFile.getPath(), expected_code, timeoutSeconds);
     }
@@ -499,11 +627,17 @@ protected:
         ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
     }
 
-    void TearDown() {
+    int RunPullHfModelAndGetCode(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask) {
+        return RunPullHfModelAndGetCode(sourceModel, modelRepositoryPath, pullTask, nullptr);
+    }
+
+    void TearDown() override {
         server.setShutdownRequest(1);
-        if (t)
+        if (t && t->joinable()) {
             t->join();
+        }
         server.setShutdownRequest(0);
+        t.reset();
         // Clone sets readonly - need to remove it before we can delete on windows
         RemoveReadonlyFileAttributeFromDir(this->directoryPath);
         TestWithTempDir::TearDown();
@@ -512,6 +646,9 @@ protected:
 
 class HfPullCache : public HfPull {
 protected:
+    static constexpr int CACHE_PULL_MAX_ATTEMPTS = 3;
+    static constexpr int CACHE_PULL_RETRY_DELAY_MS = 10000;
+
     static std::once_flag cacheInitFlag;
     static std::unique_ptr<TempDir> cacheDir;
     static std::string cachedRepositoryPath;
@@ -531,18 +668,80 @@ protected:
             std::string cacheDownloadPath = ovms::FileSystem::joinPath({cacheDir->dir.string(), "repository"});
             std::string pullTask = this->task;
 
-            this->ServerPullHfModel(sourceModelName, cacheDownloadPath, pullTask);
-            server.setShutdownRequest(1);
-            if (t)
-                t->join();
-            server.setShutdownRequest(0);
+            auto buildModelBasePath = [&](const std::string& repositoryRoot) {
+                return ovms::FileSystem::joinPath({repositoryRoot, MODEL_NAMESPACE, MODEL_ID});
+            };
+            auto hasCompleteCache = [&](const std::string& repositoryRoot) {
+                const std::string modelBase = buildModelBasePath(repositoryRoot);
+                std::error_code ec;
+                const bool hasModel = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "openvino_model.bin", ec);
+                if (ec)
+                    return false;
+                const bool hasDetok = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "openvino_detokenizer.bin", ec);
+                if (ec)
+                    return false;
+                const bool hasTok = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "openvino_tokenizer.bin", ec);
+                if (ec)
+                    return false;
+                const bool hasTokModel = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "tokenizer.model", ec);
+                if (ec)
+                    return false;
+                const bool hasGraph = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "graph.pbtxt", ec);
+                if (ec)
+                    return false;
 
-            cachedRepositoryPath = cacheDownloadPath;
-            ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath));
+                // Validate expected known sizes for deterministic cache integrity checks.
+                const bool modelSizeOk = hasModel && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "openvino_model.bin", ec) == OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+                const bool detokSizeOk = hasDetok && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "openvino_detokenizer.bin", ec) == OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+                const bool tokSizeOk = hasTok && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "openvino_tokenizer.bin", ec) == OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+                const bool tokModelSizeOk = hasTokModel && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "tokenizer.model", ec) == TOKENIZER_MODEL_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+
+                const bool hasRepoMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(repositoryRoot), ec);
+                if (ec)
+                    return false;
+                const bool hasModelMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(modelBase), ec);
+                if (ec)
+                    return false;
+
+                return hasGraph && modelSizeOk && detokSizeOk && tokSizeOk && tokModelSizeOk && !hasRepoMarker && !hasModelMarker;
+            };
+            int lastExitCode = EXIT_FAILURE;
+            for (int attempt = 1; attempt <= CACHE_PULL_MAX_ATTEMPTS; ++attempt) {
+                lastExitCode = this->RunPullHfModelAndGetCode(sourceModelName, cacheDownloadPath, pullTask);
+                const bool cacheComplete = hasCompleteCache(cacheDownloadPath);
+                if ((lastExitCode == EXIT_SUCCESS) && cacheComplete) {
+                    cachedRepositoryPath = cacheDownloadPath;
+                    ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath));
+                    return;
+                }
+
+                const bool recoverable = this->looksLikeRecoverableNetworkFailure(sourceModelName, cacheDownloadPath) || !cacheComplete;
+                if (!recoverable || (attempt == CACHE_PULL_MAX_ATTEMPTS)) {
+                    FAIL() << "Failed to initialize shared HF cache after " << attempt
+                           << " attempt(s). Last exit code: " << lastExitCode
+                           << ". Cache path: " << cacheDownloadPath;
+                }
+                SPDLOG_WARN("Shared HF cache initialization attempt {} failed with exit code {}. Retrying pull.", attempt, lastExitCode);
+                std::this_thread::sleep_for(std::chrono::milliseconds(CACHE_PULL_RETRY_DELAY_MS));
+            }
         });
     }
 
     void seedCurrentTestRepository() {
+        ASSERT_FALSE(cachedRepositoryPath.empty())
+            << "Shared HF cache was never successfully initialized (call_once completed with a failure). "
+               "All HfPullCache tests in this process will be unable to seed their working directory.";
+        ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath))
+            << "Shared HF cache path does not exist on disk: " << cachedRepositoryPath
+            << ". Cache initialization completed but left no usable directory.";
         std::error_code ec;
         std::filesystem::copy(cachedRepositoryPath,
             testRepositoryPath,
@@ -1790,6 +1989,20 @@ TEST_F(TestOptimumDownloaderSetup, TextToSpeechExportCmd) {
     inHfSettings.exportSettings.vocoder = "microsoft/speecht5_hifigan";
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     std::string expectedCmd = "optimum-cli export openvino --model-kwargs \"{\"vocoder\": \"microsoft/speecht5_hifigan\"}\" --model model/name --trust-remote-code  --weight-format fp64 --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+    std::replace(expectedCmd2.begin(), expectedCmd2.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
+}
+
+TEST_F(TestOptimumDownloaderSetup, TextToSpeechKokoroExportCmd) {
+    inHfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    inHfSettings.exportSettings.modelType = "kokoro";
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --task text-to-audio --model model/name --trust-remote-code  --weight-format fp64 --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
     std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
 #ifdef __linux__
     std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');

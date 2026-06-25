@@ -92,10 +92,10 @@ parser_image_generation.add_argument('--source_loras', default=None,
 parser_text2speech = subparsers.add_parser('text2speech', help='export model for text2speech endpoint')
 add_common_arguments(parser_text2speech)
 parser_text2speech.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
-parser_text2speech.add_argument('--vocoder', type=str, help='The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan', dest='vocoder')
-parser_text2speech.add_argument('--speaker_name', type=str, help='Name of the speaker', dest='speaker_name')
-parser_text2speech.add_argument('--speaker_path', type=str, help='Path to the speaker.bin file.', dest='speaker_path')
-
+parser_text2speech.add_argument('--model_type', default='speecht5', choices=['speecht5', 'kokoro'], help='Type of the source TTS model. speecht5 uses optimum-cli; kokoro uses a dedicated PyTorch->OpenVINO conversion path.', dest='model_type')
+parser_text2speech.add_argument('--vocoder', type=str, help='The vocoder model to use for speecht5. For example microsoft/speecht5_hifigan. Ignored for kokoro.', dest='vocoder')
+parser_text2speech.add_argument('--speaker_name', type=str, help='Name of the speaker (speecht5 only; for kokoro all voices from the HF repo are exported).', dest='speaker_name')
+parser_text2speech.add_argument('--speaker_path', type=str, help='Path to the speaker.bin file (speecht5 only; for kokoro all voices from the HF repo are exported).', dest='speaker_path')
 
 parser_speech2text = subparsers.add_parser('speech2text', help='export model for speech2text endpoint')
 add_common_arguments(parser_speech2text)
@@ -117,13 +117,16 @@ node {
       models_path: "{{model_path}}",
       plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
       target_device: "{{target_device|default("CPU", true)}}",
-      {%- if speaker_name and speaker_path %}
+      {%- if voices %}
       voices: [
+        {%- for v in voices %}
         {
-            name: "{{speaker_name}}",
-            path: "{{speaker_path}}"
-        }
-      ]{% endif %}
+            name: "{{v.name}}",
+            path: "{{v.path}}"
+        }{% if not loop.last %},{% endif %}
+        {%- endfor %}
+      ]
+      {%- endif %}
     }
   }
 }
@@ -500,14 +503,42 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
+def _list_kokoro_voices(destination_path):
+    """optimum-cli's Kokoro exporter writes per-voice speaker embeddings to
+    <destination_path>/voices/<name>.bin. Return the sorted list of voice names."""
+    voices_dir = os.path.join(destination_path, "voices")
+    if not os.path.isdir(voices_dir):
+        print("Warning: no voices/ directory found under", destination_path)
+        return []
+    return sorted(Path(p).stem for p in Path(voices_dir).glob("*.bin"))
+
 def export_text2speech_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting text2speech model to ",destination_path)
-    if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code --model-kwargs \"{{\\\"vocoder\\\": \\\"{}\\\"}}\" {}".format(source_model, precision, task_parameters['vocoder'], destination_path)
-        print('Running command: ', optimum_command)  # for debug purposes
-        if os.system(optimum_command):
-            raise ValueError("Failed to export text2speech model", source_model)
+    model_type = task_parameters.get('model_type', 'speecht5')
+
+    if model_type == 'kokoro':
+        # optimum-intel registers Kokoro under library_name=kokoro / task=text-to-audio.
+        # The kokoro exporter also dumps each speaker embedding to voices/<name>.bin.
+        if not os.path.isfile(os.path.join(destination_path, 'openvino_model.xml')) or args['overwrite_models']:
+            optimum_command = "optimum-cli export openvino --model {} --task text-to-audio --weight-format {} {} --trust-remote-code {}".format(
+                source_model, precision, task_parameters['extra_quantization_params'], destination_path)
+            print('Running command:', optimum_command)
+            if os.system(optimum_command):
+                raise ValueError("Failed to export kokoro model", source_model)
+        voice_names = _list_kokoro_voices(destination_path)
+        # Render the graph with every available voice (path is relative to graph.pbtxt).
+        task_parameters['voices'] = [{'name': n, 'path': f'./voices/{n}.bin'} for n in voice_names]
+    else:
+        if not os.path.isdir(destination_path) or args['overwrite_models']:
+            if not task_parameters.get('vocoder'):
+                raise ValueError("--vocoder is required when --model_type=speecht5")
+            optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code --model-kwargs \"{{\\\"vocoder\\\": \\\"{}\\\"}}\" {}".format(source_model, precision, task_parameters['vocoder'], destination_path)
+            print('Running command: ', optimum_command)
+            if os.system(optimum_command):
+                raise ValueError("Failed to export text2speech model", source_model)
+        if task_parameters.get('speaker_name') and task_parameters.get('speaker_path'):
+            task_parameters['voices'] = [{'name': task_parameters['speaker_name'], 'path': task_parameters['speaker_path']}]
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(t2s_graph_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:

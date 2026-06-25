@@ -125,6 +125,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             vim && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
+# Note: espeak-ng is no longer installed from apt here; it is built from
+# source by Bazel (see third_party/espeak_ng) and bundled in the release.
 # on ubuntu 24.04 python3.12 is used as default python for ovms build and release
 # TF build needs python3.10 with numpy as it does not support python3.12
 RUN python3.10 -m pip install "numpy<2.0.0" --no-cache-dir
@@ -417,6 +419,9 @@ COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
     apt-get install -y --no-install-recommends curl ca-certificates libxml2 || exit 1; \
+    # espeak-ng shared library + data are shipped inside /ovms by the Bazel
+    # build (controlled via --//:espeak=on/off in debug_bazel_flags);
+    # no system package is required at runtime.
     if [ "$GPU" == "1" ] ; then \
 	/tmp/install_gpu_drivers.sh ; \
     fi ; \
@@ -455,7 +460,10 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
 
 ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PATH="$PATH:/ovms/bin"
+# When espeak-ng data is present in the package, point runtime to it.
+# Keep this conditional to avoid exporting a non-existent path when
+# espeak support is disabled.
+ENTRYPOINT ["/bin/bash", "-c", "if [ -d /ovms/share/espeak-ng-data ]; then export ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data; fi; exec /ovms/bin/ovms \"$@\"", "--"]
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
-ENTRYPOINT ["/ovms/bin/ovms"]

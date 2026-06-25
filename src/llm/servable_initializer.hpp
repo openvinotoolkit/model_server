@@ -15,7 +15,9 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 
 #pragma warning(push)
@@ -43,10 +45,26 @@ class Status;
 class GenAiServable;
 struct GenAiServableProperties;
 
+#if (PYTHON_DISABLE == 0)
+struct ExtraGenerationInfo {
+    std::string chatTemplateDirectory;
+    bool isGgufModel = false;
+    std::string bosTokenFromTokenizer;
+    int64_t bosTokenIdFromTokenizer = -1;
+    std::string eosTokenFromTokenizer;
+    int64_t eosTokenIdFromTokenizer = -1;
+    std::string chatTemplateFromTokenizer;
+};
+#endif
+
 class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
     static void loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+#if (PYTHON_DISABLE == 0)
+    static ExtraGenerationInfo readExtraGenerationInfo(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo);
+#endif
     /*
     initialize method implementation MUST fill servable with all required properties i.e. pipeline, tokenizer, configs etc. based on mediapipe node options.
     It is strictly connected with the servable, so implementation of this method in a derived class should be aware of the specific servable class structure

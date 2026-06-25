@@ -55,7 +55,7 @@ void Gemma4ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<
         parsedOutput.content = contentWithoutReasoning;
     }
 }
-std::optional<rapidjson::Document> Gemma4ReasoningParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> Gemma4ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     if (chunk.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Gemma4ReasoningParser");
         return std::nullopt;
