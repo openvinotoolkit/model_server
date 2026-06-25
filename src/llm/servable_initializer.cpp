@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <filesystem>
 #include <chrono>
+#include <future>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -64,6 +65,10 @@ static void probeChatTemplateCaps(std::shared_ptr<GenAiServableProperties> prope
     if (properties->tokenizer.get_chat_template().empty()) {
         return;
     }
+    // Only probe if the template supports tool calls — templates that don't handle tools
+    if (!properties->chatTemplateCaps.supportsToolCalls) {
+        return;
+    }
 
     auto probeStart = std::chrono::steady_clock::now();
     const std::string argNeedle = "probe_needle_xK9m";
@@ -106,36 +111,53 @@ static void probeChatTemplateCaps(std::shared_ptr<GenAiServableProperties> prope
     } else  // NOLINT(readability/braces)
 #endif
     {
-        // Probe via GenAI's apply_chat_template (minja path)
-        try {
-            ov::genai::ChatHistory history;
-            history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
-            history.push_back(ov::genai::JsonContainer::from_json_string(
-                R"({"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]})"));
-            auto t0 = std::chrono::steady_clock::now();
-            strArgsOutput = properties->tokenizer.apply_chat_template(history, false);
-            auto t1 = std::chrono::steady_clock::now();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): {} us",
-                std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-            strArgsSuccess = true;
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): exception: {}", e.what());
-        } catch (...) {}
+        // Probe via GenAI's apply_chat_template (minja path) — run in parallel
+        auto strArgsFuture = std::async(std::launch::async, [&properties, &argNeedle]() -> std::pair<bool, std::string> {
+            try {
+                ov::genai::ChatHistory history;
+                history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
+                history.push_back(ov::genai::JsonContainer::from_json_string(
+                    R"({"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]})"));
+                auto t0 = std::chrono::steady_clock::now();
+                std::string output = properties->tokenizer.apply_chat_template(history, false);
+                auto t1 = std::chrono::steady_clock::now();
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): {} us",
+                    std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
+                return {true, std::move(output)};
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): exception: {}", e.what());
+                return {false, ""};
+            } catch (...) {
+                return {false, ""};
+            }
+        });
 
-        try {
-            ov::genai::ChatHistory history;
-            history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
-            history.push_back(ov::genai::JsonContainer::from_json_string(
-                R"({"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":{")" + argNeedle + R"(":"val"}}}]})"));
-            auto t0 = std::chrono::steady_clock::now();
-            objArgsOutput = properties->tokenizer.apply_chat_template(history, false);
-            auto t1 = std::chrono::steady_clock::now();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (object args): {} us",
-                std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-            objArgsSuccess = true;
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (object args): exception: {}", e.what());
-        } catch (...) {}
+        auto objArgsFuture = std::async(std::launch::async, [&properties, &argNeedle]() -> std::pair<bool, std::string> {
+            try {
+                ov::genai::ChatHistory history;
+                history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
+                history.push_back(ov::genai::JsonContainer::from_json_string(
+                    R"({"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":{")" + argNeedle + R"(":"val"}}}]})"));
+                auto t0 = std::chrono::steady_clock::now();
+                std::string output = properties->tokenizer.apply_chat_template(history, false);
+                auto t1 = std::chrono::steady_clock::now();
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (object args): {} us",
+                    std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
+                return {true, std::move(output)};
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (object args): exception: {}", e.what());
+                return {false, ""};
+            } catch (...) {
+                return {false, ""};
+            }
+        });
+
+        auto [strOk, strOut] = strArgsFuture.get();
+        auto [objOk, objOut] = objArgsFuture.get();
+        strArgsSuccess = strOk;
+        objArgsSuccess = objOk;
+        strArgsOutput = std::move(strOut);
+        objArgsOutput = std::move(objOut);
     }
 
     auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {

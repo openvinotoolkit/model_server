@@ -23,6 +23,9 @@ static bool contains(const std::string& haystack, const std::string& needle) {
     return haystack.find(needle) != std::string::npos;
 }
 
+
+// TODO: remove comments before analysis
+// TODO: expect GenAI to fix bug + dry-runs on separate threads?
 ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& templateSource) {
     ChatTemplateAnalysisResult result;
     if (templateSource.empty()) {
