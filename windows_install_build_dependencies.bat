@@ -63,11 +63,6 @@ goto :exit_build_error
 echo [INFO] Using MSVC %VS_2022_BT%
 set BAZEL_VS=%VS_2022_BT%
 
-:exit_build_error
-echo [ERROR] Build dependencies setup failed.
-endlocal
-exit /b 1
-
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Check directories
 IF /I EXIST %BAZEL_SHORT_PATH% (
@@ -639,6 +634,12 @@ exit /b 0
 :exit_dependencies_error
 echo [ERROR] Some dependencies not installed
 exit /b 1
+
+:exit_build_error
+echo [ERROR] Build dependencies setup failed.
+endlocal
+exit /b 1
+
 endlocal
 
 :: Set VAR to VALUE only if VAR is not already defined in the environment.
