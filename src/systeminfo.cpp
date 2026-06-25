@@ -166,6 +166,9 @@ uint16_t getSocketsCount() {
             uniqueSockets.insert(line);
         }
     }
+    if (uniqueSockets.empty()) {
+        return 1;  // Fallback when "physical id" is not present in /proc/cpuinfo
+    }
     return static_cast<uint16_t>(uniqueSockets.size());
 }
 
