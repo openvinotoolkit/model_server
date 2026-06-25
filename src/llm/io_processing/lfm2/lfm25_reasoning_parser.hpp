@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 #include "../base_output_parser.hpp"
+#include <vector>
+#include <string>
 
 namespace ovms {
 class Lfm25ReasoningParser : public BaseOutputParser {

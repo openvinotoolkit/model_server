@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "./lfm25_tool_parser.hpp"
+#include "lfm25_tool_parser.hpp"
 
 namespace ovms {
 

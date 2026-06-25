@@ -13,8 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
-#include "./lfm2_utils.hpp"
+#pragma once
+#include <string>
+#include <vector>
+#include "lfm2_utils.hpp"
 
 namespace ovms {
 class Lfm25ToolParser : public BaseOutputParser {
