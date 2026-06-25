@@ -167,6 +167,19 @@ class DockerResourceMonitor(ResourceMonitor):
         self._docker_stats_data_raw.append(result)
         return self.get_field_data(field, result)
 
+    def sample_all(self):
+        """Read one stats snapshot and return all tracked metrics as floats (MB / counts).
+
+        A single snapshot keeps every metric in the returned sample mutually
+        consistent (same instant) and avoids one docker stats call per metric.
+        """
+        stats = self._get_resource_data()
+        self._docker_stats_data_raw.append(stats)
+        return {
+            field: float(str(self.get_field_data(field, stats)).replace("M", ""))
+            for field in self.get_validated_metric_names() + self.get_logged_metric_names()
+        }
+
     @classmethod
     def get_validated_metric_names(cls):
         return cls.VALIDATED_FIELDS
@@ -260,6 +273,15 @@ class WindowsResourceMonitor(ResourceMonitor):
         if field in (self.WORKING_SET_SIZE, self.PRIVATE_BYTES, self.PAGE_FILE_USAGE):
             return f"{value:.2f}M"
         return str(value)
+
+    def sample_all(self):
+        """Read one process snapshot and return all tracked metrics as floats (MB / counts)."""
+        stats = self._get_resource_data()
+        self._stats_data_raw.append(stats)
+        return {
+            field: float(stats[field])
+            for field in self.get_validated_metric_names() + self.get_logged_metric_names()
+        }
 
     @classmethod
     def get_validated_metric_names(cls):
