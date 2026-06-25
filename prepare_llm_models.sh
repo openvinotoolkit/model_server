@@ -83,6 +83,25 @@ if [ ! -f "$1/$FACEBOOK_MODEL/chat_template.jinja" ]; then
     cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK_MODEL/chat_template.jinja"
 fi
 
+if [ -f "$1/$TTS_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$TTS_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  python3 demos/common/export_models/export_model.py text2speech --source_model "$TTS_MODEL" --weight-format int4 --model_repository_path $1 --vocoder microsoft/speecht5_hifigan
+fi
+if [ ! -f "$1/$TTS_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$TTS_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+
+if [ -f "$1/$STT_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$STT_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  python3 demos/common/export_models/export_model.py speech2text --source_model "$STT_MODEL" --weight-format int4 --model_repository_path $1
+fi
+if [ ! -f "$1/$STT_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$STT_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
 
 if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."

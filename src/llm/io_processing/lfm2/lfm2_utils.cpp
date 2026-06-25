@@ -32,8 +32,6 @@ const std::string EOS_TOKEN_STR = "<|im_end|>";
 
 const int TOOL_CALL_INDEX_START = -1;
 
-
-
 std::string parseArrayParameter(std::string argumentStr) {
     int quoteDepth = 0;
 
