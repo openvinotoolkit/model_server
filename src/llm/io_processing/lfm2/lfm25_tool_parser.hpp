@@ -30,8 +30,6 @@ public:
     explicit Lfm25ToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
-    bool parseNewContent();
-
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
@@ -64,5 +62,7 @@ private:
     ToolCall toolCall;
 
     int toolCallIndex{TOOL_CALL_INDEX_START};
+    
+    bool parseNewContent();
 };
 }

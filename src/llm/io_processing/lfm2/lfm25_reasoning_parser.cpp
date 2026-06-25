@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
+#pragma once
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
@@ -66,6 +66,5 @@ std::optional<rapidjson::Document> Lfm25ReasoningParser::parseChunk(const std::s
         doc.Parse(buffer.GetString());
         return doc;
     }
-    return std::nullopt;
 }
 }  // namespace ovms

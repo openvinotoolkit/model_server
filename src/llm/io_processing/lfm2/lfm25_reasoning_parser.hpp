@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-
+#pragma once
 #include "../base_output_parser.hpp"
 
 namespace ovms {
