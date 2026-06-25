@@ -22,7 +22,7 @@
 
 #include <gtest/gtest.h>
 
-#include "../cli_parser.hpp"
+#include "../default_task.hpp"
 
 class CLIParserDetermineTaskTest : public ::testing::TestWithParam<std::pair<std::string, std::string>> {
 public:
@@ -98,7 +98,7 @@ TEST_P(CLIParserDetermineTaskTest, DetermineTaskFromConfigStream) {
 
     if (expectedTask.empty()) {
         EXPECT_THROW(
-            ovms::CLIParser::determineDefaultTaskParameter(
+            ovms::determineDefaultTaskParameter(
                 std::make_optional(modelPath.string()),
                 std::nullopt,
                 std::nullopt),
@@ -106,7 +106,7 @@ TEST_P(CLIParserDetermineTaskTest, DetermineTaskFromConfigStream) {
         return;
     }
 
-    std::string result = ovms::CLIParser::determineDefaultTaskParameter(
+    std::string result = ovms::determineDefaultTaskParameter(
         std::make_optional(modelPath.string()),
         std::nullopt,
         std::nullopt);

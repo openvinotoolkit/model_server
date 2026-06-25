@@ -43,7 +43,6 @@ class CLIParser {
 
 public:
     CLIParser() = default;
-    static std::string determineDefaultTaskParameter(const std::optional<std::string>& modelPath, const std::optional<std::string>& sourceModel, const std::optional<std::string>& modelRepositoryPath);
     std::variant<bool, std::pair<int, std::string>> parse(int argc, char** argv);
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
 

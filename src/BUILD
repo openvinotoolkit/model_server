@@ -358,12 +358,25 @@ ovms_cc_library(
     additional_copts = COPTS_DROGON,
 )
 ovms_cc_library(
+    name = "libovms_default_task",
+    hdrs = ["default_task.hpp"],
+    srcs = ["default_task.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "libovmsstring_utils",
+        "libovmsstatus",
+        "//src/pull_module:curl_downloader",
+        "//src/pull_module:hf_env_vars",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "libovms_cliparser",
     hdrs = ["cli_parser.hpp"],
     srcs = ["cli_parser.cpp"],
     deps = [
         "@com_github_jarro2783_cxxopts//:cxxopts",
-        "@com_github_tencent_rapidjson//:rapidjson",
+        "libovms_default_task",
         "libovms_server_settings",
         "libovms_version",
         "//src/filesystem:libovmsfilesystem",
@@ -374,8 +387,6 @@ ovms_cc_library(
         "//src/graph_export:t2s_graph_cli_parser",
         "//src/graph_export:s2t_graph_cli_parser",
         "//src/graph_export:image_generation_graph_cli_parser",
-        "//src/pull_module:curl_downloader",
-        "//src/pull_module:hf_env_vars",
     ],
     visibility = ["//visibility:public",],
 )
