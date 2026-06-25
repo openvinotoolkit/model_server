@@ -270,6 +270,11 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         }
         executionContext->sendLoopbackSignal = true;
     } else {
+        // Wait for the readySignal
+        // (set right after pipe->generate() returns and results are assigned)
+        // to guarantee results is populated before we read finish_reasons and perf_metrics.
+        // Also ensures success flag is accurate.
+        legacyExecutionContext->finished.wait();
         if (!legacyExecutionContext->success) {
             return absl::InvalidArgumentError("Request processing failed, check its correctness.");
         }

@@ -203,8 +203,12 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
     if (isLast) {
         // Parser produced no delta for the final flush (e.g. generation ended on a
         // special token the parser absorbed). Still fire the callback with an empty
-        // Document so the caller can emit the finish_reason chunk.
-        return m_callback(rapidjson::Document{}, true);
+        // object Document so the caller can emit the finish_reason chunk.
+        // Note: Document{} is kNullType; construct an empty object to avoid assertion
+        // failures in downstream code that calls HasMember() on the document.
+        rapidjson::Document empty;
+        empty.SetObject();
+        return m_callback(std::move(empty), true);
     }
     return ov::genai::StreamingStatus::RUNNING;
 }
