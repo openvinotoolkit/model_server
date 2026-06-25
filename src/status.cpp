@@ -221,6 +221,10 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::PYTHON_NODE_MISSING_OPTIONS, "The Python Node is missing options definition"},
     {StatusCode::PYTHON_NODE_MISSING_NAME, "The Python Node is missing name definition"},
 
+    // Python Runtime Initialization
+    {StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED, "Failed to initialize Python interpreter. Check that libpython.so is installed"},
+    {StatusCode::PYTHON_BACKEND_CREATION_FAILED, "Failed to create Python backend. Check that pyovms module is available in PYTHONPATH"},
+
     // LLM Nodes
     {StatusCode::LLM_NODE_NAME_ALREADY_EXISTS, "The LLM Node name is already present in nodes list"},
     {StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST, "The LLM Node workspace path does not exist"},

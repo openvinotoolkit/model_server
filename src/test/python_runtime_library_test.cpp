@@ -264,6 +264,30 @@ TEST(PythonRuntimeLibrary, ValidationFailsWithoutBindingOnPythonPath) {
     EXPECT_THAT(std::string(errorMessage), HasSubstr("pyovms"));
 }
 
+TEST(PythonRuntimeLibrary, ValidationFailsWithoutPythonExecutableOnPath) {
+    const auto runtimeLibraryFilename = getRuntimeLibraryFilename();
+    const auto libraryPath = findLibrary(runtimeLibraryFilename);
+    ASSERT_FALSE(libraryPath.empty()) << "Could not find " << runtimeLibraryFilename;
+
+    ScopedSharedLibrary library(libraryPath);
+    ASSERT_NE(library.get(), nullptr) << getLibraryLoadError();
+
+    const auto bindingPath = findPyovmsBinding();
+    ASSERT_FALSE(bindingPath.empty()) << "Could not find " << getBindingFilename();
+    ScopedEnvironmentVariable pythonPathEnv("PYTHONPATH", bindingPath.parent_path().string());
+
+    // Empty PATH simulates missing operational python/python3 executable.
+    ScopedEnvironmentVariable pathEnv("PATH", "");
+
+    auto validate = reinterpret_cast<ValidatePythonEnvironmentFn>(findSymbol(library.get(), "OVMS_validatePythonEnvironment"));
+    ASSERT_NE(validate, nullptr);
+
+    const char* errorMessage = nullptr;
+    EXPECT_FALSE(validate(&errorMessage));
+    ASSERT_NE(errorMessage, nullptr);
+    EXPECT_THAT(std::string(errorMessage), HasSubstr("No operational Python executable found in PATH"));
+}
+
 TEST(PythonRuntimeLibrary, ValidationSucceedsWithBindingOnPythonPath) {
     const auto runtimeLibraryFilename = getRuntimeLibraryFilename();
     const auto libraryPath = findLibrary(runtimeLibraryFilename);

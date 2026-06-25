@@ -577,11 +577,17 @@ Status Server::startModules(ovms::Config& config) {
         if (pythonModule == nullptr) {
             SPDLOG_WARN("Python requested in configuration, but runtime library could not be loaded. Continuing with Python features disabled.");
         } else {
-            std::unique_lock lock(modulesMtx);
-            std::tie(it, inserted) = this->modules.emplace(PYTHON_INTERPRETER_MODULE_NAME, std::move(pythonModule));
-            if (!inserted)
-                return Status(StatusCode::MODULE_ALREADY_INSERTED, PYTHON_INTERPRETER_MODULE_NAME);
-            START_MODULE(it);
+            // Try to start Python support first; if runtime is not operational,
+            // continue without Python-dependent features instead of failing server startup.
+            status = pythonModule->start(config);
+            if (!status.ok()) {
+                SPDLOG_WARN("Python runtime is not operational ({}). Continuing with Python features disabled.", status.string());
+            } else {
+                std::unique_lock lock(modulesMtx);
+                std::tie(it, inserted) = this->modules.emplace(PYTHON_INTERPRETER_MODULE_NAME, std::move(pythonModule));
+                if (!inserted)
+                    return Status(StatusCode::MODULE_ALREADY_INSERTED, PYTHON_INTERPRETER_MODULE_NAME);
+            }
         }
     }
 #endif

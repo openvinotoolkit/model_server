@@ -117,3 +117,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 endlocal
+
+:exit_build_error
+echo Build failed.
+endlocal
+exit /b 1

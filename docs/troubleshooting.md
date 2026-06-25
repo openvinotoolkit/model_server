@@ -49,6 +49,70 @@ models/
 - Model import will fail if the OVMS process does not have read permissions to the model files and list permissions on the model folder and model version subfolder.
 
 
+## Python Support Issues
+
+Python support is optional in Model Server. The following issues may occur when using Python features (Python nodes, LLM models with Jinja2 templates):
+
+### Server Fails to Start with "Failed to initialize Python interpreter"
+- **Cause**: System Python library (`libpython.so`) is not found
+- **Symptoms**: Server terminates immediately at startup; error in logs mentions missing `libpython3.x.so`
+- **Resolution**:
+  - Verify you deployed a with-Python package, not without-Python package
+  - Install system Python development libraries:
+    - **Ubuntu/Debian**: `sudo apt install libpython3.12-dev` (adjust version as needed)
+    - **RHEL/CentOS**: `sudo yum install python312-devel`
+  - Verify: `find /usr -name "libpython*.so*" -type f`
+
+### Server Fails to Start with "Failed to create Python backend"
+- **Cause**: Python module `pyovms` cannot be found or imported
+- **Symptoms**: Server terminates; error mentions missing or broken `pyovms` module
+- **Resolution**:
+  - Set `PYTHONPATH` to include the Python libraries directory from OVMS package:
+    ```bash
+    export PYTHONPATH=${OVMS_PACKAGE_PATH}/lib/python:$PYTHONPATH
+    ```
+  - Verify: `python3 -c "import pyovms; print(pyovms.__file__)"`
+  - Check that Python dependencies are installed: `pip3 install Jinja2==3.1.6 MarkupSafe==3.0.2`
+  - If using Python nodes: `pip3 install numpy`
+
+### Warning: "Python calculators plugin failed to load" but Server Continues
+- **Cause**: Library `libpython_calculators.so` not found in library search path
+- **Symptoms**: Server starts successfully, but Python nodes cannot be loaded
+- **Impact**: Non-Python models work normally; Python node graphs return error when loaded
+- **Resolution** (if you need Python nodes):
+  - Verify file exists: `find ${OVMS_LIB_PATH} -name "libpython_calculators.so"`
+  - Check library path: `echo $LD_LIBRARY_PATH` (should include `${OVMS_LIB_PATH}`)
+  - Update search path: `export LD_LIBRARY_PATH=${OVMS_LIB_PATH}:$LD_LIBRARY_PATH`
+- **Resolution** (if you don't need Python nodes):
+  - No action required; graceful degradation allows non-Python models to work
+
+### Python Node Graph Returns Error When Loaded
+- **Error**: "PythonExecutorCalculator not found" or "Python calculators plugin not available"
+- **Cause**: Python calculators plugin failed to load (see above) or Python support was compiled out (`PYTHON_DISABLE=1`)
+- **Resolution**:
+  - Follow "Python calculators plugin failed to load" steps above
+  - Or use without-Python package if you don't need Python nodes
+
+### LLM Models with Complex Jinja2 Templates Don't Render Correctly
+- **Symptoms**: Chat template output is missing parts or shows literal template syntax
+- **Cause**: Without-Python package in use; complex template features require Python
+- **Resolution**:
+  - Use with-Python package instead of without-Python package
+  - Follow Python setup steps above (PYTHONPATH, dependencies)
+
+### Verify Python Support Status
+```bash
+# Check if Python libraries are available
+ldd ${OVMS_BIN} | grep -i python
+
+# Check if Python calculators plugin loaded successfully
+# Look in server logs for "KFS Python tensor bridge activated" or 
+# "Python calculators plugin libpython_calculators.so failed to load"
+
+# Try a Python node graph request (will fail gracefully if Python unavailable)
+# Error message will indicate whether Python support is available
+```
+
 ## Client Request Issues
 - When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors in the request handling.
 - The information about the failure reason is passed to the client in the response. It is also logged on the model server in the DEBUG mode.

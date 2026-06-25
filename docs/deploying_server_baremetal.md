@@ -163,6 +163,85 @@ You can also build model server from source by following the [developer guide](w
 
 > **NOTE**: You can also access [public drops of the development version](https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/) of the model server, which are built from the main branch. These builds allow you to evaluate the latest features ahead of official releases.
 
+## Python Support and Fallback Behavior
+
+Model Server supports two deployment configurations:
+
+**With Python Support** (`PYTHON_DISABLE=0`, default):
+- Python nodes and LLM models with Jinja2 templates are fully supported
+- Requires runtime Python libraries to be available
+- Can gracefully degrade if Python libraries become unavailable
+
+**Without Python Support** (`PYTHON_DISABLE=1`):
+- Lightweight deployment for C++ models only
+- Python nodes cannot be used
+- LLM models have limitations in template rendering (see above)
+- No Python runtime dependencies required
+
+### Runtime Python Library Requirements
+
+If you deployed the **with-Python package** but Python libraries are missing at runtime:
+
+**Error: "Failed to initialize Python interpreter"**
+- This occurs when system `libpython.so` is not found
+- **Fix for Ubuntu**: `sudo apt install libpython3.12-dev`
+- **Fix for RHEL**: `sudo yum install python312-devel`
+- **Check**: Verify with `find /usr -name "libpython*" -type f`
+
+**Error: "Failed to create Python backend"**
+- This occurs when `pyovms` module cannot be loaded
+- **Cause**: Missing `PYTHONPATH` environment variable
+- **Fix**: Set `export PYTHONPATH=${PWD}/ovms/lib/python` (or appropriate path to package)
+- **Check**: Verify with `python3 -c "import pyovms; print(pyovms.__file__)"`
+
+**Warning: "Python calculators plugin failed to load"**
+- This is a **graceful degradation** - server continues running
+- **Impact**: Python nodes cannot be loaded, but non-Python models work fine
+- **Fix**: Ensure `libpython_calculators.so` is in library search path
+- **Check**: Verify with `ldd ${OVMS_BIN} | grep python`
+
+### Fallback Behavior
+
+Model Server gracefully handles missing Python libraries:
+
+1. **Non-Python models/graphs**: Work normally ✓
+2. **Python node graphs**: Return descriptive error when loaded ✗
+3. **LLM models (with-Python package)**: 
+   - Without Python: Basic template rendering (no complex Jinja2 features) ⚠️
+   - With Python: Full template rendering ✓
+
+### Verify Python Support
+
+Check if your deployment has Python support:
+
+```bash
+# Method 1: Check binary dependencies
+ldd ${OVMS_BIN} | grep -i python
+
+# Method 2: Try to load a Python node graph
+# If server starts but Python graphs fail with clear errors → Python available
+# If server won't start → libpython.so missing
+
+# Method 3: Check library listing
+ls -la ${OVMS_LIB_PATH}/libpython* 2>/dev/null || echo "No Python libs"
+```
+
+### Migration Between Configurations
+
+**From without-Python to with-Python**:
+1. Download with-Python package
+2. Extract to same location (overwrites binary)
+3. Set `PYTHONPATH` and install Python dependencies (Jinja2, numpy)
+4. Restart server
+5. Python nodes now available
+
+**From with-Python to without-Python**:
+1. Download without-Python package
+2. Extract to same location (overwrites binary)
+3. No Python setup needed
+4. Restart server
+5. Python nodes now return "not available" error
+
 ## Test the Deployment
 
 Download ResNet50 model:

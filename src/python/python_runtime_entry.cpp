@@ -17,9 +17,12 @@
 #include "../module.hpp"
 #include "pythoninterpretermodule.hpp"
 
+#include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
@@ -61,6 +64,92 @@ bool ensureInterpreterInitialized(const char** output, const char* context) {
     return false;
 }
 
+bool existsInPath(const std::string& executableName) {
+    const char* pathEnv = std::getenv("PATH");
+    if (pathEnv == nullptr || pathEnv[0] == '\0') {
+        return false;
+    }
+
+#ifdef _WIN32
+    const char separator = ';';
+#else
+    const char separator = ':';
+#endif
+
+    std::string pathValue(pathEnv);
+    size_t start = 0;
+    while (start <= pathValue.size()) {
+        size_t end = pathValue.find(separator, start);
+        std::string directory = (end == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, end - start);
+        if (!directory.empty()) {
+            auto candidate = std::filesystem::path(directory) / executableName;
+            std::error_code ec;
+            if (std::filesystem::exists(candidate, ec) && !ec) {
+                return true;
+            }
+        }
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
+    }
+    return false;
+}
+
+bool hasOperationalPythonExecutable(std::string& details) {
+#ifdef _WIN32
+    const std::vector<std::string> candidates = {"python.exe", "python3.exe"};
+#else
+    const std::vector<std::string> candidates = {"python3", "python"};
+#endif
+
+    for (const auto& candidate : candidates) {
+        if (existsInPath(candidate)) {
+            return true;
+        }
+    }
+
+    details = "No operational Python executable found in PATH (expected python/python3 or python.exe/python3.exe).";
+    return false;
+}
+
+bool validateEnvPaths(std::string& details) {
+    if (const char* pythonHome = std::getenv("PYTHONHOME"); pythonHome != nullptr && pythonHome[0] != '\0') {
+        std::error_code ec;
+        if (!std::filesystem::exists(std::filesystem::path(pythonHome), ec)) {
+            details = std::string("PYTHONHOME points to non-existing path: ") + pythonHome;
+            return false;
+        }
+    }
+
+    if (const char* pythonPath = std::getenv("PYTHONPATH"); pythonPath != nullptr && pythonPath[0] != '\0') {
+#ifdef _WIN32
+        const char separator = ';';
+#else
+        const char separator = ':';
+#endif
+        std::string pathValue(pythonPath);
+        size_t start = 0;
+        while (start <= pathValue.size()) {
+            size_t end = pathValue.find(separator, start);
+            std::string directory = (end == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, end - start);
+            if (!directory.empty()) {
+                std::error_code ec;
+                if (!std::filesystem::exists(std::filesystem::path(directory), ec)) {
+                    details = std::string("PYTHONPATH entry does not exist: ") + directory;
+                    return false;
+                }
+            }
+            if (end == std::string::npos) {
+                break;
+            }
+            start = end + 1;
+        }
+    }
+
+    return true;
+}
+
 }  // namespace
 
 extern "C" PYTHON_RUNTIME_EXPORT ovms::Module* OVMS_createPythonInterpreterModule() {
@@ -71,6 +160,20 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
     static thread_local std::string lastError;
     if (errorMessage != nullptr) {
         *errorMessage = nullptr;
+    }
+
+    if (!validateEnvPaths(lastError)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = lastError.c_str();
+        }
+        return false;
+    }
+
+    if (!hasOperationalPythonExecutable(lastError)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = lastError.c_str();
+        }
+        return false;
     }
 
     bool ownsInterpreter = false;

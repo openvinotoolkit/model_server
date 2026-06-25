@@ -2294,6 +2294,7 @@ cc_test(
         "test/pipelinedefinitionstatus_test.cpp",
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
+        "test/python_fallback_test.cpp",
         "test/rest_utils_test.cpp",
         "test/schema_test.cpp",
         "test/serialization_tests.cpp",
