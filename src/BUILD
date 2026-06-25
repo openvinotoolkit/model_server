@@ -2496,10 +2496,12 @@ cc_test(
     ] + select({
         "//:is_windows_and_python_is_enabled": [
             "//src/python:libovmspython.dll",
+            "//src/python:libpython_calculators",
         ],
         "//:disable_python": [],
         "//conditions:default": [
             "//src/python:libovmspython.so",
+            "//src/python:libpython_calculators.so",
         ],
     }),
     deps = [

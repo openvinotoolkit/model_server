@@ -52,6 +52,12 @@ using GetKfsPyTensorBridgeVTableFn = const KfsPyTensorBridgeVTable* (*)();
 static PluginHandle pythonCalculatorsHandle = nullptr;
 static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
 
+#ifdef __linux__
+// Weak reference allows using in-process bridge when linked into the binary
+// (e.g. ovms_test) without requiring -rdynamic for RTLD_DEFAULT lookups.
+extern "C" const KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
+#endif
+
 #ifdef _WIN32
 std::string formatWindowsErrorMessage(DWORD errorCode) {
     LPSTR buffer = nullptr;
@@ -122,6 +128,17 @@ bool loadPythonCalculatorsPlugin() {
         if (getKfsPyTensorBridgeVTable() != nullptr) {
             return true;
         }
+#ifdef __linux__
+        // In unit tests the bridge runtime can be linked into the test binary.
+        // Use a direct weak symbol call so we do not depend on -rdynamic.
+        if (OVMS_getKfsPyTensorBridgeVTable != nullptr) {
+            if (auto* vtable = OVMS_getKfsPyTensorBridgeVTable(); vtable != nullptr) {
+                setKfsPyTensorBridgeVTable(vtable);
+                SPDLOG_INFO("KFS Python tensor bridge activated from in-process weak symbol");
+                return true;
+            }
+        }
+#endif
         // Vtable is not set — fall through to load the DLL so we can retrieve it.
     }
 #endif
