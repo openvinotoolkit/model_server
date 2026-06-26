@@ -186,6 +186,9 @@ default_npu_infer_timeout = get_int("TT_DEFAULT_NPU_INFER_TIMEOUT", 10*default_i
 infer_timeouts = {
     TargetDevice.CPU: default_infer_timeout,
     TargetDevice.GPU: default_gpu_infer_timeout,
+    TargetDevice.GPU_0: default_gpu_infer_timeout,
+    TargetDevice.GPU_1: default_gpu_infer_timeout,
+    TargetDevice.GPU_2: default_gpu_infer_timeout,
     TargetDevice.NPU: default_npu_infer_timeout,
     TargetDevice.AUTO: default_gpu_infer_timeout,
     TargetDevice.HETERO: default_gpu_infer_timeout,

@@ -20,6 +20,9 @@ from collections import defaultdict
 class TargetDevice:
     CPU = "CPU"
     GPU = "GPU"
+    GPU_0 = "GPU:0"
+    GPU_1 = "GPU:1"
+    GPU_2 = "GPU:2"
     NPU = "NPU"
     AUTO = "AUTO:GPU,CPU"
     HETERO = "HETERO:GPU,CPU"
