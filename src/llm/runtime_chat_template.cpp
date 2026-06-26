@@ -92,6 +92,8 @@ void initializeRuntimeApiLocked() {
         "./libovmspython.dll",
         "src/python/libovmspython.dll",
         "./src/python/libovmspython.dll",
+        "bazel-bin/src/libovmspython.dll",
+        "./bazel-bin/src/libovmspython.dll",
         "bazel-bin/src/python/libovmspython.dll",
         "./bazel-bin/src/python/libovmspython.dll",
     };
