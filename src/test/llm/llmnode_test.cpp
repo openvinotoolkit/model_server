@@ -37,6 +37,7 @@
 #endif
 
 #include "../../http_rest_api_handler.hpp"
+#include "../../config.hpp"
 #include "../../http_status_code.hpp"
 #include "../../json_parser.hpp"
 #include "../../llm/apis/openai_completions.hpp"
@@ -4423,6 +4424,125 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
 }
 TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
+}
+
+// Verifies that the global --cache_dir (ServerSettings) is propagated into the
+// continuous batching pipeline plugin config, and that an explicit CACHE_DIR in
+// the node's plugin_config takes precedence over the global value.
+// Regression test for openvinotoolkit/model_server#4230.
+void LLMNodeOptionsCacheDirPropagation(std::string& modelsPath) {
+    // Seed the global cache_dir via the CLI parser (same path used in production).
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)"/tmp/ovms_global_cache"};
+    int arg_count = 9;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), "/tmp/ovms_global_cache");
+
+    // Case 1: no CACHE_DIR in node plugin_config -> global value is applied.
+    {
+        std::string testPbtxt = R"(
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+            node: {
+            name: "llmNode"
+            calculator: "HttpLLMCalculator"
+            input_stream: "LOOPBACK:loopback"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+            output_stream: "LOOPBACK:loopback"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: ")" +
+                                modelsPath + R"("
+                }
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                    sync_set {
+                    tag_index: "LOOPBACK:0"
+                    }
+                }
+                }
+            }
+            }
+        )";
+        adjustConfigForTargetPlatform(testPbtxt);
+        ::mediapipe::CalculatorGraphConfig config;
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+        std::shared_ptr<GenAiServable> servable;
+        ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+        auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+        ASSERT_EQ(properties->pluginConfig.count("CACHE_DIR"), 1);
+        ASSERT_EQ(properties->pluginConfig["CACHE_DIR"].as<std::string>(), "/tmp/ovms_global_cache");
+    }
+
+    // Case 2: explicit CACHE_DIR in node plugin_config wins over the global value.
+    {
+        std::string testPbtxt = R"(
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+            node: {
+            name: "llmNode"
+            calculator: "HttpLLMCalculator"
+            input_stream: "LOOPBACK:loopback"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+            output_stream: "LOOPBACK:loopback"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: ")" +
+                                modelsPath + R"("
+                    plugin_config: '{"CACHE_DIR": "/tmp/ovms_node_cache"}'
+                }
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                    sync_set {
+                    tag_index: "LOOPBACK:0"
+                    }
+                }
+                }
+            }
+            }
+        )";
+        adjustConfigForTargetPlatform(testPbtxt);
+        ::mediapipe::CalculatorGraphConfig config;
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+        std::shared_ptr<GenAiServable> servable;
+        ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+        auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+        ASSERT_EQ(properties->pluginConfig.count("CACHE_DIR"), 1);
+        // The test harness may rewrite the path for the target platform, so match
+        // on substrings: the explicit node value must win over the global one.
+        std::string nodeCacheDir = properties->pluginConfig["CACHE_DIR"].as<std::string>();
+        ASSERT_NE(nodeCacheDir.find("ovms_node_cache"), std::string::npos) << "Explicit node CACHE_DIR should be used, got: " << nodeCacheDir;
+        ASSERT_EQ(nodeCacheDir.find("ovms_global_cache"), std::string::npos) << "Global cache_dir must not override explicit node CACHE_DIR, got: " << nodeCacheDir;
+    }
+
+    // Restore the global cache_dir so the singleton does not leak into other tests.
+    char* reset_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
+    ovms::Config::instance().parse(7, reset_argv);
+}
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCacheDirPropagation) {
+    LLMNodeOptionsCacheDirPropagation(modelsPath);
+}
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCacheDirPropagation) {
+    LLMNodeOptionsCacheDirPropagation(modelsPath);
 }
 
 void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {

@@ -227,6 +227,21 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
 
+    // Propagate the global --cache_dir (ServerSettings) into the continuous batching
+    // pipeline plugin config. Unlike the non-CB path (ModelInstance::setCacheOptions),
+    // this initializer constructs the pipeline directly, so the server-level cache_dir
+    // is otherwise never applied. An explicit CACHE_DIR in the node's plugin_config
+    // remains authoritative.
+    const std::string& globalCacheDir = Config::instance().cacheDir();
+    if (!globalCacheDir.empty()) {
+        if (properties->pluginConfig.find(ov::cache_dir.name()) == properties->pluginConfig.end()) {
+            properties->pluginConfig[ov::cache_dir.name()] = globalCacheDir;
+            SPDLOG_DEBUG("Applying global cache_dir to continuous batching pipeline: {}", globalCacheDir);
+        } else {
+            SPDLOG_DEBUG("CACHE_DIR set explicitly in node plugin_config; keeping user value over global cache_dir");
+        }
+    }
+
     if (properties->device == "CPU") {
         status = applyDefaultCpuProperties(properties->pluginConfig);
         if (!status.ok()) {
