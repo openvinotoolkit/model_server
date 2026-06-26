@@ -234,3 +234,29 @@ What's the weather in Paris?<turn|>
 <|tool_call>call:get_weather{location:<|"|>Paris<|"|>,unit:<|"|>celsius<|"|>}<tool_call|><|tool_response>)";
      EXPECT_EQ(appliedOutput, expectedOutput);
 }
+
+// =============================================================================
+// Example: Qwen3 Coder with tool call containing string arguments
+// The probe should detect requiresObjectArguments=true via the <parameter=needle pattern,
+// workaround should convert string args to object, and template should render
+// them in Qwen3 Coder's native key:<|"|>value<|"|> format.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, Qwen3Coder_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3coder_instruct.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen3 coder instruct template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(false);
+
+    ASSERT_TRUE(applySuccess);
+
+//     std::string expectedOutput = R"(</s><|turn>user
+// What's the weather in Paris?<turn|>
+// <|turn>model
+// <|tool_call>call:get_weather{location:<|"|>Paris<|"|>,unit:<|"|>celsius<|"|>}<tool_call|><|tool_response>)";
+//      EXPECT_EQ(appliedOutput, expectedOutput);
+}

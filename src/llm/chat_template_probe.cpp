@@ -37,6 +37,7 @@ void probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
     auto probeStart = std::chrono::steady_clock::now();
     const std::string argNeedle = "probe_needle_xK9m";
 
+    // Async becuase apply_chat_template is slow: CVS-189192
     auto strArgsFuture = std::async(std::launch::async, [&tokenizer, &argNeedle]() -> std::pair<bool, std::string> {
         try {
             ov::genai::ChatHistory history;
@@ -57,6 +58,7 @@ void probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
         }
     });
 
+    // Async becuase apply_chat_template is slow: CVS-189192
     auto objArgsFuture = std::async(std::launch::async, [&tokenizer, &argNeedle]() -> std::pair<bool, std::string> {
         try {
             ov::genai::ChatHistory history;
