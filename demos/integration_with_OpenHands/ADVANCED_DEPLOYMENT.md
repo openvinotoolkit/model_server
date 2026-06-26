@@ -34,9 +34,9 @@ OVMS provides native model retrieval and preparation through the `--source_model
 ```bash
 docker run --rm -v ${HOME}/ovms-openhands/models:/models \
     openvino/model_server:latest \
-    --source_model OpenVINO/qwen3-0.6b-int8-ov \
+    --source_model OpenVINO/Qwen3-8b-int8-ov \
     --model_repository_path /models \
-    --model_name qwen3-0.6b-int8-ov \
+    --model_name qwen3-8b-int8-ov \
     --task text_generation \
     --target_device CPU
 ```
@@ -51,7 +51,7 @@ After running the `--source_model` workflow, the model directory contains:
 
 ```text
 ${HOME}/ovms-openhands/models/
-└── qwen3-0.6b-int8-ov/
+└── qwen3-8b-int8-ov/
     ├── openvino_model.xml       # OpenVINO model structure
     ├── openvino_model.bin       # Model weights
     ├── graph.pbtxt              # MediaPipe LLM graph configuration
@@ -72,8 +72,8 @@ You can deploy using Docker commands directly without the helper scripts. This a
 
 ```bash
 # Model configuration
-export MODEL_ID="OpenVINO/qwen3-0.6b-int8-ov"
-export LOCAL_NAME="qwen3-0.6b-int8-ov"
+export MODEL_ID="OpenVINO/Qwen3-8b-int8-ov"
+export LOCAL_NAME="qwen3-8b-int8-ov"
 export TARGET_DEVICE="CPU"
 export TOOL_PARSER="hermes3"
 export MODEL_CACHE_DIR="${HOME}/ovms-openhands/models"
@@ -309,7 +309,7 @@ Checks for Docker and docker compose availability, warns if `HF_TOKEN` is not se
 **2. Normalizes the model name**
 
 ```bash
-# "OpenVINO/qwen3-0.6b-int8-ov" → "qwen3-0.6b-int8-ov"
+# "OpenVINO/Qwen3-8b-int8-ov" → "qwen3-8b-int8-ov"
 basename "$MODEL_ID" | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
 ```
 
@@ -352,11 +352,11 @@ Shows the manual Docker commands equivalent to what the script just performed.
 ```
 
 **Arguments:**
-- `model_id`: Hugging Face model ID (e.g., `OpenVINO/qwen3-0.6b-int8-ov`)
+- `model_id`: Hugging Face model ID (e.g., `OpenVINO/Qwen3-8b-int8-ov`)
 
 **Options:**
 - `--device DEVICE`: Target device (`CPU` or `GPU`, default: `CPU`)
-- `--parser PARSER`: Tool parser (`hermes3`, `qwen`, or `none`, default: auto-resolved)
+- `--parser PARSER`: Override the automatically resolved tool parser
 - `--cache-dir DIR`: Model cache directory (default: `${HOME}/ovms-openhands/models`)
 - `--compose-file FILE`: Path to docker-compose.yml
 - `--skip-wait`: Skip health check and return immediately after deploy
@@ -367,3 +367,87 @@ Shows the manual Docker commands equivalent to what the script just performed.
 - `MODEL_CACHE_DIR`: Override model cache directory
 - `TARGET_DEVICE`: Override target device
 - `TOOL_PARSER`: Override tool parser
+
+---
+
+## Debugging OVMS
+
+### Viewing OVMS Logs
+
+View OVMS logs from the Docker container:
+
+```bash
+docker logs ovms-llm
+```
+
+Follow logs in real time while reproducing an issue:
+
+```bash
+docker logs -f ovms-llm
+```
+
+### Running OVMS with TRACE Logging
+
+OVMS supports configurable logging levels. The following command demonstrates enabling TRACE logging for a standalone OVMS deployment:
+
+```bash
+ovms \
+  --rest_port 9001 \
+  --model_repository_path ./models \
+  --source_model OpenVINO/Qwen3-8b-int8-ov \
+  --task text_generation \
+  --target_device CPU \
+  --model_name qwen3-8b-int8-ov \
+  --tool_parser hermes3
+```
+
+Enable TRACE logging for detailed diagnostics:
+
+```bash
+ovms \
+  --rest_port 9001 \
+  --model_repository_path ./models \
+  --source_model OpenVINO/Qwen3-8b-int8-ov \
+  --task text_generation \
+  --target_device CPU \
+  --model_name qwen3-8b-int8-ov \
+  --tool_parser hermes3 \
+  --log_level TRACE
+```
+
+TRACE logging provides detailed information helpful for diagnosing issues related to model loading, request processing, inference, and tool-calling behavior.
+
+### Enabling TRACE Logging with Docker Compose
+
+Enable the same logging level by modifying the OVMS command in `docker-compose.yml`. Add the `--log_level` argument:
+
+```yaml
+command:
+  - --model_repository_path /models
+  - --source_model ${MODEL_ID}
+  - --model_name ${LOCAL_NAME}
+  - --task text_generation
+  - --target_device ${TARGET_DEVICE}
+  - --port "9000"
+  - --rest_port "8000"
+  - --tool_parser ${TOOL_PARSER}
+  - --log_level TRACE
+```
+
+### Restarting After Configuration Changes
+
+Restart the OVMS container for configuration changes to take effect:
+
+```bash
+docker compose restart ovms-llm
+```
+
+### Viewing TRACE Logs
+
+Follow the logs after restarting:
+
+```bash
+docker logs -f ovms-llm
+```
+
+Observe detailed OVMS logs while reproducing an issue.

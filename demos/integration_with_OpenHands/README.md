@@ -66,11 +66,11 @@ OpenHands requires models with instruction-following capability, coding proficie
 | Model Family | Tool Parser | Notes                                  |
 |--------------|-------------|----------------------------------------|
 | Qwen 3 Coder | `qwen3coder`| Strong coding performance, various sizes |
-| Qwen 3       | `hermes3`   | Recommended for low end systems        |
+| Qwen 3       | `hermes3`   | General instruction following          |
 | Llama 3      | `llama3`    | Good general instruction following   |
 | Mistral      | `mistral`   | Efficient inference                  |
 
-> **Note:** Examples use `OpenVINO/qwen3-0.6b-int8-ov`, a lightweight model suitable for validation. Other compatible models may also be used.
+> **Note:** Examples use `OpenVINO/Qwen3-8b-int8-ov`. Other compatible models may also be used.
 
 ### Tool Parser Selection
 
@@ -101,7 +101,7 @@ This demo uses `docker-compose.yml` and `scripts/deploy_model_ovms.sh` to automa
 
 3. **Run the deployment script:**
    ```bash
-   ./scripts/deploy_model_ovms.sh OpenVINO/qwen3-0.6b-int8-ov
+   ./scripts/deploy_model_ovms.sh OpenVINO/Qwen3-8b-int8-ov
    ```
 
    The script validates your environment, prepares the model, and launches both containers. See [ADVANCED_DEPLOYMENT.md](ADVANCED_DEPLOYMENT.md) for details on what the script does.
@@ -111,13 +111,13 @@ This demo uses `docker-compose.yml` and `scripts/deploy_model_ovms.sh` to automa
 **Optional parameters:**
 ```bash
 # Specify device, parser, or cache directory
-./scripts/deploy_model_ovms.sh OpenVINO/qwen3-0.6b-int8-ov \
+./scripts/deploy_model_ovms.sh OpenVINO/Qwen3-8b-int8-ov \
     --device CPU \
     --parser hermes3 \
     --cache-dir ~/custom-models
 
 # Skip health check for faster feedback
-./scripts/deploy_model_ovms.sh OpenVINO/qwen3-0.6b-int8-ov --skip-wait
+./scripts/deploy_model_ovms.sh OpenVINO/Qwen3-8b-int8-ov --skip-wait
 ```
 
 For manual Docker deployment, see [ADVANCED_DEPLOYMENT.md](ADVANCED_DEPLOYMENT.md).
@@ -142,7 +142,7 @@ The response should include `"model_status": "AVAILABLE"`.
 curl -X POST http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "qwen3-0.6b-int8-ov",
+    "model": "qwen3-8b-int8-ov",
     "messages": [{"role": "user", "content": "Say hello"}],
     "max_tokens": 10
   }'
@@ -158,7 +158,7 @@ If OVMS fails to respond, check `docker logs ovms-llm`, verify the model downloa
 2. **Configure the OVMS-backed model:**
    - Click **Settings** → **LLM**
    - Enable **Advanced** mode if needed
-   - Set **Custom Model:** `openai/qwen3-0.6b-int8-ov`
+   - Set **Custom Model:** `openai/qwen3-8b-int8-ov`
    - Set **Base URL:** `http://ovms-llm:8000/v3`
    - Set **API Key:** `unused`
    - Click **Save**
