@@ -167,6 +167,38 @@ TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
+// add_generation_prompt request field controls whether the trailing generation
+// prompt is rendered (assistant prefill support, issue #3877).
+TEST_F(LLMChatTemplateTest, ChatTemplateAddGenerationPromptDefaultsTrue) {
+    std::string jinja = "{% for message in messages %}{{ message['role'] }}: {{ message['content'] }}{% endfor %}{% if add_generation_prompt %}<|GEN|>{% endif %}";
+    ASSERT_TRUE(CreateJinjaConfig(jinja));
+    LoadTemplateProcessor();
+    std::string finalPrompt = "";
+    std::string payloadBody = R"(
+        {
+            "messages": [{ "role": "user", "content": "hi" }]
+        }
+    )";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_NE(finalPrompt.find("<|GEN|>"), std::string::npos) << "default should add generation prompt, got: " << finalPrompt;
+}
+
+TEST_F(LLMChatTemplateTest, ChatTemplateAddGenerationPromptFalse) {
+    std::string jinja = "{% for message in messages %}{{ message['role'] }}: {{ message['content'] }}{% endfor %}{% if add_generation_prompt %}<|GEN|>{% endif %}";
+    ASSERT_TRUE(CreateJinjaConfig(jinja));
+    LoadTemplateProcessor();
+    std::string finalPrompt = "";
+    std::string payloadBody = R"(
+        {
+            "messages": [{ "role": "user", "content": "hi" }, { "role": "assistant", "content": "partial" }],
+            "add_generation_prompt": false
+        }
+    )";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt.find("<|GEN|>"), std::string::npos) << "add_generation_prompt=false should omit generation prompt, got: " << finalPrompt;
+    ASSERT_NE(finalPrompt.find("partial"), std::string::npos) << "assistant prefill content should be present, got: " << finalPrompt;
+}
+
 TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
     CopyDefaultChatTemplate();
     LoadTemplateProcessor();
