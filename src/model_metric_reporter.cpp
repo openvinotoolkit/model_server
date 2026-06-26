@@ -349,6 +349,18 @@ MediapipeServableMetricReporter::MediapipeServableMetricReporter(const MetricCon
         SPDLOG_INFO("DISABLED {}", METRIC_NAME_CURRENT_GRAPHS);
     }
 
+    familyName = METRIC_NAME_GRAPH_LOADED;
+    if (metricConfig->isFamilyEnabled(familyName)) {
+        auto family = registry->createFamily<MetricGauge>(familyName,
+            "Whether the MediaPipe graph resources are loaded (1) or idle-unloaded (0).");
+        THROW_IF_NULL(family, "cannot create family");
+        this->graphLoaded = family->addMetric(
+            {{"name", graphName}});
+        THROW_IF_NULL(this->graphLoaded, "cannot create metric");
+    } else {
+        SPDLOG_INFO("DISABLED {}", METRIC_NAME_GRAPH_LOADED);
+    }
+
     familyName = METRIC_NAME_REQUESTS_ACCEPTED;
     if (metricConfig->isFamilyEnabled(familyName)) {
         auto family = registry->createFamily<MetricCounter>(familyName,

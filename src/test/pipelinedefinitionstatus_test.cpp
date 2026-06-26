@@ -302,3 +302,133 @@ TEST(PipelineDefinitionStatus, ConvertToModelStatus) {
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
     ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::END, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
 }
+
+// ---------------------------------------------------------------------------
+// Idle unload feature: UNLOADED state transitions (issue #4141)
+// ---------------------------------------------------------------------------
+
+TEST(PipelineDefinitionStatus, AvailableThenUnload) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+}
+
+TEST(PipelineDefinitionStatus, UnloadedThenReloadGoesToReloading) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+}
+
+TEST(PipelineDefinitionStatus, UnloadedThenReloadThenValidationPassGoesToAvailable) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(UnloadEvent());
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+}
+
+TEST(PipelineDefinitionStatus, UnloadedThenValidationPassDefensiveGoesToAvailable) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+}
+
+TEST(PipelineDefinitionStatus, UnloadedThenRetireGoesToRetired) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(RetireEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+}
+
+TEST(PipelineDefinitionStatus, UnloadedIsNotAvailable) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    ASSERT_TRUE(pds.isAvailable());
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    ASSERT_FALSE(pds.isAvailable());
+}
+
+TEST(PipelineDefinitionStatus, UnloadedConvertsToModelStatusAvailable) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    // UNLOADED must report AVAILABLE so health checks / routing do not exclude the
+    // servable (it auto-reloads on the next inference request).
+    ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::AVAILABLE, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
+}
+
+TEST(PipelineDefinitionStatus, UnloadEventOnBeginIsNoOp) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+}
+
+TEST(PipelineDefinitionStatus, UnloadEventOnReloadingIsNoOp) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+}
+
+TEST(PipelineDefinitionStatus, UnloadEventOnRetiredIsNoOp) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(RetireEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+}
+
+TEST(PipelineDefinitionStatus, UnloadEventOnLoadingPreconditionFailedRevertsToUnloaded) {
+    // A failed wake-up reload (validate -> LOADING_PRECONDITION_FAILED) is reverted
+    // to UNLOADED by wakeUpIfUnloaded() via UnloadEvent so the next request retries.
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationFailedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+}
+
+TEST(PipelineDefinitionStatus, UnloadedAfterFailedWakeIsRetryableViaReload) {
+    // Full retry path: AVAILABLE -> UNLOADED -> (wake) RELOADING -> (fail) FAILED
+    // -> (revert) UNLOADED -> (retry wake) RELOADING -> (pass) AVAILABLE.
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(ReloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+    pds.handle(ValidationFailedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    pds.handle(UnloadEvent());  // wakeUpIfUnloaded reverts on failure
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(ReloadEvent());
+    pds.handle(ValidationPassedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+}
+
+TEST(PipelineDefinitionStatus, UnloadEventOnUnloadedIsIdempotent) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(UnloadEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+}

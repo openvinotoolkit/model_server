@@ -357,6 +357,10 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
              },
              "subconfig": {
                  "type": "string"
+             },
+             "idle_unload_timeout_seconds": {
+                 "type": "integer",
+                 "minimum": 0
              }
         },
         "additionalProperties": false

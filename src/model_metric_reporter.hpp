@@ -168,6 +168,9 @@ protected:
 
 public:
     std::unique_ptr<MetricGauge> currentGraphs;
+    // 1 = graph resources loaded, 0 = idle-unloaded. Always 1 after a successful
+    // load for graphs that never enable idle unload.
+    std::unique_ptr<MetricGauge> graphLoaded;
 
     // KFS
     std::unique_ptr<MetricCounter> requestAcceptedGrpcModelInfer;

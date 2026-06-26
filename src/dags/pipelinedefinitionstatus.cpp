@@ -35,7 +35,8 @@ const std::string& pipelineDefinitionStateCodeToString(PipelineDefinitionStateCo
         {PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION, "LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION"},
         {PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION, "AVAILABLE_REQUIRED_REVALIDATION"},
         {PipelineDefinitionStateCode::AVAILABLE, "AVAILABLE"},
-        {PipelineDefinitionStateCode::RETIRED, "RETIRED"}};
+        {PipelineDefinitionStateCode::RETIRED, "RETIRED"},
+        {PipelineDefinitionStateCode::UNLOADED, "UNLOADED"}};
     return names.at(code);
 }
 
@@ -62,6 +63,9 @@ StateKeeper BeginState::handle(const RetireEvent& e) const {
     throw std::logic_error(INVALID_TRANSITION_MESSAGE);
     return {};
 }
+StateKeeper BeginState::handle(const UnloadEvent& e) const {
+    return {};  // unload is a no-op when not yet loaded
+}
 
 PipelineDefinitionStateCode ReloadState::getStateCode() const {
     return code;
@@ -84,6 +88,9 @@ StateKeeper ReloadState::handle(const RetireEvent& e) const {
     throw std::logic_error(INVALID_TRANSITION_MESSAGE);
     return {};
 }
+StateKeeper ReloadState::handle(const UnloadEvent& e) const {
+    return {};  // unload is a no-op while reloading
+}
 
 PipelineDefinitionStateCode AvailableState::getStateCode() const {
     return code;
@@ -105,6 +112,9 @@ StateChanger<AvailableRequiredRevalidation> AvailableState::handle(const UsedMod
 StateChanger<RetiredState> AvailableState::handle(const RetireEvent& e) const {
     return {};
 }
+StateChanger<UnloadedState> AvailableState::handle(const UnloadEvent& e) const {
+    return {};
+}
 
 PipelineDefinitionStateCode AvailableRequiredRevalidation::getStateCode() const {
     return code;
@@ -123,6 +133,9 @@ StateKeeper AvailableRequiredRevalidation::handle(const UsedModelChangedEvent& e
 }
 StateChanger<RetiredState> AvailableRequiredRevalidation::handle(const RetireEvent& e) const {
     return {};
+}
+StateKeeper AvailableRequiredRevalidation::handle(const UnloadEvent& e) const {
+    return {};  // unload is a no-op in AVAILABLE_REQUIRED_REVALIDATION
 }
 
 PipelineDefinitionStateCode LoadingPreconditionFailedState::getStateCode() const {
@@ -145,6 +158,10 @@ StateChanger<LoadingFailedLastValidationRequiredRevalidation> LoadingPreconditio
 StateChanger<RetiredState> LoadingPreconditionFailedState::handle(const RetireEvent& e) const {
     return {};
 }
+StateChanger<UnloadedState> LoadingPreconditionFailedState::handle(const UnloadEvent& e) const {
+    // Revert a failed wake-up reload back to UNLOADED so the next request retries.
+    return {};
+}
 
 PipelineDefinitionStateCode LoadingFailedLastValidationRequiredRevalidation::getStateCode() const {
     return code;
@@ -163,6 +180,9 @@ StateKeeper LoadingFailedLastValidationRequiredRevalidation::handle(const UsedMo
 }
 StateChanger<RetiredState> LoadingFailedLastValidationRequiredRevalidation::handle(const RetireEvent& e) const {
     return {};
+}
+StateKeeper LoadingFailedLastValidationRequiredRevalidation::handle(const UnloadEvent& e) const {
+    return {};  // unload is a no-op when loading already failed
 }
 
 PipelineDefinitionStateCode RetiredState::getStateCode() const {
@@ -186,6 +206,31 @@ StateKeeper RetiredState::handle(const UsedModelChangedEvent& e) const {
 StateKeeper RetiredState::handle(const RetireEvent& e) const {
     throw std::logic_error(INVALID_TRANSITION_MESSAGE);
     return {};
+}
+StateKeeper RetiredState::handle(const UnloadEvent& e) const {
+    return {};  // unload is a no-op when already retired
+}
+
+PipelineDefinitionStateCode UnloadedState::getStateCode() const {
+    return code;
+}
+StateChanger<ReloadState> UnloadedState::handle(const ReloadEvent& e) const {
+    return {};  // wake-up: transition through reload path
+}
+StateChanger<RetiredState> UnloadedState::handle(const RetireEvent& e) const {
+    return {};  // config removal while unloaded
+}
+StateChanger<AvailableState> UnloadedState::handle(const ValidationPassedEvent& e) const {
+    return {};  // defensive: if validation passes directly, go available
+}
+StateKeeper UnloadedState::handle(const ValidationFailedEvent& e) const {
+    return {};
+}
+StateKeeper UnloadedState::handle(const UsedModelChangedEvent& e) const {
+    return {};
+}
+StateKeeper UnloadedState::handle(const UnloadEvent& e) const {
+    return {};  // already unloaded, idempotent
 }
 
 PipelineDefinitionStatus::PipelineDefinitionStatus(const std::string& type, const std::string& name) :
@@ -231,6 +276,15 @@ std::tuple<ModelVersionState, ModelVersionStatusErrorCode> PipelineDefinitionSta
     case PipelineDefinitionStateCode::RETIRED:
         return {
             ModelVersionState::END,
+            ModelVersionStatusErrorCode::OK};
+
+    case PipelineDefinitionStateCode::UNLOADED:
+        // Report AVAILABLE: the graph auto-reloads on the next inference request,
+        // so health checks and routing should treat it as available. Reporting END
+        // or UNLOADING would cause clients and load-balancers to permanently
+        // exclude this servable from their pools.
+        return {
+            ModelVersionState::AVAILABLE,
             ModelVersionStatusErrorCode::OK};
 
     default:
