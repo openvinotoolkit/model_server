@@ -334,6 +334,30 @@ Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string
     return StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE;
 }
 
+Status resolveGenerationConfigPath(std::string& outPath, const std::string& parsedModelsPath, const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    // Default: generation_config.json inside the model directory.
+    outPath = (std::filesystem::path(parsedModelsPath) / "generation_config.json").string();
+    if (!nodeOptions.has_generation_config_path() || nodeOptions.generation_config_path().empty()) {
+        return StatusCode::OK;
+    }
+    // Explicit per-node override. A relative path is resolved against models_path
+    // (its parent directory when models_path points at a file, e.g. a GGUF).
+    std::filesystem::path overridePath(nodeOptions.generation_config_path());
+    if (overridePath.is_relative()) {
+        std::filesystem::path base(parsedModelsPath);
+        if (!std::filesystem::is_directory(base)) {
+            base = base.parent_path();
+        }
+        overridePath = base / overridePath;
+    }
+    if (!std::filesystem::exists(overridePath)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node generation_config_path: {} does not exist.", overridePath.string());
+        return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
+    }
+    outPath = overridePath.string();
+    return StatusCode::OK;
+}
+
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
     std::string configPath = FileSystem::appendSlash(modelsPath) + "config.json";
     std::optional<uint32_t> maxModelLength;
