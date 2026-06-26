@@ -15,6 +15,15 @@
 ::
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
+
+:: Delete stale test logs from previous runs before starting fresh
+echo Cleaning up stale test logs...
+del /f /q win_build_test.log 2>nul
+del /f /q win_full_test.log 2>nul
+del /f /q win_test_summary.log 2>nul
+del /f /q win_test_log.zip 2>nul
+del /f /q win_install_service_test.log 2>nul
+
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-1234" number passed here from jenkins so that a tmp directory will be created
 IF "%~1"=="" (
@@ -91,21 +100,36 @@ set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Set required libraries paths
 %openvinoBatch%
-if !errorlevel! neq 0 exit /b !errorlevel!
+if !errorlevel! neq 0 (
+    echo [ERROR] OpenVINO setupvars.bat failed with error code !errorlevel! > win_full_test.log
+    exit /b !errorlevel!
+)
 %opencvBatch%
-if !errorlevel! neq 0 exit /b !errorlevel!
+if !errorlevel! neq 0 (
+    echo [ERROR] OpenCV setup_vars_opencv4.cmd failed with error code !errorlevel! >> win_full_test.log
+    exit /b !errorlevel!
+)
 
 :: Start bazel build test
 %buildTestCommand% 2>&1 | tee win_build_test.log
 set "bazelExitCode=!errorlevel!"
 :: Check the exit code and exit if it's not 0
-if !bazelExitCode! neq 0 exit /b !bazelExitCode!
+if !bazelExitCode! neq 0 (
+    echo [ERROR] Bazel build failed with exit code !bazelExitCode! >> win_full_test.log
+    exit /b !bazelExitCode!
+)
 
-
+(
+    echo [ERROR] windows_change_test_configs.py failed with error code !errorlevel! >> win_full_test.log
+    exit /b !errorlevel!
+)
 :: Change tests configs to windows paths
 %changeConfigsCmd%
 if !errorlevel! neq 0 exit /b !errorlevel!
-
+(
+    echo [ERROR] windows_prepare_llm_models.bat failed with error code !errorlevel! >> win_full_test.log
+    exit /b !errorlevel!
+)
 :: Download LLMs
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -124,25 +148,16 @@ echo [INFO] install_ovms_service.bat unit tests passed.
 :: Start unit test
 echo Running: %runTest%
 %runTest%
-if !errorlevel! neq 0 (
-    echo [ERROR] windows_test.bat failed before test parsing stage.
-    exit /b 1
-)
+set "testExitCode=!errorlevel!"
 
 IF "%~2"=="--with_python" (
     echo Running: %runPythonRuntimeTest%
     %runPythonRuntimeTest% >> win_full_test.log 2>&1
-    if !errorlevel! neq 0 (
-        echo [ERROR] windows_test.bat failed before test parsing stage.
-        exit /b 1
-    )
+    set "pythonTestExitCode=!errorlevel!"
 
     echo Running: %runNoLibpythonSmokeTest%
     %runNoLibpythonSmokeTest%
-    if !errorlevel! neq 0 (
-        echo [ERROR] windows_test.bat failed before test parsing stage.
-        exit /b 1
-    )
+    set "smokeTestExitCode=!errorlevel!"
 )
 
 :: Cut tests log to results
