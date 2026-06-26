@@ -83,6 +83,10 @@ std::variant<TokenizeRequest, std::string> TokenizeParser::validateTokenizeReque
     if (it != parsedJson.MemberEnd()) {
         if (it->value.IsUint()) {
             size_t max_length = it->value.GetUint();
+            if (max_length == 0) {
+                return "max_length should be greater than 0";
+            }
+
             request.parameters["max_length"] = max_length;
             // Keep OVMS tokenize API contract: max_length implies truncation.
             request.parameters["truncation"] = true;

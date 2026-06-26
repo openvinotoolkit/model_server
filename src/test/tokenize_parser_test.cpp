@@ -246,3 +246,21 @@ TEST(TokenizeDeserialization, invalidTokenizeMaxLengthNegative) {
     auto error = status.message();
     ASSERT_EQ(error, "max_length should be unsigned integer");
 }
+
+TEST(TokenizeDeserialization, invalidTokenizeMaxLengthZero) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 0
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request);
+    ASSERT_NE(status, absl::OkStatus());
+    auto error = status.message();
+    ASSERT_EQ(error, "max_length should be greater than 0");
+}
