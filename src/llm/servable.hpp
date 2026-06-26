@@ -84,16 +84,21 @@ enum class ChatTemplateBackend {
 // thread, so the mutex is acquired but uncontested.
 struct DeltaChannel {
     // Push a delta from any thread (streamer callback).
-    void push(rapidjson::Document delta) {
+    // When isLast is true, also marks the channel complete atomically so consumers
+    // always see the final document and the completion flag in the same observation.
+    void push(rapidjson::Document delta, bool isLast = false) {
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_deltas.push_back(std::move(delta));
+            if (isLast)
+                m_complete = true;
         }
         m_cv.notify_one();
     }
 
     // Signal that no more deltas will be pushed (generation complete or cancelled).
-    // May be called from any thread.
+    // May be called from any thread. Also acts as a safety-net for paths where
+    // push(delta, isLast=true) may not fire (e.g. client disconnection mid-stream).
     void signalComplete() {
         {
             std::lock_guard<std::mutex> lock(m_mutex);
