@@ -47,20 +47,35 @@ set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
 :: Python 312 needs to be first in the windows path, as well as MSYS tools
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
 
 :: Bazel compilation settings
-set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+:: Auto-detect Visual Studio (BuildTools/Community/Pro/Enterprise; VS2019/2022/2026+)
+:: via vswhere, instead of hardcoding a single edition/path.
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if not exist "%VSWHERE%" goto :msvc_error
+set "VS_DETECTED="
+for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VS_DETECTED=%%i"
+if not defined VS_DETECTED goto :msvc_error
+set VS_2022_BT="%VS_DETECTED%"
+:: Major version (17, 18, ...) -> CMake generator string "Visual Studio <major> <year>"
+for /f "usebackq tokens=1 delims=." %%m in (`"%VSWHERE%" -latest -products * -property installationVersion`) do set "VS_MAJOR=%%m"
+set "VS_YEAR="
+if "%VS_MAJOR%"=="16" set "VS_YEAR=2019"
+if "%VS_MAJOR%"=="17" set "VS_YEAR=2022"
+if "%VS_MAJOR%"=="18" set "VS_YEAR=2026"
+if not defined VS_YEAR ( echo [ERROR] Unsupported Visual Studio major version %VS_MAJOR% - add it to the VS_YEAR map & goto :msvc_error )
+set "CMAKE_GEN=Visual Studio %VS_MAJOR% %VS_YEAR%"
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
-echo [ERROR] Required MSVC compiler not installed
+echo [ERROR] Required MSVC compiler not installed (need Visual Studio 2019/2022/2026 with the C++ x64 toolset)
 goto :exit_build_error
 :msvc_bt
-echo [INFO] Using MSVC %VS_2022_BT%
+echo [INFO] Using MSVC %VS_2022_BT% (generator: %CMAKE_GEN%)
 set BAZEL_VS=%VS_2022_BT%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -225,7 +240,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\%genai_dir% (
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
-mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%genai_dir%
+mklink /j %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%genai_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 echo [INFO] GenAI installed: %BAZEL_SHORT_PATH%\%genai_dir%
@@ -264,7 +279,7 @@ IF /I NOT EXIST build (
 )
 cd build
 set "TBB_DIR="
-cmake -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
+cmake -G "%CMAKE_GEN%" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -621,7 +636,7 @@ if "%ENABLE_INTEGRITYCHECK%"=="1" (
 )
 
 :: Expected compilers in CI - -G "Visual Studio 16 2019", local -G "Visual Studio 17 2022" as default
-cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags% %SDL_OPS%
+cmake .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules -D PYTHON3_EXECUTABLE=C:\opt\Python312\python.exe -D BUILD_opencv_python3=OFF -D BUILD_opencv_python2=OFF -D BUILD_opencv_python_bindings_generator=OFF %opencv_flags% %SDL_OPS%
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
 if !errorlevel! neq 0 exit /b !errorlevel!

@@ -133,6 +133,12 @@ build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
 
 build:windows --host_cxxopt=/std:c++17
 build:windows --cxxopt=/std:c++17
+# MSVC 14.51+ (VS 2026) raises C5285 ("specializing std::is_signed is forbidden")
+# on TensorFlow/XLA's quantized-type specializations (xla/tsl/framework/type_traits.h).
+# It is benign and upstream (XLA) compiles with /WX, so suppress it to allow building
+# with newer toolsets / Visual Studio 2026.
+build:windows --copt=/wd5285
+build:windows --host_copt=/wd5285
 # TODO Windows: may impact python nodes execution
 build:windows --noenable_bzlmod
 

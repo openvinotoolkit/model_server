@@ -26,11 +26,17 @@ set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Bazel compilation settings
-set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+:: Auto-detect Visual Studio (BuildTools/Community/Pro/Enterprise; VS2019/2022/2026+) via vswhere.
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if not exist "%VSWHERE%" goto :msvc_error
+set "VS_DETECTED="
+for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VS_DETECTED=%%i"
+if not defined VS_DETECTED goto :msvc_error
+set VS_2022_BT="%VS_DETECTED%"
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
-echo [ERROR] Required MSVC compiler not installed
+echo [ERROR] Required MSVC compiler not installed (need Visual Studio 2019/2022/2026 with the C++ x64 toolset)
 goto :exit_build_error
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
@@ -38,7 +44,9 @@ set BAZEL_VS=%VS_2022_BT%
 
 :: Bazel compilation settings end
 set "BAZEL_VC=%BAZEL_VS:"=%\VC"
-set "BAZEL_VC_FULL_VERSION=14.44.35207"
+:: Auto-detect the latest installed MSVC toolset version (was hardcoded 14.44.35207)
+set "BAZEL_VC_FULL_VERSION="
+for /f "delims=" %%v in ('dir /b /ad /o-n "%BAZEL_VC%\Tools\MSVC" 2^>nul') do if not defined BAZEL_VC_FULL_VERSION set "BAZEL_VC_FULL_VERSION=%%v"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
