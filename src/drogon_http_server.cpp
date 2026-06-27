@@ -32,12 +32,15 @@
 
 namespace ovms {
 
-DrogonHttpServer::DrogonHttpServer(size_t numWorkersForUnary, size_t numWorkersForStreaming, int port, const std::string& address) :
+DrogonHttpServer::DrogonHttpServer(size_t numWorkersForUnary, size_t numWorkersForStreaming, int port, const std::string& address, const std::string& certPath, const std::string& keyPath, const std::string& caPath) :
     numWorkersForUnary(numWorkersForUnary),
     numWorkersForStreaming(numWorkersForStreaming),
     pool(std::make_unique<mediapipe::ThreadPool>("DrogonThreadPool", numWorkersForStreaming)),
     port(port),
-    address(address) {
+    address(address),
+    certPath(certPath),
+    keyPath(keyPath),
+    caPath(caPath) {
     SPDLOG_DEBUG("Starting http thread pool for streaming ({} threads)", numWorkersForStreaming);
     pool->StartWorkers();  // this tp is for streaming workload which cannot use drogon's internal listener threads
     SPDLOG_DEBUG("Thread pool started");
@@ -153,9 +156,26 @@ Status DrogonHttpServer::startAcceptingRequests() {
                     });
 
                 auto ips = ovms::tokenize(this->address, ',');
+                const bool useTls = !this->certPath.empty() && !this->keyPath.empty();
+                if (useTls) {
+                    if (!this->caPath.empty()) {
+                        SPDLOG_INFO("REST TLS enabled with client certificate verification (mTLS)");
+                    } else {
+                        SPDLOG_INFO("REST TLS enabled (server-only TLS, no client certificate verification)");
+                    }
+                }
                 for (const auto& ip : ips) {
                     SPDLOG_INFO("Binding REST server to address: {}:{}", ip, this->port);
-                    drogon::app().addListener(ip, this->port);
+                    if (useTls) {
+                        std::vector<std::pair<std::string, std::string>> sslConfCmds;
+                        if (!this->caPath.empty()) {
+                            sslConfCmds.push_back({"CAfile", this->caPath});
+                            sslConfCmds.push_back({"VerifyPeer", "1"});
+                        }
+                        drogon::app().addListener(ip, this->port, /*useSSL=*/true, this->certPath, this->keyPath, /*useOldTLS=*/false, sslConfCmds);
+                    } else {
+                        drogon::app().addListener(ip, this->port);
+                    }
                 }
                 drogon::app().run();
             } catch (...) {

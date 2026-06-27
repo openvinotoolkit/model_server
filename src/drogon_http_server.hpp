@@ -35,6 +35,9 @@ class DrogonHttpServer {
     std::unique_ptr<mediapipe::ThreadPool> pool;
     int port;
     std::string address;
+    std::string certPath;
+    std::string keyPath;
+    std::string caPath;
     std::function<void(
         const drogon::HttpRequestPtr&,
         std::function<void(const drogon::HttpResponsePtr&)>)>
@@ -47,7 +50,10 @@ public:
         size_t numWorkersForUnary,
         size_t numWorkersForStreaming,
         int port,
-        const std::string& address);
+        const std::string& address,
+        const std::string& certPath = "",
+        const std::string& keyPath = "",
+        const std::string& caPath = "");
 
     Status startAcceptingRequests();
     void terminate();

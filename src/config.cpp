@@ -352,6 +352,78 @@ bool Config::validate() {
         return false;
     }
 
+    // check TLS paths:
+    bool grpcHasCert = !this->serverSettings.grpcCertPath.empty();
+    bool grpcHasKey = !this->serverSettings.grpcKeyPath.empty();
+    bool grpcHasCa = !this->serverSettings.grpcCaPath.empty();
+    bool restHasCert = !this->serverSettings.restCertPath.empty();
+    bool restHasKey = !this->serverSettings.restKeyPath.empty();
+    bool restHasCa = !this->serverSettings.restCaPath.empty();
+
+    // A TLS material file must exist and be non-empty (an empty/truncated cert or key
+    // would otherwise pass and later cause an opaque gRPC bind failure).
+    auto tlsFileUsable = [](const std::string& p) {
+        std::error_code ec;
+        return std::filesystem::exists(p) && std::filesystem::file_size(p, ec) > 0 && !ec;
+    };
+
+    if (grpcHasCert != grpcHasKey) {
+        std::cerr << "grpc_certificate_path and grpc_key_path must both be set to enable gRPC TLS" << std::endl;
+        return false;
+    }
+    if (grpcHasCert && !tlsFileUsable(this->serverSettings.grpcCertPath)) {
+        std::cerr << "File path provided as --grpc_certificate_path does not exist or is empty: " << this->serverSettings.grpcCertPath << std::endl;
+        return false;
+    }
+    if (grpcHasKey && !tlsFileUsable(this->serverSettings.grpcKeyPath)) {
+        std::cerr << "File path provided as --grpc_key_path does not exist or is empty: " << this->serverSettings.grpcKeyPath << std::endl;
+        return false;
+    }
+    if (grpcHasCa) {
+        if (!grpcHasCert) {
+            std::cerr << "grpc_ca_path requires grpc_certificate_path and grpc_key_path to be set" << std::endl;
+            return false;
+        }
+        if (!tlsFileUsable(this->serverSettings.grpcCaPath)) {
+            std::cerr << "File path provided as --grpc_ca_path does not exist or is empty: " << this->serverSettings.grpcCaPath << std::endl;
+            return false;
+        }
+    }
+
+    // REST TLS is gated: the bundled Drogon is currently built without OpenSSL, so it
+    // cannot serve HTTPS (enabling SSL would silently fall back to plaintext). Fail
+    // closed rather than expose a plaintext endpoint a user believes is encrypted.
+    // The REST TLS wiring (addListener SSL) is in place and will activate once Drogon
+    // is built with OpenSSL; remove this guard at that point. Use gRPC TLS or a
+    // TLS-terminating proxy for REST in the meantime. See issue #2144.
+    if (restHasCert || restHasKey || restHasCa) {
+        std::cerr << "REST TLS (rest_certificate_path/rest_key_path/rest_ca_path) is not supported in this build because the bundled Drogon was built without OpenSSL. Use gRPC TLS (grpc_certificate_path/grpc_key_path) or terminate REST TLS with a proxy." << std::endl;
+        return false;
+    }
+
+    if (restHasCert != restHasKey) {
+        std::cerr << "rest_certificate_path and rest_key_path must both be set to enable REST TLS" << std::endl;
+        return false;
+    }
+    if (restHasCert && !std::filesystem::exists(this->serverSettings.restCertPath)) {
+        std::cerr << "File path provided as --rest_certificate_path does not exist: " << this->serverSettings.restCertPath << std::endl;
+        return false;
+    }
+    if (restHasKey && !std::filesystem::exists(this->serverSettings.restKeyPath)) {
+        std::cerr << "File path provided as --rest_key_path does not exist: " << this->serverSettings.restKeyPath << std::endl;
+        return false;
+    }
+    if (restHasCa) {
+        if (!restHasCert) {
+            std::cerr << "rest_ca_path requires rest_certificate_path and rest_key_path to be set" << std::endl;
+            return false;
+        }
+        if (!std::filesystem::exists(this->serverSettings.restCaPath)) {
+            std::cerr << "File path provided as --rest_ca_path does not exist: " << this->serverSettings.restCaPath << std::endl;
+            return false;
+        }
+    }
+
     // check bind addresses:
     if (!restBindAddress().empty() && check_hostname_or_ip(restBindAddress()) == false) {
         std::cerr << "rest_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
@@ -427,5 +499,11 @@ const std::string& Config::allowedMethods() const { return this->serverSettings.
 const std::string& Config::allowedHeaders() const { return this->serverSettings.allowedHeaders; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }
 const std::string& Config::apiKey() const { return this->serverSettings.apiKey; }
+const std::string Config::grpcCertPath() const { return this->serverSettings.grpcCertPath; }
+const std::string Config::grpcKeyPath() const { return this->serverSettings.grpcKeyPath; }
+const std::string Config::grpcCaPath() const { return this->serverSettings.grpcCaPath; }
+const std::string Config::restCertPath() const { return this->serverSettings.restCertPath; }
+const std::string Config::restKeyPath() const { return this->serverSettings.restKeyPath; }
+const std::string Config::restCaPath() const { return this->serverSettings.restCaPath; }
 
 }  // namespace ovms
