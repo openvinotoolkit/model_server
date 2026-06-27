@@ -164,6 +164,44 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
     return true;
 }
 
+// Validates a set of TLS material paths (certificate, private key, optional CA) for one
+// endpoint. cert and key must be set together; each provided file must exist and be
+// non-empty (an empty/truncated cert or key would otherwise pass and later cause an
+// opaque bind/handshake failure); a CA requires cert+key. flagPrefix is the user-facing
+// option prefix, e.g. "grpc" or "rest", used only in error messages.
+static bool validateTlsMaterial(const std::string& certPath, const std::string& keyPath, const std::string& caPath, const std::string& flagPrefix) {
+    auto fileUsable = [](const std::string& p) {
+        std::error_code ec;
+        return std::filesystem::exists(p) && std::filesystem::file_size(p, ec) > 0 && !ec;
+    };
+    const bool hasCert = !certPath.empty();
+    const bool hasKey = !keyPath.empty();
+    const bool hasCa = !caPath.empty();
+    if (hasCert != hasKey) {
+        std::cerr << flagPrefix << "_certificate_path and " << flagPrefix << "_key_path must both be set to enable TLS" << std::endl;
+        return false;
+    }
+    if (hasCert && !fileUsable(certPath)) {
+        std::cerr << "File path provided as --" << flagPrefix << "_certificate_path does not exist or is empty: " << certPath << std::endl;
+        return false;
+    }
+    if (hasKey && !fileUsable(keyPath)) {
+        std::cerr << "File path provided as --" << flagPrefix << "_key_path does not exist or is empty: " << keyPath << std::endl;
+        return false;
+    }
+    if (hasCa) {
+        if (!hasCert) {
+            std::cerr << flagPrefix << "_ca_path requires " << flagPrefix << "_certificate_path and " << flagPrefix << "_key_path to be set" << std::endl;
+            return false;
+        }
+        if (!fileUsable(caPath)) {
+            std::cerr << "File path provided as --" << flagPrefix << "_ca_path does not exist or is empty: " << caPath << std::endl;
+            return false;
+        }
+    }
+    return true;
+}
+
 bool Config::validate() {
     if (!this->serverSettings.hfSettings.sourceModel.empty() && this->serverSettings.hfSettings.task == UNKNOWN_GRAPH) {
         std::cerr << "--source_model should be used combined with --task" << std::endl;
@@ -352,76 +390,22 @@ bool Config::validate() {
         return false;
     }
 
-    // check TLS paths:
-    bool grpcHasCert = !this->serverSettings.grpcCertPath.empty();
-    bool grpcHasKey = !this->serverSettings.grpcKeyPath.empty();
-    bool grpcHasCa = !this->serverSettings.grpcCaPath.empty();
-    bool restHasCert = !this->serverSettings.restCertPath.empty();
-    bool restHasKey = !this->serverSettings.restKeyPath.empty();
-    bool restHasCa = !this->serverSettings.restCaPath.empty();
-
-    // A TLS material file must exist and be non-empty (an empty/truncated cert or key
-    // would otherwise pass and later cause an opaque gRPC bind failure).
-    auto tlsFileUsable = [](const std::string& p) {
-        std::error_code ec;
-        return std::filesystem::exists(p) && std::filesystem::file_size(p, ec) > 0 && !ec;
-    };
-
-    if (grpcHasCert != grpcHasKey) {
-        std::cerr << "grpc_certificate_path and grpc_key_path must both be set to enable gRPC TLS" << std::endl;
+    // gRPC TLS: validate cert/key/CA paths.
+    if (!validateTlsMaterial(this->serverSettings.grpcCertPath, this->serverSettings.grpcKeyPath, this->serverSettings.grpcCaPath, "grpc")) {
         return false;
-    }
-    if (grpcHasCert && !tlsFileUsable(this->serverSettings.grpcCertPath)) {
-        std::cerr << "File path provided as --grpc_certificate_path does not exist or is empty: " << this->serverSettings.grpcCertPath << std::endl;
-        return false;
-    }
-    if (grpcHasKey && !tlsFileUsable(this->serverSettings.grpcKeyPath)) {
-        std::cerr << "File path provided as --grpc_key_path does not exist or is empty: " << this->serverSettings.grpcKeyPath << std::endl;
-        return false;
-    }
-    if (grpcHasCa) {
-        if (!grpcHasCert) {
-            std::cerr << "grpc_ca_path requires grpc_certificate_path and grpc_key_path to be set" << std::endl;
-            return false;
-        }
-        if (!tlsFileUsable(this->serverSettings.grpcCaPath)) {
-            std::cerr << "File path provided as --grpc_ca_path does not exist or is empty: " << this->serverSettings.grpcCaPath << std::endl;
-            return false;
-        }
     }
 
     // REST TLS is gated: the bundled Drogon is currently built without OpenSSL, so it
     // cannot serve HTTPS (enabling SSL would silently fall back to plaintext). Fail
     // closed rather than expose a plaintext endpoint a user believes is encrypted.
-    // The REST TLS wiring (addListener SSL) is in place and will activate once Drogon
-    // is built with OpenSSL; remove this guard at that point. Use gRPC TLS or a
-    // TLS-terminating proxy for REST in the meantime. See issue #2144.
-    if (restHasCert || restHasKey || restHasCa) {
+    // The REST TLS wiring (addListener SSL, see drogon_http_server.cpp) is in place and
+    // will activate once Drogon is built with OpenSSL. To enable REST TLS at that point,
+    // replace this guard with:
+    //     if (!validateTlsMaterial(restCertPath, restKeyPath, restCaPath, "rest")) return false;
+    // Use gRPC TLS or a TLS-terminating proxy for REST in the meantime. See issue #2144.
+    if (!this->serverSettings.restCertPath.empty() || !this->serverSettings.restKeyPath.empty() || !this->serverSettings.restCaPath.empty()) {
         std::cerr << "REST TLS (rest_certificate_path/rest_key_path/rest_ca_path) is not supported in this build because the bundled Drogon was built without OpenSSL. Use gRPC TLS (grpc_certificate_path/grpc_key_path) or terminate REST TLS with a proxy." << std::endl;
         return false;
-    }
-
-    if (restHasCert != restHasKey) {
-        std::cerr << "rest_certificate_path and rest_key_path must both be set to enable REST TLS" << std::endl;
-        return false;
-    }
-    if (restHasCert && !std::filesystem::exists(this->serverSettings.restCertPath)) {
-        std::cerr << "File path provided as --rest_certificate_path does not exist: " << this->serverSettings.restCertPath << std::endl;
-        return false;
-    }
-    if (restHasKey && !std::filesystem::exists(this->serverSettings.restKeyPath)) {
-        std::cerr << "File path provided as --rest_key_path does not exist: " << this->serverSettings.restKeyPath << std::endl;
-        return false;
-    }
-    if (restHasCa) {
-        if (!restHasCert) {
-            std::cerr << "rest_ca_path requires rest_certificate_path and rest_key_path to be set" << std::endl;
-            return false;
-        }
-        if (!std::filesystem::exists(this->serverSettings.restCaPath)) {
-            std::cerr << "File path provided as --rest_ca_path does not exist: " << this->serverSettings.restCaPath << std::endl;
-            return false;
-        }
     }
 
     // check bind addresses:
