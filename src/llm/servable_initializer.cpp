@@ -430,11 +430,21 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         if (status != StatusCode::OK) {
             return status;
         }
+        // When the pipeline type was auto-selected (not explicitly requested by the user), continuous
+        // batching can gracefully fall back to the legacy pipeline for models that do not support
+        // PagedAttention (e.g. Gemma, exported without a ScaledDotProductAttention op). When the user
+        // explicitly requested *_CB we surface the error instead of silently changing their request.
+        const bool autoSelectedPipelineType = (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO);
         if (pipelineType == PipelineType::LM_CB) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<ContinuousBatchingServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
+            if (status == StatusCode::LLM_NODE_PAGED_ATTENTION_NOT_SUPPORTED && autoSelectedPipelineType) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Model does not support PagedAttention, falling back to Language Model Legacy servable");
+                LegacyServableInitializer legacyServableInitializer;
+                status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
+            }
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
@@ -446,6 +456,11 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<VisualLanguageModelServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
+            if (status == StatusCode::LLM_NODE_PAGED_ATTENTION_NOT_SUPPORTED && autoSelectedPipelineType) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Model does not support PagedAttention, falling back to Visual Language Model Legacy servable");
+                VisualLanguageModelLegacyServableInitializer legacyServableInitializer;
+                status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
+            }
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
