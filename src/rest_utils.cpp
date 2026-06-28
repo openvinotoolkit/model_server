@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "rest_utils.hpp"
 
+#include <cmath>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -58,6 +59,21 @@ enum : unsigned int {
 }
 
 namespace ovms {
+
+namespace {
+// Integral types are always JSON-representable; only floating values can be NaN/Inf,
+// which rapidjson cannot serialize (and which are invalid per the JSON spec).
+template <typename T>
+inline bool isJsonRepresentable(T) {
+    return true;
+}
+inline bool isJsonRepresentable(float v) {
+    return std::isfinite(v);
+}
+inline bool isJsonRepresentable(double v) {
+    return std::isfinite(v);
+}
+}  // namespace
 
 static Status checkValField(const size_t& fieldSize, const size_t& expectedElementsNumber) {
     if (fieldSize != expectedElementsNumber) {
@@ -291,6 +307,9 @@ static void appendBinaryOutput(std::string& bytesOutputsBuffer, char* output, si
             appendBinaryOutput(bytesOutputsBuffer, (char*)tensor.contents().CONTENTS_FIELD().data(), expectedContentSize);            \
         } else {                                                                                                                      \
             for (auto& number : tensor.contents().CONTENTS_FIELD()) {                                                                 \
+                if (!isJsonRepresentable(number))                                                                                     \
+                    return Status(StatusCode::JSON_SERIALIZATION_ERROR,                                                               \
+                        "Output \"" + tensor.name() + "\" contains a non-finite (NaN/Inf) value that cannot be serialized to JSON");  \
                 writer.WRITER_TYPE(number);                                                                                           \
             }                                                                                                                         \
         }                                                                                                                             \
@@ -298,8 +317,13 @@ static void appendBinaryOutput(std::string& bytesOutputsBuffer, char* output, si
         if (binaryOutput) {                                                                                                           \
             appendBinaryOutput(bytesOutputsBuffer, (char*)response_proto.raw_output_contents(tensor_it).data(), expectedContentSize); \
         } else {                                                                                                                      \
-            for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(DATATYPE))                       \
-                writer.WRITER_TYPE(*(reinterpret_cast<const DATATYPE*>(response_proto.raw_output_contents(tensor_it).data() + i)));   \
+            for (size_t i = 0; i < response_proto.raw_output_contents(tensor_it).size(); i += sizeof(DATATYPE)) {                     \
+                DATATYPE valToWrite = *(reinterpret_cast<const DATATYPE*>(response_proto.raw_output_contents(tensor_it).data() + i)); \
+                if (!isJsonRepresentable(valToWrite))                                                                                 \
+                    return Status(StatusCode::JSON_SERIALIZATION_ERROR,                                                               \
+                        "Output \"" + tensor.name() + "\" contains a non-finite (NaN/Inf) value that cannot be serialized to JSON");  \
+                writer.WRITER_TYPE(valToWrite);                                                                                       \
+            }                                                                                                                         \
         }                                                                                                                             \
     }
 
