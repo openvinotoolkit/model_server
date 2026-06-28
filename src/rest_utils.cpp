@@ -123,6 +123,11 @@ Status makeJsonFromPredictResponse(
                 for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(float))
                     tensor.add_float_val(*reinterpret_cast<float*>(tensor.mutable_tensor_content()->data() + i));
             }
+            for (float v : tensor.float_val()) {
+                if (!isJsonRepresentable(v))
+                    return Status(StatusCode::JSON_SERIALIZATION_ERROR,
+                        "Output \"" + kv.first + "\" contains a non-finite (NaN/Inf) value that cannot be serialized to JSON");
+            }
             break;
         case DataType::DT_INT32:
             if (seekDataInValField) {
@@ -162,6 +167,11 @@ Status makeJsonFromPredictResponse(
             } else {
                 for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(double))
                     tensor.add_double_val(*reinterpret_cast<double*>(tensor.mutable_tensor_content()->data() + i));
+            }
+            for (double v : tensor.double_val()) {
+                if (!isJsonRepresentable(v))
+                    return Status(StatusCode::JSON_SERIALIZATION_ERROR,
+                        "Output \"" + kv.first + "\" contains a non-finite (NaN/Inf) value that cannot be serialized to JSON");
             }
             break;
         case DataType::DT_INT16:

@@ -134,6 +134,33 @@ TEST_F(TFSMakeJsonFromPredictResponseRawTest, CannotConvertInvalidPrecision) {
     EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::REST_UNSUPPORTED_PRECISION);
 }
 
+TEST_F(TFSMakeJsonFromPredictResponseRawTest, NonFiniteInfFloatError) {
+    float data[8] = {5.0f, std::numeric_limits<float>::infinity(), -3.0f, 2.5f,
+        9.0f, 55.5f, -0.5f, -1.5f};
+    output1->mutable_tensor_content()->assign(reinterpret_cast<const char*>(data), 8 * sizeof(float));
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::JSON_SERIALIZATION_ERROR);
+}
+
+TEST_F(TFSMakeJsonFromPredictResponseRawTest, NonFiniteNaNFloatError) {
+    float data[8] = {5.0f, 10.0f, std::numeric_limits<float>::quiet_NaN(), 2.5f,
+        9.0f, 55.5f, -0.5f, -1.5f};
+    output1->mutable_tensor_content()->assign(reinterpret_cast<const char*>(data), 8 * sizeof(float));
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::JSON_SERIALIZATION_ERROR);
+}
+
+TEST_F(TFSMakeJsonFromPredictResponseRawTest, NonFiniteDoubleError) {
+    output1->set_dtype(tensorflow::DataType::DT_DOUBLE);
+    double data[2] = {1.0, std::numeric_limits<double>::infinity()};
+    output1->mutable_tensor_content()->assign(reinterpret_cast<const char*>(data), 2 * sizeof(double));
+    output1->clear_tensor_shape();
+    output1->mutable_tensor_shape()->add_dim()->set_size(2);
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::JSON_SERIALIZATION_ERROR);
+}
+
+TEST_F(TFSMakeJsonFromPredictResponseRawTest, IntOutputsUnaffectedByFiniteCheck) {
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, Order::COLUMN), StatusCode::OK);
+}
+
 const char* rawPositiveFirstOrderResponseRow = R"({
     "predictions": [
         {
