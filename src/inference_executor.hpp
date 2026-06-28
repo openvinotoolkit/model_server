@@ -48,6 +48,26 @@ enum : unsigned int {
     POSTPROCESS,
     TIMER_END
 };
+
+// Releases the infer-request slot acquired by modelInferAsync when start_async() throws.
+//
+// The stream-id guard that owns the slot was moved into the completion-callback lambda;
+// since start_async() failed, that callback will never fire to destroy the lambda, so the
+// slot would leak (#2871). Clearing the callback destroys the lambda and returns the slot.
+//
+// The callback lambda also holds a (copied) OutputKeeper. Clearing the callback runs while
+// OpenVINO holds the InferRequest's internal lock, so the lambda's OutputKeeper copy must not
+// reset output tensors there - doing so would reenter this InferRequest and deadlock
+// (std::terminate via an exception leaving the noexcept destructor). The caller retains the
+// original OutputKeeper handle (capture-by-copy), so we cancel it first: inference never ran,
+// so there is nothing to restore, and the retained handle's destructor then becomes a no-op.
+inline void releaseInferRequestSlotAfterStartAsyncFailure(ov::InferRequest& inferRequest, const std::shared_ptr<OutputKeeper>& outKeeper) {
+    if (outKeeper) {
+        outKeeper->cancel();
+    }
+    inferRequest.set_callback([](std::exception_ptr) {});
+}
+
 template <typename RequestType, typename ResponseType>
 Status modelInferAsync(ModelInstance& instance, const RequestType* request,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelUnloadGuardPtr) {
@@ -136,7 +156,7 @@ Status modelInferAsync(ModelInstance& instance, const RequestType* request,
     {
         // order is important here - destructors are called in order from right to left
         inferRequest.set_callback(
-            [&instance, request, &inferRequest, userCallback, userCallbackData, modelUnloadGuardPtrMoved = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr)), streamIdGuardMoved = std::move(executingStreamIdGuard), movedOutputKeeper = std::move(outKeeper)](std::exception_ptr exception) mutable {
+            [&instance, request, &inferRequest, userCallback, userCallbackData, modelUnloadGuardPtrMoved = std::shared_ptr<ModelInstanceUnloadGuard>(std::move(modelUnloadGuardPtr)), streamIdGuardMoved = std::move(executingStreamIdGuard), movedOutputKeeper = outKeeper](std::exception_ptr exception) mutable {
                 struct CallbackGuard {
                     OVMS_InferenceRequestCompletionCallback_t userCallback{nullptr};
                     void* userCallbackData{nullptr};
@@ -204,20 +224,14 @@ Status modelInferAsync(ModelInstance& instance, const RequestType* request,
 
     try {
         SPDLOG_DEBUG("ov::InferRequest: {}, inferRequest.start_async()", reinterpret_cast<void*>(&inferRequest));
-        inferRequest.start_async();
+        instance.startAsyncInference(inferRequest);
     } catch (std::exception& e) {
         SPDLOG_DEBUG("caught exception in ov::InferRequest.start_async: {}", e.what());
-        // start_async threw, so the completion callback will never fire to release the
-        // captured stream-id guard; clear the callback to destroy it and return the
-        // infer-request slot to the pool (otherwise the slot leaks -> #2871).
-        inferRequest.set_callback([](std::exception_ptr) {});
+        releaseInferRequestSlotAfterStartAsyncFailure(inferRequest, outKeeper);
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     } catch (...) {
         SPDLOG_DEBUG("caught exception in ov::InferRequest.start_async");
-        // start_async threw, so the completion callback will never fire to release the
-        // captured stream-id guard; clear the callback to destroy it and return the
-        // infer-request slot to the pool (otherwise the slot leaks -> #2871).
-        inferRequest.set_callback([](std::exception_ptr) {});
+        releaseInferRequestSlotAfterStartAsyncFailure(inferRequest, outKeeper);
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     }
     return StatusCode::OK;
