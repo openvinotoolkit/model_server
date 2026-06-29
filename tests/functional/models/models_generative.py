@@ -132,8 +132,8 @@ class GenerativeModelHuggingFace(GenerativeModel):
     def _apply_diamond_defaults(self):
         """Fix field defaults for diamond inheritance.
 
-        When a class inherits from both LargeLanguageModelHuggingFace and a specialized
-        type (e.g. ImageGenerationModel), LargeLanguageModelHuggingFace's inherited field
+        When a class inherits from both GenerativeModelHuggingFace and a specialized
+        type (e.g. ImageGenerationModel), GenerativeModelHuggingFace's inherited field
         defaults override the specialized type's directly-defined defaults. This method
         restores the correct defaults from specialized parent classes.
         """
