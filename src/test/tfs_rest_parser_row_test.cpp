@@ -176,6 +176,19 @@ TEST(TFSRestParserRow, ValidShape_1x1) {
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(155.0));
 }
 
+TEST(TFSRestParserRow, ParseBool) {
+    TFSRestParser parser(prepareTensors({{"i", {2, 2}}}, ovms::Precision::BOOL));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","instances":[
+        {"i":[true, false]},
+        {"i":[false, true]}
+    ]})"),
+        StatusCode::OK);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_BOOL);
+    EXPECT_THAT(asVector(parser.getProto().inputs().at("i").tensor_shape()), ElementsAre(2, 2));
+    EXPECT_THAT(parser.getProto().inputs().at("i").bool_val(), ElementsAre(true, false, false, true));
+}
+
 TEST(TFSRestParserRow, ValidShape_1x2) {
     TFSRestParser parser(prepareTensors({{"i", {1, 2}}}));
 

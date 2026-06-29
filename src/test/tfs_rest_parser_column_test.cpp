@@ -487,6 +487,23 @@ TEST(TFSRestParserColumn, ParseFloat) {
     EXPECT_THAT(asVector<float>(parser.getProto().inputs().at("i").tensor_content()), ElementsAre(-5.12, 0.4344, -4.521, 155234.221));
 }
 
+TEST(TFSRestParserColumn, ParseBool) {
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::BOOL));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[true, false, true, false]]]}})"), StatusCode::OK);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_BOOL);
+    EXPECT_THAT(parser.getProto().inputs().at("i").bool_val(), ElementsAre(true, false, true, false));
+}
+
+TEST(TFSRestParserColumn, ParseBoolFromIntegers) {
+    // 1/0 are also accepted for a BOOL tensor (the historic workaround) and yield a BOOL tensor.
+    TFSRestParser parser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::BOOL));
+
+    ASSERT_EQ(parser.parse(R"({"signature_name":"","inputs":{"i":[[[1, 0, 1, 0]]]}})"), StatusCode::OK);
+    EXPECT_EQ(parser.getProto().inputs().at("i").dtype(), tensorflow::DataType::DT_BOOL);
+    EXPECT_THAT(parser.getProto().inputs().at("i").bool_val(), ElementsAre(true, false, true, false));
+}
+
 TEST(TFSRestParserColumn, ParseHalf) {
     std::vector<TFSRestParser> parsers{TFSRestParser(prepareTensors({{"i", {1, 1, 4}}}, ovms::Precision::FP16))};
     for (TFSRestParser& parser : parsers) {

@@ -361,6 +361,30 @@ static bool addToIntVal(tensorflow::TensorProto& proto, const rapidjson::Value& 
     return false;
 }
 
+static bool addToBoolVal(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
+    if (value.IsBool()) {
+        proto.add_bool_val(value.GetBool());
+        return true;
+    }
+    if (value.IsInt()) {
+        proto.add_bool_val(value.GetInt() != 0);
+        return true;
+    }
+    if (value.IsUint()) {
+        proto.add_bool_val(value.GetUint() != 0);
+        return true;
+    }
+    if (value.IsInt64()) {
+        proto.add_bool_val(value.GetInt64() != 0);
+        return true;
+    }
+    if (value.IsUint64()) {
+        proto.add_bool_val(value.GetUint64() != 0);
+        return true;
+    }
+    return false;
+}
+
 static bool addNumber(tensorflow::TensorProto& proto, const rapidjson::Value& value) {
     switch (proto.dtype()) {
     case tensorflow::DataType::DT_FLOAT:
@@ -385,6 +409,8 @@ static bool addNumber(tensorflow::TensorProto& proto, const rapidjson::Value& va
         return addToTensorContent<uint32_t>(proto, value);
     case tensorflow::DataType::DT_UINT64:
         return addToTensorContent<uint64_t>(proto, value);
+    case tensorflow::DataType::DT_BOOL:
+        return addToBoolVal(proto, value);
     default:
         return false;
     }
@@ -513,7 +539,7 @@ bool TFSRestParser::addValue(tensorflow::TensorProto& proto, const rapidjson::Va
         return true;
     }
 
-    if (!value.IsNumber()) {
+    if (!value.IsNumber() && !value.IsBool()) {
         return false;
     }
 
@@ -526,7 +552,9 @@ bool TFSRestParser::setDTypeIfNotSet(const rapidjson::Value& value, tensorflow::
     if (tensorPrecisionMap.count(tensorName))
         return true;
 
-    if (value.IsInt())
+    if (value.IsBool())
+        tensorPrecisionMap[tensorName] = ovms::Precision::BOOL;
+    else if (value.IsInt())
         tensorPrecisionMap[tensorName] = ovms::Precision::I32;
     else if (value.IsDouble())
         tensorPrecisionMap[tensorName] = ovms::Precision::FP32;
