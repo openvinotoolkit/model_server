@@ -20,10 +20,10 @@ namespace ovms {
 const std::string Lfm25ToolParser::TOOL_CALL_START_TAG = "<|tool_call_start|>";
 const std::string Lfm25ToolParser::TOOL_CALL_END_TAG = "<|tool_call_end|>";
 
-const int64_t Lfm25ToolParser::toolCallStartTokenId = 124905;  // <|tool_call_start|>
-const int64_t Lfm25ToolParser::toolCallEndTokenId = 124906;    // <|tool_call_end|>
+const int64_t Lfm25ToolParser::toolCallStartTokenId = 124905;   // <|tool_call_start|>
+const int64_t Lfm25ToolParser::toolCallEndTokenId = 124906;     // <|tool_call_end|>
 const int64_t Lfm25ToolParser::reasoningStartTokenId = 124901;  // <think>
-const int64_t Lfm25ToolParser::reasoningEndTokenId = 124902;   // </think>
+const int64_t Lfm25ToolParser::reasoningEndTokenId = 124902;    // </think>
 
 bool Lfm25ToolParser::parseNewContent() {
     switch (this->currentState) {
