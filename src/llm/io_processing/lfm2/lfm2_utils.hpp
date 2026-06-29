@@ -41,13 +41,20 @@ enum class State {
     AfterToolCall
 };
 
+struct TagIds {
+    int64_t toolCallStartTokenId;
+    int64_t toolCallEndTokenId;
+    std::optional<int64_t> reasoningStartTokenId = std::nullopt;
+    std::optional<int64_t> reasoningEndTokenId = std::nullopt;
+};
+
 std::string parseArrayParameter(std::string argumentStr);
 std::string parseObjectParameter(std::string argumentStr);
 std::string normalizeArgStr(const std::string& arg);
 void writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
 Argument parseSingleArgument(const std::string& argumentStr);
 std::vector<Argument> parseArguments(const std::string& argumentsStr);
-bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const std::string& toolCallStartTag, const std::string& toolCallEndTag);
+bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const TagIds& tagIds);
 bool parseInToolCallState(const std::string& streamingContent, ToolCall& toolCall, size_t& streamingPosition, State& currentState);
 bool parseToolCallParametersState(const std::string& streamingContent, ToolCall& toolCall, size_t& streamingPosition, State& currentState);
 bool parseInToolCallEndedState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const std::string& toolCallEndTag);
@@ -55,6 +62,6 @@ rapidjson::Document wrapDeltaContent(const std::string& content);
 rapidjson::Document wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
 void cutEOSFromContent(std::string& content);
 bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
-void parseUnaryResponse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, ov::genai::Tokenizer& tokenizer, const int64_t botTokenId, const int64_t eotTokenId, const std::optional<int64_t> reasoningEndTokenId = std::nullopt);
+void parseUnaryResponse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, ov::genai::Tokenizer& tokenizer, const TagIds& tagIds);
 
 }  // namespace ovms

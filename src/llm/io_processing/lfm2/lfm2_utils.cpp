@@ -189,12 +189,12 @@ std::vector<Argument> parseArguments(const std::string& argumentsStr) {
     return parsedArgs;
 }
 
-bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const std::string& toolCallStartTag, const std::string& toolCallEndTag) {
-    size_t toolCallStartTagPos = streamingContent.find(toolCallStartTag, streamingPosition);
-    size_t toolCallEndTagPos = streamingContent.find(toolCallEndTag, streamingPosition);
+bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const TagIds& tagIds) {
+    size_t toolCallStartTagPos = streamingContent.find(tagIds.toolCallStartTokenId, streamingPosition);
+    size_t toolCallEndTagPos = streamingContent.find(tagIds.toolCallEndTokenId, streamingPosition);
     if (toolCallEndTagPos != std::string::npos && toolCallStartTagPos == std::string::npos) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected end of tool call at position: {}", toolCallEndTagPos);
-        streamingPosition = toolCallEndTagPos + toolCallEndTag.length();
+        streamingPosition = toolCallEndTagPos + 1;
         return false;
     }
     if (toolCallStartTagPos != std::string::npos) {
@@ -203,7 +203,7 @@ bool parseInContentState(const std::string& streamingContent, size_t& streamingP
             return true;
         }
         currentState = State::ToolCallStarted;
-        streamingPosition = toolCallStartTagPos + toolCallStartTag.length();
+        streamingPosition = toolCallStartTagPos + 1;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected start of tool call at position: {}", toolCallStartTagPos);
         return false;
     }
@@ -331,20 +331,20 @@ bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall) {
     return false;
 }
 
-void parseUnaryResponse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, ov::genai::Tokenizer& tokenizer, const int64_t botTokenId, const int64_t eotTokenId, const std::optional<int64_t> reasoningEndTokenId) {
+void parseUnaryResponse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, ov::genai::Tokenizer& tokenizer, const TagIds& tagIds) {
     std::vector<std::string> tools;
     std::vector<std::pair<size_t, size_t>> toolCallPositions;
     size_t pos = 0;
 
     while (pos != std::string::npos) {
         size_t start, end;
-        auto it = std::find(generatedTokens.begin() + pos, generatedTokens.end(), botTokenId);
+        auto it = std::find(generatedTokens.begin() + pos, generatedTokens.end(), tagIds.toolCallStartTokenId);
         if (it != generatedTokens.end()) {
             start = std::distance(generatedTokens.begin(), it);
         } else {
             break;
         }
-        auto itArgs = std::find(generatedTokens.begin() + start, generatedTokens.end(), eotTokenId);
+        auto itArgs = std::find(generatedTokens.begin() + start, generatedTokens.end(), tagIds.toolCallEndTokenId);
         if (itArgs != generatedTokens.end()) {
             end = std::distance(generatedTokens.begin(), itArgs);
         } else {
@@ -394,10 +394,15 @@ void parseUnaryResponse(ParsedOutput& parsedOutput, const std::vector<int64_t>& 
     for (auto it = toolCallPositions.rbegin(); it != toolCallPositions.rend(); ++it) {
         contentWithoutToolCalls.erase(contentWithoutToolCalls.begin() + it->first, contentWithoutToolCalls.begin() + it->second + 1);
     }
-    if (reasoningEndTokenId.has_value()) {
-        auto reasoningEndIt = std::find(contentWithoutToolCalls.begin(), contentWithoutToolCalls.end(), reasoningEndTokenId.value());
+    if (tagIds.reasoningEndTokenId.has_value() && tagIds.reasoningStartTokenId.has_value()) {
+        auto reasoningEndIt = std::find(contentWithoutToolCalls.begin(), contentWithoutToolCalls.end(), tagIds.reasoningEndTokenId.value());
         if (reasoningEndIt != contentWithoutToolCalls.end()) {
             contentWithoutToolCalls.erase(contentWithoutToolCalls.begin(), reasoningEndIt + 1);
+        } else {
+            auto reasoningStartIt = std::find(contentWithoutToolCalls.begin(), contentWithoutToolCalls.end(), tagIds.reasoningStartTokenId.value());
+            if (reasoningStartIt != contentWithoutToolCalls.end()) {
+                contentWithoutToolCalls.erase(reasoningStartIt, contentWithoutToolCalls.end());
+            }
         }
     }
 

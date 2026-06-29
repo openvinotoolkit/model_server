@@ -195,9 +195,14 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (toolParserName == "devstral") {
         toolParser = std::make_unique<DevstralToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "lfm2") {
-        toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
-    } else if (toolParserName == "lfm2.5") {
-        toolParser = std::make_unique<Lfm25ToolParser>(tokenizer);
+        auto vocab = tokenizer.get_vocab();
+        auto token = vocab.find(Lfm25ToolParser::TOOL_CALL_START_TAG);
+        auto tokenId = token != vocab.end() ? token->second : -1;
+        if (tokenId == Lfm25ToolParser::toolCallStartTokenId) {
+            toolParser = std::make_unique<Lfm25ToolParser>(tokenizer);
+        } else {
+            toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
+        }
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {

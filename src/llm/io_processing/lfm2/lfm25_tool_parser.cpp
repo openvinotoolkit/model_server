@@ -22,12 +22,13 @@ const std::string Lfm25ToolParser::TOOL_CALL_END_TAG = "<|tool_call_end|>";
 
 const int64_t Lfm25ToolParser::toolCallStartTokenId = 124905;  // <|tool_call_start|>
 const int64_t Lfm25ToolParser::toolCallEndTokenId = 124906;    // <|tool_call_end|>
+const int64_t Lfm25ToolParser::reasoningStartTokenId = 124901;  // <think>
 const int64_t Lfm25ToolParser::reasoningEndTokenId = 124902;   // </think>
 
 bool Lfm25ToolParser::parseNewContent() {
     switch (this->currentState) {
     case State::Content: {
-        return parseInContentState(this->streamingContent, this->streamingPosition, this->currentState, TOOL_CALL_START_TAG, TOOL_CALL_END_TAG);
+        return parseInContentState(this->streamingContent, this->streamingPosition, this->currentState, this->tagIds);
     }
     case State::ToolCallStarted: {
         auto wasParsedCorrectly = parseInToolCallState(this->streamingContent, this->toolCall, this->streamingPosition, this->currentState);
@@ -102,6 +103,6 @@ std::optional<rapidjson::Document> Lfm25ToolParser::parseChunk(const std::string
 }
 
 void Lfm25ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    parseUnaryResponse(parsedOutput, generatedTokens, tokenizer, toolCallStartTokenId, toolCallEndTokenId, reasoningEndTokenId);
+    parseUnaryResponse(parsedOutput, generatedTokens, tokenizer, this->tagIds);
 }
 }  // namespace ovms

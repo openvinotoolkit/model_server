@@ -20,15 +20,15 @@
 
 namespace ovms {
 class Lfm25ToolParser : public BaseOutputParser {
-protected:
+public:
     static const std::string TOOL_CALL_START_TAG;
     static const std::string TOOL_CALL_END_TAG;
 
     static const int64_t toolCallStartTokenId;
     static const int64_t toolCallEndTokenId;
+    static const int64_t reasoningStartTokenId;
     static const int64_t reasoningEndTokenId;
 
-public:
     Lfm25ToolParser() = delete;
     explicit Lfm25ToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
@@ -63,6 +63,7 @@ private:
     size_t streamingPosition{0};
     State currentState{State::Content};
     ToolCall toolCall;
+    TagIds tagIds{toolCallStartTokenId, toolCallEndTokenId, reasoningStartTokenId, reasoningEndTokenId};
 
     int toolCallIndex{TOOL_CALL_INDEX_START};
 

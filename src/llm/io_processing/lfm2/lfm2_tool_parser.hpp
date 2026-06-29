@@ -64,6 +64,7 @@ private:
     size_t streamingPosition{0};
     State currentState{State::Content};
     ToolCall toolCall;
+    TagIds tagIds{botTokenId, eotTokenId};
 
     int toolCallIndex{TOOL_CALL_INDEX_START};
 

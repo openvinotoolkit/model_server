@@ -31,6 +31,7 @@ void Lfm25ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<i
     if (startReasoningIt == generatedTokens.end() || endReasoningIt == generatedTokens.end() || startReasoningIt >= endReasoningIt) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Lfm25ReasoningParser: Reasoning start or end token not found in the generated tokens, or in wrong order. Start token found: {}, End token found: {}, Start position: {}, End position: {}",
             startReasoningIt != generatedTokens.end(), endReasoningIt != generatedTokens.end(), std::distance(generatedTokens.begin(), startReasoningIt), std::distance(generatedTokens.begin(), endReasoningIt));
+        parsedOutput.reasoning = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true));
         return;
     }
 
