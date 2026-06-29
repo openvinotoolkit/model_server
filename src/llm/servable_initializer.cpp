@@ -90,7 +90,8 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
                 std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (string args): exception: {}", e.what());
-        } catch (...) {}
+        } catch (...) {
+        }
 
         try {
             auto t0 = std::chrono::steady_clock::now();
@@ -100,7 +101,8 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
                 std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (object args): exception: {}", e.what());
-        } catch (...) {}
+        } catch (...) {
+        }
 
         auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
             return output.find("\"" + argNeedle + "\": ") != std::string::npos ||
@@ -175,9 +177,9 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         properties->chatTemplateCaps = analysisResult.caps;
         properties->detectedModelFamily = analysisResult.detectedModelFamily;
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template analysis: detectedModelFamily={}, "
-            "supportsSystemRole={}, supportsTools={}, supportsToolCalls={}, supportsToolResponses={}, "
-            "requiresObjectArguments={}, requiresNonNullContent={}, requiresTypedContent={}, "
-            "supportsParallelToolCalls={}, supportsToolCallId={}",
+                                                   "supportsSystemRole={}, supportsTools={}, supportsToolCalls={}, supportsToolResponses={}, "
+                                                   "requiresObjectArguments={}, requiresNonNullContent={}, requiresTypedContent={}, "
+                                                   "supportsParallelToolCalls={}, supportsToolCallId={}",
             analysisResult.detectedModelFamily.empty() ? "(none)" : analysisResult.detectedModelFamily,
             analysisResult.caps.supportsSystemRole,
             analysisResult.caps.supportsTools,

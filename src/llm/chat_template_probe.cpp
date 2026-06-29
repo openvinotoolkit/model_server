@@ -37,7 +37,7 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
     auto probeStart = std::chrono::steady_clock::now();
     const std::string argNeedle = "probe_needle_xK9m";
 
-    // Async becuase apply_chat_template is slow: CVS-189192
+    // Async because apply_chat_template is slow: CVS-189192
     auto strArgsFuture = std::async(std::launch::async, [&tokenizer, &argNeedle]() -> std::pair<bool, std::string> {
         try {
             ov::genai::ChatHistory history;
@@ -58,7 +58,7 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
         }
     });
 
-    // Async becuase apply_chat_template is slow: CVS-189192
+    // Async because apply_chat_template is slow: CVS-189192
     auto objArgsFuture = std::async(std::launch::async, [&tokenizer, &argNeedle]() -> std::pair<bool, std::string> {
         try {
             ov::genai::ChatHistory history;
@@ -83,10 +83,10 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
     auto [objOk, objOut] = objArgsFuture.get();
 
     auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
-        return output.find("\"" + argNeedle + "\": ") != std::string::npos ||       // JSON key: "needle":
-               output.find("'" + argNeedle + "': ") != std::string::npos ||         // Python dict: 'needle':
-               output.find("<parameter=" + argNeedle + ">") != std::string::npos || // Qwen3-Coder XML
-               output.find(argNeedle + ":<|") != std::string::npos;                 // Gemma4: needle:<|
+        return output.find("\"" + argNeedle + "\": ") != std::string::npos ||        // JSON key: "needle":
+               output.find("'" + argNeedle + "': ") != std::string::npos ||          // Python dict: 'needle':
+               output.find("<parameter=" + argNeedle + ">") != std::string::npos ||  // Qwen3-Coder XML
+               output.find(argNeedle + ":<|") != std::string::npos;                  // Gemma4: needle:<|
     };
 
     bool strArgsRendersNative = strOk && rendersNativeArgs(strOut);
@@ -105,7 +105,7 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
 
     if (strArgsFailed || objArgsFailed) {
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Dry-run probe: minja silently failed to render tool calls "
-            "(output contains raw JSON dump). Template is not supported by minja for tool calls.");
+                                                  "(output contains raw JSON dump). Template is not supported by minja for tool calls.");
         auto probeEnd = std::chrono::steady_clock::now();
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe completed in {} us. Result: FAILURE",
             std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count());

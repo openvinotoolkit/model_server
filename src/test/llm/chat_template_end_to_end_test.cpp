@@ -80,7 +80,7 @@ protected:
             return "";
         }
         return std::string((std::istreambuf_iterator<char>(file)),
-                           std::istreambuf_iterator<char>());
+            std::istreambuf_iterator<char>());
     }
 
     // Run the full pipeline: analyze → probe → workarounds → apply
@@ -211,7 +211,7 @@ celsius
 </function>
 </tool_call><|im_end|>
 )";
-     EXPECT_EQ(appliedOutput, expectedOutput);
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================
@@ -241,7 +241,7 @@ TEST_F(ChatTemplateEndToEndTest, Gemma4_ToolCallWithStringArgs) {
 What's the weather in Paris?<turn|>
 <|turn>model
 <|tool_call>call:get_weather{location:<|"|>Paris<|"|>,unit:<|"|>celsius<|"|>}<tool_call|><|tool_response>)";
-     EXPECT_EQ(appliedOutput, expectedOutput);
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================
@@ -310,6 +310,17 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3_ToolCallWithStringArgs) {
     EXPECT_EQ(analysisResult.detectedModelFamily, "hermes3");
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_NE(appliedOutput.find("<tool_call>"), std::string::npos);
-    EXPECT_NE(appliedOutput.find("\"location\": \"Paris\""), std::string::npos);
+
+    std::string expectedOutput = R"(<|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+<tool_call>
+{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}}
+</tool_call><|im_end|>
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }

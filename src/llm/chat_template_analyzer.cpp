@@ -23,7 +23,6 @@ static bool contains(const std::string& haystack, const std::string& needle) {
     return haystack.find(needle) != std::string::npos;
 }
 
-
 // TODO: remove comments before analysis
 // TODO: expect GenAI to fix bug + dry-runs on separate threads?
 ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& templateSource) {
@@ -80,7 +79,9 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     }
 
     // Phi-4 detection
-    if (contains(templateSource, "<|tool\xe2\x96\x81" "call\xe2\x96\x81" "begin|>")) {  // <|tool▁call▁begin|> with Unicode ▁ (U+2581)
+    if (contains(templateSource, "<|tool\xe2\x96\x81"
+                                 "call\xe2\x96\x81"
+                                 "begin|>")) {  // <|tool▁call▁begin|> with Unicode ▁ (U+2581)
         result.detectedModelFamily = "phi4";
         result.detectedToolParser = "phi4";
         result.caps.supportsToolCalls = true;
