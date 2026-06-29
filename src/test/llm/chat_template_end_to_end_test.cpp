@@ -351,3 +351,25 @@ TEST_F(ChatTemplateEndToEndTest, Mistral7B_ToolCallWithStringArgs) {
     std::string expectedOutput = R"(</s>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]</s>)";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
+
+// =============================================================================
+// Example: LFM2-24B-A2B with tool call containing string arguments
+// Template only injects tools into the system prompt ("List of tools: [...]")
+// and has no tool_call rendering logic — assistant messages render content only.
+// Analyzer does not detect tool support, so probe is never invoked.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, LFM2_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm2.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(false);
+
+    ASSERT_TRUE(applySuccess);
+    // Analyzer does not detect tool support (no tool_call markers in template)
+    EXPECT_FALSE(caps.supportsToolCalls);
+}
