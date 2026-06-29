@@ -52,7 +52,7 @@ protected:
 TEST_F(ParserConfigValidationTest, RegistryHasExpectedToolParsers) {
     const auto& names = getSupportedToolParserNames();
     for (const auto& expected : {"llama3", "hermes3", "phi4", "mistral", "gptoss",
-             "qwen3coder", "devstral", "lfm2", "lfm2.5", "gemma4"}) {
+             "qwen3coder", "devstral", "lfm2", "gemma4"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), expected), names.end())
             << "Expected tool parser '" << expected << "' missing from registry";
     }

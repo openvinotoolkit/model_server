@@ -285,7 +285,6 @@ __Tool parsers:__
 - `gptoss`
 - `qwen3coder`
 - `lfm2`
-- `lfm2.5`
 - `gemma4`
 
 __Reasoning parsers:__
