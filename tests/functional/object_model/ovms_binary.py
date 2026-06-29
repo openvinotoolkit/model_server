@@ -28,12 +28,10 @@ from tests.functional.utils.process import Process
 
 from tests.functional.config import artifacts_dir
 from tests.functional.constants.core import CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
-from ovms.constants.models import Muse
 from tests.functional.constants.ovms_binaries import get_ovms_binary_cmd_setup
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths
 from tests.functional.utils.log_monitor import LogMonitor
-from tests.functional.object_model.cpu_extension import MuseModelExtension
 from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator
 from tests.functional.object_model.ovms_command import create_ovms_command
 from tests.functional.object_model.ovms_config import OvmsConfig
@@ -100,10 +98,12 @@ def start_binary_ovms(
         MediaPipeCalculator.prepare_proto_calculator(parameters, config_dir_path_on_host, config_path_on_host)
 
     cpu_extension_path = None
-    if parameters.models is not None and any(isinstance(model, Muse) for model in parameters.models):
-        cpu_extension = MuseModelExtension()
-        cpu_extension_path = cpu_extension.lib_path[1:]
-    elif parameters.cpu_extension:
+    if parameters.models is not None:
+        for model in parameters.models:
+            if getattr(model, "cpu_extension", None) is not None:
+                cpu_extension = model.cpu_extension()
+                cpu_extension_path = cpu_extension.lib_path[1:]
+    if parameters.cpu_extension:
         if kwargs.get("replace_cpu_extension_params_for_binary", True):
             host_dir = os.path.join(resources_dir, Paths.CPU_EXTENSIONS)
             host_lib_path = os.path.join(host_dir, parameters.cpu_extension.lib_name)

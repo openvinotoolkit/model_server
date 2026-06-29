@@ -15,6 +15,7 @@
 #
 
 # pylint: disable=too-many-nested-blocks
+# pylint: disable=too-many-positional-arguments
 # pylint: disable=unused-argument
 
 import base64
@@ -33,7 +34,7 @@ from tests.functional.utils.logger import get_logger, step
 from tests.functional.utils.inference.serving.openai import OpenAIWrapper, OpenAIFinishReason
 from tests.functional.config import save_image_to_artifacts
 from tests.functional.config import artifacts_dir, pipeline_type
-from ovms.constants.model_dataset import FeatureExtractionModelDataset
+from tests.functional.models.models_datasets import FeatureExtractionModelDataset
 
 logger = get_logger(__name__)
 
@@ -545,7 +546,7 @@ class GenerativeAIValidationUtils:
             api_type: OpenAI REST API type.
             port: OVMS port where the embeddings model is served.
             request_parameters: Optional pre-built request parameters for embeddings endpoint.
-                If None, will be built automatically via LLMUtils.prepare_request_params.
+                If None, will be built automatically via GenerativeAIUtils.prepare_request_params.
             inference_fn: Callable to run LLM inference (e.g. run_llm_inference).
                 Injected to avoid circular import between this module and inference_helpers.
 
@@ -557,8 +558,8 @@ class GenerativeAIValidationUtils:
         )
 
         if request_parameters is None:
-            from llm.utils import LLMUtils
-            request_parameters = LLMUtils.prepare_request_params(OpenAIWrapper.EMBEDDINGS)
+            from tests.functional.utils.generative_ai.utils import GenerativeAIUtils
+            request_parameters = GenerativeAIUtils.prepare_request_params(OpenAIWrapper.EMBEDDINGS)
 
         def getter(text):
             class TextDataset(FeatureExtractionModelDataset):

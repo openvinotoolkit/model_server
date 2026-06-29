@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=openvino-model-server:latest
+ARG BASE_IMAGE=registry.connect.redhat.com/intel/openvino-model-server:latest
 FROM $BASE_IMAGE as base_image
 
 ARG ROOT_PATH_CPU_EXTENSIONS=/cpu_extensions
