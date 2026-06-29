@@ -4,3 +4,11 @@ ovms
 *.jpg
 venv
 .venv
+face_detection_short_range
+face_landmark
+hand_landmark_full
+hand_recrop
+iris_landmark
+palm_detection_full
+pose_detection
+pose_landmark_full
