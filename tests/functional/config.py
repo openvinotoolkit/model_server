@@ -20,8 +20,7 @@ from pathlib import Path
 
 from tests.functional.constants.os_type import OsType
 from tests.functional.constants.ovms_type import OvmsType
-from tests.functional.constants.target_device import TargetDevice
-from tests.functional.utils.core import TmpDir
+from tests.functional.utils.core import TmpDir, get_token_value
 from tests.functional.utils.helpers import (
     generate_test_object_name,
     get_bool,
@@ -65,12 +64,13 @@ test_dir = os.environ.get("TEST_DIR", "/tmp/{}".format(generate_test_object_name
 """TEST_DIR_CACHE -  location where models and test data should be downloaded to and serve as cache for TEST_DIR"""
 test_dir_cache = os.environ.get("TEST_DIR_CACHE", "/tmp/ovms_models_cache")
 
-"""TEST_DIR_CLEANUP - if set to True, TEST_DIR directory will be removed after tests execution"""
-test_dir_cleanup = os.environ.get("TEST_DIR_CLEANUP", "True")
-test_dir_cleanup = test_dir_cleanup.lower() == "true"
-
 """ TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
 ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
+
+""" TT_SETUPVARS_SCRIPT_PATH - path to setupvars.bat script """
+setupvars_script_path = os.environ.get(
+    "TT_SETUPVARS_SCRIPT_PATH", os.path.join(ovms_c_repo_path, "setupvars.bat")
+)
 
 """BUILD_LOGS -  path to dir where artifacts should be stored"""
 artifacts_dir = get_path("BUILD_LOGS", os.path.join(ovms_c_repo_path, "tests", "functional", "test_log_build"))
@@ -83,6 +83,11 @@ models_path = get_path("TT_MODELS_PATH", os.path.join("~", "ovms_models"))
 
 """ TT_DATASETS_PATH - Datasets local repo path"""
 datasets_path = get_path("TT_DATASETS_PATH", os.path.join("~", "ovms_datasets"))
+
+""" TT_GENERATIVE_MODELS_LOCAL_PATH - local path for converted generative models """
+generative_models_local_path = get_path(
+    "TT_GENERATIVE_MODELS_LOCAL_PATH", os.path.join(models_path, "generative_models")
+)
 
 """ TT_CLEAN_ARTIFACTS_DIR """
 clean_artifacts_dir = get_bool("TT_CLEAN_ARTIFACTS_DIR", False)
@@ -141,23 +146,14 @@ os.makedirs(path_to_mount, exist_ok=True)
 
 path_to_mount_cache = os.path.join(test_dir_cache, "saved_models")
 
-"""TT_MINIO_IMAGE_NAME - Docker image for Minio"""
-minio_image = os.environ.get("TT_MINIO_IMAGE_NAME", "minio/minio:latest")
+""" TT_MINIO_IMAGE_NAME - Docker image for Minio"""
+minio_image = os.environ.get(
+    "TT_MINIO_IMAGE_NAME",
+    f"{docker_registry}/minio/minio:latest" if docker_registry is not None else "minio/minio:latest",
+)
 
 """ TT_TARGET_DEVICE - list of devices separated by a comma "CPU,GPU,NPU" """
 target_devices = get_target_devices()
-target_device = target_devices[0]
-
-"""IMAGE - docker image name which should be used to run tests"""
-if target_device == TargetDevice.GPU:
-    _default_image = "openvino/model_server-gpu"
-else:
-    _default_image = "openvino/model_server"
-image = os.environ.get("IMAGE", _default_image)
-
-start_minio_container_command = 'server --address ":{}" /data'
-
-container_minio_log_line = "Console endpoint is listening on a dynamic port"
 
 # Reservation manager values, for details study tests.functional.utils.reservation_manager
 """ TT_GRPC_OVMS_STARTING_PORT - Grpc port where ovms should be exposed"""
@@ -170,31 +166,11 @@ rest_ovms_starting_port = get_int("TT_REST_OVMS_STARTING_PORT", None)
 ports_pool_size = get_int("TT_PORTS_POOL_SIZE", None)
 # NOTE: Above values will be validated and could be changed if invalid
 
-""" TT_CONVERTED_MODELS_EXPIRE_TIME - Time after converted models are not up-to-date and needs to be refreshed(s) """
-converted_models_expire_time = get_int("TT_CONVERTED_MODELS_EXPIRE_TIME", 7*24*3600)  # Set default to one week
-
-""" TT_DEFAULT_INFER_TIMEOUT - Timeout for CPU target device"""
-default_infer_timeout = get_int("TT_DEFAULT_INFER_TIMEOUT", 10)
-
-""" TT_DEFAULT_GPU_INFER_TIMEOUT - Timeout for GPU target device"""
-default_gpu_infer_timeout = get_int("TT_DEFAULT_GPU_INFER_TIMEOUT", 10*default_infer_timeout)
-
-""" TT_DEFAULT_NPU_INFER_TIMEOUT - Timeout for NPU target device"""
-default_npu_infer_timeout = get_int("TT_DEFAULT_NPU_INFER_TIMEOUT", 10*default_infer_timeout)
-
-""" INFER TIMEOUT """
-infer_timeouts = {
-    TargetDevice.CPU: default_infer_timeout,
-    TargetDevice.GPU: default_gpu_infer_timeout,
-    TargetDevice.NPU: default_npu_infer_timeout,
-    TargetDevice.AUTO: default_gpu_infer_timeout,
-    TargetDevice.HETERO: default_gpu_infer_timeout,
-    TargetDevice.AUTO_CPU_GPU: default_gpu_infer_timeout,
-}
-infer_timeout = infer_timeouts[target_device]
-
 """ TT_IS_NGINX_MTLS - Specify if given image is OVSA nginx mtls image. """
 is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", False)
+
+""" TT_FORCE_GENERATE_NEW_SSL_CERTIFICATES """
+force_generate_new_ssl_certs = get_bool("TT_FORCE_GENERATE_NEW_SSL_CERTIFICATES", True)
 
 """ TT_SKIP_TEST_IF_IS_NGINX_MTLS """
 skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", True)
@@ -317,6 +293,25 @@ airplane_mode = get_bool("TT_AIRPLANE_MODE", False)
 """ TT_OVMS_IMAGE_LOCAL - ovms image can only be found locally """
 ovms_image_local = get_bool("TT_OVMS_IMAGE_LOCAL", False)
 
+""" TT_REQUIREMENTS - Requirements """
+req_ids = get_list("TT_REQUIREMENTS")
+
+""" TT_EXCLUDE_REQUIREMENTS - Requirements to exclude """
+exclude_req_ids = get_list("TT_EXCLUDE_REQUIREMENTS")
+
+""" TT_COMPONENTS - Components """
+components_ids = get_list("TT_COMPONENTS")
+
+""" TT_EXCLUDE_COMPONENTS - Components to exclude """
+exclude_components_ids = get_list("TT_EXCLUDE_COMPONENTS")
+
+""" TT_TESTS_PRIORITY_LIST - tests priority to run - high, medium or low """
+tests_priority_list_raw = get_list("TT_TESTS_PRIORITY_LIST", fallback=["high", "medium", "low"])
+tests_priority_list = [f"priority_{p}" for p in tests_priority_list_raw if "priority" not in p]
+
+""" TT_PERFORMANCE_TEST_TIMEOUT_MINUTES - timeout (in minutes) for each performance test """
+performance_test_timeout_minutes = get_int("TT_PERFORMANCE_TEST_TIMEOUT_MINUTES", 10)
+
 """ TT_BASE_OS - os type used for calculating ovms_image name (if not given explicitly). 
         Possible options (case insensitive): 
         ubuntu22 - use default Ubuntu 22.04 image
@@ -327,6 +322,11 @@ ovms_image_local = get_bool("TT_OVMS_IMAGE_LOCAL", False)
 """
 __base_os = os.environ.get("BASE_OS", OsType.Ubuntu24)
 base_os = get_list("TT_BASE_OS", fallback=[__base_os])
+
+""" BASE_IMAGE - Docker image used during OVMS image creation """
+base_image = os.environ.get("BASE_IMAGE", None)
+if base_image is not None:
+    assert len(base_os) == 1, "If you wish to iterate by TT_BASE_OS: do not set BASE_IMAGE explicitly."
 
 """ GLOBAL_TEMP_DIR - global temporary directory """
 global_tmp_dir_default = os.path.join("~", "AppData", "Local", "Temp") if OsType.Windows in base_os else "/tmp"
@@ -416,3 +416,17 @@ def get_ovms_types():
 """ TT_OVMS_TYPE - ovms type runtime to be executed:
 DOCKER, BINARY, BINARY_DOCKER, CAPI, CAPI_DOCKER, DOCKER_CMD_LINE """
 ovms_types = get_ovms_types()
+
+""" TT_DIVIDE_TARGET_DEVICE_PER_WORKER - spread tests across pytest workers based on target device """
+divide_target_device_per_worker = get_bool("TT_DIVIDE_TARGET_DEVICE_PER_WORKER", False)
+
+""" TT_PYTEST_KEYWORD_FILTER """
+pytest_keyword_filter = os.environ.get("TT_PYTEST_KEYWORD_FILTER", None)
+
+""" TT_HUGGINGFACE_TOKEN_FILE_PATH - path to file containing huggingface token """
+huggingface_token_file_path = get_path(
+    "TT_HUGGINGFACE_TOKEN_FILE_PATH", os.path.join("~", "ovms_tokens", "huggingface_token")
+)
+
+""" TT_HUGGINGFACE_TOKEN - huggingface token value. Env var takes priority, then file. """
+huggingface_token = os.environ.get("TT_HUGGINGFACE_TOKEN") or get_token_value(huggingface_token_file_path, "")

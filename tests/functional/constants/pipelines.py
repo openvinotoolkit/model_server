@@ -24,7 +24,7 @@ import numpy as np
 
 from tests.functional.config import datasets_path
 from ovms.constants.model_dataset import RandomDataset
-from ovms.constants.models import ModelInfo
+from tests.functional.models.models import ModelInfo
 from ovms.constants.models import (
     AgeGender,
     ArgMax,
@@ -1461,7 +1461,7 @@ class MediaPipe(Pipeline):
         )
         for i, model in enumerate(mediapipe_models):
             model_name = model.name
-            graph_name = model_name if (not model.is_llm and model.pbtxt_name is None) \
+            graph_name = model_name if (not model.is_generative and model.pbtxt_name is None) \
                 else getattr(model, "pbtxt_name", None)
             graph_filename = f"{graph_name}.pbtxt"
             mediapipe_base_path = str(Path(Paths.MODELS_PATH_INTERNAL, model_name))
