@@ -300,3 +300,102 @@ TEST(Minicpm5ToolParserImplTest, SingleQuoteAttribute) {
     EXPECT_EQ(calls[0].name, "get_weather");
     EXPECT_EQ(calls[0].arguments, R"({"city":"Sydney"})");
 }
+
+// ---- Streaming robustness: feed input in fragments and aggregate ----
+
+// Helper: stream `input` in fixed-size fragments through one impl instance,
+// collecting every tool call returned across all chunks (in order).
+static ToolCalls_t streamInFragments(const std::string& input, size_t fragmentSize,
+    const ToolsParameterTypeMap_t& typeMap) {
+    Minicpm5ToolParserImpl parser(typeMap);
+    ToolCalls_t collected;
+    for (size_t i = 0; i < input.size(); i += fragmentSize) {
+        std::string chunk = input.substr(i, fragmentSize);
+        auto callsOpt = parser.parseChunk(chunk);
+        if (callsOpt.has_value()) {
+            for (auto& c : callsOpt.value()) {
+                collected.push_back(c);
+            }
+        }
+    }
+    return collected;
+}
+
+// The streaming result (any fragmentation) MUST equal the single-chunk result.
+TEST(Minicpm5ToolParserImplStreamTest, CharByCharSingleCall) {
+    const std::string input =
+        R"(<function name="get_weather"><param name="city">Beijing</param><param name="unit">celsius</param></function>)";
+    auto calls = streamInFragments(input, 1, minicpm5TypeMap);  // one character per chunk
+    ASSERT_EQ(calls.size(), 1u);
+    EXPECT_EQ(calls[0].name, "get_weather");
+    EXPECT_EQ(calls[0].arguments, R"({"city":"Beijing","unit":"celsius"})");
+}
+
+// Tags, attributes and values are split across chunk boundaries at every offset.
+TEST(Minicpm5ToolParserImplStreamTest, VariousFragmentSizesSingleCall) {
+    const std::string input =
+        R"(<function name="get_weather"><param name="city">Beijing</param></function>)";
+    for (size_t frag = 1; frag <= input.size(); ++frag) {
+        auto calls = streamInFragments(input, frag, minicpm5TypeMap);
+        ASSERT_EQ(calls.size(), 1u) << "fragment size " << frag;
+        EXPECT_EQ(calls[0].name, "get_weather") << "fragment size " << frag;
+        EXPECT_EQ(calls[0].arguments, R"({"city":"Beijing"})") << "fragment size " << frag;
+    }
+}
+
+// Two calls with the chunk boundary falling between/inside them.
+TEST(Minicpm5ToolParserImplStreamTest, TwoCallsCharByChar) {
+    const std::string input =
+        R"(<function name="get_weather"><param name="city">Rome</param></function>)"
+        R"(<function name="calculate"><param name="a">10</param><param name="b">20</param></function>)";
+    auto calls = streamInFragments(input, 1, minicpm5TypeMap);
+    ASSERT_EQ(calls.size(), 2u);
+    EXPECT_EQ(calls[0].name, "get_weather");
+    EXPECT_EQ(calls[0].arguments, R"({"city":"Rome"})");
+    EXPECT_EQ(calls[1].name, "calculate");
+    EXPECT_EQ(calls[1].arguments, R"({"a":10,"b":20})");
+}
+
+// Leading content + <think> block streamed char-by-char before the call.
+TEST(Minicpm5ToolParserImplStreamTest, ThinkBlockAndContentCharByChar) {
+    const std::string input =
+        R"(Let me check.<think>I should call the tool</think><function name="search"><param name="query">Intel</param></function>)";
+    auto calls = streamInFragments(input, 1, minicpm5TypeMap);
+    ASSERT_EQ(calls.size(), 1u);
+    EXPECT_EQ(calls[0].name, "search");
+    EXPECT_EQ(calls[0].arguments, R"({"query":"Intel"})");
+}
+
+// ---- Edge / malformed input: must not crash and must not emit spurious calls ----
+
+// An unterminated function (no </function>) yields no completed tool call.
+TEST(Minicpm5ToolParserImplTest, UnterminatedFunctionNoCall) {
+    const std::string input =
+        R"(<function name="get_weather"><param name="city">Berlin)";  // truncated mid-value
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    EXPECT_FALSE(callsOpt.has_value() && !callsOpt.value().empty());
+}
+
+// An empty parameter value produces an empty string argument (for a STRING-typed param).
+TEST(Minicpm5ToolParserImplTest, EmptyParamValue) {
+    const std::string input =
+        R"(<function name="get_weather"><param name="city"></param></function>)";
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ASSERT_EQ(callsOpt.value().size(), 1u);
+    EXPECT_EQ(callsOpt.value()[0].name, "get_weather");
+    EXPECT_EQ(callsOpt.value()[0].arguments, R"({"city":""})");
+}
+
+// Plain text containing an angle bracket but no real function tag yields no calls and no crash.
+TEST(Minicpm5ToolParserImplTest, AngleBracketInPlainTextNoCall) {
+    const std::string input = "The value of a < b is true, and 3 < 4 as well.";
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    EXPECT_FALSE(callsOpt.has_value() && !callsOpt.value().empty());
+}
