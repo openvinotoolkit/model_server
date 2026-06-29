@@ -144,6 +144,38 @@ class OvmsTestDevCustomNode(DevCustomNode):
 
 
 @dataclass
+class CustomNodeEastOcr(OvmsCCustomNode):
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            name="east_ocr",
+            inputs={
+                "image": {"shape": [1, 3, 1024, 100], "dtype": np.float32},
+                "scores": {"shape": [1, 256, 480, 1], "dtype": np.float32},
+                "geometry": {"shape": [1, 256, 480, 5], "dtype": np.float32},
+            },
+            outputs={
+                "text_images": {"shape": [0, 1, 3, 32, 100], "dtype": np.float32},
+                "text_coordinates": {"shape": [0, 1, 4], "dtype": np.int32},
+                "confidence_levels": {"shape": [0, 1, 1], "dtype": np.float32},
+            },
+            **kwargs,
+        )
+
+    def get_parameters(self):
+        return {
+            "original_image_width": "1920",
+            "original_image_height": "1024",
+            "original_image_layout": "NHWC",
+            "target_image_layout": "NHWC",
+            "target_image_width": "100",
+            "target_image_height": "32",
+            "confidence_threshold": "0.9",
+            "debug": "true",
+        }
+
+
+@dataclass
 class CustomNodeVehicles(OvmsCCustomNode):
 
     def __init__(self, **kwargs):
@@ -177,6 +209,40 @@ class CustomNodeVehicles(OvmsCCustomNode):
 
 
 @dataclass
+class CustomNodeFaces(OvmsCCustomNode):
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            name="model_zoo_intel_object_detection",
+            inputs={
+                "image": {"shape": [1, 3, 600, 400], "dtype": np.float32},
+                "detection": {"shape": [1, 1, 200, 7], "dtype": np.float32},
+            },
+            outputs={
+                "images": {"shape": [0, 1, 3, 600, 400], "dtype": np.float32},
+                "coordinates": {"shape": [0, 1, 4], "dtype": np.int32},
+                "confidences": {"shape": [0, 1, 1], "dtype": np.float32},
+            },
+            **kwargs,
+        )
+
+    def get_parameters(self):
+        return {
+            "original_image_width": "600",
+            "original_image_height": "400",
+            "target_image_width": "64",
+            "target_image_height": "64",
+            "original_image_layout": "NHWC",
+            "target_image_layout": "NHWC",
+            "convert_to_gray_scale": "false",
+            "max_output_batch": "100",
+            "confidence_threshold": "0.7",
+            "debug": "true",
+        }
+
+
+
+@dataclass
 class CustomNodeImageTransformation(OvmsCCustomNode):
 
     def __init__(self, original_image_layout="NCHW", target_image_layout="NCHW", **kwargs):
@@ -201,6 +267,57 @@ class CustomNodeImageTransformation(OvmsCCustomNode):
             "scale_values": "[0.003921568627451,0.003921568627451,0.003921568627451]",
             "mean_values": "[-2,-2,-2]",
             "debug": "true",
+        }
+
+@dataclass
+class CustomNodeDemultiply(OvmsTestDevCustomNode):
+    ORIGINAL_DEMULTIPLY_COUNT = 3
+
+    def __init__(self, demultiply_size=None, **kwargs):
+        super().__init__(
+            name="demultiply",
+            inputs={"tensor": {"shape": [1, 3, 224, 224], "dtype": np.float32}},
+            outputs={"tensor_out": {"shape": [demultiply_size, 1, 3, 224, 224], "dtype": np.float32}},
+            **kwargs,
+        )
+
+        self.demultiply_size = demultiply_size
+
+    def get_parameters(self):
+        return {"demultiply_size": str(self.demultiply_size)}
+
+
+@dataclass
+class CustomNodeElastic1T(OvmsTestDevCustomNode):
+
+    def __init__(self, input_shape=None, output_shape=None, **kwargs):
+        super().__init__(
+            name="elastic_in_1t_out_1t",
+            inputs={"tensor_in": {"shape": input_shape, "dtype": np.float32}},
+            outputs={"tensor_out": {"shape": output_shape, "dtype": np.float32}},
+            **kwargs,
+        )
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+
+    def get_parameters(self):
+        return {"input_shape": str(self.input_shape), "output_shape": str(self.output_shape)}
+
+
+@dataclass
+class CustomNodeDemultiplyGather(OvmsTestDevCustomNode):
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            name="demultiply_gather",
+            inputs={"tensor": {"shape": [4, 1, 10], "dtype": np.float32}},
+            outputs={"tensor_out": {"shape": [4, 4, 1, 10], "dtype": np.float32}},
+            **kwargs,
+        )
+
+    def get_parameters(self):
+        return {
+            "demultiply_count": "4",
         }
 
 

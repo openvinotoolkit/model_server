@@ -45,8 +45,10 @@ from tests.functional.object_model.custom_node import (
     CustomNode,
     CustomNodeAddSub,
     CustomNodeChooseMaximum,
+    CustomNodeDemultiply,
     CustomNodeDifferentOperations,
     CustomNodeDynamicDemultiplex,
+    CustomNodeElastic1T,
     CustomNodeVehicles,
 )
 from tests.functional.object_model.mediapipe_calculators import (
@@ -687,6 +689,68 @@ class ComplexDummyPipeline(Pipeline):
 
         nodes = [request, node1, node2, node3, node4, node5, node6, output]
         return nodes
+
+
+class DemultiplyPipeline(Pipeline):
+
+    def __init__(self, demultiply_value, **kwargs):
+        super().__init__("demultiply_pipeline", **kwargs)
+        self.demultiply_node = Node(
+            "demultiply", CustomNodeDemultiply(demultiply_value), NodeType.Custom, demultiply_count=-1
+        )
+        self.resnet_node = Node("resnet", Resnet())
+        self._initialize()
+        self.update_demultiply_value(demultiply_value)
+
+    def update_demultiply_value(self, new_demultiply_value):
+        self.demultiply_node.model.demultiply_size = new_demultiply_value
+        self.set_expected_output_shape()
+
+    def set_expected_output_shape(self):
+        self.outputs["result"]["shape"] = [self.demultiply_node.model.demultiply_size] + self.resnet_node.model.outputs[
+            "softmax_tensor"
+        ]["shape"]
+
+    def _create_nodes(self, models=None):
+        request = Node("request", node_type=NodeType.Input)
+        output = Node("output", node_type=NodeType.Output, input_names=["result"])
+
+        NodesConnection.connect(self.demultiply_node, 0, request, 0)
+        NodesConnection.connect(self.resnet_node, 0, self.demultiply_node, 0)
+        NodesConnection.connect(output, 0, self.resnet_node, 0)
+
+        return [request, self.demultiply_node, self.resnet_node, output]
+
+
+class ElasticPipeline(Pipeline):
+
+    def __init__(self, input_shape, output_shape, demultiply_count=None, **kwargs):
+        super().__init__("elastic_pipeline", **kwargs)
+        self.custom_node = Node(
+            "elastic_node",
+            CustomNodeElastic1T(input_shape, output_shape),
+            NodeType.Custom,
+            demultiply_count=demultiply_count,
+        )
+        self._request = Node("request", node_type=NodeType.Input)
+        self.model_node = Node("resnet", Resnet())
+        for key in self.model_node.model.inputs:
+            self.model_node.model.inputs[key]["shape"] = None
+        self._initialize()
+        self.set_expected_output_shape()
+
+    def set_expected_output_shape(self):
+        demultiply_value = self.custom_node.model.outputs["tensor_out"]["shape"][0]
+        self.outputs["result"]["shape"] = [demultiply_value] + self.model_node.model.outputs["softmax_tensor"]["shape"]
+
+    def _create_nodes(self, models):
+        output = Node("output", node_type=NodeType.Output, input_names=["result"])
+
+        NodesConnection.connect(self.custom_node, 0, self._request, 0)
+        NodesConnection.connect(self.model_node, 0, self.custom_node, 0)
+        NodesConnection.connect(output, 0, self.model_node, 0)
+        return [self._request, self.custom_node, self.model_node, output]
+
 
 
 class ElasticBatchSizePipeline(Pipeline):
