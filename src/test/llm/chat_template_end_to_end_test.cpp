@@ -72,6 +72,7 @@ protected:
     ChatTemplateCaps caps;
     std::string appliedOutput;
     bool applySuccess = false;
+    bool basicRenderOk = false;
 
     // Load template from file
     static std::string loadTemplateFile(const std::string& path) {
@@ -100,7 +101,18 @@ protected:
         std::cout << "  requiresObjectArguments: " << caps.requiresObjectArguments << std::endl;
         std::cout << "  requiresNonNullContent: " << caps.requiresNonNullContent << std::endl;
 
-        // Step 2: Probe (only if template supports tools)
+        // Step 2: Basic render probe (can minja render this template at all?)
+        {
+            ov::genai::Tokenizer basicTokenizer(tokenizerPath);
+            basicTokenizer.set_chat_template(chatTemplate);
+            basicRenderOk = probeChatTemplateBasicRender(basicTokenizer);
+            if (!basicRenderOk) {
+                std::cout << "=== Basic Render Probe FAILED: template incompatible with minja ===" << std::endl;
+                return;
+            }
+        }
+
+        // Step 3: Tool probe (only if template supports tools)
         if (caps.supportsToolCalls) {
             ov::genai::Tokenizer probeTokenizer(tokenizerPath);
             probeTokenizer.set_chat_template(chatTemplate);
@@ -115,14 +127,14 @@ protected:
         std::cout << "=== After Probe ===" << std::endl;
         std::cout << "  requiresObjectArguments: " << caps.requiresObjectArguments << std::endl;
 
-        // Step 3: Apply workarounds to the chat history
+        // Step 4: Apply workarounds to the chat history
         if (applicator == TemplateApplicator::MINJA) {
             input_workarounds::applyToHistory(caps, analysisResult.detectedModelFamily, chatHistory);
         } else {
             GTEST_SKIP() << "JINJA applicator not implemented yet";
         }
 
-        // Step 4: Apply chat template
+        // Step 5: Apply chat template
         if (applicator == TemplateApplicator::MINJA) {
             ov::genai::Tokenizer tokenizer(tokenizerPath);
             tokenizer.set_chat_template(chatTemplate);
@@ -372,4 +384,47 @@ TEST_F(ChatTemplateEndToEndTest, LFM2_ToolCallWithStringArgs) {
     ASSERT_TRUE(applySuccess);
     // Analyzer does not detect tool support (no tool_call markers in template)
     EXPECT_FALSE(caps.supportsToolCalls);
+}
+
+// =============================================================================
+// Example: LFM2.5 with tool call containing string arguments
+// Uses <|tool_call_start|>[func(arg=val)]<|tool_call_end|> format.
+// Template uses {%- generation -%} blocks. Basic render works (simple messages
+// are fine), but tool_calls rendering silently fails — minja dumps raw JSON
+// instead of calling render_tool_calls macro. Tool probe catches this.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, LFM25_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2.5 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(false);
+
+    // Basic render works, but tool probe detects minja silent failure
+    EXPECT_TRUE(basicRenderOk);
+    EXPECT_EQ(analysisResult.detectedModelFamily, "lfm2");
+    EXPECT_FALSE(caps.supportsToolCalls);
+    EXPECT_FALSE(caps.supportsTools);
+}
+
+// =============================================================================
+// Synthetic test: template that throws on basic rendering (e.g. uses undefined
+// filter). The basic render probe should catch this and return false.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, BrokenTemplate_BasicRenderFails) {
+    // Template uses an undefined filter that causes minja to throw
+    chatTemplate = R"({%- for message in messages -%}{{ message.content | undefined_filter }}{%- endfor -%})";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"Hi"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"Hello"})"));
+
+    run(false);
+
+    EXPECT_FALSE(basicRenderOk);
 }

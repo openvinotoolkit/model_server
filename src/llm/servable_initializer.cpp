@@ -203,6 +203,13 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 
         // Dry-run probes: empirically verify requiresObjectArguments and requiresNonNullContent
         // by rendering synthetic messages through GenAI's minja and checking the output.
+        // First check if minja can render basic chat at all (catches unsupported Jinja extensions)
+        if (!probeChatTemplateBasicRender(properties->tokenizer)) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
+                                                       "Disabling /chat/completions endpoint for this model.");
+            properties->tokenizer.set_chat_template("");
+            return;
+        }
         probeServableChatTemplateCaps(properties);
     }
 }

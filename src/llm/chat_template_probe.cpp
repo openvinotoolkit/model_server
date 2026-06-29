@@ -26,6 +26,53 @@
 
 namespace ovms {
 
+bool probeChatTemplateBasicRender(ov::genai::Tokenizer& tokenizer) {
+    if (tokenizer.get_chat_template().empty()) {
+        return true;
+    }
+
+    static const std::string contentNeedle = "probe_basic_7Qw2";
+
+    try {
+        ov::genai::ChatHistory history;
+        history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hi"})"));
+        history.push_back(ov::genai::JsonContainer::from_json_string(
+            R"({"role":"assistant","content":")" + contentNeedle + R"("})"));
+
+        auto t0 = std::chrono::steady_clock::now();
+        std::string output = tokenizer.apply_chat_template(history, false);
+        auto t1 = std::chrono::steady_clock::now();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Basic render probe: {} us",
+            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
+
+        // Check if assistant content appears in output
+        if (output.find(contentNeedle) == std::string::npos) {
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Basic render probe: assistant content not found in output. "
+                                                      "Template may be incompatible with minja.");
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Basic render probe output: {}", output);
+            return false;
+        }
+
+        // Check for raw JSON dump markers — if minja silently failed, it dumps
+        // the message object as JSON containing "content": and "role":
+        if (output.find("\"content\": \"" + contentNeedle + "\"") != std::string::npos ||
+            output.find("\"content\":\"" + contentNeedle + "\"") != std::string::npos) {
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Basic render probe: output contains raw JSON dump of message object. "
+                                                      "Template is not supported by minja.");
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Basic render probe output: {}", output);
+            return false;
+        }
+
+        return true;
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Basic render probe: exception: {}", e.what());
+        return false;
+    } catch (...) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Basic render probe: unknown exception");
+        return false;
+    }
+}
+
 bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps) {
     if (tokenizer.get_chat_template().empty()) {
         return true;
@@ -86,7 +133,8 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
         return output.find("\"" + argNeedle + "\": ") != std::string::npos ||        // JSON key: "needle":
                output.find("'" + argNeedle + "': ") != std::string::npos ||          // Python dict: 'needle':
                output.find("<parameter=" + argNeedle + ">") != std::string::npos ||  // Qwen3-Coder XML
-               output.find(argNeedle + ":<|") != std::string::npos;                  // Gemma4: needle:<|
+               output.find(argNeedle + ":<|") != std::string::npos ||                // Gemma4: needle:<|
+               output.find(argNeedle + "=") != std::string::npos;                    // Function-style: needle=value
     };
 
     bool strArgsRendersNative = strOk && rendersNativeArgs(strOut);

@@ -24,6 +24,11 @@
 
 namespace ovms {
 
+// Probes whether a chat template can render a basic user/assistant exchange.
+// Returns false if minja silently fails (e.g. unsupported Jinja extensions like {%- generation -%}).
+// Should be called before tool-specific probing — if this fails, the template is broken.
+bool probeChatTemplateBasicRender(ov::genai::Tokenizer& tokenizer);
+
 // Probes a chat template by dry-running it with synthetic tool_call inputs
 // to empirically detect whether the template requires object arguments.
 // Updates caps.requiresObjectArguments based on probe results.
