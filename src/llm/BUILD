@@ -140,7 +140,10 @@ ovms_cc_library(
     deps = [
         "//third_party:genai",
         "//src:libovmslogging",
-    ],
+    ] + select({
+        "//:not_disable_python": [":py_jinja_template_processor"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
 )
 

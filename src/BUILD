@@ -2325,6 +2325,7 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
+                "test/llm/chat_template_end_to_end_jinja_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({

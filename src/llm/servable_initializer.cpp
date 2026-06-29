@@ -72,60 +72,10 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 
 #if (PYTHON_DISABLE == 0)
     if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->templateProcessor.chatTemplate != nullptr) {
-        // Probe via Python Jinja — this path has NO polyfills, tests raw template behavior
-        const std::string argNeedle = "probe_needle_xK9m";
-        std::string strArgsOutput;
-        std::string objArgsOutput;
-        bool strArgsSuccess = false;
-        bool objArgsSuccess = false;
-
-        std::string strArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]}]})";
-        std::string objArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":{")" + argNeedle + R"(":"val"}}}]}]})";
-
-        try {
-            auto t0 = std::chrono::steady_clock::now();
-            strArgsSuccess = PyJinjaTemplateProcessor::applyChatTemplate(properties->templateProcessor, properties->modelsPath, strArgsJson, strArgsOutput);
-            auto t1 = std::chrono::steady_clock::now();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (string args): {} us",
-                std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (string args): exception: {}", e.what());
-        } catch (...) {
-        }
-
-        try {
-            auto t0 = std::chrono::steady_clock::now();
-            objArgsSuccess = PyJinjaTemplateProcessor::applyChatTemplate(properties->templateProcessor, properties->modelsPath, objArgsJson, objArgsOutput);
-            auto t1 = std::chrono::steady_clock::now();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (object args): {} us",
-                std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (object args): exception: {}", e.what());
-        } catch (...) {
-        }
-
-        auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
-            return output.find("\"" + argNeedle + "\": ") != std::string::npos ||
-                   output.find("'" + argNeedle + "': ") != std::string::npos ||
-                   output.find("<parameter=" + argNeedle + ">") != std::string::npos ||
-                   output.find(argNeedle + ":<|") != std::string::npos;
-        };
-
-        bool strArgsRendersNative = strArgsSuccess && rendersNativeArgs(strArgsOutput);
-        bool objArgsRendersNative = objArgsSuccess && rendersNativeArgs(objArgsOutput);
-
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe requiresObjectArguments: strRendersNative={}, objRendersNative={}",
-            strArgsRendersNative, objArgsRendersNative);
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja strArgs output: {}", strArgsOutput);
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja objArgs output: {}", objArgsOutput);
-
-        if (strArgsRendersNative || objArgsRendersNative) {
-            bool probeResult = objArgsRendersNative;
-            if (probeResult != properties->chatTemplateCaps.requiresObjectArguments) {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Dry-run probe overrides requiresObjectArguments: {} -> {}",
-                    properties->chatTemplateCaps.requiresObjectArguments, probeResult);
-            }
-            properties->chatTemplateCaps.requiresObjectArguments = probeResult;
+        if (!probeChatTemplateCapsJinja(properties->templateProcessor, properties->modelsPath, properties->chatTemplateCaps)) {
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Disabling tool call support: Jinja cannot render this template's tool calls correctly");
+            properties->chatTemplateCaps.supportsToolCalls = false;
+            properties->chatTemplateCaps.supportsTools = false;
         }
         return;
     }

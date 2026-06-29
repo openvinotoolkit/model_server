@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <string>
+
 #include "chat_template_caps.hpp"
 
 #pragma GCC diagnostic push
@@ -35,5 +37,15 @@ bool probeChatTemplateBasicRender(ov::genai::Tokenizer& tokenizer);
 // Only performs probing if caps.supportsToolCalls is true.
 // Returns false if minja silently failed to render tool calls (template unsupported).
 bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
+
+#if (PYTHON_DISABLE == 0)
+class PyJinjaTemplateProcessor;
+
+// Probes a chat template via Python Jinja by dry-running it with synthetic tool_call inputs.
+// Updates caps.requiresObjectArguments based on probe results.
+// Only performs probing if caps.supportsToolCalls is true.
+// Returns false if Jinja silently failed to render tool calls (template unsupported).
+bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, const std::string& modelsPath, ChatTemplateCaps& caps);
+#endif
 
 }  // namespace ovms

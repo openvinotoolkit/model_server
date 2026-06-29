@@ -23,6 +23,9 @@
 #include <spdlog/spdlog.h>
 
 #include "../logging.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "py_jinja_template_processor.hpp"
+#endif
 
 namespace ovms {
 
@@ -177,5 +180,92 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
         caps.requiresObjectArguments);
     return true;
 }
+
+#if (PYTHON_DISABLE == 0)
+
+bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, const std::string& modelsPath, ChatTemplateCaps& caps) {
+    if (!caps.supportsToolCalls) {
+        return true;
+    }
+
+    auto probeStart = std::chrono::steady_clock::now();
+    const std::string argNeedle = "probe_needle_xK9m";
+
+    std::string strArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]}]})";
+    std::string objArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":{")" + argNeedle + R"(":"val"}}}]}]})";
+
+    std::string strOut, objOut;
+    bool strOk = false, objOk = false;
+
+    try {
+        auto t0 = std::chrono::steady_clock::now();
+        strOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, modelsPath, strArgsJson, strOut);
+        auto t1 = std::chrono::steady_clock::now();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (string args): {} us",
+            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (string args): exception: {}", e.what());
+    } catch (...) {
+    }
+
+    try {
+        auto t0 = std::chrono::steady_clock::now();
+        objOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, modelsPath, objArgsJson, objOut);
+        auto t1 = std::chrono::steady_clock::now();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (object args): {} us",
+            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (object args): exception: {}", e.what());
+    } catch (...) {
+    }
+
+    auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
+        return output.find("\"" + argNeedle + "\": ") != std::string::npos ||        // JSON key: "needle":
+               output.find("'" + argNeedle + "': ") != std::string::npos ||          // Python dict: 'needle':
+               output.find("<parameter=" + argNeedle + ">") != std::string::npos ||  // Qwen3-Coder XML
+               output.find(argNeedle + ":<|") != std::string::npos ||                // Gemma4: needle:<|
+               output.find(argNeedle + "=") != std::string::npos;                    // Function-style: needle=value
+    };
+
+    bool strArgsRendersNative = strOk && rendersNativeArgs(strOut);
+    bool objArgsRendersNative = objOk && rendersNativeArgs(objOut);
+
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja requiresObjectArguments: strRendersNative={}, objRendersNative={}",
+        strArgsRendersNative, objArgsRendersNative);
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja strArgs output: {}", strOut);
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja objArgs output: {}", objOut);
+
+    // Detect silent failure (raw JSON dump)
+    static const std::string silentFailureMarker = "\"tool_calls\": [";
+    bool strArgsFailed = strOk && strOut.find(silentFailureMarker) != std::string::npos;
+    bool objArgsFailed = objOk && objOut.find(silentFailureMarker) != std::string::npos;
+
+    if (strArgsFailed || objArgsFailed) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Dry-run probe Jinja: silently failed to render tool calls "
+                                                  "(output contains raw JSON dump). Template is not supported for tool calls.");
+        auto probeEnd = std::chrono::steady_clock::now();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja completed in {} us. Result: FAILURE",
+            std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count());
+        return false;
+    }
+
+    if (strArgsRendersNative || objArgsRendersNative) {
+        bool probeResult = objArgsRendersNative;
+        if (probeResult != caps.requiresObjectArguments) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Dry-run probe Jinja overrides requiresObjectArguments: {} -> {}",
+                caps.requiresObjectArguments, probeResult);
+        }
+        caps.requiresObjectArguments = probeResult;
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja: template does not render tool_call arguments in native format, keeping string-matching result for requiresObjectArguments");
+    }
+
+    auto probeEnd = std::chrono::steady_clock::now();
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja completed in {} us. Final result: requiresObjectArguments={}",
+        std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count(),
+        caps.requiresObjectArguments);
+    return true;
+}
+#endif
 
 }  // namespace ovms
