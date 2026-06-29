@@ -1457,14 +1457,6 @@ class CorruptedFileModelMediaPipe(SimpleModelMediaPipe):
         self.calculators = [CorruptedFileCalculator()]
 
 
-class SimpleOneCalculatorMediaPipe(SimpleModelMediaPipe):
-    def __init__(self, model=None):
-        super().__init__(model)
-        self.calculators = [OVMSOVCalculator()]
-        assert not self.name.endswith("_mediapipe")
-        self.name += "_mediapipe"
-
-
 class SameModelsMediaPipe(MediaPipe):
     def __init__(self, **kwargs):
         Pipeline.__init__(self, "same_models_mediapipe", **kwargs)
