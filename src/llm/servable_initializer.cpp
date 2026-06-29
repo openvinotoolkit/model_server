@@ -114,6 +114,8 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe requiresObjectArguments: strRendersNative={}, objRendersNative={}",
             strArgsRendersNative, objArgsRendersNative);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja strArgs output: {}", strArgsOutput);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja objArgs output: {}", objArgsOutput);
 
         if (strArgsRendersNative || objArgsRendersNative) {
             bool probeResult = objArgsRendersNative;

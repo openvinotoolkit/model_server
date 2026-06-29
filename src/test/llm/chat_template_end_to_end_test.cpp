@@ -254,9 +254,5 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3Coder_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(applySuccess);
 
-//     std::string expectedOutput = R"(</s><|turn>user
-// What's the weather in Paris?<turn|>
-// <|turn>model
-// <|tool_call>call:get_weather{location:<|"|>Paris<|"|>,unit:<|"|>celsius<|"|>}<tool_call|><|tool_response>)";
-//      EXPECT_EQ(appliedOutput, expectedOutput);
+    // TODO: Assert the expected output
 }
