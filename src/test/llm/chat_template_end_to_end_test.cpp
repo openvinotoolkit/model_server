@@ -324,3 +324,30 @@ What's the weather in Paris?<|im_end|>
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
+
+// =============================================================================
+// Example: Mistral-7B-Instruct-v0.3 with tool call containing string arguments
+// Uses [TOOL_CALLS] + [TOOL_RESULTS] format (detected as "devstral" by analyzer).
+// Template uses tool_call.function|tojson so object args render natively.
+// Probe detects requiresObjectArguments=true and workaround converts args.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, Mistral7B_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_mistral7b_v03.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load mistral7b-v0.3 template";
+
+    // Mistral requires 9-char alphanumeric tool_call IDs
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"abc123def","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(false);
+
+    ASSERT_TRUE(applySuccess);
+    EXPECT_EQ(analysisResult.detectedModelFamily, "devstral");
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+
+    std::string expectedOutput = R"(</s>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]</s>)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}

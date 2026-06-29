@@ -43,7 +43,7 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
             ov::genai::ChatHistory history;
             history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
             history.push_back(ov::genai::JsonContainer::from_json_string(
-                R"({"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]})"));
+                R"({"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]})"));
             auto t0 = std::chrono::steady_clock::now();
             std::string output = tokenizer.apply_chat_template(history, false);
             auto t1 = std::chrono::steady_clock::now();
@@ -64,7 +64,7 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
             ov::genai::ChatHistory history;
             history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
             history.push_back(ov::genai::JsonContainer::from_json_string(
-                R"({"role":"assistant","content":"","tool_calls":[{"id":"call_1","type":"function","function":{"name":"probe_fn","arguments":{")" + argNeedle + R"(":"val"}}}]})"));
+                R"({"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":{")" + argNeedle + R"(":"val"}}}]})"));
             auto t0 = std::chrono::steady_clock::now();
             std::string output = tokenizer.apply_chat_template(history, false);
             auto t1 = std::chrono::steady_clock::now();
