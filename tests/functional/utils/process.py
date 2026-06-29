@@ -240,9 +240,9 @@ class CommonProcess(AbstractProcess):
 
         try:
             parent_proc = psutil.Process(self._proc.pid)
+            child_processes = parent_proc.children()
         except psutil.NoSuchProcess as e:
             return not self.is_alive()
-        child_processes = parent_proc.children()
         for child_proc in child_processes:
             try:
                 child_proc.terminate()
