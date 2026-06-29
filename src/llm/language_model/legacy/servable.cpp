@@ -107,12 +107,12 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
             !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
-        auto ovmsCallback = [& ctx = *legacyExecutionContext](rapidjson::Document delta) -> ov::genai::StreamingStatus {
+        auto ovmsCallback = [& ctx = *legacyExecutionContext](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 ctx.deltaChannel.signalComplete();
                 return ov::genai::StreamingStatus::CANCEL;
             }
-            ctx.deltaChannel.push(std::move(delta));
+            ctx.deltaChannel.push(std::move(delta), isLast);
             return ov::genai::StreamingStatus::RUNNING;
         };
         legacyExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
@@ -124,7 +124,12 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     } else {
         legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(
             getProperties()->tokenizer,
-            [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+            [& ctx = *legacyExecutionContext](std::string) -> ov::genai::StreamingStatus {
+                if (ctx.clientDisconnected.load()) {
+                    return ov::genai::StreamingStatus::CANCEL;
+                }
+                return ov::genai::StreamingStatus::RUNNING;
+            });
     }
     GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
@@ -225,6 +230,11 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         }
         executionContext->sendLoopbackSignal = true;
     } else {
+        // Wait for the readySignal
+        // (set right after pipe->generate() returns and results are assigned)
+        // to guarantee results is populated before we read finish_reasons and perf_metrics.
+        // Also ensures success flag is accurate.
+        legacyExecutionContext->finished.wait();
         if (!legacyExecutionContext->success) {
             return absl::InvalidArgumentError("Request processing failed, check its correctness.");
         }

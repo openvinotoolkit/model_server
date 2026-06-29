@@ -133,7 +133,7 @@ TEST(TokenizeDeserialization, positiveTokenizeParamsParse) {
     ASSERT_EQ(strings->at(2), "three");
     auto params = request.parameters;
     ASSERT_EQ(params["max_length"].as<size_t>(), 100);
-    // ASSERT_EQ(params["truncation"].as<bool>(), true);
+    ASSERT_EQ(params["truncation"].as<bool>(), true);
     ASSERT_EQ(params["pad_to_max_length"].as<bool>(), true);
     ASSERT_EQ(params["padding_side"].as<std::string>(), "right");
     ASSERT_EQ(params["add_special_tokens"].as<bool>(), false);
@@ -154,7 +154,7 @@ TEST(TokenizeDeserialization, invalidTokenizeMaxLengthType) {
     auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request);
     ASSERT_NE(status, absl::OkStatus());
     auto error = status.message();
-    ASSERT_EQ(error, "max_length should be integer");
+    ASSERT_EQ(error, "max_length should be unsigned integer");
 }
 
 TEST(TokenizeDeserialization, invalidTokenizePadToMaxLengthType) {
@@ -227,4 +227,40 @@ TEST(TokenizeDeserialization, invalidTokenizePaddingSideValue) {
     ASSERT_NE(status, absl::OkStatus());
     auto error = status.message();
     ASSERT_EQ(error, "padding_side should be either left or right");
+}
+
+TEST(TokenizeDeserialization, invalidTokenizeMaxLengthNegative) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": -10
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request);
+    ASSERT_NE(status, absl::OkStatus());
+    auto error = status.message();
+    ASSERT_EQ(error, "max_length should be unsigned integer");
+}
+
+TEST(TokenizeDeserialization, invalidTokenizeMaxLengthZero) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 0
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request);
+    ASSERT_NE(status, absl::OkStatus());
+    auto error = status.message();
+    ASSERT_EQ(error, "max_length should be greater than 0");
 }
