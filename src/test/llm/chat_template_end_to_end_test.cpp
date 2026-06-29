@@ -174,11 +174,11 @@ TEST_F(ChatTemplateEndToEndTest, GptOss_ToolCallWithStringArgs) {
     ASSERT_TRUE(applySuccess);
     EXPECT_EQ(analysisResult.detectedModelFamily, "gptoss");
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresObjectArguments);
 
     // Note: template embeds current date, so we check key fragments instead of full match
     EXPECT_NE(appliedOutput.find("to=functions.get_weather"), std::string::npos);
-    EXPECT_NE(appliedOutput.find("{\"location\": \"Paris\", \"unit\": \"celsius\"}"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("{\"location\":\"Paris\",\"unit\":\"celsius\"}"), std::string::npos);
 }
 
 // =============================================================================

@@ -10,7 +10,7 @@
     * Added special handling for empty tool_calls field when rendering chat history.
       In some cases gpt-oss generates reasoning/content but no tool calls.
       BFCL sends empty array and chat template accessed index 0 assuming there always is some tool call. New chat template ignores empty arrays now.
-    !* Removed "|tojson" from tool argument rendering. This introduced string escaping drastically influenced following generations. OpenAI Harmony format assumes no escaping of arguments.
+    * Removed "|tojson" from tool argument rendering. This introduced string escaping drastically influenced following generations. OpenAI Harmony format assumes no escaping of arguments.
       This was related to both: function call output (result from mcp servers) and function call arguments (input to mcp servers) in chat history.
 #}
 {#-
@@ -321,7 +321,9 @@
                 {{- "<|start|>assistant to=" }}
                 {{- "functions." + tool_call.name + " <|channel|>commentary " }}
                 {{- (tool_call.content_type if tool_call.content_type is defined else "json") + "<|message|>" }}
-                {{- tool_call.arguments|tojson }}
+                {#- Original: {{- tool_call.arguments|tojson }} #}
+                {#- No need to escape: #}
+                {{- tool_call.arguments }}
                 {#- Original: {{- "<|call|>" }} #}
                 {#- https://cookbook.openai.com/articles/openai-harmony#handling-tool-calls #}
                 {#- Found out in OpenAI Harmony docs it should be replaced with <|end|> in history rendering: #}
