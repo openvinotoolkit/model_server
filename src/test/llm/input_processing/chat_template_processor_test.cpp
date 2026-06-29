@@ -174,14 +174,13 @@ TEST_F(ChatTemplateProcessorTest, EmptyStringContent_TemplateStillProducesOutput
 
 // ---------------------------------------------------------------------------
 // Negative test — model WITHOUT a chat template
-// (facebook/opt-125m is a base language model; it has no chat_template entry
-// in its tokenizer_config.json, so tokenizer.apply_chat_template() throws.)
+// (BAAI/bge-reranker-base has no chat_template specified anywhere)
 // ChatTemplateProcessor must catch that exception and return kInvalidArgument.
 // ---------------------------------------------------------------------------
 
 TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_ReturnsError) {
     const std::string path = getGenericFullPathForSrcTest(
-        "/ovms/src/test/llm_testing/facebook/opt-125m");
+        "/ovms/src/test/llm_testing/BAAI/bge-reranker-base/ov");
     ov::genai::Tokenizer tokenizer(path);
 
     ov::genai::ChatHistory history;

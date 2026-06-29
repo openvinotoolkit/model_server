@@ -57,12 +57,11 @@ ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
 #endif
 
 absl::Status ChatTemplateProcessor::process(InputRequest& req) {
-    const auto* chatHistoryPtr = std::get_if<ov::genai::ChatHistory>(&req.input);
-    if (chatHistoryPtr == nullptr) {
+    if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
         return absl::Status(absl::StatusCode::kInternal,
             "ChatTemplateProcessor received input that is not a ChatHistory");
     }
-    const ov::genai::ChatHistory& chatHistory = *chatHistoryPtr;
+    const auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Chat history messages: {}", chatHistory.get_messages().to_json_string());
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "chatHistory.get_extra_context(): {}", chatHistory.get_extra_context().to_json_string());
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "tools: {}", chatHistory.get_tools().empty() ? std::string("<none>") : chatHistory.get_tools().to_json_string());
