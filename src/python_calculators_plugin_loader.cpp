@@ -28,7 +28,10 @@
 #endif
 
 #ifdef __linux__
+#include <cerrno>
 #include <dlfcn.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #elif _WIN32
 #include <windows.h>
 #include <system_error>
@@ -56,6 +59,50 @@ static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
 // Weak reference allows using in-process bridge when linked into the binary
 // (e.g. ovms_test) without requiring -rdynamic for RTLD_DEFAULT lookups.
 extern "C" const KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
+
+bool probePluginLoadInChildProcess(const std::string& pluginPath) {
+    // Some plugin failures are process-fatal (for example LOG(FATAL)/abort in
+    // static initializers, as seen in MediaPipe type-map registration conflicts).
+    // Probe in a short-lived child process so the parent OVMS process can
+    // continue startup and gracefully disable Python calculators instead of
+    // terminating the whole server.
+    pid_t probePid = fork();
+    if (probePid < 0) {
+        SPDLOG_WARN("Could not start Python calculators plugin probe for {}. Will try loading directly.", pluginPath);
+        return true;
+    }
+
+    if (probePid == 0) {
+        void* probeHandle = dlopen(pluginPath.c_str(), RTLD_NOW | RTLD_LOCAL);
+        if (probeHandle != nullptr) {
+            dlclose(probeHandle);
+            _exit(0);
+        }
+        _exit(1);
+    }
+
+    int waitStatus = 0;
+    while (waitpid(probePid, &waitStatus, 0) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+        SPDLOG_WARN("Could not wait for Python calculators plugin probe for {}. Will try loading directly.", pluginPath);
+        return true;
+    }
+
+    if (WIFEXITED(waitStatus) && WEXITSTATUS(waitStatus) == 0) {
+        return true;
+    }
+
+    if (WIFSIGNALED(waitStatus)) {
+        SPDLOG_WARN("Skipping Python calculators plugin candidate {} because probe process terminated with signal {}.", pluginPath, WTERMSIG(waitStatus));
+    } else if (WIFEXITED(waitStatus)) {
+        SPDLOG_DEBUG("Python calculators plugin probe failed for {} with exit code {}.", pluginPath, WEXITSTATUS(waitStatus));
+    } else {
+        SPDLOG_DEBUG("Python calculators plugin probe failed for {}.", pluginPath);
+    }
+    return false;
+}
 #endif
 
 #ifdef _WIN32
@@ -192,6 +239,12 @@ bool loadPythonCalculatorsPlugin() {
     }
 
     for (const auto& candidate : candidates) {
+        // Try loading candidate in a child process first. If probe indicates a
+        // crash/non-zero exit, skip direct dlopen in the main process to avoid
+        // bringing down OVMS during optional plugin initialization.
+        if (!probePluginLoadInChildProcess(candidate)) {
+            continue;
+        }
         pythonCalculatorsHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_LOCAL);
         if (pythonCalculatorsHandle != nullptr) {
             break;
