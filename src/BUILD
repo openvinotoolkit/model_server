@@ -2601,7 +2601,10 @@ cc_test(
     srcs = [
         "test/python_runtime_library_test.cpp",
     ],
-    copts = ["-Wno-format-security"],
+    copts = select({
+        "//src:windows": [],
+        "//conditions:default": ["-Wno-format-security"],
+    }),
     data = select({
         "//src:windows": [
             "//src/python:libovmspython.dll",
