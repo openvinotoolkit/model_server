@@ -75,7 +75,9 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
 
 absl::Status InputProcessor::process(InputRequest& req) {
     for (auto& processor : processors) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "InputProcessor: executing {}", typeid(*processor).name());
+        if (llm_calculator_logger->should_log(spdlog::level::trace)) {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "InputProcessor: executing {}", typeid(*processor).name());
+        }
         auto status = processor->process(req);
         if (!status.ok()) {
             return status;

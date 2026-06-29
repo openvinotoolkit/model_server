@@ -28,6 +28,10 @@ namespace ovms {
 class RawPromptExtractor : public BaseInputProcessor {
 public:
     absl::Status process(InputRequest& req) override {
+        if (!std::holds_alternative<std::string>(req.input)) {
+            return absl::Status(absl::StatusCode::kInternal,
+                "RawPromptExtractor received input that is not a std::string");
+        }
         req.promptText = std::move(std::get<std::string>(req.input));
         return absl::OkStatus();
     }

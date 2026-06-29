@@ -22,6 +22,10 @@
 namespace ovms {
 
 absl::Status TextContentNormalizationProcessor::process(InputRequest& req) {
+    if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
+        return absl::Status(absl::StatusCode::kInternal,
+            "TextContentNormalizationProcessor received input that is not a ChatHistory");
+    }
     ov::genai::ChatHistory& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
     for (size_t i = 0; i < chatHistory.size(); i++) {
         const auto content = chatHistory[i]["content"];
