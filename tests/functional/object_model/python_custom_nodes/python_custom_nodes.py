@@ -19,9 +19,9 @@ import numpy as np
 from tests.functional.utils.inference.communication import GRPC
 from tests.functional.utils.logger import get_logger
 from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
-from ovms.constants.model_dataset import LanguageModelDataset
 from tests.functional.constants.ovms import Ovms
 from tests.functional.constants.pipelines import MediaPipe, NodesConnection, NodeType, PythonGraphNode
+from tests.functional.models.models_datasets import LanguageModelDataset
 from tests.functional.object_model.mediapipe_calculators import HttpLLMCalculator, PythonCalculator, \
     ImageGenCalculator, EmbeddingsCalculatorOV, RerankCalculatorOV, S2tCalculator, T2sCalculator
 from tests.functional import config
@@ -47,7 +47,7 @@ class SimplePythonCustomNodeMediaPipe(MediaPipe):
     def __init__(self, handler_path, node_name="upper_text", loopback=False, initialize_graphs=True, **kwargs):
         self.node_name = node_name
         self.config = {}
-        self.prepare_llm_model_inputs_outputs(model=self, dataset=LanguageModelDataset, kwargs=kwargs)
+        self.prepare_model_inputs_outputs(model=self, dataset=LanguageModelDataset, kwargs=kwargs)
 
         super().__init__(**kwargs)
         self.calculators = [
@@ -65,7 +65,7 @@ class SimplePythonCustomNodeMediaPipe(MediaPipe):
         self.handler_path = handler_path
 
     @staticmethod
-    def prepare_llm_model_inputs_outputs(model, dataset, **kwargs):
+    def prepare_model_inputs_outputs(model, dataset, **kwargs):
         inputs_number = kwargs.get("inputs_number", None)
         model.inputs_number = inputs_number if inputs_number is not None else model.inputs_number
         model.inputs = {
@@ -253,7 +253,7 @@ class PythonCustomNodeChainMediaPipe(SimplePythonCustomNodeMediaPipe):
         return True
 
 
-class SimpleLLM(SimplePythonCustomNodeMediaPipe):
+class SimpleGenerativeNode(SimplePythonCustomNodeMediaPipe):
     inputs_number = 1
     input_name: str = "input"
     outputs_number = 1
@@ -265,17 +265,18 @@ class SimpleLLM(SimplePythonCustomNodeMediaPipe):
     name: str = ""
     pbtxt_name: str = "simple_llm"
     is_python_custom_node: bool = True
-    is_llm: bool = True
+    is_generative: bool = True
+    is_llm: bool = False
     calculator_class = HttpLLMCalculator
+    use_subconfig: bool = False
     precision: str = None
-    allows_reasoning: bool = False
 
     def __init__(self, models_path, node_name="LLMExecutor", loopback=True, initialize_graphs=True, **kwargs):
         model = kwargs["model"]
         self.node_name = node_name
         self.config = {}
         dataset = model.get_default_dataset()
-        self.prepare_llm_model_inputs_outputs(model=self, dataset=dataset, kwargs=kwargs)
+        self.prepare_model_inputs_outputs(model=self, dataset=dataset, kwargs=kwargs)
 
         self.regular_models = []
         self.is_mediapipe = True
@@ -315,28 +316,23 @@ class SimpleLLM(SimplePythonCustomNodeMediaPipe):
         self.model_timeout = getattr(model, "model_timeout", None)
 
 
-class SimpleImageGenerationLLM(SimpleLLM):
-    inputs_number = 1
-    input_name: str = "input"
-    outputs_number = 1
-    output_name: str = "output"
-    child_nodes: list = None
-    inputs: dict = None
-    outputs: list = None
-    base_path: str = ""
-    name: str = ""
-    pbtxt_name: str = "simple_llm"
-    is_python_custom_node: bool = True
+class SimpleLLM(SimpleGenerativeNode):
     is_llm: bool = True
+    allows_reasoning: bool = False
+
+    def __init__(self, models_path, node_name="LLMExecutor", loopback=False, initialize_graphs=True, **kwargs):
+        super().__init__(models_path, node_name, loopback, initialize_graphs, **kwargs)
+
+
+class SimpleImageGeneration(SimpleGenerativeNode):
     calculator_class = ImageGenCalculator
-    precision: str = None
 
     def __init__(self, models_path, node_name="ImageGenExecutor", initialize_graphs=True, **kwargs):
         model = kwargs["model"]
         self.node_name = node_name
         self.config = {}
         dataset = model.get_default_dataset()
-        self.prepare_llm_model_inputs_outputs(model=self, dataset=dataset, kwargs=kwargs)
+        self.prepare_model_inputs_outputs(model=self, dataset=dataset, kwargs=kwargs)
 
         self.regular_models = []
         self.is_mediapipe = True
@@ -368,61 +364,25 @@ class SimpleImageGenerationLLM(SimpleLLM):
         self.model_timeout = getattr(model, "model_timeout", None)
 
 
-class SimpleFeatureExtractionLLM(SimpleLLM):
-    inputs_number: int = 1
-    input_name: str = "input"
-    outputs_number: int = 1
-    output_name: str = "output"
-    child_nodes: list = None
-    inputs: dict = None
-    outputs: list = None
-    base_path: str = ""
-    name: str = ""
-    pbtxt_name: str = "simple_llm"
-    is_python_custom_node: bool = True
-    is_llm: bool = True
-    use_subconfig: bool = True
+class SimpleFeatureExtraction(SimpleGenerativeNode):
     is_feature_extraction: bool = True
     calculator_class = EmbeddingsCalculatorOV
+    use_subconfig: bool = True
 
     def __init__(self, models_path, node_name="LLMExecutor", loopback=False, initialize_graphs=True, **kwargs):
         super().__init__(models_path, node_name, loopback, initialize_graphs, **kwargs)
 
 
-class SimpleRerankLLM(SimpleLLM):
-    inputs_number: int = 1
-    input_name: str = "input"
-    outputs_number: int = 1
-    output_name: str = "output"
-    child_nodes: list = None
-    inputs: dict = None
-    outputs: list = None
-    base_path: str = ""
-    name: str = ""
-    pbtxt_name: str = "simple_llm"
-    is_python_custom_node: bool = True
-    is_llm: bool = True
-    use_subconfig: bool = True
+class SimpleRerank(SimpleGenerativeNode):
     is_rerank: bool = True
     calculator_class = RerankCalculatorOV
+    use_subconfig: bool = True
 
     def __init__(self, models_path, node_name="LLMExecutor", loopback=False, initialize_graphs=True, **kwargs):
         super().__init__(models_path, node_name, loopback, initialize_graphs, **kwargs)
 
 
-class SimpleAsrModel(SimpleLLM):
-    inputs_number: int = 1
-    input_name: str = "input"
-    outputs_number: int = 1
-    output_name: str = "output"
-    child_nodes: list = None
-    inputs: dict = None
-    outputs: list = None
-    base_path: str = ""
-    name: str = ""
-    pbtxt_name: str = "simple_llm"
-    is_python_custom_node: bool = True
-    is_llm: bool = False
+class SimpleAsrModel(SimpleGenerativeNode):
     is_asr_model: bool = True
     calculator_class = S2tCalculator
 
@@ -430,19 +390,7 @@ class SimpleAsrModel(SimpleLLM):
         super().__init__(models_path, node_name, loopback, initialize_graphs, **kwargs)
 
 
-class SimpleTtsModel(SimpleLLM):
-    inputs_number: int = 1
-    input_name: str = "input"
-    outputs_number: int = 1
-    output_name: str = "output"
-    child_nodes: list = None
-    inputs: dict = None
-    outputs: list = None
-    base_path: str = ""
-    name: str = ""
-    pbtxt_name: str = "simple_llm"
-    is_python_custom_node: bool = True
-    is_llm: bool = False
+class SimpleTtsModel(SimpleGenerativeNode):
     is_tts_model: bool = True
     calculator_class = T2sCalculator
 
