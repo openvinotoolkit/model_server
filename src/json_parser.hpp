@@ -18,7 +18,7 @@
 #include <map>
 #include <string>
 
-#include <openvino/openvino.hpp>
+#include <openvino/core/any.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>

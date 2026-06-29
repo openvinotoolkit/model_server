@@ -39,7 +39,7 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
 #include "language_model/continuous_batching/servable_initializer.hpp"
@@ -55,13 +55,16 @@ static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
 #if (PYTHON_DISABLE == 0)
-    ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
-    loadPyTemplateProcessor(properties, extraGenInfo);
-#else
-    if (properties->tokenizer.get_chat_template().empty()) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
-    }
+    if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
+        ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
+        loadPyTemplateProcessor(properties, extraGenInfo);
+    } else  // NOLINT(readability/braces)
 #endif
+    {
+        if (properties->tokenizer.get_chat_template().empty()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
+        }
+    }
 
     // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
     // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
@@ -150,14 +153,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     std::string chatTemplate = properties->tokenizer.get_original_chat_template();
     std::string bosToken = properties->tokenizer.get_bos_token();
     std::string eosToken = properties->tokenizer.get_eos_token();
-    if (bosToken.empty()) {
-        SPDLOG_ERROR("BOS token was not found in model files.");
-        return;
-    }
-    if (eosToken.empty()) {
-        SPDLOG_ERROR("EOS token was not found in model files.");
-        return;
-    }
     if (chatTemplate.empty()) {
         SPDLOG_ERROR("Chat template was not found in model files.");
         return;
@@ -253,6 +248,8 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             jinja_env.globals["raise_exception"] = raise_exception
             jinja_env.globals["strftime_now"] = strftime_now
             jinja_env.filters["from_json"] = json.loads
+            # Override tojson to return plain str instead of Markup to prevent HTML escaping in LLM prompts
+            jinja_env.filters["tojson"] = lambda value, indent=None: json.dumps(value, ensure_ascii=False, indent=indent)
 
             # Try to read data from tokenizer_config.json to get additional tool chat template if present
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")

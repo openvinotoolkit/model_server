@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "../capi_frontend/server_settings.hpp"
+#include "../llm/io_processing/parser_config_validation.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../status.hpp"
 
@@ -79,7 +80,11 @@ void GraphCLIParser::createOptions() {
         ("enable_tool_guided_generation",
             "Enables enforcing tool schema during generation. Requires setting tool parser. Default: false.",
             cxxopts::value<std::string>()->default_value("false"),
-            "ENABLE_TOOL_GUIDED_GENERATION");
+            "ENABLE_TOOL_GUIDED_GENERATION")
+        ("cache_interval_multiplier",
+            "Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: unset.",
+            cxxopts::value<uint64_t>(),
+            "CACHE_INTERVAL_MULTIPLIER");
 
     options->add_options("plugin config")
         ("max_prompt_len",
@@ -152,11 +157,22 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
 
         if (result->count("reasoning_parser")) {
             graphSettings.reasoningParser = result->operator[]("reasoning_parser").as<std::string>();
+            if (!graphSettings.reasoningParser.value().empty() && !isSupportedReasoningParserName(graphSettings.reasoningParser.value())) {
+                throw std::invalid_argument("Unsupported reasoning_parser: \"" + graphSettings.reasoningParser.value() +
+                                            "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
+            }
         }
         if (result->count("tool_parser")) {
             graphSettings.toolParser = result->operator[]("tool_parser").as<std::string>();
+            if (!graphSettings.toolParser.value().empty() && !isSupportedToolParserName(graphSettings.toolParser.value())) {
+                throw std::invalid_argument("Unsupported tool_parser: \"" + graphSettings.toolParser.value() +
+                                            "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
+            }
         }
         graphSettings.enableToolGuidedGeneration = result->operator[]("enable_tool_guided_generation").as<std::string>();
+        if (result->count("cache_interval_multiplier")) {
+            graphSettings.cacheIntervalMultiplier = result->operator[]("cache_interval_multiplier").as<uint64_t>();
+        }
 
         // Plugin configuration
         if (result->count("max_prompt_len")) {

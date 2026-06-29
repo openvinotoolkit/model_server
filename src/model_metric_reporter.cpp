@@ -20,9 +20,9 @@
 
 #include "execution_context.hpp"
 #include "logging.hpp"
-#include "metric_config.hpp"
-#include "metric_family.hpp"
-#include "metric_registry.hpp"
+#include "metrics/metric_config.hpp"
+#include "metrics/metric_family.hpp"
+#include "metrics/metric_registry.hpp"
 
 namespace ovms {
 

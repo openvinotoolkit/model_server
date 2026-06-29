@@ -61,6 +61,7 @@ BUILD_TESTS ?= 0
 RUN_GPU_TESTS ?=
 GPU ?= 0
 NPU ?= 0
+ESPEAK ?= 1
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
 PYTHON_DISABLE ?= 0
@@ -70,18 +71,15 @@ $(error PYTHON_DISABLE cannot be 0 when MEDIAPIPE_DISABLE is 1)
 endif
 endif
 FUZZER_BUILD ?= 0
-
+DOCKER_BUILDKIT ?= 1
+KONFLUX ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
-OV_SOURCE_BRANCH ?= f6221c2f44e9ecfa5ac1f039d0a29a05a13aef1c # releases/2026/1 branch
-OV_TOKENIZERS_BRANCH ?= aeede7f1c441fa49c59c8020b77dfb49d7df443c # releases/2026/1 branch
-OV_GENAI_BRANCH ?= 1dabb8c22554c3224227ba7cc6b3c8966f30bded # releases/2026/1 branch
-
-OV_SOURCE_ORG ?= openvinotoolkit
-OV_GENAI_ORG ?= openvinotoolkit
-OV_TOKENIZERS_ORG ?= openvinotoolkit
+# Dependency versions (git commits, orgs, package version) are centralised in versions.mk.
+# Override any variable via the environment or command-line before invoking make.
+include versions.mk
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
@@ -150,8 +148,13 @@ else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
-CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(REPO_ENV)
+ifeq ($(ESPEAK),1)
+  ESPEAK_PARAMS = " --//:espeak=on"
+else
+  ESPEAK_PARAMS = " --//:espeak=off"
+endif
+CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(ESPEAK_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(ESPEAK_PARAMS)$(REPO_ENV)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
@@ -171,12 +174,12 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
-	INSTALL_DRIVER_VERSION ?= "25.48.36300"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.1.0.0rc1/openvino_genai_ubuntu24_2026.1.0.0rc1_x86_64.tar.gz
+	INSTALL_DRIVER_VERSION ?= "26.18.38308"
+	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU24)
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.1.0.0rc1/openvino_genai_ubuntu22_2026.1.0.0rc1_x86_64.tar.gz
+	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU22)
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -185,7 +188,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.1.0.0rc1/openvino_genai_rhel8_2026.1.0.0rc1_x86_64.tar.gz # not used
+  DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_RHEL) # not used
   INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 
@@ -198,7 +201,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2026.1.0"
+PRODUCT_VERSION ?= "2026.3.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -237,6 +240,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg minitrace_flags=$(MINITRACE_FLAGS) \
 	--build-arg CMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)\
 	--build-arg PROJECT_VERSION=$(PROJECT_VERSION)\
+	--build-arg OPENCV_VERSION=$(OPENCV_VERSION)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
 	--build-arg BASE_OS=$(BASE_OS)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
@@ -244,7 +248,8 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)\
 	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
-	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)
+	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)\
+	--build-arg KONFLUX=$(KONFLUX)
 
 
 .PHONY: default docker_build \
@@ -359,13 +364,10 @@ ifeq ($(NO_DOCKER_CACHE),true)
 	@docker pull registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   endif
 endif
-ifeq ($(USE_BUILDX),true)
-	$(eval BUILDX:=buildx)
-endif
 
 ifeq ($(BUILD_CUSTOM_NODES),true)
 	@echo "Building custom nodes"
-	@cd src/custom_nodes && make USE_BUILDX=$(USE_BUILDX) NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
+	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
 endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
@@ -389,15 +391,23 @@ targz_package:
 		--target=pkg && \
 	rm -vrf dist/$(OS) && mkdir -p dist/$(OS) && \
 	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
-	docker cp $$ID:/ovms_pkg/$(OS) dist/ && \
+	docker cp $$ID:/ovms_pkg/$(OS)/ovms.tar dist/$(OS)/ && \
 	docker rm $$ID
-	cd dist/$(OS) && sha256sum --check ovms.tar.gz.sha256
+	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
+		$(BUILD_ARGS) \
+		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG) \
+		--target=capi-build && \
+	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG)) && \
+	docker cp $$ID:/ovms_release/lib/libovms_shared.so dist/$(OS)/ && \
+	docker rm $$ID
+	cd dist/$(OS) && \
+	tar rf ovms.tar --transform 's,^,ovms/lib/,' libovms_shared.so && \
+	gzip ovms.tar && \
+	rm -f libovms_shared.so && \
+	sha256sum ovms.tar.gz > ovms.tar.gz.sha256
 
 ovms_release_images:
-ifeq ($(USE_BUILDX),true)
-	$(eval BUILDX:=buildx)
-	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
-endif
 ifeq ($(BASE_OS),redhat)
 	$(eval NPU:=0)
 else
@@ -445,10 +455,6 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 release_image:
-ifeq ($(USE_BUILDX),true)
-	$(eval BUILDX:=buildx)
-	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
-endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
@@ -608,15 +614,15 @@ test_functional: venv
 
 test_python_clients:
 	@echo "Prepare docker image"
-	@docker build . -f tests/python/Dockerfile -t python_client_test
+	@docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" . -f tests/python/Dockerfile -t python_client_test
 	@echo "Dropping test container if exist"
 	@docker rm --force $(PYTHON_CLIENT_TEST_CONTAINER_NAME) || true
 	@echo "Download models"
 	@if [ ! -d "tests/python/models" ]; then cd tests/python && \
 		mkdir models && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
-		docker run -u $(id -u):$(id -g) -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
+		docker run -u $(id -u):$(id -g) -e http_proxy="$(http_proxy)" -e https_proxy="$(https_proxy)" -v ${PWD}/tests/python/models:/models openvino/ubuntu20_dev:2024.6.0 omz_downloader --name resnet-50-tf --output_dir /models && \
+		docker run -u $(id -u):$(id -g) -e http_proxy="$(http_proxy)" -e https_proxy="$(https_proxy)" -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 omz_converter --name resnet-50-tf --download_dir /models --output_dir /models --precisions FP32 && \
+		docker run -u $(id -u):$(id -g) -e http_proxy="$(http_proxy)" -e https_proxy="$(https_proxy)" -v ${PWD}/tests/python/models:/models:rw openvino/ubuntu20_dev:2024.6.0 mv /models/public/resnet-50-tf/FP32 /models/public/resnet-50-tf/1; fi
 	@echo "Start test container"
 	@docker run -d --rm --name $(PYTHON_CLIENT_TEST_CONTAINER_NAME) -v ${PWD}/tests/python/models/public/resnet-50-tf:/models/public/resnet-50-tf -p $(PYTHON_CLIENT_TEST_REST_PORT):8000 -p $(PYTHON_CLIENT_TEST_GRPC_PORT):9000 openvino/model_server:latest --model_name resnet --model_path /models/public/resnet-50-tf --port 9000 --rest_port 8000 && \
 		sleep 10

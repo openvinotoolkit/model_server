@@ -23,7 +23,7 @@
 #include "absl/strings/str_replace.h"
 #include "absl/strings/ascii.h"
 
-#include "src/filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/image_gen/image_gen_calculator.pb.h"
 #include "src/json_parser.hpp"
 #include "src/logging.hpp"
@@ -114,6 +114,73 @@ static std::variant<Status, std::vector<resolution_t>> getListOfResolutions(cons
     return result;
 }
 
+// Validates LoRA adapter configuration: NPU-specific constraints.
+// For NPU, resolves compile-time alpha using priority: composite > individual.
+static Status validateLoraAdapterConfig(ImageGenPipelineArgs& args, bool isNPU) {
+    // For NPU STATIC mode: resolve compile-time alpha per adapter.
+    // Priority: composite component alpha (if set) > individual adapter alpha.
+    // NPU supports only a single composite definition.
+    if (!isNPU) {
+        return StatusCode::OK;
+    }
+    if (!args.compositeLoraAdapters.empty()) {
+        if (args.compositeLoraAdapters.size() > 1) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                "NPU device supports only a single composite_lora_adapters entry. "
+                "Found {} composites.",
+                args.compositeLoraAdapters.size());
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
+        const auto& [compositeAlias, components] = *args.compositeLoraAdapters.begin();
+        for (auto& adapter : args.loraAdapters) {
+            for (const auto& [compAlias, compAlpha] : components) {
+                if (compAlias != adapter.alias) {
+                    continue;
+                }
+                if (compAlpha.has_value()) {
+                    adapter.alpha = compAlpha.value();
+                    SPDLOG_LOGGER_INFO(modelmanager_logger,
+                        "LoRA adapter '{}': using composite component alpha={} for NPU compilation.",
+                        adapter.alias, compAlpha.value());
+                }
+                // else: keep individual adapter.alpha (already set from pbtxt or default)
+                break;
+            }
+        }
+    }
+    // NPU + LoRA validation: NPU uses MODE_STATIC (fixed alpha at compile time), so runtime
+    // adapter switching is impossible. Multiple LoRAs require a composite definition.
+    if (!args.loraAdapters.empty()) {
+        if (args.loraAdapters.size() > 1 && args.compositeLoraAdapters.empty()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                "NPU device with multiple LoRA adapters requires composite_lora_adapters definition. "
+                "All adapters are compiled with MODE_STATIC and runtime switching is unavailable.");
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
+        // Every adapter must appear in the composite (already validated size == 1 above)
+        if (!args.compositeLoraAdapters.empty()) {
+            const auto& [alias, components] = *args.compositeLoraAdapters.begin();
+            for (const auto& adapter : args.loraAdapters) {
+                bool found = false;
+                for (const auto& [compAlias, alpha] : components) {
+                    if (compAlias == adapter.alias) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                        "NPU device: LoRA adapter '{}' is not referenced by composite_lora_adapters entry '{}'. "
+                        "On NPU all adapters are static and only composite aliases are routable.",
+                        adapter.alias, alias);
+                    return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+                }
+            }
+        }
+    }
+    return StatusCode::OK;
+}
+
 std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const google::protobuf::Any& calculatorOptions, const std::string& graphPath) {
     mediapipe::ImageGenCalculatorOptions nodeOptions;
     if (!calculatorOptions.UnpackTo(&nodeOptions)) {
@@ -123,9 +190,9 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
     auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
     std::string pipelinePath;
     if (fsModelsPath.is_relative()) {
-        pipelinePath = (std::filesystem::path(graphPath) / fsModelsPath).string();
+        pipelinePath = (std::filesystem::path(graphPath) / fsModelsPath).generic_string();
     } else {
-        pipelinePath = fsModelsPath.string();
+        pipelinePath = fsModelsPath.generic_string();
     }
     ImageGenPipelineArgs args;
     args.modelsPath = pipelinePath;
@@ -235,7 +302,9 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         args.defaultResolution = std::get<std::optional<resolution_t>>(defaultResOptOrStatus);
         if (args.defaultResolution.value().first > args.maxResolution.first ||
             args.defaultResolution.value().second > args.maxResolution.second) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution exceeds maximum allowed resolution: {} > {}", args.defaultResolution.value(), args.maxResolution);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution exceeds maximum allowed resolution: ({}x{}) > ({}x{})",
+                args.defaultResolution.value().first, args.defaultResolution.value().second,
+                args.maxResolution.first, args.maxResolution.second);
             return StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION;
         }
         // default resolution is not among the ones allowed
@@ -243,7 +312,12 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             auto& resolutions = args.staticReshapeSettings.value().resolution;
             auto it = std::find(resolutions.begin(), resolutions.end(), args.defaultResolution.value());
             if (it == resolutions.end()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution {} is not among the static resolutions: {}", args.defaultResolution.value(), resolutions);
+                std::string resStr;
+                for (const auto& r : resolutions) {
+                    resStr += "(" + std::to_string(r.first) + "x" + std::to_string(r.second) + ") ";
+                }
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution ({}x{}) is not among the static resolutions: {}",
+                    args.defaultResolution.value().first, args.defaultResolution.value().second, resStr);
                 return StatusCode::SHAPE_WRONG_FORMAT;
             }
         }
@@ -258,6 +332,51 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
     args.maxNumImagesPerPrompt = nodeOptions.max_num_images_per_prompt();
     args.defaultNumInferenceSteps = nodeOptions.default_num_inference_steps();
     args.maxNumInferenceSteps = nodeOptions.max_num_inference_steps();
+
+    for (int i = 0; i < nodeOptions.lora_adapters_size(); ++i) {
+        const auto& loraEntry = nodeOptions.lora_adapters(i);
+        LoraAdapterInfo info;
+        info.alias = loraEntry.alias();
+        auto fsLoraPath = std::filesystem::path(loraEntry.path());
+        if (fsLoraPath.is_relative()) {
+            info.path = (std::filesystem::path(graphPath) / fsLoraPath).generic_string();
+        } else {
+            info.path = fsLoraPath.generic_string();
+        }
+        info.alpha = loraEntry.has_alpha() ? loraEntry.alpha() : DEFAULT_ALPHA;
+        switch (loraEntry.mode()) {
+        case ::mediapipe::DYNAMIC:
+            info.mode = LoraLoadMode::DYNAMIC;
+            break;
+        case ::mediapipe::STATIC:
+            info.mode = LoraLoadMode::STATIC;
+            break;
+        case ::mediapipe::FUSE:
+            info.mode = LoraLoadMode::FUSE;
+            break;
+        default:
+            info.mode = LoraLoadMode::DYNAMIC;
+            break;
+        }
+        args.loraAdapters.push_back(std::move(info));
+    }
+
+    for (int i = 0; i < nodeOptions.composite_lora_adapters_size(); ++i) {
+        const auto& compositeEntry = nodeOptions.composite_lora_adapters(i);
+        std::vector<std::pair<std::string, std::optional<float>>> components;
+        for (int j = 0; j < compositeEntry.components_size(); ++j) {
+            const auto& comp = compositeEntry.components(j);
+            std::optional<float> alpha = comp.has_alpha() ? std::optional<float>(comp.alpha()) : std::nullopt;
+            components.emplace_back(comp.adapter_alias(), alpha);
+        }
+        args.compositeLoraAdapters.emplace(compositeEntry.alias(), std::move(components));
+    }
+
+    auto loraValidationStatus = validateLoraAdapterConfig(args, isNPU);
+    if (!loraValidationStatus.ok()) {
+        return loraValidationStatus;
+    }
+
     return std::move(args);
 }
 }  // namespace ovms

@@ -24,7 +24,7 @@ def libgit2_engine():
     new_git_repository(
         name = "libgit2_engine",
         remote = "https://github.com/libgit2/libgit2.git",
-        commit = "338e6fb681369ff0537719095e22ce9dc602dbf0", # Dec 28, 2024 - v1.9.0
+        commit = "1f34e2a57a3d03f174771203b64aed2b17e8522c", # Tue Mar 31 20:34:06 2026 main
         build_file = "@_libgit2_engine//:BUILD",
         patch_args = ["-p1"],
         # Patch implements git-lfs filter, required for HF models download
@@ -51,6 +51,7 @@ def _impl(repository_ctx):
         out_static = "out_interface_libs = [\"{lib_name}.lib\"],".format(lib_name=lib_name)
         out_libs = "out_shared_libs = [\"{lib_name}.dll\"],".format(lib_name=lib_name)
         cache_entries = """
+        "EXPERIMENTAL_SHA256": "ON",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " /guard:cf /GS -s -D_GLIBCXX_USE_CXX11_ABI=1",
         "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "Debug",
@@ -59,13 +60,14 @@ def _impl(repository_ctx):
         "BUILD_EXAMPLES": "OFF",
         "BUILD_TESTS": "OFF",
         "BUILD_CLI": "OFF",
-        "CURL_DEPENDENCIES_DIR": "C:/opt/curl-8.18.0_4-win64-mingw",
+        "CURL_DEPENDENCIES_DIR": "C:/opt/curl-8.20.0_2-win64-mingw",
         """
     else:
         lib_name = "libgit2"
         out_static = ""
         out_libs = "out_shared_libs = [\"{lib_name}.so\"],".format(lib_name=lib_name)
         cache_entries = """
+        "EXPERIMENTAL_SHA256": "ON",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " /guard:cf -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",

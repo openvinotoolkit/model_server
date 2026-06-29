@@ -18,9 +18,6 @@
 #include <memory>
 #include <string>
 
-#include <fmt/ranges.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
 namespace ovms {
@@ -30,7 +27,6 @@ extern std::shared_ptr<spdlog::logger> azurestorage_logger;
 extern std::shared_ptr<spdlog::logger> s3_logger;
 extern std::shared_ptr<spdlog::logger> modelmanager_logger;
 extern std::shared_ptr<spdlog::logger> dag_executor_logger;
-extern std::shared_ptr<spdlog::logger> sequence_manager_logger;
 extern std::shared_ptr<spdlog::logger> capi_logger;
 #if (MEDIAPIPE_DISABLE == 0)
 extern std::shared_ptr<spdlog::logger> mediapipe_logger;

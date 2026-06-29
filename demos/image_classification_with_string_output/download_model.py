@@ -16,8 +16,11 @@
 
 
 import os
+import sys
 
-os.environ["KERAS_BACKEND"] = "tensorflow"
+if sys.version_info >= (3, 12):
+    os.environ.setdefault("WRAPT_DISABLE_EXTENSIONS", "true")
+os.environ.setdefault("KERAS_BACKEND", "tensorflow")
 
 import json
 import shutil
@@ -57,7 +60,7 @@ def export_model(model, labels):
 
     return serving_fn
 
-model = keras.applications.MobileNet()
+model = keras.applications.MobileNetV2()
 model_dir = "./model"
 model_version = 1
 model_export_path = f"{model_dir}/{model_version}"

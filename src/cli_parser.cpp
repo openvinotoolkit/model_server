@@ -31,8 +31,8 @@
 #include "graph_export/s2t_graph_cli_parser.hpp"
 #include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
-#include "filesystem.hpp"
-#include "localfilesystem.hpp"
+#include "filesystem/filesystem.hpp"
+#include "filesystem/localfilesystem.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -105,6 +105,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("log_path",
                 "Optional path to the log file",
                 cxxopts::value<std::string>(), "LOG_PATH")
+            ("verbose_response",
+                "When enabled, responses include an extra "
+                "\"__verbose\" object with additional debug information.",
+                cxxopts::value<bool>()->default_value("false"),
+                "VERBOSE_RESPONSE")
 #ifdef MTR_ENABLED
             ("trace_path",
                 "Path to the trace file",
@@ -117,10 +122,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
-            ("sequence_cleaner_poll_wait_minutes",
-                "Time interval between two consecutive sequence cleanup scans. Default is 5. Zero value disables sequence cleaner. It also sets the schedule for releasing free memory from the heap.",
-                cxxopts::value<uint32_t>()->default_value("5"),
-                "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
             ("custom_node_resources_cleaner_interval_seconds",
                 "Time interval between two consecutive resources cleanup scans. Default is 300. Zero value disables resources cleaner.",
                 cxxopts::value<uint32_t>()->default_value("300"),
@@ -213,6 +214,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             "HF source model path",
             cxxopts::value<std::string>(),
             "HF_SOURCE")
+            ("source_loras",
+            "LoRA adapters for image generation. Format: alias1=org1/repo1,alias2=org2/repo2@file.safetensors,alias3=https://url/file.safetensors,alias4=/local/path/file.safetensors",
+            cxxopts::value<std::string>(),
+            "SOURCE_LORAS")
             ("gguf_filename",
             "Name of the GGUF file",
             cxxopts::value<std::string>(),
@@ -225,10 +230,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             "HF model destination download path",
             cxxopts::value<std::string>()->default_value(defaultModelRepoPath),
             "MODEL_REPOSITORY_PATH")
-            ("task",
-                "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints, text2speech - audio/speech endpoint, speech2text - audio/transcriptions endpoint.",
-                cxxopts::value<std::string>(),
-                "TASK")
             ("weight-format",
             "Model precision used in optimum-cli export with conversion",
             cxxopts::value<std::string>()->default_value("int8"),
@@ -294,23 +295,13 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("plugin_config",
                 "A dictionary of plugin configuration keys and their values, eg \"{\\\"NUM_STREAMS\\\": \\\"1\\\"}\". Default number of streams is optimized to optimal latency with low concurrency.",
                 cxxopts::value<std::string>(),
-                "PLUGIN_CONFIG")
-            ("stateful",
-                "Flag indicating model is stateful",
-                cxxopts::value<bool>()->default_value("false"),
-                "STATEFUL")
-            ("idle_sequence_cleanup",
-                "Flag indicating if model is subject to sequence cleaner scans",
-                cxxopts::value<bool>()->default_value("true"),
-                "IDLE_SEQUENCE_CLEANUP")
-            ("low_latency_transformation",
-                "Flag indicating that Model Server should perform low latency transformation on that model",
-                cxxopts::value<bool>()->default_value("false"),
-                "LOW_LATENCY_TRANSFORMATION")
-            ("max_sequence_number",
-                "Determines how many sequences can be processed concurrently by one model instance. When that value is reached, attempt to start a new sequence will result in error.",
-                cxxopts::value<uint32_t>(),
-                "MAX_SEQUENCE_NUMBER");
+                "PLUGIN_CONFIG");
+
+        options->add_options("generative task (applies to: pull hf model, single model)")
+            ("task",
+                "Specifies the generative task for the local model. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on the provided task-specific options.",
+                cxxopts::value<std::string>(),
+                "TASK");
         configOptions->custom_help("");
         configOptions->add_options(CONFIG_MANAGEMENT_HELP_GROUP)
             ("list_models",
@@ -344,8 +335,8 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
-        // HF pull mode or pull and start mode
-        if (isHFPullOrPullAndStart(this->result)) {
+        // HF pull mode or pull and start mode or starting from local folder with graph created in memory
+        if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
             std::vector<std::string> unmatchedOptions;
             GraphExportType task;
             if (result->count("task")) {
@@ -508,7 +499,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.metricsEnabled = result->operator[]("metrics_enable").as<bool>();
     serverSettings.metricsList = result->operator[]("metrics_list").as<std::string>();
     serverSettings.filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
-    serverSettings.sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
+
     serverSettings.resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
     serverSettings.grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
@@ -516,6 +507,8 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.logLevel = result->operator[]("log_level").as<std::string>();
     if (result->count("log_path"))
         serverSettings.logPath = result->operator[]("log_path").as<std::string>();
+    if (result->count("verbose_response"))
+        serverSettings.verboseResponse = result->operator[]("verbose_response").as<bool>();
 
     if (result->count("grpc_channel_arguments"))
         serverSettings.grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
@@ -530,7 +523,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.allowedMediaDomains = result->operator[]("allowed_media_domains").as<std::vector<std::string>>();
     }
     if (result->count("allowed_local_media_path")) {
-        serverSettings.allowedLocalMediaPath = result->operator[]("allowed_local_media_path").as<std::string>();
+        serverSettings.allowedLocalMediaPath = FileSystem::normalizeConfiguredPath(result->operator[]("allowed_local_media_path").as<std::string>());
     }
 
     if (result->count("grpc_bind_address"))
@@ -594,10 +587,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("model_path");
     }
-    if (result->count("max_sequence_number")) {
-        modelsSettings.maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
-        modelsSettings.userSetSingleModelArguments.push_back("max_sequence_number");
-    }
+
 
     if (result->count("batch_size")) {
         modelsSettings.batchSize = result->operator[]("batch_size").as<std::string>();
@@ -670,21 +660,6 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         hfSettings.exportSettings.pluginConfig.manualString = modelsSettings.pluginConfig;
         modelsSettings.userSetSingleModelArguments.push_back("plugin_config");
     }
-
-    if (result->count("stateful")) {
-        modelsSettings.stateful = result->operator[]("stateful").as<bool>();
-        modelsSettings.userSetSingleModelArguments.push_back("stateful");
-    }
-
-    if (result->count("idle_sequence_cleanup")) {
-        modelsSettings.idleSequenceCleanup = result->operator[]("idle_sequence_cleanup").as<bool>();
-        modelsSettings.userSetSingleModelArguments.push_back("idle_sequence_cleanup");
-    }
-
-    if (result->count("low_latency_transformation")) {
-        modelsSettings.lowLatencyTransformation = result->operator[]("low_latency_transformation").as<bool>();
-        modelsSettings.userSetSingleModelArguments.push_back("low_latency_transformation");
-    }
     if (result->count("config_path")) {
             modelsSettings.configPath = result->operator[]("config_path").as<std::string>();
             modelsSettings.userSetSingleModelArguments.push_back("config_path");
@@ -692,13 +667,27 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
 }
 
 bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
+    // Keep `--task` in the broad mutually exclusive task/pull CLI category so
+    // parse-time checks that rely on this helper continue to reject combining
+    // task-based flows with config-management modes. More specific mode
+    // differentiation is handled by isInMemoryGraphMode().
     return (result->count("pull") || result->count("task"));
 }
 
+bool CLIParser::isInMemoryGraphMode(const std::unique_ptr<cxxopts::ParseResult>& result) {
+    return (result->count("task") && !result->count("source_model") && !result->count("pull"));
+}
+
 void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
+    // Always propagate source_model so validation can detect misuse
+    if (result->count("source_model")) {
+        hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
+    }
     // Ovms Pull models mode || pull and start models mode
-    if (isHFPullOrPullAndStart(this->result)) {
-        if (result->count("pull")) {
+    if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
+        if (isInMemoryGraphMode(this->result)) {
+            serverSettings.serverMode = IN_MEMORY_GRAPH_MODE;
+        } else if (result->count("pull")) {
             serverSettings.serverMode = HF_PULL_MODE;
         } else {
             serverSettings.serverMode = HF_PULL_AND_START_MODE;
@@ -711,9 +700,15 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
         }
         if (result->count("source_model")) {
+            // Already set above, but keep the original flow for downloadType logic
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-        } else if (result->count("model_name")) {
+        } else if (result->count("model_name") && !result->count("model_path")) {
+            // Only use model_name as source_model when model_path is not set
+            // (when model_path is set, user wants to use local model without HF pull)
             hfSettings.sourceModel = result->operator[]("model_name").as<std::string>();
+        }
+        if (result->count("source_loras")) {
+            hfSettings.sourceLoras = result->operator[]("source_loras").as<std::string>();
         }
         if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
             hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
@@ -731,7 +726,13 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.exportSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         if (result->count("vocoder"))
             hfSettings.exportSettings.vocoder = result->operator[]("vocoder").as<std::string>();
+        hfSettings.exportSettings.restWorkers = serverSettings.restWorkers;
         hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+        // When --task is used with --model_path but without --pull/--source_model,
+        // use model_path as the model location (no HF download needed)
+        if (!result->count("pull") && !result->count("source_model") && result->count("model_path")) {
+            hfSettings.exportSettings.modelPath = result->operator[]("model_path").as<std::string>();
+        }
         if (result->count("task")) {
             hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
             switch (hfSettings.task) {
@@ -798,7 +799,8 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         if (!serverSettings.cacheDir.empty()) {
             hfSettings.exportSettings.pluginConfig.cacheDir = serverSettings.cacheDir;
         }
-    // No pull nor pull and start mode
+
+    // No pull nor pull and start mode and no start with local model_path
     } else {
         if (result->count("weight-format")) {
             throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
@@ -840,11 +842,14 @@ void CLIParser::prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl
     // Model settings
     if (result->count("model_name")) {
         modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
-    } else {
+    } else if (!hfSettings.sourceModel.empty()) {
         modelsSettings.modelName = hfSettings.sourceModel;
     }
 
-    modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel});
+    // Only override modelPath if it wasn't already set via --model_path
+    if (!result->count("model_path")) {
+        modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel});
+    }
 }
 
 void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {

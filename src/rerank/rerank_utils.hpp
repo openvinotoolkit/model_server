@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 #include "src/port/rapidjson_document.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 

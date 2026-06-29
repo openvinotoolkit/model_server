@@ -23,7 +23,7 @@
 
 namespace ovms {
 
-void Phi4GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) {
+void Phi4GenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& request) {
     // Call the base class method to fill in common configuration
     BaseGenerationConfigBuilder::parseConfigFromRequest(request);
 

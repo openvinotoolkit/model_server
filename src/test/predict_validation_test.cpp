@@ -14,10 +14,13 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <limits>
 #include <string>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <openvino/runtime/core.hpp>
 
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
@@ -824,6 +827,34 @@ TEST_F(TfsPredictValidationDynamicModel, RequestDimensionInRangeWrongTensorConte
 
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE);
+}
+
+// Regression test: tensor buffer size validation must use overflow-safe arithmetic.
+// Both dimensions are near INT64_MAX/2; their product (~2^124) greatly exceeds SIZE_MAX.
+// The server must detect the overflow and reject the request with INVALID_CONTENT_SIZE.
+TEST_F(TfsPredictValidationDynamicModel, RequestContentSizeIntegerOverflowRejected) {
+    // Each dim ~2^62; product ~2^124 overflows size_t.
+    constexpr int64_t kOverflowDim0 = std::numeric_limits<int64_t>::max() / 2;
+    constexpr int64_t kOverflowDim1 = std::numeric_limits<int64_t>::max() / 2;
+    // What naive unchecked arithmetic produces (wraps around SIZE_MAX).
+    constexpr size_t kWrappedExpectedSize =
+        static_cast<size_t>(kOverflowDim0) * static_cast<size_t>(kOverflowDim1) * sizeof(float);
+
+    servableInputs = ovms::tensor_map_t({{"overflow_input",
+        std::make_shared<ovms::TensorInfo>("overflow_input", ovms::Precision::FP32,
+            ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()}, ovms::Layout{"NC"})}});
+    ON_CALL(*instance, getBatchSize()).WillByDefault(Return(ovms::Dimension::any()));
+
+    request.Clear();
+    auto& input = (*request.mutable_inputs())["overflow_input"];
+    input.set_dtype(tensorflow::DataType::DT_FLOAT);
+    auto* shape = input.mutable_tensor_shape();
+    shape->add_dim()->set_size(kOverflowDim0);
+    shape->add_dim()->set_size(kOverflowDim1);
+    *input.mutable_tensor_content() = std::string(kWrappedExpectedSize, 'A');
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
 
 class TfsPredictValidationPrecision : public ::testing::TestWithParam<ovms::Precision> {
@@ -1795,6 +1826,35 @@ TEST_F(KFSPredictValidationDynamicModel, RequestDimensionInRangeWrongTensorConte
     EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
 }
 
+// Regression test: tensor buffer size validation must use overflow-safe arithmetic.
+// Both dimensions are near INT64_MAX/2; their product (~2^124) greatly exceeds SIZE_MAX.
+// The server must detect the overflow and reject the request with INVALID_CONTENT_SIZE.
+TEST_F(KFSPredictValidationDynamicModel, RequestContentSizeIntegerOverflowRejected) {
+    // Each dim ~2^62; product ~2^124 overflows size_t.
+    constexpr int64_t kOverflowDim0 = std::numeric_limits<int64_t>::max() / 2;
+    constexpr int64_t kOverflowDim1 = std::numeric_limits<int64_t>::max() / 2;
+    // What naive unchecked arithmetic produces (wraps around SIZE_MAX).
+    constexpr size_t kWrappedExpectedSize =
+        static_cast<size_t>(kOverflowDim0) * static_cast<size_t>(kOverflowDim1) * sizeof(float);
+
+    servableInputs = ovms::tensor_map_t({{"overflow_input",
+        std::make_shared<ovms::TensorInfo>("overflow_input", ovms::Precision::FP32,
+            ovms::Shape{ovms::Dimension::any(), ovms::Dimension::any()}, ovms::Layout{"NC"})}});
+    ON_CALL(*instance, getBatchSize()).WillByDefault(Return(ovms::Dimension::any()));
+
+    request.Clear();
+    auto* input = request.add_inputs();
+    input->set_name("overflow_input");
+    input->set_datatype("FP32");
+    input->add_shape(kOverflowDim0);
+    input->add_shape(kOverflowDim1);
+    auto* content = request.add_raw_input_contents();
+    content->assign(kWrappedExpectedSize, 'A');
+
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_CONTENT_SIZE) << status.string();
+}
+
 class KFSPredictValidationPrecision : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {
@@ -2128,16 +2188,16 @@ TYPED_TEST(PredictValidationStringNativeTest, string_not_allowed_with_demultiple
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
-#define VERIFY_COMPUTE_BUFFER_SIZE(SHAPE, ELEMENT_SIZE, WILL_NOT_OVERFLOW, EXPECTED_BYTES)                                                       \
-    {                                                                                                                                            \
-        size_t elementSize = ELEMENT_SIZE;                                                                                                       \
-        std::vector<int> rawShape SHAPE;                                                                                                         \
-        size_t expectedBytes = 12412412;                                                                                                         \
-        bool result = ovms::request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow<int>(rawShape, elementSize, expectedBytes); \
-        EXPECT_EQ(WILL_NOT_OVERFLOW, result);                                                                                                    \
-        if (WILL_NOT_OVERFLOW) {                                                                                                                 \
-            EXPECT_EQ(EXPECTED_BYTES, expectedBytes);                                                                                            \
-        }                                                                                                                                        \
+#define VERIFY_COMPUTE_BUFFER_SIZE(SHAPE, ELEMENT_SIZE, WILL_NOT_OVERFLOW, EXPECTED_BYTES)                                                  \
+    {                                                                                                                                       \
+        size_t elementSize = ELEMENT_SIZE;                                                                                                  \
+        std::vector<int> rawShape SHAPE;                                                                                                    \
+        size_t expectedBytes = 12412412;                                                                                                    \
+        bool result = ovms::request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, elementSize, expectedBytes); \
+        EXPECT_EQ(WILL_NOT_OVERFLOW, result);                                                                                               \
+        if (WILL_NOT_OVERFLOW) {                                                                                                            \
+            EXPECT_EQ(EXPECTED_BYTES, expectedBytes);                                                                                       \
+        }                                                                                                                                   \
     }
 
 TEST(PredictRequestUtilsTest, ComputeExpectedBufferSize) {

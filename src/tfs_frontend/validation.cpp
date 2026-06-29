@@ -161,9 +161,15 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, ValidationChoice::IN
 */
 
     // For POD types
-    size_t expectedValueCount = 1;
-    for (int i = 0; i < proto.tensor_shape().dim_size(); i++) {
-        expectedValueCount *= proto.tensor_shape().dim(i).size();
+    size_t expectedValueCount = 0;
+    if (!request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(
+            proto.tensor_shape().dim().begin(), proto.tensor_shape().dim().end(),
+            [](const auto& d) { return d.size(); }, expectedValueCount)) {
+        std::stringstream ss;
+        ss << "Shape dimensions are too large; input name: " << getCurrentlyValidatedTensorName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_CONTENT_SIZE, details);
     }
 
     // Network expects tensor content size or value count
@@ -194,7 +200,15 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, ValidationChoice::IN
             return Status(StatusCode::INVALID_VALUE_COUNT, details);
         }
     } else {
-        size_t expectedContentSize = expectedValueCount * ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+        size_t expectedContentSize = 0;
+        const size_t elementByteSize = ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
+        if (!request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(expectedValueCount, elementByteSize, expectedContentSize)) {
+            std::stringstream ss;
+            ss << "Shape dimensions overflow size_t; input name: " << getCurrentlyValidatedTensorName();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid content size of tensor proto - {}", servableName, servableVersion, details);
+            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
+        }
         if (expectedContentSize != proto.tensor_content().size()) {
             std::stringstream ss;
             ss << "Expected: " << expectedContentSize << " bytes; Actual: " << proto.tensor_content().size() << " bytes; input name: " << getCurrentlyValidatedTensorName();

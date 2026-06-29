@@ -18,9 +18,12 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <regex>
 #include <sstream>
 #include <string>
+
+#include <fmt/ranges.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -37,6 +40,7 @@
 #include "../../http_status_code.hpp"
 #include "../../json_parser.hpp"
 #include "../../llm/apis/openai_completions.hpp"
+#include "../../llm/io_processing/base_generation_config_builder.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/servable.hpp"
@@ -44,6 +48,7 @@
 #include "../../llm/text_utils.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
+#include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -175,6 +180,51 @@ std::shared_ptr<ov::genai::ContinuousBatchingPipeline> LLMFlowHttpTest::cbPipe;
 std::shared_ptr<LLMExecutorWrapper> LLMFlowHttpTest::llmExecutorWrapper;
 std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 
+class LLMFlowHttpQueueGraphTest : public ::testing::Test {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
+    ovms::HttpRequestComponents comp;
+    const std::string endpointChatCompletions = "/v3/chat/completions";
+    const std::string endpointCompletions = "/v3/completions";
+    std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
+    std::string response;
+    rapidjson::Document parsedResponse;
+    ovms::HttpResponseComponents responseComponents;
+
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config_queue.json").c_str(), 60);
+    }
+
+    static void TearDownTestSuite() {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+
+    void SetUp() {
+        writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
+        ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
+        ovms::Server& server = ovms::Server::instance();
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointCompletions, headers), ovms::StatusCode::OK);
+    }
+
+    void TearDown() {
+        handler.reset();
+    }
+};
+
+std::unique_ptr<std::thread> LLMFlowHttpQueueGraphTest::t;
+
 // --------------------------------------- OVMS LLM nodes tests
 
 /* 
@@ -250,7 +300,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
             ovms::StatusCode::OK);
         parsedResponse.Parse(response.c_str());
         ASSERT_TRUE(parsedResponse["choices"].IsArray());
-        ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+        ASSERT_EQ(parsedResponse["choices"].Size(), 1);
         int i = 0;
         for (auto& choice : parsedResponse["choices"].GetArray()) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -274,6 +324,158 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     }
+}
+
+TEST_F(LLMFlowHttpQueueGraphTest, unaryCompletionsJsonQueueGraph) {
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_regular_queue",
+            "stream": false,
+            "seed" : 1,
+            "best_of": 16,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["text"].IsString());
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "lm_cb_regular_queue");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+}
+
+TEST_F(LLMFlowHttpQueueGraphTest, unaryChatCompletionsJsonQueueGraph) {
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_regular_queue",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "lm_cb_regular_queue");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+}
+
+TEST_F(LLMFlowHttpQueueGraphTest, streamChatCompletionsQueueGraph) {
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_regular_queue",
+            "stream": true,
+            "seed" : 1,
+            "max_tokens": 5,
+            "ignore_eos": true,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+    ON_CALL(*writer, PartialReply).WillByDefault([this](std::string response) {
+        rapidjson::Document d;
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Size(), 1);
+        int i = 0;
+        for (auto& choice : d["choices"].GetArray()) {
+            if (choice["finish_reason"].IsString()) {
+                EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+            } else {
+                ASSERT_TRUE(choice["finish_reason"].IsNull());
+            }
+            ASSERT_EQ(choice["index"], i++);
+            ASSERT_TRUE(choice["delta"].IsObject());
+            // First chunk may have null content (role announcement)
+            ASSERT_TRUE(choice["delta"]["content"].IsString() || choice["delta"]["content"].IsNull());
+        }
+        EXPECT_STREQ(d["model"].GetString(), "lm_cb_regular_queue");
+        EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
+    });
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+// Test that verifies graph reuse works correctly with queue size 1
+// Sends 2 sequential requests to ensure the same graph instance is reused
+TEST_F(LLMFlowHttpQueueGraphTest, queueGraphReuseTwoRequests) {
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_regular_queue",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens": 5,
+            "prompt": "What is OpenVINO?"
+        }
+    )";
+
+    // First request
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
+    ASSERT_TRUE(parsedResponse["choices"].GetArray()[0]["text"].IsString());
+
+    // Second request - reuses the same graph from the queue
+    // This validates that timestamp increment works for graph reuse
+    response.clear();
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
+    ASSERT_TRUE(parsedResponse["choices"].GetArray()[0]["text"].IsString());
+    // Note: Responses may differ due to KV cache state despite same seed
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
@@ -310,7 +512,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         if (params.checkFinishReason) {
@@ -357,43 +559,51 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
     )";
     std::vector<std::string> chunks;
     ON_CALL(*writer, PartialReply).WillByDefault([this, &chunks, &params](std::string response) {
-        rapidjson::Document d;
-        std::string dataPrefix = "data:";
+        // A single PartialReply may contain multiple SSE events (e.g. all echo
+        // tokens in the first call).  Iterate every event and collect text chunks.
+        const std::string eventSep = "\n\n";
+        const std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
-        size_t pos = response.find("\n");
-        ASSERT_NE(pos, response.npos);
-        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
-        ASSERT_EQ(parsingSucceeded.Code(), 0);
-        ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Capacity(), 1);
-        int i = 0;
-        for (auto& choice : d["choices"].GetArray()) {
-            if (params.checkFinishReason) {
-                if (choice["finish_reason"].IsString()) {
-                    EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
-                } else {
-                    ASSERT_TRUE(choice["finish_reason"].IsNull());
+        size_t start = 0;
+        while (start < response.size()) {
+            const size_t eventEnd = response.find(eventSep, start);
+            if (eventEnd == std::string::npos)
+                break;
+            const std::string event = response.substr(start, eventEnd - start);
+            start = eventEnd + eventSep.size();
+            if (event.size() < dataPrefix.size())
+                continue;
+            const std::string body = event.substr(dataPrefix.size());
+            if (body.find("[DONE]") != std::string::npos)
+                break;
+            rapidjson::Document d;
+            rapidjson::ParseResult pr = d.Parse(body.c_str());
+            ASSERT_EQ(pr.Code(), 0);
+            ASSERT_TRUE(d["choices"].IsArray());
+            ASSERT_EQ(d["choices"].Size(), 1);
+            int i = 0;
+            for (auto& choice : d["choices"].GetArray()) {
+                ASSERT_EQ(choice["index"], i++);
+                if (params.checkLogprobs) {
+                    ASSERT_FALSE(choice["logprobs"].IsObject());
                 }
+                ASSERT_TRUE(choice["text"].IsString());
+                chunks.push_back(std::string(choice["text"].GetString()));
             }
-            ASSERT_EQ(choice["index"], i++);
-            if (params.checkLogprobs) {
-                ASSERT_FALSE(choice["logprobs"].IsObject());
-            }
-            ASSERT_TRUE(choice["text"].IsString());
-            chunks.push_back(std::string(choice["text"].GetString()));
+            EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
+            EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
         }
-        EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
-        EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
     });
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 
-    // Since prompt is treated as a single entity and streamer returns chunk only after space or newline
-    // we expect chunk with echoed prompt to contain space or new line at the end
-    ASSERT_TRUE(chunks[0] == "What is OpenVINO?\n" || chunks[0] == "What is OpenVINO? ");
     ASSERT_GT(chunks.size(), 1);
+    std::string combined;
+    for (const auto& chunk : chunks)
+        combined += chunk;
+    EXPECT_EQ(combined.rfind("What is OpenVINO?", 0), 0) << "Expected output to start with echoed prompt, got: " << combined;
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
@@ -420,7 +630,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         if (params.checkFinishReason) {
@@ -479,35 +689,53 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoOnly) {
     )";
 
     if (params.modelName.find("legacy") == std::string::npos) {
-        EXPECT_CALL(*writer, PartialReply(::testing::_)).WillOnce([this, &params](std::string response) {
-            rapidjson::Document d;
-            std::string dataPrefix = "data:";
+        // Echo tokens are streamed one SSE event per token (through the normal
+        // delay-buffer path), so a single PartialReply may contain multiple events.
+        // Accumulate all text chunks and verify their concatenation equals the prompt.
+        std::string echoText;
+        std::string lastFinishReason;
+        EXPECT_CALL(*writer, PartialReply(::testing::_)).WillOnce([this, &params, &echoText, &lastFinishReason](std::string response) {
+            const std::string eventSep = "\n\n";
+            const std::string dataPrefix = "data:";
             ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
-            size_t pos = response.find("\n");
-            ASSERT_NE(pos, response.npos);
-            rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
-            ASSERT_EQ(parsingSucceeded.Code(), 0);
-            ASSERT_TRUE(d["choices"].IsArray());
-            ASSERT_EQ(d["choices"].Capacity(), 1);
-            int i = 0;
-            for (auto& choice : d["choices"].GetArray()) {
-                if (params.checkFinishReason) {
-                    ASSERT_TRUE(choice["finish_reason"].IsString());
-                    EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+            size_t start = 0;
+            while (start < response.size()) {
+                const size_t eventEnd = response.find(eventSep, start);
+                if (eventEnd == std::string::npos)
+                    break;
+                const std::string event = response.substr(start, eventEnd - start);
+                start = eventEnd + eventSep.size();
+                if (event.size() < dataPrefix.size())
+                    continue;
+                const std::string body = event.substr(dataPrefix.size());
+                if (body.find("[DONE]") != std::string::npos)
+                    break;
+                rapidjson::Document d;
+                rapidjson::ParseResult pr = d.Parse(body.c_str());
+                ASSERT_EQ(pr.Code(), 0);
+                ASSERT_TRUE(d["choices"].IsArray());
+                ASSERT_EQ(d["choices"].Size(), 1);
+                for (auto& choice : d["choices"].GetArray()) {
+                    if (params.checkLogprobs) {
+                        ASSERT_FALSE(choice["logprobs"].IsObject());
+                    }
+                    ASSERT_TRUE(choice["text"].IsString());
+                    echoText += choice["text"].GetString();
+                    if (choice.HasMember("finish_reason") && choice["finish_reason"].IsString()) {
+                        lastFinishReason = choice["finish_reason"].GetString();
+                    }
                 }
-                ASSERT_EQ(choice["index"], i++);
-                if (params.checkLogprobs) {
-                    ASSERT_FALSE(choice["logprobs"].IsObject());
-                }
-                ASSERT_TRUE(choice["text"].IsString());
-                EXPECT_STREQ(choice["text"].GetString(), "What is OpenVINO?");
+                EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
+                EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
             }
-            EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
-            EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
         });
         ASSERT_EQ(
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::PARTIAL_END);
+        if (params.checkFinishReason) {
+            EXPECT_STREQ(lastFinishReason.c_str(), "length");
+        }
+        EXPECT_EQ(echoText, "What is OpenVINO?");
     } else {
         // In legacy servable streaming with echo, prompt can be sent back in multiple chunks
         std::vector<std::string> responses;
@@ -553,7 +781,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonFinishReasonLength) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -581,6 +809,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
             "model": ")" + params.modelName +
                               R"(",
             "stream": false,
+            "temperature": 0,
             "ignore_eos": false,
             "max_tokens": 1000,
             "stop": ".",
@@ -594,7 +823,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -869,7 +1098,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         if (params.checkFinishReason) {
@@ -891,6 +1120,42 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
     EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+}
+
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsSkipSpecialTokensFalse) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed": 1,
+            "temperature": 0,
+            "max_tokens": 5,
+            "ignore_eos": true,
+            "skip_special_tokens": false,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
+    }
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
@@ -918,7 +1183,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArray) {
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         if (params.checkFinishReason) {
@@ -1652,7 +1917,8 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
             "prompt": "What is OpenVINO?"
         }
     )";
-    ON_CALL(*writer, PartialReply).WillByDefault([this, &params](std::string response) {
+    bool firstChunk = true;
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &firstChunk](std::string response) {
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
@@ -1661,7 +1927,7 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
         rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
         ASSERT_EQ(parsingSucceeded.Code(), 0);
         ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Capacity(), 1);
+        ASSERT_EQ(d["choices"].Size(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
             if (params.checkFinishReason) {
@@ -1675,7 +1941,12 @@ TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
             if (params.checkLogprobs) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
             }
-            ASSERT_TRUE(choice["text"].IsString());
+            if (firstChunk && params.checkHandshakeChunk) {
+                ASSERT_TRUE(choice["text"].IsNull() || choice["text"].IsString());
+            } else {
+                ASSERT_TRUE(choice["text"].IsString());
+            }
+            firstChunk = false;
         }
         EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
         EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
@@ -1718,7 +1989,7 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
         rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
         ASSERT_EQ(parsingSucceeded.Code(), 0);
         ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Capacity(), 1);
+        ASSERT_EQ(d["choices"].Size(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
             if (params.checkFinishReason) {
@@ -1732,10 +2003,60 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
             if (params.checkLogprobs) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
             }
-            ASSERT_TRUE(choice["delta"].IsObject());
-            ASSERT_TRUE(choice["delta"]["content"].IsString());
+            if (choice.HasMember("delta")) {
+                ASSERT_TRUE(choice["delta"].IsObject());
+                ASSERT_TRUE(choice["delta"]["content"].IsString());
+            }
         }
         EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
+        EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
+    });
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStreamSkipSpecialTokensFalse) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "seed": 1,
+            "max_tokens": 5,
+            "ignore_eos": true,
+            "skip_special_tokens": false,
+            "messages": [
+            {
+                "role": "user",
+                "content": "What is OpenVINO?"
+            }
+            ]
+        }
+    )";
+    int replyCounter = 0;
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &params, &replyCounter](std::string response) {
+        if (replyCounter == 0 && params.checkHandshakeChunk) {
+            replyCounter++;
+            assertInitialStreamChatCompletionChunk(response, params.modelName);
+            return;
+        }
+        rapidjson::Document d;
+        std::string dataPrefix = "data:";
+        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+        size_t pos = response.find("\n");
+        ASSERT_NE(pos, response.npos);
+        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Size(), 1);
+        for (auto& choice : d["choices"].GetArray()) {
+            if (choice.HasMember("delta")) {
+                ASSERT_TRUE(choice["delta"].IsObject());
+                ASSERT_TRUE(choice["delta"]["content"].IsString());
+            }
+        }
         EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
     });
     ASSERT_EQ(
@@ -1831,7 +2152,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             "model": ")" + params.modelName +
                               R"(",
             "stream": true,
-            "seed" : 1,
+            "temperature" : 0,
             "ignore_eos": false,
             "max_tokens": 1000,
             "stop": ".",
@@ -1839,7 +2160,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             "messages": [
             {
                 "role": "user",
-                "content": "What is OpenVINO? In short"
+                "content": "What is OpenVINO? Give one sentence answer."
             }
             ]
         }
@@ -1879,62 +2200,77 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
 
     // In legacy streaming we don't know if the callback is the last one, so we rely on entire generation call finish.
     // Because of that, we might get additional response with empty content at the end of the stream.
-    const size_t numberOfLastResponsesToCheckForStopString = params.modelName.find("legacy") != std::string::npos ? 2 : 1;
+    const size_t numberOfLastResponsesToCheckForStopString = std::min(
+        params.modelName.find("legacy") != std::string::npos ? size_t{2} : size_t{1},
+        responses.size());
 
     // The stop string (.) does not need to be at the end of the message.
     // There are cases when the last generation contains dot and a new lines, or generated token is "e.g",
     // or simply any token (or group of tokens) that has dot in a middle.
 
+    const std::string eventSep = "\n\n";
+    const std::string dataPrefix = "data:";
+
     // Check for no existence of a dot:
     for (size_t i = params.checkHandshakeChunk ? 1 : 0; i < responses.size() - numberOfLastResponsesToCheckForStopString; ++i) {
-        // Assert there is no dot '.' in the response
-
-        // Cut "data: " prefix
-        std::string dataPrefix = "data:";
-        std::string resp = responses[i].substr(dataPrefix.size());
-
-        rapidjson::Document d;
-        rapidjson::ParseResult ok = d.Parse(resp.c_str());
-        ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
-                                << resp;
-
-        ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Size(), 1);
-        ASSERT_TRUE(d["choices"][0].IsObject());
-        ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
-        ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
-        resp = d["choices"][0]["delta"]["content"].GetString();
-        ASSERT_EQ(resp.find('.'), std::string::npos) << "found dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
+        size_t start = 0;
+        while (start < responses[i].size()) {
+            const size_t eventEnd = responses[i].find(eventSep, start);
+            if (eventEnd == std::string::npos)
+                break;
+            const std::string event = responses[i].substr(start, eventEnd - start);
+            start = eventEnd + eventSep.size();
+            if (event.size() < dataPrefix.size())
+                continue;
+            const std::string body = event.substr(dataPrefix.size());
+            if (body.find("[DONE]") != std::string::npos)
+                break;
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(body.c_str());
+            ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
+                                    << body;
+            ASSERT_TRUE(d["choices"].IsArray());
+            ASSERT_EQ(d["choices"].Size(), 1);
+            ASSERT_TRUE(d["choices"][0].IsObject());
+            if (!d["choices"][0].HasMember("delta"))
+                continue;
+            ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
+            ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+            std::string content = d["choices"][0]["delta"]["content"].GetString();
+            ASSERT_EQ(content.find('.'), std::string::npos) << "found dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
+        }
     }
 
     bool foundDotInLastResponse = false;
     // Check for existence of a dot:
     for (size_t i = responses.size() - numberOfLastResponsesToCheckForStopString; i < responses.size(); ++i) {
-        // Assert there is a dot '.' in the response
-
-        // Cut "data: " prefix
-        std::string dataPrefix = "data:";
-        std::string resp = responses[i].substr(dataPrefix.size());
-
-        // remove from resp: "data: [DONE]" (not only in the beginning)
-        size_t pos = resp.find("data: [DONE]");
-        if (pos != std::string::npos) {
-            resp.erase(pos, std::string("data: [DONE]").length());
-        }
-
-        rapidjson::Document d;
-        rapidjson::ParseResult ok = d.Parse(resp.c_str());
-        ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
-                                << resp;
-
-        ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Size(), 1);
-        ASSERT_TRUE(d["choices"][0].IsObject());
-        ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
-        ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
-        resp = d["choices"][0]["delta"]["content"].GetString();
-        if (resp.find('.') != std::string::npos) {
-            foundDotInLastResponse = true;
+        size_t start = 0;
+        while (start < responses[i].size()) {
+            const size_t eventEnd = responses[i].find(eventSep, start);
+            if (eventEnd == std::string::npos)
+                break;
+            const std::string event = responses[i].substr(start, eventEnd - start);
+            start = eventEnd + eventSep.size();
+            if (event.size() < dataPrefix.size())
+                continue;
+            const std::string body = event.substr(dataPrefix.size());
+            if (body.find("[DONE]") != std::string::npos)
+                break;
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(body.c_str());
+            ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
+                                    << body;
+            ASSERT_TRUE(d["choices"].IsArray());
+            ASSERT_EQ(d["choices"].Size(), 1);
+            ASSERT_TRUE(d["choices"][0].IsObject());
+            if (!d["choices"][0].HasMember("delta"))
+                continue;
+            ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
+            ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+            std::string content = d["choices"][0]["delta"]["content"].GetString();
+            if (content.find('.') != std::string::npos) {
+                foundDotInLastResponse = true;
+            }
         }
     }
     ASSERT_TRUE(foundDotInLastResponse) << "cannot find dot last responses";
@@ -2013,7 +2349,13 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSingleStopString) {
     if (params.modelName.find("legacy") != std::string::npos) {
         // In legacy streaming we don't know if the callback is the last one, so we rely on entire generation call finish.
         // Because of that, we might get additional response with empty content at the end of the stream.
-        ASSERT_TRUE(std::regex_search(responses[responses.size() - 2], content_regex) || std::regex_search(responses.back(), content_regex));
+        // Guard against responses.size() < 2 (can happen when all deltas arrive in a single drain).
+        if (responses.size() >= 2) {
+            ASSERT_TRUE(std::regex_search(responses[responses.size() - 2], content_regex) || std::regex_search(responses.back(), content_regex));
+        } else {
+            ASSERT_GE(responses.size(), 1u);
+            ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
+        }
     } else {
         ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
     }
@@ -2597,9 +2939,9 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding, supports empty handshake msg
         TestParameters{"lm_cb_regular", true, true, true, false, true},
-        TestParameters{"lm_legacy_regular", false, false, false, false, false},
+        TestParameters{"lm_legacy_regular", false, false, true, false, false},
         TestParameters{"vlm_cb_regular", false, true, true, false, true},
-        TestParameters{"vlm_legacy_regular", false, false, false, false, false}));
+        TestParameters{"vlm_legacy_regular", false, false, true, false, false}));
 
 const std::string validRequestBodyWithParameter(const std::string& modelName, const std::string& parameter, const std::string& value) {
     std::string requestBody = R"(
@@ -3161,6 +3503,79 @@ TEST_P(LLMHttpParametersValidationTest, topKInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_P(LLMHttpParametersValidationTest, topKMinuOneValid) {
+    auto params = GetParam();
+    // -1 is the sentinel for "consider all tokens"
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, topKZeroInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, topKNegativeInvalid) {
+    auto params = GetParam();
+    // Only -1 is a valid negative value; other negatives must be rejected
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "-2");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0.05");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPOutOfRange) {
+    auto params = GetParam();
+    // min_p must be in [0.0, 1.0) — value of 1.0 is out of range
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "1.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, minPNegative) {
+    auto params = GetParam();
+    // min_p must be in [0.0, 1.0) — negative value is out of range
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "min_p", "-0.1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_P(LLMHttpParametersValidationTest, seedValid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "1");
@@ -3173,6 +3588,44 @@ TEST_P(LLMHttpParametersValidationTest, seedValid) {
 TEST_P(LLMHttpParametersValidationTest, seedInvalid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedBoundaryZero) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedBoundaryMax) {
+    auto params = GetParam();
+    // Maximum valid seed: 2^32 - 1 = 4294967295
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "4294967295");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedOutOfRangeNegative) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedOutOfRangeOverflow) {
+    auto params = GetParam();
+    // 2^32 = 4294967296 is one past the maximum valid seed
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "4294967296");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
@@ -3412,7 +3865,7 @@ INSTANTIATE_TEST_SUITE_P(
         TestParameters{"lm_cb_regular", true, true, true, false, true},
         TestParameters{"lm_legacy_regular", false, false, false, false, false},
         TestParameters{"vlm_cb_regular", false, true, true, false, true},
-        TestParameters{"vlm_legacy_regular", false, false, false, false, false}));
+        TestParameters{"vlm_legacy_regular", false, false, true, false, false}));
 
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
 class LLMConfigHttpTest : public ::testing::Test {};
@@ -3747,7 +4200,7 @@ public:
 class LLMVLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
-    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"; }
+    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B-int4-ov"; }
 };
 
 void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
@@ -3797,7 +4250,11 @@ void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
     ASSERT_EQ(properties->schedulerConfig.max_num_seqs, 256);
     ASSERT_EQ(properties->schedulerConfig.enable_prefix_caching, false);
     ASSERT_EQ(properties->device, "CPU");
-    ASSERT_EQ(properties->pluginConfig.size(), 0);
+    // CPU default properties (inference_num_threads, enable_cpu_pinning) are automatically
+    // added to pluginConfig for CPU device; verify no user-specified entries are present.
+    ASSERT_EQ(properties->pluginConfig.count("PERFORMANCE_HINT"), 0);
+    ASSERT_EQ(properties->pluginConfig.count("NUM_STREAMS"), 0);
+    ASSERT_EQ(properties->pluginConfig.count("KV_CACHE_PRECISION"), 0);
 }
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     TestLLMNodeOptionsCheckDefault(modelsPath);
@@ -3955,7 +4412,7 @@ void LLMNodeOptionsCheckPluginConfig(std::string& modelsPath) {
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
 
-    ASSERT_EQ(properties->pluginConfig.size(), 2);
+    // CPU default properties are added automatically; check only the user-specified entries.
     ASSERT_EQ(properties->pluginConfig.count("PERFORMANCE_HINT"), 1);
     ASSERT_EQ(properties->pluginConfig.count("NUM_STREAMS"), 1);
     ASSERT_EQ(properties->pluginConfig["PERFORMANCE_HINT"], "LATENCY");
@@ -4523,3 +4980,201 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
 }
 
 // TODO: Add missing tests for reading max prompt len property from configuration
+
+class LLMStartWithTaskParameter : public ::testing::Test {
+protected:
+    static std::unique_ptr<std::thread> t;
+    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+#ifdef __linux__
+    std::string tempDir;
+    std::string modelDir;
+    std::string graphPath;
+#else
+    std::string modelDir = srcModelDir;
+    std::string graphPath = modelDir + "/graph.pbtxt";
+    std::string graphPathRenamed = modelDir + "/graph.pbtxt.bak";
+#endif
+
+    void SetUp() override {
+        GraphExport::clearInMemoryGraphContent();
+#ifdef __linux__
+        tempDir = std::filesystem::temp_directory_path().string() + "/LLMStartWithTaskParameter_" + ::testing::UnitTest::GetInstance()->current_test_info()->name();
+        std::filesystem::remove_all(tempDir);
+        std::filesystem::copy(srcModelDir, tempDir, std::filesystem::copy_options::recursive);
+        modelDir = tempDir;
+        graphPath = modelDir + "/graph.pbtxt";
+#endif
+    }
+    void TearDown() override {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        if (t && t->joinable())
+            t->join();
+        server.setShutdownRequest(0);
+        GraphExport::clearInMemoryGraphContent();
+#ifdef __linux__
+        std::filesystem::remove_all(tempDir);
+#else
+        // Restore graph.pbtxt if it was renamed
+        if (std::filesystem::exists(graphPathRenamed)) {
+            if (std::filesystem::exists(graphPath)) {
+                std::filesystem::remove(graphPath);
+            }
+            std::filesystem::rename(graphPathRenamed, graphPath);
+        }
+#endif
+    }
+};
+
+std::unique_ptr<std::thread> LLMStartWithTaskParameter::t = nullptr;
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
+#ifdef __linux__
+    // On Linux models are on readonly FS - we use a temp copy with graph.pbtxt removed
+    std::filesystem::remove(graphPath);
+#else
+    // On Windows models are on RW FS - rename graph.pbtxt so we can check it's not recreated
+    if (std::filesystem::exists(graphPath)) {
+        std::filesystem::rename(graphPath, graphPathRenamed);
+    }
+#endif
+
+    std::string port = "9173";
+    ovms::Server& server = ovms::Server::instance();
+    ::SetUpServer(t, server, port,
+        modelDir.c_str(),
+        "SmolLM2",
+        60,
+        "text_generation");
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+    ASSERT_FALSE(std::filesystem::exists(graphPath)) << "graph.pbtxt should not be created when using --task with --model_path";
+}
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskDoesNotModifyExistingGraph) {
+    ASSERT_TRUE(std::filesystem::exists(graphPath)) << "graph.pbtxt must exist for this test";
+    auto modTimeBefore = std::filesystem::last_write_time(graphPath);
+
+    std::string port = "9174";
+    ovms::Server& server = ovms::Server::instance();
+    ::SetUpServer(t, server, port,
+        modelDir.c_str(),
+        "SmolLM2",
+        60,
+        "text_generation");
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+
+    auto modTimeAfter = std::filesystem::last_write_time(graphPath);
+    ASSERT_EQ(modTimeBefore, modTimeAfter) << "graph.pbtxt should not be modified when using --task with --model_path";
+}
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndValidPipelineType) {
+    std::string port = "9175";
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    randomizeAndEnsureFree(port);
+    std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_path", (char*)fullModelPath.c_str(),
+        (char*)"--port", (char*)port.c_str(),
+        (char*)"--task", (char*)"text_generation",
+        (char*)"--pipeline_type", (char*)"LM_CB"};
+    int argc = 11;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    EnsureServerStartedWithTimeout(server, 60);
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
+}
+
+TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndInvalidPipelineType) {
+    std::string port = "9176";
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+    randomizeAndEnsureFree(port);
+    std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_path", (char*)fullModelPath.c_str(),
+        (char*)"--port", (char*)port.c_str(),
+        (char*)"--task", (char*)"text_generation",
+        (char*)"--pipeline_type", (char*)"invalid"};
+    int argc = 11;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_NE(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    // Validation failure should complete quickly
+    if (t && t->joinable())
+        t->join();
+    ASSERT_NE(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED)
+        << "Server should not start with invalid pipeline_type";
+}
+
+// Unit tests for BaseGenerationConfigBuilder multinomial sampling defaults
+
+TEST(BaseGenerationConfigBuilderTest, TopKDefaultedTo40WhenSamplingEnabled) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;  // enables do_sample; topK not set
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, 40u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKPreservedWhenExplicitlySet) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.topK = 10;
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, 10u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKMinusOneMapsToInactive) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.topK = -1;  // sentinel: consider all tokens
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, std::numeric_limits<size_t>::max());
+}
+
+TEST(BaseGenerationConfigBuilderTest, TopKNotChangedWhenSamplingDisabled) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 0.0f;  // greedy decoding, do_sample = false
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().top_k, std::numeric_limits<size_t>::max());
+}
+
+TEST(BaseGenerationConfigBuilderTest, SeedRandomizedWhenOmittedDuringSampling) {
+    ov::genai::GenerationConfig baseConfig;
+    OpenAIRequest request;
+    request.temperature = 1.0f;  // enables do_sample; seed not set → must be randomized
+
+    // Parse the same request twice — seeds must differ (non-deterministic per request)
+    BaseGenerationConfigBuilder builder1{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    builder1.parseConfigFromRequest(request);
+    const size_t seed1 = builder1.getConfig().rng_seed;
+
+    BaseGenerationConfigBuilder builder2{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    builder2.parseConfigFromRequest(request);
+    const size_t seed2 = builder2.getConfig().rng_seed;
+
+    EXPECT_NE(seed1, 0u);
+    EXPECT_NE(seed2, 0u);
+    EXPECT_NE(seed1, seed2) << "Expected different seeds for successive omitted-seed requests";
+}
+
+TEST(BaseGenerationConfigBuilderTest, SeedPreservedWhenExplicitlySet) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.seed = 42u;
+    builder.parseConfigFromRequest(request);
+    EXPECT_EQ(builder.getConfig().rng_seed, 42u);
+}

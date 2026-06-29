@@ -32,7 +32,7 @@ namespace ovms {
 void GptOssToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     openai::Harmony harmony(tokenizer, generatedTokens);
     if (!harmony.parse()) {
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Harmony parsing failed");
         return;
     }
 
@@ -80,7 +80,7 @@ void GptOssToolParser::clearState() {
     functionNameCache.clear();
 }
 
-std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Processing Chunk [{}]", newChunk);
 
     std::string chunk = newChunk;

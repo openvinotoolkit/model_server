@@ -23,6 +23,8 @@ ovms_cc_library(
             "//src/port:rapidjson_document",
             "//src/port:rapidjson_writer",
             "//src/port:rapidjson_stringbuffer",
+            "@com_github_tencent_rapidjson//:rapidjson",
+            "@ovms//src:libovmsstatus",
     ],
     visibility = ["//visibility:public",],
 )
@@ -32,8 +34,7 @@ ovms_cc_library(
     hdrs = ["env_guard.hpp",],
     srcs = ["env_guard.cpp",],
     deps = [
-        "@ovms//src:libovmslogging",
-        "@com_google_googletest//:gtest",
+        "@com_github_gabime_spdlog//:spdlog",
     ],
     visibility = ["//visibility:public"],
 )

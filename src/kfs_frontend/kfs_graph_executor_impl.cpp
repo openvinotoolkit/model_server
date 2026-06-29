@@ -24,6 +24,7 @@
 
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../logging.hpp"
+#include "../mediapipe_internal/graph_executor_constants.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../predict_request_validation_utils.hpp"
@@ -399,7 +400,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         SET_DATA_FROM_MP_TENSOR(outTensor, GetCpuWriteView);
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         size_t expectedBytes = 1;
-        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<int>(rawShape, precision.size(), expectedBytes);
+        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, precision.size(), expectedBytes);
         if (!expectedBufferSizeValid) {
             const std::string details = "Provided shape and datatype declare too large buffer.";
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
@@ -476,7 +477,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             return Status(StatusCode::UNKNOWN_ERROR, std::string{stringViewAbslMessage});
         }
         size_t expectedBytes = 1;
-        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<int64_t>(rawShape, KFSDataTypeSize(requestInputItr->datatype()), expectedBytes);
+        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, KFSDataTypeSize(requestInputItr->datatype()), expectedBytes);
         if (!expectedBufferSizeValid) {
             const std::string details = "Provided shape and datatype declare too large buffer.";
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
@@ -559,7 +560,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         }
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         size_t expectedBytes = 1;
-        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<size_t>(shape, precision.size(), expectedBytes);
+        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(shape, precision.size(), expectedBytes);
         if (!expectedBufferSizeValid) {
             const std::string details = "Provided shape and datatype declare too large buffer.";
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
@@ -720,7 +721,12 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         return Status(StatusCode::INVALID_SHAPE, details);
     }
     size_t elementSize = KFSDataTypeSize(requestInputItr->datatype());
-    size_t expectedSize = numberOfChannels * numberOfCols * numberOfRows * elementSize;
+    const std::vector<int64_t> hwcDims{numberOfRows, numberOfCols, numberOfChannels};
+    size_t expectedSize = 0;
+    if (!request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(hwcDims, elementSize, expectedSize)) {
+        SPDLOG_DEBUG("Invalid Mediapipe Image input: shape dimensions overflow size_t");
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Invalid Mediapipe Image input: shape dimensions overflow size_t");
+    }
     if (bufferLocation.size() != expectedSize) {
         std::stringstream ss;
         ss << "Invalid Mediapipe Image input buffer size. Actual: " << bufferLocation.size() << "; Expected: " << expectedSize;
@@ -776,7 +782,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 size_t itemsize = bufferFormatToItemsize.at(formatIt->second);
                 size_t expectedBufferSize = 1;
 
-                bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, itemsize, expectedBufferSize);
+                bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(shape, itemsize, expectedBufferSize);
                 if (!expectedBufferSizeValid) {
                     const std::string details = "Provided shape and datatype declare too large buffer.";
                     SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
@@ -818,7 +824,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 }
             } else {
                 expectedBytes = 1;
-                bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow<py::ssize_t>(shape, precision.size(), expectedBytes);
+                bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(shape, precision.size(), expectedBytes);
                 if (!expectedBufferSizeValid) {
                     const std::string details = "Provided shape and datatype declare too large buffer.";
                     SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
@@ -925,6 +931,7 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
     }
     std::unique_ptr<T> inputTensor;
     OVMS_RETURN_ON_FAIL(deserializeTensor(name, *request, inputTensor, pythonBackend));
+    SPDLOG_TRACE("Current Timestamp before actual pushing:{}", timestamp.Value());
     MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
                           name,
                           ::mediapipe::packet_internal::Create(
@@ -1152,10 +1159,19 @@ Status createAndPushPacketsImpl(
     return StatusCode::OK;
 }
 
+bool requestHasInputSidePackets(const KFSRequest& request) {
+    static const std::string TIMESTAMP_PARAM{"OVMS_MP_TIMESTAMP"};
+    for (const auto& [name, valueChoice] : request.parameters()) {
+        if (name != TIMESTAMP_PARAM) {
+            return true;
+        }
+    }
+    return false;
+}
+
 Status deserializeInputSidePacketsFromFirstRequestImpl(
     std::map<std::string, mediapipe::Packet>& inputSidePackets,
     const KFSRequest& request) {
-    static const std::string PYTHON_SESSION_SIDE_PACKET_TAG{"py"};
     for (const auto& [name, valueChoice] : request.parameters()) {
         SPDLOG_DEBUG("Found: {}; parameter in request for: {};", name, request.model_name());
         if (name == TIMESTAMP_PARAMETER_NAME) {

@@ -20,8 +20,8 @@
 #include <gtest/gtest.h>
 
 #include "../config.hpp"
-#include "../metric_config.hpp"
-#include "../metric_registry.hpp"
+#include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric_registry.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"

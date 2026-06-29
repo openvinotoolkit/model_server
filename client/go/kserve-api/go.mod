@@ -16,17 +16,16 @@
 
 module github.com/openvinotoolkit/model_sever/client/go/kserve-api
 
-go 1.23
+go 1.24.0
 
 require (
-	google.golang.org/grpc v1.62.0
-	google.golang.org/protobuf v1.34.1
+        google.golang.org/grpc v1.79.3
+        google.golang.org/protobuf v1.36.10
 )
 
 require (
-	github.com/golang/protobuf v1.5.3 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240123012728-ef4313101c80 // indirect
+        golang.org/x/net v0.48.0 // indirect
+        golang.org/x/sys v0.39.0 // indirect
+        golang.org/x/text v0.32.0 // indirect
+        google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 )

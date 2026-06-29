@@ -36,6 +36,10 @@ namespace ovms {
 class PythonBackend;
 class Status;
 
+// Checks whether the request contains user-provided input side packets
+// (parameters other than the reserved OVMS_MP_TIMESTAMP).
+bool requestHasInputSidePackets(const KFSRequest& request);
+
 // Deserialization of parameters inside KServe gRPC request
 // into mediapipe Packets.
 // To be used by both - infer & inferStream.

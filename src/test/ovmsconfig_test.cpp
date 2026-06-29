@@ -26,10 +26,29 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../utils/env_guard.hpp"
 #include "../config.hpp"
-#include "../filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "../graph_export/graph_cli_parser.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
+
+#ifdef __linux__
+#include <sys/resource.h>
+
+namespace {
+class ScopedNoFileRlimitRestore {
+public:
+    explicit ScopedNoFileRlimitRestore(const struct rlimit& originalLimit) :
+        originalLimit(originalLimit) {}
+    ~ScopedNoFileRlimitRestore() {
+        setrlimit(RLIMIT_NOFILE, &originalLimit);
+    }
+
+private:
+    struct rlimit originalLimit;
+};
+}  // namespace
+#endif
 
 using testing::_;
 using testing::ContainerEq;
@@ -202,6 +221,37 @@ TEST_F(OvmsConfigDeathTest, restWorkersTooLarge) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count should be from 2 to ");
 }
 
+#ifdef __linux__
+TEST_F(OvmsConfigDeathTest, restWorkersDefaultReducedForOpenFilesLimit) {
+    // limit allowed number of open files to value that enforce default rest_workers to be determined based on open files limit instead of number of cpu cores alone. This is to test that default rest_workers count is reduced when open files limit is low.
+    int cpu_cores = ovms::getCoreCount();
+    struct rlimit limit;
+    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &limit), 0);
+    ScopedNoFileRlimitRestore restoreOriginalLimit(limit);
+    struct rlimit newLimit = {std::min(static_cast<rlim_t>(cpu_cores * 5), limit.rlim_max), limit.rlim_max};
+    std::cout << "Setting open files limit to " << newLimit.rlim_cur << " to test that default rest_workers count is reduced based on open files limit" << std::endl;
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &newLimit), 0);
+
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081"};
+    int arg_count = 7;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    EXPECT_TRUE(ovms::Config::instance().validate());
+}
+
+TEST_F(OvmsConfigDeathTest, restWorkersTooLargeForOpenFilesLimit) {
+    // limit allowed number of open files to 1024 to make sure that rest_workers count is too large.
+    struct rlimit limit;
+    ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &limit), 0);
+    ScopedNoFileRlimitRestore restoreOriginalLimit(limit);
+    struct rlimit newLimit = {std::min(static_cast<rlim_t>(1024), limit.rlim_max), limit.rlim_max};
+    std::cout << "Setting open files limit to " << newLimit.rlim_cur << " to test that rest_workers count is too large for the limit based on number of cpu cores alone" << std::endl;
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &newLimit), 0);
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081", "--rest_workers", "1000"};
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count cannot be larger than .* due to open files limit. Current open files limit: .*1024");
+}
+#endif
+
 TEST_F(OvmsConfigDeathTest, restWorkersDefinedRestPortUndefined) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--rest_workers", "60"};
     int arg_count = 7;
@@ -294,24 +344,6 @@ TEST_F(OvmsConfigDeathTest, nonExistingLogLevel) {
     char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--log_level", "WRONG", "--port", "9178"};
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "log_level should be one of");
-}
-
-TEST_F(OvmsConfigDeathTest, lowLatencyUsedForNonStateful) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--low_latency_transformation", "--port", "9178"};
-    int arg_count = 8;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "require setting stateful flag for the model");
-}
-
-TEST_F(OvmsConfigDeathTest, maxSequenceNumberUsedForNonStateful) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--max_sequence_number", "325", "--port", "9178"};
-    int arg_count = 9;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "require setting stateful flag for the model");
-}
-
-TEST_F(OvmsConfigDeathTest, idleSequenceCleanupUsedForNonStateful) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--idle_sequence_cleanup", "--port", "9178"};
-    int arg_count = 8;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "require setting stateful flag for the model");
 }
 
 TEST_F(OvmsConfigDeathTest, RestPortNegativeUint64Max) {
@@ -526,6 +558,60 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsZer
     };
     int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
+}
+
+TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyAlias) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)"some/model",
+        (char*)"--model_repository_path",
+        (char*)"/some/path",
+        (char*)"--task",
+        (char*)"image_generation",
+        (char*)"--source_loras",
+        (char*)"=org/repo",
+    };
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::invalid_argument);
+}
+
+TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyRepo) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)"some/model",
+        (char*)"--model_repository_path",
+        (char*)"/some/path",
+        (char*)"--task",
+        (char*)"image_generation",
+        (char*)"--source_loras",
+        (char*)"alias=",
+    };
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::invalid_argument);
+}
+
+TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyFilenameAfterAt) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)"some/model",
+        (char*)"--model_repository_path",
+        (char*)"/some/path",
+        (char*)"--task",
+        (char*)"image_generation",
+        (char*)"--source_loras",
+        (char*)"pokemon=org/repo@",
+    };
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::invalid_argument);
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphParameter) {
@@ -786,6 +872,18 @@ TEST_F(OvmsConfigDeathTest, hfPullNoSourceModel) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "source_model parameter is required for pull mode");
 }
 
+TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTask) {
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--source_model should be used combined with --task");
+}
+
 TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
     char* n_argv[] = {
         "ovms",
@@ -1009,9 +1107,9 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
         (char*)"--draft_source_model",
         (char*)"/draft/model/source",
         (char*)"--reasoning_parser",
-        (char*)"reasoningParserName",
+        (char*)"qwen3",
         (char*)"--tool_parser",
-        (char*)"toolParserName",
+        (char*)"hermes3",
         (char*)"--enable_tool_guided_generation",
         (char*)"true",
         (char*)"--model_distribution_policy",
@@ -1042,8 +1140,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.value(), 16);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.value(), "/draft/model/source");
-    ASSERT_EQ(graphSettings.reasoningParser.value(), "reasoningParserName");
-    ASSERT_EQ(graphSettings.toolParser.value(), "toolParserName");
+    ASSERT_EQ(graphSettings.reasoningParser.value(), "qwen3");
+    ASSERT_EQ(graphSettings.toolParser.value(), "hermes3");
     ASSERT_EQ(graphSettings.enableToolGuidedGeneration, "true");
     ASSERT_EQ(exportSettings.pluginConfig.modelDistributionPolicy.has_value(), true);
     ASSERT_EQ(exportSettings.pluginConfig.modelDistributionPolicy.value(), "TENSOR_PARALLEL");
@@ -1711,6 +1809,39 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
     ASSERT_EQ(exportSettings.pluginConfig.manualString.value(), "{\"SOME_KEY\":\"SOME_VALUE\"}");
 }
 
+TEST(OvmsGraphConfigTest, positiveImageGenerationWithSourceLoras) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"image_generation",
+        (char*)"--source_loras=pokemon=juliensimon/sd-pokemon-lora@weights.safetensors,anime=org/anime-lora",
+    };
+
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.task, ovms::IMAGE_GENERATION_GRAPH);
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters.size(), 2);
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].alias, "pokemon");
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].sourceLora, "juliensimon/sd-pokemon-lora");
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].safetensorsFile.value(), "weights.safetensors");
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::HF_REPO);
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].alias, "anime");
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].sourceLora, "org/anime-lora");
+    ASSERT_FALSE(imageGenerationGraphSettings.loraAdapters[1].safetensorsFile.has_value());
+    ASSERT_EQ(imageGenerationGraphSettings.loraAdapters[1].sourceType, ovms::LoraSourceType::HF_REPO);
+}
+
 TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
@@ -2319,7 +2450,6 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--rest_bind_address", "2.2.2.2",
         "--grpc_channel_arguments", "grpc_channel_args",
         "--file_system_poll_wait_seconds", "2",
-        "--sequence_cleaner_poll_wait_minutes", "7",
         "--custom_node_resources_cleaner_interval_seconds", "8",
         "--allow_credentials",
         "--allowed_headers", "Content-Type",
@@ -2341,7 +2471,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--grpc_memory_quota", "1000000",
         "--config_path", "/config.json"};
 
-    int arg_count = 46;
+    int arg_count = 44;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2352,7 +2482,6 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
-    EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
@@ -2364,7 +2493,7 @@ TEST(OvmsConfigTest, positiveMulti) {
 #endif
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
-    EXPECT_EQ(config.getServerSettings().allowedLocalMediaPath.value(), "/tmp/path");
+    EXPECT_EQ(config.getServerSettings().allowedLocalMediaPath.value(), ovms::FileSystem::normalizeConfiguredPath("/tmp/path"));
     ASSERT_TRUE(config.getServerSettings().allowedMediaDomains.has_value());
     EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value().size(), 3);
     EXPECT_EQ(config.getServerSettings().allowedMediaDomains.value()[0], "raw.githubusercontent.com");
@@ -2383,6 +2512,25 @@ TEST(OvmsConfigTest, positiveMulti) {
 #ifdef _WIN32
     std::filesystem::remove_all(cpu_extension_lib_path);
 #endif
+}
+
+TEST(OvmsConfigTest, allowedLocalMediaPathRelativeIsNormalized) {
+    char* n_argv[] = {
+        "ovms",
+        "--rest_port", "45",
+        "--allowed_local_media_path",
+        "src/test",
+        "--config_path",
+        "/config.json"};
+
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
+    const auto configuredPath = std::filesystem::path(config.getServerSettings().allowedLocalMediaPath.value());
+    const auto expectedPath = std::filesystem::path(ovms::FileSystem::normalizeConfiguredPath("src/test"));
+    EXPECT_EQ(configuredPath.lexically_normal(), expectedPath.lexically_normal());
 }
 
 TEST(OvmsConfigTest, positiveSingle) {
@@ -2407,8 +2555,6 @@ TEST(OvmsConfigTest, positiveSingle) {
         "grpc_channel_args",
         "--file_system_poll_wait_seconds",
         "2",
-        "--sequence_cleaner_poll_wait_minutes",
-        "7",
         "--custom_node_resources_cleaner_interval_seconds",
         "8",
 #ifdef _WIN32
@@ -2454,16 +2600,11 @@ TEST(OvmsConfigTest, positiveSingle) {
         "GPU",
         "--plugin_config",
         "pluginsetting",
-        "--stateful",
         "--metrics_enable",
         "--metrics_list",
         "ovms_streams,ovms_other",
-        "--idle_sequence_cleanup=false",
-        "--low_latency_transformation",
-        "--max_sequence_number",
-        "52",
     };
-    int arg_count = 63;
+    int arg_count = 56;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2474,7 +2615,6 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
-    EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
@@ -2499,12 +2639,8 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.nireq(), 2);
     EXPECT_EQ(config.targetDevice(), "GPU");
     EXPECT_EQ(config.pluginConfig(), "pluginsetting");
-    EXPECT_EQ(config.stateful(), true);
     EXPECT_EQ(config.metricsEnabled(), true);
     EXPECT_EQ(config.metricsList(), "ovms_streams,ovms_other");
-    EXPECT_EQ(config.idleSequenceCleanup(), false);
-    EXPECT_EQ(config.lowLatencyTransformation(), true);
-    EXPECT_EQ(config.maxSequenceNumber(), 52);
     EXPECT_EQ(config.grpcMaxThreads(), ovms::getCoreCount() * 8.0);
     EXPECT_EQ(config.grpcMemoryQuota(), (size_t)2 * 1024 * 1024 * 1024);
 
@@ -2685,6 +2821,66 @@ TEST(OvmsConfigManipulationTest, positiveDisableModel) {
     auto& modelSettings = config.getModelSettings();
     ASSERT_EQ(modelSettings.modelName, modelName);
     ASSERT_EQ(modelSettings.configPath, configPath);
+}
+
+TEST(OvmsGraphCliParserTest, invalidToolParserNameThrowsInvalidArgument) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "nonexistent_parser"};
+    parser.parse(args);
+    EXPECT_THROW({
+        try {
+            parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+        } catch (const std::invalid_argument& e) {
+            EXPECT_NE(std::string(e.what()).find("Unsupported tool_parser"), std::string::npos);
+            EXPECT_NE(std::string(e.what()).find("nonexistent_parser"), std::string::npos);
+            throw;
+        }
+    },
+        std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, invalidReasoningParserNameThrowsInvalidArgument) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--reasoning_parser", "nonexistent_parser"};
+    parser.parse(args);
+    EXPECT_THROW({
+        try {
+            parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+        } catch (const std::invalid_argument& e) {
+            EXPECT_NE(std::string(e.what()).find("Unsupported reasoning_parser"), std::string::npos);
+            EXPECT_NE(std::string(e.what()).find("nonexistent_parser"), std::string::npos);
+            throw;
+        }
+    },
+        std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, validParserNamesAreAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "hermes3", "--reasoning_parser", "qwen3"};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.toolParser.has_value());
+    EXPECT_EQ(graphSettings.toolParser.value(), "hermes3");
+    ASSERT_TRUE(graphSettings.reasoningParser.has_value());
+    EXPECT_EQ(graphSettings.reasoningParser.value(), "qwen3");
+}
+
+TEST(OvmsGraphCliParserTest, emptyParserNamesAreAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "", "--reasoning_parser", ""};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.toolParser.has_value());
+    EXPECT_EQ(graphSettings.toolParser.value(), "");
+    ASSERT_TRUE(graphSettings.reasoningParser.has_value());
+    EXPECT_EQ(graphSettings.reasoningParser.value(), "");
 }
 
 #pragma GCC diagnostic pop

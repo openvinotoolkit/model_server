@@ -86,21 +86,6 @@ And run the demo make with os specific arguments:
 make BASE_OS=redhat
 ```
 
-## Build libovms_shared.so
-Alternative to getting `ovms.tar.gz` package from web you can build it yourself from sources. To build the capi docker image, you must first build the `ovms.tar.gz` package with the `libovms_shared.so` library and `ovms.h` header. 
-run `make` command in ovms git main directory.
-```bash
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server
-make BASE_OS=ubuntu24
-```
-
-And then execute the alternative make target:
-```bash
-cd demos/c_api_minimal_app
-make all_docker
-```
-
 # Capi Benchmark
 
 This guide shows how to perform benchmark tests using OpenVINO Model Server C-API.

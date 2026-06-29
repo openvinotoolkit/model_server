@@ -412,7 +412,7 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFirstDeltaIfNeeded(
     return doc;
 }
 
-std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     // streamParser will return optional toolCalls when a tool call is completed
     // if toolCalls is returned, we need to wrap it in the required JSON structure and return it
     // if toolCalls is not returned, but we are insideFunction state, we need to return the first delta with function name once

@@ -34,8 +34,10 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "t2s_calculator",
-    srcs = ["t2s_calculator.cc"],
+    srcs = ["t2s_calculator.cc",
+            "tts_node_initializer.cpp"],
     deps = [
+        "//third_party:genai",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:httppayload",
         "//src:libovmslogging",
@@ -46,6 +48,8 @@ ovms_cc_library(
         ":t2s_servable",
         "//src/audio:audio_utils",
         "//src:libmodelconfigjsonparser",
+        "//src/mediapipe_internal:node_initializer",
+        "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

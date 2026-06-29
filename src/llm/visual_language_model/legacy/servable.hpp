@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <future>
 #include <memory>
 #include <string>
 #include <vector>
@@ -30,20 +31,21 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     ov::genai::VLMDecodedResults results;
     std::promise<void> readySignal;
     std::future<void> finished = readySignal.get_future();
-    std::mutex mutex;
     std::vector<ov::Tensor> inputImages;
-    std::condition_variable executionInProgress;
     std::string inputText;
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
     bool success{true};
+    // Accumulated decoded text for the unary path — populated via OVMSTextStreamer
+    // callback so that the user's skip_special_tokens / decode params are respected.
+    std::string accumulatedUnaryText;
 
     // Disconnection handling
     std::atomic<bool> clientDisconnected{false};
 
     void signalDisconnection() {
         clientDisconnected = true;
-        executionInProgress.notify_all();
+        deltaChannel.signalComplete();
     }
 };
 
@@ -62,10 +64,14 @@ protected:
 public:
     VisualLanguageModelLegacyServable() {
         properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
+#if (PYTHON_DISABLE == 0)
+        // TODO(dkalinow): once we have server-side workaround, set default back to JINJA
+        properties->chatTemplateMode = ChatTemplateMode::MINJA;
+#endif
     }
 
     // Interface methods
-    absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload);
+    absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const HttpPayload& payload);
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;

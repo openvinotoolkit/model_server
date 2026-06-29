@@ -66,10 +66,16 @@ private:
     // Parsing methods below read chunks from streamOutputCache hence no string argument is needed
 
     // Regular content parsing method does not require finishReason as content is always parsed
-    rapidjson::Document parseContentChunk(ProcessingPhase newPhase = CONTENT);
+    std::optional<rapidjson::Document> parseContentChunk(ProcessingPhase newPhase = CONTENT);
 
-    std::optional<rapidjson::Document> parseToolCallChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS_PROCESSING_TOOL);
-    std::optional<rapidjson::Document> parseReasoningChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
+    std::optional<rapidjson::Document> parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS_PROCESSING_TOOL);
+    std::optional<rapidjson::Document> parseReasoningChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
+
+    // Configure parser to treat the output as already-in-reasoning from the first token.
+    // Used when the chat template appends the reasoning start tag (e.g. "<think>\n") as
+    // the prompt suffix - the model then emits only the reasoning body and the closing tag.
+    // No-op when no reasoning parser is configured.
+    void setImplicitReasoningStart(bool value);
 
 public:
     OutputParser() = delete;
@@ -79,12 +85,16 @@ public:
     bool isReasoningParserAvailable() const;
     std::string getToolParserStartTag() const;
 
+    // Auto-detect and apply implicit reasoning start based on the prompt produced by the chat template.
+    void detectAndSetImplicitReasoningStart(const std::string& renderedPrompt);
+
     // Parse model output in the unary mode. Returns ParsedOutput containing data extracted by internal parsers.
     ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable);
 
     // Parse model output chunk in the steaming mode. Returns a JSON object containing the delta that conforms to OpenAI API
     // or nullopt if no response can be produced.
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason);
+    // tokens holds the token IDs that produced chunkResponse (may be empty; currently informational for future use).
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason);
 
     bool requiresStreamingWithSpecialTokens() const {
         if (!reasoningParser) {

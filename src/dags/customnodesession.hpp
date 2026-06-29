@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/tensor.hpp>
 
 #include "../custom_node_interface.h"  // NOLINT
 #include "../logging.hpp"

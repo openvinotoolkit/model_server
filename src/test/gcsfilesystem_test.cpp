@@ -18,7 +18,7 @@
 
 #include "spdlog/spdlog.h"
 
-#include "../gcsfilesystem.hpp"
+#include "src/filesystem/gcsfilesystem.hpp"
 #include "gtest/gtest.h"
 
 using namespace ovms;

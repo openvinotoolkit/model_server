@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
@@ -32,10 +33,14 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../../../config.hpp"
 #include "../../../json_parser.hpp"
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
+#include "../../../ov_utils.hpp"
 #include "../../../status.hpp"
+#include "../../../systeminfo.hpp"
+#include "../../io_processing/parser_config_validation.hpp"
 #include "llm_executor.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
@@ -141,9 +146,24 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
     if (nodeOptions.has_tool_parser()) {
         properties->toolParserName = nodeOptions.tool_parser();
+        if (!properties->toolParserName.empty() && !isSupportedToolParserName(properties->toolParserName)) {
+            SPDLOG_ERROR("Unsupported tool_parser \"{}\" specified in graph configuration. Supported tool parsers are: {}",
+                properties->toolParserName, getSupportedToolParserNamesAsString());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
     }
     if (nodeOptions.has_reasoning_parser()) {
         properties->reasoningParserName = nodeOptions.reasoning_parser();
+        if (!properties->reasoningParserName.empty() && !isSupportedReasoningParserName(properties->reasoningParserName)) {
+            SPDLOG_ERROR("Unsupported reasoning_parser \"{}\" specified in graph configuration. Supported reasoning parsers are: {}",
+                properties->reasoningParserName, getSupportedReasoningParserNamesAsString());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+    }
+    if (nodeOptions.has_chat_template_mode()) {
+        properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
+                                           ? ChatTemplateMode::JINJA
+                                           : ChatTemplateMode::MINJA;
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
@@ -151,6 +171,9 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
     properties->schedulerConfig.max_num_seqs = nodeOptions.max_num_seqs();
     properties->schedulerConfig.enable_prefix_caching = nodeOptions.enable_prefix_caching();
+    if (nodeOptions.has_cache_interval_multiplier()) {
+        properties->schedulerConfig.cache_interval_multiplier = nodeOptions.cache_interval_multiplier();
+    }
 
     if (nodeOptions.has_cache_eviction_config()) {
         properties->schedulerConfig.cache_eviction_config = prepareCacheEvictionConfig(nodeOptions);
@@ -204,7 +227,26 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
 
-    properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
+    if (properties->device == "CPU") {
+        status = applyDefaultCpuProperties(properties->pluginConfig);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to apply default CPU properties for LLM model: {}", status.string());
+            return status;
+        }
+    }
+
+    ov::AnyMap tokenProperties;
+    const uint32_t tokenizerNumStreams = std::min(static_cast<uint32_t>(Config::instance().restWorkers()), static_cast<uint32_t>(getCoreCount()));
+    tokenProperties[ov::num_streams.name()] = static_cast<int>(tokenizerNumStreams);
+    tokenProperties[ov::hint::performance_mode.name()] = ov::hint::PerformanceMode::THROUGHPUT;
+    SPDLOG_DEBUG("Setting tokenizer/detokenizer NUM_STREAMS to: {}", tokenizerNumStreams);
+    status = applyDefaultCpuProperties(tokenProperties);
+    if (!status.ok()) {
+        SPDLOG_ERROR("Failed to apply default CPU properties for tokenizer: {}", status.string());
+        return status;
+    }
+    properties->tokenizerPluginConfig = tokenProperties;
+
     try {
         properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,
             properties->schedulerConfig, properties->device,

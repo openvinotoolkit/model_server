@@ -38,22 +38,23 @@
 
 #include "config.hpp"
 #include "dags/pipeline.hpp"
+#include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
-#include "dags/pipelinedefinitionunloadguard.hpp"
+#include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
-#include "filesystem.hpp"
+#include "filesystem/filesystem.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
-#include "metric_module.hpp"
-#include "metric_registry.hpp"
+#include "metrics/metric_config.hpp"
+#include "metrics/metric_module.hpp"
+#include "metrics/metric_registry.hpp"
 #include "model_metric_reporter.hpp"
 #include "model_service.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
-#include "prediction_service_utils.hpp"
 #include "profiler.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
@@ -62,17 +63,22 @@
 #include "status.hpp"
 #include "stringutils.hpp"
 #include "timer.hpp"
+#include "utils/rapidjson_utils.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #include "copyable_object_wrapper.hpp"
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
 #include "http_frontend/http_graph_executor_impl.hpp"
+#include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
 #include "tfs_frontend/tfs_utils.hpp"
+#include "tfs_frontend/tfs_request_utils.hpp"
 #include "tfs_frontend/deserialization.hpp"
+#include "kfs_frontend/kfs_request_utils.hpp"
+#include "predict_request_validation_utils.hpp"
 #include "deserialization_main.hpp"
 #include "inference_executor.hpp"
 
@@ -238,7 +244,7 @@ Status HttpRestApiHandler::processServerReadyKFSRequest(const HttpRequestCompone
     if (isReady) {
         return StatusCode::OK;
     }
-    return StatusCode::MODEL_NOT_LOADED;
+    return StatusCode::SERVER_NOT_READY;
 }
 
 Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
@@ -295,8 +301,10 @@ static bool isInputEmpty(const ::KFSRequest::InferInputTensor& input) {
     return true;
 }
 
-static Status handleBinaryInput(const int binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs_buffer, ::KFSRequest::InferInputTensor& input, std::string* rawInputContentsBuffer) {
-    if (binary_input_offset + binary_input_size > binary_buffer_size) {
+static Status handleBinaryInput(const size_t binary_input_size, size_t& binary_input_offset, const size_t binary_buffer_size, const char* binary_inputs_buffer, ::KFSRequest::InferInputTensor& input, std::string* rawInputContentsBuffer) {
+    // Subtraction is safe: binary_input_offset <= binary_buffer_size is maintained as an invariant —
+    // offset starts at 0 and is incremented only after this check passes, keeping it within bounds.
+    if (binary_input_size > binary_buffer_size - binary_input_offset) {
         SPDLOG_DEBUG("Binary inputs size exceeds provided buffer size {}, binary input offset {}, binary_input size {}",
             binary_buffer_size,
             binary_input_offset,
@@ -308,11 +316,17 @@ static Status handleBinaryInput(const int binary_input_size, size_t& binary_inpu
     return StatusCode::OK;
 }
 
-static size_t calculateBinaryDataSize(::KFSRequest::InferInputTensor& input) {
-    auto element_size = KFSDataTypeSize(input.datatype());
-    size_t elements_number = std::accumulate(std::begin(input.shape()), std::end(input.shape()), 1, std::multiplies<size_t>());
-    size_t binary_data_size = elements_number * element_size;
-    return binary_data_size;
+static Status calculateBinaryDataSize(::KFSRequest::InferInputTensor& input, size_t& binary_data_size) {
+    const auto element_size = KFSDataTypeSize(input.datatype());
+    const std::vector<int64_t> shapeVec(input.shape().begin(), input.shape().end());
+    size_t elements_number = 0;
+    if (!request_validation_utils::computeExpectedElementCountReturnFalseIfOverflow(shapeVec, elements_number)) {
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Binary input shape dimensions overflow size_t");
+    }
+    if (!request_validation_utils::computeExpectedBufferSizeReturnFalseIfOverflow(elements_number, element_size, binary_data_size)) {
+        return Status(StatusCode::INVALID_CONTENT_SIZE, "Binary input shape dimensions overflow size_t");
+    }
+    return StatusCode::OK;
 }
 
 static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& request_body, size_t endOfJson) {
@@ -330,7 +344,12 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
                 return StatusCode::REST_CONTENTS_FIELD_NOT_EMPTY;
             }
             if (binary_data_size_parameter->second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
-                binary_input_size = binary_data_size_parameter->second.int64_param();
+                const int64_t paramValue = binary_data_size_parameter->second.int64_param();
+                if (paramValue < 0) {
+                    SPDLOG_DEBUG("binary_data_size parameter must not be negative");
+                    return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
+                }
+                binary_input_size = static_cast<size_t>(paramValue);
             } else {
                 SPDLOG_DEBUG("binary_data_size parameter type should be int64");
                 return StatusCode::REST_BINARY_DATA_SIZE_PARAMETER_INVALID;
@@ -341,7 +360,10 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
             if (grpc_request.mutable_inputs()->size() == 1 && input->datatype() == "BYTES") {
                 binary_input_size = binary_buffer_size;
             } else {
-                binary_input_size = calculateBinaryDataSize(*input);
+                auto calcStatus = calculateBinaryDataSize(*input, binary_input_size);
+                if (!calcStatus.ok()) {
+                    return calcStatus;
+                }
             }
         }
         auto status = handleBinaryInput(binary_input_size, binary_input_offset, binary_buffer_size, binary_inputs_buffer, *input, grpc_request.add_raw_input_contents());
@@ -507,17 +529,25 @@ static Status createV3HttpPayload(
         } else {
             SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", modelName);
         }
+        // Detect stream field in multipart form data (used by audio endpoints)
+        std::string streamField = multiPartParser->getFieldByName("stream");
+        if (streamField == "true") {
+            streamFieldVal = true;
+        }
         ensureJsonParserInErrorState(parsedJson);
     } else if (isApplicationJson) {
         {
             OVMS_PROFILE_SCOPE("rapidjson parse");
-            parsedJson->Parse(request_body.c_str());
+            auto status = parseJsonWithDepthLimit(*parsedJson, request_body.c_str());
+            if (!status.ok()) {
+                ensureJsonParserInErrorState(parsedJson);
+                if (status == StatusCode::JSON_NESTING_DEPTH_EXCEEDED) {
+                    return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
+                }
+                return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
+            }
         }
         OVMS_PROFILE_SCOPE("rapidjson validate");
-        if (parsedJson->HasParseError()) {
-            return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
-        }
-
         if (!parsedJson->IsObject()) {
             return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
         }
@@ -531,7 +561,7 @@ static Status createV3HttpPayload(
             return Status(StatusCode::JSON_INVALID, "model field is not a string");
         }
 
-        bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
+        bool isTextGenerationEndpoint = (uri.find("completions") != std::string_view::npos) || (uri.find("responses") != std::string_view::npos);
         if (isTextGenerationEndpoint) {
             auto streamIt = parsedJson->FindMember("stream");
             if (streamIt != parsedJson->MemberEnd()) {
@@ -737,7 +767,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
     auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), *request, modelName, streamFieldVal);
     if (!status.ok()) {
-        SPDLOG_DEBUG("Failed to create V3 payload: {}", status.string());
+        SPDLOG_DEBUG("Failed to create V3 payload: {} [{}]", status.string(), request_body);
         return status;
     }
 
@@ -1151,7 +1181,7 @@ Status HttpRestApiHandler::processPredictRequest(
     if (this->modelManager.modelExists(modelName)) {
         SPDLOG_DEBUG("Found model with name: {}. Searching for requested version...", modelName);
         status = processSingleModelRequest(modelName, modelVersion, request, requestOrder, responseProto, reporterOut);
-    } else if (this->modelManager.pipelineDefinitionExists(modelName)) {
+    } else if (this->modelManager.servableExists(modelName, ServableQueryType::Pipeline)) {
         SPDLOG_DEBUG("Found pipeline with name: {}", modelName);
         status = processPipelineRequest(modelName, request, requestOrder, responseProto, reporterOut);
     } else {
@@ -1245,7 +1275,7 @@ Status HttpRestApiHandler::getPipelineInputsAndReporter(const std::string& model
     if (!pipelineDefinition) {
         return StatusCode::MODEL_MISSING;
     }
-    std::unique_ptr<PipelineDefinitionUnloadGuard> unloadGuard;
+    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     Status status = pipelineDefinition->waitForLoaded(unloadGuard);
     if (!status.ok()) {
         return status;
@@ -1286,7 +1316,7 @@ Status HttpRestApiHandler::processPipelineRequest(const std::string& modelName,
 
     tensorflow::serving::PredictRequest& requestProto = requestParser.getProto();
     requestProto.mutable_model_spec()->set_name(modelName);
-    status = this->modelManager.createPipeline(pipelinePtr, modelName, &requestProto, &responseProto);
+    status = this->modelManager.getPipelineFactory().create(pipelinePtr, modelName, &requestProto, &responseProto, this->modelManager);
     if (!status.ok()) {
         INCREMENT_IF_ENABLED(reporterOut->getInferRequestMetric(executionContext, false));
         return status;

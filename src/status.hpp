@@ -21,7 +21,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "logging.hpp"
+#include <fmt/format.h>
 
 namespace ovms {
 
@@ -33,8 +33,9 @@ enum class StatusCode {
     CONFIG_FILE_INVALID,   /*!< Config file not found or cannot open */
     FILESYSTEM_ERROR,      /*!< Underlying filesystem error */
     MODEL_NOT_LOADED,
-    JSON_INVALID,             /*!< The file/content is not valid json */
-    JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */
+    JSON_INVALID,                /*!< The file/content is not valid json */
+    JSON_NESTING_DEPTH_EXCEEDED, /*!< JSON nesting depth exceeds the allowed limit */
+    JSON_SERIALIZATION_ERROR,    /*!< Data serialization to json format failed */
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,                   /*!< The provided shape param is in wrong format */
     LAYOUT_WRONG_FORMAT,                  /*!< The provided layout param is in wrong format */
@@ -70,30 +71,14 @@ enum class StatusCode {
     OV_NO_OUTPUTS,
 
     // Model management
-    MODEL_MISSING,                                     /*!< Model with such name and/or version does not exist */
-    MODEL_CONFIG_INVALID,                              /*!< Model config is invalid */
-    MODEL_NAME_MISSING,                                /*!< Model with requested name is not found */
-    MODEL_NAME_OCCUPIED,                               /*!< Given model name is already occupied */
-    MODEL_VERSION_MISSING,                             /*!< Model with requested version is not found */
-    MODEL_VERSION_NOT_LOADED_ANYMORE,                  /*!< Model with requested version is retired */
-    MODEL_VERSION_NOT_LOADED_YET,                      /*!< Model with requested version is not loaded yet */
-    INVALID_NIREQ,                                     /*!< Invalid NIREQ requested */
-    REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL,    /*!< Dynamic shape and dynamic batch size not supported for stateful models */
-    REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, /*!< Stateful model cannot be subscribed to pipeline */
-    REQUESTED_MODEL_TYPE_CHANGE,                       /*!< Model type cannot be changed after it's loaded */
-    INVALID_NON_STATEFUL_MODEL_PARAMETER,              /*!< Stateful model config parameter used for non stateful model */
-    INVALID_MAX_SEQUENCE_NUMBER,                       /*!< Sequence max number parameter too high */
-
-    // Sequence management
-    SEQUENCE_MISSING,                /*!< Sequence with provided ID does not exist */
-    SEQUENCE_ALREADY_EXISTS,         /*!< Sequence with provided ID already exists */
-    SEQUENCE_ID_NOT_PROVIDED,        /*!< Sequence ID has not been provided in request inputs */
-    SEQUENCE_ID_BAD_TYPE,            /*!< Wrong sequence ID type */
-    INVALID_SEQUENCE_CONTROL_INPUT,  /*!< Unexpected value of sequence control input */
-    SEQUENCE_CONTROL_INPUT_BAD_TYPE, /*!< Sequence control input in bad type */
-    SEQUENCE_TERMINATED,             /*!< Sequence last request is being processed and it's not available anymore */
-    SPECIAL_INPUT_NO_TENSOR_SHAPE,   /*!< Special input proto does not contain tensor shape information */
-    MAX_SEQUENCE_NUMBER_REACHED,     /*!< Model handles maximum number of sequences and will not accept new ones */
+    MODEL_MISSING,                    /*!< Model with such name and/or version does not exist */
+    MODEL_CONFIG_INVALID,             /*!< Model config is invalid */
+    MODEL_NAME_MISSING,               /*!< Model with requested name is not found */
+    MODEL_NAME_OCCUPIED,              /*!< Given model name is already occupied */
+    MODEL_VERSION_MISSING,            /*!< Model with requested version is not found */
+    MODEL_VERSION_NOT_LOADED_ANYMORE, /*!< Model with requested version is retired */
+    MODEL_VERSION_NOT_LOADED_YET,     /*!< Model with requested version is not loaded yet */
+    INVALID_NIREQ,                    /*!< Invalid NIREQ requested */
 
     // Predict request validation
     INVALID_NO_OF_INPUTS,             /*!< Invalid number of inputs */
@@ -359,7 +344,13 @@ enum class StatusCode {
     HF_FAILED_TO_INIT_OPTIMUM_CLI,
     HF_RUN_OPTIMUM_CLI_EXPORT_FAILED,
     HF_RUN_CONVERT_TOKENIZER_EXPORT_FAILED,
+    HF_GIT_CLONE_CANCELLED,
     HF_GIT_CLONE_FAILED,
+    HF_GIT_STATUS_FAILED,
+    HF_GIT_STATUS_FAILED_TO_RESOLVE_PATH,
+    HF_GIT_LIBGIT2_NOT_INITIALIZED,
+    HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED,
+    HF_GIT_STATUS_UNCLEAN,
 
     PARTIAL_END,
     NONEXISTENT_PATH,

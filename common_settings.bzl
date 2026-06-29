@@ -20,7 +20,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-load("//:distro.bzl", "distro_flag")
+load("//:distro.bzl", "distro_flag", "espeak_flag")
 
 # cc_library rule wrapper that will accept the same arguments but if user will not provide
 # copts, linkopts, local_defines it will set them to the defaults
@@ -28,6 +28,8 @@ load("//:distro.bzl", "distro_flag")
 def ovms_cc_library(**kwargs):
     """
     Wrapper for cc_library that sets default copts and linkopts if not provided.
+    Transitive defines (PYTHON_DISABLE, MEDIAPIPE_DISABLE) are always set via 'defines'
+    so that any target depending on an ovms_cc_library automatically gets these macros.
     """
     if "copts" not in kwargs:
         kwargs["copts"] = COMMON_STATIC_LIBS_COPTS + select({
@@ -41,10 +43,14 @@ def ovms_cc_library(**kwargs):
         })
     if "local_defines" not in kwargs:
         kwargs["local_defines"] = COMMON_LOCAL_DEFINES
+    if "defines" not in kwargs:
+        kwargs["defines"] = COMMON_DEFINES
     if "additional_copts" in kwargs:
         kwargs["copts"] += kwargs.pop("additional_copts")
     if "additional_linkopts" in kwargs:
         kwargs["linkopts"] += kwargs.pop("additional_linkopts")
+    if "additional_local_defines" in kwargs:
+        kwargs["local_defines"] += kwargs.pop("additional_local_defines")
 
     native.cc_library(
         **kwargs
@@ -52,6 +58,7 @@ def ovms_cc_library(**kwargs):
 
 def create_config_settings():
     distro_flag()
+    espeak_flag()
     native.config_setting(
         name = "disable_mediapipe",
         define_values = {
@@ -143,6 +150,7 @@ def create_config_settings():
 ###############################
 LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Wall",
+                    # "-Wextra", Requires more cleanup in code
                     # TODO: was in ovms bin "-Wconversion",
                     "-Wno-unknown-pragmas", 
                     "-Wno-sign-compare",
@@ -159,7 +167,6 @@ LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Wl,-z,noexecstack",
                     "-fPIC",
                     #"-D_GLIBCXX_ASSERTIONS", - causes errors on gpu
-                    "-Wl,-z,relro",
                     "-Wl,-z,relro,-z,now",
                     "-Wl,-z,nodlopen",
                     "-fstack-protector-strong",
@@ -209,8 +216,6 @@ COMMON_STATIC_TEST_COPTS = select({
                     "-Wall",
                     "-Wno-unknown-pragmas",
                     "-Werror",
-                    # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
-                    "-Wno-deprecated-declarations",
                     "-Isrc",
                     "-fconcepts", # for gmock related utils
                     "-fvisibility=hidden",# Needed for pybind targets
@@ -237,17 +242,17 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                     "/LTCG",
                 ],
                 })
-COPTS_PYTHON = select({
-    "//conditions:default": ["-DPYTHON_DISABLE=1"],
-    "//:not_disable_python" : ["-DPYTHON_DISABLE=0"],
-})
-COPTS_MEDIAPIPE = select({
-    "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
-    "//:not_disable_mediapipe" : ["-DMEDIAPIPE_DISABLE=0"],
-})
 COPTS_DROGON = select({
     "//conditions:default": ["-DUSE_DROGON=0"],
     "//:enable_drogon" : ["-DUSE_DROGON=1"],
+})
+DEFINES_PYTHON = select({
+    "//conditions:default": ["PYTHON_DISABLE=1"],
+    "//:not_disable_python" : ["PYTHON_DISABLE=0"],
+})
+DEFINES_MEDIAPIPE = select({
+    "//conditions:default": ["MEDIAPIPE_DISABLE=1"],
+    "//:not_disable_mediapipe" : ["MEDIAPIPE_DISABLE=0"],
 })
 COMMON_FUZZER_COPTS = [
     "-fsanitize=address",
@@ -261,6 +266,7 @@ COMMON_FUZZER_LINKOPTS = [
     "-static-libasan",
 ]
 COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"]
+COMMON_DEFINES = DEFINES_PYTHON + DEFINES_MEDIAPIPE
 PYBIND_DEPS = [
     "//third_party:python3",
     "@pybind11//:pybind11_embed",

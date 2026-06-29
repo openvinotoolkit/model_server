@@ -45,9 +45,15 @@ set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUM
 set "changeConfigsCmd=python windows_change_test_configs.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
 
+:: Load chosen dependency versions from versions.mk
+for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
+    if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
+    if "%%A"=="CURL_VERSION" if "!curl_version!"=="" set "curl_version=%%B"
+)
+
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-8.18.0_4-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
@@ -71,7 +77,8 @@ set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
-set "opencvBatch=call C:\opt\opencv_4.12.0\setup_vars_opencv4.cmd"
+
+set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 set "PYTHONHOME=C:\opt\Python312"
 set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
@@ -96,6 +103,17 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Run install_ovms_service.bat unit tests
+echo Running install_ovms_service.bat unit tests...
+python -m pytest tests\python\test_install_ovms_service_windows.py -v > win_install_service_test.log 2>&1
+set "pytestExitCode=!errorlevel!"
+type win_install_service_test.log
+if !pytestExitCode! neq 0 (
+    echo [ERROR] install_ovms_service.bat unit tests failed. See win_install_service_test.log.
+    exit /b !pytestExitCode!
+)
+echo [INFO] install_ovms_service.bat unit tests passed.
+
 :: Start unit test
 echo Running: %runTest%
 %runTest%
@@ -104,13 +122,34 @@ echo Running: %runTest%
 set regex="\[  .* ms"
 set sed_clean="s/ (.* ms)//g"
 C:\Windows\System32\tar.exe -a -c -f win_test_log.zip win_full_test.log
-grep -a %regex% win_full_test.log | sed %sed_clean% > win_test_summary.log
-grep -a %regex% win_full_test.log | sed %sed_clean% | grep -q " FAILED "
-if !errorlevel! equ 0 goto :exit_build_error
-:exit_build 
+
+:: Create summary log with filtered results, always create the file even if grep finds no matches
+ grep -a %regex% win_full_test.log > win_test_summary.tmp
+ if !errorlevel! equ 0 (
+     sed %sed_clean% win_test_summary.tmp > win_test_summary.log 2>&1
+ ) else (
+     echo No matching test results found > win_test_summary.log
+ )
+ if exist win_test_summary.tmp del /f /q win_test_summary.tmp
+
+:: Parse logs and decide final test status using dedicated parser script
+:: Skip expensive parsing only if PASSED summary exists AND no FAILED markers
+grep -a -q "\[  PASSED  \] " win_full_test.log
+set "hasPassed=!errorlevel!"
+grep -a -q "\[  FAILED  \] " win_full_test.log
+set "hasFailed=!errorlevel!"
+if !hasPassed! equ 0 if !hasFailed! neq 0 (
+    echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
+    exit /b 0
+)
+call %cd%\windows_parse_tests.bat win_full_test.log win_test_summary.log
+set "parseExitCode=!errorlevel!"
+if !parseExitCode! neq 0 exit /b !parseExitCode!
+
 echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
 exit /b 0
+
 :exit_build_error
-echo [ERROR] Check tests summary in 'win_test_summary.log' and tests logs in 'win_full_test.log'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
+echo [ERROR] windows_test.bat failed before test parsing stage.
 exit /b 1
 endlocal

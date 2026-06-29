@@ -17,6 +17,14 @@ echo off
 setlocal EnableExtensions EnableDelayedExpansion
 set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
 set "PATH=%setPath%"
+
+:: Load chosen dependency versions from versions.mk
+for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
+    if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
+    if "%%A"=="CURL_VERSION" if "!curl_version!"=="" set "curl_version=%%B"
+)
+:: Build DLL suffix by removing dots (e.g. 4.13.0 -> 4130)
+set "opencv_dll_ver=!opencv_version:.=!"
 IF "%~1"=="" (
     echo No argument provided. Using default opt path
     set "output_user_root=opt"
@@ -82,19 +90,30 @@ copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\wind
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Copy from bazel-out if the genai is from sources
-copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4120.dll dist\windows\ovms
+copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world!opencv_dll_ver!.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_genai.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_tokenizers.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\git2.dll dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\libcurl-x64.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\git2.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: Old package had core_tokenizers
 if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
     copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll dist\windows\ovms
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+:: Bundle espeak-ng DLL + data when it was built from source by Bazel
+:: (--//:espeak=on). Picked up from the rules_foreign_cc cmake output tree.
+for /f "delims=" %%D in ('dir /b /s /a:-d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng\espeak-ng.dll" 2^>nul') do (
+    copy /Y "%%D" dist\windows\ovms
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+for /f "delims=" %%D in ('dir /b /s /a:d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng" 2^>nul ^| findstr /e "espeak-ng-data"') do (
+    xcopy "%%D" dist\windows\ovms\espeak-ng-data /E /I /H /Y
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
@@ -107,7 +126,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 set "license_dest=%cd%\dist\windows\ovms\thirdparty-licenses\"
 md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\opencv_4.12.0\etc\licenses\* %license_dest%
+copy C:\opt\opencv_!opencv_version!\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 IF "%OV_USE_BINARY%"=="1" (
     copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
@@ -124,28 +143,45 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy %cd%\release_files\thirdparty-licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Bundle eSpeak-ng license text when eSpeak artifacts are included.
+set "espeak_license_src="
+for /f "delims=" %%F in ('dir /b /s /a:-d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng\COPYING*" 2^>nul') do (
+    set "espeak_license_src=%%F"
+    goto :copy_espeak_license
+)
+for /f "delims=" %%F in ('dir /b /s /a:-d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng\LICENSE*" 2^>nul') do (
+    set "espeak_license_src=%%F"
+    goto :copy_espeak_license
+)
+:copy_espeak_license
+if defined espeak_license_src (
+    copy /Y "!espeak_license_src!" "%license_dest%espeak-ng.LICENSE.txt"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+set "curl_dir=curl-!curl_version!-win64-mingw"
+echo Adding curl licenses from !curl_dir!...
+copy C:\opt\!curl_dir!\COPYING.txt %license_dest%LICENSE-CURL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\COPYING.txt %license_dest%LICENSE-CURL.txt
+copy C:\opt\!curl_dir!\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTLI.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTIL.txt
+copy C:\opt\!curl_dir!\dep\certdata\LICENSE.url %license_dest%LICENSE-CERTDATA.url
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\dep\cacert\LICENSE.url %license_dest%LICENSE-CACERT.url
+copy C:\opt\!curl_dir!\dep\libpsl\COPYING.txt %license_dest%LICENSE-LIBPSL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\dep\libpsl\COPYING.txt %license_dest%LICENSE-LIBPSL.txt
+copy C:\opt\!curl_dir!\dep\libressl\COPYING.txt %license_dest%LICENSE-LIBRESSL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\dep\libressl\COPYING.txt %license_dest%LICENSE-LIBRESSL.txt
+copy C:\opt\!curl_dir!\dep\libssh2\COPYING.txt %license_dest%LICENSE-LIBSSH2.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\dep\libssh2\COPYING.txt %license_dest%LICENSE-LIBSSH2.txt
+copy C:\opt\!curl_dir!\dep\nghttp2\COPYING.txt %license_dest%LICENSE-NGHTTP2.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\dep\nghttp2\COPYING.txt %license_dest%LICENSE-NGHTTP2.txt
+copy C:\opt\!curl_dir!\dep\nghttp3\COPYING.txt %license_dest%LICENSE-NGHTTP3.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\dep\nghttp3\COPYING.txt %license_dest%LICENSE-NGHTTP3.txt
+copy C:\opt\!curl_dir!\dep\ngtcp2\COPYING.txt %license_dest%LICENSE-NGTCP2.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\dep\ngtcp2\COPYING.txt %license_dest%LICENSE-NGTCP2.txt
+copy C:\opt\!curl_dir!\dep\zlibng\LICENSE.md %license_dest%LICENSE-ZLIBNG.md
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\dep\zlibng\LICENSE.md %license_dest%LICENSE-ZLIBNG.md
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.18.0_4-win64-mingw\dep\zstd\LICENSE.txt %license_dest%LICENSE-ZSTD.txt
+copy C:\opt\!curl_dir!\dep\zstd\LICENSE.txt %license_dest%LICENSE-ZSTD.txt
 
 :: Add when CAPI enabled and tested
 ::mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include

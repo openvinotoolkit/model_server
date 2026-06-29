@@ -21,7 +21,7 @@ ovms_cc_library(
     hdrs = ["listmodels.hpp",],
     srcs = ["listmodels.cpp",],
     deps = [
-        "//src:libovmsfilesystem",
+        "//src/filesystem:libovmsfilesystem",
         "//src:libovmslogging",
         "//src:modelextensions",
     ],

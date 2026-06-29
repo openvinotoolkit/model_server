@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "config.hpp"
-
+#include <algorithm>
 #include <filesystem>
 #include <limits>
 #include <regex>
@@ -43,11 +43,28 @@ const uint32_t AVAILABLE_CORES = getCoreCount();
 const uint32_t WIN_MAX_GRPC_WORKERS = 1;
 const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
-// For drogon, we need to minimize the number of default workers since this value is set for both: unary and streaming (making it always double)
-const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES;
 const uint32_t DEFAULT_GRPC_MAX_THREADS = AVAILABLE_CORES * 8.0;
 const size_t DEFAULT_GRPC_MEMORY_QUOTA = (size_t)2 * 1024 * 1024 * 1024;  // 2GB
 const uint64_t MAX_REST_WORKERS = 10'000;
+
+// We need to minimize the number of default drogon workers since this value is set for both: unary and streaming (making it always double)
+// on linux, restrict also based on the max allowed number of open files
+#ifdef __linux__
+
+const uint64_t RESERVED_OPEN_FILES = 15;        // we need to reserve some file descriptors for other operations, so we don't want to use all of them for drogon workers
+const uint64_t OPEN_FILES_PER_REST_WORKER = 7;  // 5x rest_workers to initialize ovms and 2x rest_workers for new connections
+uint64_t getDefaultRestWorkers() {
+    const uint64_t maxOpenFiles = getMaxOpenFilesLimit();
+    if (maxOpenFiles <= RESERVED_OPEN_FILES) {
+        return static_cast<uint64_t>(0);
+    }
+    return std::min(static_cast<uint64_t>(AVAILABLE_CORES), (maxOpenFiles - RESERVED_OPEN_FILES) / OPEN_FILES_PER_REST_WORKER);
+}
+#else
+uint64_t getDefaultRestWorkers() {
+    return AVAILABLE_CORES;
+}
+#endif
 
 Config& Config::parse(int argc, char** argv) {
     ovms::CLIParser parser;
@@ -148,18 +165,22 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
 }
 
 bool Config::validate() {
-    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE) {
-        if (!serverSettings.hfSettings.sourceModel.size()) {
-            std::cerr << "source_model parameter is required for pull mode";
-            return false;
-        }
-        if (!serverSettings.hfSettings.downloadPath.size()) {
-            std::cerr << "model_repository_path parameter is required for pull mode";
-            return false;
-        }
-        if (this->serverSettings.hfSettings.task == UNKNOWN_GRAPH) {
-            std::cerr << "Error: --task parameter not set." << std::endl;
-            return false;
+    if (!this->serverSettings.hfSettings.sourceModel.empty() && this->serverSettings.hfSettings.task == UNKNOWN_GRAPH) {
+        std::cerr << "--source_model should be used combined with --task" << std::endl;
+        return false;
+    }
+    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE || this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE) {
+        // When --task is used with --model_path (no HF pulling), sourceModel and downloadPath are not required
+        bool taskWithModelPath = this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE && !this->modelsSettings.modelPath.empty();
+        if (!taskWithModelPath) {
+            if (!serverSettings.hfSettings.sourceModel.size()) {
+                std::cerr << "source_model parameter is required for pull mode";
+                return false;
+            }
+            if (!serverSettings.hfSettings.downloadPath.size()) {
+                std::cerr << "model_repository_path parameter is required for pull mode";
+                return false;
+            }
         }
         if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {
             if (!std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
@@ -297,7 +318,8 @@ bool Config::validate() {
     }
 
     // check rest_workers value
-    if (((restWorkers() > MAX_REST_WORKERS) || (restWorkers() < 2))) {
+    const uint32_t restWorkersValue = restWorkers();  // Cache to avoid multiple calls
+    if (((restWorkersValue > MAX_REST_WORKERS) || (restWorkersValue < 2))) {
         std::cerr << "rest_workers count should be from 2 to " << MAX_REST_WORKERS << std::endl;
         return false;
     }
@@ -306,6 +328,12 @@ bool Config::validate() {
         std::cerr << "rest_workers is set but rest_port is not set. rest_port is required to start rest servers" << std::endl;
         return false;
     }
+#ifdef __linux__
+    if (restWorkersValue > (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 6) {
+        std::cerr << "rest_workers count cannot be larger than " << (getMaxOpenFilesLimit() - RESERVED_OPEN_FILES) / 6 << " due to open files limit. Current open files limit: " << getMaxOpenFilesLimit() << std::endl;
+        return false;
+    }
+#endif
 
 #ifdef _WIN32
     if (grpcWorkers() > WIN_MAX_GRPC_WORKERS) {
@@ -351,11 +379,6 @@ bool Config::validate() {
         std::cerr << "log_level should be one of: TRACE, DEBUG, INFO, WARNING, ERROR" << std::endl;
         return false;
     }
-    // check stateful flags:
-    if ((this->modelsSettings.lowLatencyTransformation.has_value() || this->modelsSettings.maxSequenceNumber.has_value() || this->modelsSettings.idleSequenceCleanup.has_value()) && !stateful()) {
-        std::cerr << "Setting low_latency_transformation, max_sequence_number and idle_sequence_cleanup require setting stateful flag for the model." << std::endl;
-        return false;
-    }
     return true;
 }
 
@@ -368,7 +391,7 @@ const std::string Config::restBindAddress() const { return this->serverSettings.
 uint32_t Config::grpcWorkers() const { return this->serverSettings.grpcWorkers; }
 uint32_t Config::grpcMaxThreads() const { return this->serverSettings.grpcMaxThreads.value_or(DEFAULT_GRPC_MAX_THREADS); }
 size_t Config::grpcMemoryQuota() const { return this->serverSettings.grpcMemoryQuota.value_or(DEFAULT_GRPC_MEMORY_QUOTA); }
-uint32_t Config::restWorkers() const { return this->serverSettings.restWorkers.value_or(DEFAULT_REST_WORKERS); }
+uint32_t Config::restWorkers() const { return static_cast<uint32_t>(std::max(static_cast<uint64_t>(2), static_cast<uint64_t>(this->serverSettings.restWorkers.value_or(getDefaultRestWorkers())))); }
 const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
 const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }
 const std::string& Config::batchSize() const {
@@ -388,12 +411,8 @@ const std::string& Config::targetDevice() const {
     return this->modelsSettings.targetDevice.empty() ? defaultTargetDevice : this->modelsSettings.targetDevice;
 }
 const std::string& Config::Config::pluginConfig() const { return this->modelsSettings.pluginConfig; }
-bool Config::stateful() const { return this->modelsSettings.stateful.value_or(false); }
 bool Config::metricsEnabled() const { return this->serverSettings.metricsEnabled; }
 std::string Config::metricsList() const { return this->serverSettings.metricsList; }
-bool Config::idleSequenceCleanup() const { return this->modelsSettings.idleSequenceCleanup.value_or(true); }
-uint32_t Config::maxSequenceNumber() const { return this->modelsSettings.maxSequenceNumber.value_or(DEFAULT_MAX_SEQUENCE_NUMBER); }
-bool Config::lowLatencyTransformation() const { return this->modelsSettings.lowLatencyTransformation.value_or(false); }
 const std::string& Config::logLevel() const { return this->serverSettings.logLevel; }
 const std::string& Config::logPath() const { return this->serverSettings.logPath; }
 #ifdef MTR_ENABLED
@@ -401,7 +420,6 @@ const std::string& Config::tracePath() const { return this->serverSettings.trace
 #endif
 const std::string& Config::grpcChannelArguments() const { return this->serverSettings.grpcChannelArguments; }
 uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
-uint32_t Config::sequenceCleanerPollWaitMinutes() const { return this->serverSettings.sequenceCleanerPollWaitMinutes; }
 uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
 bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
 const std::string& Config::allowedOrigins() const { return this->serverSettings.allowedOrigins; }

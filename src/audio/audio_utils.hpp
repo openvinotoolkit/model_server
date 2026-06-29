@@ -19,9 +19,18 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
+#include <string_view>
 
 bool isWavBuffer(const std::string buf);
 
 std::vector<float> readWav(const std::string_view& wavData);
 std::vector<float> readMp3(const std::string_view& mp3Data);
-void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, const float* waveformPtr);
+void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, uint16_t bitsPerSample, size_t speechSize, const float* waveformPtr);
+
+// Throws if the estimated resampled audio buffer size would exceed the maximum allowed size
+void validateAudioFileSize(
+    size_t inputSamples,
+    uint32_t inputRate,
+    uint32_t targetRate,
+    uint32_t channels,
+    size_t bytesPerSample);

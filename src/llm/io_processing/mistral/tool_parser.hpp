@@ -34,7 +34,6 @@ class MistralToolParser : public BaseOutputParser {
     const std::string streamingParsingStartTag = "[{\"";
 
     /////////////////////////////////////////////////
-    // FIXME: Duplicated from Phi4 with slight change
     // Streaming required members
     enum InternalState {
         AWAITING_START_TAG,
@@ -71,7 +70,7 @@ public:
         BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
         static const std::vector<std::string> toolCallStartTags{"[TOOL_CALLS]", streamingParsingStartTag};
         return toolCallStartTags;
