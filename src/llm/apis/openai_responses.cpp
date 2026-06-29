@@ -1576,7 +1576,7 @@ std::string OpenAIResponsesHandler::serializeStreamingInProgressEvent() {
     return buffer.GetString();
 }
 
-std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
+std::string OpenAIResponsesHandler::serializeStreamingChunk(rapidjson::Document parsedDelta, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
     const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
@@ -1594,33 +1594,24 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& c
         events.emplace_back(std::move(inProgressEvent));
     }
 
-    // Lifecycle priming: when the servable invokes serializeStreamingChunk("")
-    // before the first token is generated (Responses-only behavior), we must
-    // only emit lifecycle events and skip the parser. Feeding an empty chunk
-    // into outputParser->parseChunk would advance processingPhase from UNKNOWN
-    // to CONTENT and cause subsequent reasoning-tag chunks to leak into
-    // delta.content.
-    if (chunkResponse.empty() && finishReason == ov::genai::GenerationFinishReason::NONE) {
-        return joinServerSideEvents(events);
-    }
-
-    if (outputParser != nullptr) {
-        // Use output parser to separate reasoning from content
-        std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
-
-        if (delta.has_value() && delta->HasMember("delta") && (*delta)["delta"].IsObject()) {
-            const auto& deltaObj = (*delta)["delta"];
-            if (deltaObj.HasMember("reasoning_content") && deltaObj["reasoning_content"].IsString()) {
-                // Reasoning chunk
-                if (!responsesState.reasoningInitialized) {
-                    events.emplace_back(serializeReasoningOutputItemAddedEvent(reasoningItemId));
-                    events.emplace_back(serializeReasoningSummaryPartAddedEvent(reasoningItemId));
-                    responsesState.reasoningInitialized = true;
-                }
-                const std::string reasoningText = deltaObj["reasoning_content"].GetString();
-                responsesState.reasoningText += reasoningText;
-                events.emplace_back(serializeReasoningSummaryTextDeltaEvent(reasoningItemId, reasoningText));
-            } else if (deltaObj.HasMember("content") && deltaObj["content"].IsString()) {
+    // parsedDelta is a pre-parsed Document produced by OVMSTextStreamer::flushChunk.
+    // Shape: {"delta":{...}} for content/reasoning/tool_calls, or an empty Document{}
+    // for finish-only chunks. Inspect the delta directly — no parsing needed here.
+    if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject()) {
+        const auto& deltaObj = parsedDelta["delta"];
+        if (deltaObj.HasMember("reasoning_content") && deltaObj["reasoning_content"].IsString()) {
+            // Reasoning chunk
+            if (!responsesState.reasoningInitialized) {
+                events.emplace_back(serializeReasoningOutputItemAddedEvent(reasoningItemId));
+                events.emplace_back(serializeReasoningSummaryPartAddedEvent(reasoningItemId));
+                responsesState.reasoningInitialized = true;
+            }
+            const std::string reasoningText = deltaObj["reasoning_content"].GetString();
+            responsesState.reasoningText += reasoningText;
+            events.emplace_back(serializeReasoningSummaryTextDeltaEvent(reasoningItemId, reasoningText));
+        } else if (deltaObj.HasMember("content") && deltaObj["content"].IsString()) {
+            const std::string contentText = deltaObj["content"].GetString();
+            if (!contentText.empty()) {
                 // Content chunk - close reasoning if it was active, init message if needed
                 if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
                     events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
@@ -1634,72 +1625,61 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(const std::string& c
                     events.emplace_back(serializeContentPartAddedEvent(outputItemId, msgIdx));
                     responsesState.messageInitialized = true;
                 }
-                const std::string contentText = deltaObj["content"].GetString();
                 responsesState.outputText += contentText;
                 events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, contentText, msgIdx));
-            } else if (deltaObj.HasMember("tool_calls") && deltaObj["tool_calls"].IsArray()) {
-                // Tool call chunk - close reasoning if active
-                if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
-                    events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
-                    events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
-                    events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
-                    responsesState.reasoningCompleted = true;
+            }
+        } else if (deltaObj.HasMember("tool_calls") && deltaObj["tool_calls"].IsArray()) {
+            // Tool call chunk - close reasoning if active
+            if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
+                events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
+                events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
+                events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
+                responsesState.reasoningCompleted = true;
+            }
+            const auto& toolCallsArr = deltaObj["tool_calls"];
+            for (rapidjson::SizeType i = 0; i < toolCallsArr.Size(); ++i) {
+                const auto& tc = toolCallsArr[i];
+                int tcIndex = tc.HasMember("index") ? tc["index"].GetInt() : 0;
+                // Determine the output index for this tool call
+                const uint64_t baseIdx = responsesState.reasoningInitialized ? 1 : 0;
+                const uint64_t tcOutputIdx = baseIdx + static_cast<uint64_t>(tcIndex);
+                // Determine if this is a new tool call (has function name)
+                bool isNewToolCall = false;
+                std::string funcName;
+                std::string tcId;
+                std::string argDelta;
+                if (tc.HasMember("function") && tc["function"].IsObject()) {
+                    const auto& funcObj = tc["function"];
+                    if (funcObj.HasMember("name") && funcObj["name"].IsString()) {
+                        funcName = funcObj["name"].GetString();
+                        isNewToolCall = true;
+                    }
+                    if (funcObj.HasMember("arguments") && funcObj["arguments"].IsString()) {
+                        argDelta = funcObj["arguments"].GetString();
+                    }
                 }
-                const auto& toolCallsArr = deltaObj["tool_calls"];
-                for (rapidjson::SizeType i = 0; i < toolCallsArr.Size(); ++i) {
-                    const auto& tc = toolCallsArr[i];
-                    int tcIndex = tc.HasMember("index") ? tc["index"].GetInt() : 0;
-                    // Determine the output index for this tool call
-                    const uint64_t baseIdx = responsesState.reasoningInitialized ? 1 : 0;
-                    const uint64_t tcOutputIdx = baseIdx + static_cast<uint64_t>(tcIndex);
-                    // Determine if this is a new tool call (has function name)
-                    bool isNewToolCall = false;
-                    std::string funcName;
-                    std::string tcId;
-                    std::string argDelta;
-                    if (tc.HasMember("function") && tc["function"].IsObject()) {
-                        const auto& funcObj = tc["function"];
-                        if (funcObj.HasMember("name") && funcObj["name"].IsString()) {
-                            funcName = funcObj["name"].GetString();
-                            isNewToolCall = true;
-                        }
-                        if (funcObj.HasMember("arguments") && funcObj["arguments"].IsString()) {
-                            argDelta = funcObj["arguments"].GetString();
-                        }
+                if (tc.HasMember("id") && tc["id"].IsString()) {
+                    tcId = tc["id"].GetString();
+                }
+                if (isNewToolCall) {
+                    // Ensure we have enough entries in our tracking vector
+                    while (static_cast<int>(responsesState.toolCalls.size()) <= tcIndex) {
+                        responsesState.toolCalls.push_back(ToolCall{});
                     }
-                    if (tc.HasMember("id") && tc["id"].IsString()) {
-                        tcId = tc["id"].GetString();
-                    }
-                    if (isNewToolCall) {
-                        // Ensure we have enough entries in our tracking vector
-                        while (static_cast<int>(responsesState.toolCalls.size()) <= tcIndex) {
-                            responsesState.toolCalls.push_back(ToolCall{});
-                        }
-                        responsesState.toolCalls[tcIndex].id = tcId;
-                        responsesState.toolCalls[tcIndex].name = funcName;
-                        responsesState.toolCalls[tcIndex].arguments = "";
-                        events.emplace_back(serializeFunctionCallOutputItemAddedEvent(responsesState.toolCalls[tcIndex], tcOutputIdx));
-                    }
-                    if (!argDelta.empty() && static_cast<int>(responsesState.toolCalls.size()) > tcIndex) {
-                        responsesState.toolCalls[tcIndex].arguments += argDelta;
-                        events.emplace_back(serializeFunctionCallArgumentsDeltaEvent(responsesState.toolCalls[tcIndex].id, argDelta, tcOutputIdx));
-                    }
+                    responsesState.toolCalls[tcIndex].id = tcId;
+                    responsesState.toolCalls[tcIndex].name = funcName;
+                    responsesState.toolCalls[tcIndex].arguments = "";
+                    events.emplace_back(serializeFunctionCallOutputItemAddedEvent(responsesState.toolCalls[tcIndex], tcOutputIdx));
+                }
+                if (!argDelta.empty() && static_cast<int>(responsesState.toolCalls.size()) > tcIndex) {
+                    responsesState.toolCalls[tcIndex].arguments += argDelta;
+                    events.emplace_back(serializeFunctionCallArgumentsDeltaEvent(responsesState.toolCalls[tcIndex].id, argDelta, tcOutputIdx));
                 }
             }
         }
-        // If delta is nullopt, the parser is accumulating tag tokens - skip
-    } else {
-        // No parser - pass through raw text
-        if (!chunkResponse.empty()) {
-            if (!responsesState.messageInitialized) {
-                events.emplace_back(serializeOutputItemAddedEvent(outputItemId));
-                events.emplace_back(serializeContentPartAddedEvent(outputItemId));
-                responsesState.messageInitialized = true;
-            }
-            responsesState.outputText += chunkResponse;
-            events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, chunkResponse));
-        }
+        // Empty delta object (no recognized member) — finish-only chunk, no events to emit here.
     }
+    // Empty Document (no "delta" member) — finish-only chunk; lifecycle events already emitted above.
 
     if (finishReason != ov::genai::GenerationFinishReason::NONE) {
         // Close any open reasoning that wasn't closed by content transition

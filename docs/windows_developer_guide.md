@@ -77,7 +77,7 @@ windows_build.bat
 
 Optionally, you add parameter to the windows_build.bat script
 ```bat
-windows_install_build_dependencies.bat my_dir_on_c --with_python --with_tests --integrity
+windows_build.bat my_dir_on_c --with_python --with_tests --integrity
 ```
 [arg1] This way you can change default dependency location directory to c:\my_dir_on_c
 [arg2] --with_python - this will build the ovms.exe with python dependency and support for python chat templates for GENAI LLM
