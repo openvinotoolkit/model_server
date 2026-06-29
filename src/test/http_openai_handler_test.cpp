@@ -823,16 +823,6 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultimodalInputImage
     EXPECT_EQ(content[1]["type"].as_string().value_or(""), "image_url");
 }
 
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageJpegBase64Succeeds) {
-    const std::string base64Image = "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg==";
-    std::string json = createMultimodalRequestWithImageUrl(base64Image);
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-    auto content = apiHandler->getChatHistory()[0]["content"];
-    EXPECT_TRUE(content.is_array());
-    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "image_url");
-}
-
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageOnlyNoTextSucceeds) {
     const std::string base64Image = "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg==";
     std::string json = createImageOnlyRequest(base64Image);
@@ -908,110 +898,8 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystem
     EXPECT_FALSE(content[0]["image_url"]["url"].as_string().value_or("").empty());
 }
 
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemOutsideAllowedPathPreservesUrlInChatHistory) {
-    // Path validation is deferred to ImageDecodingProcessor; the handler no longer rejects here.
-    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
-    std::string json = createImageOnlyRequest(imageUrl);
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-    auto content = apiHandler->getChatHistory()[0]["content"];
-    EXPECT_TRUE(content.is_array());
-    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemPathTraversalPreservesUrlInChatHistory) {
-    // Path traversal validation is deferred to ImageDecodingProcessor; handler just preserves URL.
-    std::string imageUrlWithEscape = getGenericFullPathForSrcTest("/ovms/src/test/../test/binaryutils/rgb.jpg");
-    std::string json = createImageOnlyRequest(imageUrlWithEscape);
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-    auto content = apiHandler->getChatHistory()[0]["content"];
-    EXPECT_TRUE(content.is_array());
-    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemPrefixPathBypassPreservesUrlInChatHistory) {
-    // Path validation is deferred to ImageDecodingProcessor; handler just preserves URL.
-    const std::string allowedLocalMediaPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
-    const std::string siblingPrefixPath = allowedLocalMediaPath + "_private/rgb.jpg";
-    std::string json = createImageOnlyRequest(siblingPrefixPath);
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-    auto content = apiHandler->getChatHistory()[0]["content"];
-    EXPECT_TRUE(content.is_array());
-    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemNonexistentPathPreservesUrlInChatHistory) {
-    // File existence is checked in ImageDecodingProcessor; handler just preserves URL.
-    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/not_existing.jpeg");
-    std::string json = createImageOnlyRequest(imageUrl);
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-    auto content = apiHandler->getChatHistory()[0]["content"];
-    EXPECT_TRUE(content.is_array());
-    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemSymlinkEscapePreservesUrlInChatHistory) {
-    // Symlink escape validation is deferred to ImageDecodingProcessor; handler just preserves URL.
-#ifdef _WIN32
-    GTEST_SKIP() << "Symlink tests are not reliable on Windows CI.";
-#else
-    const std::filesystem::path realImageDir = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
-    const std::filesystem::path allowedRoot = std::filesystem::temp_directory_path() / "ovms_symlink_allowlist_test_param";
-    std::error_code ec;
-    std::filesystem::remove_all(allowedRoot, ec);
-    ASSERT_TRUE(std::filesystem::create_directories(allowedRoot, ec)) << ec.message();
-    const std::filesystem::path symlinkInsideAllowed = allowedRoot / "linked";
-    std::filesystem::create_directory_symlink(realImageDir, symlinkInsideAllowed, ec);
-    if (ec) {
-        std::filesystem::remove_all(allowedRoot);
-        GTEST_SKIP() << "Cannot create symlink for test: " << ec.message();
-    }
-    const std::string imageUrl = (symlinkInsideAllowed / "rgb.jpg").string();
-    std::string json = createImageOnlyRequest(imageUrl);
-    auto apiHandler = parseCurrentRequest(json);
-    std::filesystem::remove_all(allowedRoot, ec);
-    ASSERT_NE(apiHandler, nullptr);
-    auto content = apiHandler->getChatHistory()[0]["content"];
-    EXPECT_TRUE(content.is_array());
-    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
-#endif
-}
-
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlNotInAllowedDomainsPreservesUrlInChatHistory) {
     // Domain validation is deferred to ImageDecodingProcessor; handler just preserves URL.
-    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-    auto content = apiHandler->getChatHistory()[0]["content"];
-    EXPECT_TRUE(content.is_array());
-    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlPartialDomainMatchPreservesUrlInChatHistory) {
-    // Domain validation is deferred to ImageDecodingProcessor; handler just preserves URL.
-    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-    auto content = apiHandler->getChatHistory()[0]["content"];
-    EXPECT_TRUE(content.is_array());
-    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlSuffixMatchAllowedDomainPreservesUrlInChatHistory) {
-    // Domain validation is deferred to ImageDecodingProcessor; handler just preserves URL.
-    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-    auto content = apiHandler->getChatHistory()[0]["content"];
-    EXPECT_TRUE(content.is_array());
-    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlWildcardPatternPreservesUrlInChatHistory) {
-    // Domain validation (including wildcard rejection) is deferred to ImageDecodingProcessor.
     std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
     auto apiHandler = parseCurrentRequest(json);
     ASSERT_NE(apiHandler, nullptr);

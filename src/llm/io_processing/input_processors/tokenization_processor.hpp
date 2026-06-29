@@ -32,7 +32,7 @@ public:
     absl::Status process(InputRequest& req) override;
 
 private:
-    ov::genai::Tokenizer* tokenizer;  // non-owning; lifetime tied to InputProcessorContext
+    ov::genai::Tokenizer& tokenizer;  // non-owning; lifetime tied to InputProcessorContext
     bool addSpecialTokens;
 };
 

@@ -236,6 +236,14 @@ public:
     virtual absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     /*
+    validateInputCompatibility checks whether the request input is compatible with this servable type.
+    Called from prepareInputs before the InputProcessor chain runs.
+    Base implementation rejects image_url content for non-VLM (text-only) servables.
+    Derived classes may override to add or relax constraints.
+    */
+    virtual absl::Status validateInputCompatibility(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
+    /*
     scheduleExecution method should implement any necessary queueing mechanism or start asynchronous execution.
     Execution context in such case may contain handles, futures or other objects that will be used to track the execution.
     If none of that is necessary, the implementation can simply return OK status.

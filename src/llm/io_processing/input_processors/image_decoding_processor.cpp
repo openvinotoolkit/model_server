@@ -18,6 +18,7 @@
 
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "../../apis/openai_api_handler.hpp"
 #include "../../../logging.hpp"
@@ -31,7 +32,12 @@ ImageDecodingProcessor::ImageDecodingProcessor(
     allowedMediaDomains(std::move(allowedMediaDomains)) {}
 
 absl::Status ImageDecodingProcessor::process(InputRequest& req) {
-    ov::genai::ChatHistory& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
+    auto* chatHistoryPtr = std::get_if<ov::genai::ChatHistory>(&req.input);
+    if (chatHistoryPtr == nullptr) {
+        return absl::Status(absl::StatusCode::kInternal,
+            "ImageDecodingProcessor received input that is not a ChatHistory");
+    }
+    ov::genai::ChatHistory& chatHistory = *chatHistoryPtr;
 
     // Injection guard: reject requests that already contain image tags to
     // prevent prompt injection via pre-baked tags.

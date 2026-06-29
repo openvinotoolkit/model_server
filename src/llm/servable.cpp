@@ -172,11 +172,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     return absl::OkStatus();
 }
 
-absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    if (executionContext->apiHandler == nullptr) {
-        return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
-    }
-
+absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     // LM servables reject requests containing image content. Images are preserved
     // as JsonContainer arrays in chatHistory. Reject if any message's content array
     // contains an image_url entry.
@@ -194,10 +190,22 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
             }
         }
     }
+    return absl::OkStatus();
+}
+
+absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    if (executionContext->apiHandler == nullptr) {
+        return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
+    }
+
+    auto status = validateInputCompatibility(executionContext);
+    if (!status.ok()) {
+        return status;
+    }
 
     InputRequest& req = executionContext->inputRequest;
     InputProcessor processor(getProperties()->inputProcessorContext, req);
-    auto status = processor.process(req);
+    status = processor.process(req);
     if (!status.ok()) {
         return status;
     }

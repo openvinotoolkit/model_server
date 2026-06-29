@@ -19,6 +19,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "../../../logging.hpp"
 
@@ -27,11 +28,11 @@ namespace ovms {
 #if (PYTHON_DISABLE == 0)
 ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
     PyJinjaTemplateProcessor& templateProcessor) :
-    tokenizer(&tokenizer),
+    tokenizer(tokenizer),
     templateProcessor(templateProcessor) {}
 
 ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
-    tokenizer(&tokenizer),
+    tokenizer(tokenizer),
     templateProcessor(std::nullopt) {}
 
 std::string ChatTemplateProcessor::serializeForPyJinja(const ov::genai::ChatHistory& chatHistory) {
@@ -52,11 +53,21 @@ std::string ChatTemplateProcessor::serializeForPyJinja(const ov::genai::ChatHist
 
 #else
 ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
-    tokenizer(&tokenizer) {}
+    tokenizer(tokenizer) {}
 #endif
 
 absl::Status ChatTemplateProcessor::process(InputRequest& req) {
-    const ov::genai::ChatHistory& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
+    const auto* chatHistoryPtr = std::get_if<ov::genai::ChatHistory>(&req.input);
+    if (chatHistoryPtr == nullptr) {
+        return absl::Status(absl::StatusCode::kInternal,
+            "ChatTemplateProcessor received input that is not a ChatHistory");
+    }
+    const ov::genai::ChatHistory& chatHistory = *chatHistoryPtr;
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Chat history messages: {}", chatHistory.get_messages().to_json_string());
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "chatHistory.get_extra_context(): {}", chatHistory.get_extra_context().to_json_string());
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "tools: {}", chatHistory.get_tools().empty() ? std::string("<none>") : chatHistory.get_tools().to_json_string());
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "chatTemplateKwargs: {}", chatHistory.get_extra_context().empty() ? std::string("<none>") : chatHistory.get_extra_context().to_json_string());
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "addGenerationPrompt: {}", true);
 
 #if (PYTHON_DISABLE == 0)
     if (templateProcessor.has_value()) {
@@ -78,7 +89,7 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         const std::optional<ov::genai::JsonContainer> optKwargs =
             kwargs.empty() ? std::nullopt : std::make_optional(kwargs);
         try {
-            req.promptText = tokenizer->apply_chat_template(
+            req.promptText = tokenizer.apply_chat_template(
                 chatHistory, addGenerationPrompt, {}, optTools, optKwargs);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());

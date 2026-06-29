@@ -51,7 +51,7 @@ public:
     absl::Status process(InputRequest& req) override;
 
 private:
-    ov::genai::Tokenizer* tokenizer;  // non-owning; lifetime tied to InputProcessorContext
+    ov::genai::Tokenizer& tokenizer;  // non-owning; lifetime tied to InputProcessorContext
 #if (PYTHON_DISABLE == 0)
     // Present only on the PyJinja path; nullopt → use tokenizer.apply_chat_template().
     std::optional<std::reference_wrapper<PyJinjaTemplateProcessor>> templateProcessor;
