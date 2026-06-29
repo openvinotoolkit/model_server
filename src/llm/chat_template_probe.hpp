@@ -28,6 +28,7 @@ namespace ovms {
 // to empirically detect whether the template requires object arguments.
 // Updates caps.requiresObjectArguments based on probe results.
 // Only performs probing if caps.supportsToolCalls is true.
-void probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
+// Returns false if minja silently failed to render tool calls (template unsupported).
+bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
 
 }  // namespace ovms

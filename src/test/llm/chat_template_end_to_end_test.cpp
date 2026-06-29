@@ -104,7 +104,12 @@ protected:
         if (caps.supportsToolCalls) {
             ov::genai::Tokenizer probeTokenizer(tokenizerPath);
             probeTokenizer.set_chat_template(chatTemplate);
-            probeChatTemplateCaps(probeTokenizer, caps);
+            bool probeOk = probeChatTemplateCaps(probeTokenizer, caps);
+            if (!probeOk) {
+                std::cout << "=== Probe FAILED: minja cannot render tool calls ===" << std::endl;
+                caps.supportsToolCalls = false;
+                caps.supportsTools = false;
+            }
         }
 
         std::cout << "=== After Probe ===" << std::endl;
@@ -155,15 +160,13 @@ TEST_F(ChatTemplateEndToEndTest, GptOss_ToolCallWithStringArgs) {
     run(false);
 
     ASSERT_TRUE(applySuccess);
+    EXPECT_EQ(analysisResult.detectedModelFamily, "gptoss");
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
 
-    std::string expectedOutput = R"(<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.
-Knowledge cutoff: 2024-06
-Current date: 2026-06-25
-
-Reasoning: medium
-
-# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|><|start|>user<|message|>What's the weather in Paris?<|end|><|start|>assistant to=functions.get_weather <|channel|>commentary json<|message|>{"location": "Paris", "unit": "celsius"}<|end|>)";
-    EXPECT_EQ(appliedOutput, expectedOutput);
+    // Note: template embeds current date, so we check key fragments instead of full match
+    EXPECT_NE(appliedOutput.find("to=functions.get_weather"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("{\"location\": \"Paris\", \"unit\": \"celsius\"}"), std::string::npos);
 }
 
 // =============================================================================
@@ -186,6 +189,9 @@ TEST_F(ChatTemplateEndToEndTest, Qwen36_ToolCallWithStringArgs) {
     run(false);
 
     ASSERT_TRUE(applySuccess);
+    EXPECT_EQ(analysisResult.detectedModelFamily, "qwen3coder");
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -226,6 +232,9 @@ TEST_F(ChatTemplateEndToEndTest, Gemma4_ToolCallWithStringArgs) {
     run(false);
 
     ASSERT_TRUE(applySuccess);
+    EXPECT_EQ(analysisResult.detectedModelFamily, "gemma4");
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
 
     // FIXME: Why is </s> here? because of facebook-opt125?
     std::string expectedOutput = R"(</s><|turn>user
@@ -237,9 +246,9 @@ What's the weather in Paris?<turn|>
 
 // =============================================================================
 // Example: Qwen3 Coder with tool call containing string arguments
-// The probe should detect requiresObjectArguments=true via the <parameter=needle pattern,
-// workaround should convert string args to object, and template should render
-// them in Qwen3 Coder's native key:<|"|>value<|"|> format.
+// Minja silently fails for this template because it uses from_json filter
+// which is not supported by minja. The probe detects this (raw JSON dump in
+// output containing "tool_calls": [) and disables tool call support.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndTest, Qwen3Coder_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3coder_instruct.jinja");
@@ -252,7 +261,55 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3Coder_ToolCallWithStringArgs) {
 
     run(false);
 
-    ASSERT_TRUE(applySuccess);
+    // Probe should detect minja silent failure (from_json not supported)
+    // and disable tool call support
+    EXPECT_FALSE(caps.supportsToolCalls);
+    EXPECT_FALSE(caps.supportsTools);
+}
 
-    // TODO: Assert the expected output
+// =============================================================================
+// Example: Phi-4-mini-instruct with tool call containing string arguments
+// This template uses message.tool_calls with direct {{ call.function.arguments }}
+// rendering. The static analyzer does NOT detect tool support (no known markers),
+// so the probe is never invoked. Tool calls still render correctly if manually
+// enabled, but the current pipeline won't auto-detect tool support for this variant.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, Phi4Mini_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_phi4_mini.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load phi4-mini template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(false);
+
+    ASSERT_TRUE(applySuccess);
+    // Analyzer does not detect phi4-mini tool support (no <|tool▁call▁begin|> marker)
+    EXPECT_FALSE(caps.supportsToolCalls);
+}
+
+// =============================================================================
+// Example: Qwen3-4B with tool call containing string arguments
+// Uses <tool_call></tool_call> format with tojson for object args.
+// Probe detects requiresObjectArguments=true (tojson adds spaces, string args don't).
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, Qwen3_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen3 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(false);
+
+    ASSERT_TRUE(applySuccess);
+    EXPECT_EQ(analysisResult.detectedModelFamily, "hermes3");
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_NE(appliedOutput.find("<tool_call>"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("\"location\": \"Paris\""), std::string::npos);
 }

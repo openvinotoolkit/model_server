@@ -130,7 +130,12 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 #endif
 
     // Minja path — use the shared probe component
-    probeChatTemplateCaps(properties->tokenizer, properties->chatTemplateCaps);
+    if (!probeChatTemplateCaps(properties->tokenizer, properties->chatTemplateCaps)) {
+        // Minja silently failed — disable tool call support for this model
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Disabling tool call support: minja cannot render this template's tool calls correctly");
+        properties->chatTemplateCaps.supportsToolCalls = false;
+        properties->chatTemplateCaps.supportsTools = false;
+    }
 }
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {

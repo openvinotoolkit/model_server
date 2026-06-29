@@ -26,12 +26,12 @@
 
 namespace ovms {
 
-void probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps) {
+bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps) {
     if (tokenizer.get_chat_template().empty()) {
-        return;
+        return true;
     }
     if (!caps.supportsToolCalls) {
-        return;
+        return true;
     }
 
     auto probeStart = std::chrono::steady_clock::now();
@@ -97,6 +97,21 @@ void probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe strArgs output: {}", strOut);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe objArgs output: {}", objOut);
 
+    // Detect minja silent failure: if the output contains "tool_calls": [ it means
+    // minja didn't process the template's tool call logic and just dumped raw JSON.
+    static const std::string silentFailureMarker = "\"tool_calls\": [";
+    bool strArgsFailed = strOk && strOut.find(silentFailureMarker) != std::string::npos;
+    bool objArgsFailed = objOk && objOut.find(silentFailureMarker) != std::string::npos;
+
+    if (strArgsFailed || objArgsFailed) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Dry-run probe: minja silently failed to render tool calls "
+            "(output contains raw JSON dump). Template is not supported by minja for tool calls.");
+        auto probeEnd = std::chrono::steady_clock::now();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe completed in {} us. Result: FAILURE",
+            std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count());
+        return false;
+    }
+
     if (strArgsRendersNative || objArgsRendersNative) {
         bool probeResult = objArgsRendersNative;
         if (probeResult != caps.requiresObjectArguments) {
@@ -112,6 +127,7 @@ void probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe completed in {} us. Final result: requiresObjectArguments={}",
         std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count(),
         caps.requiresObjectArguments);
+    return true;
 }
 
 }  // namespace ovms
