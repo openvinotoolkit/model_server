@@ -160,7 +160,6 @@ LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Wno-deprecated-declarations",
                     "-Werror",
                     "-Wimplicit-fallthrough",
-                    "-fcf-protection=full",
                     "-Wformat",
                     "-Wformat-security",
                     "-Werror=format-security",
@@ -209,6 +208,15 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
 COMMON_STATIC_LIBS_COPTS = select({
                 "//conditions:default": LINUX_COMMON_STATIC_LIBS_COPTS,
                 "//src:windows" : WINDOWS_COMMON_STATIC_LIBS_COPTS,
+                }) + select({
+                # Control-flow protection: Intel CET (-fcf-protection) is x86-only;
+                # aarch64 uses branch-target identification / PAC via -mbranch-protection.
+                # Windows supplies /guard:cf in its own list, so it gets no flag here.
+                # Kept as a separate top-level select (not nested in the list above) because
+                # Starlark forbids a select whose values are themselves selects.
+                "//src:windows": [],
+                "@platforms//cpu:aarch64": ["-mbranch-protection=standard"],
+                "//conditions:default": ["-fcf-protection=full"],
                 })
 
 COMMON_STATIC_TEST_COPTS = select({
