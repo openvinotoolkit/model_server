@@ -33,6 +33,7 @@
 #include "gptoss/reasoning_parser.hpp"
 #include "lfm2/lfm2_tool_parser.hpp"
 #include "gemma4/gemma4_tool_parser.hpp"
+#include "minicpm5/minicpm5_tool_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -196,6 +197,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
+    } else if (toolParserName == "minicpm5") {
+        toolParser = std::make_unique<Minicpm5ToolParser>(tokenizer, toolNameSchemaMap);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: \"" + toolParserName +
                                  "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());

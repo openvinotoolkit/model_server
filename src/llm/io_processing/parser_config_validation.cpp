@@ -32,6 +32,7 @@ const std::vector<std::string>& getSupportedToolParserNames() {
         "devstral",
         "lfm2",
         "gemma4",
+        "minicpm5",
     };
     return names;
 }
