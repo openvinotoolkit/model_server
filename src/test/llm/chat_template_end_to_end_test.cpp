@@ -412,6 +412,30 @@ TEST_F(ChatTemplateEndToEndTest, LFM25_ToolCallWithStringArgs) {
 }
 
 // =============================================================================
+// Example: Qwen3-VL-8B-Instruct with tool call containing string arguments
+// Uses <tool_call>{"name": ..., "arguments": ...}</tool_call> format.
+// Template handles both string and object arguments natively (has is_string check).
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, Qwen3VL_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3vl.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen3-vl template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(false);
+
+    ASSERT_TRUE(applySuccess);
+    EXPECT_TRUE(caps.supportsToolCalls);
+
+    EXPECT_NE(appliedOutput.find("<tool_call>"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("get_weather"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("</tool_call>"), std::string::npos);
+}
+
+// =============================================================================
 // Synthetic test: template that throws on basic rendering (e.g. uses undefined
 // filter). The basic render probe should catch this and return false.
 // =============================================================================

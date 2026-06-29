@@ -133,12 +133,12 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
     auto [objOk, objOut] = objArgsFuture.get();
 
     auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
-        return output.find("\"" + argNeedle + "\": \"") != std::string::npos ||         // JSON key: ["needle": "]
-               output.find("\"" + argNeedle + "\":\"") != std::string::npos ||         // JSON key: ["needle":"]
-               //output.find("'" + argNeedle + "': ") != std::string::npos ||           // Python dict: []'needle': ]
-               output.find("<parameter=" + argNeedle + ">") != std::string::npos ||     // Qwen3-Coder XML
-               output.find(argNeedle + ":<|") != std::string::npos ||                   // Gemma4: [needle:<|]
-               output.find(argNeedle + "=") != std::string::npos;                       // Function-style: [needle=] for LFM2.5
+        return output.find("\"" + argNeedle + "\": \"") != std::string::npos ||  // JSON key: ["needle": "]
+               output.find("\"" + argNeedle + "\":\"") != std::string::npos ||   // JSON key: ["needle":"]
+               // output.find("'" + argNeedle + "': ") != std::string::npos ||           // Python dict: []'needle': ]
+               output.find("<parameter=" + argNeedle + ">") != std::string::npos ||  // Qwen3-Coder XML
+               output.find(argNeedle + ":<|") != std::string::npos ||                // Gemma4: [needle:<|]
+               output.find(argNeedle + "=") != std::string::npos;                    // Function-style: [needle=] for LFM2.5
     };
 
     bool strArgsRendersNative = strOk && rendersNativeArgs(strOut);
@@ -220,13 +220,13 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, con
     } catch (...) {
     }
 
-    auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {\
-        return output.find("\"" + argNeedle + "\": \"") != std::string::npos ||         // JSON key: ["needle": "]
-               output.find("\"" + argNeedle + "\":\"") != std::string::npos ||         // JSON key: ["needle":"]
+    auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
+        return output.find("\"" + argNeedle + "\": \"") != std::string::npos ||  // JSON key: ["needle": "]
+               output.find("\"" + argNeedle + "\":\"") != std::string::npos ||   // JSON key: ["needle":"]
                //output.find("'" + argNeedle + "': ") != std::string::npos ||           // Python dict: []'needle': ]
-               output.find("<parameter=" + argNeedle + ">") != std::string::npos ||     // Qwen3-Coder XML
-               output.find(argNeedle + ":<|") != std::string::npos ||                   // Gemma4: [needle:<|]
-               output.find(argNeedle + "=") != std::string::npos;                       // Function-style: [needle=] for LFM2.5
+               output.find("<parameter=" + argNeedle + ">") != std::string::npos ||  // Qwen3-Coder XML
+               output.find(argNeedle + ":<|") != std::string::npos ||                // Gemma4: [needle:<|]
+               output.find(argNeedle + "=") != std::string::npos;                    // Function-style: [needle=] for LFM2.5
     };
 
     bool strArgsRendersNative = strOk && rendersNativeArgs(strOut);

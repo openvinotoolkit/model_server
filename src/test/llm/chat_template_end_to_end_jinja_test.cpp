@@ -421,3 +421,26 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM25_ToolCallWithStringArgs) {
     EXPECT_NE(appliedOutput.find("get_weather("), std::string::npos);
     EXPECT_NE(appliedOutput.find("<|tool_call_end|>"), std::string::npos);
 }
+
+// =============================================================================
+// Jinja: Qwen3-VL-8B-Instruct with tool call containing string arguments
+// Template handles both string and object arguments natively (has is_string check).
+// =============================================================================
+TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3VL_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3vl.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    std::string requestJson = R"({"messages":[
+        {"role":"user","content":"What's the weather in Paris?"},
+        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
+    ]})";
+
+    run(requestJson, false);
+
+    ASSERT_TRUE(applySuccess);
+    EXPECT_TRUE(caps.supportsToolCalls);
+
+    EXPECT_NE(appliedOutput.find("<tool_call>"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("get_weather"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("</tool_call>"), std::string::npos);
+}
