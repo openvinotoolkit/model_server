@@ -1,0 +1,47 @@
+#
+# Copyright (c) 2026 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.7
+ARG OVMS_TEST_IMAGE=openvino-model-server:latest-test
+ARG OVMS_IMAGE=registry.connect.redhat.com/intel/openvino-model-server:latest
+
+FROM $OVMS_IMAGE as ovms_image
+FROM $OVMS_TEST_IMAGE as ovms_test_image
+FROM $BASE_IMAGE as base_image
+
+# libtbb is now available in /ovms/lib
+#ARG OVMS_DEPENDENCIES="https://vault.centos.org/centos/8/AppStream/x86_64/os/Packages/tbb-2018.2-9.el8.x86_64.rpm"
+#RUN dnf install -y pkg-config && rpm -ivh ${OVMS_DEPENDENCIES}
+
+WORKDIR /
+COPY ovms/ ovms/
+
+ENV LD_LIBRARY_PATH=/ovms/lib
+
+RUN /ovms/bin/ovms --version
+
+# Copy all dependent libraries for enabling GPU based images (be cautious)
+COPY --from=ovms_image /etc /etc
+COPY --from=ovms_image /usr/lib64/ /usr/lib64/
+COPY --from=ovms_image /usr/local/ /usr/local/
+
+ARG CPU_EXTENSIONS_PATH=/cpu_extensions
+ARG CUSTOM_NODES_PATH=/custom_nodes
+
+COPY --from=ovms_test_image ${CPU_EXTENSIONS_PATH} ${CPU_EXTENSIONS_PATH}
+COPY --from=ovms_test_image ${CUSTOM_NODES_PATH} ${CUSTOM_NODES_PATH}
+
+ENTRYPOINT ["/ovms/bin/ovms"]

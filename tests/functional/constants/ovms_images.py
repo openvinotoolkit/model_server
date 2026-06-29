@@ -19,13 +19,15 @@ import re
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.constants.os_type import OsType, UBUNTU
 from tests.functional.config import (
+    base_os,
     docker_registry,
+    force_use_ovms_image,
     is_nginx_mtls,
     ovms_cpp_docker_image,
     ovms_image,
     ovms_image_tag,
     ovms_test_image_name,
-    force_use_ovms_image,
+    target_devices,
 )
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms import CurrentOvmsType
@@ -172,3 +174,11 @@ def calculate_ovms_capi_image_name(ovms_image_name):
 def calculate_ovms_test_image_name(ovms_image_name):
     test_image_name = ovms_test_image_name if ovms_test_image_name is not None else f"{ovms_image_name}-test"
     return test_image_name
+
+
+def get_ovms_calculated_images():
+    ovms_images = set()
+    for _os in base_os:
+        for _target_device in target_devices:
+            ovms_images.add((calculate_ovms_image_name(_target_device, _os), _os))
+    return ovms_images

@@ -369,6 +369,10 @@ class OVVPException(OvmsTestException):
     pass
 
 
+class OVHfDownloadException(OvmsTestException):
+    pass
+
+
 def get_exception_by_ovms_log(ovms_log_lines):
     exceptions_to_recognize = [NginxException]
 
