@@ -164,10 +164,21 @@ Status GRPCServerModule::start(const ovms::Config& config) {
     builder.SetMaxReceiveMessageSize(GIGABYTE);
     builder.SetMaxSendMessageSize(GIGABYTE);
     auto ips = ovms::tokenize(config.grpcBindAddress(), ',');
+    const bool tlsEnabled = !certPath.empty() && !keyPath.empty();
     for (const auto& ip : ips) {
         auto hostWithPort = host_with_port(ip, config.port());
         SPDLOG_INFO("Binding gRPC server to address: {}", hostWithPort);
-        builder.AddListeningPort(hostWithPort, serverCredentials);
+        int boundPort = 0;
+        builder.AddListeningPort(hostWithPort, serverCredentials, &boundPort);
+        // When TLS is enabled, a bound port of 0 means gRPC rejected the credentials (e.g. a
+        // malformed cert/key that passed the existence/size checks). Fail closed with a clear
+        // error instead of starting a server that silently does not listen.
+        if (tlsEnabled && boundPort == 0) {
+            std::stringstream ss;
+            ss << hostWithPort << " (TLS) - verify the certificate and key are valid PEM files";
+            SPDLOG_ERROR("Failed to bind gRPC server with TLS on {}", hostWithPort);
+            return Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
+        }
     }
     builder.RegisterService(&tfsPredictService);
     builder.RegisterService(&tfsModelService);

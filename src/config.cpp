@@ -16,6 +16,7 @@
 #include "config.hpp"
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <limits>
 #include <regex>
 #include <utility>
@@ -172,7 +173,14 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
 static bool validateTlsMaterial(const std::string& certPath, const std::string& keyPath, const std::string& caPath, const std::string& flagPrefix) {
     auto fileUsable = [](const std::string& p) {
         std::error_code ec;
-        return std::filesystem::exists(p) && std::filesystem::file_size(p, ec) > 0 && !ec;
+        if (!std::filesystem::exists(p, ec) || ec)
+            return false;
+        if (std::filesystem::file_size(p, ec) == 0 || ec)
+            return false;
+        // Confirm the file is actually readable (e.g. not blocked by permissions) so a
+        // misconfiguration fails here with a clear message instead of later at TLS setup.
+        std::ifstream f(p, std::ios::in | std::ios::binary);
+        return f.good();
     };
     const bool hasCert = !certPath.empty();
     const bool hasKey = !keyPath.empty();
