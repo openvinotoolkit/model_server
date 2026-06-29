@@ -111,14 +111,8 @@ fi
 
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/python /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
-if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
-	if [ -f /ovms_release/lib/python/bin/convert_tokenizer ]; then
-		mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer
-		chmod +x /ovms_release/bin/convert_tokenizer
-	else
-		echo "convert_tokenizer not found under /ovms_release/lib/python/bin; skipping binary staging."
-	fi
-fi
+if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer ; \
+   chmod +x /ovms_release/bin/convert_tokenizer ; fi
 if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2026.3.dist-info ; \
 	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.3\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.3.0' > /ovms_release/lib/python/openvino_genai-2026.3.dist-info/METADATA; fi
 

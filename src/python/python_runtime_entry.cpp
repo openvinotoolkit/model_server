@@ -96,7 +96,7 @@ bool existsInPath(const std::string& executableName) {
     return false;
 }
 
-bool hasOperationalPythonExecutable(std::string& details) {
+[[maybe_unused]] bool hasOperationalPythonExecutable(std::string& details) {
 #ifdef _WIN32
     const std::vector<std::string> candidates = {"python.exe", "python3.exe"};
 #else
@@ -169,12 +169,14 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
         return false;
     }
 
-    if (!hasOperationalPythonExecutable(lastError)) {
-        if (errorMessage != nullptr) {
-            *errorMessage = lastError.c_str();
-        }
-        return false;
-    }
+    // PATH-based executable presence check disabled by request.
+    // Keep environment path validation and embedded interpreter/import checks.
+    // if (!hasOperationalPythonExecutable(lastError)) {
+    //     if (errorMessage != nullptr) {
+    //         *errorMessage = lastError.c_str();
+    //     }
+    //     return false;
+    // }
 
     bool ownsInterpreter = false;
     try {
