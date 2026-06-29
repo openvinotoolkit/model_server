@@ -2405,7 +2405,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
         EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
     }
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?<ov_genai_image_0>\\n\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttp) {
@@ -2442,7 +2442,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttp) {
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?<ov_genai_image_0>\\n\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpMultipleAllowedDomains) {
@@ -2479,7 +2479,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpMultipleAllow
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?<ov_genai_image_0>\\n\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttps) {
@@ -2516,7 +2516,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttps) {
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?<ov_genai_image_0>\\n\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpsAllowedDomainAll) {
@@ -2553,7 +2553,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpsAllowedDomai
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?<ov_genai_image_0>\\n\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
@@ -2588,7 +2588,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
         EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
     }
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"<ov_genai_image_0>\\n\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefixFails) {
@@ -2763,7 +2763,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystem) {
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?<ov_genai_image_0>\\n\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAllowedPath) {
@@ -2799,7 +2799,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?<ov_genai_image_0>\\n\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAllowedPathMixedSeparators) {
@@ -3250,9 +3250,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
         }
     }
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"},"
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?<ov_genai_image_0>\\n\"},"
                                 "{\"role\":\"assistant\",\"content\":\"No idea my friend.\"},"
-                                "{\"role\":\"user\",\"content\":\"What about this one?\"},"
+                                "{\"role\":\"user\",\"content\":\"What about this one?<ov_genai_image_1>\\n\"},"
                                 "{\"role\":\"assistant\",\"content\":\"Same thing. I'm not very good with images.\"},"
                                 "{\"role\":\"user\",\"content\":\"You were not trained with images, were you?\"}]}"));
 }
@@ -3343,7 +3343,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
     EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid message structure - content array is empty"));
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesMultipleTextItemsConcatenatesWithNewline) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesMultipleTextItemsPreservesTextParts) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -3366,15 +3366,13 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesMultipleTextItemsConcatenate
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-    // Non-Python path: chatHistory content is the concatenated string
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 1);
     EXPECT_EQ(chatHistory[0]["content"], "First part.\nSecond part.");
-    // Python Jinja path: processedJson carries the same flattened content for applyChatTemplate
     EXPECT_EQ(apiHandler->getProcessedJson(), R"({"model":"llama","messages":[{"role":"user","content":"First part.\nSecond part."}]})");
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesTextBeforeAndAfterImageConcatenatesAllText) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesTextBeforeAndAfterImagePreservesMultipartOrder) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -3403,13 +3401,48 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesTextBeforeAndAfterImageConca
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-    // Non-Python path: chatHistory content is the concatenated string
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 1);
-    EXPECT_EQ(chatHistory[0]["content"], "Before image.\nAfter image.");
+    EXPECT_EQ(chatHistory[0]["content"], "Before image.<ov_genai_image_0>\nAfter image.");
     EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
-    // Python Jinja path: processedJson carries the same flattened content for applyChatTemplate
-    EXPECT_EQ(apiHandler->getProcessedJson(), R"({"model":"llama","messages":[{"role":"user","content":"Before image.\nAfter image."}]})");
+    EXPECT_EQ(apiHandler->getProcessedJson(), R"({"model":"llama","messages":[{"role":"user","content":"Before image.<ov_genai_image_0>\nAfter image."}]})");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesStringContentWithReservedImageTagFails) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Please use <ov_genai_image_0>"
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesTextPartWithReservedImageTagFails) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Please use <ov_genai_image_0>"
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefaultToMaxTokensLimit) {

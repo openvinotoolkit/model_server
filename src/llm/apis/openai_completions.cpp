@@ -25,6 +25,7 @@
 #include <set>
 #include <string>
 #include <string.h>
+#include <string_view>
 #include <vector>
 
 #include <openvino/genai/llm_pipeline.hpp>
@@ -45,6 +46,10 @@
 using namespace rapidjson;
 
 namespace ovms {
+
+static bool containsReservedImageTag(std::string_view text) {
+    return text.find("<ov_genai_image_") != std::string::npos;
+}
 
 static bool hasToolCallsInStreamingDelta(const rapidjson::Document& delta) {
     if (!delta.HasMember("delta") || !delta["delta"].IsObject()) {
@@ -176,6 +181,9 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                 return absl::InvalidArgumentError("Invalid message structure");
             std::string memberName = member->name.GetString();
             if (member->value.IsString() && (memberName == "role" || memberName == "content")) {
+                if (memberName == "content" && containsReservedImageTag({member->value.GetString(), member->value.GetStringLength()})) {
+                    return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
+                }
                 // Add new field to the last message in history
                 request.chatHistory.last()[memberName] = member->value.GetString();
                 continue;
@@ -201,7 +209,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                     return absl::InvalidArgumentError("Invalid message structure - content array is empty");
                 }
                 jsonChanged = true;
-                std::string combinedText;
+                std::string contentWithImageTags;
+                bool previousPartWasText = false;
                 for (auto& v : member->value.GetArray()) {
                     if (!v.IsObject()) {
                         return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
@@ -215,10 +224,14 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         if (!entry.HasMember("text") || !entry["text"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - content text missing");
                         }
-                        if (!combinedText.empty()) {
-                            combinedText += "\n";
+                        if (containsReservedImageTag({entry["text"].GetString(), entry["text"].GetStringLength()})) {
+                            return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
                         }
-                        combinedText.append(entry["text"].GetString(), entry["text"].GetStringLength());
+                        if (previousPartWasText) {
+                            contentWithImageTags += "\n";
+                        }
+                        contentWithImageTags.append(entry["text"].GetString(), entry["text"].GetStringLength());
+                        previousPartWasText = true;
                         continue;
                     } else if (entryType == std::string("image_url")) {
                         if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
@@ -233,15 +246,17 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         if (!tensorResult.ok()) {
                             return tensorResult.status();
                         }
+                        contentWithImageTags += "<ov_genai_image_" + std::to_string(request.imageHistory.size()) + ">\n";
                         request.imageHistory.push_back({i, tensorResult.value()});
+                        previousPartWasText = false;
                     } else {
                         return absl::InvalidArgumentError("Unsupported content type");
                     }
                 }
-                // Flatten all text parts (joined with newlines) into the "content" field.
-                // Images are stored separately in request.imageHistory.
+                // Preserve multipart content order by replacing image parts with
+                // the placeholders consumed by the VLM pipeline.
                 Value contentText(rapidjson::kStringType);
-                contentText.SetString(combinedText.c_str(), combinedText.length(), doc.GetAllocator());
+                contentText.SetString(contentWithImageTags.c_str(), contentWithImageTags.length(), doc.GetAllocator());
                 member->value = contentText;
                 // Add new field to the last message in history if content is text
                 if (member->value.IsString()) {
