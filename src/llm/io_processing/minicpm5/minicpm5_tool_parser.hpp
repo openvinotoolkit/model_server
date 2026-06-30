@@ -40,7 +40,8 @@ namespace ovms {
 // <function name="get_weather"><param name="city">Beijing</param><param name="unit">celsius</param></function>
 //
 // Multiple <function ...>...</function> blocks may appear concatenated.
-// <think>...</think> blocks are stripped before parsing.
+// Reasoning (<think>...</think>) is stripped earlier in the chain by the reasoning parser,
+// so this tool parser only deals with <function ...> blocks.
 
 struct Minicpm5Functool {
     std::string name;
@@ -56,8 +57,7 @@ struct Minicpm5Functool {
 
 struct Minicpm5ToolParserImpl {
     enum class State {
-        Content,             // (C) looking for <function or <think>
-        InsideThink,         // (IT) inside <think>...</think> — skip until </think>
+        Content,             // (C) looking for <function
         InsideFunctionName,  // (IFN) inside <function name="..." — reading attribute until >
         InsideFunction,      // (IF) inside function body — looking for <param or </function>
         InsideParamName,     // (IPN) inside <param name="..." — reading attribute until >
@@ -66,7 +66,6 @@ struct Minicpm5ToolParserImpl {
     // STATE DEMARKATION
     /*
     Content
-    (<think>InsideThink</think>Content)*
     <function name="...">        <- InsideFunctionName reads up to >
     InsideFunction
     (<param name="...">          <- InsideParamName reads up to >
@@ -108,8 +107,17 @@ private:
     /*
      * Process streamContent from lastProcessedPosition until a state change.
      * Returns true if the state changed, false when no further progress is possible.
+     * Dispatches to the per-state handlers below.
      */
     bool parseUntilStateChange(ToolCalls_t& toolCalls);
+
+    // Per-state handlers. Each advances lastProcessedPosition and/or currentState as far
+    // as the currently buffered streamContent allows. Extracted from parseUntilStateChange.
+    void handleContentState();
+    void handleInsideFunctionNameState();
+    void handleInsideFunctionState(ToolCalls_t& toolCalls);
+    void handleInsideParamNameState();
+    void handleInsideParamState();
 
     /*
      * Extract the value of the name="..." (or name='...') attribute from an opening tag
@@ -123,8 +131,6 @@ private:
 class Minicpm5ToolParser : public BaseOutputParser {
 public:
     // Tag literals used by the state machine
-    static const std::string THINK_START_TAG;   // <think>
-    static const std::string THINK_END_TAG;     // </think>
     static const std::string FUNCTION_START_TAG;  // <function
     static const std::string NAME_ATTR_PREFIX;    // name="  (or name=')
     static const std::string XML_TAG_END;         // >
@@ -176,7 +182,6 @@ struct fmt::formatter<ovms::Minicpm5ToolParserImpl::State> : fmt::formatter<std:
     auto format(const ovms::Minicpm5ToolParserImpl::State& state, fmt::format_context& ctx) const {
         std::unordered_map<ovms::Minicpm5ToolParserImpl::State, std::string> stateMap = {
             {ovms::Minicpm5ToolParserImpl::State::Content, "Content"},
-            {ovms::Minicpm5ToolParserImpl::State::InsideThink, "InsideThink"},
             {ovms::Minicpm5ToolParserImpl::State::InsideFunctionName, "InsideFunctionName"},
             {ovms::Minicpm5ToolParserImpl::State::InsideFunction, "InsideFunction"},
             {ovms::Minicpm5ToolParserImpl::State::InsideParamName, "InsideParamName"},

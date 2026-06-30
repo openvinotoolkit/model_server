@@ -30,8 +30,6 @@
 namespace ovms {
 
 // ---- Tag string constants ----
-const std::string Minicpm5ToolParser::THINK_START_TAG   = "<think>";
-const std::string Minicpm5ToolParser::THINK_END_TAG     = "</think>";
 const std::string Minicpm5ToolParser::FUNCTION_START_TAG = "<function";
 const std::string Minicpm5ToolParser::NAME_ATTR_PREFIX   = "name=";  // will handle both " and '
 const std::string Minicpm5ToolParser::XML_TAG_END        = ">";
@@ -39,70 +37,7 @@ const std::string Minicpm5ToolParser::PARAM_START_TAG    = "<param";
 const std::string Minicpm5ToolParser::PARAM_END_TAG      = "</param>";
 const std::string Minicpm5ToolParser::FUNCTION_END_TAG   = "</function>";
 
-// ---- helpers shared with qwen3coder (duplicated locally to avoid coupling) ----
-
-static void trimNewline(std::string& str) {
-    if (str.empty()) return;
-    if (str.back() == '\n') str.pop_back();
-    if (str.empty()) return;
-    if (str.front() == '\n') str.erase(str.begin());
-}
-
-static const char* jsonTypeOf(const rapidjson::Value& val) {
-    if (val.IsObject())  return "object";
-    if (val.IsArray())   return "array";
-    if (val.IsString())  return "string";
-    if (val.IsBool())    return "bool";
-    if (val.IsInt())     return "int";
-    if (val.IsUint())    return "uint";
-    if (val.IsInt64())   return "int64";
-    if (val.IsUint64())  return "uint64";
-    if (val.IsDouble())  return "double";
-    if (val.IsNumber())  return "number";
-    if (val.IsNull())    return "null";
-    return "unknown";
-}
-
-static void enforceStringValue(rapidjson::Value& v, rapidjson::Document::AllocatorType& alloc) {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    v.Accept(writer);
-    v.SetString(buffer.GetString(), buffer.GetLength(), alloc);
-}
-
-// ---- Schema helpers (mirrors qwen3coder) ----
-
-static const ParametersTypeMap_t parseToolSchema(const std::string& functionName, const rapidjson::Value& schema) {
-    SPDLOG_TRACE("Minicpm5: parse tool schema for tool: {}", functionName);
-    ParametersTypeMap_t result;
-    if (!schema.IsObject()) return result;
-    if (!schema.HasMember("properties") || !schema["properties"].IsObject()) return result;
-    const rapidjson::Value& properties = schema["properties"];
-    for (auto it = properties.MemberBegin(); it != properties.MemberEnd(); ++it) {
-        if (!it->value.IsObject()) continue;
-        if (!it->value.HasMember("type") || !it->value["type"].IsString()) continue;
-        std::string paramName = it->name.GetString();
-        std::string typeStr = it->value["type"].GetString();
-        ParameterType type = ParameterType::UNKNOWN;
-        if (typeStr == "string")                          type = ParameterType::STRING;
-        else if (typeStr == "number" || typeStr == "integer") type = ParameterType::NUMBER;
-        else if (typeStr == "boolean")                    type = ParameterType::BOOLEAN;
-        else if (typeStr == "array")                      type = ParameterType::ARRAY;
-        else if (typeStr == "object")                     type = ParameterType::OBJECT;
-        SPDLOG_TRACE("Minicpm5 tool:{} param:{} type:{}", functionName, paramName, typeStr);
-        result.emplace(paramName, type);
-    }
-    return result;
-}
-
-static ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas) {
-    SPDLOG_TRACE("Minicpm5: creating tools parameters types map, schemas size: {}", toolsSchemas.size());
-    ToolsParameterTypeMap_t result;
-    for (const auto& [toolName, toolSchemaWrapper] : toolsSchemas) {
-        result.emplace(toolName, parseToolSchema(toolName, *toolSchemaWrapper.rapidjsonRepr));
-    }
-    return result;
-}
+// Schema helpers, JSON helpers and string helpers are shared with qwen3coder; see utils.{hpp,cpp}.
 
 // ---- Minicpm5ToolParserImpl ----
 
@@ -145,14 +80,11 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
     rapidjson::Value keyVal(key.c_str(), allocator);
 
     rapidjson::Document temp;
-    // Boolean normalisation (same as qwen3coder)
+    // Boolean normalisation (shared helper, same as qwen3coder)
     if (paramIt != this->toolsParametersTypeMap.end()) {
         auto paramJt = paramIt->second.find(currentParameterName);
         if (paramJt != paramIt->second.end() && paramJt->second == ParameterType::BOOLEAN) {
-            if (parameterValueAsString == "True" || parameterValueAsString == "TRUE")
-                parameterValueAsString = "true";
-            else if (parameterValueAsString == "False" || parameterValueAsString == "FALSE")
-                parameterValueAsString = "false";
+            normalizeBooleanString(parameterValueAsString);
         }
     }
 
@@ -204,147 +136,146 @@ Status Minicpm5ToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& o
     return StatusCode::OK;
 }
 
-// Helper macro (mirrors qwen3coder)
-#define MINICPM5_FIND_TAG_OR_BREAK(TAG)                                                     \
-    auto pos = this->streamContent.find(TAG, this->lastProcessedPosition);                  \
-    if (pos == std::string::npos) {                                                         \
-        SPDLOG_TRACE("Minicpm5: did not find: {}", TAG);                                    \
-        break;                                                                              \
+// parseUntilStateChange is a small dispatcher: it records the previous state, runs the
+// handler for the current state and reports whether the state changed. Reasoning (<think>)
+// stripping is handled earlier in the chain by the reasoning parser, so the tool parser
+// only looks for <function ...> blocks.
+
+void Minicpm5ToolParserImpl::handleContentState() {
+    // Look for the next <function tag; everything else is plain content.
+    auto posFunc = this->streamContent.find(Minicpm5ToolParser::FUNCTION_START_TAG, this->lastProcessedPosition);
+    if (posFunc == std::string::npos) {
+        SPDLOG_TRACE("Minicpm5: no <function> found");
+        return;
     }
+    this->toolCallPositions.begin.push(posFunc);
+    // Skip past "<function" — we now need to read the name="..." attribute
+    this->lastProcessedPosition = posFunc + Minicpm5ToolParser::FUNCTION_START_TAG.size();
+    this->currentState = State::InsideFunctionName;
+}
+
+void Minicpm5ToolParserImpl::handleInsideFunctionNameState() {
+    // We are positioned somewhere inside the <function ... > opening tag.
+    // First find the closing '>' of this tag.
+    auto tagEnd = this->streamContent.find('>', this->lastProcessedPosition);
+    if (tagEnd == std::string::npos) {
+        SPDLOG_TRACE("Minicpm5: waiting for '>' of <function> tag");
+        return;
+    }
+    // Find name=" (or name=') inside the tag body
+    auto nameAttr = this->streamContent.find(Minicpm5ToolParser::NAME_ATTR_PREFIX, this->lastProcessedPosition);
+    if (nameAttr == std::string::npos || nameAttr >= tagEnd) {
+        SPDLOG_DEBUG("Minicpm5: <function> tag has no name= attribute — skipping");
+        this->lastProcessedPosition = tagEnd + 1;
+        this->currentState = State::Content;
+        this->toolCallPositions.begin.pop();  // undo the push
+        return;
+    }
+    size_t valueStart = nameAttr + Minicpm5ToolParser::NAME_ATTR_PREFIX.size();
+    this->currentFunction.name = extractNameAttribute(this->streamContent, valueStart, tagEnd);
+    if (this->currentFunction.name.empty()) {
+        SPDLOG_DEBUG("Minicpm5: could not extract function name — skipping tag");
+        this->lastProcessedPosition = tagEnd + 1;
+        this->currentState = State::Content;
+        this->toolCallPositions.begin.pop();
+        return;
+    }
+    SPDLOG_TRACE("Minicpm5: function name: {}", this->currentFunction.name);
+    this->lastProcessedPosition = tagEnd + 1;  // past '>'
+    this->currentState = State::InsideFunction;
+}
+
+void Minicpm5ToolParserImpl::handleInsideFunctionState(ToolCalls_t& toolCalls) {
+    // Expect either <param or </function>
+    auto funcEnd = this->streamContent.find(Minicpm5ToolParser::FUNCTION_END_TAG, this->lastProcessedPosition);
+    auto paramStart = this->streamContent.find(Minicpm5ToolParser::PARAM_START_TAG, this->lastProcessedPosition);
+    if (funcEnd == std::string::npos && paramStart == std::string::npos) {
+        // Waiting for more data
+    } else if (paramStart != std::string::npos && (funcEnd == std::string::npos || paramStart < funcEnd)) {
+        // Next <param
+        this->lastProcessedPosition = paramStart + Minicpm5ToolParser::PARAM_START_TAG.size();
+        this->currentState = State::InsideParamName;
+    } else {
+        // </function>
+        this->lastProcessedPosition = funcEnd + Minicpm5ToolParser::FUNCTION_END_TAG.size();
+        this->currentState = State::Content;
+        // Finalise tool call
+        std::string argumentsAsString;
+        {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            this->currentFunction.argumentsAsDocument.Accept(writer);
+            argumentsAsString = buffer.GetString();
+        }
+        ToolCall toolCall{generateRandomId(), this->currentFunction.name, argumentsAsString};
+        SPDLOG_TRACE("Minicpm5: adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
+        toolCalls.emplace_back(std::move(toolCall));
+        this->currentFunction.clear();
+        this->toolCallPositions.end.push(this->lastProcessedPosition);
+    }
+}
+
+void Minicpm5ToolParserImpl::handleInsideParamNameState() {
+    // We are positioned inside <param (after "<param").
+    // Find the '>' closing the <param ...> tag.
+    auto tagEnd = this->streamContent.find('>', this->lastProcessedPosition);
+    if (tagEnd == std::string::npos) {
+        SPDLOG_TRACE("Minicpm5: waiting for '>' of <param> tag");
+        return;
+    }
+    auto nameAttr = this->streamContent.find(Minicpm5ToolParser::NAME_ATTR_PREFIX, this->lastProcessedPosition);
+    if (nameAttr == std::string::npos || nameAttr >= tagEnd) {
+        SPDLOG_DEBUG("Minicpm5: <param> tag has no name= attribute — skipping");
+        this->lastProcessedPosition = tagEnd + 1;
+        this->currentState = State::InsideFunction;
+        return;
+    }
+    size_t valueStart = nameAttr + Minicpm5ToolParser::NAME_ATTR_PREFIX.size();
+    this->currentParameterName = extractNameAttribute(this->streamContent, valueStart, tagEnd);
+    if (this->currentParameterName.empty()) {
+        SPDLOG_DEBUG("Minicpm5: could not extract param name — skipping");
+        this->lastProcessedPosition = tagEnd + 1;
+        this->currentState = State::InsideFunction;
+        return;
+    }
+    SPDLOG_TRACE("Minicpm5: param name: {}", this->currentParameterName);
+    this->lastProcessedPosition = tagEnd + 1;  // past '>'
+    this->currentState = State::InsideParam;
+}
+
+void Minicpm5ToolParserImpl::handleInsideParamState() {
+    // Read until </param>
+    auto endPos = this->streamContent.find(Minicpm5ToolParser::PARAM_END_TAG, this->lastProcessedPosition);
+    if (endPos == std::string::npos) {
+        SPDLOG_TRACE("Minicpm5: waiting for </param>");
+        return;
+    }
+    std::string paramValue = this->streamContent.substr(this->lastProcessedPosition, endPos - this->lastProcessedPosition);
+    addParameterToCurrentFunctionDoc(paramValue);
+    this->lastProcessedPosition = endPos + Minicpm5ToolParser::PARAM_END_TAG.size();
+    this->currentState = State::InsideFunction;
+}
 
 bool Minicpm5ToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     SPDLOG_TRACE("Minicpm5: state: {}", this->currentState);
     auto previousState = this->currentState;
 
     switch (this->currentState) {
-    case State::Content: {
-        // Look for either <think> or <function, whichever comes first.
-        auto posThink = this->streamContent.find(Minicpm5ToolParser::THINK_START_TAG, this->lastProcessedPosition);
-        auto posFunc  = this->streamContent.find(Minicpm5ToolParser::FUNCTION_START_TAG, this->lastProcessedPosition);
-        if (posThink == std::string::npos && posFunc == std::string::npos) {
-            SPDLOG_TRACE("Minicpm5: no <think> or <function> found");
-        } else if (posThink != std::string::npos && (posFunc == std::string::npos || posThink < posFunc)) {
-            // Enter <think> block
-            this->lastProcessedPosition = posThink + Minicpm5ToolParser::THINK_START_TAG.size();
-            this->currentState = State::InsideThink;
-        } else {
-            // Found <function before <think> (or no <think>)
-            this->toolCallPositions.begin.push(posFunc);
-            // Skip past "<function" — we now need to read the name="..." attribute
-            this->lastProcessedPosition = posFunc + Minicpm5ToolParser::FUNCTION_START_TAG.size();
-            this->currentState = State::InsideFunctionName;
-        }
+    case State::Content:
+        handleContentState();
         break;
-    }
-    case State::InsideThink: {
-        // Skip until </think>
-        MINICPM5_FIND_TAG_OR_BREAK(Minicpm5ToolParser::THINK_END_TAG);
-        this->lastProcessedPosition = pos + Minicpm5ToolParser::THINK_END_TAG.size();
-        this->currentState = State::Content;
+    case State::InsideFunctionName:
+        handleInsideFunctionNameState();
         break;
-    }
-    case State::InsideFunctionName: {
-        // We are positioned somewhere inside the <function ... > opening tag.
-        // First find the closing '>' of this tag.
-        auto tagEnd = this->streamContent.find('>', this->lastProcessedPosition);
-        if (tagEnd == std::string::npos) {
-            SPDLOG_TRACE("Minicpm5: waiting for '>' of <function> tag");
-            break;
-        }
-        // Find name=" (or name=') inside the tag body
-        auto nameAttr = this->streamContent.find(Minicpm5ToolParser::NAME_ATTR_PREFIX, this->lastProcessedPosition);
-        if (nameAttr == std::string::npos || nameAttr >= tagEnd) {
-            SPDLOG_DEBUG("Minicpm5: <function> tag has no name= attribute — skipping");
-            this->lastProcessedPosition = tagEnd + 1;
-            this->currentState = State::Content;
-            this->toolCallPositions.begin.pop();  // undo the push
-            break;
-        }
-        size_t valueStart = nameAttr + Minicpm5ToolParser::NAME_ATTR_PREFIX.size();
-        this->currentFunction.name = extractNameAttribute(this->streamContent, valueStart, tagEnd);
-        if (this->currentFunction.name.empty()) {
-            SPDLOG_DEBUG("Minicpm5: could not extract function name — skipping tag");
-            this->lastProcessedPosition = tagEnd + 1;
-            this->currentState = State::Content;
-            this->toolCallPositions.begin.pop();
-            break;
-        }
-        SPDLOG_TRACE("Minicpm5: function name: {}", this->currentFunction.name);
-        this->lastProcessedPosition = tagEnd + 1;  // past '>'
-        this->currentState = State::InsideFunction;
+    case State::InsideFunction:
+        handleInsideFunctionState(toolCalls);
         break;
-    }
-    case State::InsideFunction: {
-        // Expect either <param or </function>
-        auto funcEnd   = this->streamContent.find(Minicpm5ToolParser::FUNCTION_END_TAG, this->lastProcessedPosition);
-        auto paramStart = this->streamContent.find(Minicpm5ToolParser::PARAM_START_TAG,  this->lastProcessedPosition);
-        if (funcEnd == std::string::npos && paramStart == std::string::npos) {
-            // Waiting for more data
-        } else if (paramStart != std::string::npos && (funcEnd == std::string::npos || paramStart < funcEnd)) {
-            // Next <param
-            this->lastProcessedPosition = paramStart + Minicpm5ToolParser::PARAM_START_TAG.size();
-            this->currentState = State::InsideParamName;
-        } else {
-            // </function>
-            this->lastProcessedPosition = funcEnd + Minicpm5ToolParser::FUNCTION_END_TAG.size();
-            this->currentState = State::Content;
-            // Finalise tool call
-            std::string argumentsAsString;
-            {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                this->currentFunction.argumentsAsDocument.Accept(writer);
-                argumentsAsString = buffer.GetString();
-            }
-            ToolCall toolCall{generateRandomId(), this->currentFunction.name, argumentsAsString};
-            SPDLOG_TRACE("Minicpm5: adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
-            toolCalls.emplace_back(std::move(toolCall));
-            this->currentFunction.clear();
-            this->toolCallPositions.end.push(this->lastProcessedPosition);
-        }
+    case State::InsideParamName:
+        handleInsideParamNameState();
         break;
-    }
-    case State::InsideParamName: {
-        // We are positioned inside <param (after "<param").
-        // Find the '>' closing the <param ...> tag.
-        auto tagEnd = this->streamContent.find('>', this->lastProcessedPosition);
-        if (tagEnd == std::string::npos) {
-            SPDLOG_TRACE("Minicpm5: waiting for '>' of <param> tag");
-            break;
-        }
-        auto nameAttr = this->streamContent.find(Minicpm5ToolParser::NAME_ATTR_PREFIX, this->lastProcessedPosition);
-        if (nameAttr == std::string::npos || nameAttr >= tagEnd) {
-            SPDLOG_DEBUG("Minicpm5: <param> tag has no name= attribute — skipping");
-            this->lastProcessedPosition = tagEnd + 1;
-            this->currentState = State::InsideFunction;
-            break;
-        }
-        size_t valueStart = nameAttr + Minicpm5ToolParser::NAME_ATTR_PREFIX.size();
-        this->currentParameterName = extractNameAttribute(this->streamContent, valueStart, tagEnd);
-        if (this->currentParameterName.empty()) {
-            SPDLOG_DEBUG("Minicpm5: could not extract param name — skipping");
-            this->lastProcessedPosition = tagEnd + 1;
-            this->currentState = State::InsideFunction;
-            break;
-        }
-        SPDLOG_TRACE("Minicpm5: param name: {}", this->currentParameterName);
-        this->lastProcessedPosition = tagEnd + 1;  // past '>'
-        this->currentState = State::InsideParam;
+    case State::InsideParam:
+        handleInsideParamState();
         break;
-    }
-    case State::InsideParam: {
-        // Read until </param>
-        auto endPos = this->streamContent.find(Minicpm5ToolParser::PARAM_END_TAG, this->lastProcessedPosition);
-        if (endPos == std::string::npos) {
-            SPDLOG_TRACE("Minicpm5: waiting for </param>");
-            break;
-        }
-        std::string paramValue = this->streamContent.substr(this->lastProcessedPosition, endPos - this->lastProcessedPosition);
-        addParameterToCurrentFunctionDoc(paramValue);
-        this->lastProcessedPosition = endPos + Minicpm5ToolParser::PARAM_END_TAG.size();
-        this->currentState = State::InsideFunction;
-        break;
-    }
     }
 
     return previousState != this->currentState;

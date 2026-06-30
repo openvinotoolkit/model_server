@@ -232,6 +232,7 @@ ovms_cc_library(
         "//src/port:rapidjson_writer",
         "//src/port:rapidjson_document",
         ":io_processing_utils",
+        ":apis_tool_schema_wrapper",
         "//third_party:genai",
     ],
 )

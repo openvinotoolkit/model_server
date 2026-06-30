@@ -154,8 +154,32 @@ TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"ticker":"INTC","count":42})");
 }
 
-// <think>...</think> blocks must be stripped before parsing
-TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockStripped) {
+// Reasoning (<think>...</think>) stripping is the reasoning parser's job, not the tool
+// parser's. With the qwen3 reasoning parser in front, the <think> block is moved to
+// reasoning and the tool call is still parsed from the remaining content.
+TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
+    auto outputParserWithReasoning =
+        std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "qwen3", minicpm5ToolsSchemas);
+    const std::string input =
+        "<think>This is my internal reasoning about what to call.</think>"
+        R"(<function name="search"><param name="query">Intel</param></function>)";
+    auto generatedTensor = minicpm5Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(
+        generatedTensor.data<int64_t>(),
+        generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithReasoning->parse(generatedTokens, true);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "search");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"query":"Intel"})");
+    // Reasoning was extracted by the reasoning parser, not left in content.
+    EXPECT_NE(parsedOutput.reasoning.find("internal reasoning"), std::string::npos);
+    EXPECT_EQ(parsedOutput.content.find("<think>"), std::string::npos);
+}
+
+// Without a reasoning parser, the tool parser does NOT strip <think> — it remains in content,
+// but the tool call is still parsed correctly.
+TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockNotStrippedWhenNoReasoningParser) {
     const std::string input =
         "<think>This is my internal reasoning about what to call.</think>"
         R"(<function name="search"><param name="query">Intel</param></function>)";
@@ -164,6 +188,8 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockStripped) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "search");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"query":"Intel"})");
+    // The tool parser leaves the <think> block in content.
+    EXPECT_NE(parsedOutput.content.find("<think>"), std::string::npos);
 }
 
 // Plain content with no tool calls must pass through unchanged
@@ -225,7 +251,9 @@ TEST(Minicpm5ToolParserImplTest, TwoCalls) {
     EXPECT_EQ(calls[1].arguments, R"({"a":10,"b":20})");
 }
 
-TEST(Minicpm5ToolParserImplTest, ThinkBlockStripped) {
+// The impl does not handle <think> at all (that's the reasoning parser's job); any leading
+// text including a <think> block is treated as plain content and skipped until <function.
+TEST(Minicpm5ToolParserImplTest, ThinkBlockTreatedAsContent) {
     const std::string input =
         "<think>Reasoning here.</think>"
         R"(<function name="search"><param name="query">test</param></function>)";
@@ -356,7 +384,9 @@ TEST(Minicpm5ToolParserImplStreamTest, TwoCallsCharByChar) {
     EXPECT_EQ(calls[1].arguments, R"({"a":10,"b":20})");
 }
 
-// Leading content + <think> block streamed char-by-char before the call.
+// Leading content + <think> block streamed char-by-char before the call. The <think> text
+// is just plain content to the tool parser (reasoning stripping happens upstream); the tool
+// call must still be parsed correctly.
 TEST(Minicpm5ToolParserImplStreamTest, ThinkBlockAndContentCharByChar) {
     const std::string input =
         R"(Let me check.<think>I should call the tool</think><function name="search"><param name="query">Intel</param></function>)";
@@ -398,4 +428,187 @@ TEST(Minicpm5ToolParserImplTest, AngleBracketInPlainTextNoCall) {
     Minicpm5ToolParserImpl parser(minicpm5TypeMap);
     auto callsOpt = parser.parseChunk(content);
     EXPECT_FALSE(callsOpt.has_value() && !callsOpt.value().empty());
+}
+
+// ---- Public parseChunk streaming deltas (comment #6) ----
+// Drive the public Minicpm5ToolParser::parseChunk across fragments and verify the actual
+// deltas emitted to the client: a first delta with the function name once the name is known,
+// and the full arguments delta once the function completes.
+
+static std::string docToStr(const rapidjson::Document& doc) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    return buffer.GetString();
+}
+
+class Minicpm5PublicStreamTest : public ::testing::Test {
+protected:
+    static void SetUpTestSuite() {
+        if (!minicpm5Tokenizer) {
+            minicpm5Tokenizer = std::make_unique<ov::genai::Tokenizer>(minicpm5TokenizerPath);
+        }
+    }
+    static void TearDownTestSuite() {
+        minicpm5Tokenizer.reset();
+    }
+};
+
+// Feed a single tool call in fragments; assert the name delta is emitted exactly once and the
+// full arguments delta is emitted after the function completes.
+TEST_F(Minicpm5PublicStreamTest, EmitsNameDeltaThenArgumentsDelta) {
+    Minicpm5ToolParser parser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
+    const std::vector<int64_t> noTokens;
+    const auto reason = ov::genai::GenerationFinishReason::NONE;
+
+    std::vector<std::string> chunks = {
+        R"(<function name="get_weather">)",
+        R"(<param name="city">Beijing</param>)",
+        R"(<param name="unit">celsius</param>)",
+        R"(</function>)",
+    };
+
+    std::optional<std::string> nameDelta;
+    std::optional<std::string> argsDelta;
+    int nameDeltaCount = 0;
+    for (const auto& chunk : chunks) {
+        auto delta = parser.parseChunk(chunk, noTokens, reason);
+        if (!delta.has_value()) {
+            continue;
+        }
+        std::string deltaStr = docToStr(delta.value());
+        if (deltaStr.find("\"name\"") != std::string::npos) {
+            nameDelta = deltaStr;
+            ++nameDeltaCount;
+        } else if (deltaStr.find("\"arguments\"") != std::string::npos) {
+            argsDelta = deltaStr;
+        }
+    }
+
+    // (a) first delta carries the function name, emitted exactly once
+    ASSERT_TRUE(nameDelta.has_value());
+    EXPECT_EQ(nameDeltaCount, 1);
+    EXPECT_NE(nameDelta.value().find("\"name\":\"get_weather\""), std::string::npos) << nameDelta.value();
+    EXPECT_NE(nameDelta.value().find("\"type\":\"function\""), std::string::npos) << nameDelta.value();
+
+    // (b) full arguments delta is emitted after the function completes
+    ASSERT_TRUE(argsDelta.has_value());
+    EXPECT_NE(argsDelta.value().find(R"({\"city\":\"Beijing\",\"unit\":\"celsius\"})"), std::string::npos) << argsDelta.value();
+}
+
+// Same expectations but with the input fragmented character-by-character.
+TEST_F(Minicpm5PublicStreamTest, EmitsDeltasWhenFragmentedCharByChar) {
+    Minicpm5ToolParser parser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
+    const std::vector<int64_t> noTokens;
+    const auto reason = ov::genai::GenerationFinishReason::NONE;
+    const std::string input =
+        R"(<function name="search"><param name="query">Intel</param></function>)";
+
+    std::optional<std::string> nameDelta;
+    std::optional<std::string> argsDelta;
+    int nameDeltaCount = 0;
+    for (char c : input) {
+        auto delta = parser.parseChunk(std::string(1, c), noTokens, reason);
+        if (!delta.has_value()) {
+            continue;
+        }
+        std::string deltaStr = docToStr(delta.value());
+        if (deltaStr.find("\"name\"") != std::string::npos) {
+            nameDelta = deltaStr;
+            ++nameDeltaCount;
+        } else if (deltaStr.find("\"arguments\"") != std::string::npos) {
+            argsDelta = deltaStr;
+        }
+    }
+
+    ASSERT_TRUE(nameDelta.has_value());
+    EXPECT_EQ(nameDeltaCount, 1);
+    EXPECT_NE(nameDelta.value().find("\"name\":\"search\""), std::string::npos) << nameDelta.value();
+    ASSERT_TRUE(argsDelta.has_value());
+    EXPECT_NE(argsDelta.value().find(R"({\"query\":\"Intel\"})"), std::string::npos) << argsDelta.value();
+}
+
+// ---- Complex parameter values: code, special chars, escaping (comment #7) ----
+
+// A string parameter whose value contains embedded double quotes and backslashes must produce
+// valid, correctly-escaped JSON.
+TEST(Minicpm5ToolParserImplTest, StringParamWithQuotesAndBackslashes) {
+    const std::string input =
+        R"(<function name="search"><param name="query">say "hi" and a backslash \ here</param></function>)";
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    auto& calls = callsOpt.value();
+    ASSERT_EQ(calls.size(), 1u);
+    EXPECT_EQ(calls[0].name, "search");
+    // arguments must be valid JSON
+    rapidjson::Document argsDoc;
+    argsDoc.Parse(calls[0].arguments.c_str());
+    ASSERT_FALSE(argsDoc.HasParseError()) << "arguments not valid JSON: " << calls[0].arguments;
+    ASSERT_TRUE(argsDoc.HasMember("query"));
+    ASSERT_TRUE(argsDoc["query"].IsString());
+    EXPECT_EQ(std::string(argsDoc["query"].GetString()), R"(say "hi" and a backslash \ here)");
+}
+
+// A code snippet with braces, quotes and newlines as a STRING-typed param value stays a string
+// and round-trips to valid JSON.
+TEST(Minicpm5ToolParserImplTest, StringParamWithCodeSnippet) {
+    const std::string code =
+        "def f(x):\n    return {\"a\": x, \"b\": [1, 2, 3]}  // comment";
+    const std::string input =
+        R"(<function name="search"><param name="query">)" + code + R"(</param></function>)";
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    auto& calls = callsOpt.value();
+    ASSERT_EQ(calls.size(), 1u);
+    rapidjson::Document argsDoc;
+    argsDoc.Parse(calls[0].arguments.c_str());
+    ASSERT_FALSE(argsDoc.HasParseError()) << "arguments not valid JSON: " << calls[0].arguments;
+    ASSERT_TRUE(argsDoc.HasMember("query"));
+    ASSERT_TRUE(argsDoc["query"].IsString());
+    // value preserved (newlines are interior, so not trimmed by trimNewline)
+    EXPECT_EQ(std::string(argsDoc["query"].GetString()), code);
+}
+
+// A param value that itself looks like JSON, for a STRING-typed param, must be kept as a string
+// (enforceStringValue), not parsed into a nested object.
+TEST(Minicpm5ToolParserImplTest, StringParamThatLooksLikeJson) {
+    const std::string input =
+        R"(<function name="search"><param name="query">{"nested":true,"n":42}</param></function>)";
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    auto& calls = callsOpt.value();
+    ASSERT_EQ(calls.size(), 1u);
+    rapidjson::Document argsDoc;
+    argsDoc.Parse(calls[0].arguments.c_str());
+    ASSERT_FALSE(argsDoc.HasParseError()) << "arguments not valid JSON: " << calls[0].arguments;
+    ASSERT_TRUE(argsDoc.HasMember("query"));
+    // STRING-typed param: kept as a string, not an object
+    ASSERT_TRUE(argsDoc["query"].IsString());
+    EXPECT_EQ(std::string(argsDoc["query"].GetString()), R"({"nested":true,"n":42})");
+}
+
+// Special characters (unicode, tabs, control-ish punctuation) in a string param round-trip
+// to valid JSON.
+TEST(Minicpm5ToolParserImplTest, StringParamWithSpecialChars) {
+    const std::string value = "tab\tand emoji \xF0\x9F\x98\x80 and slash / and quote \" end";
+    const std::string input =
+        R"(<function name="search"><param name="query">)" + value + R"(</param></function>)";
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    auto& calls = callsOpt.value();
+    ASSERT_EQ(calls.size(), 1u);
+    rapidjson::Document argsDoc;
+    argsDoc.Parse(calls[0].arguments.c_str());
+    ASSERT_FALSE(argsDoc.HasParseError()) << "arguments not valid JSON: " << calls[0].arguments;
+    ASSERT_TRUE(argsDoc.HasMember("query"));
+    ASSERT_TRUE(argsDoc["query"].IsString());
+    EXPECT_EQ(std::string(argsDoc["query"].GetString()), value);
 }
