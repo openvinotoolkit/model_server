@@ -21,6 +21,7 @@
 #include "src/llm/io_processing/base_output_parser.hpp"
 #include "src/llm/io_processing/output_parser.hpp"
 #include "src/llm/io_processing/minicpm5/minicpm5_tool_parser.hpp"
+#include "src/llm/io_processing/minicpm5/minicpm5_reasoning_parser.hpp"
 #include "src/test/platform_utils.hpp"
 
 using namespace ovms;
@@ -155,11 +156,13 @@ TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
 }
 
 // Reasoning (<think>...</think>) stripping is the reasoning parser's job, not the tool
-// parser's. With the qwen3 reasoning parser in front, the <think> block is moved to
-// reasoning and the tool call is still parsed from the remaining content.
+// parser's. With the minicpm5 reasoning parser in front, the <think> block is moved to
+// reasoning and the tool call is still parsed from the remaining content. (minicpm5 is used
+// rather than qwen3 because the tool parser requires special tokens to be streamed, and the
+// paired reasoning parser must agree on that flag.)
 TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
     auto outputParserWithReasoning =
-        std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "qwen3", minicpm5ToolsSchemas);
+        std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
     const std::string input =
         "<think>This is my internal reasoning about what to call.</think>"
         R"(<function name="search"><param name="query">Intel</param></function>)";
@@ -175,6 +178,20 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
     // Reasoning was extracted by the reasoning parser, not left in content.
     EXPECT_NE(parsedOutput.reasoning.find("internal reasoning"), std::string::npos);
     EXPECT_EQ(parsedOutput.content.find("<think>"), std::string::npos);
+}
+
+// MiniCPM5's tool tags (<function>, <param>, ...) are special tokens, so the tool parser must
+// request that special tokens are preserved in the stream; the paired reasoning parser agrees.
+TEST_F(Minicpm5OutputParserTest, RequiresStreamingWithSpecialTokens) {
+    Minicpm5ToolParser toolParser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
+    EXPECT_TRUE(toolParser.requiresStreamingWithSpecialTokens());
+    Minicpm5ReasoningParser reasoningParser(*minicpm5Tokenizer);
+    EXPECT_TRUE(reasoningParser.requiresStreamingWithSpecialTokens());
+    // Pairing the two must not throw the consistency check in OutputParser.
+    EXPECT_NO_THROW({
+        OutputParser parser(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
+        (void)parser;
+    });
 }
 
 // Without a reasoning parser, the tool parser does NOT strip <think> — it remains in content,

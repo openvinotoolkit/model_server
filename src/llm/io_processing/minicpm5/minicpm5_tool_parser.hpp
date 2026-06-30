@@ -168,6 +168,12 @@ public:
         static const std::string EMPTY_STRING = "";
         return EMPTY_STRING;
     }
+    // MiniCPM5 emits its tool-call tags (<function, </function>, <param, </param>) as special
+    // tokens, which the streamer skips by default; they must be preserved so the parser can see
+    // them. (The <think> reasoning tags are NOT special tokens, so reasoning parsing is unaffected.)
+    bool requiresStreamingWithSpecialTokens() const override {
+        return true;
+    }
 
 private:
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);

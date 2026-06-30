@@ -42,6 +42,7 @@ const std::vector<std::string>& getSupportedReasoningParserNames() {
         "qwen3",
         "gemma4",
         "gptoss",
+        "minicpm5",
     };
     return names;
 }

@@ -297,7 +297,10 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "io_processing_minicpm5_tool_parser",
-    hdrs = ["io_processing/minicpm5/minicpm5_tool_parser.hpp"],
+    hdrs = [
+        "io_processing/minicpm5/minicpm5_tool_parser.hpp",
+        "io_processing/minicpm5/minicpm5_reasoning_parser.hpp",
+    ],
     srcs = ["io_processing/minicpm5/minicpm5_tool_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -306,6 +309,7 @@ ovms_cc_library(
         "//src/utils:rapidjson_utils",
         ":io_processing_utils",
         ":io_processing_base_output_parser",
+        ":io_processing_qwen3_reasoning_parser",
         ":apis_tool_schema_wrapper",
         "//third_party:genai",
     ],

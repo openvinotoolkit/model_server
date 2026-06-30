@@ -34,6 +34,7 @@
 #include "lfm2/lfm2_tool_parser.hpp"
 #include "gemma4/gemma4_tool_parser.hpp"
 #include "minicpm5/minicpm5_tool_parser.hpp"
+#include "minicpm5/minicpm5_reasoning_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -210,6 +211,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Gemma4ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "gptoss") {
         reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "minicpm5") {
+        reasoningParser = std::make_unique<Minicpm5ReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
