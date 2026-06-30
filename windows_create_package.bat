@@ -18,6 +18,9 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
 set "PATH=%setPath%"
 
+set "libovmspython_src="
+set "libpython_calculators_src="
+
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
     if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
@@ -55,17 +58,35 @@ md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+if not exist %cd%\bazel-out\x64_windows-opt\bin\src\mediapipe_framework_shared.dll (
+    echo Missing mediapipe_framework_shared.dll in bazel output. Ensure //src:mediapipe_framework_shared is built.
+    exit /b 1
+)
+copy %cd%\bazel-out\x64_windows-opt\bin\src\mediapipe_framework_shared.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 set "dest_dir=C:\opt"
 
 if /i "%with_python%"=="true" (
-    if not exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll (
+    if exist %cd%\bazel-bin\src\python\libovmspython.dll (
+        set "libovmspython_src=%cd%\bazel-bin\src\python\libovmspython.dll"
+    ) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll (
+        set "libovmspython_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll"
+    )
+    if not defined libovmspython_src (
         echo Missing libovmspython.dll in bazel output. Ensure //src/python:libovmspython is built.
         exit /b 1
     )
-    if not exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll (
+
+    if exist %cd%\bazel-bin\src\python\libpython_calculators.dll (
+        set "libpython_calculators_src=%cd%\bazel-bin\src\python\libpython_calculators.dll"
+    ) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll (
+        set "libpython_calculators_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll"
+    )
+    if not defined libpython_calculators_src (
         echo Missing libpython_calculators.dll in bazel output. Ensure //src/python:libpython_calculators is built.
         exit /b 1
     )
@@ -76,9 +97,9 @@ if /i "%with_python%"=="true" (
     if !errorlevel! neq 0 exit /b !errorlevel!
 
     :: Copy shared OVMS python runtime libraries required by ovms.exe when Python is enabled.
-    copy %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll dist\windows\ovms
+    copy "!libovmspython_src!" dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
-    copy %cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll dist\windows\ovms
+    copy "!libpython_calculators_src!" dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
     :: Prepare self-contained python
     set "python_version=3.12.10"
@@ -93,6 +114,10 @@ if /i "%with_python%"=="true" (
     if !errorlevel! neq 0 (
         echo Error occurred when creating Python environment for the distribution.
         exit /b !errorlevel!
+    )
+    if not exist dist\windows\ovms\python\python312.zip (
+        echo Packaging validation failed: embedded stdlib python312.zip is missing from dist\windows\ovms\python.
+        exit /b 1
     )
     .\dist\windows\ovms\python\python.exe -m pip install "setuptools==80.9.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
     if !errorlevel! neq 0 (
@@ -209,6 +234,17 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 dist\windows\ovms\ovms.exe --help
 if !errorlevel! neq 0 exit /b !errorlevel!
+
+if /i "%with_python%"=="true" (
+    if not exist dist\windows\ovms\libovmspython.dll (
+        echo Packaging validation failed: libovmspython.dll is missing from dist\windows\ovms.
+        exit /b 1
+    )
+    if not exist dist\windows\ovms\libpython_calculators.dll (
+        echo Packaging validation failed: libpython_calculators.dll is missing from dist\windows\ovms.
+        exit /b 1
+    )
+)
 
 cd dist\windows
 C:\Windows\System32\tar.exe -a -c -f ovms.zip ovms

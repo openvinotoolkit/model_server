@@ -28,17 +28,19 @@ IF "%~1"=="" (
 IF "%~2"=="--with_python" (
     echo Building model server with Python
     set "bazelBuildArgs=--config=win_mp_on_py_on"
+    set "pythonRuntimeTargets=//src/python:libpython_calculators //src/python:libovmspython"
 ) ELSE (
     echo Building model server without Python 
     set "bazelBuildArgs=--config=win_mp_on_py_off"
+    set "pythonRuntimeTargets="
 )
 
 IF "%~3"=="--with_tests" (
     echo Building model server with tests
-    set "buildTargets=//src:ovms //src:ovms_test"
+    set "buildTargets=//src:ovms //src:ovms_test //src:mediapipe_framework_shared !pythonRuntimeTargets!"
 ) ELSE (
     echo Building model server without tests
-    set "buildTargets=//src:ovms"
+    set "buildTargets=//src:ovms //src:mediapipe_framework_shared !pythonRuntimeTargets!"
 )
 
 IF "%~4"=="--integrity" (
