@@ -75,10 +75,7 @@ cc_library(
             "//:disable_mediapipe": []
             })
          + select({
-            "//:not_disable_python": [
-                "//third_party:python3",
-                "@pybind11//:pybind11_embed",
-                ],
+            "//:not_disable_python": [],
             "//:disable_python": []
             }),
     visibility = ["//visibility:public"],

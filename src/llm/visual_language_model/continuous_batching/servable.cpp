@@ -29,10 +29,8 @@
 #include "../../../config.hpp"
 #include "../../../logging.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
+#include "../../runtime_chat_template.hpp"
 #include "../../text_utils.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../../py_jinja_template_processor.hpp"
-#endif
 
 namespace ovms {
 
@@ -103,7 +101,8 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
         }
 
 #if (PYTHON_DISABLE == 0)
-        if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
+        bool templateApplied = false;
+        if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
             std::string jsonForTemplate;
             if (vlmExecutionContext->apiHandler->getProcessedJson().size() > 0) {
                 jsonForTemplate = vlmExecutionContext->apiHandler->getProcessedJson();
@@ -131,14 +130,23 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
                     jsonForTemplate = buffer.GetString();
                 }
             }
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "VLM CB: Applying chat template using Python Jinja processor");
-            bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, jsonForTemplate, vlmExecutionContext->inputText);
-            if (!success) {
+            auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
+                getProperties()->preparedChatTemplate,
+                jsonForTemplate,
+                vlmExecutionContext->inputText);
+            if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
             }
+            templateApplied = (runtimeStatus == RuntimeChatTemplateStatus::APPLIED);
         } else  // NOLINT(readability/braces)
 #endif
-        {
+            if (
+#if (PYTHON_DISABLE == 0)
+                !templateApplied
+#else
+            true
+#endif
+            ) {
             constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
             auto toolParsingResult = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
             if (!toolParsingResult.ok()) {

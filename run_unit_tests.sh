@@ -25,6 +25,7 @@ FAIL_LOG=${FAIL_LOG:-"fail.log"}
 if [ -f /etc/redhat-release ] ; then dist="--//:distro=redhat" ; fi
 debug_bazel_flags=${debug_bazel_flags:-"--config=mp_on_py_on $dist"}
 TEST_FILTER="--test_filter=*"
+UNIT_TEST_TARGETS="//src:ovms_test //src:python_runtime_library_test"
 SHARED_OPTIONS=" \
 --jobs=$JOBS \
 ${debug_bazel_flags} \
@@ -93,7 +94,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     if [ "$CHECK_COVERAGE" == "1" ] ; then
         if bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \
-            //src:ovms_test ${SHARED_OPTIONS} > ${TEST_LOG} 2>&1 ; then
+            ${UNIT_TEST_TARGETS} ${SHARED_OPTIONS} > ${TEST_LOG} 2>&1 ; then
             if ! generate_coverage_report ; then
                 compress_logs
                 exit 1
@@ -104,12 +105,12 @@ if [ "$RUN_TESTS" == "1" ] ; then
         fi
     fi
     bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding || exit 1
-    bazel build ${SHARED_OPTIONS} //src:ovms_test || exit 1
+    bazel build ${SHARED_OPTIONS} ${UNIT_TEST_TARGETS} || exit 1
     echo "Executing unit tests"
     failed=0
 
     # For RH UBI and Ubuntu
-    if ! bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
+    if ! bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="*" ${UNIT_TEST_TARGETS} > ${TEST_LOG} 2>&1 ; then
         failed=1
     fi
     cat ${TEST_LOG} | tail -500

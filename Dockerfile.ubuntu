@@ -273,9 +273,8 @@ COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
-# change system python to 3.10 for first bazel call and or_tensorflow build
-# hadolint ignore=DL3059
-RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1; fi
+# Keep default system Python (3.12 on ubuntu24) for Bazel repository/toolchain
+# setup so pybind11 extensions are built against the same ABI as tests.
 
 # prebuild dependencies before copying sources & test dependencies for caching
 # hadolint ignore=DL3059
@@ -284,10 +283,14 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_goog
 COPY src/ /ovms/src/
 
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
-
-# hadolint ignore=DL3059
-RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 2; fi
+RUN if [ "$BASE_OS" == "ubuntu24" ] ; then \
+        bazel build --jobs=$JOBS ${debug_bazel_flags} \
+            --action_env=PYTHON_BIN_PATH=/usr/bin/python3.10 \
+            --define=PYTHON_BIN_PATH=/usr/bin/python3.10 \
+            @org_tensorflow//tensorflow/core:framework; \
+    else \
+        bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework; \
+    fi
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
@@ -329,7 +332,7 @@ ARG OPTIMIZE_BUILDING_TESTS=0
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n //src:ovms_test; fi); fi;
+RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n "//src:ovms_test //src:python_runtime_library_test"; fi); fi;
 
 ARG RUN_TESTS=0
 RUN if [ "$RUN_TESTS" == "1" ] ; then mkdir -p demos/common/export_models/ && mv export_model.py demos/common/export_models/ && ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi

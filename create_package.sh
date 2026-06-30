@@ -26,7 +26,7 @@ mkdir -vp /ovms_release/lib/custom_nodes
 # Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
 if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
-find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -v {} /ovms_release/lib/ \;
+find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*gtest*" ! -name "*googletest*" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -path "*test_python_binding*" ! -name "libpython[0-9]*.so*" -exec cp -v {} /ovms_release/lib/ \;
 
 # Bundle espeak-ng data files when espeak was enabled in the Bazel build.
 # rules_foreign_cc places the cmake install tree under copy_<rule>/espeak-ng/
@@ -89,6 +89,26 @@ if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then \
 fi
 
 # Add Python bindings for pyovms, openvino, openvino_tokenizers and openvino_genai, so they are all available for OVMS Python servables
+if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
+	# Keep explicit copies for Python runtime/plugin artifacts so release staging
+	# remains stable even if the generic .so copy filter changes.
+	OVMS_PY_RUNTIME_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libovmspython.so' | head -n 1 || true)
+	OVMS_PY_CALCULATORS_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libpython_calculators.so' | head -n 1 || true)
+	if [ -z "$OVMS_PY_RUNTIME_LIB" ] || [ -z "$OVMS_PY_CALCULATORS_LIB" ]; then
+		echo "Missing Python runtime/plugin shared libraries in bazel outputs. Ensure //src/python:libovmspython and //src/python:libpython_calculators are built."
+		exit 1
+	fi
+	cp -v "$OVMS_PY_RUNTIME_LIB" /ovms_release/lib/
+	cp -v "$OVMS_PY_CALCULATORS_LIB" /ovms_release/lib/
+fi
+
+if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
+	if [ ! -f /ovms_release/lib/libovmspython.so ]; then
+		echo "Missing libovmspython.so in package staging. Ensure //src/python:libovmspython is built."
+		exit 1
+	fi
+fi
+
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/python /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer ; \
@@ -138,7 +158,7 @@ ls -lahR /ovms_release/
 
 # removing 29MB of cpython packages for unsupported python versions
 rls_python=cpython-"$(python3 --version 2>&1 | awk '{gsub(/\./, "", $2); print $2}' | cut -c1-3)"
-find /ovms_release/ovms/lib/python/openvino -name *cpython* | grep -vZ $rls_python | xargs rm -rf --
+find /ovms_release/lib/python/openvino -name *cpython* | grep -vZ $rls_python | xargs rm -rf --
 
 mkdir -p /ovms_pkg/${BASE_OS}
 cd /ovms_pkg/${BASE_OS}

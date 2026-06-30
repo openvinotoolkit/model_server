@@ -46,6 +46,7 @@ public:
     PythonBackend* pythonBackend;
     std::string handlerPath;
     std::unordered_map<std::string, std::string> outputsNameTagMapping;
+    py::object initializeKwargs;
 
     PythonNodeResources(PythonBackend* pythonBackend);
     ~PythonNodeResources();

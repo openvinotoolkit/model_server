@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,36 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
 #pragma once
 
 namespace ovms {
-class Config;
-class Status;
-class PythonBackend;
-enum class ModuleState {
-    NOT_INITIALIZED,
-    STARTED_INITIALIZE,
-    INITIALIZED,
-    RELOADING,
-    STARTED_SHUTDOWN,
-    SHUTDOWN
-};
 
-class Module {
-protected:
-    ModuleState state = ModuleState::NOT_INITIALIZED;
+// Dynamically loads the Python calculators plugin library if available
+// Returns true if plugin loaded successfully or was not needed
+// Returns false if plugin load failed
+bool loadPythonCalculatorsPlugin();
 
-public:
-    virtual Status start(const ovms::Config& config) = 0;
-    virtual void shutdown() = 0;
-    virtual PythonBackend* getPythonBackend() const {
-        return nullptr;
-    }
-    virtual bool ownsPythonInterpreter() const {
-        return false;
-    }
-    virtual void releaseGILFromThisThread() const {}
-    virtual ~Module() = default;
-    ModuleState getState() const;
-};
 }  // namespace ovms

@@ -52,13 +52,12 @@ set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%
-setlocal EnableExtensions EnableDelayedExpansion
-if !errorlevel! neq 0 exit /b !errorlevel!
-endlocal
+if %errorlevel% neq 0 exit /b %errorlevel%
 %opencvBatch%
-setlocal EnableExtensions EnableDelayedExpansion
-if !errorlevel! neq 0 exit /b !errorlevel!
-endlocal
+if %errorlevel% neq 0 exit /b %errorlevel%
+
+:: Preserve environment changes for parent scope
+endlocal & set "PATH=%PATH%" & set "PYTHONPATH=%PYTHONPATH%" & set "PYTHONHOME=%PYTHONHOME%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%"
 
 :exit_build
 echo [INFO] Setup finished

@@ -36,6 +36,7 @@
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "apis/openai_responses.hpp"
+#include "runtime_chat_template.hpp"
 #include "ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
@@ -185,41 +186,68 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
 
     std::string inputText;
+    auto applyWithTokenizer = [&](std::string& outText) -> absl::Status {
+        ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
+        constexpr bool addGenerationPrompt = true;
+        auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
+        if (!toolsStatus.ok()) {
+            return toolsStatus.status();
+        }
+        const auto& tools = toolsStatus.value();
+        auto chatTemplateKwargsStatus = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
+        if (!chatTemplateKwargsStatus.ok()) {
+            return chatTemplateKwargsStatus.status();
+        }
+        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
+        try {
+            outText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
+            return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
+        }
+        return absl::OkStatus();
+    };
+#if (PYTHON_DISABLE == 0)
+    auto applyWithPreparedRuntime = [&](const std::string& requestBody, std::string& outText) -> absl::StatusOr<bool> {
+        if (getProperties()->chatTemplateMode != ChatTemplateMode::JINJA ||
+            getProperties()->chatTemplateBackend != ChatTemplateBackend::PYTHON_RUNTIME) {
+            return false;
+        }
+        auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
+            getProperties()->preparedChatTemplate,
+            requestBody,
+            outText);
+        if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
+            return absl::Status(absl::StatusCode::kInvalidArgument, outText);
+        }
+        return runtimeStatus == RuntimeChatTemplateStatus::APPLIED;
+    };
+#endif
+
     switch (executionContext->endpoint) {
     case Endpoint::CHAT_COMPLETIONS: {
 #if (PYTHON_DISABLE == 0)
-        if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
-            bool success;
-            if (executionContext->apiHandler->getProcessedJson().size() > 0) {
-                success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
-            } else {
-                success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->payload.body, inputText);
+        bool templateApplied = false;
+        if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
+            const std::string requestBody = (executionContext->apiHandler->getProcessedJson().size() > 0) ? executionContext->apiHandler->getProcessedJson() : executionContext->payload.body;
+            auto runtimeStatus = applyWithPreparedRuntime(requestBody, inputText);
+            if (!runtimeStatus.ok()) {
+                return runtimeStatus.status();
             }
-            if (!success) {
-                return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
-            }
-        } else  // NOLINT(readability/braces)
-#endif
-        {
-            ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
-            constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
-            auto toolParsingResult = executionContext->apiHandler->parseToolsToJsonContainer();
-            if (!toolParsingResult.ok()) {
-                return toolParsingResult.status();
-            }
-            const auto& tools = toolParsingResult.value();
-            auto chatTemplateKwargsParsingResult = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-            if (!chatTemplateKwargsParsingResult.ok()) {
-                return chatTemplateKwargsParsingResult.status();
-            }
-            const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
-            try {
-                inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
-            } catch (const std::exception& e) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
-                return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
+            templateApplied = runtimeStatus.value();
+        }
+        if (!templateApplied) {
+            auto tokenizerStatus = applyWithTokenizer(inputText);
+            if (!tokenizerStatus.ok()) {
+                return tokenizerStatus;
             }
         }
+#else
+        auto tokenizerStatus = applyWithTokenizer(inputText);
+        if (!tokenizerStatus.ok()) {
+            return tokenizerStatus;
+        }
+#endif
         if (inputText.size() == 0) {
             return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
         }
@@ -231,33 +259,26 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     case Endpoint::RESPONSES: {
         if (executionContext->apiHandler->getChatHistory().size() > 0) {
 #if (PYTHON_DISABLE == 0)
-            if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
-                bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
-                if (!success) {
-                    return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
+            bool templateApplied = false;
+            if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
+                auto runtimeStatus = applyWithPreparedRuntime(executionContext->apiHandler->getProcessedJson(), inputText);
+                if (!runtimeStatus.ok()) {
+                    return runtimeStatus.status();
                 }
-            } else  // NOLINT(readability/braces)
-#endif
-            {
-                ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
-                constexpr bool addGenerationPrompt = true;
-                auto toolParsingResult = executionContext->apiHandler->parseToolsToJsonContainer();
-                if (!toolParsingResult.ok()) {
-                    return toolParsingResult.status();
-                }
-                const auto& tools = toolParsingResult.value();
-                auto chatTemplateKwargsParsingResult = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-                if (!chatTemplateKwargsParsingResult.ok()) {
-                    return chatTemplateKwargsParsingResult.status();
-                }
-                const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
-                try {
-                    inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
-                } catch (const std::exception& e) {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
-                    return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
+                templateApplied = runtimeStatus.value();
+            }
+            if (!templateApplied) {
+                auto tokenizerStatus = applyWithTokenizer(inputText);
+                if (!tokenizerStatus.ok()) {
+                    return tokenizerStatus;
                 }
             }
+#else
+            auto tokenizerStatus = applyWithTokenizer(inputText);
+            if (!tokenizerStatus.ok()) {
+                return tokenizerStatus;
+            }
+#endif
             if (inputText.size() == 0) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
             }

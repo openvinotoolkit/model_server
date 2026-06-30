@@ -50,7 +50,20 @@ void PythonNodeResources::finalize() {
                 return;
             }
 
-            ovmsPythonModel.get()->attr("finalize")();
+            py::object finalizeMethod = ovmsPythonModel.get()->attr("finalize");
+            if (this->initializeKwargs && !this->initializeKwargs.is_none()) {
+                try {
+                    finalizeMethod(initializeKwargs);
+                } catch (const pybind11::error_already_set& e) {
+                    if (!e.matches(PyExc_TypeError)) {
+                        throw;
+                    }
+                    SPDLOG_DEBUG("Python node finalize in {} does not accept kwargs. Retrying finalize() with no arguments.", this->handlerPath);
+                    finalizeMethod();
+                }
+            } else {
+                finalizeMethod();
+            }
         } catch (const pybind11::error_already_set& e) {
             SPDLOG_ERROR("Failed to process python node finalize method. {}  Python node handler_path: {} ", e.what(), this->handlerPath);
             return;
@@ -159,6 +172,7 @@ Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNode
         nodeResources->ovmsPythonModel = std::make_unique<py::object>(OvmsPythonModel());
         if (py::hasattr(*nodeResources->ovmsPythonModel, "initialize")) {
             py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig, basePath);
+            nodeResources->initializeKwargs = kwargsParam;  // Store kwargs for optional finalize(kwargs)
             nodeResources->ovmsPythonModel->attr("initialize")(kwargsParam);
         } else {
             SPDLOG_DEBUG("OvmsPythonModel class defined in {} does not implement initialize method.", nodeOptions.handler_path());
@@ -177,6 +191,11 @@ PythonNodeResources::~PythonNodeResources() {
     SPDLOG_DEBUG("Calling Python node resource destructor");
     this->finalize();
     py::gil_scoped_acquire acquire;
+    // Release python refs while GIL is held. Otherwise member destruction after
+    // leaving the destructor body may decref without GIL and crash.
+    if (this->initializeKwargs) {
+        this->initializeKwargs = py::none();
+    }
     this->ovmsPythonModel.reset();
 }
 

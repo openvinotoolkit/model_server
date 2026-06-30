@@ -33,14 +33,15 @@
 #include "../grpcservermodule.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../kfs_python_tensor_bridge.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../model_service.hpp"
+#include "../module.hpp"
 #include "../precision.hpp"
-#include "../python/pythoninterpretermodule.hpp"
 #include "../python/pythonnoderesources.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -58,6 +59,7 @@
 #include "c_api_test_utils.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
+#include "python_environment.hpp"
 #include "test_utils.hpp"
 
 namespace py = pybind11;
@@ -112,7 +114,19 @@ public:
 };
 
 static PythonBackend* getPythonBackend() {
-    return dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME))->getPythonBackend();
+    auto* pythonModule = ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME);
+    if (pythonModule != nullptr) {
+        auto* pythonBackend = pythonModule->getPythonBackend();
+        if (pythonBackend != nullptr) {
+            return pythonBackend;
+        }
+    }
+
+    auto* pythonBackend = getGlobalPythonBackend();
+    if (pythonBackend == nullptr) {
+        throw std::runtime_error("Python backend is not available");
+    }
+    return pythonBackend;
 }
 
 // --------------------------------------- OVMS initializing Python nodes tests
@@ -1044,6 +1058,21 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
     const float* outputDataPtr = reinterpret_cast<const float*>(response.raw_output_contents().at(0).data());
     outputData.assign(outputDataPtr, outputDataPtr + numElements);
     ASSERT_EQ(expectedOutputData, outputData);
+}
+
+TEST_F(PythonFlowTest, KfsPythonTensorBridgeVTableRegistration) {
+    const auto* original = getKfsPyTensorBridgeVTable();
+
+    const KfsPyTensorBridgeVTable testVtable{
+        nullptr,
+        nullptr,
+    };
+
+    setKfsPyTensorBridgeVTable(&testVtable);
+    ASSERT_EQ(getKfsPyTensorBridgeVTable(), &testVtable);
+
+    // Restore global state for the rest of the suite.
+    setKfsPyTensorBridgeVTable(original);
 }
 
 // ---------------------------------- PythonExecutorCalculcator tests
