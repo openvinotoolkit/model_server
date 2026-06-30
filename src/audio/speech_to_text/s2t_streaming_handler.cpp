@@ -19,6 +19,7 @@
 #include <utility>
 #include <vector>
 
+#include "openvino/genai/automatic_speech_recognition/pipeline.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include "src/http_payload.hpp"

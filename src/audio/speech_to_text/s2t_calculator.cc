@@ -267,8 +267,8 @@ private:
             writer.String("words");
             writer.StartArray();
             if (result.words.has_value()) {
-                if (!result.words.value().empty()) {
-                    for (const auto& word : result.words.value().front()) {
+                for (const auto& wordGroup : result.words.value()) {
+                    for (const auto& word : wordGroup) {
                         writer.StartObject();
                         writer.String("word");
                         writer.String(word.text.c_str());
@@ -286,8 +286,8 @@ private:
             writer.String("segments");
             writer.StartArray();
             if (result.chunks.has_value()) {
-                if (!result.chunks.value().empty()) {
-                    for (const auto& chunk : result.chunks.value().front()) {
+                for (const auto& chunkGroup : result.chunks.value()) {
+                    for (const auto& chunk : chunkGroup) {
                         writer.StartObject();
                         writer.String("text");
                         writer.String(chunk.text.c_str());

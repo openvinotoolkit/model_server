@@ -29,9 +29,13 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "openvino/genai/automatic_speech_recognition/pipeline.hpp"
-
 #include "src/http_payload.hpp"
+
+namespace ov::genai {
+class ASRGenerationConfig;
+class ASRDecodedResults;
+}  // namespace ov::genai
+
 namespace ovms {
 class StreamingTextQueue;
 struct SttServable;
