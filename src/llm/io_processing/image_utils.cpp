@@ -97,18 +97,18 @@ bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char*
     if (allowedDomains.size() == 1 && allowedDomains[0] == "all") {
         return true;
     }
-CURLUcode rc;
-CURLU* parsedUrl = curl_url();
-if (!parsedUrl) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} failed", url);
-    return false;
-}
-rc = curl_url_set(parsedUrl, CURLUPART_URL, url, 0);
-if (rc) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} failed", url);
-    curl_url_cleanup(parsedUrl);
-    return false;
-}
+    CURLUcode rc;
+    CURLU* parsedUrl = curl_url();
+    if (!parsedUrl) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} failed", url);
+        return false;
+    }
+    rc = curl_url_set(parsedUrl, CURLUPART_URL, url, 0);
+    if (rc) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} failed", url);
+        curl_url_cleanup(parsedUrl);
+        return false;
+    }
     char* host;
     rc = curl_url_get(parsedUrl, CURLUPART_HOST, &host, 0);
     if (rc) {
