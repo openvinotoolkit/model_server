@@ -21,11 +21,11 @@
 # Source repository git commits / branches (used for source builds)
 OV_SOURCE_BRANCH ?= 6830129f5399fbbe9ed7b295156fee50da1de32c
 OV_TOKENIZERS_BRANCH ?= cdedc4fea12fa5505bb644efb7993f649082cd19
-OV_GENAI_BRANCH ?= 1af8022b804990d41dce49fce2721d2dbf5b3a91
+OV_GENAI_BRANCH ?= 27b480d39731996f68ed8cf7c54a5c0dd6122ba6
 
 # Source repository organizations
 OV_SOURCE_ORG ?= openvinotoolkit
-OV_GENAI_ORG ?= openvinotoolkit
+OV_GENAI_ORG ?= as-suvorov:as/qwen3-asr
 OV_TOKENIZERS_ORG ?= openvinotoolkit
 
 # Binary package URLs for each supported platform.

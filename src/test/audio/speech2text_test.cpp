@@ -467,13 +467,6 @@ TEST_F(Speech2TextHttpTest, positiveSegmentTimestamps) {
     EXPECT_FALSE(d.HasMember("words"));
 }
 
-// Test segment timestamps (return_timestamps=true).
-// Validates that all segment chunks are serialized in correct order.
-// The ASR result may have multiple groups of chunks (vector<vector<...>>),
-// which are flattened into a single segments array by nested iteration.
-// This test ensures the flattening logic produces a valid JSON array with
-// all required fields ("text", "start", "end") for each element.
-
 // Test word timestamps (word_timestamps=true).
 // Validates that all word chunks are serialized in correct order.
 // The ASR result may have multiple groups of words (vector<vector<...>>),
