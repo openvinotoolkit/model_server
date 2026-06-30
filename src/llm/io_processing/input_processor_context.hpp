@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,28 +14,26 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <memory>
-#include <sstream>
+
 #include <string>
 
-#pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-// Python execution for template processing
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
-#pragma warning(pop)
+#include <openvino/genai/tokenizer.hpp>
 
-#include "src/python/utils.hpp"
+#include "input_processing_config.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "../py_jinja_template_processor.hpp"
+#endif
 
 namespace ovms {
 
-class PyJinjaTemplateProcessor {
-public:
-    std::string bosToken = "";
-    std::string eosToken = "";
-    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
-    std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
-
-    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output);
+// Holds the per-deployment resources needed by InputProcessor.
+// Created once during servable initialization; reused across requests.
+struct InputProcessorContext {
+    InputProcessingConfig config;
+    ov::genai::Tokenizer tokenizer;
+#if (PYTHON_DISABLE == 0)
+    PyJinjaTemplateProcessor* templateProcessor = nullptr;
+#endif
 };
+
 }  // namespace ovms

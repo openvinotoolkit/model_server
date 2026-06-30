@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,28 +14,18 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <memory>
-#include <sstream>
-#include <string>
 
-#pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-// Python execution for template processing
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
-#pragma warning(pop)
-
-#include "src/python/utils.hpp"
+#include "../base_input_processor.hpp"
 
 namespace ovms {
 
-class PyJinjaTemplateProcessor {
+// Normalizes text-only content arrays in ChatHistory messages to plain strings.
+// Parts are joined with "\n" for backward compatibility with LM chat templates.
+// Active when: !config.isVLM && input is ChatHistory variant.
+// Must run before ChatTemplateProcessor.
+class TextContentNormalizationProcessor : public BaseInputProcessor {
 public:
-    std::string bosToken = "";
-    std::string eosToken = "";
-    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
-    std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
-
-    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output);
+    absl::Status process(InputRequest& req) override;
 };
+
 }  // namespace ovms

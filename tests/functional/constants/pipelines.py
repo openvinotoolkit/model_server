@@ -26,16 +26,11 @@ from tests.functional.config import datasets_path
 from ovms.constants.model_dataset import RandomDataset
 from tests.functional.models.models import ModelInfo
 from ovms.constants.models import (
-    AgeGender,
     ArgMax,
-    CrnnTf,
     Dummy,
     DummyAdd2Inputs,
     DummyIncrement,
     DummyIncrementDecrement,
-    EastFp32,
-    Emotion,
-    FaceDetectionRetail,
     GoogleNetV2Fp32,
     Increment4d,
     Resnet,
@@ -51,13 +46,9 @@ from tests.functional.object_model.custom_node import (
     CustomNodeAddSub,
     CustomNodeChooseMaximum,
     CustomNodeDemultiply,
-    CustomNodeDemultiplyGather,
     CustomNodeDifferentOperations,
     CustomNodeDynamicDemultiplex,
-    CustomNodeEastOcr,
     CustomNodeElastic1T,
-    CustomNodeFaces,
-    CustomNodeImageTransformation,
     CustomNodeVehicles,
 )
 from tests.functional.object_model.mediapipe_calculators import (
@@ -700,100 +691,6 @@ class ComplexDummyPipeline(Pipeline):
         return nodes
 
 
-class SameModelsPipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("multiple_versions_of_the_same_model_pipeline", **kwargs)
-        self._initialize()
-
-    def _create_nodes(self, models=None):
-        node1 = Node("node_1", DummyIncrement())
-        node2 = Node("node_2", DummyIncrement())
-
-        request = Node("request", node_type=NodeType.Input)
-        output = Node("output", node_type=NodeType.Output)
-
-        NodesConnection.connect(node1, 0, request, 0)
-        NodesConnection.connect(node2, 0, node1, 0)
-        NodesConnection.connect(output, 0, node2, 0)
-
-        nodes = [request, node1, node2, output]
-        return nodes
-
-
-class NodeReferringMultipleOutputsFromPreviousNodePipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("pipeline_multiple_inputs_from_the_same_model", **kwargs)
-        self._initialize()
-
-    def _create_nodes(self, models=None):
-        node1 = Node("node_1", DummyIncrementDecrement())
-        node2 = Node("node_2", DummyAdd2Inputs())
-
-        request = Node("request", node_type=NodeType.Input)
-        output = Node("output", node_type=NodeType.Output)
-
-        NodesConnection.connect(node1, 0, request, 0)
-        NodesConnection.connect(node1, 1, request, 1)
-        NodesConnection.connect(node2, 0, node1, 0)
-        NodesConnection.connect(node2, 1, node1, 1)
-        NodesConnection.connect(output, 0, node2, 0)
-
-        nodes = [request, node1, node2, output]
-        return nodes
-
-    def get_expected_output(self, input_data, client_type: str = None):
-        models = self.get_regular_models()
-        input_model = models[0]
-        output_model = models[1]
-        input_model_output = input_model.get_expected_output(input_data)
-        node2 = {
-            output_model.input_names[0]: input_model_output[input_model.output_names[0]],
-            output_model.input_names[1]: input_model_output[input_model.output_names[1]],
-        }
-        output_model_output = output_model.get_expected_output(node2)
-        pipeline_output = self.map_model_output_to_pipeline_output(output_model_output)
-        return pipeline_output
-
-
-class EastAndOcrPipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("east_and_ocr_pipeline", **kwargs)
-        self._initialize()
-        self.set_expected_output_shape()
-
-    def set_expected_output_shape(self):
-        self.outputs["texts"]["shape"].insert(0, 0)
-
-    def _create_nodes(self, models=None):
-        east_node = Node("east_node", EastFp32(), output_names=["scores", "geometry"])
-        extract_node = Node("extract_node", CustomNodeEastOcr(), NodeType.Custom, demultiply_count=0)
-        crnn_model = CrnnTf()
-        crnn_model.inputs["input"]["layout"] = "NHWC:NCHW"
-        crnn_node = Node("crnn_node", crnn_model)
-
-        request = Node("request", node_type=NodeType.Input)
-        output = Node(
-            "output",
-            node_type=NodeType.Output,
-            input_names=["text_images", "text_coordinates", "confidence_levels", "texts"],
-        )
-        NodesConnection.connect(east_node, 0, request, 0)
-        NodesConnection.connect(extract_node, 0, request, 0)
-        NodesConnection.connect(extract_node, 1, east_node, 0)
-        NodesConnection.connect(extract_node, 2, east_node, 1)
-        NodesConnection.connect(crnn_node, 0, extract_node, 0)
-        NodesConnection.connect(output, 0, extract_node, 0)
-        NodesConnection.connect(output, 1, extract_node, 1)
-        NodesConnection.connect(output, 2, extract_node, 2)
-        NodesConnection.connect(output, 3, crnn_node, 0)
-
-        nodes = [request, east_node, extract_node, crnn_node, output]
-        return nodes
-
-
 class DemultiplyPipeline(Pipeline):
 
     def __init__(self, demultiply_value, **kwargs):
@@ -944,59 +841,6 @@ class CustomNodeNotAllInputsConnectedPipeline(Pipeline):
         return nodes
 
 
-class CyclicGraphPipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("cyclic_graph_pipeline", **kwargs)
-        self._initialize()
-
-    def _create_nodes(self, models=None):
-        model_two_inputs_two_outputs = DummyIncrementDecrement()
-        model_two_inputs_one_output = DummyAdd2Inputs()
-
-        node1 = Node("node_1", model_two_inputs_one_output)
-        node2 = Node("node_2", model_two_inputs_two_outputs)
-
-        request = Node("request", node_type=NodeType.Input, output_names=self.input_names)
-        output = Node("output", node_type=NodeType.Output, input_names=self.output_names)
-
-        NodesConnection.connect(node1, 0, request, 0)
-        NodesConnection.connect(node1, 1, node2, 1)
-        NodesConnection.connect(output, 0, node2, 0)
-
-        nodes = [request, node1, node2, output]
-        return nodes
-
-
-class AgeGenderAndEmotionPipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("combined-recognition", **kwargs)
-        self._initialize()
-
-    def _create_nodes(self, models=None):
-        model_gender = AgeGender()
-        model_gender.set_input_shape_for_ovms([1, 3, 64, 64])
-
-        model_emotion = Emotion()
-
-        age_gender_node = Node("age_gender", model_gender, output_names=["age", "gender"])
-        emotion_node = Node("emotion_node", model_emotion, output_names=["emotion"])
-
-        request = Node("request", node_type=NodeType.Input, output_names=["image"])
-        output = Node("output", node_type=NodeType.Output, input_names=["age", "gender", "emotion"])
-
-        NodesConnection.connect(age_gender_node, 0, request, 0)
-        NodesConnection.connect(emotion_node, 0, request, 0)
-
-        NodesConnection.connect(output, 0, age_gender_node, 0)
-        NodesConnection.connect(output, 1, age_gender_node, 1)
-        NodesConnection.connect(output, 2, emotion_node, 0)
-
-        nodes = [request, age_gender_node, emotion_node, output]
-        return nodes
-
-
 class VehiclesAnalysisPipeline(Pipeline):
 
     def __init__(self, **kwargs):
@@ -1040,76 +884,6 @@ class VehiclesAnalysisPipeline(Pipeline):
         NodesConnection.connect(output, 4, vehicle_recognition_node, 1)
 
         nodes = [request, vehicle_detection_node, extract_node, vehicle_recognition_node, output]
-        return nodes
-
-
-class FacesAnalysisPipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("find_face_images", **kwargs)
-        self._initialize()
-
-    def _create_nodes(self, models=None):
-        model_face = FaceDetectionRetail()
-        model_face.input_shapes = [1, 3, 400, 600]
-        model_face.set_input_shape_for_ovms([1, 3, 400, 600])
-
-        model_gender = AgeGender()
-        model_gender.input_shapes = [1, 3, 64, 64]
-        model_gender.set_input_shape_for_ovms([1, 3, 64, 64])
-
-        model_emotion = Emotion()
-        model_emotion.input_shapes = [1, 3, 64, 64]
-        model_emotion.set_input_shape_for_ovms([1, 3, 64, 64])
-
-        faces_custom_node = CustomNodeFaces()
-
-        model_gender.inputs["data"]["shape"] = deepcopy(model_emotion.inputs["data"]["shape"])
-        model_face.inputs["data"]["shape"] = [1, 3, 400, 600]
-
-        face_detection_node = Node("face_detection_node", model_face, output_names=["detection_out"])
-        extract_node = Node(
-            "extract_node",
-            faces_custom_node,
-            NodeType.Custom,
-            demultiply_count=0,
-            output_names=["face_images", "face_coordinates", "confidence_levels"],
-        )
-        age_gender_recognition_node = Node("age_gender_recognition_node", model_gender, output_names=["age", "gender"])
-        emotion_recognition_node = Node("emotion_recognition_node", model_emotion, output_names=["emotion"])
-
-        request = Node("request", node_type=NodeType.Input, output_names=["image"])
-        output = Node(
-            "output",
-            node_type=NodeType.Output,
-            input_names=["face_images", "face_coordinates", "confidence_levels", "ages", "genders", "emotions"],
-        )
-
-        NodesConnection.connect(face_detection_node, 0, request, 0)
-
-        NodesConnection.connect(extract_node, 0, request, 0)
-        NodesConnection.connect(extract_node, 1, face_detection_node, 0)
-
-        NodesConnection.connect(age_gender_recognition_node, 0, extract_node, 0)
-
-        NodesConnection.connect(emotion_recognition_node, 0, extract_node, 0)
-
-        NodesConnection.connect(output, 0, extract_node, 0)
-        NodesConnection.connect(output, 1, extract_node, 1)
-        NodesConnection.connect(output, 2, extract_node, 2)
-
-        NodesConnection.connect(output, 3, age_gender_recognition_node, 0)
-        NodesConnection.connect(output, 4, age_gender_recognition_node, 1)
-        NodesConnection.connect(output, 5, emotion_recognition_node, 0)
-
-        nodes = [
-            request,
-            face_detection_node,
-            extract_node,
-            age_gender_recognition_node,
-            emotion_recognition_node,
-            output,
-        ]
         return nodes
 
 
@@ -1224,65 +998,6 @@ class DifferentDemultiplyValuesPipeline(Pipeline):
         NodesConnection.connect(output, 0, dummy_node, 0)
 
         nodes = [request, self.demux_node, dummy_node, output]
-        return nodes
-
-
-class DemultiplexerAndGatherPipeline(Pipeline):
-
-    def __init__(self, demultiply_count, **kwargs):
-        super().__init__("pipeline_with_demultiplexer_and_gather", **kwargs)
-        self._demultiply_count = demultiply_count
-        self._initialize()
-
-    def _create_nodes(self, models=None):
-        diff_node = Node(
-            "diff_node", CustomNodeDifferentOperations(), NodeType.Custom, demultiply_count=self._demultiply_count
-        )
-        dummy_node = Node("dummy_node", Dummy())
-        demultiply_gather_node = Node(
-            "demultiply_gather_node",
-            CustomNodeDemultiplyGather(),
-            NodeType.Custom,
-            demultiply_count=self._demultiply_count,
-            gather_from_node="diff_node",
-        )
-
-        request = Node("request", node_type=NodeType.Input, output_names=self.input_names)
-        output = Node("output", node_type=NodeType.Output, input_names=self.output_names)
-
-        NodesConnection.connect(diff_node, 0, request, 0)
-        NodesConnection.connect(diff_node, 1, request, 1)
-        NodesConnection.connect(dummy_node, 0, diff_node, 0)
-        NodesConnection.connect(demultiply_gather_node, 0, dummy_node, 0)
-        NodesConnection.connect(output, 0, demultiply_gather_node, 0)
-
-        nodes = [request, dummy_node, demultiply_gather_node, diff_node, output]
-        return nodes
-
-
-class ImageTransformationPipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("image_transformation_test", **kwargs)
-        self._initialize()
-
-    def _create_nodes(self, models=None):
-        self.demultiply_count = 0
-        image_transformation_node = Node(
-            "image_transformation_node", CustomNodeImageTransformation(), NodeType.Custom, output_names=["image"]
-        )
-        resnet_node = Node("resnet_node", Resnet())
-
-        request = Node("request", node_type=NodeType.Input, output_names=["image"])
-        output = Node("output", node_type=NodeType.Output, input_names=["image_0", "image_1"])
-
-        NodesConnection.connect(image_transformation_node, 0, request, 0)
-        NodesConnection.connect(resnet_node, 0, image_transformation_node, 0)
-        NodesConnection.connect(output, 0, resnet_node, 0)
-
-        NodesConnection.connect(output, 1, image_transformation_node, 0)
-
-        nodes = [request, image_transformation_node, resnet_node, output]
         return nodes
 
 
@@ -1739,14 +1454,6 @@ class CorruptedFileModelMediaPipe(SimpleModelMediaPipe):
     def __init__(self, model=None):
         super().__init__(model)
         self.calculators = [CorruptedFileCalculator()]
-
-
-class SimpleOneCalculatorMediaPipe(SimpleModelMediaPipe):
-    def __init__(self, model=None):
-        super().__init__(model)
-        self.calculators = [OVMSOVCalculator()]
-        assert not self.name.endswith("_mediapipe")
-        self.name += "_mediapipe"
 
 
 class SameModelsMediaPipe(MediaPipe):
