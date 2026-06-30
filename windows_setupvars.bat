@@ -47,6 +47,11 @@ set "BAZEL_VC=%BAZEL_VS:"=%\VC"
 :: Auto-detect the latest installed MSVC toolset version (was hardcoded 14.44.35207)
 set "BAZEL_VC_FULL_VERSION="
 for /f "delims=" %%v in ('dir /b /ad /o-n "%BAZEL_VC%\Tools\MSVC" 2^>nul') do if not defined BAZEL_VC_FULL_VERSION set "BAZEL_VC_FULL_VERSION=%%v"
+if not defined BAZEL_VC_FULL_VERSION (
+    echo [ERROR] Could not detect an MSVC toolset under "%BAZEL_VC%\Tools\MSVC" - install the C++ x64 build tools for the detected Visual Studio
+    exit /b 1
+)
+echo [INFO] Using MSVC toolset %BAZEL_VC_FULL_VERSION%
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
