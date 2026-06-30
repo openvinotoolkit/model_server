@@ -101,11 +101,8 @@ TEST_F(ChatTemplateAnalyzerTest, detectsLfm2ToolCallStart) {
 
 // --- Phi-4 ---
 
-TEST_F(ChatTemplateAnalyzerTest, detectsPhi4) {
-    // Using raw bytes for ▁ (U+2581, UTF-8: E2 96 81)
-    std::string tmpl = "some template with <|tool\xe2\x96\x81"
-                       "call\xe2\x96\x81"
-                       "begin|> tag";
+TEST_F(ChatTemplateAnalyzerTest, detectsPhi4Functools) {
+    std::string tmpl = R"(prefix function calls with functools marker functools[{"name": "fn"}])";
     auto result = ChatTemplateAnalyzer::analyze(tmpl);
     EXPECT_EQ(result.detectedModelFamily, "phi4");
     EXPECT_EQ(result.detectedToolParser.value(), "phi4");

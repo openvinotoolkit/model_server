@@ -349,8 +349,29 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Phi4Mini_ToolCallWithStringArgs) {
 
     run(requestJson);
 
+    // FIXME:
+    // The model doesnt render available tools
+    // The model renders tool calls
+    // However we have it in agentic demo so I keep it here for documentation 
+
+    // It only works when chat template is taken from our extras
+
     ASSERT_TRUE(applySuccess);
-    EXPECT_FALSE(caps.supportsToolCalls);
+
+    EXPECT_EQ(analysisResult.detectedModelFamily, "phi4");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "phi4");
+    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+
+    EXPECT_TRUE(caps.supportsTools);
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
+
+    std::string expectedOutput = R"(<|system|>
+You are a helpful assistant.<|end|><|user|>What's the weather in Paris?<|end|><|assistant|>{"name": "get_weather", "arguments": {"location":"Paris","unit":"celsius"}}<|end|><|assistant|>)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================

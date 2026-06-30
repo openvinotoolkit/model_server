@@ -324,9 +324,7 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3Coder_ToolCallWithStringArgs) {
 // =============================================================================
 // Example: Phi-4-mini-instruct with tool call containing string arguments
 // This template uses message.tool_calls with direct {{ call.function.arguments }}
-// rendering. The static analyzer does NOT detect tool support (no known markers),
-// so the probe is never invoked. Tool calls still render correctly if manually
-// enabled, but the current pipeline won't auto-detect tool support for this variant.
+// rendering. The static analyzer detects phi4 via the "functools" marker.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndTest, Phi4Mini_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_phi4_mini.jinja");
@@ -338,10 +336,29 @@ TEST_F(ChatTemplateEndToEndTest, Phi4Mini_ToolCallWithStringArgs) {
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
     run(true);
+    // FIXME:
+    // The model doesnt render available tools
+    // The model renders tool calls
+    // However we have it in agentic demo so I keep it here for documentation 
+
+    // It only works when chat template is taken from our extras
 
     ASSERT_TRUE(applySuccess);
-    // Analyzer does not detect phi4-mini tool support (no <|tool▁call▁begin|> marker)
-    EXPECT_FALSE(caps.supportsToolCalls);
+
+    EXPECT_EQ(analysisResult.detectedModelFamily, "phi4");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "phi4");
+    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+
+    EXPECT_TRUE(caps.supportsTools);
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
+
+    std::string expectedOutput = R"(<|system|>
+You are a helpful assistant.<|end|><|user|>What's the weather in Paris?<|end|><|assistant|>{"name": "get_weather", "arguments": {"location":"Paris","unit":"celsius"}}<|end|><|assistant|>)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================
@@ -375,6 +392,7 @@ What's the weather in Paris?<|im_end|>
 <tool_call>
 {"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}}
 </tool_call><|im_end|>
+<|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }

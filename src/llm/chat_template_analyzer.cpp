@@ -78,10 +78,8 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
-    // Phi-4 detection
-    if (contains(templateSource, "<|tool\xe2\x96\x81"
-                                 "call\xe2\x96\x81"
-                                 "begin|>")) {  // <|tool▁call▁begin|> with Unicode ▁ (U+2581)
+    // Phi-4 detection — uses "functools[" marker for tool calls
+    if (contains(templateSource, "functools")) {
         result.detectedModelFamily = "phi4";
         result.detectedToolParser = "phi4";
         result.caps.supportsToolCalls = true;
