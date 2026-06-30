@@ -168,13 +168,11 @@ ovms_cc_library(
             "@mediapipe//mediapipe/calculators/geti/utils:utils",
             "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
             "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
-            "@com_github_glog_glog//:glog",
             "opencv_dep",
         ],
         "//:disable_mediapipe": [],
     }),
     visibility = ["//visibility:public"],
-    alwayslink = 1,
     linkstatic = 1,
 )
 
@@ -182,6 +180,10 @@ cc_binary(
     name = "mediapipe_framework_shared",
     srcs = [],
     deps = [":libmediapipe_framework_impl"],
+    linkopts = select({
+        "//src:windows": ["/FORCE:UNRESOLVED"],
+        "//conditions:default": [],
+    }),
     linkshared = 1,
     visibility = ["//visibility:public"],
 )

@@ -193,6 +193,10 @@ git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
     commit = "12e8d511cfbc5f471c498278a65a02dd250963e8", # top of mediapipe main branch as of 26.11.2025
+    patches = [
+        "//third_party:mediapipe_model_api_openvino_windows.patch",
+    ],
+    patch_args = ["-p1"],
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build

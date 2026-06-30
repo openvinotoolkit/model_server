@@ -27,14 +27,21 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+cc_import(
+    name = "openvino_import_lib",
+    interface_library = "lib/intel64/Release/openvino.lib",
+    shared_library = "bin/intel64/Release/openvino.dll",
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "openvino",
-    srcs = glob([
-        "lib\\intel64\\Release\\openvino.lib"
-    ]),
-    #strip_include_prefix = "include/ie",
+    srcs = [
+        "bin/intel64/Release/openvino.dll",
+    ],
     visibility = ["//visibility:public"],
     deps = [
+        ":openvino_import_lib",
         ":openvino_new_headers",
         "@windows_opencl//:opencl",
         "@windows_opencl2//:opencl2",
