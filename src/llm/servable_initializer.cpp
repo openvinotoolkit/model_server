@@ -74,8 +74,6 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
     if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->templateProcessor.chatTemplate != nullptr) {
         if (!probeChatTemplateCapsJinja(properties->templateProcessor, properties->modelsPath, properties->chatTemplateCaps)) {
             SPDLOG_LOGGER_WARN(llm_calculator_logger, "Disabling tool call support: Jinja cannot render this template's tool calls correctly");
-            properties->chatTemplateCaps.supportsToolCalls = false;
-            properties->chatTemplateCaps.supportsTools = false;
         }
         return;
     }
@@ -83,10 +81,7 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 
     // Minja path — use the shared probe component
     if (!probeChatTemplateCaps(properties->tokenizer, properties->chatTemplateCaps)) {
-        // Minja silently failed — disable tool call support for this model
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Disabling tool call support: minja cannot render this template's tool calls correctly");
-        properties->chatTemplateCaps.supportsToolCalls = false;
-        properties->chatTemplateCaps.supportsTools = false;
     }
 }
 
@@ -154,12 +149,18 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         // Dry-run probes: empirically verify requiresObjectArguments and requiresNonNullContent
         // by rendering synthetic messages through GenAI's minja and checking the output.
         // First check if minja can render basic chat at all (catches unsupported Jinja extensions)
-        if (!probeChatTemplateBasicRender(properties->tokenizer)) {
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
-                                                       "Disabling /chat/completions endpoint for this model.");
-            properties->tokenizer.set_chat_template("");
-            return;
+#if (PYTHON_DISABLE == 0)
+        if (properties->chatTemplateMode != ChatTemplateMode::JINJA) {
+#endif
+            if (!probeChatTemplateBasicRender(properties->tokenizer)) {
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
+                                                           "Disabling /chat/completions endpoint for this model.");
+                properties->tokenizer.set_chat_template("");
+                return;
+            }
+#if (PYTHON_DISABLE == 0)
         }
+#endif
         probeServableChatTemplateCaps(properties);
     }
 }

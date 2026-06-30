@@ -165,8 +165,6 @@ protected:
         if (!probeChatTemplateCapsJinja(servable->getProperties()->templateProcessor,
                 servable->getProperties()->modelsPath, caps)) {
             std::cout << "=== Jinja Probe FAILED: silent failure detected ===" << std::endl;
-            caps.supportsToolCalls = false;
-            caps.supportsTools = false;
         }
 
         std::cout << "=== After Probe ===" << std::endl;
@@ -205,9 +203,18 @@ TEST_F(ChatTemplateEndToEndJinjaTest, GptOss_ToolCallWithStringArgs) {
     run(requestJson, false);
 
     ASSERT_TRUE(applySuccess);
+
     EXPECT_EQ(analysisResult.detectedModelFamily, "gptoss");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "gptoss");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "gptoss");
+
+    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
 
     EXPECT_NE(appliedOutput.find("to=functions.get_weather"), std::string::npos);
     EXPECT_NE(appliedOutput.find("{\"location\":\"Paris\",\"unit\":\"celsius\"}"), std::string::npos);
@@ -428,6 +435,29 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM25_ToolCallWithStringArgs) {
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3VL_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3vl.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    std::string requestJson = R"({"messages":[
+        {"role":"user","content":"What's the weather in Paris?"},
+        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
+    ]})";
+
+    run(requestJson, false);
+
+    ASSERT_TRUE(applySuccess);
+    EXPECT_TRUE(caps.supportsToolCalls);
+
+    EXPECT_NE(appliedOutput.find("<tool_call>"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("get_weather"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("</tool_call>"), std::string::npos);
+}
+
+// =============================================================================
+// Jinja: Qwen3-30B-A3B-Instruct-2507 with tool call containing string arguments
+// Template handles both string and object arguments natively (has is_string check).
+// =============================================================================
+TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3_30b.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
     std::string requestJson = R"({"messages":[

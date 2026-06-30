@@ -158,6 +158,8 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
     if (strArgsFailed || objArgsFailed) {
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Dry-run probe: minja silently failed to render tool calls "
                                                   "(output contains raw JSON dump). Template is not supported by minja for tool calls.");
+        caps.supportsToolCalls = false;
+        caps.supportsTools = false;
         auto probeEnd = std::chrono::steady_clock::now();
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe completed in {} us. Result: FAILURE",
             std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count());
@@ -245,6 +247,8 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, con
     if (strArgsFailed || objArgsFailed) {
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Dry-run probe Jinja: silently failed to render tool calls "
                                                   "(output contains raw JSON dump). Template is not supported for tool calls.");
+        caps.supportsToolCalls = false;
+        caps.supportsTools = false;
         auto probeEnd = std::chrono::steady_clock::now();
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja completed in {} us. Result: FAILURE",
             std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count());

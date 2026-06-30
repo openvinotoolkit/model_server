@@ -37,12 +37,16 @@ using namespace ovms;
 // Chat template applicator type
 enum class TemplateApplicator {
     MINJA,
-    JINJA  // Not implemented yet
+    JINJA  // Implemented in separate translation unit
 };
 
 // Test fixture providing end-to-end: analyze → probe → apply workarounds → apply template
 class ChatTemplateEndToEndTest : public ::testing::Test {
 protected:
+
+    // Any tokenizer will do the job, the only thing we need to do is to do is to change chat template content before use
+    // TODO: Check if should dump custom template into tokenizer directory before test runs
+    // Minja likes to do some work during initialization and we need to ensure it does that with the correct template content
     const std::string& tokenizerPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m", false);
     const std::string& chatTemplatesPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/chat_templates", false);
 
@@ -119,8 +123,6 @@ protected:
             bool probeOk = probeChatTemplateCaps(probeTokenizer, caps);
             if (!probeOk) {
                 std::cout << "=== Probe FAILED: minja cannot render tool calls ===" << std::endl;
-                caps.supportsToolCalls = false;
-                caps.supportsTools = false;
             }
         }
 
@@ -419,6 +421,30 @@ TEST_F(ChatTemplateEndToEndTest, LFM25_ToolCallWithStringArgs) {
 TEST_F(ChatTemplateEndToEndTest, Qwen3VL_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3vl.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen3-vl template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(false);
+
+    ASSERT_TRUE(applySuccess);
+    EXPECT_TRUE(caps.supportsToolCalls);
+
+    EXPECT_NE(appliedOutput.find("<tool_call>"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("get_weather"), std::string::npos);
+    EXPECT_NE(appliedOutput.find("</tool_call>"), std::string::npos);
+}
+
+// =============================================================================
+// Example: Qwen3-30B-A3B-Instruct-2507 with tool call containing string arguments
+// Uses <tool_call>{"name": ..., "arguments": ...}</tool_call> format.
+// Template handles both string and object arguments natively (has is_string check).
+// =============================================================================
+TEST_F(ChatTemplateEndToEndTest, Qwen3_30B_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3_30b.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen3-30b template";
 
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"user","content":"What's the weather in Paris?"})"));
