@@ -61,9 +61,13 @@ internal sealed class MainForm : Form
     private ComboBox runModeInput = null!;
     private CheckBox showTrayCheckBox = null!;
     private CheckBox startAtLoginCheckBox = null!;
+    private Label settingsStatusLabel = null!;
 
     // Logs controls
     private TextBox logTextBox = null!;
+    private Label logPathLabel = null!;
+    private CheckBox autoScrollCheckBox = null!;
+    private Label logStatusLabel = null!;
 
     // Advanced controls
     private TextBox advancedTextBox = null!;
@@ -74,8 +78,8 @@ internal sealed class MainForm : Form
         this.controller = controller;
 
         Text = "OpenVINO Model Server Manager";
-        MinimumSize = new Size(860, 600);
-        Size = new Size(960, 640);
+        MinimumSize = new Size(1020, 680);
+        Size = new Size(1220, 780);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Theme.WindowBackground;
         Font = Theme.BaseFont;
@@ -167,11 +171,13 @@ internal sealed class MainForm : Form
 
         var navFlow = new FlowLayoutPanel
         {
-            Dock = DockStyle.Top,
+            Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            AutoSize = true,
-            Top = 76
+            AutoSize = false,
+            AutoScroll = true,
+            BackColor = Theme.Rail,
+            Padding = new Padding(0, 8, 0, 0)
         };
         navFlow.Controls.Add(CreateNavButton("Dashboard", Glyphs.Dashboard));
         navFlow.Controls.Add(CreateNavButton("Settings", Glyphs.Settings));
@@ -186,6 +192,18 @@ internal sealed class MainForm : Form
         pillInner.Controls.Add(railStatusText);
         statusPill.Controls.Add(pillInner);
 
+        // Dock carving order matters: WinForms carves docked children from the
+        // LAST-added control backwards. We add navFlow (Fill) FIRST so it is
+        // carved first and would normally claim the whole client area; but
+        // controls added AFTER it (statusPill=Bottom, headerBlock=Top) are
+        // carved out of navRail's bounds BEFORE navFlow's Fill is resolved,
+        // because Fill is always resolved last regardless of add order for
+        // DockStyle.Fill vs the other dock styles -- WinForms processes
+        // Top/Bottom/Left/Right docked siblings first (in reverse add order)
+        // and only then gives the remaining space to the Fill control. So the
+        // actual requirement is just that statusPill/headerBlock are added
+        // AFTER navFlow so they end up with a higher z-order and get their
+        // Top/Bottom slices carved out of the rail before Fill claims the rest.
         navRail.Controls.Add(navFlow);
         navRail.Controls.Add(statusPill);
         navRail.Controls.Add(headerBlock);
@@ -204,7 +222,7 @@ internal sealed class MainForm : Form
         contentHost = new Panel { Dock = DockStyle.Fill, BackColor = Theme.WindowBackground, Padding = new Padding(24, 12, 24, 24) };
         SetDoubleBuffered(contentHost);
 
-        pages["Dashboard"] = BuildDashboardPage();
+        pages["Dashboard"] = BuildResponsiveDashboardPage();
         pages["Settings"] = BuildSettingsPage();
         pages["Logs"] = BuildLogsPage();
         pages["Advanced"] = BuildAdvancedPage();
@@ -357,7 +375,7 @@ internal sealed class MainForm : Form
     {
         var button = new Button
         {
-            Text = "  " + text,
+            Text = string.IsNullOrEmpty(glyph) ? text : glyph + "   " + text,
             Font = Theme.NavFont,
             FlatStyle = FlatStyle.Flat,
             ForeColor = Color.White,
@@ -409,6 +427,297 @@ internal sealed class MainForm : Form
     // Dashboard
     // ---------------------------------------------------------------
 
+    private Panel BuildResponsiveDashboardPage()
+    {
+        var page = new Panel { BackColor = Theme.WindowBackground, AutoScroll = true };
+
+        var dashboardStack = new TableLayoutPanel
+        {
+            Location = new Point(0, 0),
+            AutoSize = false,
+            ColumnCount = 1,
+            RowCount = 2,
+            Height = 656,
+            Padding = new Padding(0),
+            Margin = new Padding(0)
+        };
+        dashboardStack.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        dashboardStack.RowStyles.Add(new RowStyle(SizeType.Absolute, 456));
+        dashboardStack.RowStyles.Add(new RowStyle(SizeType.Absolute, 200));
+
+        var metricGrid = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = false,
+            ColumnCount = 2,
+            RowCount = 4,
+            Padding = new Padding(0),
+            Margin = new Padding(0)
+        };
+        for (var i = 0; i < 2; i++)
+        {
+            metricGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        }
+
+        for (var i = 0; i < 4; i++)
+        {
+            metricGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
+        }
+
+        startButton = CreatePrimaryButton("", "Start", Theme.Success);
+        stopButton = CreatePrimaryButton("", "Stop", Theme.Danger);
+        restartButton = CreatePrimaryButton("", "Restart", Theme.Accent);
+
+        foreach (var b in new[] { startButton, stopButton, restartButton })
+        {
+            b.AutoSize = false;
+            b.Anchor = AnchorStyles.None;
+            b.Margin = new Padding(8, 0, 0, 0);
+            b.MinimumSize = new Size(108, 42);
+        }
+
+        startButton.Click += async (_, _) => await RunControlActionAsync("Start", controller.Start);
+        stopButton.Click += async (_, _) => await RunControlActionAsync("Stop", controller.Stop);
+        restartButton.Click += async (_, _) => await RunControlActionAsync("Restart", controller.Restart);
+
+        (Label dot, Label value) AddControlStatusCard(int column, int row)
+        {
+            var card = new CardPanel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 0, 16, 16),
+                Padding = new Padding(18, 14, 18, 14)
+            };
+
+            var cardLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0),
+                Padding = new Padding(0)
+            };
+            cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 248));
+
+            var statusLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 2,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0),
+                Padding = new Padding(0)
+            };
+            statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20));
+            statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            statusLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+            statusLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            var titleLabel = new Label
+            {
+                Text = "Status",
+                Font = Theme.CardTitleFont,
+                ForeColor = Theme.Muted,
+                AutoEllipsis = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0)
+            };
+            var dotLabel = new Label
+            {
+                Text = "\u25CF",
+                Font = new Font("Segoe UI", 10.5f),
+                ForeColor = Theme.Muted,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 5, 0, 0)
+            };
+            var valueLabel = new Label
+            {
+                Text = "-",
+                Font = Theme.CardValueFont,
+                ForeColor = Theme.Text,
+                AutoEllipsis = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 2, 0, 0)
+            };
+
+            statusLayout.Controls.Add(titleLabel, 0, 0);
+            statusLayout.SetColumnSpan(titleLabel, 2);
+            statusLayout.Controls.Add(dotLabel, 0, 1);
+            statusLayout.Controls.Add(valueLabel, 1, 1);
+
+            var actionLayout = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0),
+                Padding = new Padding(0, 19, 0, 0)
+            };
+            actionLayout.Controls.Add(startButton);
+            actionLayout.Controls.Add(stopButton);
+            actionLayout.Controls.Add(restartButton);
+
+            cardLayout.Controls.Add(statusLayout, 0, 0);
+            cardLayout.Controls.Add(actionLayout, 1, 0);
+            card.Controls.Add(cardLayout);
+            metricGrid.Controls.Add(card, column, row);
+            return (dotLabel, valueLabel);
+        }
+
+        (Label dot, Label value) AddStatusCard(string title, string initialValue, bool withDot, int column, int row)
+        {
+            var card = new CardPanel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 0, 16, 16),
+                Padding = new Padding(18, 14, 18, 14)
+            };
+
+            var cardLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = withDot ? 2 : 1,
+                RowCount = 2,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0),
+                Padding = new Padding(0)
+            };
+            if (withDot)
+            {
+                cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20));
+                cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            }
+            else
+            {
+                cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            }
+            cardLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+            cardLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            var titleLabel = new Label
+            {
+                Text = title,
+                Font = Theme.CardTitleFont,
+                ForeColor = Theme.Muted,
+                AutoEllipsis = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0)
+            };
+            var valueLabel = new Label
+            {
+                Text = initialValue,
+                Font = Theme.CardValueFont,
+                ForeColor = Theme.Text,
+                AutoEllipsis = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 2, 0, 0)
+            };
+
+            Label? dotLabel = null;
+            if (withDot)
+            {
+                dotLabel = new Label
+                {
+                    Text = "\u25CF",
+                    Font = new Font("Segoe UI", 10.5f),
+                    ForeColor = Theme.Muted,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Margin = new Padding(0, 5, 0, 0)
+                };
+                cardLayout.Controls.Add(titleLabel, 0, 0);
+                cardLayout.SetColumnSpan(titleLabel, 2);
+                cardLayout.Controls.Add(dotLabel, 0, 1);
+                cardLayout.Controls.Add(valueLabel, 1, 1);
+            }
+            else
+            {
+                cardLayout.Controls.Add(titleLabel, 0, 0);
+                cardLayout.Controls.Add(valueLabel, 0, 1);
+            }
+
+            card.Controls.Add(cardLayout);
+            metricGrid.Controls.Add(card, column, row);
+            return (dotLabel!, valueLabel);
+        }
+
+        (statusDotLabel, statusValueLabel) = AddControlStatusCard(0, 0);
+        (_, restUrlValueLabel) = AddStatusCard("REST endpoint", "-", withDot: false, 1, 0);
+        (_, grpcValueLabel) = AddStatusCard("gRPC port", "-", withDot: false, 0, 1);
+        (_, modelsValueLabel) = AddStatusCard("Models served", "-", withDot: false, 1, 1);
+        (healthDotLabel, healthValueLabel) = AddStatusCard("Health", "-", withDot: true, 0, 2);
+        (_, variantValueLabel) = AddStatusCard("Package variant", "-", withDot: false, 1, 2);
+        (_, runModeValueLabel) = AddStatusCard("Runtime mode", "-", withDot: false, 0, 3);
+
+        var actionsCard = new CardPanel { Dock = DockStyle.Fill, Margin = new Padding(0, 10, 0, 0), Padding = new Padding(14) };
+        var actionsLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 3,
+            RowCount = 2,
+            Margin = new Padding(0),
+            Padding = new Padding(0)
+        };
+        for (var i = 0; i < 3; i++)
+        {
+            actionsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
+        }
+        actionsLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        actionsLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+
+        var openLogsButton = CreateSecondaryButton("Open Logs");
+        var openModelFolderButton = CreateSecondaryButton("Open Model Folder");
+
+        foreach (var b in new[] { openLogsButton, openModelFolderButton })
+        {
+            b.AutoSize = false;
+            b.Anchor = AnchorStyles.None;
+            b.Margin = new Padding(0, 0, 10, 10);
+            b.MinimumSize = new Size(120, 48);
+        }
+
+        openLogsButton.Click += (_, _) => OpenFolderFor(TryLoadSettings()?.LogPath);
+        openModelFolderButton.Click += (_, _) => OpenFolder(TryLoadSettings()?.ModelRepositoryPath);
+
+        actionsLayout.Controls.Add(openLogsButton, 0, 0);
+        actionsLayout.Controls.Add(openModelFolderButton, 1, 0);
+        actionsLayout.SetColumnSpan(openModelFolderButton, 2);
+        actionsCard.Controls.Add(actionsLayout);
+
+        dashboardStack.Controls.Add(metricGrid, 0, 0);
+        dashboardStack.Controls.Add(actionsCard, 0, 1);
+        page.Controls.Add(dashboardStack);
+
+        void SizeActionButtons()
+        {
+            foreach (var button in new[] { startButton, stopButton, restartButton, openLogsButton, openModelFolderButton })
+            {
+                var preferred = TextRenderer.MeasureText(button.Text, button.Font).Width + 72;
+                button.Size = new Size(Math.Clamp(preferred, 120, 280), 52);
+            }
+        }
+
+        void ResizeDashboard()
+        {
+            var availableWidth = ClientSize.Width - navRail.Width - contentHost.Padding.Horizontal - 28;
+            dashboardStack.Width = Math.Max(560, availableWidth);
+            SizeActionButtons();
+        }
+
+        page.Resize += (_, _) => ResizeDashboard();
+        Resize += (_, _) => ResizeDashboard();
+        ResizeDashboard();
+        return page;
+    }
+
     private Panel BuildDashboardPage()
     {
         var page = new Panel { BackColor = Theme.WindowBackground };
@@ -424,10 +733,10 @@ internal sealed class MainForm : Form
 
         (Label dot, Label value) AddStatusCard(string title, string initialValue, bool withDot)
         {
-            var card = CreateCard(220, 92);
+            var card = CreateCard(250, 96);
             var titleLabel = new Label { Text = title, Font = Theme.CardTitleFont, ForeColor = Theme.Muted, AutoSize = true, Location = new Point(16, 14) };
             Label? dotLabel = null;
-            var valueLabel = new Label { Text = initialValue, Font = Theme.CardValueFont, ForeColor = Theme.Text, AutoSize = true, Location = new Point(withDot ? 32 : 16, 42) };
+            var valueLabel = new Label { Text = initialValue, Font = Theme.CardValueFont, ForeColor = Theme.Text, AutoSize = true, Location = new Point(withDot ? 34 : 16, 46) };
             if (withDot)
             {
                 dotLabel = new Label { Text = "●", Font = new Font("Segoe UI", 11f), ForeColor = Theme.Muted, AutoSize = true, Location = new Point(16, 44) };
@@ -447,12 +756,12 @@ internal sealed class MainForm : Form
         (_, variantValueLabel) = AddStatusCard("Package variant", "-", withDot: false);
         (_, runModeValueLabel) = AddStatusCard("Runtime mode", "-", withDot: false);
 
-        var actionsCard = new CardPanel { Dock = DockStyle.Top, Height = 76, Margin = new Padding(0, 8, 0, 0) };
-        var actionsFlow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = true, Padding = new Padding(4) };
+        var actionsCard = new CardPanel { Dock = DockStyle.Top, Height = 84, Margin = new Padding(0, 8, 0, 0) };
+        var actionsFlow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = false, AutoScroll = true, Padding = new Padding(12, 10, 12, 10) };
 
-        startButton = CreatePrimaryButton(Glyphs.Play, "Start", Theme.Success);
-        stopButton = CreatePrimaryButton(Glyphs.Stop, "Stop", Theme.Danger);
-        restartButton = CreatePrimaryButton(Glyphs.Restart, "Restart", Theme.Accent);
+        startButton = CreatePrimaryButton("▶", "Start", Theme.Success);
+        stopButton = CreatePrimaryButton("■", "Stop", Theme.Danger);
+        restartButton = CreatePrimaryButton("↻", "Restart", Theme.Accent);
         var openLogsButton = CreateSecondaryButton("Open Logs");
         var openModelFolderButton = CreateSecondaryButton("Open Model Folder");
 
@@ -513,6 +822,9 @@ internal sealed class MainForm : Form
         if (settings is null)
         {
             statusValueLabel.Text = "Settings unavailable";
+            startButton.Visible = false;
+            stopButton.Visible = false;
+            restartButton.Visible = false;
             return;
         }
 
@@ -522,6 +834,9 @@ internal sealed class MainForm : Form
         railStatusDot.ForeColor = runtimeStatus.Running ? Theme.Success : Theme.Muted;
         railStatusText.Text = runtimeStatus.Running ? "Running" : "Stopped";
         railStatusText.ForeColor = runtimeStatus.Running ? Theme.Text : Theme.Muted;
+        startButton.Visible = !runtimeStatus.Running;
+        stopButton.Visible = runtimeStatus.Running;
+        restartButton.Visible = runtimeStatus.Running;
 
         runModeValueLabel.Text = settings.RunMode;
         restUrlValueLabel.Text = $"{settings.BindAddress}:{settings.RestPort}";
@@ -572,74 +887,184 @@ internal sealed class MainForm : Form
     {
         var page = new Panel { BackColor = Theme.WindowBackground, AutoScroll = true };
 
-        var card = new CardPanel { Dock = DockStyle.Top, Height = 430 };
-        var cardLayout = new TableLayoutPanel
+        var serverCard = CreateTitledCard("Server", 320);
+        var serverLayout = CreateSettingsTable();
+
+        var row = 0;
+        AddSettingsRow(serverLayout, "REST port:", restPortInput = new NumericUpDown { Minimum = 1, Maximum = 65535, Width = 120, Margin = new Padding(3, 6, 3, 3) }, row++);
+        AddSettingsRow(serverLayout, "gRPC port (0 = disabled):", grpcPortInput = new NumericUpDown { Minimum = 0, Maximum = 65535, Width = 120, Margin = new Padding(3, 6, 3, 3) }, row++);
+        AddSettingsRow(serverLayout, "Bind address:", bindAddressInput = new TextBox { Width = 240, Margin = new Padding(3, 6, 3, 3) }, row++);
+
+        logLevelInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 140, Margin = new Padding(3, 6, 3, 3) };
+        logLevelInput.Items.AddRange(new object[] { "ERROR", "WARNING", "INFO", "DEBUG", "TRACE" });
+        AddSettingsRow(serverLayout, "Log level:", logLevelInput, row++);
+
+        logPathInput = new TextBox { Width = 360, Margin = new Padding(3, 6, 3, 3) };
+        var browseLogButton = CreateSecondaryButton("Browse...");
+        browseLogButton.Margin = new Padding(6, 3, 3, 3);
+        browseLogButton.Click += (_, _) =>
+        {
+            using var dialog = new SaveFileDialog
+            {
+                Title = "Select log file",
+                CheckFileExists = false,
+                OverwritePrompt = false,
+                FileName = Path.GetFileName(logPathInput.Text),
+                InitialDirectory = SafeDirectoryName(logPathInput.Text),
+                Filter = "Log files (*.log)|*.log|All files (*.*)|*.*"
+            };
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+            {
+                logPathInput.Text = dialog.FileName;
+            }
+        };
+        AddSettingsRowWithButton(serverLayout, "Log path:", logPathInput, browseLogButton, row++);
+
+        modelRepoInput = new TextBox { Width = 360, Margin = new Padding(3, 6, 3, 3) };
+        var browseModelRepoButton = CreateSecondaryButton("Browse...");
+        browseModelRepoButton.Margin = new Padding(6, 3, 3, 3);
+        browseModelRepoButton.Click += (_, _) =>
+        {
+            using var dialog = new FolderBrowserDialog
+            {
+                Description = "Select model repository folder",
+                SelectedPath = Directory.Exists(modelRepoInput.Text) ? modelRepoInput.Text : ""
+            };
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+            {
+                modelRepoInput.Text = dialog.SelectedPath;
+            }
+        };
+        AddSettingsRowWithButton(serverLayout, "Model repository path:", modelRepoInput, browseModelRepoButton, row++);
+
+        serverCard.Controls.Add(serverLayout);
+
+        var startupCard = CreateTitledCard("Startup & tray", 200);
+        var startupLayout = CreateSettingsTable();
+
+        row = 0;
+        runModeInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180, Margin = new Padding(3, 6, 3, 3) };
+        runModeInput.Items.AddRange(new object[] { "user-login", "service", "manual" });
+        AddSettingsRow(startupLayout, "Startup mode:", runModeInput, row++);
+
+        showTrayCheckBox = new CheckBox { Margin = new Padding(3, 10, 3, 3) };
+        AddSettingsRow(startupLayout, "Show tray icon:", showTrayCheckBox, row++);
+
+        startAtLoginCheckBox = new CheckBox { Margin = new Padding(3, 10, 3, 3) };
+        AddSettingsRow(startupLayout, "Start at login:", startAtLoginCheckBox, row++);
+
+        startupCard.Controls.Add(startupLayout);
+
+        var footer = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 56,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Padding = new Padding(0, 14, 0, 0),
+            Margin = new Padding(0)
+        };
+        var saveButton = CreatePrimaryButton("", "Save", Theme.Accent);
+        var resetButton = CreateSecondaryButton("Reset");
+        saveButton.Margin = new Padding(0, 0, 10, 0);
+        resetButton.Margin = new Padding(0, 0, 16, 0);
+        settingsStatusLabel = new Label
+        {
+            Text = "",
+            AutoSize = true,
+            Font = Theme.SemiboldFont,
+            Margin = new Padding(0, 10, 0, 0)
+        };
+
+        saveButton.Click += async (_, _) => await SaveSettingsAsync();
+        resetButton.Click += (_, _) =>
+        {
+            LoadSettingsIntoForm();
+            settingsStatusLabel.ForeColor = Theme.Muted;
+            settingsStatusLabel.Text = "Reloaded from disk.";
+        };
+
+        footer.Controls.Add(saveButton);
+        footer.Controls.Add(resetButton);
+        footer.Controls.Add(settingsStatusLabel);
+
+        // Dock-Top stacking: add bottom-most visual element first so later
+        // Top-docked controls are carved above it (see BuildShell comment).
+        page.Controls.Add(footer);
+        page.Controls.Add(startupCard);
+        page.Controls.Add(serverCard);
+        return page;
+    }
+
+    private static CardPanel CreateTitledCard(string title, int height)
+    {
+        var card = new CardPanel { Dock = DockStyle.Top, Height = height, Margin = new Padding(0, 0, 0, 16) };
+        var titleLabel = new Label
+        {
+            Text = title,
+            Font = Theme.CardTitleFont,
+            ForeColor = Theme.Text,
+            AutoSize = true,
+            Dock = DockStyle.Top,
+            Margin = new Padding(0, 0, 0, 12)
+        };
+        card.Controls.Add(titleLabel);
+        return card;
+    }
+
+    private static TableLayoutPanel CreateSettingsTable()
+    {
+        var table = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             AutoSize = false,
-            Padding = new Padding(4, 4, 4, 4)
+            Padding = new Padding(0, 32, 0, 0)
         };
-        cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        return table;
+    }
 
-        var sectionTitle = new Label { Text = "Server settings", Font = Theme.CardTitleFont, ForeColor = Theme.Text, AutoSize = true, Margin = new Padding(0, 0, 0, 12) };
-        cardLayout.Controls.Add(sectionTitle, 0, 0);
-        cardLayout.SetColumnSpan(sectionTitle, 2);
+    private static void AddSettingsRow(TableLayoutPanel table, string label, Control field, int row)
+    {
+        table.Controls.Add(new Label { Text = label, AutoSize = true, ForeColor = Theme.Text, Margin = new Padding(3, 10, 16, 3) }, 0, row);
+        table.Controls.Add(field, 1, row);
+    }
 
-        void AddLabel(string text, int row)
+    private static void AddSettingsRowWithButton(TableLayoutPanel table, string label, Control field, Control button, int row)
+    {
+        var inline = new FlowLayoutPanel
         {
-            cardLayout.Controls.Add(new Label { Text = text, AutoSize = true, ForeColor = Theme.Text, Margin = new Padding(3, 10, 16, 3) }, 0, row);
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            Margin = new Padding(0)
+        };
+        inline.Controls.Add(field);
+        inline.Controls.Add(button);
+        table.Controls.Add(new Label { Text = label, AutoSize = true, ForeColor = Theme.Text, Margin = new Padding(3, 10, 16, 3) }, 0, row);
+        table.Controls.Add(inline, 1, row);
+    }
+
+    private static string SafeDirectoryName(string path)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(path);
+            return string.IsNullOrEmpty(dir) ? "" : dir;
         }
+        catch
+        {
+            return "";
+        }
+    }
 
-        var row = 1;
-        AddLabel("REST port:", row);
-        restPortInput = new NumericUpDown { Minimum = 1, Maximum = 65535, Width = 120, Margin = new Padding(3, 6, 3, 3) };
-        cardLayout.Controls.Add(restPortInput, 1, row++);
-
-        AddLabel("gRPC port (0 = disabled):", row);
-        grpcPortInput = new NumericUpDown { Minimum = 0, Maximum = 65535, Width = 120, Margin = new Padding(3, 6, 3, 3) };
-        cardLayout.Controls.Add(grpcPortInput, 1, row++);
-
-        AddLabel("Bind address:", row);
-        bindAddressInput = new TextBox { Width = 240, Margin = new Padding(3, 6, 3, 3) };
-        cardLayout.Controls.Add(bindAddressInput, 1, row++);
-
-        AddLabel("Log level:", row);
-        logLevelInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 140, Margin = new Padding(3, 6, 3, 3) };
-        logLevelInput.Items.AddRange(new object[] { "ERROR", "WARNING", "INFO", "DEBUG", "TRACE" });
-        cardLayout.Controls.Add(logLevelInput, 1, row++);
-
-        AddLabel("Log path:", row);
-        logPathInput = new TextBox { Width = 420, Margin = new Padding(3, 6, 3, 3) };
-        cardLayout.Controls.Add(logPathInput, 1, row++);
-
-        AddLabel("Model repository path:", row);
-        modelRepoInput = new TextBox { Width = 420, Margin = new Padding(3, 6, 3, 3) };
-        cardLayout.Controls.Add(modelRepoInput, 1, row++);
-
-        AddLabel("Startup mode:", row);
-        runModeInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180, Margin = new Padding(3, 6, 3, 3) };
-        runModeInput.Items.AddRange(new object[] { "user-login", "service", "manual" });
-        cardLayout.Controls.Add(runModeInput, 1, row++);
-
-        AddLabel("Show tray icon:", row);
-        showTrayCheckBox = new CheckBox { Margin = new Padding(3, 10, 3, 3) };
-        cardLayout.Controls.Add(showTrayCheckBox, 1, row++);
-
-        AddLabel("Start at login:", row);
-        startAtLoginCheckBox = new CheckBox { Margin = new Padding(3, 10, 3, 3) };
-        cardLayout.Controls.Add(startAtLoginCheckBox, 1, row++);
-
-        var saveButton = CreatePrimaryButton(Glyphs.Save, "Save", Theme.Accent);
-        saveButton.Margin = new Padding(3, 18, 3, 3);
-        saveButton.Click += async (_, _) => await SaveSettingsAsync();
-        cardLayout.Controls.Add(new Label(), 0, row);
-        cardLayout.Controls.Add(saveButton, 1, row++);
-
-        card.Controls.Add(cardLayout);
-        page.Controls.Add(card);
-        return page;
+    private static bool IsLocalBindAddress(string bindAddress)
+    {
+        return string.Equals(bindAddress, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(bindAddress, "localhost", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(bindAddress, "::1", StringComparison.OrdinalIgnoreCase);
     }
 
     private void LoadSettingsIntoForm()
@@ -666,12 +1091,16 @@ internal sealed class MainForm : Form
         var current = TryLoadSettings();
         if (current is null)
         {
+            settingsStatusLabel.ForeColor = Theme.Danger;
+            settingsStatusLabel.Text = "Error: could not load existing settings.";
             MessageBox.Show(this, "Could not load existing settings.", "Save", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(bindAddressInput.Text))
         {
+            settingsStatusLabel.ForeColor = Theme.Danger;
+            settingsStatusLabel.Text = "Error: bind address cannot be empty.";
             MessageBox.Show(this, "Bind address cannot be empty.", "Save", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
@@ -709,8 +1138,18 @@ internal sealed class MainForm : Form
         }
         catch (Exception ex)
         {
+            settingsStatusLabel.ForeColor = Theme.Danger;
+            settingsStatusLabel.Text = $"Error: {ex.Message}";
             MessageBox.Show(this, ex.Message, "Save", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
+        }
+
+        settingsStatusLabel.ForeColor = Theme.Success;
+        settingsStatusLabel.Text = "Saved.";
+        if (!IsLocalBindAddress(updated.BindAddress))
+        {
+            settingsStatusLabel.ForeColor = Theme.Warning;
+            settingsStatusLabel.Text = "Saved. Non-local bind address - server may be reachable from other devices.";
         }
 
         if (commandLineAffectingChanged)
@@ -773,13 +1212,40 @@ internal sealed class MainForm : Form
         var toolbar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 40, FlowDirection = FlowDirection.LeftToRight, Padding = new Padding(0, 0, 0, 8) };
         var refreshLogsButton = CreateIconButton(Glyphs.Refresh, "Refresh");
         var openFolderButton = CreateIconButton(Glyphs.OpenFolder, "Open Folder");
+        var clearLogsButton = CreateIconButton("✕", "Clear (display only)");
         refreshLogsButton.Margin = new Padding(0, 0, 8, 0);
+        openFolderButton.Margin = new Padding(0, 0, 8, 0);
+        clearLogsButton.Margin = new Padding(0, 0, 16, 0);
+
+        autoScrollCheckBox = new CheckBox { Text = "Auto-scroll", Checked = true, AutoSize = true, Margin = new Padding(0, 8, 16, 0) };
 
         refreshLogsButton.Click += async (_, _) => await RefreshLogsAsync();
         openFolderButton.Click += (_, _) => OpenFolderFor(TryLoadSettings()?.LogPath);
+        clearLogsButton.Click += (_, _) =>
+        {
+            logTextBox.Clear();
+            logStatusLabel.Text = "Display cleared (file untouched).";
+        };
+
+        logPathLabel = new Label
+        {
+            Text = "",
+            AutoSize = true,
+            ForeColor = Theme.Muted,
+            TextAlign = ContentAlignment.MiddleRight,
+            Anchor = AnchorStyles.Right,
+            Margin = new Padding(8, 8, 0, 0)
+        };
 
         toolbar.Controls.Add(refreshLogsButton);
         toolbar.Controls.Add(openFolderButton);
+        toolbar.Controls.Add(clearLogsButton);
+        toolbar.Controls.Add(autoScrollCheckBox);
+        toolbar.Controls.Add(logPathLabel);
+
+        var statusBar = new Panel { Dock = DockStyle.Bottom, Height = 24, Padding = new Padding(0, 4, 0, 0) };
+        logStatusLabel = new Label { Text = "", AutoSize = true, ForeColor = Theme.Muted, Dock = DockStyle.Left };
+        statusBar.Controls.Add(logStatusLabel);
 
         var logCard = new CardPanel { Dock = DockStyle.Fill, Padding = new Padding(1), CardBackColor = Theme.LogBackground, BorderColor = Theme.LogBackground };
         logTextBox = new TextBox
@@ -796,17 +1262,35 @@ internal sealed class MainForm : Form
         };
         logCard.Controls.Add(logTextBox);
 
+        // Dock-Top stacking: add bottom-most visual element first (see
+        // BuildShell comment for why this ordering yields correct results).
         page.Controls.Add(logCard);
+        page.Controls.Add(statusBar);
         page.Controls.Add(toolbar);
         return page;
     }
 
     private async Task RefreshLogsAsync()
     {
+        var settings = TryLoadSettings();
+        logPathLabel.Text = settings?.LogPath ?? "";
+
+        if (settings is null || string.IsNullOrEmpty(settings.LogPath) || !File.Exists(settings.LogPath))
+        {
+            logTextBox.Text = "(log file not found)";
+            logStatusLabel.Text = $"0 lines - last refreshed {DateTime.Now:T}";
+            return;
+        }
+
         var lines = await Task.Run(() => controller.TailLog(500));
         logTextBox.Text = string.Join(Environment.NewLine, lines);
-        logTextBox.SelectionStart = logTextBox.Text.Length;
-        logTextBox.ScrollToCaret();
+        if (autoScrollCheckBox.Checked)
+        {
+            logTextBox.SelectionStart = logTextBox.Text.Length;
+            logTextBox.ScrollToCaret();
+        }
+
+        logStatusLabel.Text = $"{lines.Count} lines - last refreshed {DateTime.Now:T}";
     }
 
     // ---------------------------------------------------------------
@@ -815,16 +1299,12 @@ internal sealed class MainForm : Form
 
     private Panel BuildAdvancedPage()
     {
-        var page = new Panel { BackColor = Theme.WindowBackground };
+        var page = new Panel { BackColor = Theme.WindowBackground, AutoScroll = true };
 
-        var card = new CardPanel { Dock = DockStyle.Top, Height = 260 };
-        var cardLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3 };
-        cardLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        cardLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        cardLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-        var sectionTitle = new Label { Text = "Effective command line", Font = Theme.CardTitleFont, ForeColor = Theme.Text, AutoSize = true, Margin = new Padding(0, 0, 0, 8) };
-        cardLayout.Controls.Add(sectionTitle, 0, 0);
+        var envCard = CreateTitledCard("Environment", 260);
+        var envLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(0, 32, 0, 0) };
+        envLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        envLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         advancedTextBox = new TextBox
         {
@@ -837,30 +1317,63 @@ internal sealed class MainForm : Form
             BorderStyle = BorderStyle.FixedSingle,
             Font = Theme.MonoFont
         };
-        cardLayout.Controls.Add(advancedTextBox, 0, 1);
+        envLayout.Controls.Add(advancedTextBox, 0, 0);
 
-        advancedStatusLabel = new Label { Text = "", ForeColor = Theme.Muted, AutoSize = true, Margin = new Padding(0, 8, 0, 0) };
-        cardLayout.Controls.Add(advancedStatusLabel, 0, 2);
+        var copyButton = CreateSecondaryButton("Copy");
+        copyButton.Margin = new Padding(0, 8, 0, 0);
+        copyButton.Click += (_, _) =>
+        {
+            try
+            {
+                var settings = TryLoadSettings();
+                var commandLine = settings is null ? "" : controller.EffectiveCommandLine();
+                if (!string.IsNullOrEmpty(commandLine))
+                {
+                    Clipboard.SetText(commandLine);
+                }
+            }
+            catch
+            {
+                // Best effort; clipboard access can fail in restricted environments.
+            }
+        };
+        envLayout.Controls.Add(copyButton, 0, 1);
 
-        card.Controls.Add(cardLayout);
+        envCard.Controls.Add(envLayout);
 
-        var buttonPanel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 56, Padding = new Padding(0, 16, 0, 0) };
-        var repairButton = CreatePrimaryButton(Glyphs.Repair, "Repair Package", Theme.Accent);
-        var exportButton = CreateSecondaryButton("Export Diagnostics");
+        var maintenanceCard = CreateTitledCard("Maintenance", 170);
+        var buttonPanel = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(0, 32, 0, 0) };
+        var repairButton = CreatePrimaryButton("", "Repair Package", Theme.Accent);
         var validateButton = CreateSecondaryButton("Validate Environment");
+        var exportButton = CreateSecondaryButton("Export Diagnostics");
         repairButton.Margin = new Padding(0, 0, 10, 0);
-        exportButton.Margin = new Padding(0, 0, 10, 0);
+        validateButton.Margin = new Padding(0, 0, 10, 0);
 
         repairButton.Click += async (_, _) => await RunAdvancedActionAsync("Repair", () => controller.Repair());
         validateButton.Click += async (_, _) => await RunAdvancedActionAsync("Validate Environment", () => controller.ValidateEnvironment());
         exportButton.Click += async (_, _) => await ExportDiagnosticsAsync();
 
         buttonPanel.Controls.Add(repairButton);
-        buttonPanel.Controls.Add(exportButton);
         buttonPanel.Controls.Add(validateButton);
+        buttonPanel.Controls.Add(exportButton);
 
-        page.Controls.Add(buttonPanel);
-        page.Controls.Add(card);
+        advancedStatusLabel = new Label
+        {
+            Text = "",
+            ForeColor = Theme.Muted,
+            Font = new Font(Theme.SemiboldFont.FontFamily, 11f, FontStyle.Bold),
+            AutoSize = true,
+            Dock = DockStyle.Top,
+            Margin = new Padding(0, 14, 0, 0)
+        };
+
+        maintenanceCard.Controls.Add(advancedStatusLabel);
+        maintenanceCard.Controls.Add(buttonPanel);
+
+        // Dock-Top stacking: add bottom-most visual element first (see
+        // BuildShell comment for why this ordering yields correct results).
+        page.Controls.Add(maintenanceCard);
+        page.Controls.Add(envCard);
         return page;
     }
 
@@ -883,10 +1396,13 @@ internal sealed class MainForm : Form
             commandLine = $"(error building command line: {ex.Message})";
         }
 
+        var managerVersion = typeof(MainForm).Assembly.GetName().Version;
+
         advancedTextBox.Text = string.Join(Environment.NewLine, new[]
         {
             $"Install dir: {settings.InstallDir}",
             $"Data dir: {controller.DataDir}",
+            $"Manager version: {managerVersion}",
             "",
             "Effective command line:",
             commandLine
@@ -962,8 +1478,9 @@ internal sealed class NavButton : Panel
         PageName = pageName;
         this.glyph = glyph;
 
-        Dock = DockStyle.Top;
-        Height = 40;
+        Width = 210;
+        Height = 44;
+        Margin = new Padding(0);
         Cursor = Cursors.Hand;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
 
@@ -972,7 +1489,7 @@ internal sealed class NavButton : Panel
             Text = glyph,
             Font = Theme.IconFont(14f),
             AutoSize = false,
-            Size = new Size(36, 40),
+            Size = new Size(36, 44),
             TextAlign = ContentAlignment.MiddleCenter,
             Location = new Point(10, 0),
             BackColor = Color.Transparent
@@ -982,7 +1499,7 @@ internal sealed class NavButton : Panel
             Text = pageName,
             Font = Theme.NavFont,
             AutoSize = false,
-            Size = new Size(150, 40),
+            Size = new Size(158, 44),
             TextAlign = ContentAlignment.MiddleLeft,
             Location = new Point(44, 0),
             BackColor = Color.Transparent
