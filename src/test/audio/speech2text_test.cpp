@@ -445,6 +445,14 @@ TEST_F(Speech2TextHttpTest, positiveSegmentTimestamps) {
     EXPECT_TRUE(d["text"].IsString());
     EXPECT_TRUE(d.HasMember("segments"));
     EXPECT_TRUE(d["segments"].IsArray());
+    ASSERT_GT(d["segments"].Size(), 0u);
+    ASSERT_TRUE(d["segments"][0].IsObject());
+    ASSERT_TRUE(d["segments"][0].HasMember("text"));
+    EXPECT_TRUE(d["segments"][0]["text"].IsString());
+    ASSERT_TRUE(d["segments"][0].HasMember("start"));
+    EXPECT_TRUE(d["segments"][0]["start"].IsNumber());
+    ASSERT_TRUE(d["segments"][0].HasMember("end"));
+    EXPECT_TRUE(d["segments"][0]["end"].IsNumber());
     EXPECT_FALSE(d.HasMember("words"));
 }
 
@@ -481,6 +489,14 @@ TEST_F(Speech2TextHttpTest, positiveWordTimestamps) {
     EXPECT_TRUE(d["text"].IsString());
     EXPECT_TRUE(d.HasMember("words"));
     EXPECT_TRUE(d["words"].IsArray());
+    ASSERT_GT(d["words"].Size(), 0u);
+    ASSERT_TRUE(d["words"][0].IsObject());
+    ASSERT_TRUE(d["words"][0].HasMember("word"));
+    EXPECT_TRUE(d["words"][0]["word"].IsString());
+    ASSERT_TRUE(d["words"][0].HasMember("start"));
+    EXPECT_TRUE(d["words"][0]["start"].IsNumber());
+    ASSERT_TRUE(d["words"][0].HasMember("end"));
+    EXPECT_TRUE(d["words"][0]["end"].IsNumber());
     EXPECT_FALSE(d.HasMember("segments"));
 }
 
@@ -521,8 +537,24 @@ TEST_F(Speech2TextHttpTest, positiveBothTimestampsTypes) {
     EXPECT_TRUE(d["text"].IsString());
     EXPECT_TRUE(d.HasMember("words"));
     EXPECT_TRUE(d["words"].IsArray());
+    ASSERT_GT(d["words"].Size(), 0u);
+    ASSERT_TRUE(d["words"][0].IsObject());
+    ASSERT_TRUE(d["words"][0].HasMember("word"));
+    EXPECT_TRUE(d["words"][0]["word"].IsString());
+    ASSERT_TRUE(d["words"][0].HasMember("start"));
+    EXPECT_TRUE(d["words"][0]["start"].IsNumber());
+    ASSERT_TRUE(d["words"][0].HasMember("end"));
+    EXPECT_TRUE(d["words"][0]["end"].IsNumber());
     EXPECT_TRUE(d.HasMember("segments"));
     EXPECT_TRUE(d["segments"].IsArray());
+    ASSERT_GT(d["segments"].Size(), 0u);
+    ASSERT_TRUE(d["segments"][0].IsObject());
+    ASSERT_TRUE(d["segments"][0].HasMember("text"));
+    EXPECT_TRUE(d["segments"][0]["text"].IsString());
+    ASSERT_TRUE(d["segments"][0].HasMember("start"));
+    EXPECT_TRUE(d["segments"][0]["start"].IsNumber());
+    ASSERT_TRUE(d["segments"][0].HasMember("end"));
+    EXPECT_TRUE(d["segments"][0]["end"].IsNumber());
 }
 
 TEST_F(Speech2TextHttpTest, invalidFile) {
