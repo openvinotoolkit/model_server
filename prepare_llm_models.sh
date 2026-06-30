@@ -39,7 +39,6 @@ MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 GPT_OSS_MODEL="openai/gpt-oss-20b"
 DEVSTRAL_MODEL="unsloth/Devstral-Small-2507"
 LFM2_MODEL="LiquidAI/LFM2-2.6B"
-LFM25_MODEL="LiquidAI/LFM2.5-8B-A1B"
 GEMMA4_MODEL="OpenVINO/gemma-4-E4B-it-int4-ov"
 
 if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then echo "Prepare models with python > 3.8."; exit 1 ; fi
