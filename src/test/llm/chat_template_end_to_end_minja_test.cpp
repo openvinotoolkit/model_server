@@ -378,9 +378,18 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_ToolCallWithStringArgs) {
     run(true);
 
     ASSERT_TRUE(applySuccess);
+
     EXPECT_EQ(analysisResult.detectedModelFamily, "hermes3");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "hermes3");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
+
+    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -416,9 +425,17 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
     run(true);
 
     ASSERT_TRUE(applySuccess);
+
     EXPECT_EQ(analysisResult.detectedModelFamily, "mistral");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "mistral");
+    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+
+    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(</s>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]</s>)";
     EXPECT_EQ(appliedOutput, expectedOutput);
