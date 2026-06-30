@@ -394,6 +394,13 @@ ovms_cc_library(
     alwayslink = 1,
 )
 
+# cc_import wrapper for libmediapipe_framework.so to force proper linking
+cc_import(
+    name = "libmediapipe_framework_import",
+    shared_library = "//src:libmediapipe_framework.so",
+    visibility = ["//visibility:private"],
+)
+
 # Plugin shared library containing MediaPipe Python calculators
 # This library is loaded dynamically at runtime, making Python calculators
 # optional and keeping the main ovms binary free from direct Python dependencies
@@ -431,7 +438,11 @@ cc_binary(
         "//src:windows": [
             "/FORCE:MULTIPLE",  # Allow multiple symbol definitions for glog (linked in both this DLL and main binary)
         ],
-        "//conditions:default": [],
+        "//conditions:default": [
+            "-Wl,--as-needed",  # Only link needed symbols
+            "-Wl,--allow-shlib-undefined",  # Allow undefined symbols in plugin (resolved at runtime from main binary)
+            "-Wl,-rpath,/ovms/lib:/opt/intel/openvino/runtime/lib/intel64",  # Search for dependencies in deployment and OV directories
+        ],
     }),
     local_defines = COMMON_LOCAL_DEFINES,
     visibility = ["//visibility:public"],

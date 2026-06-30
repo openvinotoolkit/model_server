@@ -146,6 +146,60 @@ cc_shared_library(
     ],
 )
 
+# Build MediaPipe as a proper shared library (.so) that both main binary and plugin will link to
+# This target collects all MediaPipe dependencies and exports them in a single .so file
+# Ensures type-id consistency - both main binary and plugin use the SAME MediaPipe copy
+ovms_cc_library(
+    name = "libmediapipe_framework_impl",
+    srcs = [],
+    hdrs = [],
+    deps = select({
+        "//:not_disable_mediapipe": [
+            "@mediapipe//mediapipe/framework:calculator_framework",
+            "@mediapipe//mediapipe/framework:calculator_graph",
+            "@mediapipe//mediapipe/framework/formats:image_frame",
+            "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
+            "@mediapipe//mediapipe/framework/formats:tensor",
+            "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
+            "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
+            "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
+            "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
+            "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
+            "@mediapipe//mediapipe/calculators/geti/utils:utils",
+            "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
+            "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
+            "@com_github_glog_glog//:glog",
+            "opencv_dep",
+        ],
+        "//:disable_mediapipe": [],
+    }),
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+    linkstatic = 1,
+)
+
+cc_binary(
+    name = "mediapipe_framework_shared",
+    srcs = [],
+    deps = [":libmediapipe_framework_impl"],
+    linkshared = 1,
+    visibility = ["//visibility:public"],
+)
+
+# Alias for backward compatibility
+alias(
+    name = "libmediapipe_framework.so",
+    actual = ":mediapipe_framework_shared",
+    visibility = ["//visibility:public"],
+)
+
+# cc_import wrapper to force proper DT_NEEDED linking in binaries that depend on it
+cc_import(
+    name = "mediapipe_framework_shared_import",
+    shared_library = ":mediapipe_framework_shared",
+    visibility = ["//visibility:public"],
+)
+
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 mediapipe_proto_library(
@@ -728,19 +782,13 @@ ovms_cc_library(
             "//:not_disable_python": [],
             "//:disable_python": []
         }) + select({
-            "//conditions:default": [],
             "//:not_disable_mediapipe" : [
+                # Link to shared MediaPipe library instead of static linking
+                # This allows plugin to load dynamically without type-id collisions
+                "//src:mediapipe_framework_shared",
                 "//src/mediapipe_internal:libovms_mediapipe",
                 "libovms_mediapipe_kfs_executor",
                 "libovms_mediapipe_http_executor",
-                "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
-                "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
-                "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
-                "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
-                "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
-                "@mediapipe//mediapipe/calculators/geti/utils:utils",
-                "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
-                "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
                 "//src/llm:openai_completions_api_handler",
                 "//src/image_gen:image_gen_calculator",
                 "//src/audio/speech_to_text:s2t_calculator",
@@ -752,6 +800,7 @@ ovms_cc_library(
                 "//src/rerank:rerankcalculator_ov",
                 "//src/llm:llmcalculator",
             ],
+            "//conditions:default": [],
         }) + select({
             "//:enable_drogon": [
                 "libdrogon_http_server",
@@ -2199,7 +2248,11 @@ cc_binary(
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
         "//src:ovms_lib",
-        "//src/filesystem:libovmsfilesystemfactory",]
+        "//src/filesystem:libovmsfilesystemfactory",
+        # NOTE: mediapipe_framework_shared is NOT linked into the main binary.
+        # Only the plugin links to it. This avoids protobuf symbol conflicts.
+        # The plugin uses RTLD_GLOBAL to share MediaPipe with the main process.
+    ]
     + select({
             "//conditions:default": [
                 "//src:libcustom_node_east_ocr.so",

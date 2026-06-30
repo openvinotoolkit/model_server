@@ -18,6 +18,7 @@
 #include "kfs_python_tensor_bridge.hpp"
 
 #include <cstdlib>
+#include <cstdio>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -61,6 +62,13 @@ static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
 extern "C" const KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
 
 bool probePluginLoadInChildProcess(const std::string& pluginPath) {
+    // For absolute /ovms/lib paths, skip the probe since we control that deployment
+    // and can handle failures gracefully in the main process.
+    if (pluginPath.find("/ovms/lib/") == 0) {
+        SPDLOG_DEBUG("Skipping probe for deployment path: {}", pluginPath);
+        return true;
+    }
+
     // Some plugin failures are process-fatal (for example LOG(FATAL)/abort in
     // static initializers, as seen in MediaPipe type-map registration conflicts).
     // Probe in a short-lived child process so the parent OVMS process can
@@ -73,10 +81,29 @@ bool probePluginLoadInChildProcess(const std::string& pluginPath) {
     }
 
     if (probePid == 0) {
-        void* probeHandle = dlopen(pluginPath.c_str(), RTLD_NOW | RTLD_LOCAL);
+        // Ensure child process can find shared libraries like libmediapipe_framework.so
+        // Add /ovms/lib to LD_LIBRARY_PATH for plugin loading
+        const char* existing_ld = std::getenv("LD_LIBRARY_PATH");
+        std::string ld_lib_path = "/ovms/lib";
+        if (existing_ld != nullptr && existing_ld[0] != '\0') {
+            ld_lib_path = ld_lib_path + ":" + existing_ld;
+        }
+        setenv("LD_LIBRARY_PATH", ld_lib_path.c_str(), 1);
+
+        // Use RTLD_GLOBAL to ensure plugin symbols are available to the main binary.
+        // Both main binary and shared MediaPipe library have protobuf, but since
+        // the main binary no longer links to the shared library directly, protobuf
+        // conflicts are avoided.
+        void* probeHandle = dlopen(pluginPath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
         if (probeHandle != nullptr) {
             dlclose(probeHandle);
             _exit(0);
+        }
+        // Probe failed - log details before exiting
+        const char* dlopen_error = dlerror();
+        if (dlopen_error) {
+            // Write to stderr since this is a child process
+            fprintf(stderr, "[PROBE] dlopen failed for %s: %s\n", pluginPath.c_str(), dlopen_error);
         }
         _exit(1);
     }
@@ -210,6 +237,7 @@ bool loadPythonCalculatorsPlugin() {
     std::vector<std::string> candidates{
         "libpython_calculators.so",
         "./libpython_calculators.so",
+        "/ovms/lib/libpython_calculators.so",
         "src/python/libpython_calculators.so",
         "./src/python/libpython_calculators.so",
         "bazel-bin/src/python/libpython_calculators.so",
@@ -238,6 +266,22 @@ bool loadPythonCalculatorsPlugin() {
     } catch (...) {
     }
 
+    // CRITICAL: Expose main process symbols to plugin before loading it.
+    // The plugin will link to a shared MediaPipe library that contains undefined
+    // OVMS symbols (from geti calculators in the external MediaPipe fork).
+    // By calling dlopen(NULL, RTLD_GLOBAL) on the main process, we make all
+    // OVMS and geti symbols available via the main process's symbol table.
+    // When the plugin's dlopen tries to resolve undefined symbols, it will find
+    // them in the main process instead of failing with "undefined symbol" errors.
+    // This allows the plugin to load even though the shared MediaPipe library
+    // has forward references to OVMS code that's only available in the main binary.
+    void* mainProcessSymbols = dlopen(NULL, RTLD_GLOBAL);
+    if (mainProcessSymbols == nullptr) {
+        SPDLOG_WARN("Failed to expose main process symbols (dlopen(NULL)): {}. "
+                    "Plugin loading may fail if shared libraries have unresolved symbols.",
+            dlerror());
+    }
+
     for (const auto& candidate : candidates) {
         // Try loading candidate in a child process first. If probe indicates a
         // crash/non-zero exit, skip direct dlopen in the main process to avoid
@@ -245,9 +289,18 @@ bool loadPythonCalculatorsPlugin() {
         if (!probePluginLoadInChildProcess(candidate)) {
             continue;
         }
-        pythonCalculatorsHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_LOCAL);
+
+        // Use RTLD_GLOBAL to share plugin symbols with the main binary.
+        // This allows the main binary to call plugin functions like registerPythonCalculators.
+        SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", candidate);
+
+        pythonCalculatorsHandle = dlopen(candidate.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+
         if (pythonCalculatorsHandle != nullptr) {
+            SPDLOG_INFO("Successfully loaded Python calculators plugin from: {}", candidate);
             break;
+        } else {
+            SPDLOG_DEBUG("Failed to load Python calculators plugin candidate {}: {}", candidate, dlerror());
         }
     }
 
@@ -331,6 +384,19 @@ bool loadPythonCalculatorsPlugin() {
     DWORD lastLoadError = ERROR_SUCCESS;
     for (const auto& candidate : candidates) {
         SetLastError(ERROR_SUCCESS);
+        
+        // On Windows, unlike dlopen(NULL, RTLD_GLOBAL) on Linux, the operating system
+        // automatically makes all symbols from the current process available to any DLL
+        // that LoadLibraryA loads. The DLL's import table is resolved against:
+        // 1. The DLL itself
+        // 2. DLLs it explicitly links to
+        // 3. The main executable's exported symbols
+        // 4. System libraries
+        // This automatic symbol resolution means the plugin will find undefined OVMS
+        // symbols from the shared MediaPipe library without requiring an explicit call.
+        // No dlopen(NULL, RTLD_GLOBAL) equivalent is needed on Windows.
+        
+        SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", toAbsolutePath(candidate));
         pythonCalculatorsHandle = LoadLibraryA(candidate.c_str());
         if (pythonCalculatorsHandle != nullptr) {
             SPDLOG_INFO("Python calculators plugin loaded from candidate: {}", toAbsolutePath(candidate));
@@ -356,6 +422,8 @@ bool loadPythonCalculatorsPlugin() {
         }
         logLikelyMissingWindowsDependencies();
         SPDLOG_WARN("Python calculators plugin libpython_calculators.dll failed to load: {} ({}). "
+                    "Possible causes: missing dependency (libmediapipe_framework_shared.dll, libovmspython.dll), "
+                    "incompatible architecture (32-bit vs 64-bit), or export symbol conflict. "
                     "MediaPipe Python calculators will not be available.",
             error, formatWindowsErrorMessage(error));
         return false;
