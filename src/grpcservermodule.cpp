@@ -143,19 +143,30 @@ Status GRPCServerModule::start(const ovms::Config& config) {
     const std::string keyPath = config.grpcKeyPath();
     const std::string caPath = config.grpcCaPath();
     if (!certPath.empty() && !keyPath.empty()) {
-        grpc::SslServerCredentialsOptions sslOpts;
-        grpc::SslServerCredentialsOptions::PemKeyCertPair keyCertPair;
-        keyCertPair.cert_chain = read_file_to_string(certPath);
-        keyCertPair.private_key = read_file_to_string(keyPath);
-        sslOpts.pem_key_cert_pairs.push_back(keyCertPair);
-        if (!caPath.empty()) {
-            sslOpts.pem_root_certs = read_file_to_string(caPath);
-            sslOpts.client_certificate_request = GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY;
-            SPDLOG_INFO("gRPC TLS enabled with mutual TLS (mTLS) — client certificates required");
-        } else {
-            SPDLOG_INFO("gRPC TLS enabled (server-only TLS, no client certificate verification)");
+        // The TLS material is validated earlier, but it can still become unreadable between
+        // validation and here (deleted, permission change). read_file_to_string() throws on
+        // failure; catch it and return a controlled Status instead of letting it propagate
+        // out of start() and trigger std::terminate.
+        try {
+            grpc::SslServerCredentialsOptions sslOpts;
+            grpc::SslServerCredentialsOptions::PemKeyCertPair keyCertPair;
+            keyCertPair.cert_chain = read_file_to_string(certPath);
+            keyCertPair.private_key = read_file_to_string(keyPath);
+            sslOpts.pem_key_cert_pairs.push_back(keyCertPair);
+            if (!caPath.empty()) {
+                sslOpts.pem_root_certs = read_file_to_string(caPath);
+                sslOpts.client_certificate_request = GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY;
+                SPDLOG_INFO("gRPC TLS enabled with mutual TLS (mTLS) — client certificates required");
+            } else {
+                SPDLOG_INFO("gRPC TLS enabled (server-only TLS, no client certificate verification)");
+            }
+            serverCredentials = grpc::SslServerCredentials(sslOpts);
+        } catch (const std::exception& e) {
+            std::stringstream ss;
+            ss << "failed to read gRPC TLS material: " << e.what();
+            SPDLOG_ERROR(ss.str());
+            return Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
         }
-        serverCredentials = grpc::SslServerCredentials(sslOpts);
     } else {
         serverCredentials = grpc::InsecureServerCredentials();
     }

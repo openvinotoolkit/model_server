@@ -491,11 +491,11 @@ const std::string& Config::allowedMethods() const { return this->serverSettings.
 const std::string& Config::allowedHeaders() const { return this->serverSettings.allowedHeaders; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }
 const std::string& Config::apiKey() const { return this->serverSettings.apiKey; }
-const std::string Config::grpcCertPath() const { return this->serverSettings.grpcCertPath; }
-const std::string Config::grpcKeyPath() const { return this->serverSettings.grpcKeyPath; }
-const std::string Config::grpcCaPath() const { return this->serverSettings.grpcCaPath; }
-const std::string Config::restCertPath() const { return this->serverSettings.restCertPath; }
-const std::string Config::restKeyPath() const { return this->serverSettings.restKeyPath; }
-const std::string Config::restCaPath() const { return this->serverSettings.restCaPath; }
+const std::string& Config::grpcCertPath() const { return this->serverSettings.grpcCertPath; }
+const std::string& Config::grpcKeyPath() const { return this->serverSettings.grpcKeyPath; }
+const std::string& Config::grpcCaPath() const { return this->serverSettings.grpcCaPath; }
+const std::string& Config::restCertPath() const { return this->serverSettings.restCertPath; }
+const std::string& Config::restKeyPath() const { return this->serverSettings.restKeyPath; }
+const std::string& Config::restCaPath() const { return this->serverSettings.restCaPath; }
 
 }  // namespace ovms

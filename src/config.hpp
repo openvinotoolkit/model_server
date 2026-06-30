@@ -326,12 +326,12 @@ public:
     const std::string cacheDir() const;
 
     // TLS configuration accessors
-    const std::string grpcCertPath() const;
-    const std::string grpcKeyPath() const;
-    const std::string grpcCaPath() const;
-    const std::string restCertPath() const;
-    const std::string restKeyPath() const;
-    const std::string restCaPath() const;
+    const std::string& grpcCertPath() const;
+    const std::string& grpcKeyPath() const;
+    const std::string& grpcCaPath() const;
+    const std::string& restCertPath() const;
+    const std::string& restKeyPath() const;
+    const std::string& restCaPath() const;
 
     bool startedFromCLI() {
         return serverSettings.startedWithCLI;

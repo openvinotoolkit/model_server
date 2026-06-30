@@ -51,9 +51,9 @@ public:
         size_t numWorkersForStreaming,
         int port,
         const std::string& address,
-        const std::string& certPath = "",
-        const std::string& keyPath = "",
-        const std::string& caPath = "");
+        std::string certPath = {},
+        std::string keyPath = {},
+        std::string caPath = {});
 
     Status startAcceptingRequests();
     void terminate();

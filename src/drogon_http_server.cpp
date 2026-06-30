@@ -32,15 +32,15 @@
 
 namespace ovms {
 
-DrogonHttpServer::DrogonHttpServer(size_t numWorkersForUnary, size_t numWorkersForStreaming, int port, const std::string& address, const std::string& certPath, const std::string& keyPath, const std::string& caPath) :
+DrogonHttpServer::DrogonHttpServer(size_t numWorkersForUnary, size_t numWorkersForStreaming, int port, const std::string& address, std::string certPath, std::string keyPath, std::string caPath) :
     numWorkersForUnary(numWorkersForUnary),
     numWorkersForStreaming(numWorkersForStreaming),
     pool(std::make_unique<mediapipe::ThreadPool>("DrogonThreadPool", numWorkersForStreaming)),
     port(port),
     address(address),
-    certPath(certPath),
-    keyPath(keyPath),
-    caPath(caPath) {
+    certPath(std::move(certPath)),
+    keyPath(std::move(keyPath)),
+    caPath(std::move(caPath)) {
     SPDLOG_DEBUG("Starting http thread pool for streaming ({} threads)", numWorkersForStreaming);
     pool->StartWorkers();  // this tp is for streaming workload which cannot use drogon's internal listener threads
     SPDLOG_DEBUG("Thread pool started");
