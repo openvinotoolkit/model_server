@@ -302,6 +302,7 @@ private:
             writer.EndArray();
         }
     }
+
 };
 
 const std::string S2tCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};

@@ -453,9 +453,33 @@ TEST_F(Speech2TextHttpTest, positiveSegmentTimestamps) {
     EXPECT_TRUE(d["segments"][0]["start"].IsNumber());
     ASSERT_TRUE(d["segments"][0].HasMember("end"));
     EXPECT_TRUE(d["segments"][0]["end"].IsNumber());
+    // Validate all remaining elements have the same schema (recursive validation)
+    // This ensures the flattening logic consistently applies to all items
+    for (size_t i = 1; i < d["segments"].Size(); ++i) {
+        ASSERT_TRUE(d["segments"][i].IsObject()) << "Segment " << i << " is not an object";
+        ASSERT_TRUE(d["segments"][i].HasMember("text")) << "Segment " << i << " missing 'text'";
+        EXPECT_TRUE(d["segments"][i]["text"].IsString());
+        ASSERT_TRUE(d["segments"][i].HasMember("start")) << "Segment " << i << " missing 'start'";
+        EXPECT_TRUE(d["segments"][i]["start"].IsNumber());
+        ASSERT_TRUE(d["segments"][i].HasMember("end")) << "Segment " << i << " missing 'end'";
+        EXPECT_TRUE(d["segments"][i]["end"].IsNumber());
+    }
     EXPECT_FALSE(d.HasMember("words"));
 }
 
+// Test segment timestamps (return_timestamps=true).
+// Validates that all segment chunks are serialized in correct order.
+// The ASR result may have multiple groups of chunks (vector<vector<...>>),
+// which are flattened into a single segments array by nested iteration.
+// This test ensures the flattening logic produces a valid JSON array with
+// all required fields ("text", "start", "end") for each element.
+
+// Test word timestamps (word_timestamps=true).
+// Validates that all word chunks are serialized in correct order.
+// The ASR result may have multiple groups of words (vector<vector<...>>),
+// which are flattened into a single words array by nested iteration.
+// This test ensures the flattening logic produces a valid JSON array with
+// all required fields ("word", "start", "end") for each word element.
 TEST_F(Speech2TextHttpTest, positiveWordTimestamps) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
@@ -490,6 +514,7 @@ TEST_F(Speech2TextHttpTest, positiveWordTimestamps) {
     EXPECT_TRUE(d.HasMember("words"));
     EXPECT_TRUE(d["words"].IsArray());
     ASSERT_GT(d["words"].Size(), 0u);
+    // Validate first element schema
     ASSERT_TRUE(d["words"][0].IsObject());
     ASSERT_TRUE(d["words"][0].HasMember("word"));
     EXPECT_TRUE(d["words"][0]["word"].IsString());
@@ -497,9 +522,25 @@ TEST_F(Speech2TextHttpTest, positiveWordTimestamps) {
     EXPECT_TRUE(d["words"][0]["start"].IsNumber());
     ASSERT_TRUE(d["words"][0].HasMember("end"));
     EXPECT_TRUE(d["words"][0]["end"].IsNumber());
+    // Validate all remaining elements have the same schema (recursive validation)
+    // This ensures the flattening logic consistently applies to all items
+    for (size_t i = 1; i < d["words"].Size(); ++i) {
+        ASSERT_TRUE(d["words"][i].IsObject()) << "Word " << i << " is not an object";
+        ASSERT_TRUE(d["words"][i].HasMember("word")) << "Word " << i << " missing 'word'";
+        EXPECT_TRUE(d["words"][i]["word"].IsString());
+        ASSERT_TRUE(d["words"][i].HasMember("start")) << "Word " << i << " missing 'start'";
+        EXPECT_TRUE(d["words"][i]["start"].IsNumber());
+        ASSERT_TRUE(d["words"][i].HasMember("end")) << "Word " << i << " missing 'end'";
+        EXPECT_TRUE(d["words"][i]["end"].IsNumber());
+    }
     EXPECT_FALSE(d.HasMember("segments"));
 }
 
+// Test both word and segment timestamps simultaneously (word_timestamps=true, return_timestamps=true).
+// Validates that both timestamp types are correctly flattened from potentially multiple groups
+// and serialized in the same HTTP response without interference.
+// This exercises the flattening contract for both nested loops (words and chunks)
+// and ensures they coexist properly in the output JSON.
 TEST_F(Speech2TextHttpTest, positiveBothTimestampsTypes) {
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setMethod(drogon::Post);
@@ -545,6 +586,16 @@ TEST_F(Speech2TextHttpTest, positiveBothTimestampsTypes) {
     EXPECT_TRUE(d["words"][0]["start"].IsNumber());
     ASSERT_TRUE(d["words"][0].HasMember("end"));
     EXPECT_TRUE(d["words"][0]["end"].IsNumber());
+    // Validate all remaining word elements have the same schema
+    for (size_t i = 1; i < d["words"].Size(); ++i) {
+        ASSERT_TRUE(d["words"][i].IsObject()) << "Word " << i << " is not an object";
+        ASSERT_TRUE(d["words"][i].HasMember("word")) << "Word " << i << " missing 'word'";
+        EXPECT_TRUE(d["words"][i]["word"].IsString());
+        ASSERT_TRUE(d["words"][i].HasMember("start")) << "Word " << i << " missing 'start'";
+        EXPECT_TRUE(d["words"][i]["start"].IsNumber());
+        ASSERT_TRUE(d["words"][i].HasMember("end")) << "Word " << i << " missing 'end'";
+        EXPECT_TRUE(d["words"][i]["end"].IsNumber());
+    }
     EXPECT_TRUE(d.HasMember("segments"));
     EXPECT_TRUE(d["segments"].IsArray());
     ASSERT_GT(d["segments"].Size(), 0u);
@@ -555,6 +606,16 @@ TEST_F(Speech2TextHttpTest, positiveBothTimestampsTypes) {
     EXPECT_TRUE(d["segments"][0]["start"].IsNumber());
     ASSERT_TRUE(d["segments"][0].HasMember("end"));
     EXPECT_TRUE(d["segments"][0]["end"].IsNumber());
+    // Validate all remaining segment elements have the same schema
+    for (size_t i = 1; i < d["segments"].Size(); ++i) {
+        ASSERT_TRUE(d["segments"][i].IsObject()) << "Segment " << i << " is not an object";
+        ASSERT_TRUE(d["segments"][i].HasMember("text")) << "Segment " << i << " missing 'text'";
+        EXPECT_TRUE(d["segments"][i]["text"].IsString());
+        ASSERT_TRUE(d["segments"][i].HasMember("start")) << "Segment " << i << " missing 'start'";
+        EXPECT_TRUE(d["segments"][i]["start"].IsNumber());
+        ASSERT_TRUE(d["segments"][i].HasMember("end")) << "Segment " << i << " missing 'end'";
+        EXPECT_TRUE(d["segments"][i]["end"].IsNumber());
+    }
 }
 
 TEST_F(Speech2TextHttpTest, invalidFile) {
