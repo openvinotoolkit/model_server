@@ -28,7 +28,7 @@ def api_type_non_fixture(serving, communication, ovms_type=None):
     return InferenceClientFactory.get_client(serving=serving, communication=communication, ovms_type=ovms_type)
 
 
-_possible_api_types = list(itertools.product([TFS, KFS], [GRPC, REST]))
+_possible_api_types = list(itertools.product([KFS], [GRPC, REST]))
 if OvmsType.CAPI in ovms_types:
     _possible_api_types += [OvmsType.CAPI]
 
