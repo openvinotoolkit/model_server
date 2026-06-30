@@ -392,6 +392,31 @@ internal sealed class MainForm : Form
         return button;
     }
 
+    private static Button CreateRuntimeIconButton(string glyph, string tooltip, Color fillColor)
+    {
+        var button = new Button
+        {
+            Text = glyph,
+            Font = new Font("Segoe UI Symbol", 13.5f, FontStyle.Regular, GraphicsUnit.Point),
+            FlatStyle = FlatStyle.Flat,
+            ForeColor = Color.White,
+            BackColor = fillColor,
+            Size = new Size(44, 42),
+            MinimumSize = new Size(44, 42),
+            MaximumSize = new Size(44, 42),
+            Cursor = Cursors.Hand,
+            UseVisualStyleBackColor = false,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Padding = new Padding(0),
+            Margin = new Padding(8, 0, 0, 0)
+        };
+        button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(fillColor, 0.08f);
+        var tip = new ToolTip();
+        tip.SetToolTip(button, tooltip);
+        return button;
+    }
+
     private static Button CreateSecondaryButton(string text)
     {
         var button = new Button
@@ -464,17 +489,9 @@ internal sealed class MainForm : Form
             metricGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
         }
 
-        startButton = CreatePrimaryButton("", "Start", Theme.Success);
-        stopButton = CreatePrimaryButton("", "Stop", Theme.Danger);
-        restartButton = CreatePrimaryButton("", "Restart", Theme.Accent);
-
-        foreach (var b in new[] { startButton, stopButton, restartButton })
-        {
-            b.AutoSize = false;
-            b.Anchor = AnchorStyles.None;
-            b.Margin = new Padding(8, 0, 0, 0);
-            b.MinimumSize = new Size(108, 42);
-        }
+        startButton = CreateRuntimeIconButton("\u25B6", "Start server", Theme.Success);
+        stopButton = CreateRuntimeIconButton("\u25A0", "Stop server", Theme.Danger);
+        restartButton = CreateRuntimeIconButton("\u21BB", "Restart server", Theme.Accent);
 
         startButton.Click += async (_, _) => await RunControlActionAsync("Start", controller.Start);
         stopButton.Click += async (_, _) => await RunControlActionAsync("Stop", controller.Stop);
@@ -500,6 +517,7 @@ internal sealed class MainForm : Form
             };
             cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 248));
+            cardLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             var statusLayout = new TableLayoutPanel
             {
@@ -550,18 +568,24 @@ internal sealed class MainForm : Form
             statusLayout.Controls.Add(dotLabel, 0, 1);
             statusLayout.Controls.Add(valueLabel, 1, 1);
 
-            var actionLayout = new FlowLayoutPanel
+            var actionLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                ColumnCount = 3,
+                RowCount = 3,
                 BackColor = Color.Transparent,
                 Margin = new Padding(0),
-                Padding = new Padding(0, 19, 0, 0)
+                Padding = new Padding(0)
             };
-            actionLayout.Controls.Add(startButton);
-            actionLayout.Controls.Add(stopButton);
-            actionLayout.Controls.Add(restartButton);
+            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
+            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
+            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
+            actionLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            actionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            actionLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            actionLayout.Controls.Add(startButton, 0, 1);
+            actionLayout.Controls.Add(stopButton, 1, 1);
+            actionLayout.Controls.Add(restartButton, 2, 1);
 
             cardLayout.Controls.Add(statusLayout, 0, 0);
             cardLayout.Controls.Add(actionLayout, 1, 0);
@@ -698,7 +722,7 @@ internal sealed class MainForm : Form
 
         void SizeActionButtons()
         {
-            foreach (var button in new[] { startButton, stopButton, restartButton, openLogsButton, openModelFolderButton })
+            foreach (var button in new[] { openLogsButton, openModelFolderButton })
             {
                 var preferred = TextRenderer.MeasureText(button.Text, button.Font).Width + 72;
                 button.Size = new Size(Math.Clamp(preferred, 120, 280), 52);
@@ -1508,9 +1532,14 @@ internal sealed class NavButton : Panel
         Controls.Add(glyphLabel);
         Controls.Add(textLabel);
 
+        // Only forward the child labels' clicks to the panel's OnClick. Do NOT
+        // subscribe the panel's own Click to OnClick -- OnClick raises Click,
+        // which would re-enter the handler and recurse until a stack overflow.
+        glyphLabel.Click += (_, _) => OnClick(EventArgs.Empty);
+        textLabel.Click += (_, _) => OnClick(EventArgs.Empty);
+
         foreach (var c in new Control[] { this, glyphLabel, textLabel })
         {
-            c.Click += (_, _) => OnClick(EventArgs.Empty);
             c.MouseEnter += (_, _) => { hovered = true; ApplyState(); };
             c.MouseLeave += (_, _) => { hovered = false; ApplyState(); };
         }
