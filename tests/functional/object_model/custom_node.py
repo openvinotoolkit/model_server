@@ -241,7 +241,6 @@ class CustomNodeFaces(OvmsCCustomNode):
         }
 
 
-
 @dataclass
 class CustomNodeImageTransformation(OvmsCCustomNode):
 

@@ -752,7 +752,6 @@ class ElasticPipeline(Pipeline):
         return [self._request, self.custom_node, self.model_node, output]
 
 
-
 class ElasticBatchSizePipeline(Pipeline):
     def __init__(self, node_batch_configuration_list, **kwargs):
         super().__init__(name="misconfigurated_pipeline", **kwargs)
