@@ -41,7 +41,7 @@ enum class TemplateApplicator {
 };
 
 // Test fixture providing end-to-end: analyze → probe → apply workarounds → apply template
-class ChatTemplateEndToEndTest : public ::testing::Test {
+class ChatTemplateEndToEndMinjaTest : public ::testing::Test {
 protected:
 
     // Any tokenizer will do the job, the only thing we need to do is to do is to change chat template content before use
@@ -159,7 +159,7 @@ protected:
 // The probe should detect requiresObjectArguments=false, workaround should not be applied
 // applied, and the final template should render them natively.
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, GptOss_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, GptOss_ToolCallWithStringArgs) {
     // Load the real gpt-oss chat template
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_gpt_oss.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load gpt-oss template";
@@ -196,7 +196,7 @@ TEST_F(ChatTemplateEndToEndTest, GptOss_ToolCallWithStringArgs) {
 // The probe should detect requiresObjectArguments=true, workaround should convert
 // string args to object, and the final template should render them natively.
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, Qwen36_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, Qwen36_ToolCallWithStringArgs) {
     // Load the real qwen chat template
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen36.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen36 template";
@@ -253,7 +253,7 @@ celsius
 // workaround should convert string args to object, and template should render
 // them in Gemma's native key:<|"|>value<|"|> format.
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, Gemma4_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_gemma.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load gemma template";
 
@@ -292,7 +292,7 @@ What's the weather in Paris?<turn|>
 // which is not supported by minja. The probe detects this (raw JSON dump in
 // output containing "tool_calls": [) and disables tool call support.
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, Qwen3Coder_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3coder_instruct.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen3 coder instruct template";
 
@@ -326,7 +326,7 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3Coder_ToolCallWithStringArgs) {
 // This template uses message.tool_calls with direct {{ call.function.arguments }}
 // rendering. The static analyzer detects phi4 via the "functools" marker.
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, Phi4Mini_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, Phi4Mini_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_phi4_mini.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load phi4-mini template";
 
@@ -366,7 +366,7 @@ You are a helpful assistant.<|end|><|user|>What's the weather in Paris?<|end|><|
 // Uses <tool_call></tool_call> format with tojson for object args.
 // Probe detects requiresObjectArguments=true (tojson adds spaces, string args don't).
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, Qwen3_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen3 template";
 
@@ -399,11 +399,11 @@ What's the weather in Paris?<|im_end|>
 
 // =============================================================================
 // Example: Mistral-7B-Instruct-v0.3 with tool call containing string arguments
-// Uses [TOOL_CALLS] + [TOOL_RESULTS] format (detected as "devstral" by analyzer).
+// Uses [TOOL_CALLS] + [TOOL_RESULTS] format (detected as "mistral" by analyzer).
 // Template uses tool_call.function|tojson so object args render natively.
 // Probe detects requiresObjectArguments=true and workaround converts args.
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, Mistral7B_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_mistral7b_v03.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load mistral7b-v0.3 template";
 
@@ -416,7 +416,7 @@ TEST_F(ChatTemplateEndToEndTest, Mistral7B_ToolCallWithStringArgs) {
     run(true);
 
     ASSERT_TRUE(applySuccess);
-    EXPECT_EQ(analysisResult.detectedModelFamily, "devstral");
+    EXPECT_EQ(analysisResult.detectedModelFamily, "mistral");
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
 
@@ -430,7 +430,7 @@ TEST_F(ChatTemplateEndToEndTest, Mistral7B_ToolCallWithStringArgs) {
 // and has no tool_call rendering logic — assistant messages render content only.
 // Analyzer does not detect tool support, so probe is never invoked.
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, LFM2_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm2.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2 template";
 
@@ -453,7 +453,7 @@ TEST_F(ChatTemplateEndToEndTest, LFM2_ToolCallWithStringArgs) {
 // are fine), but tool_calls rendering silently fails — minja dumps raw JSON
 // instead of calling render_tool_calls macro. Tool probe catches this.
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, LFM25_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2.5 template";
 
@@ -476,7 +476,7 @@ TEST_F(ChatTemplateEndToEndTest, LFM25_ToolCallWithStringArgs) {
 // Uses <tool_call>{"name": ..., "arguments": ...}</tool_call> format.
 // Template handles both string and object arguments natively (has is_string check).
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, Qwen3VL_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3VL_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3vl.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen3-vl template";
 
@@ -500,7 +500,7 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3VL_ToolCallWithStringArgs) {
 // Uses <tool_call>{"name": ..., "arguments": ...}</tool_call> format.
 // Template handles both string and object arguments natively (has is_string check).
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, Qwen3_30B_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3_30b.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen3-30b template";
 
@@ -523,7 +523,7 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3_30B_ToolCallWithStringArgs) {
 // Synthetic test: template that throws on basic rendering (e.g. uses undefined
 // filter). The basic render probe should catch this and return false.
 // =============================================================================
-TEST_F(ChatTemplateEndToEndTest, BrokenTemplate_BasicRenderFails) {
+TEST_F(ChatTemplateEndToEndMinjaTest, BrokenTemplate_BasicRenderFails) {
     // Template uses an undefined filter that causes minja to throw
     chatTemplate = R"({%- for message in messages -%}{{ message.content | undefined_filter }}{%- endfor -%})";
 

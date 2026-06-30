@@ -111,7 +111,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsPhi4Functools) {
 // --- Devstral ---
 
 TEST_F(ChatTemplateAnalyzerTest, detectsDevstral) {
-    std::string tmpl = R"({% if tool_calls %}[TOOL_CALLS]{{ tool_calls }}{% endif %}{% if tool_result %}[TOOL_RESULTS]{{ result }}{% endif %})";
+    std::string tmpl = R"({% if tool_calls %}[TOOL_CALLS]{{ name }}[ARGS]{{ args }}{% endif %}{% if tool_result %}[TOOL_RESULTS]{{ result }}{% endif %})";
     auto result = ChatTemplateAnalyzer::analyze(tmpl);
     EXPECT_EQ(result.detectedModelFamily, "devstral");
     EXPECT_EQ(result.detectedToolParser.value(), "devstral");
@@ -199,8 +199,8 @@ TEST_F(ChatTemplateAnalyzerTest, unknownTemplateReturnsEmpty) {
 // --- Priority: Devstral over Mistral ---
 
 TEST_F(ChatTemplateAnalyzerTest, devstralTakesPriorityOverMistral) {
-    // Both have [TOOL_CALLS] but Devstral also has [TOOL_RESULTS]
-    std::string tmpl = R"([TOOL_CALLS]{{ tool_calls }}[TOOL_RESULTS]{{ results }})";
+    // Both have [TOOL_CALLS] but Devstral also has [ARGS]
+    std::string tmpl = R"([TOOL_CALLS]{{ name }}[ARGS]{{ args }}[TOOL_RESULTS]{{ results }})";
     auto result = ChatTemplateAnalyzer::analyze(tmpl);
     EXPECT_EQ(result.detectedModelFamily, "devstral");
     EXPECT_EQ(result.detectedToolParser.value(), "devstral");

@@ -333,6 +333,23 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
+
+    std::string expectedOutput = R"(<|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<tool_call>
+<function=get_weather>
+<parameter=location>
+Paris
+</parameter>
+<parameter=unit>
+celsius
+</parameter>
+</function>
+</tool_call><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================
@@ -423,7 +440,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Mistral7B_ToolCallWithStringArgs) {
     run(requestJson);
 
     ASSERT_TRUE(applySuccess);
-    EXPECT_EQ(analysisResult.detectedModelFamily, "devstral");
+    EXPECT_EQ(analysisResult.detectedModelFamily, "mistral");
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
 

@@ -88,8 +88,8 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
-    // Devstral detection — uses [TOOL_CALLS] with [TOOL_RESULTS]
-    if (contains(templateSource, "[TOOL_CALLS]") && contains(templateSource, "[TOOL_RESULTS]")) {
+    // Devstral detection — uses [TOOL_CALLS]name[ARGS]json format (unique [ARGS] marker)
+    if (contains(templateSource, "[TOOL_CALLS]") && contains(templateSource, "[ARGS]")) {
         result.detectedModelFamily = "devstral";
         result.detectedToolParser = "devstral";
         result.caps.supportsToolCalls = true;
