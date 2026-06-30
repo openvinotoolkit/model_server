@@ -16,6 +16,8 @@
 
 #include "image_utils.hpp"
 
+#include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <regex>
@@ -95,14 +97,18 @@ bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char*
     if (allowedDomains.size() == 1 && allowedDomains[0] == "all") {
         return true;
     }
-    CURLUcode rc;
-    CURLU* parsedUrl = curl_url();
-    rc = curl_url_set(parsedUrl, CURLUPART_URL, url, 0);
-    if (rc) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} failed", url);
-        curl_url_cleanup(parsedUrl);
-        return false;
-    }
+CURLUcode rc;
+CURLU* parsedUrl = curl_url();
+if (!parsedUrl) {
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} failed", url);
+    return false;
+}
+rc = curl_url_set(parsedUrl, CURLUPART_URL, url, 0);
+if (rc) {
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} failed", url);
+    curl_url_cleanup(parsedUrl);
+    return false;
+}
     char* host;
     rc = curl_url_get(parsedUrl, CURLUPART_HOST, &host, 0);
     if (rc) {
@@ -142,7 +148,8 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
             return absl::InvalidArgumentError("Image parsing failed");
         }
-    } else if (std::regex_match(imageSource.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
+    } else if (imageSource.rfind("http://", 0) == 0 || imageSource.rfind("https://", 0) == 0 ||
+               imageSource.rfind("ftp://", 0) == 0 || imageSource.rfind("sftp://", 0) == 0) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
         if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), imageSource.c_str())) {
             return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
