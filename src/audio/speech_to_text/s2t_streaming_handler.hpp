@@ -33,7 +33,6 @@
 
 namespace ov::genai {
 class ASRGenerationConfig;
-class ASRDecodedResults;
 }  // namespace ov::genai
 
 namespace ovms {
