@@ -156,8 +156,8 @@ protected:
 
 // =============================================================================
 // Example: gpt-oss-20b with tool call containing string arguments
-// The probe should detect requiresObjectArguments=true, workaround should convert
-// string args to object, and the final template should render them natively.
+// The probe should detect requiresObjectArguments=false, workaround should not be applied
+// applied, and the final template should render them natively.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndTest, GptOss_ToolCallWithStringArgs) {
     // Load the real gpt-oss chat template
@@ -211,9 +211,18 @@ TEST_F(ChatTemplateEndToEndTest, Qwen36_ToolCallWithStringArgs) {
     run(true);
 
     ASSERT_TRUE(applySuccess);
+
     EXPECT_EQ(analysisResult.detectedModelFamily, "qwen3coder");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
+
+    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -232,6 +241,8 @@ celsius
 </parameter>
 </function>
 </tool_call><|im_end|>
+<|im_start|>assistant
+<think>
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
@@ -254,9 +265,18 @@ TEST_F(ChatTemplateEndToEndTest, Gemma4_ToolCallWithStringArgs) {
     run(true);
 
     ASSERT_TRUE(applySuccess);
+
     EXPECT_EQ(analysisResult.detectedModelFamily, "gemma4");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "gemma4");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "gemma4");
+
+    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
 
     // FIXME: Why is </s> here? because of facebook-opt125?
     std::string expectedOutput = R"(</s><|turn>user
@@ -283,10 +303,22 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3Coder_ToolCallWithStringArgs) {
 
     run(true);
 
-    // Probe should detect minja silent failure (from_json not supported)
-    // and disable tool call support
-    EXPECT_FALSE(caps.supportsToolCalls);
+    
+    ASSERT_TRUE(applySuccess);  // here we dont block people from using such templates that mis-render requests
+    ASSERT_TRUE(basicRenderOk);  // only tool rendering is broken
+
+    EXPECT_EQ(analysisResult.detectedModelFamily, "qwen3coder");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
+    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+    
+    // This is bug, how to fix?
+    // TODO: "| from_json" patching?
     EXPECT_FALSE(caps.supportsTools);
+    EXPECT_FALSE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
 }
 
 // =============================================================================

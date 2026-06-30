@@ -235,9 +235,18 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen36_ToolCallWithStringArgs) {
     run(requestJson);
 
     ASSERT_TRUE(applySuccess);
+
     EXPECT_EQ(analysisResult.detectedModelFamily, "qwen3coder");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
+
+    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -277,9 +286,18 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Gemma4_ToolCallWithStringArgs) {
     run(requestJson);
 
     ASSERT_TRUE(applySuccess);
+
     EXPECT_EQ(analysisResult.detectedModelFamily, "gemma4");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "gemma4");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "gemma4");
+
+    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(</s><|turn>user
 What's the weather in Paris?<turn|>
@@ -303,10 +321,18 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
 
     run(requestJson);
 
-    // Python Jinja has from_json filter — template renders correctly
     ASSERT_TRUE(applySuccess);
+
     EXPECT_EQ(analysisResult.detectedModelFamily, "qwen3coder");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
+    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+
+    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
 }
 
 // =============================================================================
