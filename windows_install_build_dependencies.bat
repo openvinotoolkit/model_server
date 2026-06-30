@@ -69,6 +69,16 @@ if "%VS_MAJOR%"=="17" set "VS_YEAR=2022"
 if "%VS_MAJOR%"=="18" set "VS_YEAR=2026"
 if not defined VS_YEAR ( echo [ERROR] Unsupported Visual Studio major version %VS_MAJOR% - add it to the VS_YEAR map & goto :msvc_error )
 set "CMAKE_GEN=Visual Studio %VS_MAJOR% %VS_YEAR%"
+:: Ensure cmake is available (either on PATH or from the detected Visual Studio installation)
+where cmake >nul 2>nul
+if errorlevel 1 (
+    if exist "%VS_DETECTED%\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" (
+        set "PATH=%VS_DETECTED%\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;%PATH%"
+    ) else (
+        echo [ERROR] CMake not found on PATH and not present in the detected Visual Studio installation. Install the "C++ CMake tools for Windows" component or add CMake to PATH.
+        goto :exit_build_error
+    )
+)
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
