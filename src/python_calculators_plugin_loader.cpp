@@ -166,10 +166,12 @@ std::string toAbsolutePath(const std::string& candidate) {
 
 void logLikelyMissingWindowsDependencies() {
     const std::vector<std::string> likelyDependencies = {
-        "libovmspython.dll",
-        "python312.dll",
-        "openvino.dll",
-        "openvino_genai.dll",
+        "libpython_calculators.dll",        // The plugin itself
+        "libmediapipe_framework_shared.dll", // Shared MediaPipe library (critical for type-id resolution)
+        "libovmspython.dll",                 // Python runtime support
+        "python312.dll",                     // Python interpreter
+        "openvino.dll",                      // OpenVINO core
+        "openvino_genai.dll",                // OpenVINO GenAI
     };
     for (const auto& dependency : likelyDependencies) {
         char resolvedPath[MAX_PATH] = {0};
