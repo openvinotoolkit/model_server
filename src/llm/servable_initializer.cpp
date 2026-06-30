@@ -123,18 +123,14 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         properties->detectedModelFamily = analysisResult.detectedModelFamily;
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template analysis: detectedModelFamily={}, "
                                                    "supportsSystemRole={}, supportsTools={}, supportsToolCalls={}, supportsToolResponses={}, "
-                                                   "requiresObjectArguments={}, requiresNonNullContent={}, requiresTypedContent={}, "
-                                                   "supportsParallelToolCalls={}, supportsToolCallId={}",
+                                                   "requiresObjectArguments={}, requiresNonNullContent={}",
             analysisResult.detectedModelFamily.empty() ? "(none)" : analysisResult.detectedModelFamily,
             analysisResult.caps.supportsSystemRole,
             analysisResult.caps.supportsTools,
             analysisResult.caps.supportsToolCalls,
             analysisResult.caps.supportsToolResponses,
             analysisResult.caps.requiresObjectArguments,
-            analysisResult.caps.requiresNonNullContent,
-            analysisResult.caps.requiresTypedContent,
-            analysisResult.caps.supportsParallelToolCalls,
-            analysisResult.caps.supportsToolCallId);
+            analysisResult.caps.requiresNonNullContent);
         // Auto-detect tool parser if not explicitly configured
         if (properties->toolParserName.empty() && analysisResult.detectedToolParser.has_value()) {
             properties->toolParserName = analysisResult.detectedToolParser.value();

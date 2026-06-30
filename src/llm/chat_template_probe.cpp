@@ -43,7 +43,7 @@ bool probeChatTemplateBasicRender(ov::genai::Tokenizer& tokenizer) {
             R"({"role":"assistant","content":")" + contentNeedle + R"("})"));
 
         auto t0 = std::chrono::steady_clock::now();
-        std::string output = tokenizer.apply_chat_template(history, false);
+        std::string output = tokenizer.apply_chat_template(history, true);
         auto t1 = std::chrono::steady_clock::now();
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Basic render probe: {} us",
             std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
@@ -95,7 +95,7 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
             history.push_back(ov::genai::JsonContainer::from_json_string(
                 R"({"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]})"));
             auto t0 = std::chrono::steady_clock::now();
-            std::string output = tokenizer.apply_chat_template(history, false);
+            std::string output = tokenizer.apply_chat_template(history, true);
             auto t1 = std::chrono::steady_clock::now();
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): {} us",
                 std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
@@ -116,7 +116,7 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
             history.push_back(ov::genai::JsonContainer::from_json_string(
                 R"({"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":{")" + argNeedle + R"(":"val"}}}]})"));
             auto t0 = std::chrono::steady_clock::now();
-            std::string output = tokenizer.apply_chat_template(history, false);
+            std::string output = tokenizer.apply_chat_template(history, true);
             auto t1 = std::chrono::steady_clock::now();
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (object args): {} us",
                 std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());

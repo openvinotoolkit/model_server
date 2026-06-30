@@ -171,16 +171,24 @@ TEST_F(ChatTemplateEndToEndTest, GptOss_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     ASSERT_TRUE(applySuccess);
-    EXPECT_EQ(analysisResult.detectedModelFamily, "gptoss");
-    EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_FALSE(caps.requiresObjectArguments);
 
-    // Note: template embeds current date, so we check key fragments instead of full match
-    EXPECT_NE(appliedOutput.find("to=functions.get_weather"), std::string::npos);
-    EXPECT_NE(appliedOutput.find("{\"location\":\"Paris\",\"unit\":\"celsius\"}"), std::string::npos);
+    EXPECT_EQ(analysisResult.detectedModelFamily, "gptoss");
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "gptoss");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "gptoss");
+
+    EXPECT_TRUE(caps.supportsTools);
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.supportsToolResponses);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresNonNullContent);
+
+    std::string expectedOutput = R"(<|start|>user<|message|>What's the weather in Paris?<|end|><|start|>assistant to=functions.get_weather <|channel|>commentary json<|message|>{"location":"Paris","unit":"celsius"}<|end|><|start|>assistant)";
+    EXPECT_NE(appliedOutput.find(expectedOutput), std::string::npos) << appliedOutput;
 }
 
 // =============================================================================
@@ -200,7 +208,7 @@ TEST_F(ChatTemplateEndToEndTest, Qwen36_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_EQ(analysisResult.detectedModelFamily, "qwen3coder");
@@ -243,7 +251,7 @@ TEST_F(ChatTemplateEndToEndTest, Gemma4_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_EQ(analysisResult.detectedModelFamily, "gemma4");
@@ -273,7 +281,7 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3Coder_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     // Probe should detect minja silent failure (from_json not supported)
     // and disable tool call support
@@ -297,7 +305,7 @@ TEST_F(ChatTemplateEndToEndTest, Phi4Mini_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     ASSERT_TRUE(applySuccess);
     // Analyzer does not detect phi4-mini tool support (no <|tool▁call▁begin|> marker)
@@ -318,7 +326,7 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_EQ(analysisResult.detectedModelFamily, "hermes3");
@@ -355,7 +363,7 @@ TEST_F(ChatTemplateEndToEndTest, Mistral7B_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"abc123def","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_EQ(analysisResult.detectedModelFamily, "devstral");
@@ -381,7 +389,7 @@ TEST_F(ChatTemplateEndToEndTest, LFM2_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     ASSERT_TRUE(applySuccess);
     // Analyzer does not detect tool support (no tool_call markers in template)
@@ -404,7 +412,7 @@ TEST_F(ChatTemplateEndToEndTest, LFM25_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     // Basic render works, but tool probe detects minja silent failure
     EXPECT_TRUE(basicRenderOk);
@@ -427,7 +435,7 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3VL_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_TRUE(caps.supportsToolCalls);
@@ -451,7 +459,7 @@ TEST_F(ChatTemplateEndToEndTest, Qwen3_30B_ToolCallWithStringArgs) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(false);
+    run(true);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_TRUE(caps.supportsToolCalls);
@@ -474,7 +482,7 @@ TEST_F(ChatTemplateEndToEndTest, BrokenTemplate_BasicRenderFails) {
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"assistant","content":"Hello"})"));
 
-    run(false);
+    run(true);
 
     EXPECT_FALSE(basicRenderOk);
 }

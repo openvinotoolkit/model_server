@@ -219,7 +219,4 @@ TEST_F(ChatTemplateAnalyzerTest, defaultCapsValues) {
     EXPECT_FALSE(caps.supportsToolResponses);
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
-    EXPECT_FALSE(caps.requiresTypedContent);
-    EXPECT_FALSE(caps.supportsParallelToolCalls);
-    EXPECT_FALSE(caps.supportsToolCallId);
 }

@@ -141,7 +141,7 @@ protected:
     }
 
     // Run the full Jinja pipeline: analyze → probe → workarounds → apply via Python Jinja
-    void run(const std::string& requestJson, bool addGenerationPrompt = true) {
+    void run(const std::string& requestJson) {
         ASSERT_FALSE(chatTemplate.empty()) << "chatTemplate must be set before calling run()";
         ASSERT_FALSE(requestJson.empty()) << "requestJson must be provided";
 
@@ -200,7 +200,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, GptOss_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     ASSERT_TRUE(applySuccess);
 
@@ -216,8 +216,8 @@ TEST_F(ChatTemplateEndToEndJinjaTest, GptOss_ToolCallWithStringArgs) {
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
-    EXPECT_NE(appliedOutput.find("to=functions.get_weather"), std::string::npos);
-    EXPECT_NE(appliedOutput.find("{\"location\":\"Paris\",\"unit\":\"celsius\"}"), std::string::npos);
+    std::string expectedOutput = R"(<|start|>user<|message|>What's the weather in Paris?<|end|><|start|>assistant to=functions.get_weather <|channel|>commentary json<|message|>{"location":"Paris","unit":"celsius"}<|end|><|start|>assistant)";
+    EXPECT_NE(appliedOutput.find(expectedOutput), std::string::npos) << appliedOutput;
 }
 
 // =============================================================================
@@ -232,7 +232,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen36_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_EQ(analysisResult.detectedModelFamily, "qwen3coder");
@@ -274,7 +274,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Gemma4_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_EQ(analysisResult.detectedModelFamily, "gemma4");
@@ -301,7 +301,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     // Python Jinja has from_json filter — template renders correctly
     ASSERT_TRUE(applySuccess);
@@ -321,7 +321,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Phi4Mini_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_FALSE(caps.supportsToolCalls);
@@ -339,7 +339,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_EQ(analysisResult.detectedModelFamily, "hermes3");
@@ -373,7 +373,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Mistral7B_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"abc123def","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_EQ(analysisResult.detectedModelFamily, "devstral");
@@ -396,7 +396,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM2_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_FALSE(caps.supportsToolCalls);
@@ -416,7 +416,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM25_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     // Jinja probe detects requiresObjectArguments=true, workaround converts args
     ASSERT_TRUE(applySuccess);
@@ -442,7 +442,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3VL_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_TRUE(caps.supportsToolCalls);
@@ -465,7 +465,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
         {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
     ]})";
 
-    run(requestJson, false);
+    run(requestJson);
 
     ASSERT_TRUE(applySuccess);
     EXPECT_TRUE(caps.supportsToolCalls);

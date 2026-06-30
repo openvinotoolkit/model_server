@@ -22,7 +22,7 @@ Both **llama.cpp** and **minja** solve these problems via "dry run" probing and 
 ### minja approach
 1. **`try_raw_render` + needles** — renders template with sentinel strings, checks if they appear in output
 2. **`<parameter=argument_needle>`** — detects coder-style XML parameter templates (Qwen3-Coder)
-3. **Capability struct** — `chat_template_caps` populated at construction time: `supports_tools`, `requires_object_arguments`, `requires_typed_content`, etc.
+3. **Capability struct** — `chat_template_caps` populated at construction time: `supports_tools`, `requires_object_arguments`, `requires_non_null_content`, etc.
 4. **Polyfills** — automatic fallbacks when template lacks native support (inject tool definitions into system prompt, merge system into user, etc.)
 
 ---
@@ -116,9 +116,6 @@ struct ChatTemplateCaps {
     bool supports_tool_responses = false;
     bool requires_object_arguments = false;     // Gemma: args as dict not string
     bool requires_non_null_content = false;     // tool_call messages need content=""
-    bool requires_typed_content = false;        // content must be [{type:"text",...}]
-    bool supports_parallel_tool_calls = false;
-    bool supports_tool_call_id = false;
 };
 ```
 
@@ -179,10 +176,6 @@ void ensureNonNullContent(rapidjson::Document& doc);
 // Restructure tool response messages for Gemma4 format
 // Triggered by: detected model == gemma4
 void convertToolResponsesGemma4(rapidjson::Document& doc);
-
-// Convert string content to typed content array [{type:"text", text:"..."}]
-// Triggered by: caps.requires_typed_content
-void convertToTypedContent(rapidjson::Document& doc);
 
 // Apply all relevant workarounds based on caps
 void applyAll(const ChatTemplateCaps& caps, const std::string& modelFamily,

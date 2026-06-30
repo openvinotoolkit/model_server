@@ -26,9 +26,6 @@ struct ChatTemplateCaps {
     bool supportsToolResponses = false;
     bool requiresObjectArguments = false;
     bool requiresNonNullContent = false;
-    bool requiresTypedContent = false;
-    bool supportsParallelToolCalls = false;
-    bool supportsToolCallId = false;
 };
 
 }  // namespace ovms
