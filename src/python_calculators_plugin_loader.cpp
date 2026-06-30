@@ -166,12 +166,12 @@ std::string toAbsolutePath(const std::string& candidate) {
 
 void logLikelyMissingWindowsDependencies() {
     const std::vector<std::string> likelyDependencies = {
-        "libpython_calculators.dll",        // The plugin itself
-        "libmediapipe_framework_shared.dll", // Shared MediaPipe library (critical for type-id resolution)
-        "libovmspython.dll",                 // Python runtime support
-        "python312.dll",                     // Python interpreter
-        "openvino.dll",                      // OpenVINO core
-        "openvino_genai.dll",                // OpenVINO GenAI
+        "libpython_calculators.dll",          // The plugin itself
+        "libmediapipe_framework_shared.dll",  // Shared MediaPipe library (critical for type-id resolution)
+        "libovmspython.dll",                  // Python runtime support
+        "python312.dll",                      // Python interpreter
+        "openvino.dll",                       // OpenVINO core
+        "openvino_genai.dll",                 // OpenVINO GenAI
     };
     for (const auto& dependency : likelyDependencies) {
         char resolvedPath[MAX_PATH] = {0};
@@ -386,7 +386,7 @@ bool loadPythonCalculatorsPlugin() {
     DWORD lastLoadError = ERROR_SUCCESS;
     for (const auto& candidate : candidates) {
         SetLastError(ERROR_SUCCESS);
-        
+
         // On Windows, unlike dlopen(NULL, RTLD_GLOBAL) on Linux, the operating system
         // automatically makes all symbols from the current process available to any DLL
         // that LoadLibraryA loads. The DLL's import table is resolved against:
@@ -397,7 +397,7 @@ bool loadPythonCalculatorsPlugin() {
         // This automatic symbol resolution means the plugin will find undefined OVMS
         // symbols from the shared MediaPipe library without requiring an explicit call.
         // No dlopen(NULL, RTLD_GLOBAL) equivalent is needed on Windows.
-        
+
         SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", toAbsolutePath(candidate));
         pythonCalculatorsHandle = LoadLibraryA(candidate.c_str());
         if (pythonCalculatorsHandle != nullptr) {
