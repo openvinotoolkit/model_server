@@ -24,7 +24,6 @@
 #include <utility>
 #include <vector>
 
-#include "openvino/genai/automatic_speech_recognition/pipeline.hpp"
 #include "src/audio/speech_to_text/s2t_executor.hpp"
 #include "src/status.hpp"
 
@@ -35,6 +34,11 @@ class Status;
 namespace mediapipe {
 class S2tCalculatorOptions;
 }  // namespace mediapipe
+
+namespace ov::genai {
+class ASRPipeline;
+class ASRGenerationConfig;
+}  // namespace ov::genai
 
 namespace ovms {
 

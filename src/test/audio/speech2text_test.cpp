@@ -86,7 +86,7 @@ TEST(SttServableParseTemperatureTest, negativeTemperatureEnableSampling) {
     EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
         .WillOnce(::testing::Return("-1.0"));
 
-    ov::genai::WhisperGenerationConfig config;
+    ov::genai::ASRGenerationConfig config;
     config.do_sample = false;
 
     auto status = SttServable::parseTemperature(payload, config);
@@ -102,7 +102,7 @@ TEST(SttServableParseTemperatureTest, zeroTemperatureDoesNotEnableSampling) {
     EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
         .WillOnce(::testing::Return("0"));
 
-    ov::genai::WhisperGenerationConfig config;
+    ov::genai::ASRGenerationConfig config;
     config.do_sample = false;
 
     auto status = SttServable::parseTemperature(payload, config);
@@ -118,7 +118,7 @@ TEST(SttServableParseTemperatureTest, positiveTemperatureEnablesSampling) {
     EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
         .WillOnce(::testing::Return("1.0"));
 
-    ov::genai::WhisperGenerationConfig config;
+    ov::genai::ASRGenerationConfig config;
     config.do_sample = false;
 
     auto status = SttServable::parseTemperature(payload, config);
