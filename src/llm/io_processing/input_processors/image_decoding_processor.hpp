@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,28 +14,27 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <memory>
-#include <sstream>
+
+#include <optional>
 #include <string>
+#include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-// Python execution for template processing
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
-#pragma warning(pop)
-
-#include "src/python/utils.hpp"
+#include "../base_input_processor.hpp"
 
 namespace ovms {
 
-class PyJinjaTemplateProcessor {
+// Decodes image_url content entries from ChatHistory messages into tensors and
+// injects <ov_genai_image_N> tags into message content.
+// Active when: config.isVLM && input is ChatHistory variant.
+class ImageDecodingProcessor : public BaseInputProcessor {
 public:
-    std::string bosToken = "";
-    std::string eosToken = "";
-    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
-    std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
+    ImageDecodingProcessor(std::optional<std::string> allowedLocalMediaPath,
+        std::optional<std::vector<std::string>> allowedMediaDomains);
+    absl::Status process(InputRequest& req) override;
 
-    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output);
+private:
+    std::optional<std::string> allowedLocalMediaPath;
+    std::optional<std::vector<std::string>> allowedMediaDomains;
 };
+
 }  // namespace ovms
