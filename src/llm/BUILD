@@ -301,7 +301,10 @@ ovms_cc_library(
         "io_processing/minicpm5/minicpm5_tool_parser.hpp",
         "io_processing/minicpm5/minicpm5_reasoning_parser.hpp",
     ],
-    srcs = ["io_processing/minicpm5/minicpm5_tool_parser.cpp"],
+    srcs = [
+        "io_processing/minicpm5/minicpm5_tool_parser.cpp",
+        "io_processing/minicpm5/minicpm5_reasoning_parser.cpp",
+    ],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmslogging",

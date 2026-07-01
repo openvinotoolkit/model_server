@@ -166,16 +166,34 @@ TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
 // reasoning and the tool call is still parsed from the remaining content. (minicpm5 is used
 // rather than qwen3 because the tool parser requires special tokens to be streamed, and the
 // paired reasoning parser must agree on that flag.)
+//
+// Minicpm5ReasoningParser locates the reasoning segment by real MiniCPM5 special-token ids
+// (8 = <think>, 9 = </think>; see minicpm5_reasoning_parser.hpp), not by decoded-text
+// substring search. The Qwen3-8B stand-in tokenizer used in this file has its OWN, different
+// ids for the literal "<think>"/"</think>" strings, so encoding that text here would not
+// exercise the real boundary check at all. Instead, the token sequence is assembled directly
+// with the real ids as delimiters, and the Qwen3 tokenizer is used only to encode/decode the
+// free-form text around them (which round-trips correctly regardless of whose vocab it is).
 TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
+    constexpr int64_t thinkStartTokenId = 8;  // <think>, per Minicpm5ReasoningParser
+    constexpr int64_t thinkEndTokenId = 9;    // </think>, per Minicpm5ReasoningParser
+
     auto outputParserWithReasoning =
         std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
-    const std::string input =
-        "<think>This is my internal reasoning about what to call.</think>"
-        R"(<function name="search"><param name="query">Intel</param></function>)";
-    auto generatedTensor = minicpm5Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(
-        generatedTensor.data<int64_t>(),
-        generatedTensor.data<int64_t>() + generatedTensor.get_size());
+
+    auto encode = [](ov::genai::Tokenizer& tok, const std::string& text) {
+        auto tensor = tok.encode(text, ov::genai::add_special_tokens(false)).input_ids;
+        return std::vector<int64_t>(tensor.data<int64_t>(), tensor.data<int64_t>() + tensor.get_size());
+    };
+
+    std::vector<int64_t> generatedTokens;
+    generatedTokens.push_back(thinkStartTokenId);
+    auto reasoningTokens = encode(*minicpm5Tokenizer, "This is my internal reasoning about what to call.");
+    generatedTokens.insert(generatedTokens.end(), reasoningTokens.begin(), reasoningTokens.end());
+    generatedTokens.push_back(thinkEndTokenId);
+    auto functionCallTokens = encode(*minicpm5Tokenizer, R"(<function name="search"><param name="query">Intel</param></function>)");
+    generatedTokens.insert(generatedTokens.end(), functionCallTokens.begin(), functionCallTokens.end());
+
     ParsedOutput parsedOutput = outputParserWithReasoning->parse(generatedTokens, true);
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
