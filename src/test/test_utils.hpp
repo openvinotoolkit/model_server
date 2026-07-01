@@ -33,10 +33,6 @@
 #include <gtest/gtest.h>
 #include <spdlog/spdlog.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
 #include "../capi_frontend/inferencerequest.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../config.hpp"
@@ -69,14 +65,6 @@ void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfi
 
 static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::Predict};
 
-using TFSRequestType = tensorflow::serving::PredictRequest;
-using TFSResponseType = tensorflow::serving::PredictResponse;
-using TFSInputTensorType = tensorflow::TensorProto;
-using TFSOutputTensorType = tensorflow::TensorProto;
-using TFSShapeType = tensorflow::TensorShapeProto;
-using TFSInputTensorIteratorType = google::protobuf::Map<std::string, TFSInputTensorType>::const_iterator;
-using TFSOutputTensorIteratorType = google::protobuf::Map<std::string, TFSOutputTensorType>::const_iterator;
-using TFSInterface = std::pair<TFSRequestType, TFSResponseType>;
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
 
@@ -87,8 +75,6 @@ void printTensor(const ov::Tensor& tensor);
 ovms::tensor_map_t prepareTensors(
     const std::unordered_map<std::string, ovms::Shape>&& tensors,
     ovms::Precision precision = ovms::Precision::FP32);
-
-void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data = std::vector<float>{});
 
 KFSTensorInputProto* findKFSInferInputTensor(::KFSRequest& request, const std::string& name);
 std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, const std::string& name);
@@ -280,23 +266,18 @@ void preparePredictRequest(ovms::InferenceRequest& request, inputs_info_t reques
     uint32_t decrementBufferSize = 0, OVMS_BufferType bufferType = OVMS_BUFFERTYPE_CPU, std::optional<uint32_t> deviceId = std::nullopt);
 
 void prepareInferStringTensor(::KFSRequest::InferInputTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content);
-void prepareInferStringTensor(tensorflow::TensorProto& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content);
 void prepareInferStringTensor(ovms::InferenceTensor& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content);
 
 void prepareInferStringRequest(::KFSRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true);
-void prepareInferStringRequest(tensorflow::serving::PredictRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true);
 void prepareInferStringRequest(ovms::InferenceRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent = true);  // CAPI binary not supported
 
 void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<std::string> expectedStrings);
 
-void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize);  // CAPI binary not supported
 
-void prepareBinaryPredictRequestNoShape(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequestNoShape(::KFSRequest& request, const std::string& inputName, const int batchSize);
 void prepareBinaryPredictRequestNoShape(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize);  // CAPI binary not supported
-void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize = 1);
 void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize = 1);
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize = 1);  // CAPI binary not supported
 
@@ -316,10 +297,6 @@ std::string readableError(const T* expected_output, const T* actual_output, cons
 }
 
 std::string readableSetError(std::unordered_set<std::string> expected, std::unordered_set<std::string> actual);
-
-void checkDummyResponse(const std::string outputName,
-    const std::vector<float>& requestData,
-    tensorflow::serving::PredictRequest& request, tensorflow::serving::PredictResponse& response, int seriesLength, int batchSize = 1, const std::string& servableName = "", size_t expectedOutputsCount = 1);
 
 static std::string vectorTypeToKfsString(const std::type_info& vectorType) {
     // {Precision::BF16, "BF16"},
@@ -397,22 +374,14 @@ void checkDummyResponse(const std::string outputName,
 }
 
 void checkScalarResponse(const std::string outputName,
-    float inputScalar, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
-
-void checkScalarResponse(const std::string outputName,
     float inputScalar, ::KFSResponse& response, const std::string& servableName = "");
-
-void checkStringResponse(const std::string outputName,
-    const std::vector<std::string>& inputStrings, tensorflow::serving::PredictResponse& response, const std::string& servableName = "");
 
 void checkStringResponse(const std::string outputName,
     const std::vector<std::string>& inputStrings, ::KFSResponse& response, const std::string& servableName = "");
 
-void assertStringOutputProto(const tensorflow::TensorProto& proto, const std::vector<std::string>& expectedStrings);
 void assertStringOutputProto(const KFSTensorOutputProto& proto, const std::vector<std::string>& expectedStrings);
 void assertStringOutputProto(const ovms::InferenceTensor& proto, const std::vector<std::string>& expectedStrings);
 
-void assertStringResponse(const tensorflow::serving::PredictResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName);
 void assertStringResponse(const ::KFSResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName);
 void assertStringResponse(const ovms::InferenceResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName);
 
@@ -420,30 +389,6 @@ void checkAddResponse(const std::string outputName,
     const std::vector<float>& requestData1,
     const std::vector<float>& requestData2,
     ::KFSRequest& request, const ::KFSResponse& response, int seriesLength, int batchSize, const std::string& servableName);
-
-template <typename T>
-void checkIncrement4DimResponse(const std::string outputName,
-    const std::vector<T>& expectedData,
-    tensorflow::serving::PredictResponse& response,
-    const std::vector<size_t>& expectedShape,
-    bool checkRaw = true) {
-    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
-    const auto& output_proto = response.outputs().at(outputName);
-
-    auto elementsCount = std::accumulate(expectedShape.begin(), expectedShape.end(), 1, std::multiplies<size_t>());
-
-    ASSERT_EQ(output_proto.tensor_content().size(), elementsCount * sizeof(T));
-    ASSERT_EQ(output_proto.tensor_shape().dim_size(), expectedShape.size());
-    for (size_t i = 0; i < expectedShape.size(); i++) {
-        ASSERT_EQ(output_proto.tensor_shape().dim(i).size(), expectedShape[i]);
-    }
-
-    T* actual_output = (T*)output_proto.tensor_content().data();
-    T* expected_output = (T*)expectedData.data();
-    const int dataLengthToCheck = elementsCount * sizeof(T);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(T));
-}
 
 template <typename T>
 void checkIncrement4DimResponse(const std::string outputName,
@@ -477,23 +422,6 @@ void checkIncrement4DimResponse(const std::string outputName,
     }
 }
 
-void checkIncrement4DimShape(const std::string outputName,
-    tensorflow::serving::PredictResponse& response,
-    const std::vector<size_t>& expectedShape);
-
-static std::vector<int> asVector(const tensorflow::TensorShapeProto& proto) {
-    std::vector<int> shape;
-    for (int i = 0; i < proto.dim_size(); i++) {
-        shape.push_back(proto.dim(i).size());
-    }
-    return shape;
-}
-
-static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedField<google::protobuf::int32>* container) {
-    std::vector<google::protobuf::int32> result(container->size(), 0);
-    std::memcpy(result.data(), container->mutable_data(), result.size() * sizeof(google::protobuf::int32));
-    return result;
-}
 #pragma GCC diagnostic pop
 
 template <typename T>
@@ -515,9 +443,6 @@ public:
     MOCK_METHOD(const ovms::tensor_map_t&, getOutputsInfo, (), (const, override));
     MOCK_METHOD(std::optional<ovms::Dimension>, getBatchSize, (), (const, override));
     MOCK_METHOD(const ovms::ModelConfig&, getModelConfig, (), (const, override));
-    const ovms::Status mockValidate(const tensorflow::serving::PredictRequest* request) {
-        return validate(request);
-    }
     const ovms::Status mockValidate(const ::KFSRequest* request) {
         return validate(request);
     }
@@ -557,7 +482,6 @@ static ovms::NodeLibrary createLibraryMock() {
         T::release};
 }
 
-bool isShapeTheSame(const tensorflow::TensorShapeProto&, const std::vector<int64_t>&&);
 bool isShapeTheSame(const KFSShapeType&, const std::vector<int64_t>&&);
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);

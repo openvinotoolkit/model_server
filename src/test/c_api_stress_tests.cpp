@@ -26,10 +26,8 @@
 #include "../dags/pipeline.hpp"
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
-#include "../get_model_metadata_impl.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
-#include "../model_service.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
@@ -42,8 +40,6 @@
 #include "test_utils.hpp"
 
 using namespace ovms;
-using namespace tensorflow;
-using namespace tensorflow::serving;
 
 using testing::_;
 using testing::Return;

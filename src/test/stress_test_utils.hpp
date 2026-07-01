@@ -38,12 +38,10 @@
 #include "../dags/pipeline.hpp"
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
-#include "../get_model_metadata_impl.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
-#include "../model_service.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
@@ -52,7 +50,7 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "src/timer.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
+#include "../tensorflow_type_utils.hpp"
 #include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"
@@ -63,8 +61,6 @@
 #endif
 
 using namespace ovms;
-using namespace tensorflow;
-using namespace tensorflow::serving;
 
 using testing::_;
 using testing::Return;
@@ -346,7 +342,7 @@ static const char* stressTestPipelineOneDummyConfigAddNewPipeline = R"(
             ]
     ]
 })";
-static const char* stressTestPipelineOneDummyConfigSpecificVersionUsed = R"(
+[[maybe_unused]] static const char* stressTestPipelineOneDummyConfigSpecificVersionUsed = R"(
 {
     "model_config_list": [
         {
@@ -553,7 +549,7 @@ static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChoos
     ]
 })";
 
-static const char* stressPipelineCustomNodeAddOneThenDummy = R"(
+[[maybe_unused]] static const char* stressPipelineCustomNodeAddOneThenDummy = R"(
 {
     "custom_node_library_config_list": [
         {
@@ -1580,85 +1576,6 @@ public:
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
 
-    bool isMetadataResponseCorrect(tensorflow::serving::GetModelMetadataResponse& response, SERVABLE_TYPE servableType) {
-        tensorflow::serving::SignatureDefMap def;
-        EXPECT_EQ(response.model_spec().name(), pipelineName);
-        EXPECT_TRUE(response.model_spec().has_version());
-        EXPECT_EQ(response.model_spec().version().value(), 1);
-        EXPECT_EQ(response.metadata_size(), 1);
-        EXPECT_NE(
-            response.metadata().find("signature_def"),
-            response.metadata().end());
-        response.metadata().at("signature_def").UnpackTo(&def);
-        response.metadata().at("signature_def").UnpackTo(&def);
-        const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
-        const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
-        auto expectedInputs = getExpectedInputsInfo();
-        std::cout << "Expected inputs: " << expectedInputs.size() << std::endl;
-        bool inputsSizeCorrect{inputs.size() == expectedInputs.size()};
-        EXPECT_TRUE(inputsSizeCorrect) << "Expected: " << expectedInputs.size() << " actual: " << inputs.size();
-        bool outputsSizeCorrect{outputs.size() == 1};
-        EXPECT_TRUE(outputsSizeCorrect) << "Expected: " << 1 << " actual: " << outputs.size();
-        if (!inputsSizeCorrect || !outputsSizeCorrect) {
-            return false;
-        }
-        for (auto& [expectedInputName, shapeTypeTuple] : expectedInputs) {
-            bool inputNameExist = inputs.find(expectedInputName.c_str()) != inputs.end();
-            EXPECT_TRUE(inputNameExist);
-            if (!inputNameExist) {
-                return false;
-            }
-            bool inputNameCorrect{inputs.at(pipelineInputName.c_str()).name() == pipelineInputName};
-            EXPECT_TRUE(inputNameCorrect);
-            if (!inputNameCorrect) {
-                return false;
-            }
-            bool inputTypeCorrect{inputs.at(pipelineInputName.c_str()).dtype() == tensorflow::DT_FLOAT};
-            EXPECT_TRUE(inputTypeCorrect);
-            if (!inputTypeCorrect) {
-                return false;
-            }
-            bool inputShapeCorrect = false;
-            std::vector<int64_t> expectedShape;
-            if (servableType == SERVABLE_TYPE::DAG) {
-                expectedShape = std::vector<int64_t>{1, 10};
-            } else if (servableType == SERVABLE_TYPE::MEDIAPIPE) {
-                expectedShape = std::vector<int64_t>{};
-            } else {
-                EXPECT_TRUE(false) << "Unsupported checks";
-            }
-            inputShapeCorrect = isShapeTheSame(
-                inputs.at(pipelineInputName.c_str()).tensor_shape(),
-                std::move(expectedShape));
-            EXPECT_TRUE(inputShapeCorrect);
-            if (!inputShapeCorrect) {
-                return false;
-            }
-        }
-        bool outputNameExist{outputs.find(pipelineOutputName.c_str()) != outputs.end()};
-        EXPECT_TRUE(outputNameExist);
-        if (!outputNameExist) {
-            return false;
-        }
-        bool outputNameCorrect{outputs.at(pipelineOutputName.c_str()).name() == pipelineOutputName};
-        EXPECT_TRUE(outputNameCorrect);
-        if (!outputNameCorrect) {
-            return false;
-        }
-        bool outputTypeCorrect{outputs.at(pipelineOutputName.c_str()).dtype() == tensorflow::DT_FLOAT};
-        EXPECT_TRUE(outputTypeCorrect);
-        if (!outputTypeCorrect) {
-            return false;
-        }
-        bool outputShapeCorrect{isShapeTheSame(
-            outputs.at(pipelineOutputName.c_str()).tensor_shape(),
-            {1, 10})};
-        EXPECT_TRUE(outputShapeCorrect);
-        if (!outputShapeCorrect) {
-            return false;
-        }
-        return true;
-    }
 #if (MEDIAPIPE_DISABLE == 0)
     void isKFSMetadataResponseCorrect(KFSModelMetadataResponse& response, SERVABLE_TYPE servableType) {
         EXPECT_EQ(response.name(), pipelineName);
@@ -1674,52 +1591,6 @@ public:
         EXPECT_EQ(response.outputs()[0].datatype(), "INVALID");
         EXPECT_TRUE(isShapeTheSame(response.outputs()[0].shape(), std::move(std::vector<int64_t>{})));
     }
-#endif
-    template <
-        typename RequestType = tensorflow::serving::GetModelMetadataRequest,
-        typename ResponseType = tensorflow::serving::GetModelMetadataResponse,
-        typename ServableType = ovms::Pipeline>
-    void triggerGetPipelineMetadataInALoop(
-        std::future<void>& startSignal,
-        std::future<void>& stopSignal,
-        const std::set<StatusCode>& requiredLoadResults,
-        const std::set<StatusCode>& allowedLoadResults,
-        std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
-        tensorflow::serving::GetModelMetadataRequest request;
-        startSignal.get();
-        // stressIterationsCounter is additional safety measure
-        auto stressIterationsCounter = stressIterationsLimit;
-        while (stressIterationsCounter-- > 0) {
-            auto futureWaitResult = stopSignal.wait_for(std::chrono::milliseconds(0));
-            if (futureWaitResult == std::future_status::ready) {
-                SPDLOG_INFO("Got stop signal. Ending Load");
-                break;
-            }
-            auto status = ovms::GetModelMetadataImpl::createGrpcRequest(pipelineName, 1, &request);
-            tensorflow::serving::GetModelMetadataResponse response;
-            status = ovms::GetModelMetadataImpl::getModelStatus(&request, &response, *(this->manager), ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata));
-            createPipelineRetCodesCounters[status.getCode()]++;
-            EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
-                        (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
-                << status.string() << "\n";
-            if (!status.ok()) {
-                continue;
-            }
-            // Check response if correct
-            SERVABLE_TYPE servableType = SERVABLE_TYPE::DAG;
-#if (MEDIAPIPE_DISABLE == 0)
-            if (typeid(ServableType) == typeid(MediapipeGraphExecutor)) {
-                servableType = SERVABLE_TYPE::MEDIAPIPE;
-            }
-#endif
-            EXPECT_TRUE(isMetadataResponseCorrect(response, servableType));
-            if (::testing::Test::HasFailure()) {
-                SPDLOG_INFO("Earlier fail detected. Stopping execution");
-                break;
-            }
-        }
-    }
-#if (MEDIAPIPE_DISABLE == 0)
     template <
         typename RequestType = KFSModelMetadataRequest,
         typename ResponseType = KFSModelMetadataResponse,
@@ -1766,58 +1637,11 @@ public:
         }
     }
 #endif
-    void triggerGetPipelineStatusInALoop(
-        std::future<void>& startSignal,
-        std::future<void>& stopSignal,
-        const std::set<StatusCode>& requiredLoadResults,
-        const std::set<StatusCode>& allowedLoadResults,
-        std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
-        tensorflow::serving::GetModelStatusRequest request;
-        startSignal.get();
-        // stressIterationsCounter is additional safety measure
-        // for getModelStatus requests it must be much higher since the response time is much lower
-        // as in contrast to predict/metadata requests
-        auto stressIterationsCounter = stressIterationsLimit * 100000;
-        while (stressIterationsCounter-- > 0) {
-            auto futureWaitResult = stopSignal.wait_for(std::chrono::milliseconds(0));
-            if (futureWaitResult == std::future_status::ready) {
-                SPDLOG_INFO("Got stop signal. Ending Load");
-                break;
-            }
-            auto status = ovms::GetModelStatusImpl::createGrpcRequest(getServableName(), 1, &request);
-            tensorflow::serving::GetModelStatusResponse response;
-            status = ovms::GetModelStatusImpl::getModelStatus(&request, &response, *(this->manager), ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelStatus));
-            createPipelineRetCodesCounters[status.getCode()]++;
-            EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
-                        (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
-                << status.string() << "\n";
-            if (!status.ok()) {
-                continue;
-            }
-            if (::testing::Test::HasFailure()) {
-                SPDLOG_INFO("Earlier fail detected. Stopping execution");
-                break;
-            }
-        }
-    }
-
-    virtual tensorflow::serving::PredictRequest preparePipelinePredictRequest(tensorflow::serving::PredictRequest) {
-        tensorflow::serving::PredictRequest request;
-        preparePredictRequest(request, getExpectedInputsInfo());
-        auto& input = (*request.mutable_inputs())[pipelineInputName];
-        input.mutable_tensor_content()->assign((char*)requestData.data(), requestData.size() * sizeof(float));
-        return request;
-    }
     virtual KFSRequest preparePipelinePredictRequest(KFSRequest&) {
         KFSRequest request;
         preparePredictRequest(request, getExpectedInputsInfo(), requestData);
         request.set_model_name(PIPELINE_1_DUMMY_NAME);
         return request;
-    }
-    virtual void checkPipelineResponse(const std::string& pipelineOutputName,
-        TFSPredictRequest& request,
-        TFSPredictResponse& response) {
-        checkDummyResponse(pipelineOutputName, requestData, request, response, 1);
     }
     virtual void checkPipelineResponse(const std::string& pipelineOutputName,
         KFSRequest& request,

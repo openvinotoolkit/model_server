@@ -408,14 +408,14 @@ TEST_F(HttpRestApiHandlerTest, MetricsParameters) {
 }
 
 TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithLongVersion) {
-    std::string request = "/v1/models/dummy/versions/72487667423532349025128558057";
+    std::string request = "/v2/models/dummy/versions/72487667423532349025128558057";
     ovms::HttpRequestComponents comp;
 
     ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::MODEL_VERSION_MISSING);
 }
 
 TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithEscapedPath) {
-    std::string request = "/v1/models/..iO!.0?E*/versions/1/metadata";
+    std::string request = "/v2/models/..iO!.0E/versions/1";
     ovms::HttpRequestComponents comp;
 
     ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);

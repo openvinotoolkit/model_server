@@ -27,12 +27,10 @@
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 #include "../executingstreamidguard.hpp"
-#include "../get_model_metadata_impl.hpp"
 #include "../grpcservermodule.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../model.hpp"
-#include "../model_service.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
@@ -206,33 +204,6 @@ public:
         std::filesystem::remove_all(cl_models_path);
     }
 };
-
-TEST_F(TestImplGetModelStatus, NegativeTfsGetModelStatus) {
-    // Create config file with an empty config & reload
-    std::string configStr = dummy_config;
-    configStr = configStr.replace(configStr.find("/tmp/test_cl_models"), std::string("/tmp/test_cl_models").size(), cl_models_path);
-    std::string fileToReload = cl_models_path + "/cl_config.json";
-    createConfigFileWithContent(configStr, fileToReload);
-    ASSERT_EQ(manager.loadConfig(fileToReload), ovms::StatusCode::OK);
-
-    tensorflow::serving::GetModelMetadataRequest req;
-    tensorflow::serving::GetModelMetadataResponse res;
-
-    auto model_spec = req.mutable_model_spec();
-    model_spec->Clear();
-    model_spec->set_name("dummy2");
-    model_spec->mutable_version()->set_value(2);
-    ASSERT_EQ(GetModelMetadataImpl::getModelStatus(&req, &res, manager, DEFAULT_TEST_CONTEXT), StatusCode::MODEL_NAME_MISSING);
-
-    model_spec->Clear();
-    model_spec->set_name("dummy");
-    model_spec->mutable_version()->set_value(2);
-    ASSERT_EQ(GetModelMetadataImpl::getModelStatus(&req, &res, manager, DEFAULT_TEST_CONTEXT), StatusCode::MODEL_VERSION_MISSING);
-
-    model_spec->Clear();
-    model_spec->set_name("dummy");
-    ASSERT_EQ(GetModelMetadataImpl::getModelStatus(&req, &res, manager, DEFAULT_TEST_CONTEXT), StatusCode::MODEL_VERSION_MISSING);
-}
 
 class ServerShutdownGuard {
     ovms::Server& ovmsServer;
