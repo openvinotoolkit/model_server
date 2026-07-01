@@ -623,30 +623,6 @@ class InputNotConnectedPipeline(Pipeline):
         return nodes
 
 
-class ImageClassificationPipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("image_classification_pipeline", **kwargs)
-        self._initialize()
-
-    def _create_nodes(self, models=None):
-        resnet_node = Node("resnet_node", Resnet())
-        googlenet_node = Node("googlenet_node", GoogleNetV2Fp32())
-        argmax_node = Node("argmax_node", ArgMax())
-
-        request = Node("request", node_type=NodeType.Input)
-        output = Node("output", node_type=NodeType.Output)
-
-        NodesConnection.connect(googlenet_node, 0, request, 0)
-        NodesConnection.connect(resnet_node, 0, request, 0)
-        NodesConnection.connect(argmax_node, 0, googlenet_node, 0)
-        NodesConnection.connect(argmax_node, 1, resnet_node, 0)
-        NodesConnection.connect(output, 0, argmax_node, 0)
-
-        nodes = [request, googlenet_node, resnet_node, argmax_node, output]
-        return nodes
-
-
 class ComplexDummyPipeline(Pipeline):
 
     def __init__(self, **kwargs):
