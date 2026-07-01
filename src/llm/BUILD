@@ -136,7 +136,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "io_processing_input_processor_context",
-    hdrs = ["io_processing/input_processor_context.hpp"],
+    hdrs = ["io_processing/input_processor_context.hpp",
+            "chat_template_caps.hpp"],
     srcs = [],
     deps = [
         ":io_processing_input_request",
@@ -152,17 +153,20 @@ ovms_cc_library(
     name = "io_processing_input_processors",
     hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
             "io_processing/input_processors/chat_template_processor.hpp",
+            "io_processing/input_processors/input_workarounds_processor.hpp",
             "io_processing/input_processors/raw_prompt_extractor.hpp",
             "io_processing/input_processors/text_content_normalization_processor.hpp",
             "io_processing/input_processors/tokenization_processor.hpp"],
     srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
             "io_processing/input_processors/chat_template_processor.cpp",
+            "io_processing/input_processors/input_workarounds_processor.cpp",
             "io_processing/input_processors/text_content_normalization_processor.cpp",
             "io_processing/input_processors/tokenization_processor.cpp"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmsprofiler",
         ":image_utils",
+        ":input_workarounds",
         ":io_processing_input_request",
         "//third_party:genai",
         "//src:libovmslogging",
@@ -238,7 +242,6 @@ ovms_cc_library(
             "chat_template_caps.hpp"],
     srcs = ["input_workarounds.cpp"],
     deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
         "//third_party:genai",
         "//src:libovmslogging",
     ],
@@ -469,7 +472,6 @@ ovms_cc_library(
         ":generation_config_builders",
         ":chat_template_analyzer",
         ":chat_template_probe",
-        ":input_workarounds",
         ":io_processing_input_processor_context",
         "//src:httppayload",
         "//src:libhttpclientconnection",

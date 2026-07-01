@@ -28,7 +28,6 @@
 
 #include "../../../config.hpp"
 #include "../../../logging.hpp"
-#include "../../input_workarounds.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)

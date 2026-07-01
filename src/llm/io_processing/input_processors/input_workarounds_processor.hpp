@@ -15,27 +15,22 @@
 //*****************************************************************************
 #pragma once
 
-#include <string>
-
-#include <openvino/genai/tokenizer.hpp>
-
-#include "../chat_template_caps.hpp"
-#include "input_processing_config.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../py_jinja_template_processor.hpp"
-#endif
+#include "../../chat_template_caps.hpp"
+#include "../base_input_processor.hpp"
 
 namespace ovms {
 
-// Holds the per-deployment resources needed by InputProcessor.
-// Created once during servable initialization; reused across requests.
-struct InputProcessorContext {
-    InputProcessingConfig config;
-    ChatTemplateCaps chatTemplateCaps;
-    ov::genai::Tokenizer tokenizer;
-#if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor* templateProcessor = nullptr;
-#endif
+// Applies input workarounds to ChatHistory based on detected ChatTemplateCaps.
+// Active when: input is ChatHistory variant and at least one workaround is needed.
+// Must run before ChatTemplateProcessor so the template receives corrected input.
+class InputWorkaroundsProcessor : public BaseInputProcessor {
+public:
+    explicit InputWorkaroundsProcessor(const ChatTemplateCaps& caps);
+
+    absl::Status process(InputRequest& req) override;
+
+private:
+    const ChatTemplateCaps& caps;
 };
 
 }  // namespace ovms

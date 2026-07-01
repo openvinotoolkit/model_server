@@ -36,7 +36,6 @@
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "apis/openai_responses.hpp"
-#include "input_workarounds.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #include "io_processing/input_processor.hpp"
 #include "ovms_text_streamer.hpp"

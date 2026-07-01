@@ -18,41 +18,26 @@
 #include <string>
 
 #include <openvino/genai/tokenizer.hpp>
-#include <rapidjson/document.h>
 
 #include "chat_template_caps.hpp"
 
 namespace ovms {
 namespace input_workarounds {
 
-// --- Individual workaround functions (JSON path) ---
-// Each operates on the full request document containing "messages" array.
-// Exposed individually for unit testing and for selective use during refactoring.
-
-// Convert tool_call arguments from JSON string to parsed JSON object.
-// Models like Gemma require arguments as a dict/object, not a stringified JSON.
-void funcArgsToObjectJson(rapidjson::Document& doc);
-
-// Ensure assistant messages with tool_calls have non-null content field.
-// Some templates require content="" rather than content=null.
-void ensureNonNullContentJson(rapidjson::Document& doc);
-
 // --- Individual workaround functions (ChatHistory path) ---
-// Operates on ov::genai::ChatHistory for the GenAI C++ tokenizer path.
+// Operates on ov::genai::ChatHistory for both GenAI C++ tokenizer and PyJinja paths.
 
 // Convert tool_call arguments from string to object in ChatHistory.
+// Models like Gemma require arguments as a dict/object, not a stringified JSON.
 void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory);
 
 // Ensure assistant messages with tool_calls have non-null content in ChatHistory.
+// Some templates require content="" rather than content=null.
 void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory);
 
 // --- Aggregate application ---
 
-// Apply all relevant workarounds to the JSON document (Python Jinja path).
-// Modifies the document in-place based on detected capabilities.
-void applyToJson(const ChatTemplateCaps& caps, const std::string& modelFamily, rapidjson::Document& doc);
-
-// Apply all relevant workarounds to the ChatHistory (GenAI C++ tokenizer path).
+// Apply all relevant workarounds to the ChatHistory.
 // Modifies the chat history in-place based on detected capabilities.
 void applyToHistory(const ChatTemplateCaps& caps, const std::string& modelFamily, ov::genai::ChatHistory& chatHistory);
 

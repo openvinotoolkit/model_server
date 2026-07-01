@@ -42,7 +42,6 @@
 #include "../../../config.hpp"
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
-#include "../../input_workarounds.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)

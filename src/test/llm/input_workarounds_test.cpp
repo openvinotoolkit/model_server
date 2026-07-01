@@ -17,9 +17,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
+#include <openvino/genai/chat_history.hpp>
 
 #include "../../llm/input_workarounds.hpp"
 
@@ -27,250 +25,214 @@ using namespace ovms;
 
 class InputWorkaroundsTest : public ::testing::Test {
 protected:
-    rapidjson::Document parseJson(const std::string& json) {
-        rapidjson::Document doc;
-        doc.Parse(json.c_str());
-        EXPECT_FALSE(doc.HasParseError()) << "Failed to parse test JSON";
-        return doc;
-    }
-
-    std::string serializeJson(const rapidjson::Document& doc) {
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        return buffer.GetString();
+    ov::genai::ChatHistory buildHistory(const std::string& messagesJson) {
+        ov::genai::ChatHistory history;
+        auto container = ov::genai::JsonContainer::from_json_string(messagesJson);
+        for (size_t i = 0; i < container.size(); ++i) {
+            history.push_back(container[i]);
+        }
+        return history;
     }
 };
 
-// --- funcArgsToObjectJson ---
+// --- funcArgsToObjectHistory ---
 
 TEST_F(InputWorkaroundsTest, funcArgsToObjectConvertsStringArgs) {
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "user", "content": "hello"},
-            {"role": "assistant", "content": null, "tool_calls": [
-                {"id": "call_1", "type": "function", "function": {
-                    "name": "get_weather",
-                    "arguments": "{\"city\": \"London\", \"units\": \"celsius\"}"
-                }}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "user", "content": "hello"},
+        {"role": "assistant", "content": "", "tool_calls": [
+            {"id": "call_1", "type": "function", "function": {
+                "name": "get_weather",
+                "arguments": "{\"city\": \"London\", \"units\": \"celsius\"}"
+            }}
+        ]}
+    ])");
 
-    input_workarounds::funcArgsToObjectJson(doc);
+    input_workarounds::funcArgsToObjectHistory(history);
 
-    auto& args = doc["messages"][1]["tool_calls"][0]["function"]["arguments"];
-    ASSERT_TRUE(args.IsObject());
-    ASSERT_TRUE(args.HasMember("city"));
-    EXPECT_STREQ(args["city"].GetString(), "London");
-    ASSERT_TRUE(args.HasMember("units"));
-    EXPECT_STREQ(args["units"].GetString(), "celsius");
+    auto args = history[1]["tool_calls"][0]["function"]["arguments"];
+    ASSERT_TRUE(args.is_object());
+    EXPECT_EQ(args["city"].get_string(), "London");
+    EXPECT_EQ(args["units"].get_string(), "celsius");
 }
 
 TEST_F(InputWorkaroundsTest, funcArgsToObjectHandlesMultipleToolCalls) {
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "assistant", "content": null, "tool_calls": [
-                {"id": "call_1", "function": {"name": "fn1", "arguments": "{\"a\": 1}"}},
-                {"id": "call_2", "function": {"name": "fn2", "arguments": "{\"b\": true}"}}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "assistant", "content": "", "tool_calls": [
+            {"id": "call_1", "function": {"name": "fn1", "arguments": "{\"a\": 1}"}},
+            {"id": "call_2", "function": {"name": "fn2", "arguments": "{\"b\": true}"}}
+        ]}
+    ])");
 
-    input_workarounds::funcArgsToObjectJson(doc);
+    input_workarounds::funcArgsToObjectHistory(history);
 
-    auto& args1 = doc["messages"][0]["tool_calls"][0]["function"]["arguments"];
-    ASSERT_TRUE(args1.IsObject());
-    EXPECT_EQ(args1["a"].GetInt(), 1);
+    auto args1 = history[0]["tool_calls"][0]["function"]["arguments"];
+    ASSERT_TRUE(args1.is_object());
+    EXPECT_EQ(args1.to_json_string(), R"({"a":1})");
 
-    auto& args2 = doc["messages"][0]["tool_calls"][1]["function"]["arguments"];
-    ASSERT_TRUE(args2.IsObject());
-    EXPECT_TRUE(args2["b"].GetBool());
+    auto args2 = history[0]["tool_calls"][1]["function"]["arguments"];
+    ASSERT_TRUE(args2.is_object());
+    EXPECT_EQ(args2.to_json_string(), R"({"b":true})");
 }
 
 TEST_F(InputWorkaroundsTest, funcArgsToObjectSkipsAlreadyObjectArgs) {
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "assistant", "tool_calls": [
-                {"function": {"name": "fn", "arguments": {"key": "value"}}}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "assistant", "content": "", "tool_calls": [
+            {"function": {"name": "fn", "arguments": {"key": "value"}}}
+        ]}
+    ])");
 
-    input_workarounds::funcArgsToObjectJson(doc);
+    input_workarounds::funcArgsToObjectHistory(history);
 
-    auto& args = doc["messages"][0]["tool_calls"][0]["function"]["arguments"];
-    ASSERT_TRUE(args.IsObject());
-    EXPECT_STREQ(args["key"].GetString(), "value");
+    auto args = history[0]["tool_calls"][0]["function"]["arguments"];
+    ASSERT_TRUE(args.is_object());
+    EXPECT_EQ(args["key"].get_string(), "value");
 }
 
 TEST_F(InputWorkaroundsTest, funcArgsToObjectSkipsInvalidJsonString) {
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "assistant", "tool_calls": [
-                {"function": {"name": "fn", "arguments": "not valid json {"}}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "assistant", "content": "", "tool_calls": [
+            {"function": {"name": "fn", "arguments": "not valid json {"}}
+        ]}
+    ])");
 
-    input_workarounds::funcArgsToObjectJson(doc);
+    input_workarounds::funcArgsToObjectHistory(history);
 
-    auto& args = doc["messages"][0]["tool_calls"][0]["function"]["arguments"];
-    EXPECT_TRUE(args.IsString());
-}
-
-TEST_F(InputWorkaroundsTest, funcArgsToObjectNoopWithoutMessages) {
-    auto doc = parseJson(R"({"model": "test"})");
-    input_workarounds::funcArgsToObjectJson(doc);
-    // Should not crash
-    EXPECT_TRUE(doc.HasMember("model"));
+    auto args = history[0]["tool_calls"][0]["function"]["arguments"];
+    EXPECT_TRUE(args.is_string());
 }
 
 TEST_F(InputWorkaroundsTest, funcArgsToObjectNoopWithoutToolCalls) {
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "user", "content": "hello"}
-        ]
-    })");
-    input_workarounds::funcArgsToObjectJson(doc);
-    EXPECT_STREQ(doc["messages"][0]["content"].GetString(), "hello");
+    auto history = buildHistory(R"([
+        {"role": "user", "content": "hello"}
+    ])");
+
+    input_workarounds::funcArgsToObjectHistory(history);
+
+    EXPECT_EQ(history[0]["content"].get_string(), "hello");
 }
 
-// --- ensureNonNullContentJson ---
+// --- ensureNonNullContentHistory ---
 
 TEST_F(InputWorkaroundsTest, ensureNonNullContentSetsNullToEmpty) {
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "assistant", "content": null, "tool_calls": [
-                {"function": {"name": "fn"}}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "assistant", "content": null, "tool_calls": [
+            {"function": {"name": "fn"}}
+        ]}
+    ])");
 
-    input_workarounds::ensureNonNullContentJson(doc);
+    input_workarounds::ensureNonNullContentHistory(history);
 
-    ASSERT_TRUE(doc["messages"][0]["content"].IsString());
-    EXPECT_STREQ(doc["messages"][0]["content"].GetString(), "");
+    ASSERT_TRUE(history[0]["content"].is_string());
+    EXPECT_EQ(history[0]["content"].get_string(), "");
 }
 
 TEST_F(InputWorkaroundsTest, ensureNonNullContentAddsMissingContent) {
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "assistant", "tool_calls": [
-                {"function": {"name": "fn"}}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "assistant", "tool_calls": [
+            {"function": {"name": "fn"}}
+        ]}
+    ])");
 
-    input_workarounds::ensureNonNullContentJson(doc);
+    input_workarounds::ensureNonNullContentHistory(history);
 
-    ASSERT_TRUE(doc["messages"][0].HasMember("content"));
-    ASSERT_TRUE(doc["messages"][0]["content"].IsString());
-    EXPECT_STREQ(doc["messages"][0]["content"].GetString(), "");
+    EXPECT_TRUE(history[0].contains("content"));
+    ASSERT_TRUE(history[0]["content"].is_string());
+    EXPECT_EQ(history[0]["content"].get_string(), "");
 }
 
 TEST_F(InputWorkaroundsTest, ensureNonNullContentPreservesExistingString) {
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "assistant", "content": "some text", "tool_calls": [
-                {"function": {"name": "fn"}}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "assistant", "content": "some text", "tool_calls": [
+            {"function": {"name": "fn"}}
+        ]}
+    ])");
 
-    input_workarounds::ensureNonNullContentJson(doc);
+    input_workarounds::ensureNonNullContentHistory(history);
 
-    ASSERT_TRUE(doc["messages"][0]["content"].IsString());
-    EXPECT_STREQ(doc["messages"][0]["content"].GetString(), "some text");
+    ASSERT_TRUE(history[0]["content"].is_string());
+    EXPECT_EQ(history[0]["content"].get_string(), "some text");
 }
 
 TEST_F(InputWorkaroundsTest, ensureNonNullContentSkipsMessagesWithoutToolCalls) {
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "user", "content": null}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "user", "content": null}
+    ])");
 
-    input_workarounds::ensureNonNullContentJson(doc);
+    input_workarounds::ensureNonNullContentHistory(history);
 
     // User message without tool_calls should not be modified
-    EXPECT_TRUE(doc["messages"][0]["content"].IsNull());
+    EXPECT_TRUE(history[0]["content"].is_null());
 }
 
-// --- applyToJson ---
+// --- applyToHistory ---
 
-TEST_F(InputWorkaroundsTest, applyToJsonAppliesObjectArgsWhenRequired) {
+TEST_F(InputWorkaroundsTest, applyToHistoryAppliesObjectArgsWhenRequired) {
     ChatTemplateCaps caps;
     caps.requiresObjectArguments = true;
 
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "assistant", "tool_calls": [
-                {"function": {"name": "fn", "arguments": "{\"x\": 42}"}}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "assistant", "content": "", "tool_calls": [
+            {"function": {"name": "fn", "arguments": "{\"x\": 42}"}}
+        ]}
+    ])");
 
-    input_workarounds::applyToJson(caps, "gemma4", doc);
+    input_workarounds::applyToHistory(caps, "gemma4", history);
 
-    ASSERT_TRUE(doc["messages"][0]["tool_calls"][0]["function"]["arguments"].IsObject());
-    EXPECT_EQ(doc["messages"][0]["tool_calls"][0]["function"]["arguments"]["x"].GetInt(), 42);
+    auto args = history[0]["tool_calls"][0]["function"]["arguments"];
+    ASSERT_TRUE(args.is_object());
+    EXPECT_EQ(args.to_json_string(), R"({"x":42})");
 }
 
-TEST_F(InputWorkaroundsTest, applyToJsonAppliesNonNullContentWhenRequired) {
+TEST_F(InputWorkaroundsTest, applyToHistoryAppliesNonNullContentWhenRequired) {
     ChatTemplateCaps caps;
     caps.requiresNonNullContent = true;
 
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "assistant", "content": null, "tool_calls": [
-                {"function": {"name": "fn"}}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "assistant", "content": null, "tool_calls": [
+            {"function": {"name": "fn"}}
+        ]}
+    ])");
 
-    input_workarounds::applyToJson(caps, "llama3", doc);
+    input_workarounds::applyToHistory(caps, "llama3", history);
 
-    ASSERT_TRUE(doc["messages"][0]["content"].IsString());
-    EXPECT_STREQ(doc["messages"][0]["content"].GetString(), "");
+    ASSERT_TRUE(history[0]["content"].is_string());
+    EXPECT_EQ(history[0]["content"].get_string(), "");
 }
 
-TEST_F(InputWorkaroundsTest, applyToJsonDoesNothingWhenNoCapsSet) {
+TEST_F(InputWorkaroundsTest, applyToHistoryDoesNothingWhenNoCapsSet) {
     ChatTemplateCaps caps;  // all defaults (false)
 
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "assistant", "content": null, "tool_calls": [
-                {"function": {"name": "fn", "arguments": "{\"x\": 1}"}}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "assistant", "content": null, "tool_calls": [
+            {"function": {"name": "fn", "arguments": "{\"x\": 1}"}}
+        ]}
+    ])");
 
-    std::string before = serializeJson(doc);
-    input_workarounds::applyToJson(caps, "", doc);
-    std::string after = serializeJson(doc);
+    std::string before = history.get_messages().to_json_string();
+    input_workarounds::applyToHistory(caps, "", history);
+    std::string after = history.get_messages().to_json_string();
 
     EXPECT_EQ(before, after);
 }
 
-TEST_F(InputWorkaroundsTest, applyToJsonAppliesBothWorkarounds) {
+TEST_F(InputWorkaroundsTest, applyToHistoryAppliesBothWorkarounds) {
     ChatTemplateCaps caps;
     caps.requiresObjectArguments = true;
     caps.requiresNonNullContent = true;
 
-    auto doc = parseJson(R"({
-        "messages": [
-            {"role": "assistant", "content": null, "tool_calls": [
-                {"function": {"name": "fn", "arguments": "{\"key\": \"val\"}"}}
-            ]}
-        ]
-    })");
+    auto history = buildHistory(R"([
+        {"role": "assistant", "content": null, "tool_calls": [
+            {"function": {"name": "fn", "arguments": "{\"key\": \"val\"}"}}
+        ]}
+    ])");
 
-    input_workarounds::applyToJson(caps, "test", doc);
+    input_workarounds::applyToHistory(caps, "test", history);
 
     // Arguments should be converted to object
-    ASSERT_TRUE(doc["messages"][0]["tool_calls"][0]["function"]["arguments"].IsObject());
+    auto args = history[0]["tool_calls"][0]["function"]["arguments"];
+    ASSERT_TRUE(args.is_object());
     // Content should be non-null
-    ASSERT_TRUE(doc["messages"][0]["content"].IsString());
-    EXPECT_STREQ(doc["messages"][0]["content"].GetString(), "");
+    ASSERT_TRUE(history[0]["content"].is_string());
+    EXPECT_EQ(history[0]["content"].get_string(), "");
 }

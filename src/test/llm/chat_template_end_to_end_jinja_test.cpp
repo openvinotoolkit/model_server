@@ -31,9 +31,7 @@
 #include <pybind11/embed.h>
 #pragma warning(pop)
 
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
+#include <openvino/genai/chat_history.hpp>
 
 #include "../../llm/chat_template_analyzer.hpp"
 #include "../../llm/chat_template_caps.hpp"
@@ -123,21 +121,23 @@ protected:
     }
 
     // Probe tool caps using Python Jinja (same engine as production Jinja path)
-    // Apply workarounds to the JSON request body
+    // Apply workarounds to the JSON request body via ChatHistory path (same as production)
     std::string applyWorkarounds(const std::string& jsonBody) {
         if (!caps.requiresObjectArguments && !caps.requiresNonNullContent) {
             return jsonBody;
         }
-        rapidjson::Document doc;
-        doc.Parse(jsonBody.c_str());
-        if (doc.HasParseError()) {
-            return jsonBody;
+        // Parse messages from JSON body into ChatHistory
+        auto bodyContainer = ov::genai::JsonContainer::from_json_string(jsonBody);
+        ov::genai::ChatHistory history;
+        auto messages = bodyContainer["messages"];
+        for (size_t i = 0; i < messages.size(); ++i) {
+            history.push_back(messages[i]);
         }
-        input_workarounds::applyToJson(caps, analysisResult.detectedModelFamily, doc);
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        return buffer.GetString();
+        // Apply workarounds on ChatHistory (same as InputWorkaroundsProcessor)
+        input_workarounds::applyToHistory(caps, analysisResult.detectedModelFamily, history);
+        // Serialize back to JSON body format for PyJinja
+        std::string result = "{\"messages\":" + history.get_messages().to_json_string() + "}";
+        return result;
     }
 
     // Run the full Jinja pipeline: analyze → probe → workarounds → apply via Python Jinja

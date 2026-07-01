@@ -13,29 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
 
-#include <string>
+#include "input_workarounds_processor.hpp"
 
-#include <openvino/genai/tokenizer.hpp>
+#include <variant>
 
-#include "../chat_template_caps.hpp"
-#include "input_processing_config.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../py_jinja_template_processor.hpp"
-#endif
+#include "../../input_workarounds.hpp"
 
 namespace ovms {
 
-// Holds the per-deployment resources needed by InputProcessor.
-// Created once during servable initialization; reused across requests.
-struct InputProcessorContext {
-    InputProcessingConfig config;
-    ChatTemplateCaps chatTemplateCaps;
-    ov::genai::Tokenizer tokenizer;
-#if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor* templateProcessor = nullptr;
-#endif
-};
+InputWorkaroundsProcessor::InputWorkaroundsProcessor(const ChatTemplateCaps& caps) :
+    caps(caps) {}
+
+absl::Status InputWorkaroundsProcessor::process(InputRequest& req) {
+    if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
+        return absl::OkStatus();
+    }
+    auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
+    input_workarounds::applyToHistory(caps, "", chatHistory);
+    return absl::OkStatus();
+}
 
 }  // namespace ovms

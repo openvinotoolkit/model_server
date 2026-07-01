@@ -24,66 +24,6 @@
 namespace ovms {
 namespace input_workarounds {
 
-// --- JSON path implementations ---
-
-void funcArgsToObjectJson(rapidjson::Document& doc) {
-    if (!doc.HasMember("messages") || !doc["messages"].IsArray()) {
-        return;
-    }
-    auto& allocator = doc.GetAllocator();
-    for (auto& message : doc["messages"].GetArray()) {
-        if (!message.IsObject() || !message.HasMember("tool_calls") || !message["tool_calls"].IsArray()) {
-            continue;
-        }
-        for (auto& toolCall : message["tool_calls"].GetArray()) {
-            if (!toolCall.IsObject() || !toolCall.HasMember("function") || !toolCall["function"].IsObject()) {
-                continue;
-            }
-            auto& function = toolCall["function"];
-            if (!function.HasMember("arguments") || !function["arguments"].IsString()) {
-                continue;
-            }
-            const char* argsStr = function["arguments"].GetString();
-            rapidjson::Document argsDoc;
-            argsDoc.Parse(argsStr);
-            if (argsDoc.HasParseError()) {
-                continue;
-            }
-            function["arguments"].CopyFrom(argsDoc, allocator);
-        }
-    }
-}
-
-void ensureNonNullContentJson(rapidjson::Document& doc) {
-    if (!doc.HasMember("messages") || !doc["messages"].IsArray()) {
-        return;
-    }
-    auto& allocator = doc.GetAllocator();
-    for (auto& message : doc["messages"].GetArray()) {
-        if (!message.IsObject() || !message.HasMember("tool_calls")) {
-            continue;
-        }
-        if (!message.HasMember("content")) {
-            message.AddMember("content", rapidjson::Value().SetString("", allocator), allocator);
-        } else if (message["content"].IsNull()) {
-            message["content"].SetString("", allocator);
-        }
-    }
-}
-
-void applyToJson(const ChatTemplateCaps& caps, const std::string& modelFamily, rapidjson::Document& doc) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Applying input workarounds (JSON path) for model family '{}': "
-                                               "requiresObjectArguments={}, requiresNonNullContent={}",
-        modelFamily.empty() ? "(none)" : modelFamily,
-        caps.requiresObjectArguments, caps.requiresNonNullContent);
-    if (caps.requiresObjectArguments) {
-        funcArgsToObjectJson(doc);
-    }
-    if (caps.requiresNonNullContent) {
-        ensureNonNullContentJson(doc);
-    }
-}
-
 // --- ChatHistory path implementations ---
 
 void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory) {

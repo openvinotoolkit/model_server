@@ -163,6 +163,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
     // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
     properties->inputProcessorContext.config.useMinja = (properties->chatTemplateMode != ChatTemplateMode::JINJA);
+    properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
 #if (PYTHON_DISABLE == 0)
     properties->inputProcessorContext.templateProcessor = &properties->templateProcessor;
 #endif
