@@ -26,8 +26,14 @@
 
 using namespace ovms;
 
+// There is no MiniCPM5 tokenizer among the test assets, so this reuses the existing
+// Qwen3-8B tokenizer instead of adding a new asset. This is safe here: the Minicpm5
+// parser (see minicpm5_tool_parser.cpp) operates on OutputParser::parse's decoded text
+// (tokenizer.decode(generatedTokens)) via plain string/XML-tag matching -- it never reads
+// token ids or vocab-specific special tokens. Every test string below is round-tripped
+// through encode() then decode() with this same tokenizer instance, so the parser sees
+// back the exact text it was given regardless of whose vocabulary produced the token ids.
 #ifdef _WIN32
-// Reuse an existing tokenizer from the test assets (content doesn't matter for these unary tests)
 const std::string minicpm5TokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\Qwen\\Qwen3-8B";
 #else
 const std::string minicpm5TokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
