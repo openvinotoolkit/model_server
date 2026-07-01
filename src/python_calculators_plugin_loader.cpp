@@ -277,9 +277,9 @@ bool loadPythonCalculatorsPlugin() {
     // them in the main process instead of failing with "undefined symbol" errors.
     // This allows the plugin to load even though the shared MediaPipe library
     // has forward references to OVMS code that's only available in the main binary.
-    void* mainProcessSymbols = dlopen(NULL, RTLD_GLOBAL);
+    void* mainProcessSymbols = dlopen(NULL, RTLD_NOW | RTLD_GLOBAL);
     if (mainProcessSymbols == nullptr) {
-        SPDLOG_WARN("Failed to expose main process symbols (dlopen(NULL)): {}. "
+        SPDLOG_WARN("Failed to expose main process symbols: {}. "
                     "Plugin loading may fail if shared libraries have unresolved symbols.",
             dlerror());
     }
