@@ -179,7 +179,6 @@ struct GenAiServableProperties {
 #endif
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
-    std::string detectedModelFamily;
     // Sampling
     DecodingMethod decodingMethod;
     std::optional<uint32_t> maxTokensLimit;

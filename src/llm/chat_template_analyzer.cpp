@@ -33,7 +33,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
 
     // GPT-OSS detection — must be before other checks as it has a unique marker
     if (contains(templateSource, "<|channel|>")) {
-        result.detectedModelFamily = "gptoss";
         result.detectedToolParser = "gptoss";
         result.detectedReasoningParser = "gptoss";
         result.caps.supportsToolCalls = true;
@@ -44,7 +43,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
 
     // Gemma4 detection
     if (contains(templateSource, "'<|tool_call>call:'") || contains(templateSource, "<|tool_call>call:")) {
-        result.detectedModelFamily = "gemma4";
         result.detectedToolParser = "gemma4";
         result.detectedReasoningParser = "gemma4";
         result.caps.supportsToolCalls = true;
@@ -56,7 +54,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
 
     // Qwen3-Coder detection — uses <parameter= XML style
     if (contains(templateSource, "<parameter=") && contains(templateSource, "</parameter>") && contains(templateSource, "<function=")) {
-        result.detectedModelFamily = "qwen3coder";
         result.detectedToolParser = "qwen3coder";
         result.caps.supportsToolCalls = true;
         result.caps.supportsTools = true;
@@ -70,17 +67,16 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
 
     // LFM2 detection
     if (contains(templateSource, "<|assistant_tool_call|>") || contains(templateSource, "<|tool_call_start|>")) {
-        result.detectedModelFamily = "lfm2";
         result.detectedToolParser = "lfm2";
         result.caps.supportsToolCalls = true;
         result.caps.supportsTools = true;
         result.caps.supportsToolResponses = true;
         return result;
+        // TODO: Support reasoning after Pawel adds reasoning parser for it
     }
 
     // Phi-4 detection — uses "functools[" marker for tool calls
     if (contains(templateSource, "functools")) {
-        result.detectedModelFamily = "phi4";
         result.detectedToolParser = "phi4";
         result.caps.supportsToolCalls = true;
         result.caps.supportsTools = true;
@@ -90,7 +86,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
 
     // Devstral detection — uses [TOOL_CALLS]name[ARGS]json format (unique [ARGS] marker)
     if (contains(templateSource, "[TOOL_CALLS]") && contains(templateSource, "[ARGS]")) {
-        result.detectedModelFamily = "devstral";
         result.detectedToolParser = "devstral";
         result.caps.supportsToolCalls = true;
         result.caps.supportsTools = true;
@@ -100,7 +95,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
 
     // Mistral detection — uses [TOOL_CALLS] without [TOOL_RESULTS] or uses [AVAILABLE_TOOLS]
     if (contains(templateSource, "[TOOL_CALLS]") || (contains(templateSource, "[AVAILABLE_TOOLS]") && contains(templateSource, "[/AVAILABLE_TOOLS]"))) {
-        result.detectedModelFamily = "mistral";
         result.detectedToolParser = "mistral";
         result.caps.supportsToolCalls = true;
         result.caps.supportsTools = true;
@@ -110,7 +104,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
 
     // Llama3 detection — <|python_tag|>
     if (contains(templateSource, "<|python_tag|>")) {
-        result.detectedModelFamily = "llama3";
         result.detectedToolParser = "llama3";
         result.caps.supportsToolCalls = true;
         result.caps.supportsTools = true;
@@ -121,7 +114,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
 
     // Hermes3/Qwen detection — <tool_call> / </tool_call> (without <parameter= which is Qwen3-Coder, already checked above)
     if (contains(templateSource, "<tool_call>") && contains(templateSource, "</tool_call>")) {
-        result.detectedModelFamily = "hermes3";
         result.detectedToolParser = "hermes3";
         result.caps.supportsToolCalls = true;
         result.caps.supportsTools = true;

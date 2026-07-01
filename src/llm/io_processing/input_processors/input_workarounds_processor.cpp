@@ -30,7 +30,7 @@ absl::Status InputWorkaroundsProcessor::process(InputRequest& req) {
         return absl::OkStatus();
     }
     auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
-    input_workarounds::applyToHistory(caps, "", chatHistory);
+    input_workarounds::applyToHistory(caps, chatHistory);
     return absl::OkStatus();
 }
 

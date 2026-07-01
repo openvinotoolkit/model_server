@@ -24,7 +24,6 @@ namespace ovms {
 
 struct ChatTemplateAnalysisResult {
     ChatTemplateCaps caps;
-    std::string detectedModelFamily;
     std::optional<std::string> detectedToolParser;
     std::optional<std::string> detectedReasoningParser;
 };

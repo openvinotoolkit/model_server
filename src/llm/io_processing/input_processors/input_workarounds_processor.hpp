@@ -21,8 +21,7 @@
 namespace ovms {
 
 // Applies input workarounds to ChatHistory based on detected ChatTemplateCaps.
-// Active when: input is ChatHistory variant and at least one workaround is needed.
-// Must run before ChatTemplateProcessor so the template receives corrected input.
+// Runs before ChatTemplateProcessor so the template receives corrected input.
 class InputWorkaroundsProcessor : public BaseInputProcessor {
 public:
     explicit InputWorkaroundsProcessor(const ChatTemplateCaps& caps);

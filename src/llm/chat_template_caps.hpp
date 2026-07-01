@@ -15,8 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#include <string>
-
 namespace ovms {
 
 struct ChatTemplateCaps {
@@ -26,6 +24,10 @@ struct ChatTemplateCaps {
     bool supportsToolResponses = false;
     bool requiresObjectArguments = false;
     bool requiresNonNullContent = false;
+
+    bool needsWorkarounds() const {
+        return requiresObjectArguments || requiresNonNullContent;
+    }
 };
 
 }  // namespace ovms

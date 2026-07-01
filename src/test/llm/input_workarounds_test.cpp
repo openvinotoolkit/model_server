@@ -177,7 +177,7 @@ TEST_F(InputWorkaroundsTest, applyToHistoryAppliesObjectArgsWhenRequired) {
         ]}
     ])");
 
-    input_workarounds::applyToHistory(caps, "gemma4", history);
+    input_workarounds::applyToHistory(caps, history);
 
     auto args = history[0]["tool_calls"][0]["function"]["arguments"];
     ASSERT_TRUE(args.is_object());
@@ -194,7 +194,7 @@ TEST_F(InputWorkaroundsTest, applyToHistoryAppliesNonNullContentWhenRequired) {
         ]}
     ])");
 
-    input_workarounds::applyToHistory(caps, "llama3", history);
+    input_workarounds::applyToHistory(caps, history);
 
     ASSERT_TRUE(history[0]["content"].is_string());
     EXPECT_EQ(history[0]["content"].get_string(), "");
@@ -210,7 +210,7 @@ TEST_F(InputWorkaroundsTest, applyToHistoryDoesNothingWhenNoCapsSet) {
     ])");
 
     std::string before = history.get_messages().to_json_string();
-    input_workarounds::applyToHistory(caps, "", history);
+    input_workarounds::applyToHistory(caps, history);
     std::string after = history.get_messages().to_json_string();
 
     EXPECT_EQ(before, after);
@@ -227,7 +227,7 @@ TEST_F(InputWorkaroundsTest, applyToHistoryAppliesBothWorkarounds) {
         ]}
     ])");
 
-    input_workarounds::applyToHistory(caps, "test", history);
+    input_workarounds::applyToHistory(caps, history);
 
     // Arguments should be converted to object
     auto args = history[0]["tool_calls"][0]["function"]["arguments"];

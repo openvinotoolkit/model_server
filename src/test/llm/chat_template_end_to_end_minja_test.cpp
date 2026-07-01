@@ -97,7 +97,6 @@ protected:
         caps = analysisResult.caps;
 
         std::cout << "=== Analysis ===" << std::endl;
-        std::cout << "  modelFamily: " << analysisResult.detectedModelFamily << std::endl;
         std::cout << "  toolParser: " << analysisResult.detectedToolParser.value_or("(none)") << std::endl;
         std::cout << "  reasoningParser: " << analysisResult.detectedReasoningParser.value_or("(none)") << std::endl;
         std::cout << "  supportsToolCalls: " << caps.supportsToolCalls << std::endl;
@@ -119,7 +118,7 @@ protected:
         if (caps.supportsToolCalls) {
             ov::genai::Tokenizer probeTokenizer(tokenizerPath);
             probeTokenizer.set_chat_template(chatTemplate);
-            bool probeOk = probeChatTemplateCaps(probeTokenizer, caps);
+            bool probeOk = probeChatTemplateCapsMinja(probeTokenizer, caps);
             if (!probeOk) {
                 std::cout << "=== Probe FAILED: minja cannot render tool calls ===" << std::endl;
             }
@@ -130,7 +129,7 @@ protected:
 
         // Step 4: Apply workarounds to the chat history
         if (applicator == TemplateApplicator::MINJA) {
-            input_workarounds::applyToHistory(caps, analysisResult.detectedModelFamily, chatHistory);
+            input_workarounds::applyToHistory(caps, chatHistory);
         } else {
             GTEST_SKIP() << "JINJA applicator not implemented yet";
         }
@@ -174,7 +173,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, GptOss_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(applySuccess);
 
-    EXPECT_EQ(analysisResult.detectedModelFamily, "gptoss");
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "gptoss");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
@@ -211,7 +209,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen36_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(applySuccess);
 
-    EXPECT_EQ(analysisResult.detectedModelFamily, "qwen3coder");
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
@@ -265,7 +262,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(applySuccess);
 
-    EXPECT_EQ(analysisResult.detectedModelFamily, "gemma4");
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "gemma4");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
@@ -305,7 +301,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
     ASSERT_TRUE(applySuccess);   // here we dont block people from using such templates that mis-render requests
     ASSERT_TRUE(basicRenderOk);  // only tool rendering is broken
 
-    EXPECT_EQ(analysisResult.detectedModelFamily, "qwen3coder");
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
@@ -343,7 +338,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Phi4Mini_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(applySuccess);
 
-    EXPECT_EQ(analysisResult.detectedModelFamily, "phi4");
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "phi4");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
@@ -377,7 +371,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(applySuccess);
 
-    EXPECT_EQ(analysisResult.detectedModelFamily, "hermes3");
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "hermes3");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
@@ -424,7 +417,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(applySuccess);
 
-    EXPECT_EQ(analysisResult.detectedModelFamily, "mistral");
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "mistral");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
@@ -481,13 +473,11 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
 
     // // Basic render works, but tool probe detects minja silent failure
     // EXPECT_TRUE(basicRenderOk);
-    // EXPECT_EQ(analysisResult.detectedModelFamily, "lfm2");
     // EXPECT_FALSE(caps.supportsToolCalls);
     // EXPECT_FALSE(caps.supportsTools);
 
     ASSERT_TRUE(applySuccess);
 
-    EXPECT_EQ(analysisResult.detectedModelFamily, "lfm2");
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
@@ -521,7 +511,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3VL_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(applySuccess);
 
-    EXPECT_EQ(analysisResult.detectedModelFamily, "hermes3");
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "hermes3");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
@@ -561,7 +550,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(applySuccess);
 
-    EXPECT_EQ(analysisResult.detectedModelFamily, "hermes3");
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "hermes3");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());

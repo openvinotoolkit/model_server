@@ -48,8 +48,7 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         processors.emplace_back(std::make_unique<TextContentNormalizationProcessor>());
     }
 
-    // Apply input workarounds (e.g. string→object argument conversion) before template rendering.
-    if (isChatPath) {
+    if (isChatPath && context.chatTemplateCaps.needsWorkarounds()) {
         processors.emplace_back(std::make_unique<InputWorkaroundsProcessor>(context.chatTemplateCaps));
     }
 

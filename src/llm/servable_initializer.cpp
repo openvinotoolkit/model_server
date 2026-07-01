@@ -80,7 +80,7 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 #endif
 
     // Minja path — use the shared probe component
-    if (!probeChatTemplateCaps(properties->tokenizer, properties->chatTemplateCaps)) {
+    if (!probeChatTemplateCapsMinja(properties->tokenizer, properties->chatTemplateCaps)) {
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Disabling tool call support: minja cannot render this template's tool calls correctly");
     }
 }
@@ -120,7 +120,6 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
     if (!templateSource.empty()) {
         auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
         properties->chatTemplateCaps = analysisResult.caps;
-        properties->detectedModelFamily = analysisResult.detectedModelFamily;
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: supportsTools={}, supportsToolCalls={}, supportsToolResponses={}, "
                                                    "requiresObjectArguments={}, requiresNonNullContent={}",
             analysisResult.caps.supportsTools,

@@ -36,7 +36,7 @@ bool probeChatTemplateBasicRender(ov::genai::Tokenizer& tokenizer);
 // Updates caps.requiresObjectArguments based on probe results.
 // Only performs probing if caps.supportsToolCalls is true.
 // Returns false if minja silently failed to render tool calls (template unsupported).
-bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
+bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
 
 #if (PYTHON_DISABLE == 0)
 class PyJinjaTemplateProcessor;

@@ -75,7 +75,7 @@ void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory) {
     }
 }
 
-void applyToHistory(const ChatTemplateCaps& caps, const std::string& modelFamily, ov::genai::ChatHistory& chatHistory) {
+void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory) {
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Applying input workarounds: "
                                                "requiresObjectArguments={}, requiresNonNullContent={}",
         caps.requiresObjectArguments, caps.requiresNonNullContent);

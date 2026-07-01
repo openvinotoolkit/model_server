@@ -15,9 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <string>
-
-#include <openvino/genai/tokenizer.hpp>
+#include <openvino/genai/chat_history.hpp>
 
 #include "chat_template_caps.hpp"
 
@@ -39,7 +37,7 @@ void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory);
 
 // Apply all relevant workarounds to the ChatHistory.
 // Modifies the chat history in-place based on detected capabilities.
-void applyToHistory(const ChatTemplateCaps& caps, const std::string& modelFamily, ov::genai::ChatHistory& chatHistory);
+void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory);
 
 }  // namespace input_workarounds
 }  // namespace ovms
