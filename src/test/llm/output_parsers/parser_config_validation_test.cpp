@@ -63,7 +63,7 @@ TEST_F(ParserConfigValidationTest, RegistryHasExpectedToolParsers) {
 
 TEST_F(ParserConfigValidationTest, RegistryHasExpectedReasoningParsers) {
     const auto& names = getSupportedReasoningParserNames();
-    for (const auto& expected : {"qwen3", "gemma4", "gptoss"}) {
+    for (const auto& expected : {"qwen3", "gemma4", "gptoss", "lfm2.5"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), expected), names.end())
             << "Expected reasoning parser '" << expected << "' missing from registry";
     }
@@ -79,6 +79,7 @@ TEST_F(ParserConfigValidationTest, SupportedNamesStringContainsAllParsers) {
     const std::string reasoningNames = getSupportedReasoningParserNamesAsString();
     EXPECT_NE(reasoningNames.find("qwen3"), std::string::npos);
     EXPECT_NE(reasoningNames.find("gptoss"), std::string::npos);
+    EXPECT_NE(reasoningNames.find("lfm2.5"), std::string::npos);
 }
 
 TEST_F(ParserConfigValidationTest, OutputParserThrowsOnUnknownToolParser) {

@@ -16,22 +16,21 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "src/llm/io_processing/base_output_parser.hpp"
-#include "../../../logging.hpp"
-#include "./lfm2_utils.hpp"
+#include "lfm2_utils.hpp"
 
 namespace ovms {
-class Lfm2ToolParser : public BaseOutputParser {
-protected:
+class Lfm25ToolParser : public BaseOutputParser {
+public:
     static const std::string TOOL_CALL_START_TAG;
     static const std::string TOOL_CALL_END_TAG;
 
-    static const int64_t botTokenId;
-    static const int64_t eotTokenId;
+    static const int64_t toolCallStartTokenId;
+    static const int64_t toolCallEndTokenId;
+    static const int64_t reasoningStartTokenId;
+    static const int64_t reasoningEndTokenId;
 
-public:
-    Lfm2ToolParser() = delete;
-    explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) :
+    Lfm25ToolParser() = delete;
+    explicit Lfm25ToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
@@ -64,7 +63,7 @@ private:
     size_t streamingPosition{0};
     State currentState{State::Content};
     ToolCall toolCall;
-    TagIds tagIds{botTokenId, eotTokenId};
+    TagIds tagIds{toolCallStartTokenId, toolCallEndTokenId, reasoningStartTokenId, reasoningEndTokenId};
 
     int toolCallIndex{TOOL_CALL_INDEX_START};
 

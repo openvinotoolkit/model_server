@@ -13,17 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "lfm2_tool_parser.hpp"
+#include "lfm25_tool_parser.hpp"
 
 namespace ovms {
 
-const std::string Lfm2ToolParser::TOOL_CALL_START_TAG = "<|tool_call_start|>";
-const std::string Lfm2ToolParser::TOOL_CALL_END_TAG = "<|tool_call_end|>";
+const std::string Lfm25ToolParser::TOOL_CALL_START_TAG = "<|tool_call_start|>";
+const std::string Lfm25ToolParser::TOOL_CALL_END_TAG = "<|tool_call_end|>";
 
-const int64_t Lfm2ToolParser::botTokenId = 10;  // <|tool_call_start|>
-const int64_t Lfm2ToolParser::eotTokenId = 11;  // <|tool_call_end|>
+const int64_t Lfm25ToolParser::toolCallStartTokenId = 124905;   // <|tool_call_start|>
+const int64_t Lfm25ToolParser::toolCallEndTokenId = 124906;     // <|tool_call_end|>
+const int64_t Lfm25ToolParser::reasoningStartTokenId = 124901;  // <think>
+const int64_t Lfm25ToolParser::reasoningEndTokenId = 124902;    // </think>
 
-bool Lfm2ToolParser::parseNewContent() {
+bool Lfm25ToolParser::parseNewContent() {
     switch (this->currentState) {
     case State::Content: {
         return parseInContentState(this->streamingContent, this->streamingPosition, this->currentState, this->tagIds);
@@ -47,7 +49,7 @@ bool Lfm2ToolParser::parseNewContent() {
     return false;
 }
 
-std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> Lfm25ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     if (chunk.empty()) {
         return std::nullopt;
     }
@@ -100,7 +102,7 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
     return std::nullopt;
 }
 
-void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
+void Lfm25ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     parseUnaryResponse(parsedOutput, generatedTokens, tokenizer, this->tagIds);
 }
 }  // namespace ovms
