@@ -2244,7 +2244,14 @@ cc_binary(
     # Avoid inheriting transitive DT_NEEDED entries (for example libpython from runtime-loaded libs)
     # while still allowing explicitly linked dependencies required by ovms.
     linkopts = LINKOPTS_ADJUSTED + select({
-        "//conditions:default": ["-Wl,--no-copy-dt-needed-entries"],
+        "//conditions:default": [
+            "-Wl,--no-copy-dt-needed-entries",
+            # Python calculators are loaded at runtime and may depend on symbols
+            # provided by the ovms executable (for example OVMS_ServerNew).
+            # Export executable symbols to the dynamic symbol table so dlopen()
+            # of dependent shared libraries can resolve them.
+            "-Wl,--export-dynamic",
+        ],
         "//src:windows": [],
     }),
     copts = COMMON_STATIC_LIBS_COPTS,

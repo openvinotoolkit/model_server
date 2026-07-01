@@ -90,6 +90,17 @@ bool probePluginLoadInChildProcess(const std::string& pluginPath) {
         }
         setenv("LD_LIBRARY_PATH", ld_lib_path.c_str(), 1);
 
+        // Keep process symbols globally visible in the probe process as well.
+        // This mirrors the parent behavior and helps resolve plugin dependencies
+        // that expect OVMS symbols to be available from the main executable.
+        void* probeMainSymbols = dlopen(NULL, RTLD_NOW | RTLD_GLOBAL);
+        if (probeMainSymbols == nullptr) {
+            const char* dlopen_main_error = dlerror();
+            if (dlopen_main_error) {
+                fprintf(stderr, "[PROBE] dlopen(NULL) failed: %s\n", dlopen_main_error);
+            }
+        }
+
         // Use RTLD_GLOBAL to ensure plugin symbols are available to the main binary.
         // Both main binary and shared MediaPipe library have protobuf, but since
         // the main binary no longer links to the shared library directly, protobuf
