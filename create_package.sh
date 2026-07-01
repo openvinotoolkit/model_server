@@ -18,6 +18,9 @@
 set -e
 # Set default value for variables
 : "${FUZZER_BUILD:=0}"
+# OpenVINO names its runtime lib subdir intel64 on x86_64 and aarch64 on ARM.
+OV_LIB_ARCH=intel64
+if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then OV_LIB_ARCH=aarch64; fi
 env
 mkdir -vp /ovms_release/bin
 mkdir -vp /ovms_release/lib
@@ -26,13 +29,13 @@ mkdir -vp /ovms_release/lib/custom_nodes
 # Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
 if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
-find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -v {} /ovms_release/lib/ \;
+find /ovms/bazel-out/*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -v {} /ovms_release/lib/ \;
 
 # Bundle espeak-ng data files when espeak was enabled in the Bazel build.
 # rules_foreign_cc places the cmake install tree under copy_<rule>/espeak-ng/
 # inside bazel-out. Both the shared library (picked up by the find above)
 # and the espeak-ng-data directory are required at runtime.
-ESPEAK_DATA_SRC=$(find /ovms/bazel-out/k8-*/bin/external/espeak_ng -type d -name 'espeak-ng-data' 2>/dev/null | head -n 1 || true)
+ESPEAK_DATA_SRC=$(find /ovms/bazel-out/*/bin/external/espeak_ng -type d -name 'espeak-ng-data' 2>/dev/null | head -n 1 || true)
 if [ -n "$ESPEAK_DATA_SRC" ] && [ -d "$ESPEAK_DATA_SRC" ] ; then
     mkdir -p /ovms_release/share
     cp -rL "$ESPEAK_DATA_SRC" /ovms_release/share/ ;
@@ -96,8 +99,8 @@ if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/python/b
 if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2026.3.dist-info ; \
 	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.3\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.3.0' > /ovms_release/lib/python/openvino_genai-2026.3.dist-info/METADATA; fi
 
-if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
-find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -vP {} /ovms_release/lib/ \;
+if [ -f /opt/intel/openvino/runtime/lib/${OV_LIB_ARCH}/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/${OV_LIB_ARCH}/plugins.xml /ovms_release/lib/ ; fi
+find /opt/intel/openvino/runtime/lib/${OV_LIB_ARCH}/ -iname '*.mvcmd*' -exec cp -vP {} /ovms_release/lib/ \;
 if [ -d /opt/intel/openvino/runtime/3rdparty ] ; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*libtbb.so*' -exec cp -vP {} /ovms_release/lib/ \;; fi
 if [[ $debug_bazel_flags == *"--copt=-g -c dbg"* ]]; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*libtbb_debug*' -exec cp -vP {} /ovms_release/lib/ \;; fi
 find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
@@ -105,7 +108,7 @@ cp /opt/opencv/share/licenses/opencv4/* /ovms/release_files/thirdparty-licenses/
 
 # Bundle eSpeak-ng license text when eSpeak artifacts are included.
 # The source repository is checked out under Bazel external trees.
-ESPEAK_LICENSE_SRC=$(find /ovms/bazel-out/k8-*/bin/external/espeak_ng -type f \
+ESPEAK_LICENSE_SRC=$(find /ovms/bazel-out/*/bin/external/espeak_ng -type f \
 	\( -name 'COPYING*' -o -name 'LICENSE*' \) \
 	2>/dev/null | head -n 1 || true)
 if [ -n "$ESPEAK_LICENSE_SRC" ] && [ -f "$ESPEAK_LICENSE_SRC" ] ; then
@@ -113,7 +116,9 @@ if [ -n "$ESPEAK_LICENSE_SRC" ] && [ -f "$ESPEAK_LICENSE_SRC" ] ; then
 fi
 
 if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libOpenCL.so* /ovms_release/lib/ ; fi
-if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL.so* /ovms_release/lib/ ; fi
+# Use the running architecture's multiarch dir (x86_64-linux-gnu / aarch64-linux-gnu).
+# OpenCL is only needed for GPU; on CPU-only aarch64 it may be absent, so tolerate it.
+if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/"$(uname -m)"-linux-gnu/libOpenCL.so* /ovms_release/lib/ 2>/dev/null || true ; fi
 
 if [ "$FUZZER_BUILD" == "0" ]; then find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \; ; fi;
 cd /ovms_release/bin
@@ -121,9 +126,11 @@ if [ "$FUZZER_BUILD" == "0" ]; then patchelf --remove-rpath ./ovms && patchelf -
 find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --remove-rpath  {}  \;
 find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
 
-find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
+find /opt/intel/openvino/runtime/lib/${OV_LIB_ARCH}/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino.so
-patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino_tokenizers.so
+# libopenvino_tokenizers.so is not shipped in the aarch64 OpenVINO GenAI package,
+# so only patch it when present (it is always present on x86_64).
+if [ -e /ovms_release/lib/libopenvino_tokenizers.so ]; then patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino_tokenizers.so ; fi
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/lib*plugin.so
 if [ -e /ovms_release/lib/libopenvino_genai_c.so ]; then rm -rf /ovms_release/lib/libopenvino_genai_c.so* ; fi
 

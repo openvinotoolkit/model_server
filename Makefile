@@ -47,6 +47,25 @@ JOBS ?= $(CORES_TOTAL)
 # Currently supported BASE_OS values are: ubuntu24 ubuntu22 redhat
 BASE_OS ?= ubuntu24
 
+# Target CPU architecture for the docker build. Default amd64 (x86_64) preserves
+# existing behavior exactly. Set TARGETARCH=arm64 for experimental aarch64 builds.
+# When left at the amd64 default, PLATFORM_OPTION is empty so the docker build
+# command line is unchanged from before.
+TARGETARCH ?= amd64
+ifeq ($(TARGETARCH),amd64)
+  PLATFORM_OPTION =
+  # OpenVINO runtime library subdir is intel64 on x86_64
+  OV_LIBDIR ?= intel64
+  # Intel CET control-flow protection is x86-only
+  CF_PROTECTION ?= -fcf-protection
+else
+  PLATFORM_OPTION = --platform linux/$(TARGETARCH)
+  # aarch64 OpenVINO packages place runtime libs under lib/aarch64
+  OV_LIBDIR ?= aarch64
+  # ARM equivalent of -fcf-protection
+  CF_PROTECTION ?= -mbranch-protection=standard
+endif
+
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
@@ -72,6 +91,10 @@ endif
 endif
 FUZZER_BUILD ?= 0
 DOCKER_BUILDKIT ?= 1
+# Optional extra flags for the build-stage `docker buildx build` (e.g. registry/gha
+# layer cache: --cache-from/--cache-to). Empty by default so normal builds are
+# unaffected; the ARM CI sets this together with BUILDX=buildx.
+DOCKER_CACHE_OPTION ?=
 KONFLUX ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -249,7 +272,10 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg JOBS=$(JOBS)\
 	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
 	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)\
-	--build-arg KONFLUX=$(KONFLUX)
+	--build-arg KONFLUX=$(KONFLUX)\
+	--build-arg TARGETARCH=$(TARGETARCH)\
+	--build-arg OV_LIBDIR=$(OV_LIBDIR)\
+	--build-arg CF_PROTECTION=$(CF_PROTECTION)
 
 
 .PHONY: default docker_build \
@@ -378,13 +404,13 @@ else
 	@touch .workspace/metadata.json
 endif
 	@cat .workspace/metadata.json
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker $(BUILDX) build $(PLATFORM_OPTION) $(NO_CACHE_OPTION) $(DOCKER_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=build
 
 targz_package:
-	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
+	docker $(BUILDX) build $(PLATFORM_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
@@ -393,7 +419,7 @@ targz_package:
 	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
 	docker cp $$ID:/ovms_pkg/$(OS)/ovms.tar dist/$(OS)/ && \
 	docker rm $$ID
-	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
+	docker $(BUILDX) build $(PLATFORM_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG) \
@@ -413,17 +439,21 @@ ifeq ($(BASE_OS),redhat)
 else
 	$(eval NPU:=1)
 endif
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker $(BUILDX) build $(PLATFORM_OPTION) $(NO_CACHE_OPTION) $(DOCKER_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
-		--target=release && \
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+		--target=release
+# The GPU image variant pulls in the x86_64-only Intel GPU/NPU runtime drivers,
+# so it is only built on amd64; aarch64 ships the CPU-only release image.
+ifeq ($(TARGETARCH),amd64)
+	docker $(BUILDX) build $(PLATFORM_OPTION) $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg GPU=1 \
 		--build-arg NPU=$(NPU) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-gpu$(IMAGE_TAG_SUFFIX)
+endif
 ifeq ($(BUILD_NGINX), 1)
 	cd extras/nginx-mtls-auth && \
 	http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(DIST_OS)" && \
@@ -455,7 +485,7 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 release_image:
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker $(BUILDX) build $(PLATFORM_OPTION) $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		--build-arg GPU=$(GPU) \
