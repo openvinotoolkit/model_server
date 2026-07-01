@@ -26,7 +26,10 @@ mkdir -vp /ovms_release/lib/custom_nodes
 # Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
 if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
-find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*gtest*" ! -name "*googletest*" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -path "*test_python_binding*" ! -name "libpython[0-9]*.so*" -exec cp -v {} /ovms_release/lib/ \;
+find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*gtest*" ! -name "*googletest*" ! -name "*params" ! -name "*.hana.*" ! -name "*runfiles_manifest*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -path "*test_python_binding*" ! -name "libpython[0-9]*.so*" -exec cp -v {} /ovms_release/lib/ \;
+
+# Defensive cleanup: keep Bazel runfiles metadata out of release payloads.
+rm -f /ovms_release/lib/*.runfiles_manifest
 
 # Bundle espeak-ng data files when espeak was enabled in the Bazel build.
 # rules_foreign_cc places the cmake install tree under copy_<rule>/espeak-ng/
