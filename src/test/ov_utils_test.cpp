@@ -251,3 +251,4 @@ TEST(OVUtils, ValidatePluginConfigurationAllowCPURuntimeCacheCapacity) {
     EXPECT_TRUE(status.ok());
     auto model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml", {}, pluginConfig);
     auto compiledModel = ieCore.compile_model(model, "CPU", pluginConfig);
+}
