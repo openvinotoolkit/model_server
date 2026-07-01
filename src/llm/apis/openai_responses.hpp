@@ -95,9 +95,10 @@ public:
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
         std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) override;
 
-    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) override;
-    std::string serializeUnaryResponse(ov::genai::EncodedResults& results) override;
-    std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) override;
+    std::string serializeUnaryResponse(const std::vector<rapidjson::Document>& deltas, ov::genai::GenerationFinishReason finishReason) override;
+    std::string serializeUnaryResponse(const std::vector<std::vector<rapidjson::Document>>& allDeltas,
+        const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
+        const std::vector<UnaryChoiceLogprobs>& logprobData) override;
     std::string serializeStreamingChunk(rapidjson::Document parsedDelta, ov::genai::GenerationFinishReason finishReason) override;
     std::string serializeStreamingUsageChunk() override;
     std::string serializeStreamingHandshakeChunk() override;

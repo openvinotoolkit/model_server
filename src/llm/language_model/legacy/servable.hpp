@@ -26,13 +26,11 @@
 
 namespace ovms {
 
-struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
+struct LegacyServableExecutionContext : public LegacyServableExecutionContextBase {
     ov::genai::EncodedResults results;
-    std::promise<void> readySignal;
-    std::future<void> finished = readySignal.get_future();
+    // readySignal, finished, success are inherited from LegacyServableExecutionContextBase
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
-    bool success{true};
 
     // Disconnection handling
     std::atomic<bool> clientDisconnected{false};
@@ -40,6 +38,16 @@ struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
     void signalDisconnection() {
         clientDisconnected = true;
         deltaChannel.signalComplete();
+    }
+
+    // Legacy generation path always runs with a single beam, so finish_reasons[0] is the result.
+    ov::genai::GenerationFinishReason legacyFinishReason() const override {
+        return results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP
+                                              : results.finish_reasons[0];
+    }
+    void setLegacyUsage(OpenAIApiHandler& apiHandler) override {
+        apiHandler.setPromptTokensUsage(results.perf_metrics.get_num_input_tokens());
+        apiHandler.setCompletionTokensUsage(results.perf_metrics.get_num_generated_tokens());
     }
 };
 
@@ -50,7 +58,7 @@ struct LegacyServableProperties : public GenAiServableProperties {
     int64_t maxPromptLength = 1024;  // NPU property. 1024 is the default value in the plugin
 };
 
-class LegacyServable : public GenAiServable {
+class LegacyServable : public LegacyServableBase {
     std::shared_ptr<LegacyServableProperties> properties;
 
 protected:
@@ -71,6 +79,5 @@ public:
     absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
-    absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
 };
 }  // namespace ovms

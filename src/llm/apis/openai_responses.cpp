@@ -1014,72 +1014,28 @@ std::string OpenAIResponsesHandler::serializeUnaryResponseImpl(const std::vector
 
 // --- Unary response serialization ---
 
-std::string OpenAIResponsesHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
+std::string OpenAIResponsesHandler::serializeUnaryResponse(
+    const std::vector<rapidjson::Document>& deltas,
+    ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
-    std::vector<ParsedOutput> parsedOutputs;
-    usage.completionTokens = 0;
-    constexpr bool echo = false;  // echo is not supported in Responses API
-    ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
-    for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
-        updateUsage(usage, generationOutput.generated_ids, echo);
-        parsedOutputs.push_back(parseOutputIfNeeded(generationOutput.generated_ids));
-        if (generationOutput.finish_reason == ov::genai::GenerationFinishReason::LENGTH) {
-            responsesFinishReason = ov::genai::GenerationFinishReason::LENGTH;
-        }
-    }
-    return serializeUnaryResponseImpl(parsedOutputs, responsesFinishReason);
+    ParsedOutput parsedOutput = parsedOutputFromDeltas(deltas);
+    return serializeUnaryResponseImpl({std::move(parsedOutput)}, finishReason);
 }
 
-std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::EncodedResults& results) {
+std::string OpenAIResponsesHandler::serializeUnaryResponse(
+    const std::vector<std::vector<rapidjson::Document>>& allDeltas,
+    const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
+    const std::vector<UnaryChoiceLogprobs>& /*logprobData*/) {
     OVMS_PROFILE_FUNCTION();
-    usage.promptTokens = results.perf_metrics.get_num_input_tokens();
-    usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
-    if (results.finish_reasons.empty()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary LM responses generation result, defaulting to STOP");
-    }
+    // Responses API does not expose logprobs; logprobData is intentionally unused.
     std::vector<ParsedOutput> parsedOutputs;
-    ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
-    for (const auto& tokens : results.tokens) {
-        parsedOutputs.push_back(parseOutputIfNeeded(tokens));
+    parsedOutputs.reserve(allDeltas.size());
+    for (const auto& deltas : allDeltas) {
+        parsedOutputs.push_back(parsedOutputFromDeltas(deltas));
     }
-    for (const auto& finishReason : results.finish_reasons) {
-        if (finishReason == ov::genai::GenerationFinishReason::LENGTH) {
-            responsesFinishReason = ov::genai::GenerationFinishReason::LENGTH;
-            break;
-        }
-    }
-    return serializeUnaryResponseImpl(parsedOutputs, responsesFinishReason);
-}
-
-std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) {
-    OVMS_PROFILE_FUNCTION();
-    usage.promptTokens = results.perf_metrics.get_num_input_tokens();
-    usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
-    if (results.finish_reasons.empty()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary VLM responses generation result, defaulting to STOP");
-    }
-    // Usage is already correctly set from perf_metrics above — no need for updateUsage.
-    std::vector<ParsedOutput> parsedOutputs;
-    if (!textResponse.empty()) {
-        if (outputParser != nullptr) {
-            // Same workaround as in chat completions
-            auto generatedTokens = encodeTextToTokens(textResponse);
-            parsedOutputs.push_back(parseOutputIfNeeded(generatedTokens));
-        } else {
-            // Fast path: no output parser, use decoded text directly.
-            ParsedOutput output;
-            output.content = textResponse;
-            parsedOutputs.push_back(std::move(output));
-        }
-    }
-    ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
-    for (const auto& finishReason : results.finish_reasons) {
-        if (finishReason == ov::genai::GenerationFinishReason::LENGTH) {
-            responsesFinishReason = ov::genai::GenerationFinishReason::LENGTH;
-            break;
-        }
-    }
-    return serializeUnaryResponseImpl(parsedOutputs, responsesFinishReason);
+    const ov::genai::GenerationFinishReason finishReason =
+        finishReasons.empty() ? ov::genai::GenerationFinishReason::STOP : finishReasons[0];
+    return serializeUnaryResponseImpl(parsedOutputs, finishReason);
 }
 
 // --- Streaming event building blocks ---
