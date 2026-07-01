@@ -86,7 +86,27 @@ export HF_TOKEN="${HF_TOKEN:-}"
 mkdir -p "$MODEL_CACHE_DIR"
 ```
 
-> **Note:** OVMS runs as a non-root user inside the container. The mounted model cache directory must be writable by the OVMS container user. If OVMS fails during startup with permission errors when creating model directories, verify permissions on the model cache directory.
+> **Note:** OVMS runs as a non-root user inside the container. The mounted model cache directory must be writable by the OVMS container user.
+>
+> On some WSL2/Docker environments, the mounted directory permissions may prevent OVMS from creating model directories. If OVMS fails during startup with permission errors, you may see an error like:
+>
+> ```
+> Libgit2 clone error: failed to make directory '/models/...': Permission denied
+> ```
+>
+> Verify the directory permissions:
+>
+> ```bash
+> ls -ld "$MODEL_CACHE_DIR"
+> ```
+>
+> Fix by making the directory writable by all users:
+>
+> ```bash
+> chmod a+rwx "$MODEL_CACHE_DIR"
+> ```
+>
+> Then redeploy the OVMS container.
 
 ### Step 3: Deploy OVMS
 
@@ -533,44 +553,10 @@ crw-rw-rw- 1 root root 247, 0 ... /dev/dxg
 
 > **Note:** Under WSL2, `/dev/dri` is **not expected** to be present. GPU access is provided through `/dev/dxg` instead. Native Linux exposes GPUs through `/dev/dri`, while WSL2 exposes GPUs through `/dev/dxg`.
 
-### 3. Verify Docker GPU Access
-
-Verify that Docker containers can access the GPU before attempting deployment.
-
-**Native Linux:**
-
-```bash
-docker run --rm \
-  --device /dev/dri:/dev/dri \
-  openvino/ubuntu24_runtime:latest \
-  python3 -c "from openvino import Core; print(Core().available_devices)"
-```
-
-Expected output:
-
-```text
-['CPU', 'GPU']
-```
-
-**WSL2:**
-
-```bash
-docker run --rm \
-  --device /dev/dxg:/dev/dxg \
-  -v /usr/lib/wsl:/usr/lib/wsl:ro \
-  openvino/ubuntu24_runtime:latest \
-  python3 -c "from openvino import Core; print(Core().available_devices)"
-```
-
-Expected output:
-
-```text
-['CPU', 'GPU']
-```
 
 If only `['CPU']` is returned, ensure Docker Desktop WSL2 integration is enabled with GPU support.
 
-### 4. Deploy with GPU
+### 3. Deploy with GPU
 
 Run the deployment script with GPU device:
 

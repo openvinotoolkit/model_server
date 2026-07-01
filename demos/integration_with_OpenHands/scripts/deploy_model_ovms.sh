@@ -254,6 +254,16 @@ export_runtime_configuration() {
     export MODEL_CACHE_DIR
     export HF_TOKEN="${HF_TOKEN:-}"
 
+    # Select OVMS Docker image based on target device
+    case "$TARGET_DEVICE" in
+        GPU)
+            export OVMS_IMAGE="openvino/model_server:latest-gpu"
+            ;;
+        *)
+            export OVMS_IMAGE="openvino/model_server:latest"
+            ;;
+    esac
+
     # Detect and export GPU device for docker-compose.yml devices mapping
     export GPU_DEVICE
     GPU_DEVICE="$(detect_gpu_device)"
