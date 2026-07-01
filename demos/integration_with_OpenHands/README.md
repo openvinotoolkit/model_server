@@ -108,6 +108,16 @@ This demo uses `docker-compose.yml` and `scripts/deploy_model_ovms.sh` to automa
 
 4. **Verify the deployment** (see next section)
 
+### Using Intel GPU (Optional)
+
+The deployment script supports GPU inference for improved performance:
+
+```bash
+./scripts/deploy_model_ovms.sh OpenVINO/Qwen3-8b-int8-ov --device GPU
+```
+
+Before using GPU inference, ensure your host system exposes an OpenVINO-compatible Intel GPU runtime (see [GPU Acceleration](ADVANCED_DEPLOYMENT.md#gpu-acceleration) for platform-specific setup and verification). GPU support depends on your host environment—the same OVMS deployment works on CPU or GPU based on the `--device` flag.
+
 **Optional parameters:**
 ```bash
 # Specify device, parser, or cache directory
