@@ -31,8 +31,6 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     ov::genai::VLMDecodedResults results;
     std::promise<void> readySignal;
     std::future<void> finished = readySignal.get_future();
-    std::vector<ov::Tensor> inputImages;
-    std::string inputText;
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
     bool success{true};
@@ -64,6 +62,7 @@ protected:
 public:
     VisualLanguageModelLegacyServable() {
         properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
+        properties->inputProcessorContext.config.isVLM = true;
 #if (PYTHON_DISABLE == 0)
         // TODO(dkalinow): once we have server-side workaround, set default back to JINJA
         properties->chatTemplateMode = ChatTemplateMode::MINJA;
@@ -80,6 +79,5 @@ public:
     absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
-    absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
 };
 }  // namespace ovms
