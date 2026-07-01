@@ -212,7 +212,6 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 
     if (executionContext->apiHandler->getOutputParser() != nullptr) {
         executionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(req.promptText);
-
     }
     if (Config::instance().getServerSettings().verboseResponse) {
         executionContext->apiHandler->enableVerboseResponse(req.promptText);

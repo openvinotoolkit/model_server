@@ -76,9 +76,8 @@ void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory) {
 }
 
 void applyToHistory(const ChatTemplateCaps& caps, const std::string& modelFamily, ov::genai::ChatHistory& chatHistory) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Applying input workarounds (ChatHistory path) for model family '{}': "
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Applying input workarounds: "
                                                "requiresObjectArguments={}, requiresNonNullContent={}",
-        modelFamily.empty() ? "(none)" : modelFamily,
         caps.requiresObjectArguments, caps.requiresNonNullContent);
     if (caps.requiresObjectArguments) {
         funcArgsToObjectHistory(chatHistory);

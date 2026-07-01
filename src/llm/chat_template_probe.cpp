@@ -45,14 +45,14 @@ bool probeChatTemplateBasicRender(ov::genai::Tokenizer& tokenizer) {
         auto t0 = std::chrono::steady_clock::now();
         std::string output = tokenizer.apply_chat_template(history, true);
         auto t1 = std::chrono::steady_clock::now();
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Basic render probe: {} us",
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Basic render probe: {} us",
             std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
 
         // Check if assistant content appears in output
         if (output.find(contentNeedle) == std::string::npos) {
             SPDLOG_LOGGER_WARN(llm_calculator_logger, "Basic render probe: assistant content not found in output. "
                                                       "Template may be incompatible with minja.");
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Basic render probe output: {}", output);
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Basic render probe output: {}", output);
             return false;
         }
 
@@ -62,7 +62,7 @@ bool probeChatTemplateBasicRender(ov::genai::Tokenizer& tokenizer) {
             output.find("\"content\":\"" + contentNeedle + "\"") != std::string::npos) {
             SPDLOG_LOGGER_WARN(llm_calculator_logger, "Basic render probe: output contains raw JSON dump of message object. "
                                                       "Template is not supported by minja.");
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Basic render probe output: {}", output);
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Basic render probe output: {}", output);
             return false;
         }
 
@@ -84,7 +84,6 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
         return true;
     }
 
-    auto probeStart = std::chrono::steady_clock::now();
     const std::string argNeedle = "probe_needle_xK9m";
 
     // Async because apply_chat_template is slow: CVS-189192
@@ -97,11 +96,11 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
             auto t0 = std::chrono::steady_clock::now();
             std::string output = tokenizer.apply_chat_template(history, true);
             auto t1 = std::chrono::steady_clock::now();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): {} us",
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe minja (string args): {} us",
                 std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
             return {true, std::move(output)};
         } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (string args): exception: {}", e.what());
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe minja (string args): exception: {}", e.what());
             return {false, ""};
         } catch (...) {
             return {false, ""};
@@ -118,11 +117,11 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
             auto t0 = std::chrono::steady_clock::now();
             std::string output = tokenizer.apply_chat_template(history, true);
             auto t1 = std::chrono::steady_clock::now();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (object args): {} us",
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe minja (object args): {} us",
                 std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
             return {true, std::move(output)};
         } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe minja (object args): exception: {}", e.what());
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe minja (object args): exception: {}", e.what());
             return {false, ""};
         } catch (...) {
             return {false, ""};
@@ -144,7 +143,7 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
     bool strArgsRendersNative = strOk && rendersNativeArgs(strOut);
     bool objArgsRendersNative = objOk && rendersNativeArgs(objOut);
 
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe requiresObjectArguments: strRendersNative={}, objRendersNative={}",
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe minja: strRendersNative={}, objRendersNative={}",
         strArgsRendersNative, objArgsRendersNative);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe strArgs output: {}", strOut);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe objArgs output: {}", objOut);
@@ -160,27 +159,19 @@ bool probeChatTemplateCaps(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& ca
                                                   "(output contains raw JSON dump). Template is not supported by minja for tool calls.");
         caps.supportsToolCalls = false;
         caps.supportsTools = false;
-        auto probeEnd = std::chrono::steady_clock::now();
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe completed in {} us. Result: FAILURE",
-            std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count());
         return false;
     }
 
     if (strArgsRendersNative || objArgsRendersNative) {
         bool probeResult = objArgsRendersNative;
         if (probeResult != caps.requiresObjectArguments) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Dry-run probe overrides requiresObjectArguments: {} -> {}",
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe overrides requiresObjectArguments: {} -> {}",
                 caps.requiresObjectArguments, probeResult);
         }
         caps.requiresObjectArguments = probeResult;
     } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe: template does not render tool_call arguments in native format, keeping string-matching result for requiresObjectArguments");
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe: template does not render tool_call arguments natively");
     }
-
-    auto probeEnd = std::chrono::steady_clock::now();
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe completed in {} us. Final result: requiresObjectArguments={}",
-        std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count(),
-        caps.requiresObjectArguments);
     return true;
 }
 
@@ -191,7 +182,6 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, con
         return true;
     }
 
-    auto probeStart = std::chrono::steady_clock::now();
     const std::string argNeedle = "probe_needle_xK9m";
 
     std::string strArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":"{\")" + argNeedle + R"(\":\"val\"}"}}]}]})";
@@ -201,40 +191,31 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, con
     bool strOk = false, objOk = false;
 
     try {
-        auto t0 = std::chrono::steady_clock::now();
         strOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, strArgsJson, strOut);
-        auto t1 = std::chrono::steady_clock::now();
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (string args): {} us",
-            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
     } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (string args): exception: {}", e.what());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja (string args): exception: {}", e.what());
     } catch (...) {
     }
 
     try {
-        auto t0 = std::chrono::steady_clock::now();
         objOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, objArgsJson, objOut);
-        auto t1 = std::chrono::steady_clock::now();
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (object args): {} us",
-            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
     } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (object args): exception: {}", e.what());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja (object args): exception: {}", e.what());
     } catch (...) {
     }
 
     auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
-        return output.find("\"" + argNeedle + "\": \"") != std::string::npos ||  // JSON key: ["needle": "]
-               output.find("\"" + argNeedle + "\":\"") != std::string::npos ||   // JSON key: ["needle":"]
-               // output.find("'" + argNeedle + "': ") != std::string::npos ||           // Python dict: []'needle': ]
-               output.find("<parameter=" + argNeedle + ">") != std::string::npos ||  // Qwen3-Coder XML
-               output.find(argNeedle + ":<|") != std::string::npos ||                // Gemma4: [needle:<|]
-               output.find(argNeedle + "=") != std::string::npos;                    // Function-style: [needle=] for LFM2.5
+        return output.find("\"" + argNeedle + "\": \"") != std::string::npos ||
+               output.find("\"" + argNeedle + "\":\"") != std::string::npos ||
+               output.find("<parameter=" + argNeedle + ">") != std::string::npos ||
+               output.find(argNeedle + ":<|") != std::string::npos ||
+               output.find(argNeedle + "=") != std::string::npos;
     };
 
     bool strArgsRendersNative = strOk && rendersNativeArgs(strOut);
     bool objArgsRendersNative = objOk && rendersNativeArgs(objOut);
 
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja requiresObjectArguments: strRendersNative={}, objRendersNative={}",
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja: strRendersNative={}, objRendersNative={}",
         strArgsRendersNative, objArgsRendersNative);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja strArgs output: {}", strOut);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja objArgs output: {}", objOut);
@@ -249,27 +230,19 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, con
                                                   "(output contains raw JSON dump). Template is not supported for tool calls.");
         caps.supportsToolCalls = false;
         caps.supportsTools = false;
-        auto probeEnd = std::chrono::steady_clock::now();
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja completed in {} us. Result: FAILURE",
-            std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count());
         return false;
     }
 
     if (strArgsRendersNative || objArgsRendersNative) {
         bool probeResult = objArgsRendersNative;
         if (probeResult != caps.requiresObjectArguments) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Dry-run probe Jinja overrides requiresObjectArguments: {} -> {}",
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja overrides requiresObjectArguments: {} -> {}",
                 caps.requiresObjectArguments, probeResult);
         }
         caps.requiresObjectArguments = probeResult;
     } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja: template does not render tool_call arguments in native format, keeping string-matching result for requiresObjectArguments");
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Dry-run probe Jinja: template does not render tool_call arguments natively");
     }
-
-    auto probeEnd = std::chrono::steady_clock::now();
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja completed in {} us. Final result: requiresObjectArguments={}",
-        std::chrono::duration_cast<std::chrono::microseconds>(probeEnd - probeStart).count(),
-        caps.requiresObjectArguments);
     return true;
 }
 #endif

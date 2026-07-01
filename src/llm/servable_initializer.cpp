@@ -121,23 +121,24 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
         properties->chatTemplateCaps = analysisResult.caps;
         properties->detectedModelFamily = analysisResult.detectedModelFamily;
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template analysis: detectedModelFamily={}, "
-                                                   "supportsSystemRole={}, supportsTools={}, supportsToolCalls={}, supportsToolResponses={}, "
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: supportsTools={}, supportsToolCalls={}, supportsToolResponses={}, "
                                                    "requiresObjectArguments={}, requiresNonNullContent={}",
-            analysisResult.detectedModelFamily.empty() ? "(none)" : analysisResult.detectedModelFamily,
-            analysisResult.caps.supportsSystemRole,
             analysisResult.caps.supportsTools,
             analysisResult.caps.supportsToolCalls,
             analysisResult.caps.supportsToolResponses,
             analysisResult.caps.requiresObjectArguments,
             analysisResult.caps.requiresNonNullContent);
-        // Auto-detect tool parser if not explicitly configured
-        if (properties->toolParserName.empty() && analysisResult.detectedToolParser.has_value()) {
+        // Auto-detect or report manually configured tool parser
+        if (!properties->toolParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
+        } else if (analysisResult.detectedToolParser.has_value()) {
             properties->toolParserName = analysisResult.detectedToolParser.value();
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
         }
-        // Auto-detect reasoning parser if not explicitly configured
-        if (properties->reasoningParserName.empty() && analysisResult.detectedReasoningParser.has_value()) {
+        // Auto-detect or report manually configured reasoning parser
+        if (!properties->reasoningParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
+        } else if (analysisResult.detectedReasoningParser.has_value()) {
             properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
         }
@@ -167,7 +168,6 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 #if (PYTHON_DISABLE == 0)
     properties->inputProcessorContext.templateProcessor = &properties->templateProcessor;
 #endif
-
 }
 
 #if (PYTHON_DISABLE == 0)
