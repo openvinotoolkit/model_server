@@ -202,7 +202,7 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, con
 
     try {
         auto t0 = std::chrono::steady_clock::now();
-        strOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, modelsPath, strArgsJson, strOut);
+        strOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, strArgsJson, strOut);
         auto t1 = std::chrono::steady_clock::now();
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (string args): {} us",
             std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
@@ -213,7 +213,7 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, con
 
     try {
         auto t0 = std::chrono::steady_clock::now();
-        objOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, modelsPath, objArgsJson, objOut);
+        objOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, objArgsJson, objOut);
         auto t1 = std::chrono::steady_clock::now();
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Dry-run probe Jinja (object args): {} us",
             std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());

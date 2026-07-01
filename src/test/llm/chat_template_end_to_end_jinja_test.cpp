@@ -176,7 +176,6 @@ protected:
         // Step 5: Render via Python Jinja
         applySuccess = PyJinjaTemplateProcessor::applyChatTemplate(
             servable->getProperties()->templateProcessor,
-            servable->getProperties()->modelsPath,
             modifiedJson, appliedOutput);
 
         std::cout << "=== Result (Jinja) ===" << std::endl;

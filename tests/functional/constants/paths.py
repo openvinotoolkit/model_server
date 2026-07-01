@@ -63,6 +63,17 @@ class Paths:
     def CAPI_WRAPPER_PACKAGE_CONTENT_PATH(base_os):
         return os.path.join(config.c_api_wrapper_dir, base_os, "ovms")
 
+    COMMON_GIT_CLONE_LOCK_FILE = os.path.join(config.ovms_file_locks_dir, "common_git_clone.lock")
+
+    COMMON_BUILD_LOCK_FILE = os.path.join(config.ovms_file_locks_dir, "common_build.lock")
+
+    # Use single shared lock file until ensure that those builds can be done concurrently.
+    DOCKER_BUILD_LOCK_FILE = COMMON_BUILD_LOCK_FILE
+    CUSTOM_NODE_BUILD_LOCK_FILE = COMMON_BUILD_LOCK_FILE
+    CPU_EXTENSION_BUILD_LOCK_FILE = COMMON_BUILD_LOCK_FILE
+
+    COMMON_DOWNLOAD_LOCK_FILE = os.path.join(config.ovms_file_locks_dir, "common_download.lock")
+
     @staticmethod
     def get_target_device_lock_file(target_device, i):
         if isinstance(target_device, str):
