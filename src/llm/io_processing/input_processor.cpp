@@ -16,6 +16,7 @@
 
 #include "input_processor.hpp"
 
+#include <chrono>
 #include <typeinfo>
 #include <variant>
 
@@ -78,9 +79,21 @@ absl::Status InputProcessor::process(InputRequest& req) {
         if (llm_calculator_logger->should_log(spdlog::level::trace)) {
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "InputProcessor: executing {}", typeid(*processor).name());
         }
-        auto status = processor->process(req);
-        if (!status.ok()) {
-            return status;
+        if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+            const auto start = std::chrono::steady_clock::now();
+            auto status = processor->process(req);
+            const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - start);
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "InputProcessor: {} took {} us",
+                typeid(*processor).name(), elapsed.count());
+            if (!status.ok()) {
+                return status;
+            }
+        } else {
+            auto status = processor->process(req);
+            if (!status.ok()) {
+                return status;
+            }
         }
     }
     return absl::OkStatus();

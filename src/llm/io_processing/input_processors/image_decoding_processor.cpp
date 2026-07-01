@@ -20,7 +20,7 @@
 #include <utility>
 #include <variant>
 
-#include "../../apis/openai_api_handler.hpp"
+#include "../../io_processing/image_utils.hpp"
 #include "../../../logging.hpp"
 
 namespace ovms {

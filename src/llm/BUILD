@@ -120,6 +120,21 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "image_utils",
+    hdrs = ["io_processing/image_utils.hpp"],
+    srcs = ["io_processing/image_utils.cpp"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",  # required for absl status
+        "//third_party:curl",
+        "//src:image_conversion",
+        "//src/filesystem:libovmsfilesystem",
+        "//third_party:genai",
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "io_processing_input_processor_context",
     hdrs = ["io_processing/input_processor_context.hpp"],
     srcs = [],
@@ -147,12 +162,8 @@ ovms_cc_library(
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmsprofiler",
-        "//third_party:curl",
-        "//src:image_conversion",
-        "//src/filesystem:libovmsfilesystem",
-        "@stb//:image",
+        ":image_utils",
         ":io_processing_input_request",
-        ":openai_api_handler",
         "//third_party:genai",
         "//src:libovmslogging",
     ] + select({
