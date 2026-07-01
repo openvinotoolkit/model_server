@@ -62,13 +62,6 @@ static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
 extern "C" const KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
 
 bool probePluginLoadInChildProcess(const std::string& pluginPath) {
-    // For absolute /ovms/lib paths, skip the probe since we control that deployment
-    // and can handle failures gracefully in the main process.
-    if (pluginPath.find("/ovms/lib/") == 0) {
-        SPDLOG_DEBUG("Skipping probe for deployment path: {}", pluginPath);
-        return true;
-    }
-
     // Some plugin failures are process-fatal (for example LOG(FATAL)/abort in
     // static initializers, as seen in MediaPipe type-map registration conflicts).
     // Probe in a short-lived child process so the parent OVMS process can
