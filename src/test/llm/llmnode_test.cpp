@@ -4323,6 +4323,8 @@ void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
     ASSERT_EQ(properties->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(properties->schedulerConfig.max_num_seqs, 256);
     ASSERT_EQ(properties->schedulerConfig.enable_prefix_caching, false);
+    ASSERT_TRUE(properties->schedulerConfig.cache_interval_multiplier.has_value());
+    ASSERT_EQ(properties->schedulerConfig.cache_interval_multiplier.value(), 64);
     ASSERT_EQ(properties->device, "CPU");
     // CPU default properties (inference_num_threads, enable_cpu_pinning) are automatically
     // added to pluginConfig for CPU device; verify no user-specified entries are present.
