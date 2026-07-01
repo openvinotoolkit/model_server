@@ -472,11 +472,11 @@ GPU enablement depends on the host environment rather than OVMS itself. The same
 
 GPU inference is supported on the following platforms:
 
-| Platform      | Status         | Notes                                          |
-| ------------- | -------------- | ---------------------------------------------- |
-| Native Linux  | ✅ Supported   | Requires Intel GPU runtime and device access  |
-| WSL2          | ✅ Supported   | Requires WSL2 GPU support and `/dev/dxg`      |
-| Windows       | ⚠️ Limited     | GPU plugins available; Docker setup varies     |
+| Platform                | Status         | Notes                                              |
+| ----------------------- | -------------- | -------------------------------------------------- |
+| Native Linux            | ✅ Supported   | Requires Intel GPU runtime and device access      |
+| WSL2 + Docker Desktop   | ✅ Supported   | Requires WSL2 GPU support and `/dev/dxg`          |
+| Native Windows          | ❌ Not supported | Use WSL2 for Docker-based deployment              |
 
 
 ## Verifying GPU Availability
@@ -485,10 +485,10 @@ Before deploying with GPU, verify that your host system can access an Intel GPU 
 
 ### GPU Runtime Installation
 
-GPU inference requires an OpenVINO-compatible Intel GPU runtime on your host system. Installation procedures vary by platform and distribution:
+GPU inference requires an OpenVINO-compatible Intel GPU runtime on your host system. Installation procedures vary by platform and distribution. Refer to the official documentation:
 
 * **OpenVINO GPU documentation:** https://docs.openvino.ai/
-* **Intel GPU runtime:** https://www.intel.com/content/www/us/en/developer/tools/oneapi/oneapi-base-toolkit-download.html
+* **Intel GPU runtime documentation:** https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/documentation.html
 * **WSL2 GPU setup:** https://learn.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl
 
 Follow the official instructions for your platform before proceeding with verification.
@@ -531,18 +531,44 @@ Expected output:
 crw-rw-rw- 1 root root 247, 0 ... /dev/dxg
 ```
 
-> **Note:** Under WSL2, `/dev/dri` is **not expected** to be present. GPU access is provided through `/dev/dxg` instead. The docker-compose.yml device mapping for `/dev/dri:/dev/dri` is harmless under WSL2.
+> **Note:** Under WSL2, `/dev/dri` is **not expected** to be present. GPU access is provided through `/dev/dxg` instead. Native Linux exposes GPUs through `/dev/dri`, while WSL2 exposes GPUs through `/dev/dxg`.
 
 ### 3. Verify Docker GPU Access
 
-Ensure Docker can access the GPU:
+Verify that Docker containers can access the GPU before attempting deployment.
 
-**Native Linux:** The docker-compose.yml includes `--device /dev/dri:/dev/dri` for device passthrough. Verify Docker is running and has device access permissions.
+**Native Linux:**
 
-**WSL2:** In Docker Desktop, enable WSL2 GPU support:
-- Go to **Resources → WSL Integration**
-- Enable "Use the WSL 2 based engine"
-- Ensure GPU support is enabled
+```bash
+docker run --rm \
+  --device /dev/dri:/dev/dri \
+  openvino/ubuntu24_runtime:latest \
+  python3 -c "from openvino import Core; print(Core().available_devices)"
+```
+
+Expected output:
+
+```text
+['CPU', 'GPU']
+```
+
+**WSL2:**
+
+```bash
+docker run --rm \
+  --device /dev/dxg:/dev/dxg \
+  -v /usr/lib/wsl:/usr/lib/wsl:ro \
+  openvino/ubuntu24_runtime:latest \
+  python3 -c "from openvino import Core; print(Core().available_devices)"
+```
+
+Expected output:
+
+```text
+['CPU', 'GPU']
+```
+
+If only `['CPU']` is returned, ensure Docker Desktop WSL2 integration is enabled with GPU support.
 
 ### 4. Deploy with GPU
 
@@ -569,10 +595,10 @@ Available devices for Open VINO: CPU, GPU
 Verify the model reaches `AVAILABLE` status:
 
 ```bash
-curl -s http://localhost:8000/v1/config | jq '.model_status'
+curl -s http://localhost:8000/v1/config | grep AVAILABLE
 ```
 
-Should return `"AVAILABLE"`.
+Should return output containing `AVAILABLE`.
 
 ## Troubleshooting
 
@@ -580,7 +606,7 @@ Should return `"AVAILABLE"`.
 
 If `python3 -c "from openvino import Core; print(Core().available_devices)"` returns only `['CPU']`:
 
-1. Verify Intel GPU is physically present: `lspci | grep -i vga`
+1. Verify Intel GPU is physically present: `lspci | grep -Ei "vga|display"`
 2. Refer to the GPU runtime installation documentation for your platform
 3. Check OpenVINO installation: `pip3 show openvino`
 4. Try restarting the WSL instance: `wsl --shutdown` (from Windows)
@@ -594,7 +620,7 @@ ls -la /dev/dxg  # Should exist
 ls -la /dev/dri  # May not exist—this is normal
 ```
 
-The docker-compose.yml `--device /dev/dri:/dev/dri` directive is for native Linux and is harmless under WSL2.
+Native Linux exposes GPUs through `/dev/dri`, while WSL2 exposes GPUs through `/dev/dxg`. The docker-compose.yml `/dev/dri` device mapping is intended for native Linux deployments.
 
 ### Docker Cannot Access GPU
 
@@ -614,31 +640,19 @@ docker logs ovms-llm | grep -i "target device"
 ```
 
 Look for warnings about plugin loading. This may indicate:
-- GPU runtime not installed in the container image
+- GPU runtime not available to the container
 - Incompatible OpenVINO version
 
-### USM Allocation Failures
+### OpenVINO Python Not Installed
 
-Some models may fail during GPU inference with USM (Unified Shared Memory) allocation errors:
+If running verification commands produces:
 
 ```text
-Exception from src/inference/src/dev/plugin.cpp:54:
-[CL ext] Can not allocate XXXXX bytes for USM Host.
+ModuleNotFoundError: No module named 'openvino'
 ```
 
-This limitation was observed during testing on a Panther Lake system running Ubuntu under WSL2 using the OpenVINO GPU runtime. The following behavior was documented:
+This means the OpenVINO Python package is not installed in the active Python environment, or the correct virtual environment is not activated. Install OpenVINO or activate the appropriate environment before running the verification commands.
 
-| Model                               | CPU | GPU                      |
-| ----------------------------------- | --- | ------------------------ |
-| Qwen3-8B-int8-ov                    | ✅   | ✅                        |
-| Qwen3-14B-int8-ov                   | ✅   | ❌ USM allocation failure |
-| Qwen3-30B-A3B-Instruct-2507-int4-ov | ✅   | ❌ USM allocation failure |
-
-If you encounter USM allocation errors:
-- Verify you're using the latest OpenVINO and GPU runtime versions
-- Try a smaller model variant
-- Use CPU inference for affected models
-- Report the issue to OpenVINO with your environment details
 
 ## Performance Verification
 
@@ -671,9 +685,11 @@ Use the same curl command and compare response times.
 
 **4. Metrics to compare:**
 
-- **Total response time:** GPU should be significantly faster for longer sequences
+- **Total response time:** Compare end-to-end request duration
 - **Tokens per second:** Calculate by dividing output tokens by generation time
-- **CPU utilization:** GPU inference typically shows lower CPU utilization
+- **CPU utilization:** GPU inference typically shows different CPU utilization patterns
+
+GPU acceleration is generally expected to improve throughput and reduce response time for sufficiently large inference workloads. Actual performance depends on the model, hardware, prompt length, and runtime configuration.
 
 > **Note:** The first inference on GPU includes model compilation overhead. Treat the first request as a warm-up; subsequent requests will reflect true GPU performance.
 
