@@ -521,7 +521,8 @@ def parametrize_model_type(metafunc):
         return
     if isinstance(args[0], dict):
         params_list = [
-            (device_type, result) for device_type in config.target_devices for result in args[0][device_type]
+            (device_type, result) for device_type in config.target_devices
+            for result in args[0][get_base_device(device_type)]
         ]
     else:
         params_list = [(device_type, result) for device_type in config.target_devices for result in args[0]]
@@ -545,7 +546,7 @@ def parametrize_model_aux_type(metafunc):
     if args is None:
         return
     if isinstance(args[0], dict):
-        params_list = [model for device_type in config.target_devices for model in args[0][device_type]]
+        params_list = [model for device_type in config.target_devices for model in args[0][get_base_device(device_type)]]
     else:
         params_list = list(args[0])
     ids_list = [model.__name__ for model in params_list]
@@ -561,7 +562,7 @@ def parametrize_all_models(metafunc):
     for device_type in config.target_devices:
         for _models in args[0]:
             if isinstance(_models, dict):
-                params_list.append((device_type, _models[device_type]))
+                params_list.append((device_type, _models[get_base_device(device_type)]))
             else:
                 params_list.append((device_type, _models))
     ids_list = lambda i: get_ids_with_target_device(
@@ -629,7 +630,8 @@ def parametrize_plugin_config(metafunc):
         parametrize_target_device(metafunc)
         return
     params_list = [
-        (device_type, plugin_config) for device_type in config.target_devices for plugin_config in args[0][device_type]
+        (device_type, plugin_config) for device_type in config.target_devices
+        for plugin_config in args[0][get_base_device(device_type)]
     ]
     ids_list = lambda i: get_ids_with_target_device(i, lambda x: "-".join(map(lambda y: "%s=%s" % y, x.items())))
     metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.PLUGIN_CONFIG}", params_list, ids=ids_list)

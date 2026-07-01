@@ -17,6 +17,7 @@
 import os
 import random
 
+from collections import defaultdict
 from time import strftime
 
 from tests.functional.constants.target_device import TargetDevice
@@ -114,6 +115,21 @@ def get_base_device(device_str):
     if _is_device_with_index(device_str):
         return device_str.split(":", 1)[0]
     return device_str
+
+
+class DeviceAwareDefaultDict(defaultdict):
+    """
+    Transparently resolves indexed devices (e.g. GPU:0 -> GPU).
+    When a key like 'GPU:0' is not found, it falls back to the base device key 'GPU'.
+    """
+
+    def __missing__(self, key):
+        if isinstance(key, str) and _is_device_with_index(key):
+            base = key.split(":", 1)[0]
+            if base in self:
+                return self[base]
+        # Fall back to default_factory behavior
+        return super().__missing__(key)
 
 
 def validate_supported_values(detected_list, supported_list):
