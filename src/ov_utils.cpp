@@ -135,6 +135,9 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
     }
 
     pluginSupportedConfigKeys.insert("ENABLE_MMAP");  // WA: always supported
+    if (targetDevice.find("CPU") != std::string::npos) {
+        pluginSupportedConfigKeys.insert("CPU_RUNTIME_CACHE_CAPACITY");  // WA: supported by CPU plugin but not reported in supported_properties
+     }
 
     for (auto& config : pluginConfig) {
         if (std::find(pluginSupportedConfigKeys.begin(), pluginSupportedConfigKeys.end(), config.first) == pluginSupportedConfigKeys.end()) {
