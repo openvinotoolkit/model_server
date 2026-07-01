@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,28 +14,27 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <memory>
-#include <sstream>
-#include <string>
 
+#ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-// Python execution for template processing
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
+#pragma warning(disable : 6001 4324 6385 6386)
+#endif
+#include "absl/status/status.h"
+#ifdef _MSC_VER
 #pragma warning(pop)
+#endif
 
-#include "src/python/utils.hpp"
+#include "input_request.hpp"
 
 namespace ovms {
 
-class PyJinjaTemplateProcessor {
+// Abstract base for a single step in the input processing chain.
+class BaseInputProcessor {
 public:
-    std::string bosToken = "";
-    std::string eosToken = "";
-    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
-    std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
+    virtual ~BaseInputProcessor() = default;
 
-    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output);
+    // Transform req in-place. A non-OK status aborts the chain.
+    virtual absl::Status process(InputRequest& req) = 0;
 };
+
 }  // namespace ovms

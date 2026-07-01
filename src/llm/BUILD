@@ -62,6 +62,7 @@ ovms_cc_library(
         "@stb//:image",
         ":openai_request",
         ":output_parsers",
+        ":generation_config_builders",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
 )
@@ -81,6 +82,7 @@ ovms_cc_library(
         ":openai_api_handler",
         ":openai_request",
         ":output_parsers",
+        ":io_processing_input_processor",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
 )
@@ -105,12 +107,95 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "io_processing_input_request",
+    hdrs = ["io_processing/input_request.hpp",
+            "io_processing/input_processing_config.hpp",
+            "io_processing/base_input_processor.hpp"],
+    srcs = [],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "image_utils",
+    hdrs = ["io_processing/image_utils.hpp"],
+    srcs = ["io_processing/image_utils.cpp"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",  # required for absl status
+        "//third_party:curl",
+        "//src:image_conversion",
+        "//src/filesystem:libovmsfilesystem",
+        "//third_party:genai",
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_input_processor_context",
+    hdrs = ["io_processing/input_processor_context.hpp"],
+    srcs = [],
+    deps = [
+        ":io_processing_input_request",
+        "//third_party:genai",
+    ] + select({
+        "//:disable_python": [],
+        "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,
+    }),
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_input_processors",
+    hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
+            "io_processing/input_processors/chat_template_processor.hpp",
+            "io_processing/input_processors/raw_prompt_extractor.hpp",
+            "io_processing/input_processors/text_content_normalization_processor.hpp",
+            "io_processing/input_processors/tokenization_processor.hpp"],
+    srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
+            "io_processing/input_processors/chat_template_processor.cpp",
+            "io_processing/input_processors/text_content_normalization_processor.cpp",
+            "io_processing/input_processors/tokenization_processor.cpp"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "//src:libovmsprofiler",
+        ":image_utils",
+        ":io_processing_input_request",
+        "//third_party:genai",
+        "//src:libovmslogging",
+    ] + select({
+        "//:disable_python": [],
+        "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,
+    }),
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_input_processor",
+    hdrs = ["io_processing/input_processor.hpp"],
+    srcs = ["io_processing/input_processor.cpp"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        ":io_processing_input_request",
+        ":io_processing_input_processors",
+        ":io_processing_input_processor_context",
+        "//src:libovms_config",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "openai_request",
     hdrs = ["apis/openai_request.hpp"],
     srcs = [],
-    deps = ["//third_party:genai",            
+    deps = ["//third_party:genai",
             "//src/port:rapidjson_document",
-            ":apis_tool_schema_wrapper",],
+            ":apis_tool_schema_wrapper",
+            ":io_processing_input_request",],
     visibility = ["//visibility:public"],
 )
 
@@ -344,6 +429,7 @@ ovms_cc_library(
         ":openai_completions_api_handler",
         ":openai_responses_handler",
         ":generation_config_builders",
+        ":io_processing_input_processor_context",
         "//src:httppayload",
         "//src:libhttpclientconnection",
         "//src:sse_utils",
