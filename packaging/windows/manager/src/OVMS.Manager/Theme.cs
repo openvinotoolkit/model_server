@@ -15,6 +15,8 @@ internal static class Theme
     public static readonly Color Text = ColorTranslator.FromHtml("#1F2937");
     public static readonly Color Muted = ColorTranslator.FromHtml("#6B7280");
     public static readonly Color Border = ColorTranslator.FromHtml("#E5E7EB");
+    public static readonly Color FieldBorder = ColorTranslator.FromHtml("#CBD5E1");
+    public static readonly Color FieldBackground = ColorTranslator.FromHtml("#F8FAFC");
     public static readonly Color Success = ColorTranslator.FromHtml("#16A34A");
     public static readonly Color Danger = ColorTranslator.FromHtml("#DC2626");
     public static readonly Color Warning = ColorTranslator.FromHtml("#D97706");
@@ -74,18 +76,22 @@ internal static class Theme
 /// </summary>
 internal static class Glyphs
 {
-    public const string Dashboard = ""; // Home
-    public const string Settings = "";  // Settings gear
-    public const string Logs = "";      // Diagnostic
-    public const string Advanced = "";  // Repair/tools (Build)
+    public const string Dashboard = "\uE80F"; // Home
+    public const string Settings = "\uE713";  // Settings gear
+    public const string Logs = "\uE9D9";      // Diagnostic
+    public const string Advanced = "\uE90F";  // Repair/tools (Build)
+    public const string Update = "\uE895";    // Download/update
 
-    public const string Play = "";       // Play
-    public const string Stop = "";       // Stop
-    public const string Restart = "";    // Sync/restart
-    public const string Refresh = "";    // Refresh
-    public const string OpenFolder = ""; // OpenFolderHorizontal
-    public const string Repair = "";     // Repair/build tools
-    public const string Save = "";       // Save
-    public const string Health = "";     // HealthSolid
-    public const string Export = "";     // Export
+    public const string Play = "\uE768";       // Play
+    public const string Stop = "\uE71A";       // Stop
+    public const string Restart = "\uE777";    // Sync/restart
+    public const string Refresh = "\uE72C";    // Refresh
+    public const string OpenFolder = "\uE838"; // OpenFolderHorizontal
+    public const string Edit = "\uE70F";       // Edit
+    public const string Cancel = "\uE711";     // Cancel
+    public const string Repair = "\uE90F";     // Repair/build tools
+    public const string Save = "\uE74E";       // Save
+    public const string Health = "\uEB51";     // HealthSolid
+    public const string Export = "\uEDE1";     // Export
 }
+
