@@ -2608,6 +2608,7 @@ cc_test(
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
                 ":test_llm_output_parser_tests",
+                "//src:libmediapipe_framework_impl",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
