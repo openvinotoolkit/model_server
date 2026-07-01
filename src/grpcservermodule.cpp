@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <fstream>
 #include <map>
 #include <sstream>
 #include <string>
@@ -97,6 +98,14 @@ GRPCServerModule::GRPCServerModule(Server& server) :
     tfsModelService(this->server),
     kfsGrpcInferenceService(this->server) {}
 
+static std::string read_file_to_string(const std::string& path) {
+    std::ifstream f(path, std::ios::in | std::ios::binary);
+    if (!f) {
+        throw std::runtime_error("Cannot open file: " + path);
+    }
+    return std::string(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+}
+
 static std::string host_with_port(const std::string& host, int port) {
     if (Config::is_ipv6(host)) {
         return "[" + host + "]:" + std::to_string(port);
@@ -128,14 +137,59 @@ Status GRPCServerModule::start(const ovms::Config& config) {
         return status;
     }
 
+    // Build gRPC server credentials (TLS or insecure)
+    std::shared_ptr<grpc::ServerCredentials> serverCredentials;
+    const std::string certPath = config.grpcCertPath();
+    const std::string keyPath = config.grpcKeyPath();
+    const std::string caPath = config.grpcCaPath();
+    if (!certPath.empty() && !keyPath.empty()) {
+        // The TLS material is validated earlier, but it can still become unreadable between
+        // validation and here (deleted, permission change). read_file_to_string() throws on
+        // failure; catch it and return a controlled Status instead of letting it propagate
+        // out of start() and trigger std::terminate.
+        try {
+            grpc::SslServerCredentialsOptions sslOpts;
+            grpc::SslServerCredentialsOptions::PemKeyCertPair keyCertPair;
+            keyCertPair.cert_chain = read_file_to_string(certPath);
+            keyCertPair.private_key = read_file_to_string(keyPath);
+            sslOpts.pem_key_cert_pairs.push_back(keyCertPair);
+            if (!caPath.empty()) {
+                sslOpts.pem_root_certs = read_file_to_string(caPath);
+                sslOpts.client_certificate_request = GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY;
+                SPDLOG_INFO("gRPC TLS enabled with mutual TLS (mTLS) — client certificates required");
+            } else {
+                SPDLOG_INFO("gRPC TLS enabled (server-only TLS, no client certificate verification)");
+            }
+            serverCredentials = grpc::SslServerCredentials(sslOpts);
+        } catch (const std::exception& e) {
+            std::stringstream ss;
+            ss << "failed to read gRPC TLS material: " << e.what();
+            SPDLOG_ERROR(ss.str());
+            return Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
+        }
+    } else {
+        serverCredentials = grpc::InsecureServerCredentials();
+    }
+
     ServerBuilder builder;
     builder.SetMaxReceiveMessageSize(GIGABYTE);
     builder.SetMaxSendMessageSize(GIGABYTE);
     auto ips = ovms::tokenize(config.grpcBindAddress(), ',');
+    const bool tlsEnabled = !certPath.empty() && !keyPath.empty();
     for (const auto& ip : ips) {
         auto hostWithPort = host_with_port(ip, config.port());
         SPDLOG_INFO("Binding gRPC server to address: {}", hostWithPort);
-        builder.AddListeningPort(hostWithPort, grpc::InsecureServerCredentials());
+        int boundPort = 0;
+        builder.AddListeningPort(hostWithPort, serverCredentials, &boundPort);
+        // When TLS is enabled, a bound port of 0 means gRPC rejected the credentials (e.g. a
+        // malformed cert/key that passed the existence/size checks). Fail closed with a clear
+        // error instead of starting a server that silently does not listen.
+        if (tlsEnabled && boundPort == 0) {
+            std::stringstream ss;
+            ss << hostWithPort << " (TLS) - verify the certificate and key are valid PEM files";
+            SPDLOG_ERROR("Failed to bind gRPC server with TLS on {}", hostWithPort);
+            return Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
+        }
     }
     builder.RegisterService(&tfsPredictService);
     builder.RegisterService(&tfsModelService);

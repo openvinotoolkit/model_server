@@ -354,6 +354,75 @@ OVMS_Status* OVMS_ServerSettingsSetAllowedLocalMediaPath(OVMS_ServerSettings* se
 OVMS_Status* OVMS_ServerSettingsSetAllowedMediaDomains(OVMS_ServerSettings* settings,
     const char* allowed_media_domains);
 
+// Set the path to the PEM-encoded server certificate for gRPC TLS.
+// Equivalent of starting server with --grpc_certificate_path.
+// Must be set together with OVMS_ServerSettingsSetGrpcKeyPath to enable TLS.
+//
+// \param settings The server settings object to be set
+// \param grpc_cert_path Path to the PEM certificate file
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerSettingsSetGrpcCertPath(OVMS_ServerSettings* settings,
+    const char* grpc_cert_path);
+
+// Set the path to the PEM-encoded private key for gRPC TLS.
+// Equivalent of starting server with --grpc_key_path.
+// Must be set together with OVMS_ServerSettingsSetGrpcCertPath to enable TLS.
+//
+// \param settings The server settings object to be set
+// \param grpc_key_path Path to the PEM private key file
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerSettingsSetGrpcKeyPath(OVMS_ServerSettings* settings,
+    const char* grpc_key_path);
+
+// Set the path to the PEM-encoded CA certificate for gRPC mutual TLS (mTLS).
+// Equivalent of starting server with --grpc_ca_path.
+// Requires OVMS_ServerSettingsSetGrpcCertPath and OVMS_ServerSettingsSetGrpcKeyPath.
+// When set, client certificates are required and verified against this CA.
+//
+// \param settings The server settings object to be set
+// \param grpc_ca_path Path to the PEM CA certificate file
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerSettingsSetGrpcCaPath(OVMS_ServerSettings* settings,
+    const char* grpc_ca_path);
+
+// NOTE: REST TLS is currently gated. The bundled Drogon is built without OpenSSL, so
+// native REST HTTPS cannot be served; setting any REST TLS path causes the server to
+// fail startup (rather than silently serving plaintext). Use the gRPC TLS setters, or
+// terminate REST TLS with a reverse proxy. The REST setters below are retained for
+// forward compatibility (they will work once Drogon is built with OpenSSL). See #2144.
+//
+// Set the path to the PEM-encoded server certificate for REST TLS (HTTPS).
+// Equivalent of starting server with --rest_certificate_path.
+// Must be set together with OVMS_ServerSettingsSetRestKeyPath to enable HTTPS.
+//
+// \param settings The server settings object to be set
+// \param rest_cert_path Path to the PEM certificate file
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerSettingsSetRestCertPath(OVMS_ServerSettings* settings,
+    const char* rest_cert_path);
+
+// Set the path to the PEM-encoded private key for REST TLS (HTTPS).
+// Equivalent of starting server with --rest_key_path.
+// Must be set together with OVMS_ServerSettingsSetRestCertPath to enable HTTPS.
+//
+// \param settings The server settings object to be set
+// \param rest_key_path Path to the PEM private key file
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerSettingsSetRestKeyPath(OVMS_ServerSettings* settings,
+    const char* rest_key_path);
+
+// Set the path to the PEM-encoded CA certificate for REST client certificate verification.
+// Equivalent of starting server with --rest_ca_path.
+// Requires OVMS_ServerSettingsSetRestCertPath and OVMS_ServerSettingsSetRestKeyPath.
+// When set, client certificates are required and verified against this CA via Drogon's
+// SSL config commands (OpenSSL CAfile + VerifyPeer).
+//
+// \param settings The server settings object to be set
+// \param rest_ca_path Path to the PEM CA certificate file
+// \return OVMS_Status object in case of failure
+OVMS_Status* OVMS_ServerSettingsSetRestCaPath(OVMS_ServerSettings* settings,
+    const char* rest_ca_path);
+
 ////
 //// OVMS_ModelsSettings
 //// Options for starting multi model server controlled by config.json file

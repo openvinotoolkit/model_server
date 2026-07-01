@@ -156,7 +156,7 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
 }
 
 std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, const ovms::Config& config, int timeout_in_ms) {
-    auto server = std::make_unique<DrogonHttpServer>(num_threads, num_threads, port, address);
+    auto server = std::make_unique<DrogonHttpServer>(num_threads, num_threads, port, address, config.restCertPath(), config.restKeyPath(), config.restCaPath());
     auto handler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms, config.apiKey());
     auto& pool = server->getPool();
     server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)> drogonResponseInitializeCallback) {
