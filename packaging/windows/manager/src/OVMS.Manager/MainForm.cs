@@ -73,6 +73,31 @@ internal sealed class MainForm : Form
     private TextBox advancedTextBox = null!;
     private Label advancedStatusLabel = null!;
 
+    // Updates controls
+    private Label updatesBaseInstalledVersionValue = null!;
+    private Label updatesBaseLatestVersionValue = null!;
+    private Label updatesModelServerInstalledVersionValue = null!;
+    private Label updatesModelServerLatestVersionValue = null!;
+    private Label updatesGenAiInstalledVersionValue = null!;
+    private Label updatesGenAiLatestVersionValue = null!;
+    private Label updatesVariantValue = null!;
+    private Label updatesManagerVersionValue = null!;
+    private Label updatesStatusLabel = null!;
+    private CardPanel updatesBaseCard = null!;
+    private CardPanel updatesModelServerCard = null!;
+    private CardPanel updatesGenAiCard = null!;
+    private CollapsibleActionRow updatesBaseInstallRow;
+    private CollapsibleActionRow updatesModelServerInstallRow;
+    private CollapsibleActionRow updatesGenAiInstallRow;
+    private Button updatesCheckButton = null!;
+    private Button updatesBaseInstallButton = null!;
+    private Button updatesModelServerInstallButton = null!;
+    private Button updatesGenAiInstallButton = null!;
+    private Button updatesModelServerReleaseButton = null!;
+    private Button updatesGenAiReleaseButton = null!;
+    private string updatesModelServerReleaseUrl = "";
+    private string updatesGenAiReleaseUrl = "";
+
     public MainForm(OvmsController controller)
     {
         this.controller = controller;
@@ -183,6 +208,7 @@ internal sealed class MainForm : Form
         navFlow.Controls.Add(CreateNavButton("Settings", Glyphs.Settings));
         navFlow.Controls.Add(CreateNavButton("Logs", Glyphs.Logs));
         navFlow.Controls.Add(CreateNavButton("Advanced", Glyphs.Advanced));
+        navFlow.Controls.Add(CreateNavButton("Updates", Glyphs.Update));
 
         var statusPill = new Panel { Dock = DockStyle.Bottom, Height = 56, BackColor = Theme.Rail, Padding = new Padding(16, 12, 16, 12) };
         var pillInner = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
@@ -226,6 +252,7 @@ internal sealed class MainForm : Form
         pages["Settings"] = BuildSettingsPage();
         pages["Logs"] = BuildLogsPage();
         pages["Advanced"] = BuildAdvancedPage();
+        pages["Updates"] = BuildUpdatesPage();
 
         foreach (var page in pages.Values)
         {
@@ -296,6 +323,10 @@ internal sealed class MainForm : Form
             {
                 RefreshAdvancedInfo();
             }
+            else if (name == "Updates")
+            {
+                RefreshUpdatesInfo();
+            }
         }
     }
 
@@ -311,6 +342,9 @@ internal sealed class MainForm : Form
                 break;
             case "Advanced":
                 RefreshAdvancedInfo();
+                break;
+            case "Updates":
+                RefreshUpdatesInfo();
                 break;
             case "Settings":
                 LoadSettingsIntoForm();
@@ -352,20 +386,15 @@ internal sealed class MainForm : Form
 
     private static Button CreateIconButton(string glyph, string tooltip)
     {
-        var button = new Button
+        var button = new RuntimeIconButton(glyph, Theme.Muted)
         {
-            Text = glyph,
-            Font = Theme.IconFont(13f),
-            FlatStyle = FlatStyle.Flat,
-            ForeColor = Theme.Muted,
             BackColor = Theme.Surface,
-            Size = new Size(32, 32),
-            Cursor = Cursors.Hand,
-            UseVisualStyleBackColor = false
+            Size = new Size(42, 38),
+            MinimumSize = new Size(42, 38),
+            MaximumSize = new Size(42, 38),
+            Margin = new Padding(0)
         };
-        button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.BorderColor = Theme.Border;
-        button.FlatAppearance.MouseOverBackColor = Theme.HoverTint;
+        button.Font = Theme.IconFont(12.5f);
         var tip = new ToolTip();
         tip.SetToolTip(button, tooltip);
         return button;
@@ -431,14 +460,14 @@ internal sealed class MainForm : Form
     {
         var button = new Button
         {
-            Text = "  " + text,
+            Text = text,
             Font = Theme.NavFont,
             FlatStyle = FlatStyle.Flat,
             ForeColor = Theme.Text,
             BackColor = Theme.Surface,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(12, 8, 14, 8),
+            Padding = new Padding(16, 8, 16, 8),
             Cursor = Cursors.Hand,
             UseVisualStyleBackColor = false
         };
@@ -471,14 +500,13 @@ internal sealed class MainForm : Form
             Location = new Point(0, 0),
             AutoSize = false,
             ColumnCount = 1,
-            RowCount = 2,
-            Height = 656,
+            RowCount = 1,
+            Height = 456,
             Padding = new Padding(0),
             Margin = new Padding(0)
         };
         dashboardStack.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         dashboardStack.RowStyles.Add(new RowStyle(SizeType.Absolute, 456));
-        dashboardStack.RowStyles.Add(new RowStyle(SizeType.Absolute, 200));
 
         var metricGrid = new TableLayoutPanel
         {
@@ -499,9 +527,9 @@ internal sealed class MainForm : Form
             metricGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
         }
 
-        startButton = CreateRuntimeIconButton("\uE768", "Start server", Theme.Success);
-        stopButton = CreateRuntimeIconButton("\uE71A", "Stop server", Theme.Danger);
-        restartButton = CreateRuntimeIconButton("\uE72C", "Restart server", Theme.Accent);
+        startButton = CreateRuntimeIconButton(Glyphs.Play, "Start server", Theme.Success);
+        stopButton = CreateRuntimeIconButton(Glyphs.Stop, "Stop server", Theme.Danger);
+        restartButton = CreateRuntimeIconButton(Glyphs.Refresh, "Restart server", Theme.Accent);
 
         startButton.Click += async (_, _) => await RunControlActionAsync("Start", controller.Start);
         stopButton.Click += async (_, _) => await RunControlActionAsync("Stop", controller.Stop);
@@ -692,59 +720,13 @@ internal sealed class MainForm : Form
         (_, variantValueLabel) = AddStatusCard("Package variant", "-", withDot: false, 1, 2);
         (_, runModeValueLabel) = AddStatusCard("Runtime mode", "-", withDot: false, 0, 3);
 
-        var actionsCard = new CardPanel { Dock = DockStyle.Fill, Margin = new Padding(0, 10, 0, 0), Padding = new Padding(14) };
-        var actionsLayout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 3,
-            RowCount = 2,
-            Margin = new Padding(0),
-            Padding = new Padding(0)
-        };
-        for (var i = 0; i < 3; i++)
-        {
-            actionsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
-        }
-        actionsLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-        actionsLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-
-        var openLogsButton = CreateSecondaryButton("Open Logs");
-        var openModelFolderButton = CreateSecondaryButton("Open Model Folder");
-
-        foreach (var b in new[] { openLogsButton, openModelFolderButton })
-        {
-            b.AutoSize = false;
-            b.Anchor = AnchorStyles.None;
-            b.Margin = new Padding(0, 0, 10, 10);
-            b.MinimumSize = new Size(120, 48);
-        }
-
-        openLogsButton.Click += (_, _) => OpenFolderFor(TryLoadSettings()?.LogPath);
-        openModelFolderButton.Click += (_, _) => OpenFolder(TryLoadSettings()?.ModelRepositoryPath);
-
-        actionsLayout.Controls.Add(openLogsButton, 0, 0);
-        actionsLayout.Controls.Add(openModelFolderButton, 1, 0);
-        actionsLayout.SetColumnSpan(openModelFolderButton, 2);
-        actionsCard.Controls.Add(actionsLayout);
-
         dashboardStack.Controls.Add(metricGrid, 0, 0);
-        dashboardStack.Controls.Add(actionsCard, 0, 1);
         page.Controls.Add(dashboardStack);
-
-        void SizeActionButtons()
-        {
-            foreach (var button in new[] { openLogsButton, openModelFolderButton })
-            {
-                var preferred = TextRenderer.MeasureText(button.Text, button.Font).Width + 72;
-                button.Size = new Size(Math.Clamp(preferred, 120, 280), 52);
-            }
-        }
 
         void ResizeDashboard()
         {
             var availableWidth = ClientSize.Width - navRail.Width - contentHost.Padding.Horizontal - 28;
             dashboardStack.Width = Math.Max(560, availableWidth);
-            SizeActionButtons();
         }
 
         page.Resize += (_, _) => ResizeDashboard();
@@ -923,25 +905,35 @@ internal sealed class MainForm : Form
 
     private Panel BuildSettingsPage()
     {
-        var page = new Panel { BackColor = Theme.WindowBackground, AutoScroll = true };
+        var page = new Panel { BackColor = Theme.WindowBackground, AutoScroll = true, Padding = new Padding(0, 0, 10, 0) };
 
-        var serverCard = CreateTitledCard("Server", 400, "Endpoints, logging, and model repository.");
+        var serverCard = CreateSettingsCard(650);
         var serverLayout = CreateSettingsTable();
 
         var row = 0;
-        AddSettingsRow(serverLayout, "REST port:", restPortInput = new NumericUpDown { Minimum = 1, Maximum = 65535, Width = 140, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) }, row++);
-        AddSettingsRow(serverLayout, "gRPC port (0 = disabled):", grpcPortInput = new NumericUpDown { Minimum = 0, Maximum = 65535, Width = 140, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) }, row++);
+        AddSettingsCardHeader(serverLayout, "Server", "Configure endpoints, logging, and where OVMS loads models from.", row++);
+        AddSettingsSectionHeader(serverLayout, "Network", row++);
+        restPortInput = new NumericUpDown { Minimum = 1, Maximum = 65535, Width = 150, Anchor = AnchorStyles.Left };
+        StyleSettingsField(restPortInput);
+        AddSettingsRow(serverLayout, "REST port", restPortInput, row++);
+        grpcPortInput = new NumericUpDown { Minimum = 0, Maximum = 65535, Width = 150, Anchor = AnchorStyles.Left };
+        StyleSettingsField(grpcPortInput);
+        AddSettingsRow(serverLayout, "gRPC port", grpcPortInput, row++);
         AddHelperRow(serverLayout, "Set to 0 to disable the gRPC endpoint.", row++);
-        AddSettingsRow(serverLayout, "Bind address:", bindAddressInput = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(3, 6, 12, 3) }, row++);
+        bindAddressInput = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right };
+        StyleSettingsField(bindAddressInput);
+        AddSettingsRow(serverLayout, "Bind address", bindAddressInput, row++);
         AddHelperRow(serverLayout, "Use 127.0.0.1 for local-only access. Other addresses may expose the server to your network.", row++);
 
-        logLevelInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 160, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) };
+        AddSettingsSectionHeader(serverLayout, "Logging and models", row++);
+        logLevelInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 170, Anchor = AnchorStyles.Left, FlatStyle = FlatStyle.Standard };
+        StyleSettingsField(logLevelInput);
         logLevelInput.Items.AddRange(new object[] { "ERROR", "WARNING", "INFO", "DEBUG", "TRACE" });
-        AddSettingsRow(serverLayout, "Log level:", logLevelInput, row++);
+        AddSettingsRow(serverLayout, "Log level", logLevelInput, row++);
 
-        logPathInput = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(3, 6, 3, 3) };
+        logPathInput = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right };
+        StyleSettingsField(logPathInput);
         var browseLogButton = CreateSecondaryButton("Browse...");
-        browseLogButton.Margin = new Padding(8, 3, 3, 3);
         browseLogButton.Click += (_, _) =>
         {
             using var dialog = new SaveFileDialog
@@ -958,11 +950,11 @@ internal sealed class MainForm : Form
                 logPathInput.Text = dialog.FileName;
             }
         };
-        AddSettingsRowWithButton(serverLayout, "Log path:", logPathInput, browseLogButton, row++);
+        AddSettingsRowWithButton(serverLayout, "Log path", logPathInput, browseLogButton, row++);
 
-        modelRepoInput = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(3, 6, 3, 3) };
+        modelRepoInput = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right };
+        StyleSettingsField(modelRepoInput);
         var browseModelRepoButton = CreateSecondaryButton("Browse...");
-        browseModelRepoButton.Margin = new Padding(8, 3, 3, 3);
         browseModelRepoButton.Click += (_, _) =>
         {
             using var dialog = new FolderBrowserDialog
@@ -975,37 +967,43 @@ internal sealed class MainForm : Form
                 modelRepoInput.Text = dialog.SelectedPath;
             }
         };
-        AddSettingsRowWithButton(serverLayout, "Model repository path:", modelRepoInput, browseModelRepoButton, row++);
+        var openModelRepoButton = CreateSecondaryButton("Open");
+        openModelRepoButton.Click += (_, _) => OpenFolder(modelRepoInput.Text);
+        AddSettingsRowWithButtons(serverLayout, "Model folder", modelRepoInput, new[] { browseModelRepoButton, openModelRepoButton }, row++);
 
         serverCard.Controls.Add(serverLayout);
 
-        var startupCard = CreateTitledCard("Startup & tray", 240, "How the server runs and whether the tray app launches at sign-in.");
+        var startupCard = CreateSettingsCard(330);
         var startupLayout = CreateSettingsTable();
 
         row = 0;
-        runModeInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) };
+        AddSettingsCardHeader(startupLayout, "Startup tray", "Choose how the manager and server behave when Windows starts.", row++);
+        AddSettingsSectionHeader(startupLayout, "Launch behavior", row++);
+        runModeInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 220, Anchor = AnchorStyles.Left, FlatStyle = FlatStyle.Standard };
+        StyleSettingsField(runModeInput);
         runModeInput.Items.AddRange(new object[] { "user-login", "service", "manual" });
-        AddSettingsRow(startupLayout, "Startup mode:", runModeInput, row++);
+        AddSettingsRow(startupLayout, "Startup mode", runModeInput, row++);
 
-        showTrayCheckBox = new CheckBox { Anchor = AnchorStyles.Left, Margin = new Padding(3, 10, 3, 3) };
-        AddSettingsRow(startupLayout, "Show tray icon:", showTrayCheckBox, row++);
+        showTrayCheckBox = new CheckBox { Text = "Show OVMS in the Windows notification area", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 8, 3, 5), FlatStyle = FlatStyle.System, BackColor = Theme.Surface };
+        AddSettingsRow(startupLayout, "Tray icon", showTrayCheckBox, row++);
 
-        startAtLoginCheckBox = new CheckBox { Anchor = AnchorStyles.Left, Margin = new Padding(3, 10, 3, 3) };
-        AddSettingsRow(startupLayout, "Start at login:", startAtLoginCheckBox, row++);
+        startAtLoginCheckBox = new CheckBox { Text = "Launch OVMS Manager when you sign in", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 8, 3, 5), FlatStyle = FlatStyle.System, BackColor = Theme.Surface };
+        AddSettingsRow(startupLayout, "Start at login", startAtLoginCheckBox, row++);
 
         startupCard.Controls.Add(startupLayout);
 
         var footer = new FlowLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = 56,
+            Height = 82,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Padding = new Padding(0, 20, 0, 0),
-            Margin = new Padding(0, 4, 0, 0)
+            Padding = new Padding(18, 16, 18, 14),
+            Margin = new Padding(0, 2, 0, 0),
+            BackColor = Theme.WindowBackground
         };
         var footerRule = new Panel { Dock = DockStyle.Top, Height = 1, BackColor = Theme.Border, Margin = new Padding(0) };
-        var saveButton = CreatePrimaryButton("", "Save", Theme.Accent);
+        var saveButton = CreatePrimaryButton("", "Save changes", Theme.Accent);
         var resetButton = CreateSecondaryButton("Reset");
         saveButton.Margin = new Padding(0, 0, 10, 0);
         resetButton.Margin = new Padding(0, 0, 16, 0);
@@ -1038,85 +1036,175 @@ internal sealed class MainForm : Form
         return page;
     }
 
-    private static CardPanel CreateTitledCard(string title, int height, string? subtitle = null)
+    private static CardPanel CreateSettingsCard(int height)
     {
-        var card = new CardPanel { Dock = DockStyle.Top, Height = height, Margin = new Padding(0, 0, 0, 16) };
-
-        if (subtitle is not null)
+        return new CardPanel
         {
-            var subtitleLabel = new Label
-            {
-                Text = subtitle,
-                Font = new Font(Theme.BaseFont.FontFamily, 8.25f),
-                ForeColor = Theme.Muted,
-                AutoSize = true,
-                Dock = DockStyle.Top,
-                Margin = new Padding(0, 0, 0, 0)
-            };
-            card.Controls.Add(subtitleLabel);
-        }
-
-        var titleLabel = new Label
-        {
-            Text = title,
-            Font = Theme.CardTitleFont,
-            ForeColor = Theme.Text,
-            AutoSize = true,
             Dock = DockStyle.Top,
-            Margin = new Padding(0, 0, 0, subtitle is null ? 12 : 2)
+            Height = height,
+            Margin = new Padding(0, 0, 0, 26),
+            Padding = new Padding(26, 22, 26, 24),
+            CardBackColor = Theme.Surface,
+            BorderColor = Color.FromArgb(222, 226, 232)
         };
-        card.Controls.Add(titleLabel);
-        return card;
+    }
+
+    private static Panel CreateCardSpacer(int height = 18)
+    {
+        return new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = height,
+            BackColor = Theme.WindowBackground
+        };
     }
 
     private static TableLayoutPanel CreateSettingsTable()
     {
         var table = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             ColumnCount = 2,
-            AutoSize = false,
-            Padding = new Padding(0, 24, 0, 0)
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(0),
+            BackColor = Theme.Surface
         };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         return table;
     }
 
+    private static void AddSettingsCardHeader(TableLayoutPanel table, string title, string subtitle, int row)
+    {
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
+        var header = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            Margin = new Padding(0),
+            BackColor = Theme.Surface
+        };
+        header.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+        header.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+        header.Controls.Add(new Label
+        {
+            Text = title,
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Font = Theme.CardTitleFont,
+            ForeColor = Theme.Text,
+            BackColor = Theme.Surface,
+            Margin = new Padding(0)
+        }, 0, 0);
+        header.Controls.Add(new Label
+        {
+            Text = subtitle,
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.TopLeft,
+            Font = new Font(Theme.BaseFont.FontFamily, 9.25f),
+            ForeColor = Theme.Muted,
+            BackColor = Theme.Surface,
+            Margin = new Padding(0)
+        }, 0, 1);
+
+        table.Controls.Add(header, 0, row);
+        table.SetColumnSpan(header, 2);
+    }
+
+    private static void AddSettingsSectionHeader(TableLayoutPanel table, string text, int row)
+    {
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        var header = new Label
+        {
+            Text = text,
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Font = new Font(Theme.BaseFont.FontFamily, 8.25f, FontStyle.Bold),
+            ForeColor = Theme.Accent,
+            BackColor = Theme.Surface,
+            Margin = new Padding(3, 10, 0, 6)
+        };
+        table.Controls.Add(header, 0, row);
+        table.SetColumnSpan(header, 2);
+    }
+
     private static void AddSettingsRow(TableLayoutPanel table, string label, Control field, int row)
     {
-        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
-        table.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, ForeColor = Theme.Text, Margin = new Padding(3, 10, 16, 3) }, 0, row);
-        table.Controls.Add(field, 1, row);
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+        table.Controls.Add(CreateSettingsLabel(label), 0, row);
+        table.Controls.Add(field is CheckBox ? field : CreateCappedSettingsField(field), 1, row);
+    }
+
+    private static Label AddReadOnlySettingsRow(TableLayoutPanel table, string label, int row)
+    {
+        var value = CreateReadOnlyValueLabel();
+        AddSettingsRow(table, label, value, row);
+        return value;
     }
 
     private static void AddSettingsRowWithButton(TableLayoutPanel table, string label, Control field, Control button, int row)
     {
-        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+        AddSettingsRowWithButtons(table, label, field, new[] { button }, row);
+    }
 
-        var inline = new TableLayoutPanel
+    private static void AddSettingsRowWithButtons(TableLayoutPanel table, string label, Control field, IReadOnlyList<Control> buttons, int row)
+    {
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 84));
+
+        var inline = new Panel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            AutoSize = false,
-            Margin = new Padding(0)
+            Margin = new Padding(0),
+            BackColor = Theme.Surface
         };
-        inline.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        inline.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        field.Dock = DockStyle.Fill;
-        field.Margin = new Padding(3, 6, 8, 3);
-        button.Anchor = AnchorStyles.Right;
-        inline.Controls.Add(field, 0, 0);
-        inline.Controls.Add(button, 1, 0);
+        var fieldHost = CreateSettingsFieldHost(field);
+        fieldHost.Location = new Point(3, 8);
+        inline.Controls.Add(fieldHost);
 
-        table.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, ForeColor = Theme.Text, Margin = new Padding(3, 10, 16, 3) }, 0, row);
+        for (var i = 0; i < buttons.Count; i++)
+        {
+            buttons[i].Anchor = AnchorStyles.Top | AnchorStyles.Left;
+            buttons[i].AutoSize = false;
+            buttons[i].Size = new Size(buttons[i].Text == "Open" ? 110 : 150, 52);
+            buttons[i].MinimumSize = buttons[i].Size;
+            buttons[i].Margin = new Padding(0);
+            buttons[i].Location = new Point(0, 6);
+            inline.Controls.Add(buttons[i]);
+        }
+
+        void LayoutInline()
+        {
+            var buttonWidth = buttons.Count * 10;
+            foreach (var button in buttons)
+            {
+                buttonWidth += button.Width;
+            }
+            var fieldWidth = Math.Min(700, Math.Max(420, inline.ClientSize.Width - buttonWidth - 16));
+            fieldHost.Size = new Size(fieldWidth, 40);
+
+            var x = fieldHost.Right + 10;
+            foreach (var button in buttons)
+            {
+                button.Location = new Point(x, 6);
+                x += button.Width + 10;
+            }
+        }
+
+        inline.Resize += (_, _) => LayoutInline();
+        LayoutInline();
+
+        table.Controls.Add(CreateSettingsLabel(label), 0, row);
         table.Controls.Add(inline, 1, row);
     }
 
     private static void AddHelperRow(TableLayoutPanel table, string text, int row)
     {
-        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
         var helper = new Label
         {
             Text = text,
@@ -1124,10 +1212,200 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             Font = new Font(Theme.BaseFont.FontFamily, 8.25f),
             ForeColor = Theme.Muted,
-            Margin = new Padding(3, 0, 12, 6)
+            BackColor = Theme.Surface,
+            Margin = new Padding(3, 0, 12, 12)
         };
-        table.Controls.Add(helper, 0, row);
-        table.SetColumnSpan(helper, 2);
+        table.Controls.Add(helper, 1, row);
+    }
+
+    private static void AddStatusRow(TableLayoutPanel table, Label statusLabel, int row)
+    {
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+        statusLabel.AutoSize = false;
+        statusLabel.Dock = DockStyle.Fill;
+        statusLabel.TextAlign = ContentAlignment.MiddleLeft;
+        statusLabel.BackColor = Theme.Surface;
+        statusLabel.Margin = new Padding(3, 4, 12, 4);
+        table.Controls.Add(statusLabel, 1, row);
+    }
+
+    private static CollapsibleActionRow AddActionRow(TableLayoutPanel table, string label, string helperText, IReadOnlyList<Control> buttons, int row)
+    {
+        var stacked = buttons.Count > 1;
+        var height = stacked ? 118 : 84;
+        var rowStyle = new RowStyle(SizeType.Absolute, height);
+        table.RowStyles.Add(rowStyle);
+        var labelControl = CreateSettingsLabel(label);
+        table.Controls.Add(labelControl, 0, row);
+
+        var content = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = stacked ? 1 : 3,
+            RowCount = stacked ? 2 : 1,
+            Margin = new Padding(0),
+            BackColor = Theme.Surface
+        };
+        if (stacked)
+        {
+            content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            content.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+            content.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
+        }
+        else
+        {
+            content.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 360));
+            content.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        }
+        content.Controls.Add(new Label
+        {
+            Text = helperText,
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Font = new Font(Theme.BaseFont.FontFamily, 8.25f),
+            ForeColor = Theme.Muted,
+            BackColor = Theme.Surface,
+            Margin = new Padding(3, 0, stacked ? 12 : 18, 0)
+        }, 0, 0);
+
+        var buttonFlow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            BackColor = Theme.Surface,
+            Margin = new Padding(0),
+            Padding = new Padding(stacked ? 3 : 0, stacked ? 6 : 14, 0, 0),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink
+        };
+        foreach (var button in buttons)
+        {
+            button.AutoSize = false;
+            button.Height = 52;
+            button.Padding = new Padding(14, 4, 14, 6);
+            var preferredWidth = TextRenderer.MeasureText(button.Text, button.Font).Width + 56;
+            var minimumWidth = string.Equals(button.Text, "Install Package Update", StringComparison.OrdinalIgnoreCase)
+                ? 230
+                : button.Text.Length > 12 ? 170 : 140;
+            button.Width = Math.Clamp(preferredWidth, minimumWidth, 240);
+            button.Margin = new Padding(0, 0, 10, 0);
+            buttonFlow.Controls.Add(button);
+        }
+        content.Controls.Add(buttonFlow, stacked ? 0 : 1, stacked ? 1 : 0);
+
+        table.Controls.Add(content, 1, row);
+        return new CollapsibleActionRow(rowStyle, labelControl, content, height);
+    }
+
+    private static Label CreateSettingsLabel(string text)
+    {
+        return new Label
+        {
+            Text = text,
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = Color.FromArgb(55, 65, 81),
+            Font = new Font(Theme.BaseFont.FontFamily, 9.25f, FontStyle.Bold),
+            BackColor = Theme.Surface,
+            Margin = new Padding(3, 0, 18, 0)
+        };
+    }
+
+    private static Label CreateReadOnlyValueLabel()
+    {
+        return new Label
+        {
+            Text = "",
+            AutoSize = false,
+            AutoEllipsis = true,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = Theme.Text,
+            Font = new Font(Theme.BaseFont.FontFamily, 10f),
+            BackColor = Theme.FieldBackground,
+            Margin = new Padding(10, 0, 10, 0)
+        };
+    }
+
+    private static Control CreateCappedSettingsField(Control field)
+    {
+        var host = CreateSettingsFieldHost(field);
+        if (field is NumericUpDown or ComboBox)
+        {
+            return host;
+        }
+
+        var wrapper = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Theme.Surface,
+            Margin = new Padding(0)
+        };
+        host.Width = 900;
+        host.MaximumSize = new Size(900, 40);
+        host.Anchor = AnchorStyles.Left | AnchorStyles.Top;
+        wrapper.Controls.Add(host);
+        return wrapper;
+    }
+
+    private static Control CreateSettingsFieldHost(Control field)
+    {
+        var fixedWidth = field is NumericUpDown or ComboBox;
+        var host = new SettingsFieldHost
+        {
+            Dock = fixedWidth ? DockStyle.None : DockStyle.Top,
+            Anchor = fixedWidth ? AnchorStyles.Left : AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+            Height = 40,
+            Size = fixedWidth ? new Size(field.Width + 22, 40) : new Size(0, 40),
+            MinimumSize = fixedWidth ? new Size(field.Width + 22, 40) : new Size(0, 40),
+            Margin = new Padding(3, 8, 12, 8)
+        };
+
+        field.Dock = DockStyle.Fill;
+        field.Margin = field is ComboBox or NumericUpDown
+            ? new Padding(10, 5, 8, 4)
+            : new Padding(10, 8, 10, 6);
+
+        if (field is TextBox textBox)
+        {
+            textBox.BorderStyle = BorderStyle.None;
+            textBox.BackColor = Theme.FieldBackground;
+        }
+        else if (field is NumericUpDown numeric)
+        {
+            numeric.BorderStyle = BorderStyle.None;
+            numeric.BackColor = Theme.FieldBackground;
+        }
+        else if (field is ComboBox combo)
+        {
+            combo.FlatStyle = FlatStyle.Flat;
+            combo.BackColor = Theme.FieldBackground;
+        }
+
+        host.Controls.Add(field);
+        return host;
+    }
+
+    private static void StyleSettingsField(Control control)
+    {
+        control.Font = new Font(Theme.BaseFont.FontFamily, 10f);
+        control.ForeColor = Theme.Text;
+        control.BackColor = Theme.FieldBackground;
+        control.Margin = new Padding(0);
+
+        if (control is TextBox textBox)
+        {
+            textBox.BorderStyle = BorderStyle.None;
+        }
+        else if (control is NumericUpDown numeric)
+        {
+            numeric.BorderStyle = BorderStyle.None;
+        }
     }
 
     private static string SafeDirectoryName(string path)
@@ -1292,18 +1570,48 @@ internal sealed class MainForm : Form
     {
         var page = new Panel { BackColor = Theme.WindowBackground };
 
-        var toolbar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 40, FlowDirection = FlowDirection.LeftToRight, Padding = new Padding(0, 0, 0, 8) };
-        var refreshLogsButton = CreateIconButton(Glyphs.Refresh, "Refresh");
-        var openFolderButton = CreateIconButton(Glyphs.OpenFolder, "Open Folder");
-        var clearLogsButton = CreateIconButton("✕", "Clear (display only)");
-        refreshLogsButton.Margin = new Padding(0, 0, 8, 0);
+        var toolbar = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 72,
+            ColumnCount = 5,
+            RowCount = 1,
+            Padding = new Padding(0, 0, 0, 10),
+            BackColor = Theme.WindowBackground
+        };
+        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 66));
+        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 66));
+        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 78));
+        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 172));
+        toolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        toolbar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        var openFolderButton = CreateIconButton(Glyphs.OpenFolder, "Open Logs");
+        var changeLogPathButton = CreateIconButton(Glyphs.Edit, "Change log location");
+        var clearLogsButton = CreateIconButton(Glyphs.Cancel, "Clear (display only)");
+        foreach (var button in new[] { openFolderButton, changeLogPathButton, clearLogsButton })
+        {
+            button.Size = new Size(58, 52);
+            button.MinimumSize = new Size(58, 52);
+            button.MaximumSize = new Size(58, 52);
+        }
         openFolderButton.Margin = new Padding(0, 0, 8, 0);
-        clearLogsButton.Margin = new Padding(0, 0, 16, 0);
+        changeLogPathButton.Margin = new Padding(0, 0, 8, 0);
+        clearLogsButton.Margin = new Padding(0, 0, 18, 0);
 
-        autoScrollCheckBox = new CheckBox { Text = "Auto-scroll", Checked = true, AutoSize = true, Margin = new Padding(0, 8, 16, 0) };
+        autoScrollCheckBox = new CheckBox
+        {
+            Text = "Auto-scroll",
+            Checked = true,
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            BackColor = Theme.WindowBackground,
+            Margin = new Padding(0, 16, 16, 0),
+            MinimumSize = new Size(140, 24)
+        };
 
-        refreshLogsButton.Click += async (_, _) => await RefreshLogsAsync();
         openFolderButton.Click += (_, _) => OpenFolderFor(TryLoadSettings()?.LogPath);
+        changeLogPathButton.Click += async (_, _) => await ChangeLogLocationAsync();
         clearLogsButton.Click += (_, _) =>
         {
             logTextBox.Clear();
@@ -1315,19 +1623,20 @@ internal sealed class MainForm : Form
             Text = "",
             AutoSize = true,
             ForeColor = Theme.Muted,
+            AutoEllipsis = true,
+            Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleRight,
-            Anchor = AnchorStyles.Right,
-            Margin = new Padding(8, 8, 0, 0)
+            Margin = new Padding(8, 10, 0, 0)
         };
 
-        toolbar.Controls.Add(refreshLogsButton);
-        toolbar.Controls.Add(openFolderButton);
-        toolbar.Controls.Add(clearLogsButton);
-        toolbar.Controls.Add(autoScrollCheckBox);
-        toolbar.Controls.Add(logPathLabel);
+        toolbar.Controls.Add(openFolderButton, 0, 0);
+        toolbar.Controls.Add(changeLogPathButton, 1, 0);
+        toolbar.Controls.Add(clearLogsButton, 2, 0);
+        toolbar.Controls.Add(autoScrollCheckBox, 3, 0);
+        toolbar.Controls.Add(logPathLabel, 4, 0);
 
-        var statusBar = new Panel { Dock = DockStyle.Bottom, Height = 24, Padding = new Padding(0, 4, 0, 0) };
-        logStatusLabel = new Label { Text = "", AutoSize = true, ForeColor = Theme.Muted, Dock = DockStyle.Left };
+        var statusBar = new Panel { Dock = DockStyle.Bottom, Height = 34, Padding = new Padding(0, 7, 0, 0) };
+        logStatusLabel = new Label { Text = "", AutoSize = false, AutoEllipsis = true, ForeColor = Theme.Muted, Dock = DockStyle.Fill };
         statusBar.Controls.Add(logStatusLabel);
 
         var logCard = new CardPanel { Dock = DockStyle.Fill, Padding = new Padding(1), CardBackColor = Theme.LogBackground, BorderColor = Theme.LogBackground };
@@ -1376,40 +1685,114 @@ internal sealed class MainForm : Form
         logStatusLabel.Text = $"{lines.Count} lines - last refreshed {DateTime.Now:T}";
     }
 
+    private async Task ChangeLogLocationAsync()
+    {
+        var current = TryLoadSettings();
+        if (current is null)
+        {
+            MessageBox.Show(this, "Could not load existing settings.", "Change Log Location", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        using var dialog = new SaveFileDialog
+        {
+            Title = "Select log file",
+            CheckFileExists = false,
+            OverwritePrompt = false,
+            FileName = Path.GetFileName(current.LogPath),
+            InitialDirectory = SafeDirectoryName(current.LogPath),
+            Filter = "Log files (*.log)|*.log|All files (*.*)|*.*"
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        var updated = new OvmsSettings
+        {
+            InstallDir = current.InstallDir,
+            DataDir = current.DataDir,
+            ModelRepositoryPath = current.ModelRepositoryPath,
+            ConfigPath = current.ConfigPath,
+            LogPath = dialog.FileName,
+            RestPort = current.RestPort,
+            GrpcPort = current.GrpcPort,
+            BindAddress = current.BindAddress,
+            LogLevel = current.LogLevel,
+            RunMode = current.RunMode,
+            StartAtLogin = current.StartAtLogin,
+            ShowTrayIcon = current.ShowTrayIcon,
+            ServiceAutoStart = current.ServiceAutoStart,
+            PackageVariant = current.PackageVariant
+        };
+        try
+        {
+            await Task.Run(() => controller.SaveSettings(updated));
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Change Log Location", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        logPathInput.Text = updated.LogPath;
+        logPathLabel.Text = updated.LogPath;
+        logStatusLabel.Text = "Log location saved.";
+
+        var runtimeStatus = await Task.Run(controller.GetRuntimeStatus);
+        if (runtimeStatus.Running)
+        {
+            var result = MessageBox.Show(this, "The log path changed. Restart server to apply the new log location?",
+                "Restart required", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result == DialogResult.Yes)
+            {
+                await RunControlActionAsync("Restart", controller.Restart);
+            }
+        }
+
+        await RefreshLogsAsync();
+    }
+
     // ---------------------------------------------------------------
     // Advanced
     // ---------------------------------------------------------------
 
+    private Label advancedInstallDirValue = null!;
+    private Label advancedDataDirValue = null!;
+    private Label advancedVersionValue = null!;
+    private Label advancedConfigPathValue = null!;
+
     private Panel BuildAdvancedPage()
     {
-        var page = new Panel { BackColor = Theme.WindowBackground, AutoScroll = true };
+        var page = new Panel { BackColor = Theme.WindowBackground, AutoScroll = true, Padding = new Padding(0, 0, 10, 0) };
 
-        var envCard = CreateTitledCard("Environment", 260);
-        var envLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(0, 32, 0, 0) };
-        envLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        envLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var envCard = CreateSettingsCard(500);
+        var envLayout = CreateSettingsTable();
+        var envRow = 0;
+        AddSettingsCardHeader(envLayout, "Environment", "Review the installed manager paths and the command OVMS will run.", envRow++);
+        AddSettingsSectionHeader(envLayout, "Paths and versions", envRow++);
+        advancedInstallDirValue = AddReadOnlySettingsRow(envLayout, "Install dir", envRow++);
+        advancedDataDirValue = AddReadOnlySettingsRow(envLayout, "Data dir", envRow++);
+        advancedVersionValue = AddReadOnlySettingsRow(envLayout, "Manager version", envRow++);
+        advancedConfigPathValue = AddReadOnlySettingsRow(envLayout, "Config path", envRow++);
 
         advancedTextBox = new TextBox
         {
-            Dock = DockStyle.Fill,
-            Multiline = true,
+            Anchor = AnchorStyles.Left | AnchorStyles.Right,
             ReadOnly = true,
-            ScrollBars = ScrollBars.Both,
-            WordWrap = false,
-            BackColor = Theme.WindowBackground,
-            BorderStyle = BorderStyle.FixedSingle,
-            Font = Theme.MonoFont
+            Font = Theme.MonoFont,
+            BackColor = Theme.FieldBackground,
+            ForeColor = Theme.Text
         };
-        envLayout.Controls.Add(advancedTextBox, 0, 0);
+        StyleSettingsField(advancedTextBox);
 
         var copyButton = CreateSecondaryButton("Copy");
-        copyButton.Margin = new Padding(0, 8, 0, 0);
         copyButton.Click += (_, _) =>
         {
             try
             {
-                var settings = TryLoadSettings();
-                var commandLine = settings is null ? "" : controller.EffectiveCommandLine();
+                var commandLine = advancedTextBox.Text;
                 if (!string.IsNullOrEmpty(commandLine))
                 {
                     Clipboard.SetText(commandLine);
@@ -1420,38 +1803,39 @@ internal sealed class MainForm : Form
                 // Best effort; clipboard access can fail in restricted environments.
             }
         };
-        envLayout.Controls.Add(copyButton, 0, 1);
+
+        AddSettingsSectionHeader(envLayout, "Command", envRow++);
+        AddSettingsRowWithButton(envLayout, "Effective command line", advancedTextBox, copyButton, envRow++);
 
         envCard.Controls.Add(envLayout);
 
-        var maintenanceCard = CreateTitledCard("Maintenance", 170);
-        var buttonPanel = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(0, 32, 0, 0) };
-        var repairButton = CreatePrimaryButton("", "Repair Package", Theme.Accent);
+        var maintenanceCard = CreateSettingsCard(450);
+        var maintenanceLayout = CreateSettingsTable();
+
+        var repairButton = CreateSecondaryButton("Repair Package");
         var validateButton = CreateSecondaryButton("Validate Environment");
         var exportButton = CreateSecondaryButton("Export Diagnostics");
-        repairButton.Margin = new Padding(0, 0, 10, 0);
-        validateButton.Margin = new Padding(0, 0, 10, 0);
 
         repairButton.Click += async (_, _) => await RunAdvancedActionAsync("Repair", () => controller.Repair());
         validateButton.Click += async (_, _) => await RunAdvancedActionAsync("Validate Environment", () => controller.ValidateEnvironment());
         exportButton.Click += async (_, _) => await ExportDiagnosticsAsync();
 
-        buttonPanel.Controls.Add(repairButton);
-        buttonPanel.Controls.Add(validateButton);
-        buttonPanel.Controls.Add(exportButton);
+        var maintenanceRow = 0;
+        AddSettingsCardHeader(maintenanceLayout, "Maintenance", "Repair the installation, validate the environment, or export a diagnostics bundle.", maintenanceRow++);
+        AddSettingsSectionHeader(maintenanceLayout, "Package tools", maintenanceRow++);
+        AddActionRow(maintenanceLayout, "Repair package", "Verify installed files and restore any that are missing or corrupt.", new[] { repairButton }, maintenanceRow++);
+        AddActionRow(maintenanceLayout, "Validate environment", "Check that ovms.exe and required files are present and runnable.", new[] { validateButton }, maintenanceRow++);
+        AddActionRow(maintenanceLayout, "Diagnostics", "Save a zip with settings, logs, versions, and runtime state.", new[] { exportButton }, maintenanceRow++);
 
         advancedStatusLabel = new Label
         {
             Text = "",
             ForeColor = Theme.Muted,
-            Font = new Font(Theme.SemiboldFont.FontFamily, 11f, FontStyle.Bold),
-            AutoSize = true,
-            Dock = DockStyle.Top,
-            Margin = new Padding(0, 14, 0, 0)
+            Font = new Font(Theme.SemiboldFont.FontFamily, 10.5f, FontStyle.Bold)
         };
+        AddStatusRow(maintenanceLayout, advancedStatusLabel, maintenanceRow++);
 
-        maintenanceCard.Controls.Add(advancedStatusLabel);
-        maintenanceCard.Controls.Add(buttonPanel);
+        maintenanceCard.Controls.Add(maintenanceLayout);
 
         // Dock-Top stacking: add bottom-most visual element first (see
         // BuildShell comment for why this ordering yields correct results).
@@ -1465,6 +1849,10 @@ internal sealed class MainForm : Form
         var settings = TryLoadSettings();
         if (settings is null)
         {
+            advancedInstallDirValue.Text = "-";
+            advancedDataDirValue.Text = "-";
+            advancedVersionValue.Text = typeof(MainForm).Assembly.GetName().Version?.ToString() ?? "-";
+            advancedConfigPathValue.Text = "-";
             advancedTextBox.Text = "Settings unavailable.";
             return;
         }
@@ -1479,17 +1867,11 @@ internal sealed class MainForm : Form
             commandLine = $"(error building command line: {ex.Message})";
         }
 
-        var managerVersion = typeof(MainForm).Assembly.GetName().Version;
-
-        advancedTextBox.Text = string.Join(Environment.NewLine, new[]
-        {
-            $"Install dir: {settings.InstallDir}",
-            $"Data dir: {controller.DataDir}",
-            $"Manager version: {managerVersion}",
-            "",
-            "Effective command line:",
-            commandLine
-        });
+        advancedInstallDirValue.Text = settings.InstallDir;
+        advancedDataDirValue.Text = controller.DataDir;
+        advancedVersionValue.Text = typeof(MainForm).Assembly.GetName().Version?.ToString() ?? "-";
+        advancedConfigPathValue.Text = settings.ConfigPath;
+        advancedTextBox.Text = commandLine;
     }
 
     private async Task RunAdvancedActionAsync(string title, Func<string> action)
@@ -1530,6 +1912,275 @@ internal sealed class MainForm : Form
             advancedStatusLabel.Text = "Export Diagnostics: failed.";
             MessageBox.Show(this, ex.Message, "Export Diagnostics", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    // ---------------------------------------------------------------
+    // Updates
+    // ---------------------------------------------------------------
+
+    private Panel BuildUpdatesPage()
+    {
+        var page = new Panel { BackColor = Theme.WindowBackground, AutoScroll = true, Padding = new Padding(0, 0, 10, 0) };
+
+        var actionCard = CreateSettingsCard(320);
+        var actionLayout = CreateSettingsTable();
+
+        updatesCheckButton = CreateSecondaryButton("Check for Updates");
+        updatesCheckButton.Click += async (_, _) => await CheckForUpdatesAsync();
+
+        updatesModelServerReleaseButton = CreateSecondaryButton("Model Server Notes");
+        updatesModelServerReleaseButton.Enabled = false;
+        updatesModelServerReleaseButton.Click += (_, _) => OpenReleaseNotes(updatesModelServerReleaseUrl, "Model Server Release Notes");
+
+        updatesGenAiReleaseButton = CreateSecondaryButton("GenAI Notes");
+        updatesGenAiReleaseButton.Enabled = false;
+        updatesGenAiReleaseButton.Click += (_, _) => OpenReleaseNotes(updatesGenAiReleaseUrl, "GenAI Release Notes");
+
+        var actionRow = 0;
+        AddSettingsCardHeader(actionLayout, "Update check", "Check for a newer compatible release. This will not download or install anything.", actionRow++);
+        AddSettingsSectionHeader(actionLayout, "Manual check", actionRow++);
+        AddActionRow(actionLayout, "Available updates", "Compare the package, Model Server, and GenAI versions with release metadata.", new[] { updatesCheckButton, updatesModelServerReleaseButton, updatesGenAiReleaseButton }, actionRow++);
+        updatesStatusLabel = new Label
+        {
+            Text = "Ready to check for updates.",
+            ForeColor = Theme.Muted,
+            Font = new Font(Theme.SemiboldFont.FontFamily, 10.5f, FontStyle.Bold)
+        };
+        AddStatusRow(actionLayout, updatesStatusLabel, actionRow++);
+
+        actionCard.Controls.Add(actionLayout);
+
+        updatesBaseCard = CreateSettingsCard(360);
+        var baseLayout = CreateSettingsTable();
+        var baseRow = 0;
+        AddSettingsCardHeader(baseLayout, "Base Package", "Installed package metadata and matching package release.", baseRow++);
+        AddSettingsSectionHeader(baseLayout, "Version details", baseRow++);
+        updatesBaseInstalledVersionValue = AddReadOnlySettingsRow(baseLayout, "Installed version", baseRow++);
+        updatesBaseLatestVersionValue = AddReadOnlySettingsRow(baseLayout, "Latest version", baseRow++);
+        updatesVariantValue = AddReadOnlySettingsRow(baseLayout, "Package variant", baseRow++);
+        updatesManagerVersionValue = AddReadOnlySettingsRow(baseLayout, "Manager version", baseRow++);
+        updatesBaseInstallButton = CreateSecondaryButton("Install Package Update");
+        updatesBaseInstallButton.Click += async (_, _) => await InstallPackageUpdateAsync("Base Package");
+        updatesBaseInstallRow = AddActionRow(baseLayout, "Install update", "Download, verify, stage, and replace the installed package.", new[] { updatesBaseInstallButton }, baseRow++);
+        updatesBaseCard.Controls.Add(baseLayout);
+
+        updatesGenAiCard = CreateSettingsCard(260);
+        var genAiLayout = CreateSettingsTable();
+        var genAiRow = 0;
+        AddSettingsCardHeader(genAiLayout, "GenAI", "OpenVINO GenAI backend bundled with this package.", genAiRow++);
+        AddSettingsSectionHeader(genAiLayout, "Version details", genAiRow++);
+        updatesGenAiInstalledVersionValue = AddReadOnlySettingsRow(genAiLayout, "Installed version", genAiRow++);
+        updatesGenAiLatestVersionValue = AddReadOnlySettingsRow(genAiLayout, "Latest version", genAiRow++);
+        updatesGenAiInstallButton = CreateSecondaryButton("Install Package Update");
+        updatesGenAiInstallButton.Click += async (_, _) => await InstallPackageUpdateAsync("GenAI");
+        updatesGenAiInstallRow = AddActionRow(genAiLayout, "Install update", "Install the matching package update so GenAI stays version-aligned.", new[] { updatesGenAiInstallButton }, genAiRow++);
+        updatesGenAiCard.Controls.Add(genAiLayout);
+
+        updatesModelServerCard = CreateSettingsCard(260);
+        var modelServerLayout = CreateSettingsTable();
+        var modelServerRow = 0;
+        AddSettingsCardHeader(modelServerLayout, "Model Server", "OpenVINO Model Server runtime bundled with this package.", modelServerRow++);
+        AddSettingsSectionHeader(modelServerLayout, "Version details", modelServerRow++);
+        updatesModelServerInstalledVersionValue = AddReadOnlySettingsRow(modelServerLayout, "Installed version", modelServerRow++);
+        updatesModelServerLatestVersionValue = AddReadOnlySettingsRow(modelServerLayout, "Latest version", modelServerRow++);
+        updatesModelServerInstallButton = CreateSecondaryButton("Install Package Update");
+        updatesModelServerInstallButton.Click += async (_, _) => await InstallPackageUpdateAsync("Model Server");
+        updatesModelServerInstallRow = AddActionRow(modelServerLayout, "Install update", "Install the matching package update so Model Server and dependencies stay aligned.", new[] { updatesModelServerInstallButton }, modelServerRow++);
+        updatesModelServerCard.Controls.Add(modelServerLayout);
+
+        SetInstallRowsVisible(basePackage: false, modelServer: false, genAi: false);
+
+        // Dock-Top stacking: add bottom-most visual element first.
+        page.Controls.Add(updatesModelServerCard);
+        page.Controls.Add(CreateCardSpacer(20));
+        page.Controls.Add(updatesGenAiCard);
+        page.Controls.Add(CreateCardSpacer(20));
+        page.Controls.Add(updatesBaseCard);
+        page.Controls.Add(CreateCardSpacer(20));
+        page.Controls.Add(actionCard);
+        return page;
+    }
+
+    private void RefreshUpdatesInfo()
+    {
+        try
+        {
+            var info = controller.GetPackageVersionInfo();
+            updatesBaseInstalledVersionValue.Text = info.BasePackageVersion;
+            updatesBaseLatestVersionValue.Text = "-";
+            updatesVariantValue.Text = info.PackageVariant;
+            updatesManagerVersionValue.Text = info.ManagerVersion;
+            updatesModelServerInstalledVersionValue.Text = info.ModelServerVersion;
+            updatesModelServerLatestVersionValue.Text = "-";
+            updatesGenAiInstalledVersionValue.Text = info.GenAiVersion;
+            updatesGenAiLatestVersionValue.Text = "-";
+            updatesStatusLabel.ForeColor = Theme.Muted;
+            updatesStatusLabel.Text = "Ready to check for updates.";
+            updatesModelServerReleaseUrl = "";
+            updatesGenAiReleaseUrl = "";
+            updatesModelServerReleaseButton.Enabled = false;
+            updatesGenAiReleaseButton.Enabled = false;
+            SetInstallRowsVisible(basePackage: false, modelServer: false, genAi: false);
+        }
+        catch (Exception ex)
+        {
+            updatesBaseInstalledVersionValue.Text = "-";
+            updatesBaseLatestVersionValue.Text = "-";
+            updatesVariantValue.Text = "-";
+            updatesManagerVersionValue.Text = typeof(MainForm).Assembly.GetName().Version?.ToString() ?? "-";
+            updatesModelServerInstalledVersionValue.Text = "-";
+            updatesModelServerLatestVersionValue.Text = "-";
+            updatesGenAiInstalledVersionValue.Text = "-";
+            updatesGenAiLatestVersionValue.Text = "-";
+            updatesStatusLabel.ForeColor = Theme.Danger;
+            updatesStatusLabel.Text = $"Cannot read package information: {ex.Message}";
+            updatesModelServerReleaseUrl = "";
+            updatesGenAiReleaseUrl = "";
+            updatesModelServerReleaseButton.Enabled = false;
+            updatesGenAiReleaseButton.Enabled = false;
+            SetInstallRowsVisible(basePackage: false, modelServer: false, genAi: false);
+        }
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        updatesCheckButton.Enabled = false;
+        updatesStatusLabel.ForeColor = Theme.Muted;
+        updatesStatusLabel.Text = "Checking for updates...";
+
+        try
+        {
+            var result = await controller.CheckForUpdatesAsync();
+            updatesBaseInstalledVersionValue.Text = result.BasePackageVersion;
+            updatesBaseLatestVersionValue.Text = result.LatestBasePackageVersion;
+            updatesModelServerInstalledVersionValue.Text = result.ModelServerVersion;
+            updatesModelServerLatestVersionValue.Text = result.LatestModelServerVersion;
+            updatesGenAiInstalledVersionValue.Text = result.GenAiVersion;
+            updatesGenAiLatestVersionValue.Text = result.LatestGenAiVersion;
+            updatesVariantValue.Text = result.PackageVariant;
+            updatesModelServerReleaseUrl = result.ModelServerReleaseUrl;
+            updatesGenAiReleaseUrl = result.GenAiReleaseUrl;
+            updatesModelServerReleaseButton.Enabled = !string.IsNullOrWhiteSpace(updatesModelServerReleaseUrl);
+            updatesGenAiReleaseButton.Enabled = !string.IsNullOrWhiteSpace(updatesGenAiReleaseUrl);
+            SetInstallRowsVisible(result.BasePackageUpdateAvailable, result.ModelServerUpdateAvailable, result.GenAiUpdateAvailable);
+            updatesStatusLabel.ForeColor = result.UpdateAvailable
+                ? Theme.Warning
+                : result.LatestIsOlderThanInstalled ? Theme.Muted : Theme.Success;
+            updatesStatusLabel.Text = result.Message;
+        }
+        catch (Exception ex)
+        {
+            updatesStatusLabel.ForeColor = Theme.Danger;
+            updatesStatusLabel.Text = $"Cannot check for updates: {ex.Message}";
+            updatesModelServerReleaseUrl = "";
+            updatesGenAiReleaseUrl = "";
+            updatesModelServerReleaseButton.Enabled = false;
+            updatesGenAiReleaseButton.Enabled = false;
+            SetInstallRowsVisible(basePackage: false, modelServer: false, genAi: false);
+        }
+        finally
+        {
+            updatesCheckButton.Enabled = true;
+        }
+    }
+
+    private async Task InstallPackageUpdateAsync(string sectionName)
+    {
+        var result = MessageBox.Show(this,
+            $"{sectionName} updates are installed by replacing the matched OVMS Windows package as a unit. This keeps Base Package, Model Server, and GenAI versions aligned.{Environment.NewLine}{Environment.NewLine}Download and install the latest package now?",
+            "Install Package Update",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question);
+        if (result != DialogResult.Yes)
+        {
+            return;
+        }
+
+        SetUpdateInstallButtonsEnabled(false);
+        updatesStatusLabel.ForeColor = Theme.Muted;
+        updatesStatusLabel.Text = "Installing package update...";
+
+        try
+        {
+            var output = await Task.Run(controller.InstallPackageUpdate);
+            updatesStatusLabel.ForeColor = Theme.Success;
+            updatesStatusLabel.Text = "Package update installed.";
+            MessageBox.Show(this, string.IsNullOrWhiteSpace(output) ? "Package update installed." : output, "Install Package Update", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            RefreshUpdatesInfo();
+        }
+        catch (Exception ex)
+        {
+            updatesStatusLabel.ForeColor = Theme.Danger;
+            updatesStatusLabel.Text = "Package update failed.";
+            MessageBox.Show(this, ex.Message, "Install Package Update", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            SetUpdateInstallButtonsEnabled(true);
+        }
+    }
+
+    private void SetUpdateInstallButtonsEnabled(bool enabled)
+    {
+        updatesCheckButton.Enabled = enabled;
+        updatesBaseInstallButton.Enabled = enabled;
+        updatesModelServerInstallButton.Enabled = enabled;
+        updatesGenAiInstallButton.Enabled = enabled;
+    }
+
+    private void SetInstallRowsVisible(bool basePackage, bool modelServer, bool genAi)
+    {
+        updatesBaseInstallRow.SetVisible(basePackage);
+        updatesModelServerInstallRow.SetVisible(modelServer);
+        updatesGenAiInstallRow.SetVisible(genAi);
+
+        updatesBaseCard.Height = basePackage ? 444 : 360;
+        updatesModelServerCard.Height = modelServer ? 344 : 260;
+        updatesGenAiCard.Height = genAi ? 344 : 260;
+    }
+
+    private void OpenReleaseNotes(string releaseUrl, string title)
+    {
+        if (string.IsNullOrWhiteSpace(releaseUrl))
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = releaseUrl,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+}
+
+internal readonly struct CollapsibleActionRow
+{
+    private readonly RowStyle rowStyle;
+    private readonly Control label;
+    private readonly Control content;
+    private readonly float expandedHeight;
+
+    public CollapsibleActionRow(RowStyle rowStyle, Control label, Control content, float expandedHeight)
+    {
+        this.rowStyle = rowStyle;
+        this.label = label;
+        this.content = content;
+        this.expandedHeight = expandedHeight;
+    }
+
+    public void SetVisible(bool visible)
+    {
+        rowStyle.Height = visible ? expandedHeight : 0;
+        label.Visible = visible;
+        content.Visible = visible;
     }
 }
 
@@ -1606,7 +2257,7 @@ internal sealed class RuntimeIconButton : Button
     {
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
         e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-        e.Graphics.Clear(Theme.Surface);
+        e.Graphics.Clear(ResolveCanvasColor(this));
 
         var buttonRect = new Rectangle(7, 6, Width - 14, Height - 13);
         if (pressed)
@@ -1650,6 +2301,61 @@ internal sealed class RuntimeIconButton : Button
         transform.Translate(targetCenter.X - (bounds.Left + bounds.Width / 2f), targetCenter.Y - (bounds.Top + bounds.Height / 2f));
         iconPath.Transform(transform);
         e.Graphics.FillPath(textBrush, iconPath);
+    }
+
+    private static GraphicsPath RoundedRect(Rectangle bounds, int radius)
+    {
+        var diameter = radius * 2;
+        var path = new GraphicsPath();
+        path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+
+    private static Color ResolveCanvasColor(Control control)
+    {
+        for (var current = control; current is not null; current = current.Parent)
+        {
+            if (current.BackColor != Color.Transparent && current.BackColor.A > 0)
+            {
+                return current.BackColor;
+            }
+        }
+
+        return Theme.Surface;
+    }
+}
+
+internal sealed class SettingsFieldHost : Panel
+{
+    public SettingsFieldHost()
+    {
+        BackColor = Theme.Surface;
+        Padding = new Padding(1);
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.UserPaint |
+            ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.ResizeRedraw,
+            true);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        e.Graphics.Clear(Parent?.BackColor ?? Theme.Surface);
+
+        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+        using var path = RoundedRect(rect, 7);
+        using var fillBrush = new SolidBrush(Theme.FieldBackground);
+        using var borderPen = new Pen(Theme.FieldBorder);
+        e.Graphics.FillPath(fillBrush, path);
+        e.Graphics.DrawPath(borderPen, path);
+
+        base.OnPaint(e);
     }
 
     private static GraphicsPath RoundedRect(Rectangle bounds, int radius)
