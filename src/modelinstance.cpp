@@ -1604,6 +1604,10 @@ OVInferRequestsQueue& ModelInstance::getInferRequestsQueue() {
     return *inferRequestsQueue;
 }
 
+void ModelInstance::startAsyncInference(ov::InferRequest& inferRequest) {
+    inferRequest.start_async();
+}
+
 const size_t ModelInstance::getBatchSizeIndex() const {
     const auto& inputItr = this->inputsInfo.cbegin();
     if (inputItr == this->inputsInfo.cend()) {
