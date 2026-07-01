@@ -40,9 +40,13 @@ void Minicpm5ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vecto
             parsedOutput.reasoning = tokenizer.decode(
                 std::vector<int64_t>(generatedTokens.begin(), generatedTokens.begin() + endPos),
                 ov::genai::skip_special_tokens(true));
+            // Content must keep special tokens: MiniCPM5's tool-call tags (<function>, <param>,
+            // ...) are special tokens too, and Minicpm5ToolParserImpl matches them as literal
+            // substrings in decoded content, so skip_special_tokens(true) here would silently
+            // erase them before the tool parser ever sees them.
             parsedOutput.content = tokenizer.decode(
                 std::vector<int64_t>(generatedTokens.begin() + endPos + 1, generatedTokens.end()),
-                ov::genai::skip_special_tokens(true));
+                ov::genai::skip_special_tokens(false));
         } else {
             parsedOutput.reasoning = tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(true));
             parsedOutput.content.clear();
@@ -50,6 +54,12 @@ void Minicpm5ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vecto
         return;
     }
 
+    // NOTE: endIt is the FIRST </think> token in the whole sequence. A stray/malformed
+    // </think> appearing before any <think> would make startIt >= endIt below and cause a
+    // later, well-formed <think>...</think> pair to be skipped entirely. This mirrors an
+    // existing limitation in Gemma4ReasoningParser's identical find-first approach and is
+    // considered acceptable for now, since models are not expected to emit an unpaired
+    // closing tag before ever opening one.
     auto startIt = std::find(generatedTokens.begin(), generatedTokens.end(), thinkStartTokenId);
     if (startIt == generatedTokens.end() || endIt == generatedTokens.end() || startIt >= endIt) {
         // No well-formed <think>...</think> segment in the raw tokens; leave parsedOutput.content
@@ -68,12 +78,19 @@ void Minicpm5ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vecto
     // </think>, concatenated. Decoding the two spans separately (rather than erasing a
     // substring from the already-decoded text) avoids any ambiguity from special-token
     // markers that may appear in the decoded text around the reasoning segment.
+    //
+    // Content must keep special tokens: MiniCPM5's tool-call tags (<function>, <param>, ...)
+    // are special tokens too, and Minicpm5ToolParserImpl matches them as literal substrings
+    // in decoded content, so skip_special_tokens(true) here would silently erase them before
+    // the tool parser ever sees them. Only the extracted reasoning text (above) is safe to
+    // decode with special tokens skipped, since it is a human-facing string, not matched
+    // against tags downstream.
     std::string beforeReasoning = tokenizer.decode(
         std::vector<int64_t>(generatedTokens.begin(), generatedTokens.begin() + startPos),
-        ov::genai::skip_special_tokens(true));
+        ov::genai::skip_special_tokens(false));
     std::string afterReasoning = tokenizer.decode(
         std::vector<int64_t>(generatedTokens.begin() + endPos + 1, generatedTokens.end()),
-        ov::genai::skip_special_tokens(true));
+        ov::genai::skip_special_tokens(false));
     parsedOutput.content = beforeReasoning + afterReasoning;
 }
 
