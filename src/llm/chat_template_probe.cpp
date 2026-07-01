@@ -225,7 +225,7 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, con
     auto rendersNativeArgs = [&argNeedle](const std::string& output) -> bool {
         return output.find("\"" + argNeedle + "\": \"") != std::string::npos ||  // JSON key: ["needle": "]
                output.find("\"" + argNeedle + "\":\"") != std::string::npos ||   // JSON key: ["needle":"]
-               //output.find("'" + argNeedle + "': ") != std::string::npos ||           // Python dict: []'needle': ]
+               // output.find("'" + argNeedle + "': ") != std::string::npos ||           // Python dict: []'needle': ]
                output.find("<parameter=" + argNeedle + ">") != std::string::npos ||  // Qwen3-Coder XML
                output.find(argNeedle + ":<|") != std::string::npos ||                // Gemma4: [needle:<|]
                output.find(argNeedle + "=") != std::string::npos;                    // Function-style: [needle=] for LFM2.5
