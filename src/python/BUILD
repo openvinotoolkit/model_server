@@ -422,6 +422,7 @@ cc_binary(
         "//src:kfs_python_tensor_bridge_hdrs",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
+        "libmediapipe_framework_import",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src/mediapipe_internal:mediapipe_utils",

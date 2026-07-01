@@ -271,7 +271,7 @@ bool loadPythonCalculatorsPlugin() {
     // CRITICAL: Expose main process symbols to plugin before loading it.
     // The plugin will link to a shared MediaPipe library that contains undefined
     // OVMS symbols (from geti calculators in the external MediaPipe fork).
-    // By calling dlopen(NULL, RTLD_GLOBAL) on the main process, we make all
+    // By calling dlopen(NULL, RTLD_NOW | RTLD_GLOBAL) on the main process, we make all
     // OVMS and geti symbols available via the main process's symbol table.
     // When the plugin's dlopen tries to resolve undefined symbols, it will find
     // them in the main process instead of failing with "undefined symbol" errors.
