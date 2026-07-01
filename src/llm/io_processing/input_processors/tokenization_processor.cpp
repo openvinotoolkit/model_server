@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,29 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-#include <memory>
-#include <sstream>
-#include <string>
 
-#pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-// Python execution for template processing
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
-#pragma warning(pop)
+#include <utility>
 
-#include "src/python/utils.hpp"
+#include "tokenization_processor.hpp"
 
 namespace ovms {
 
-class PyJinjaTemplateProcessor {
-public:
-    std::string bosToken = "";
-    std::string eosToken = "";
-    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
-    std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
+TokenizationProcessor::TokenizationProcessor(ov::genai::Tokenizer& tokenizer, bool addSpecialTokens) :
+    tokenizer(tokenizer),
+    addSpecialTokens(addSpecialTokens) {}
 
-    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output);
-};
+absl::Status TokenizationProcessor::process(InputRequest& req) {
+    req.inputIds = tokenizer.encode(req.promptText,
+                                ov::genai::add_special_tokens(addSpecialTokens))
+                       .input_ids;
+    return absl::OkStatus();
+}
+
 }  // namespace ovms

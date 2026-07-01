@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,28 +14,32 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+
 #include <memory>
-#include <sstream>
-#include <string>
+#include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-// Python execution for template processing
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
-#pragma warning(pop)
+#include "absl/status/status.h"
 
-#include "src/python/utils.hpp"
+#include "base_input_processor.hpp"
+#include "input_processing_config.hpp"
+#include "input_processor_context.hpp"
+#include "input_request.hpp"
 
 namespace ovms {
 
-class PyJinjaTemplateProcessor {
+// Orchestrates the input processing chain.
+// The constructor selects concrete processors based on InputProcessorContext
+// and the active InputPayload variant. The chain composition is an implementation detail.
+class InputProcessor {
 public:
-    std::string bosToken = "";
-    std::string eosToken = "";
-    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
-    std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
+    InputProcessor(InputProcessorContext& context,
+        const InputRequest& req);
 
-    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output);
+    // Execute the chain in order. Returns the first non-OK status encountered.
+    absl::Status process(InputRequest& req);
+
+private:
+    std::vector<std::unique_ptr<BaseInputProcessor>> processors;
 };
+
 }  // namespace ovms

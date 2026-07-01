@@ -56,7 +56,6 @@ from tests.functional.object_model.mediapipe_calculators import (
     MediaPipeCalculator,
     OpenVINOInferenceCalculator,
     OpenVINOModelServerSessionCalculator,
-    OVMSOVCalculator,
     PythonCalculator,
 )
 

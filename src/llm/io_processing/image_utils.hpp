@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,28 +14,29 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <memory>
-#include <sstream>
+
+#include <cstdint>
+#include <optional>
 #include <string>
+#include <string_view>
+#include <vector>
 
 #pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-// Python execution for template processing
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
+#pragma warning(disable : 6001 4324 6385 6386)
+#include "absl/status/statusor.h"
 #pragma warning(pop)
 
-#include "src/python/utils.hpp"
+#include "openvino/runtime/tensor.hpp"
 
 namespace ovms {
 
-class PyJinjaTemplateProcessor {
-public:
-    std::string bosToken = "";
-    std::string eosToken = "";
-    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
-    std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
+constexpr std::string_view BASE64_PREFIX = "base64,";
+constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
 
-    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output);
-};
+// Loads an image from a base64 data URI, HTTP/HTTPS URL, or local file path.
+// Returns the decoded image as an ov::Tensor (RGB, u8).
+absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
+    const std::optional<std::string>& allowedLocalMediaPath,
+    const std::optional<std::vector<std::string>>& allowedMediaDomains);
+
 }  // namespace ovms
