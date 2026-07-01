@@ -140,9 +140,13 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
     properties->modelsPath = parsedModelsPath;
-    std::filesystem::path modelGenerationConfigPath = std::filesystem::path(parsedModelsPath) / "generation_config.json";
-    if (std::filesystem::exists(modelGenerationConfigPath)) {
-        properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
+    std::string generationConfigPath;
+    status = resolveGenerationConfigPath(generationConfigPath, parsedModelsPath, nodeOptions);
+    if (!status.ok()) {
+        return status;
+    }
+    if (std::filesystem::exists(generationConfigPath)) {
+        properties->baseGenerationConfig = ov::genai::GenerationConfig(generationConfigPath);
     }
     if (nodeOptions.has_tool_parser()) {
         properties->toolParserName = nodeOptions.tool_parser();

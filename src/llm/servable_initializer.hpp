@@ -61,6 +61,7 @@ public:
     virtual Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) = 0;
 };
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
+Status resolveGenerationConfigPath(std::string& outPath, const std::string& parsedModelsPath, const mediapipe::LLMCalculatorOptions& nodeOptions);
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
