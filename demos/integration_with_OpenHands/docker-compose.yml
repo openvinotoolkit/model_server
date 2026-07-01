@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   ovms-llm:
-    image: openvino/model_server:latest
+    image: ${OVMS_IMAGE}
     container_name: ovms-llm
     # GPU device access for hardware acceleration.
     # For CPU-only deployments, this device mapping can be removed.

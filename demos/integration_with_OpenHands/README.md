@@ -205,6 +205,35 @@ Check `docker logs ovms-llm`. Possible causes:
 - Volume mount error (ensure `MODEL_CACHE_DIR` exists)
 - Permission denied on `/models` (directory must be writable by OVMS container user)
 
+**Permission denied on `/models`**
+
+On some WSL2/Docker configurations, OVMS may fail to start with an error like:
+
+```
+Libgit2 clone error: failed to make directory '/models/OpenVINO': Permission denied
+```
+
+This occurs when the mounted model cache directory is not writable by the OVMS container user. The issue is specific to the permissions of the host directory, not OVMS itself.
+
+Verify the directory permissions:
+
+```bash
+ls -ld "$MODEL_CACHE_DIR"
+```
+
+Fix by making the directory writable by all users:
+
+```bash
+chmod a+rwx "$MODEL_CACHE_DIR"
+```
+
+Then redeploy:
+
+```bash
+docker compose down
+./scripts/deploy_model_ovms.sh <model_id>
+```
+
 **Model status is not `AVAILABLE`**
 
 Check `curl -s http://localhost:8000/v1/config`. Possible causes:
