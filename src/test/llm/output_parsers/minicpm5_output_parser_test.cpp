@@ -370,7 +370,15 @@ TEST(Minicpm5ToolParserImplTest, SingleQuoteAttribute) {
     EXPECT_EQ(calls[0].arguments, R"({"city":"Sydney"})");
 }
 
-// ---- Streaming robustness: feed input in fragments and aggregate ----
+// ---- Streaming robustness: fragment-boundary invariance of the underlying state machine ----
+// These tests operate on the low-level Minicpm5ToolParserImpl and only assert that the
+// AGGREGATED final result (completed call name + arguments) is the same no matter how the
+// input is chopped into chunks -- i.e. that the state machine correctly reassembles calls
+// regardless of where chunk boundaries fall. They do NOT test what a client actually receives
+// mid-stream (when a name/arguments delta is surfaced, or whether it is surfaced exactly
+// once at the right moment). That user-visible delta contract is covered separately by
+// Minicpm5PublicStreamTest below, which drives the public Minicpm5ToolParser::parseChunk API
+// and asserts on the actual emitted deltas.
 
 // Helper: stream `input` in fixed-size fragments through one impl instance,
 // collecting every tool call returned across all chunks (in order).
@@ -567,6 +575,49 @@ TEST_F(Minicpm5PublicStreamTest, EmitsDeltasWhenFragmentedCharByChar) {
     EXPECT_NE(nameDelta.value().find("\"name\":\"search\""), std::string::npos) << nameDelta.value();
     ASSERT_TRUE(argsDelta.has_value());
     EXPECT_NE(argsDelta.value().find(R"({\"query\":\"Intel\"})"), std::string::npos) << argsDelta.value();
+}
+
+// Two sequential tool calls: verify each gets its own name delta (in order, correct index) and
+// its own arguments delta once IT completes -- not just that the aggregated end result is
+// correct, but that the user-visible deltas for the second call are not emitted early/mixed
+// with the first, and that both calls' index fields are distinct and increasing.
+TEST_F(Minicpm5PublicStreamTest, EmitsDeltasForTwoSequentialCalls) {
+    Minicpm5ToolParser parser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
+    const std::vector<int64_t> noTokens;
+    const auto reason = ov::genai::GenerationFinishReason::NONE;
+    const std::string input =
+        R"(<function name="get_weather"><param name="city">Rome</param></function>)"
+        R"(<function name="calculate"><param name="a">10</param><param name="b">20</param></function>)";
+
+    std::vector<std::string> nameDeltas;
+    std::vector<std::string> argsDeltas;
+    for (char c : input) {
+        auto delta = parser.parseChunk(std::string(1, c), noTokens, reason);
+        if (!delta.has_value()) {
+            continue;
+        }
+        std::string deltaStr = docToStr(delta.value());
+        if (deltaStr.find("\"name\"") != std::string::npos) {
+            nameDeltas.push_back(deltaStr);
+        } else if (deltaStr.find("\"arguments\"") != std::string::npos) {
+            argsDeltas.push_back(deltaStr);
+        }
+    }
+
+    // Exactly one name delta per call, in call order, each carrying its own index.
+    ASSERT_EQ(nameDeltas.size(), 2u);
+    EXPECT_NE(nameDeltas[0].find("\"name\":\"get_weather\""), std::string::npos) << nameDeltas[0];
+    EXPECT_NE(nameDeltas[0].find("\"index\":0"), std::string::npos) << nameDeltas[0];
+    EXPECT_NE(nameDeltas[1].find("\"name\":\"calculate\""), std::string::npos) << nameDeltas[1];
+    EXPECT_NE(nameDeltas[1].find("\"index\":1"), std::string::npos) << nameDeltas[1];
+
+    // Exactly one arguments delta per call, each with the right content and index, and the
+    // first call's arguments are surfaced before the second call has even started.
+    ASSERT_EQ(argsDeltas.size(), 2u);
+    EXPECT_NE(argsDeltas[0].find(R"({\"city\":\"Rome\"})"), std::string::npos) << argsDeltas[0];
+    EXPECT_NE(argsDeltas[0].find("\"index\":0"), std::string::npos) << argsDeltas[0];
+    EXPECT_NE(argsDeltas[1].find(R"({\"a\":10,\"b\":20})"), std::string::npos) << argsDeltas[1];
+    EXPECT_NE(argsDeltas[1].find("\"index\":1"), std::string::npos) << argsDeltas[1];
 }
 
 // ---- Complex parameter values: code, special chars, escaping (comment #7) ----
