@@ -24,6 +24,7 @@ from tests.functional.constants.os_type import OsType
 
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms_type import OvmsType
+from tests.functional.utils.helpers import get_base_device
 
 
 class Ovms:
@@ -195,11 +196,11 @@ class Ovms:
 class CurrentTarget:
     target_device = None
 
-    is_auto_target = lambda: CurrentTarget.target_device in [TargetDevice.AUTO]
-    is_hetero_target = lambda: CurrentTarget.target_device in [TargetDevice.HETERO]
-    is_gpu_target = lambda: CurrentTarget.target_device in [TargetDevice.GPU]
-    is_npu_target = lambda: CurrentTarget.target_device in [TargetDevice.NPU]
-    is_cpu_target = lambda: CurrentTarget.target_device in [TargetDevice.CPU]
+    is_auto_target = lambda: get_base_device(CurrentTarget.target_device) in [TargetDevice.AUTO]
+    is_hetero_target = lambda: get_base_device(CurrentTarget.target_device) in [TargetDevice.HETERO]
+    is_gpu_target = lambda: get_base_device(CurrentTarget.target_device) in [TargetDevice.GPU]
+    is_npu_target = lambda: get_base_device(CurrentTarget.target_device) in [TargetDevice.NPU]
+    is_cpu_target = lambda: get_base_device(CurrentTarget.target_device) in [TargetDevice.CPU]
 
     @classmethod
     def is_plugin_target(cls):
@@ -211,7 +212,8 @@ class CurrentTarget:
 
     @staticmethod
     def is_gpu_based_target(target_device):
-        return target_device in [
+        base = get_base_device(target_device)
+        return base in [
             TargetDevice.GPU,
             TargetDevice.NPU,
             TargetDevice.AUTO,

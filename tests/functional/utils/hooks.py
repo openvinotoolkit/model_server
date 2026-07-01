@@ -104,6 +104,7 @@ from tests.functional.utils.marks import (
 from tests.functional.utils.ov_hf_downloader import OVHfDownloader
 from tests.functional.utils.process import PID_STATE_ZOMBIE, Process, get_pid_name, get_pid_status
 from tests.functional.utils.test_framework import change_dir_permissions, get_test_object_prefix, is_xdist_master
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.object_model.ovsa import OvsaCerts
 
 logger = get_logger(__name__)
@@ -646,7 +647,7 @@ def validate_lock_files():
 
     locks = [value for key, value in vars(Paths).items() if "LOCK_FILE" in key]
     for target_device in config.target_devices:
-        n = MAX_WORKERS_PER_TARGET_DEVICE[target_device]
+        n = MAX_WORKERS_PER_TARGET_DEVICE[get_base_device(target_device)]
         locks += [Paths.get_target_device_lock_file(target_device, i) for i in range(n)]
     for lock_path in [Path(x) for x in locks]:
         if lock_path.exists():

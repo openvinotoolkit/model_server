@@ -103,6 +103,19 @@ def _is_device_with_index(device_str):
     return False
 
 
+def get_base_device(device_str):
+    """
+    Return base device name stripping numeric index suffix.
+    E.g. 'GPU:0' -> 'GPU', 'GPU:1' -> 'GPU', 'CPU' -> 'CPU', None -> None.
+    For multi-target devices like 'AUTO:GPU,CPU' returns the string unchanged.
+    """
+    if device_str is None:
+        return device_str
+    if _is_device_with_index(device_str):
+        return device_str.split(":", 1)[0]
+    return device_str
+
+
 def validate_supported_values(detected_list, supported_list):
     supported_list += ALL_AVAILABLE_OPTIONS  # 'starred expression' will be evaluated during pytest_configure
 
