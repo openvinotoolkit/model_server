@@ -99,19 +99,6 @@ std::string OpenAIApiHandler::serializeFailedEvent(const std::string& errorMessa
     return "";
 }
 
-std::vector<int64_t> OpenAIApiHandler::encodeTextToTokens(const std::string& text) {
-    auto result = tokenizer.encode(text);
-    auto& input_ids = result.input_ids;
-    if (input_ids.get_shape().size() != 2)
-        throw std::runtime_error("input_ids should have 2 dimensions");
-    if (input_ids.get_shape()[0] != 1)
-        throw std::runtime_error("input_ids should have 1 batch size");
-    if (input_ids.get_element_type() != ov::element::i64)
-        throw std::runtime_error("input_ids should have i64 element type");
-    int64_t* data = reinterpret_cast<int64_t*>(input_ids.data());
-    return std::vector<int64_t>(data, data + input_ids.get_shape()[1]);
-}
-
 absl::Status OpenAIApiHandler::parseResponseFormat() {
     auto it = doc.FindMember("response_format");
     if (it != doc.MemberEnd()) {
@@ -395,15 +382,61 @@ void OpenAIApiHandler::incrementProcessedTokens(size_t numTokens) {
     usage.completionTokens += numTokens;
 }
 
-ParsedOutput OpenAIApiHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
-    OVMS_PROFILE_FUNCTION();
-    ParsedOutput parsedOutput;
-    if ((endpoint != Endpoint::CHAT_COMPLETIONS && endpoint != Endpoint::RESPONSES) || outputParser == nullptr) {
-        parsedOutput.content = this->tokenizer.decode(generatedIds, ov::genai::skip_special_tokens(request.skipSpecialTokens));
-    } else {
-        parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
+std::string OpenAIApiHandler::serializeUnaryResponse(
+    const std::vector<std::vector<rapidjson::Document>>& allDeltas,
+    const std::vector<ov::genai::GenerationFinishReason>& finishReasons) {
+    return serializeUnaryResponse(allDeltas, finishReasons, {});
+}
+
+ParsedOutput OpenAIApiHandler::parsedOutputFromDeltas(const std::vector<rapidjson::Document>& deltas) {
+    ParsedOutput output;
+    // tool calls keyed by index; index values are expected to be dense starting from 0
+    std::vector<ToolCall> toolCalls;
+    for (const auto& doc : deltas) {
+        if (!doc.IsObject() || !doc.HasMember("delta")) {
+            continue;  // empty finish-only chunk
+        }
+        const auto& delta = doc["delta"];
+        if (!delta.IsObject()) {
+            continue;
+        }
+        if (delta.HasMember("content") && delta["content"].IsString()) {
+            output.content += delta["content"].GetString();
+        }
+        if (delta.HasMember("reasoning_content") && delta["reasoning_content"].IsString()) {
+            output.reasoning += delta["reasoning_content"].GetString();
+        }
+        if (delta.HasMember("tool_calls") && delta["tool_calls"].IsArray()) {
+            for (const auto& tcEntry : delta["tool_calls"].GetArray()) {
+                if (!tcEntry.IsObject() || !tcEntry.HasMember("index")) {
+                    continue;
+                }
+                const int rawIdx = tcEntry["index"].GetInt();
+                if (rawIdx < 0) {
+                    continue;
+                }
+                const auto idx = static_cast<size_t>(rawIdx);
+                if (idx >= toolCalls.size()) {
+                    toolCalls.resize(idx + 1);
+                }
+                ToolCall& tc = toolCalls[idx];
+                if (tcEntry.HasMember("id") && tcEntry["id"].IsString()) {
+                    tc.id = tcEntry["id"].GetString();
+                }
+                if (tcEntry.HasMember("function") && tcEntry["function"].IsObject()) {
+                    const auto& fn = tcEntry["function"];
+                    if (fn.HasMember("name") && fn["name"].IsString()) {
+                        tc.name = fn["name"].GetString();
+                    }
+                    if (fn.HasMember("arguments") && fn["arguments"].IsString()) {
+                        tc.arguments += fn["arguments"].GetString();
+                    }
+                }
+            }
+        }
     }
-    return parsedOutput;
+    output.toolCalls = std::move(toolCalls);
+    return output;
 }
 
 // --- Free functions ---

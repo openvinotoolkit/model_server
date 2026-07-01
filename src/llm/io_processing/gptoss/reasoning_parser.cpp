@@ -27,18 +27,6 @@
 #include "../utils.hpp"
 
 namespace ovms {
-void GptOssReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    openai::Harmony harmony(tokenizer, generatedTokens);
-    if (!harmony.parse()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Harmony parsing failed");
-        return;
-    }
-
-    parsedOutput.content = harmony.getContent();
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Content | [{}]", parsedOutput.content);
-    parsedOutput.reasoning = harmony.getReasoning();
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Reasoning | [{}]", parsedOutput.reasoning);
-}
 
 std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Processing Chunk [{}]", newChunk);

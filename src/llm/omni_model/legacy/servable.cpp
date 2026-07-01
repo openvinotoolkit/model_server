@@ -111,9 +111,10 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
 
     ov::AnyMap streamerConfig;
     if (omniExecutionContext->apiHandler->isStream()) {
-        if ((omniExecutionContext->apiHandler->getOutputParser() != nullptr &&
-                omniExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
-            !omniExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
+        const bool userWantsSpecial = !omniExecutionContext->apiHandler->getRequest().skipSpecialTokens;
+        const bool parserNeedsSpecial = omniExecutionContext->apiHandler->getOutputParser() != nullptr &&
+                                        omniExecutionContext->apiHandler->getOutputParser()->needSpecialTokensForCurrentDecode(userWantsSpecial);
+        if (userWantsSpecial || parserNeedsSpecial) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
         const bool audioRequested = omniExecutionContext->apiHandler->getRequest().audioOutputRequested;
@@ -134,19 +135,15 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
             std::move(ovmsCallback),
             streamerConfig);
     } else {
-        if ((omniExecutionContext->apiHandler->getOutputParser() != nullptr &&
-                omniExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
-            !omniExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
+        const bool userWantsSpecial = !omniExecutionContext->apiHandler->getRequest().skipSpecialTokens;
+        if (userWantsSpecial) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
-        auto unaryCallback = [& ctx = *omniExecutionContext](rapidjson::Document delta, bool /*isLast*/) -> ov::genai::StreamingStatus {
+        auto unaryCallback = [& ctx = *omniExecutionContext](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 return ov::genai::StreamingStatus::CANCEL;
             }
-            if (delta.HasMember("delta") && delta["delta"].IsObject() &&
-                delta["delta"].HasMember("content") && delta["delta"]["content"].IsString()) {
-                ctx.accumulatedUnaryText += delta["delta"]["content"].GetString();
-            }
+            ctx.deltaChannel.push(std::move(delta), isLast);
             return ov::genai::StreamingStatus::RUNNING;
         };
         omniExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
@@ -249,9 +246,13 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
         return absl::CancelledError();
     }
 
-    const std::string& completeText = omniExecutionContext->accumulatedUnaryText;
+    auto deltas = omniExecutionContext->deltaChannel.drain();
+    const ov::genai::GenerationFinishReason finishReason =
+        omniExecutionContext->results.finish_reasons.empty()
+            ? ov::genai::GenerationFinishReason::STOP
+            : omniExecutionContext->results.finish_reasons[0];
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
-        omniExecutionContext->results, completeText);
+        deltas, finishReason);
 
     // If audio output was requested and waveforms are available, inject audio field into response
     if (omniExecutionContext->audioOutputRequested && !omniExecutionContext->results.speech_result.waveforms.empty()) {

@@ -18,6 +18,7 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
@@ -64,22 +65,18 @@ protected:
 
 public:
     Phi4ToolParser() = delete;
-    explicit Phi4ToolParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"functools"};
+        return cfg;
+    }
+
+    explicit Phi4ToolParser(ov::genai::Tokenizer& tokenizer,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags = {this->parsingStartTag};
-        return parsingStartTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags = {};
-        return specialParsingStartTags;
-    }
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
-    }
 };
 }  // namespace ovms

@@ -301,7 +301,8 @@ void Minicpm5ToolParser::lazyFillInitToolParametersTypesMap() {
 }
 
 Minicpm5ToolParser::Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
-    BaseOutputParser(tokenizer),
+    BaseOutputParser(tokenizer,
+        defaultParsingConfig(FUNCTION_START_TAG, SOS_TOKEN_STR, EOS_TOKEN_STR)),
     toolSchemas(toolSchemas),
     streamParser(this->toolsParametersTypes) {}
 
@@ -326,24 +327,6 @@ const std::vector<int64_t> Minicpm5ToolParser::removeReasoningTokens(const std::
         tokensWithoutReasoning.insert(tokensWithoutReasoning.end(), reasoningEndIt + 1, generatedTokens.end());
     }
     return tokensWithoutReasoning;
-}
-
-void Minicpm5ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    auto tokensWithoutReasoning = this->removeReasoningTokens(generatedTokens);
-    std::string contentWithSpecialTokens = this->tokenizer.decode(tokensWithoutReasoning, ov::genai::skip_special_tokens(false));
-    this->lazyFillInitToolParametersTypesMap();
-    auto toolCallsOpt = this->streamParser.parseChunk(contentWithSpecialTokens);
-    if (toolCallsOpt.has_value()) {
-        parsedOutput.toolCalls = std::move(toolCallsOpt.value());
-        SPDLOG_DEBUG("Minicpm5ToolParser: parse done, removing tool calls from content");
-        auto status = this->streamParser.removeToolCallsFromContentIfNeeded(contentWithSpecialTokens);
-        if (!status.ok()) {
-            SPDLOG_DEBUG("Minicpm5ToolParser: failed to remove tool calls from content: {}", status.string());
-        }
-        parsedOutput.content = std::move(contentWithSpecialTokens);
-        return;
-    }
-    SPDLOG_DEBUG("Minicpm5ToolParser: parse done, no tool calls found");
 }
 
 std::optional<rapidjson::Document> Minicpm5ToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {

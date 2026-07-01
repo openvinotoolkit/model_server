@@ -24,26 +24,10 @@
 #include "../utils.hpp"
 
 namespace ovms {
-void Lfm25ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    auto startReasoningIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningStartTokenId);
-    auto endReasoningIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId);
-
-    if (startReasoningIt == generatedTokens.end() || endReasoningIt == generatedTokens.end() || startReasoningIt >= endReasoningIt) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Lfm25ReasoningParser: Reasoning start or end token not found in the generated tokens, or in wrong order. Start token found: {}, End token found: {}, Start position: {}, End position: {}",
-            startReasoningIt != generatedTokens.end(), endReasoningIt != generatedTokens.end(), std::distance(generatedTokens.begin(), startReasoningIt), std::distance(generatedTokens.begin(), endReasoningIt));
-        return;
-    }
-
-    auto startPos = std::distance(generatedTokens.begin(), startReasoningIt);
-    auto endPos = std::distance(generatedTokens.begin(), endReasoningIt);
-
-    std::string reasoningContent = tokenizer.decode(std::vector<int64_t>(startPos + generatedTokens.begin() + 1, endPos + generatedTokens.begin()), ov::genai::skip_special_tokens(true));
-
-    parsedOutput.reasoning = reasoningContent;
-
-    std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + endPos + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true));  // content MUST never appear before reasoning
-    parsedOutput.content = contentWithoutReasoning;
-}
+namespace {
+constexpr int64_t REASONING_START_TOKEN_ID = 124901;  // <think>
+constexpr int64_t REASONING_END_TOKEN_ID = 124902;    // </think>
+}  // namespace
 
 std::optional<rapidjson::Document> Lfm25ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) {
     if (tokens.empty()) {
@@ -51,8 +35,8 @@ std::optional<rapidjson::Document> Lfm25ReasoningParser::parseChunk(const std::s
         return std::nullopt;
     }
 
-    if (std::find(tokens.begin(), tokens.end(), reasoningStartTokenId) != tokens.end() ||
-        std::find(tokens.begin(), tokens.end(), reasoningEndTokenId) != tokens.end()) {
+    if (std::find(tokens.begin(), tokens.end(), REASONING_START_TOKEN_ID) != tokens.end() ||
+        std::find(tokens.begin(), tokens.end(), REASONING_END_TOKEN_ID) != tokens.end()) {
         return std::nullopt;
     } else {
         rapidjson::StringBuffer buffer;

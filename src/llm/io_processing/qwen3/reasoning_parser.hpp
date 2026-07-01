@@ -18,6 +18,7 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
@@ -31,23 +32,28 @@ protected:
     const std::string parsingStartTag = "<think>";
     const std::string parsingEndTag = "</think>";
 
+private:
+    // Tracks whether the phase-entry start tag has already been consumed by parseChunk.
+    // On the very first call the start tag is stripped (explicit start) or skipped
+    // (implicit start — tag was already in the prompt). After that, any <think> in
+    // the stream is treated as literal reasoning content and emitted as-is.
+    bool phaseEntryTagConsumed_ = false;
+
 public:
     Qwen3ReasoningParser() = delete;
-    explicit Qwen3ReasoningParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"<think>"};
+        cfg.endTag = "</think>";
+        return cfg;
+    }
+
+    explicit Qwen3ReasoningParser(ov::genai::Tokenizer& tokenizer,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags{this->parsingStartTag};
-        return parsingStartTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags{};
-        return specialParsingStartTags;
-    }
-    const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
-    }
 };
 }  // namespace ovms

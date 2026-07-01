@@ -29,22 +29,6 @@
 
 namespace ovms {
 
-void GptOssToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    openai::Harmony harmony(tokenizer, generatedTokens);
-    if (!harmony.parse()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Harmony parsing failed");
-        return;
-    }
-
-    // Yes, getContent is called twice, once in reasoning parser and once here, in tool parser.
-    // This is because we have no guarantee that user will use both parsers, they might use only one of them.
-    parsedOutput.content = harmony.getContent();
-    parsedOutput.toolCalls = harmony.getToolCalls();
-    for (const auto& toolCall : parsedOutput.toolCalls) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Tool | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
-    }
-}
-
 /*
     Prepares document with {"arguments": "escaped_chunk"}
     String gets escaped automatically by rapidjson

@@ -22,6 +22,7 @@
 #include "src/llm/io_processing/base_output_parser.hpp"
 #include "src/llm/io_processing/output_parser.hpp"
 #include "src/llm/io_processing/qwen3coder/qwen3coder_tool_parser.hpp"
+#include "output_parser_test_utils.hpp"
 #include "src/test/platform_utils.hpp"
 
 using namespace ovms;
@@ -103,7 +104,7 @@ protected:
     std::tuple<ov::Tensor, std::vector<int64_t>, ParsedOutput> generateParsedOutput(const std::string& input) {
         auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
+        ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*qwen3Tokenizer, *outputParser, generatedTokens, true, true);
         return {generatedTensor, generatedTokens, parsedOutput};
     }
 };
