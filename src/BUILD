@@ -68,7 +68,6 @@ cc_shared_library(
     dynamic_deps = [],
     static_deps = [
         #"//src/filesystem:libovmsfilesystemfactory", // TODO missing symbols
-        "@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
         "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
@@ -764,16 +763,9 @@ ovms_cc_library(
                 "//src/rerank:rerankcalculator_ov",
                 "//src/llm:llmcalculator",
             ],
-        }) + select({
-            "//:enable_drogon": [
-                "libdrogon_http_server",
-                "libmultipart_parser_drogon_impl",
-            ],
-            "//conditions:default" : [
-                "libnet_http_server",
-                # Add net-http implementation here if we ever want one
-            ],
         }) + [
+            "libdrogon_http_server",
+            "libmultipart_parser_drogon_impl",
             "cpp_headers",
             "libovms_shutdown_state",
             "ovms_header",
@@ -2006,26 +1998,6 @@ ovms_cc_library(
         "//third_party:openvino",
         "//src:libovmslogging",
         "//src:libovmsprofiler",
-    ],
-    visibility = ["//visibility:public",],
-)
-
-# HTTP Server implementation using net_http of tensorflow
-# To use other library simply create new target and implementation of libhttp_async_writer_interface
-ovms_cc_library(
-    name = "libnet_http_server",
-    srcs = [
-        "net_http_async_writer_impl.hpp",
-        "net_http_async_writer_impl.cpp",
-    ],
-    deps = [
-        "libhttp_async_writer_interface",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
-        "libovmslogging",
-        "libovmsstatus",
-        "libhttp_status_code"
     ],
     visibility = ["//visibility:public",],
 )

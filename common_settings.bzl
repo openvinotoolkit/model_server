@@ -77,10 +77,6 @@ def create_config_settings():
         },
         visibility = ["//visibility:public"],
     )
-    more_selects.config_setting_negation(
-        name = "enable_net_http",
-        negate = ":enable_drogon",
-    )
     native.config_setting(
         name = "disable_cloud",
         define_values = {
