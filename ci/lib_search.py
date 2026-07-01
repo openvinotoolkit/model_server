@@ -155,6 +155,7 @@ def check_dir(start_dir):
         "kserve-openvino.yaml",
         "ServingRuntime.yaml",
         "dummy_facebook_template.jinja",
+        "mediapipe_model_api_openvino_windows.patch",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples']
