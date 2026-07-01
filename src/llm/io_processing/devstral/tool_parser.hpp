@@ -18,6 +18,7 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
@@ -47,34 +48,32 @@ class DevstralToolParser : public BaseOutputParser {
     int toolCallIndex = -1;
     std::string streamContent = "";  // content accumulated from stream chunks
     std::string toolName = "";
+    bool argumentsEmitted = false;  // true once any argument content delta has been sent
     std::optional<rapidjson::Document> sendFullDelta(ToolCall& toolCall);
 
 public:
     DevstralToolParser() = delete;
-    DevstralToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
-        BaseOutputParser(tokenizer),
+
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        // [TOOL_CALLS] is always visible as text (needsSpecialTokens=true).
+        // Put it in startTags for reliable text-based detection.
+        cfg.startTags = {"[TOOL_CALLS]"};
+        cfg.tokenIdStartTags = {"[TOOL_CALLS]"};
+        cfg.endTag = "</s>";
+        cfg.needsSpecialTokens = true;
+        return cfg;
+    }
+
+    DevstralToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()),
         toolSchemas(toolSchemas) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
     rapidjson::Document parseContentChunk();
     rapidjson::Document wrapCombinedDelta(ToolCall& toolCall);
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> toolCallStartTags{parsingToolCallsStartTag};
-        return toolCallStartTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags{};
-        return specialParsingStartTags;
-    }
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    const std::string& getParsingEndTag() const override {
-        return this->parsingEndTag;
-    }
-
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
 };
 
 }  // namespace ovms

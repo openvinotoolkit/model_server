@@ -116,68 +116,6 @@ void Hermes3ToolParser::clearState() {
     argumentsDelayWindow[1].clear();
 }
 
-void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    const std::string startTag = "<tool_call>";
-    const std::string endTag = "</tool_call>";
-    std::vector<std::string> tools;
-    size_t pos = 0;
-    size_t firstToolCallPos;
-
-    // Save position of the first tool call start tag to properly clear content after parsing.
-    firstToolCallPos = parsedOutput.content.find(startTag, pos);
-    while (true) {
-        size_t start = parsedOutput.content.find(startTag, pos);
-        if (start == std::string::npos) {
-            break;
-        }
-        start += startTag.length();
-        size_t end = parsedOutput.content.find(endTag, start);
-        std::string tool;
-        if (end != std::string::npos) {
-            tool = parsedOutput.content.substr(start, end - start);
-            pos = end + endTag.length();
-        } else {
-            tool = parsedOutput.content.substr(start);
-            pos = parsedOutput.content.length();
-        }
-        if (!tool.empty()) {
-            tools.push_back(tool);
-        }
-    }
-
-    for (const std::string& tool : tools) {
-        ToolCall toolCall;
-        rapidjson::Document toolDoc;
-        toolDoc.Parse(tool.c_str());
-        if (toolDoc.HasParseError()) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse tool call as JSON");
-            continue;
-        }
-        if (toolDoc.HasMember("name") && toolDoc["name"].IsString()) {
-            toolCall.name = toolDoc["name"].GetString();
-        } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
-            continue;
-        }
-
-        if (toolDoc.HasMember("arguments") && toolDoc["arguments"].IsObject()) {
-            rapidjson::StringBuffer sb;
-            rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-            toolDoc["arguments"].Accept(toolWriter);
-            toolCall.arguments = sb.GetString();
-        } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-            continue;
-        }
-        toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-        parsedOutput.toolCalls.push_back(toolCall);
-    }
-    // Remove tool calls from the content
-    if (firstToolCallPos != std::string::npos) {
-        parsedOutput.content.erase(firstToolCallPos);
-    }
-}
-
 std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     We first collect data until we have full function name - that's when we return the first delta.
@@ -203,7 +141,15 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
 
     toolCallCompleted = (finishReason != ov::genai::GenerationFinishReason::NONE);
 
-    if (chunk.empty()) {
+    const bool hasPendingState =
+        !unprocessedBuffer.empty() ||
+        !argumentsDelayWindow[0].empty() ||
+        !argumentsDelayWindow[1].empty() ||
+        lastJson.HasMember("arguments");
+
+    // Empty chunks are usually ignorable, except finalization calls when we still
+    // have delayed argument state to flush (e.g. empty STOP chunk from streamer).
+    if (chunk.empty() && !hasPendingState) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Hermes3ToolParser");
         return std::nullopt;
     }

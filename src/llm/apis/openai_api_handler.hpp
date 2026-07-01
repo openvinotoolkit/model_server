@@ -87,6 +87,13 @@ struct CompletionUsageStatistics {
     }
 };
 
+// Per-choice raw token data needed to build logprob objects in unary responses.
+// populated in GenAiServable::prepareCompleteResponse from GenerationOutput.
+struct UnaryChoiceLogprobs {
+    std::vector<int64_t> generatedIds;
+    std::vector<float> logProbs;
+};
+
 // Abstract base class for OpenAI API handlers.
 // Holds common state (request, doc, tokenizer, usage, output parser) and implements
 // shared parsing logic. Endpoint-specific parsing and serialization are pure virtual.
@@ -117,10 +124,10 @@ protected:
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
     absl::Status parseResponseFormat();
     absl::Status ensureArgumentsInToolCalls(Value& messageObj);
-    ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
-
-    // Shared VLM workaround: encode text to tokens using tokenizer, validates shape
-    std::vector<int64_t> encodeTextToTokens(const std::string& text);
+    // Assemble a ParsedOutput from a sequence of streaming delta Documents produced by OVMSTextStreamer.
+    // Each document has the shape {"delta":{...}} as emitted by flush_chunk, or an empty object for
+    // finish-only chunks.  Content, reasoning, and tool-call fragments are accumulated in order.
+    static ParsedOutput parsedOutputFromDeltas(const std::vector<rapidjson::Document>& deltas);
 
 public:
     OpenAIApiHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -198,9 +205,19 @@ public:
     virtual void incrementProcessedTokens(size_t numTokens = 1);
 
     // Serialization - pure virtual, each handler produces its own response format
-    virtual std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) = 0;
-    virtual std::string serializeUnaryResponse(ov::genai::EncodedResults& results) = 0;
-    virtual std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) = 0;
+    // Phase 2: delta-based unary serialisation — assembles a complete response from streaming
+    // delta Documents collected via deltaChannel after OVMSTextStreamer finishes.
+    // Single-choice variant (used by Legacy servables).
+    virtual std::string serializeUnaryResponse(const std::vector<rapidjson::Document>& deltas, ov::genai::GenerationFinishReason finishReason) = 0;
+    // Multi-choice variant: N delta-vectors (one per sequence) + per-sequence finish reasons.
+    // logprobData may be empty when logprobs are not requested; otherwise its size equals
+    // allDeltas.size(). Used by ContinuousBatchingServable for both n=1 and n>1.
+    virtual std::string serializeUnaryResponse(const std::vector<std::vector<rapidjson::Document>>& allDeltas,
+        const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
+        const std::vector<UnaryChoiceLogprobs>& logprobData) = 0;
+    // Convenience overload: no logprobs (delegates to the virtual above with empty logprobData).
+    std::string serializeUnaryResponse(const std::vector<std::vector<rapidjson::Document>>& allDeltas,
+        const std::vector<ov::genai::GenerationFinishReason>& finishReasons);
     virtual std::string serializeStreamingChunk(rapidjson::Document parsedDelta, ov::genai::GenerationFinishReason finishReason) = 0;
     virtual std::string serializeStreamingUsageChunk() = 0;
     virtual std::string serializeStreamingHandshakeChunk() = 0;

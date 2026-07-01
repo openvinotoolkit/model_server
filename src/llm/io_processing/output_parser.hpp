@@ -56,6 +56,9 @@ public:
 
 private:
     ov::genai::Tokenizer tokenizer;
+    std::string toolParserName;
+    std::string reasoningParserName;
+    const ToolsSchemas_t& toolNameSchemaMap;                      // reference to OpenAIApiHandler::request.toolNameSchemaMap; always sees populated map
     std::unique_ptr<BaseOutputParser> toolParser = nullptr;       // Tool parser for extracting tool calls
     std::unique_ptr<BaseOutputParser> reasoningParser = nullptr;  // Reasoning parser for extracting reasoning content
     bool decodeWithSpecialTokens = false;                         // Onyx parsers match on special token text (e.g. <|message|>, <|eom|>)
@@ -63,6 +66,12 @@ private:
     // Streaming related members
     ProcessingPhase processingPhase = UNKNOWN;
     StreamOutputCache streamOutputCache;
+    bool implicitReasoningStart = false;
+
+    // Baseline decode mode for content/unknown phases — true when the model/output format
+    // needs special tokens visible before any parser-owned phase becomes active.
+    // Set once in the constructor from parser names.
+    bool defaultDecodingWithSpecialTokens = false;
 
     // Parsing methods below read chunks from streamOutputCache hence no string argument is needed
 
@@ -86,25 +95,29 @@ public:
     bool isReasoningParserAvailable() const;
     std::string getToolParserStartTag() const;
 
+    // Reset streaming state and recreate parser instances to clear internal parser state.
+    void resetStreamingState();
+
     // Auto-detect and apply implicit reasoning start based on the prompt produced by the chat template.
     void detectAndSetImplicitReasoningStart(const std::string& renderedPrompt);
-
-    // Parse model output in the unary mode. Returns ParsedOutput containing data extracted by internal parsers.
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable);
 
     // Parse model output chunk in the steaming mode. Returns a JSON object containing the delta that conforms to OpenAI API
     // or nullopt if no response can be produced.
     // tokens holds the token IDs that produced chunkResponse (may be empty; currently informational for future use).
     std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason);
 
-    bool requiresStreamingWithSpecialTokens() const {
-        if (!reasoningParser) {
-            return toolParser && toolParser->requiresStreamingWithSpecialTokens();
-        } else if (!toolParser) {
-            return reasoningParser && reasoningParser->requiresStreamingWithSpecialTokens();
-        } else {
-            return (reasoningParser && reasoningParser->requiresStreamingWithSpecialTokens()) && (toolParser && toolParser->requiresStreamingWithSpecialTokens());
-        }
-    }
+    // Decide decode mode dynamically based on parser phase and user preference.
+    // Content/unknown phases use defaultDecodingWithSpecialTokens OR user preference.
+    // Reasoning/tool phases are driven solely by the active parser's needsSpecialTokens flag;
+    // user preference does not override parser correctness requirements in those phases.
+    bool needSpecialTokensForCurrentDecode(bool userWantsSpecialTokens = false) const;
+
+    // If `tokenId` is a phase-start token, returns the corresponding tag string
+    // (taken directly from resolvedStartTokenToTag — no tokenizer decode needed).
+    // Tool phase-start tags are considered only when toolsAvailable is true.
+    // Returns an empty string when the token is not a known phase-start token.
+    // Used by OVMSTextStreamer to immediately flush the start-tag text without
+    // going through the delay buffer.
+    std::string getPhaseStartTagForToken(int64_t tokenId, bool toolsAvailable = true) const;
 };
 }  // namespace ovms

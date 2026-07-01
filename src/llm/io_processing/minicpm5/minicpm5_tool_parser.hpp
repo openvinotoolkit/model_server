@@ -146,32 +146,20 @@ private:
 
 public:
     Minicpm5ToolParser() = delete;
+
+    static OutputParsingConfig defaultParsingConfig(const std::string& functionStartTag,
+        const std::string& sosToken,
+        const std::string& eosToken) {
+        OutputParsingConfig cfg;
+        cfg.startTags = {functionStartTag};
+        cfg.contentTagsToErase = {sosToken, eosToken};
+        cfg.needsSpecialTokens = true;
+        return cfg;
+    }
+
     explicit Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas);
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> startTags = {FUNCTION_START_TAG};
-        return startTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags = {};
-        return specialParsingStartTags;
-    }
-    const std::string& getParsingEndTag() const override {
-        static const std::string EMPTY_STRING = "";
-        return EMPTY_STRING;
-    }
-
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
-
-    const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> tagsToErase = {SOS_TOKEN_STR, EOS_TOKEN_STR};
-        return tagsToErase;
-    }
 
 private:
     const std::vector<int64_t> removeReasoningTokens(const std::vector<int64_t>& generatedTokens);

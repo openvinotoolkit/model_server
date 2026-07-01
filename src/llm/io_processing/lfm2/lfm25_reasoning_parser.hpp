@@ -15,40 +15,29 @@
 //*****************************************************************************
 #pragma once
 #include "../base_output_parser.hpp"
-#include <vector>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace ovms {
 class Lfm25ReasoningParser : public BaseOutputParser {
-protected:
-    const std::string parsingStartTag = "<think>";
-    const std::string parsingEndTag = "</think>";
-
-    const int64_t reasoningStartTokenId = 124901;  // <think>
-    const int64_t reasoningEndTokenId = 124902;    // </think>
-
 public:
     Lfm25ReasoningParser() = delete;
-    explicit Lfm25ReasoningParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"<think>"};
+        cfg.tokenIdStartTags = {"<think>"};
+        cfg.endTag = "</think>";
+        cfg.needsSpecialTokens = true;
+        return cfg;
+    }
+
+    explicit Lfm25ReasoningParser(ov::genai::Tokenizer& tokenizer,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags{this->parsingStartTag};
-        return parsingStartTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags{};
-        return specialParsingStartTags;
-    }
-    const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
-    }
-
-    // It may be removed after changing logic in Lfm2ToolParser to use tokens in streaming instead of chunk content, both tool parser and reasoning parser need to have the same value for this function
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
 };
 }  // namespace ovms

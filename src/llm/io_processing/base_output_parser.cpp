@@ -72,6 +72,29 @@ ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& tool
     return toolsParametersTypes;
 }
 
+std::string BaseOutputParser::buildParsingConfigStringRepresentation() const {
+    std::string result = "StartTags: [";
+    for (const auto& tag : parsingConfig.startTags) {
+        result += tag + ", ";
+    }
+    result += "], EndTag: " + parsingConfig.endTag + ", ContentTagsToErase: [";
+    for (const auto& tag : parsingConfig.contentTagsToErase) {
+        result += tag + ", ";
+    }
+    result += "]";
+
+    // Additionally include the resolved start token IDs and their corresponding tags in the string representation
+    result += ", ResolvedStartTokenToTag: {";
+    for (const auto& [tokenId, tag] : resolvedStartTokenToTag) {
+        result += std::to_string(tokenId) + ": " + tag + ", ";
+    }
+    result += "}";
+
+    result += ", ImplicitStart: " + std::string(implicitStart ? "true" : "false");
+    result += ", NeedsSpecialTokens: " + std::string(parsingConfig.needsSpecialTokens ? "true" : "false");
+    return result;
+}
+
 rapidjson::Document BaseOutputParser::wrapFirstDelta(const std::string& functionName, int toolCallIndex) {
     rapidjson::Document wrappedDelta;
     wrappedDelta.SetObject();

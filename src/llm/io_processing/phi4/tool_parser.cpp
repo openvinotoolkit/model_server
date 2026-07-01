@@ -109,55 +109,6 @@ void Phi4ToolParser::clearState() {
     openBracesCount = 1;  // Reset to 1 as we count the tool call opening brace
 }
 
-void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    std::vector<std::string> tools;
-
-    // Phi4 with vLLM template produces tool calls in the format:
-    // functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
-
-    std::string toolsStartString = "functools";
-    size_t toolsStartPos = 0;
-    toolsStartPos = parsedOutput.content.find(toolsStartString);
-
-    if (toolsStartPos != std::string::npos) {
-        // Extract the tools part, assuming it's all the remaining content after "functools"
-        std::string toolsString = parsedOutput.content.substr(toolsStartPos + toolsStartString.length());
-        rapidjson::Document toolsDoc;
-        toolsDoc.Parse(toolsString.c_str());
-        if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
-            for (auto& toolVal : toolsDoc.GetArray()) {
-                if (!toolVal.IsObject()) {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
-                    continue;
-                }
-                ToolCall toolCall;
-                toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-                if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
-                    toolCall.name = toolVal["name"].GetString();
-                } else {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
-                    continue;
-                }
-
-                if (toolVal.HasMember("arguments") && toolVal["arguments"].IsObject()) {
-                    rapidjson::StringBuffer sb;
-                    rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                    toolVal["arguments"].Accept(toolWriter);
-                    toolCall.arguments = sb.GetString();
-                } else {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-                    continue;
-                }
-                parsedOutput.toolCalls.push_back(toolCall);
-            }
-        } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
-        }
-        // Remove the tools part from the content
-        parsedOutput.content.erase(toolsStartPos);
-    }
-}
-
 std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     Phi4 with vLLM template produces tool calls in the format:
