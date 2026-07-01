@@ -32,7 +32,7 @@
 #   TOOL_PARSER       Override tool parser
 #
 # The script exports environment variables consumed by docker-compose.yml:
-#   MODEL_ID, LOCAL_NAME, TARGET_DEVICE, TOOL_PARSER, MODEL_CACHE_DIR
+#   MODEL_ID, LOCAL_NAME, TARGET_DEVICE, TOOL_PARSER, MODEL_CACHE_DIR, GPU_DEVICE, WSL_LIBS
 
 set -euo pipefail
 
@@ -62,6 +62,26 @@ declare -A TOOL_PARSERS=(
     ["Phi4"]="phi4"
     ["phi4"]="phi4"
 )
+
+################################################################################
+# GPU Device Detection
+################################################################################
+
+detect_gpu_device() {
+    # Check for WSL2 first (GPU passthrough device)
+    if [[ -e /dev/dxg ]]; then
+        echo "/dev/dxg:/dev/dxg"
+    # Fallback: check /proc/version for WSL signature
+    elif grep -qi microsoft /proc/version 2>/dev/null; then
+        echo "/dev/dxg:/dev/dxg"
+    # Native Linux with GPU device
+    elif [[ -e /dev/dri ]]; then
+        echo "/dev/dri:/dev/dri"
+    # No GPU device detected
+    else
+        echo ""
+    fi
+}
 
 ################################################################################
 # Argument Parsing
@@ -233,6 +253,17 @@ export_runtime_configuration() {
     export TOOL_PARSER
     export MODEL_CACHE_DIR
     export HF_TOKEN="${HF_TOKEN:-}"
+
+    # Detect and export GPU device for docker-compose.yml devices mapping
+    export GPU_DEVICE
+    GPU_DEVICE="$(detect_gpu_device)"
+
+    # WSL library dependencies (only needed for WSL2 GPU passthrough)
+    if [[ "$GPU_DEVICE" == *"/dev/dxg"* ]]; then
+        export WSL_LIBS="/usr/lib/wsl:/usr/lib/wsl:ro"
+    else
+        export WSL_LIBS=""
+    fi
 
     echo "Runtime configuration:"
     echo "  MODEL_ID:        $MODEL_ID"
