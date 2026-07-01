@@ -3053,6 +3053,7 @@ cc_library(
         "//src/llm:chat_template_analyzer",
         "//src/llm:chat_template_probe",
         "//src/llm:input_workarounds",
+        "//src/utils:env_guard",
         "//third_party:genai",
         ":test_platform_utils",
     ],

@@ -30,6 +30,7 @@
 #include "../../llm/chat_template_caps.hpp"
 #include "../../llm/chat_template_probe.hpp"
 #include "../../llm/input_workarounds.hpp"
+#include "../../utils/env_guard.hpp"
 #include "../platform_utils.hpp"
 
 using namespace ovms;
@@ -54,14 +55,14 @@ protected:
     void SetUp() override {
         const char* prev = std::getenv("OPENVINO_LOG_LEVEL");
         savedLogLevel = prev ? prev : "";
-        setenv("OPENVINO_LOG_LEVEL", "0", 1);
+        SetEnvironmentVar("OPENVINO_LOG_LEVEL", "0");
     }
 
     void TearDown() override {
         if (savedLogLevel.empty()) {
-            unsetenv("OPENVINO_LOG_LEVEL");
+            UnSetEnvironmentVar("OPENVINO_LOG_LEVEL");
         } else {
-            setenv("OPENVINO_LOG_LEVEL", savedLogLevel.c_str(), 1);
+            SetEnvironmentVar("OPENVINO_LOG_LEVEL", savedLogLevel);
         }
     }
 
