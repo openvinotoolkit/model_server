@@ -70,22 +70,19 @@ protected:
 
 public:
     Hermes3ToolParser() = delete;
-    explicit Hermes3ToolParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    static ParsingConfig defaultParsingConfig() {
+        ParsingConfig cfg;
+        cfg.startTags = {"<tool_call>"};
+        cfg.endTag    = "</tool_call>";
+        return cfg;
+    }
+
+    explicit Hermes3ToolParser(ov::genai::Tokenizer& tokenizer,
+                                std::optional<ParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+                         configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags = {parsingStartTag};
-        return parsingStartTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> beginningOnlyTags = {};
-        return beginningOnlyTags;
-    }
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
-    }
 };
 }  // namespace ovms

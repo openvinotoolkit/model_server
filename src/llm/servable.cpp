@@ -152,15 +152,13 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         return status;
     }
 
-    if (executionContext->apiHandler->isStream()) {
+    {
         auto ovmsCallback = [& ctx = *executionContext](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
             ctx.deltaChannel.push(std::move(delta), isLast);
             return ov::genai::StreamingStatus::RUNNING;
         };
         ov::AnyMap streamerConfig;
-        if ((executionContext->apiHandler->getOutputParser() != nullptr &&
-                executionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
-            !executionContext->apiHandler->getRequest().skipSpecialTokens) {
+        if (!executionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
         executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
@@ -253,7 +251,67 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 }
 
 absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(executionContext->generationOutputs);
+    const bool hasLogprobs = executionContext->apiHandler->getRequest().logprobschat ||
+                             executionContext->apiHandler->getRequest().logprobs;
+    const size_t numOutputs = executionContext->generationOutputs.size();
+
+    // Build streamer config once; shared across all per-sequence streamers.
+    ov::AnyMap streamerConfig;
+    if (!executionContext->apiHandler->getRequest().skipSpecialTokens) {
+        streamerConfig.insert(ov::genai::skip_special_tokens(false));
+    }
+
+    std::vector<std::vector<rapidjson::Document>> allDeltas;
+    std::vector<ov::genai::GenerationFinishReason> finishReasons;
+    std::vector<UnaryChoiceLogprobs> logprobData;
+    allDeltas.reserve(numOutputs);
+    finishReasons.reserve(numOutputs);
+
+    for (size_t i = 0; i < numOutputs; ++i) {
+        const auto& output = executionContext->generationOutputs[i];
+
+        if (executionContext->apiHandler->isVerboseResponse()) {
+            executionContext->apiHandler->appendVerboseRawTokens(output.generated_ids);
+        }
+        executionContext->apiHandler->incrementProcessedTokens(output.generated_ids.size());
+
+        std::vector<rapidjson::Document> localDeltas;
+        if (numOutputs == 1) {
+            // Single sequence: reuse the OVMSTextStreamer and deltaChannel built in parseRequest.
+            executionContext->textStreamer->write(output.generated_ids);
+            executionContext->textStreamer->end();
+            localDeltas = executionContext->deltaChannel.drain();
+        } else {
+            // Multiple sequences: each beam requires its own independent stateful streamer
+            // (hold-back buffer, parser state are per-sequence).
+            auto cb = [&localDeltas](rapidjson::Document delta, bool) -> ov::genai::StreamingStatus {
+                localDeltas.push_back(std::move(delta));
+                return ov::genai::StreamingStatus::RUNNING;
+            };
+            auto tempStreamer = std::make_shared<OVMSTextStreamer>(
+                getProperties()->tokenizer,
+                executionContext->apiHandler->getOutputParser(),
+                executionContext->apiHandler->areToolsAvailable(),
+                std::move(cb),
+                streamerConfig);
+            tempStreamer->write(output.generated_ids);
+            tempStreamer->end();
+        }
+
+        allDeltas.push_back(std::move(localDeltas));
+        finishReasons.push_back(output.finish_reason);
+        if (hasLogprobs) {
+            logprobData.push_back({output.generated_ids, output.generated_log_probs});
+        }
+    }
+
+    if (hasLogprobs) {
+        executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
+            allDeltas, finishReasons, logprobData);
+    } else {
+        executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
+            allDeltas, finishReasons);
+    }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
@@ -358,6 +416,103 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     }
 
     return absl::OkStatus();
+}
+
+absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto legacyCtx = std::static_pointer_cast<LegacyServableExecutionContextBase>(executionContext);
+    if (legacyCtx->payload.client->isDisconnected()) {
+        return absl::CancelledError();
+    }
+    std::vector<rapidjson::Document> deltas = executionContext->deltaChannel.drain();
+    const bool isFinishing = executionContext->deltaChannel.complete();
+
+    // Helper: accumulate verbose raw text from a delta's content field.
+    // Both LLM-Legacy (switched from token-based) and VLM-Legacy use per-delta
+    // text extraction, which is correct because OVMSTextStreamer is configured with
+    // skip_special_tokens(false) in verbose mode, so delta content already includes
+    // special tokens.
+    auto appendVerboseContent = [&](const rapidjson::Document& delta) {
+        if (executionContext->apiHandler->isVerboseResponse() &&
+            delta.HasMember("delta") && delta["delta"].IsObject() &&
+            delta["delta"].HasMember("content") && delta["delta"]["content"].IsString()) {
+            executionContext->apiHandler->appendVerboseRawText(delta["delta"]["content"].GetString());
+        }
+    };
+
+    if (!isFinishing) {
+        // For RESPONSES endpoint, always call serializeStreamingChunk so that
+        // output item initialization events are emitted even before the tokenizer produces text.
+        if (deltas.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
+            for (auto& delta : deltas) {
+                appendVerboseContent(delta);
+                std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
+                    std::move(delta), ov::genai::GenerationFinishReason::NONE);
+                if (!serialized.empty()) {
+                    executionContext->response += wrapTextInServerSideEventMessage(serialized);
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", serialized);
+                }
+            }
+            if (deltas.empty()) {
+                // No delta generated yet — emit lifecycle events for RESPONSES endpoint.
+                if (!executionContext->lifecyclePrimed) {
+                    std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
+                        rapidjson::Document{}, ov::genai::GenerationFinishReason::NONE);
+                    if (!serialized.empty()) {
+                        executionContext->response = wrapTextInServerSideEventMessage(serialized);
+                        executionContext->lifecyclePrimed = true;
+                    }
+                }
+            }
+        }
+        executionContext->sendLoopbackSignal = true;
+    } else {
+        // Wait for the readySignal
+        // (set right after pipe->generate() returns and results are assigned)
+        // to guarantee results is populated before we read finish_reasons and perf_metrics.
+        // Also ensures success flag is accurate.
+        legacyCtx->finished.wait();
+        if (!legacyCtx->success) {
+            return absl::InvalidArgumentError("Request processing failed, check its correctness.");
+        }
+        OVMS_PROFILE_SCOPE("Generation of last streaming response");
+        // end() was already called by pipe->generate() internally; all deltas are
+        // already in deltaChannel before signalComplete() fired. Drain any remaining.
+        for (auto& d : executionContext->deltaChannel.drain()) {
+            deltas.push_back(std::move(d));
+        }
+        // Legacy generation path always runs with deltas=1, so we read the single finish reason at index 0.
+        const ov::genai::GenerationFinishReason finishReason = legacyCtx->legacyFinishReason();
+        legacyCtx->setLegacyUsage(*executionContext->apiHandler);
+        if (!deltas.empty()) {
+            for (size_t i = 0; i < deltas.size(); ++i) {
+                const bool isLast = (i == deltas.size() - 1);
+                appendVerboseContent(deltas[i]);
+                std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
+                    std::move(deltas[i]),
+                    isLast ? finishReason : ov::genai::GenerationFinishReason::NONE);
+                if (!serialized.empty()) {
+                    executionContext->response += wrapTextInServerSideEventMessage(serialized);
+                }
+            }
+        } else {
+            // Parser produced no delta (generation ended on a swallowed token).
+            std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
+                rapidjson::Document{}, finishReason);
+            if (!serialized.empty()) {
+                executionContext->response += wrapTextInServerSideEventMessage(serialized);
+            }
+        }
+        if (executionContext->apiHandler->getStreamOptions().includeUsage)
+            executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
+        executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
+        executionContext->sendLoopbackSignal = false;
+    }
+    return absl::OkStatus();
+}
+
+absl::Status LegacyServableBase::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    return prepareLegacyPartialResponse(executionContext);
 }
 
 void logRequestDetails(const ovms::HttpPayload& payload) {

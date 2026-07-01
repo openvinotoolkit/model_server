@@ -48,33 +48,23 @@ protected:
 
 public:
     Gemma4ToolParser() = delete;
-    explicit Gemma4ToolParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    static ParsingConfig defaultParsingConfig() {
+        ParsingConfig cfg;
+        cfg.startTags                    = {"<|tool_call>"};
+        cfg.specialTokenStartTags        = {"<|tool_call>"};
+        cfg.endTag                       = "<tool_call|>";
+        cfg.contentTagsToErase           = {"<turn|>", "<|tool_response>"};
+        cfg.toolCallPhaseNeedsSpecialTokens = true;
+        return cfg;
+    }
+
+    explicit Gemma4ToolParser(ov::genai::Tokenizer& tokenizer,
+                               std::optional<ParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+                         configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags = {TOOL_CALL_START_TAG};
-        return parsingStartTags;
-    }
-
-    const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> tagsToErase = {TURN_END_TAG, TOOL_RESPONSE_START_TAG};
-        return tagsToErase;
-    }
-
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> beginningOnlyTags = {};
-        return beginningOnlyTags;
-    }
-
-    const std::string& getParsingEndTag() const override {
-        return TOOL_CALL_END_TAG;
-    }
-
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
 
     static std::string normalizeArgStr(const std::string& arg);
     static std::string parseArrayParameter(const std::string& argumentStr);

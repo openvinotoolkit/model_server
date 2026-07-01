@@ -49,7 +49,33 @@ OVMSTextStreamer::OVMSTextStreamer(
     ov::genai::TextStreamer(tokenizer, noop_string_callback, decode_params),
     m_output_parser(output_parser),
     m_tools_available(tools_available),
-    m_callback(std::move(callback)) {}
+    m_callback(std::move(callback)) {
+    // Extract user's skip_special_tokens preference from decode_params.
+    // The OV any-map stores it as a bool under the canonical key name.
+    auto it = decode_params.find(ov::genai::skip_special_tokens.name());
+    if (it != decode_params.end()) {
+        try {
+            // skip_special_tokens=true means we DON'T want special tokens.
+            const bool skipSpecial = it->second.as<bool>();
+            m_user_wants_special = !skipSpecial;
+        } catch (...) {}
+    }
+    // Initialise current mode from parser state (UNKNOWN phase at construction).
+    m_current_special_mode = m_output_parser
+        ? m_output_parser->needSpecialTokensForCurrentDecode(m_user_wants_special)
+        : m_user_wants_special;
+}
+
+// -----------------------------------------------------------------------------
+// applyDecodeParams — update m_additional_detokenization_params to reflect the
+// desired skip_special_tokens setting and reset the token cache so the next
+// decode call uses the new mode from a clean baseline.
+// Called when the parser's required decode mode changes mid-stream.
+// -----------------------------------------------------------------------------
+void OVMSTextStreamer::applyDecodeParams(bool useSpecial) {
+    m_additional_detokenization_params[ov::genai::skip_special_tokens.name()] = !useSpecial;
+    m_current_special_mode = useSpecial;
+}
 
 // -----------------------------------------------------------------------------
 // write(int64_t) — owned decode loop (does NOT delegate to TextStreamer::write)
@@ -64,6 +90,28 @@ OVMSTextStreamer::OVMSTextStreamer(
 //   m_tokenizer, m_additional_detokenization_params.
 // -----------------------------------------------------------------------------
 ov::genai::StreamingStatus OVMSTextStreamer::write(int64_t token) {
+    // Check if the parser's required decode mode changed since the last token.
+    // If it has, flush any pending text with the old mode, reset the cache, and
+    // apply the new decode params before adding the current token.
+    if (m_output_parser) {
+        const bool newMode = m_output_parser->needSpecialTokensForCurrentDecode(m_user_wants_special);
+        if (newMode != m_current_special_mode) {
+            // Flush pending text with old mode.
+            if (!m_tokens_cache.empty()) {
+                const std::string text = m_tokenizer.decode(m_tokens_cache, m_additional_detokenization_params);
+                if (text.size() > m_printed_len) {
+                    const auto status = flush_chunk(text, text.size(), ov::genai::GenerationFinishReason::NONE);
+                    if (status != ov::genai::StreamingStatus::RUNNING) return status;
+                }
+            }
+            // Reset decode state and switch mode.
+            m_tokens_cache.clear();
+            m_decoded_lengths.clear();
+            m_printed_len = 0;
+            applyDecodeParams(newMode);
+        }
+    }
+
     m_tokens_cache.push_back(token);
     const std::string text = m_tokenizer.decode(m_tokens_cache, m_additional_detokenization_params);
     m_decoded_lengths.push_back(static_cast<int64_t>(text.size()));
@@ -127,7 +175,11 @@ void OVMSTextStreamer::end() {
     if (!m_tokens_cache.empty()) {
         const std::string text = m_tokenizer.decode(m_tokens_cache, m_additional_detokenization_params);
         if (text.size() > m_printed_len) {
-            flush_chunk(text, text.size(), ov::genai::GenerationFinishReason::STOP);
+            // 1) Flush remaining text as a regular (non-final) chunk.
+            // 2) Then emit an empty STOP chunk so parsers can finalize and emit
+            //    a separate final delta if needed.
+            flush_chunk(text, text.size(), ov::genai::GenerationFinishReason::NONE);
+            flush_chunk(text, m_printed_len, ov::genai::GenerationFinishReason::STOP);
         } else {
             flush_chunk(text, m_printed_len, ov::genai::GenerationFinishReason::STOP);
         }

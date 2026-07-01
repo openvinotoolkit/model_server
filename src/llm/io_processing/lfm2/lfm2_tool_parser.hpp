@@ -31,33 +31,22 @@ protected:
 
 public:
     Lfm2ToolParser() = delete;
-    explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    static ParsingConfig defaultParsingConfig() {
+        ParsingConfig cfg;
+        cfg.startTags                    = {"<|tool_call_start|>"};
+        cfg.specialTokenStartTags        = {"<|tool_call_start|>"};
+        cfg.endTag                        = "<|tool_call_end|>";
+        cfg.toolCallPhaseNeedsSpecialTokens = true;
+        return cfg;
+    }
+
+    explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer,
+                             std::optional<ParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+                         configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags = {TOOL_CALL_START_TAG};
-        return parsingStartTags;
-    }
-
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> beginningOnlyTags = {};
-        return beginningOnlyTags;
-    }
-
-    const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> tagsToErase = {EOS_TOKEN_STR};
-        return tagsToErase;
-    }
-
-    const std::string& getParsingEndTag() const override {
-        return TOOL_CALL_END_TAG;
-    }
-
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
 
 private:
     std::string streamingContent;

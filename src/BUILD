@@ -2922,11 +2922,12 @@ cc_library(
     name = "test_llm_output_parser_tests",
     linkstatic = 1,
     alwayslink = True,
+    hdrs = ["test/llm/output_parsers/output_parser_test_utils.hpp"],
     srcs = glob(["test/llm/output_parsers/*_test.cpp"]),
     deps = [
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
-        "//src/llm:output_parsers",
+        "//src/llm:text_streamer",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

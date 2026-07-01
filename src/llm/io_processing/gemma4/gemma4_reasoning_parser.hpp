@@ -35,25 +35,19 @@ protected:
 
 public:
     Gemma4ReasoningParser() = delete;
-    explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer) :
-        Qwen3ReasoningParser(tokenizer) {}
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer,
+                                    std::optional<ParsingConfig> configOverride = std::nullopt) :
+        Qwen3ReasoningParser(tokenizer, [&]() -> std::optional<ParsingConfig> {
+            if (configOverride.has_value()) return configOverride;
+            ParsingConfig cfg;
+            cfg.startTags                = {"<|channel>thought\n"};
+            cfg.specialTokenStartTags    = {"<|channel>"};
+            cfg.endTag                   = "<channel|>";
+            cfg.alwaysNeedsSpecialTokens = true;
+            return cfg;
+        }()) {
+        resolveSpecialTokenIds();
+    }
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
-
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags{this->parsingStartTag};
-        return parsingStartTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags{};
-        return specialParsingStartTags;
-    }
-    const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
-    }
 };
 }  // namespace ovms

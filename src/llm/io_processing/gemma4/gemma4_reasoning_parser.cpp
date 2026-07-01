@@ -31,30 +31,6 @@ void Gemma4ReasoningParser::skipToken(const std::vector<int64_t>& generatedToken
     }
 }
 
-void Gemma4ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    auto startPos = std::string::npos;
-    auto endPos = std::string::npos;
-
-    auto startIt = std::find(generatedTokens.begin(), generatedTokens.end(), channelStartTokenId);
-    auto endIt = std::find(generatedTokens.begin(), generatedTokens.end(), channelEndTokenId);
-
-    if (startIt != generatedTokens.end() && endIt != generatedTokens.end() && startIt < endIt) {
-        startPos = std::distance(generatedTokens.begin(), startIt);
-        endPos = std::distance(generatedTokens.begin(), endIt);
-    }
-
-    if (startPos != std::string::npos && endPos != std::string::npos && startPos < endPos) {
-        skipToken(generatedTokens, startPos, channelStartTokenId);
-        std::string reasoningText = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + startPos, generatedTokens.begin() + endPos), ov::genai::skip_special_tokens(true));
-        if (reasoningText.find(reasoningStrIndicator) == 0) {
-            reasoningText = reasoningText.substr(reasoningStrIndicator.size());
-        }
-        parsedOutput.reasoning = reasoningText;
-        // Remove reasoning from content
-        std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + endPos + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true));  // content MUST never appear before reasoning
-        parsedOutput.content = contentWithoutReasoning;
-    }
-}
 std::optional<rapidjson::Document> Gemma4ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     if (chunk.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Gemma4ReasoningParser");

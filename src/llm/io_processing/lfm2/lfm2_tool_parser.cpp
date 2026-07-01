@@ -100,7 +100,31 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
     return std::nullopt;
 }
 
-void Lfm2ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    parseUnaryResponse(parsedOutput, generatedTokens, tokenizer, this->tagIds);
+bool Lfm2ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall) {
+    size_t argsPos = toolStr.find(TOOL_ARGS_START_INDICATOR);
+    if (argsPos != std::string::npos) {
+        std::string toolName = toolStr.substr(0, argsPos);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool name: {}", toolName);
+
+        int argsStrLen = toolStr.length() - argsPos - TOOL_ARGS_START_INDICATOR.length() - TOOL_ARGS_END_INDICATOR.length();
+        std::string argsStr = toolStr.substr(argsPos + TOOL_ARGS_START_INDICATOR.length(), argsStrLen);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed args string: {}", argsStr);
+        std::vector<Lfm2ToolParser::Argument> arguments = parseArguments(argsStr);
+
+        toolCall.name = toolName;
+        rapidjson::Document argsDoc(rapidjson::kObjectType);
+        rapidjson::StringBuffer sb;
+        rapidjson::Writer<rapidjson::StringBuffer> argsWriter(sb);
+        argsWriter.StartObject();
+        for (const Lfm2ToolParser::Argument& argument : arguments) {
+            argsWriter.Key(argument.name.c_str());
+            writeArgumentToWriter(argument.value, argsWriter);
+        }
+        argsWriter.EndObject();
+        toolCall.arguments = sb.GetString();
+        toolCall.id = generateRandomId();
+        return true;
+    }
+    return false;
 }
 }  // namespace ovms

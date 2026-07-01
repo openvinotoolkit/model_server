@@ -27,79 +27,6 @@
 #include "src/stringutils.hpp"
 
 namespace ovms {
-void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    // TODO: check if we can rely on decoded <|python_tag|> token to be present in the content, so we can drop multiple detokenizations and copies
-    // and just extract substrings from the content and modify content in-place
-
-    // We search for botTokenId in the generatedTokens to find tool calls start or check if the content starts with "{" (llama3 sometimes does not generate botTokenId)
-    auto toolCallsStartPosition = generatedTokens.begin();
-    toolCallsStartPosition = generatedTokens.end();
-    // Find botTokenId in generated_ids
-    auto botTokenIt = std::find(generatedTokens.begin(), generatedTokens.end(), botTokenId);
-
-    if (botTokenIt != generatedTokens.end()) {
-        // Decode the content before botTokenId
-        std::vector<int64_t> contentTokens(generatedTokens.begin(), botTokenIt);
-        parsedOutput.content = tokenizer.decode(contentTokens);
-        // Tokens after botTokenId will be treated as tool calls
-        toolCallsStartPosition = botTokenIt + 1;
-    } else {
-        // If botTokenId is not found, check if model output starts with "{" and if so, assume it's a tool call"
-        if (!parsedOutput.content.empty() && parsedOutput.content[0] == '{') {
-            // If model output starts with "{", treat it as a tool call
-            toolCallsStartPosition = generatedTokens.begin();
-            parsedOutput.content.clear();
-        }
-    }
-
-    if (toolCallsStartPosition != generatedTokens.end()) {
-        std::vector<int64_t> toolCallsTokens(toolCallsStartPosition, generatedTokens.end());
-        std::string toolsResponse = tokenizer.decode(toolCallsTokens);
-
-        std::vector<std::string> tools;
-        size_t start = 0;
-        size_t end = 0;
-        while ((end = toolsResponse.find(separator, start)) != std::string::npos) {
-            std::string tool = toolsResponse.substr(start, end - start);
-            if (!tool.empty()) {
-                tools.push_back(tool);
-            }
-            start = end + separator.length();
-        }
-        std::string lastTool = toolsResponse.substr(start);
-        if (!lastTool.empty()) {
-            tools.push_back(lastTool);
-        }
-
-        for (const std::string& tool : tools) {
-            ToolCall toolCall;
-            rapidjson::Document toolDoc;
-            toolDoc.Parse(tool.c_str());
-            if (toolDoc.HasParseError()) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse tool call as JSON");
-                continue;
-            }
-            if (toolDoc.HasMember("name") && toolDoc["name"].IsString()) {
-                toolCall.name = toolDoc["name"].GetString();
-            } else {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
-                continue;
-            }
-
-            if (toolDoc.HasMember("parameters") && toolDoc["parameters"].IsObject()) {
-                rapidjson::StringBuffer sb;
-                rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                toolDoc["parameters"].Accept(toolWriter);
-                toolCall.arguments = sb.GetString();
-            } else {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-                continue;
-            }
-            toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-            parsedOutput.toolCalls.push_back(toolCall);
-        }
-    }
-}
 
 void Llama3ToolParser::startNextToolCall() {
     lastJson.Clear();
@@ -122,13 +49,17 @@ static inline void changeParametersToArguments(rapidjson::Document& json) {
 }
 
 std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
-    if (chunk.empty()) {
+    const bool hasPendingState =
+        !argumentsDelayWindow[0].empty() ||
+        !argumentsDelayWindow[1].empty() ||
+        jsonHasArgumentsOrParameters(lastJson);
+    if (chunk.empty() && !hasPendingState) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Llama3ToolParser");
         return std::nullopt;
     }
 
-    // <|python_tag|> appears
-    if (chunk.find(parsingStartTag) != std::string::npos) {
+    // <|python_tag|> boundary text (synthesised by OutputParser on token-ID detection)
+    if (chunk.find("<|python_tag|>") != std::string::npos) {
         this->startNextToolCall();
         return std::nullopt;  // ignoring the special tag
     }
@@ -176,11 +107,19 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
         // We need to place it right before last closing brace
         if (finishReason != ov::genai::GenerationFinishReason::NONE) {
             isCurrentToolCallParsingFinished = true;
-            size_t lastClosingBrace = modifiedChunk.find_last_of('}');
-            if (lastClosingBrace != std::string::npos) {
-                modifiedChunk.insert(lastClosingBrace, "\"");
+            if (modifiedChunk.empty()) {
+                // Empty STOP flush from streamer: finalize the delayed chunk in-place.
+                size_t lastClosingBrace = argumentsDelayWindow[0].find_last_of('}');
+                if (lastClosingBrace != std::string::npos) {
+                    argumentsDelayWindow[0].insert(lastClosingBrace, "\"");
+                }
+            } else {
+                size_t lastClosingBrace = modifiedChunk.find_last_of('}');
+                if (lastClosingBrace != std::string::npos) {
+                    modifiedChunk.insert(lastClosingBrace, "\"");
+                }
+                argumentsDelayWindow[0] += modifiedChunk;
             }
-            argumentsDelayWindow[0] += modifiedChunk;
             // If this is end of one of the tool calls "in the middle" (; has been found), we need to manually add closing quote "
             // We need to place it right before last closing brace
         } else if (modifiedChunk.find(separator) != std::string::npos) {
