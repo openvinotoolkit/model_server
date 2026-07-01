@@ -394,27 +394,37 @@ internal sealed class MainForm : Form
 
     private static Button CreateRuntimeIconButton(string glyph, string tooltip, Color fillColor)
     {
-        var button = new Button
+        var button = new RuntimeIconButton(glyph, fillColor)
         {
-            Text = glyph,
-            Font = new Font("Segoe UI Symbol", 13.5f, FontStyle.Regular, GraphicsUnit.Point),
-            FlatStyle = FlatStyle.Flat,
-            ForeColor = Color.White,
-            BackColor = fillColor,
-            Size = new Size(44, 42),
-            MinimumSize = new Size(44, 42),
-            MaximumSize = new Size(44, 42),
-            Cursor = Cursors.Hand,
-            UseVisualStyleBackColor = false,
-            TextAlign = ContentAlignment.MiddleCenter,
-            Padding = new Padding(0),
-            Margin = new Padding(8, 0, 0, 0)
+            BackColor = Theme.Surface,
+            Size = new Size(58, 52),
+            MinimumSize = new Size(58, 52),
+            MaximumSize = new Size(58, 52),
+            Margin = new Padding(4, 0, 0, 0)
         };
-        button.FlatAppearance.BorderSize = 0;
-        button.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(fillColor, 0.08f);
         var tip = new ToolTip();
         tip.SetToolTip(button, tooltip);
         return button;
+    }
+
+    private static void SetRuntimeIconButtonState(Button button, bool enabled)
+    {
+        var activeColor = button.Tag is Color color ? color : Theme.Text;
+        button.Enabled = enabled;
+        button.ForeColor = enabled ? activeColor : Color.FromArgb(145, Theme.Muted);
+        button.BackColor = Theme.Surface;
+        button.Cursor = enabled ? Cursors.Hand : Cursors.Default;
+        if (button is RuntimeIconButton iconButton)
+        {
+            iconButton.ActiveColor = activeColor;
+            iconButton.DisabledColor = Color.FromArgb(145, Theme.Muted);
+            iconButton.Invalidate();
+        }
+        else
+        {
+            button.FlatAppearance.MouseOverBackColor = enabled ? Theme.HoverTint : Theme.Surface;
+            button.FlatAppearance.MouseDownBackColor = enabled ? Theme.WindowBackground : Theme.Surface;
+        }
     }
 
     private static Button CreateSecondaryButton(string text)
@@ -489,9 +499,9 @@ internal sealed class MainForm : Form
             metricGrid.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
         }
 
-        startButton = CreateRuntimeIconButton("\u25B6", "Start server", Theme.Success);
-        stopButton = CreateRuntimeIconButton("\u25A0", "Stop server", Theme.Danger);
-        restartButton = CreateRuntimeIconButton("\u21BB", "Restart server", Theme.Accent);
+        startButton = CreateRuntimeIconButton("\uE768", "Start server", Theme.Success);
+        stopButton = CreateRuntimeIconButton("\uE71A", "Stop server", Theme.Danger);
+        restartButton = CreateRuntimeIconButton("\uE72C", "Restart server", Theme.Accent);
 
         startButton.Click += async (_, _) => await RunControlActionAsync("Start", controller.Start);
         stopButton.Click += async (_, _) => await RunControlActionAsync("Stop", controller.Stop);
@@ -516,7 +526,7 @@ internal sealed class MainForm : Form
                 Padding = new Padding(0)
             };
             cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 248));
+            cardLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 230));
             cardLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             var statusLayout = new TableLayoutPanel
@@ -571,21 +581,22 @@ internal sealed class MainForm : Form
             var actionLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 3,
+                ColumnCount = 4,
                 RowCount = 3,
                 BackColor = Color.Transparent,
                 Margin = new Padding(0),
-                Padding = new Padding(0)
+                Padding = new Padding(0, 0, 6, 0)
             };
-            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
-            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
-            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
+            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 62));
+            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 62));
+            actionLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 62));
             actionLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-            actionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            actionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             actionLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-            actionLayout.Controls.Add(startButton, 0, 1);
-            actionLayout.Controls.Add(stopButton, 1, 1);
-            actionLayout.Controls.Add(restartButton, 2, 1);
+            actionLayout.Controls.Add(startButton, 1, 1);
+            actionLayout.Controls.Add(stopButton, 2, 1);
+            actionLayout.Controls.Add(restartButton, 3, 1);
 
             cardLayout.Controls.Add(statusLayout, 0, 0);
             cardLayout.Controls.Add(actionLayout, 1, 0);
@@ -834,9 +845,12 @@ internal sealed class MainForm : Form
 
     private void SetControlButtonsEnabled(bool enabled)
     {
-        startButton.Enabled = enabled;
-        stopButton.Enabled = enabled;
-        restartButton.Enabled = enabled;
+        if (!enabled)
+        {
+            SetRuntimeIconButtonState(startButton, false);
+            SetRuntimeIconButtonState(stopButton, false);
+            SetRuntimeIconButtonState(restartButton, false);
+        }
         headerRefreshButton.Enabled = enabled;
     }
 
@@ -846,9 +860,9 @@ internal sealed class MainForm : Form
         if (settings is null)
         {
             statusValueLabel.Text = "Settings unavailable";
-            startButton.Visible = false;
-            stopButton.Visible = false;
-            restartButton.Visible = false;
+            SetRuntimeIconButtonState(startButton, false);
+            SetRuntimeIconButtonState(stopButton, false);
+            SetRuntimeIconButtonState(restartButton, false);
             return;
         }
 
@@ -858,9 +872,9 @@ internal sealed class MainForm : Form
         railStatusDot.ForeColor = runtimeStatus.Running ? Theme.Success : Theme.Muted;
         railStatusText.Text = runtimeStatus.Running ? "Running" : "Stopped";
         railStatusText.ForeColor = runtimeStatus.Running ? Theme.Text : Theme.Muted;
-        startButton.Visible = !runtimeStatus.Running;
-        stopButton.Visible = runtimeStatus.Running;
-        restartButton.Visible = runtimeStatus.Running;
+        SetRuntimeIconButtonState(startButton, !runtimeStatus.Running);
+        SetRuntimeIconButtonState(stopButton, runtimeStatus.Running);
+        SetRuntimeIconButtonState(restartButton, runtimeStatus.Running);
 
         runModeValueLabel.Text = settings.RunMode;
         restUrlValueLabel.Text = $"{settings.BindAddress}:{settings.RestPort}";
@@ -911,21 +925,23 @@ internal sealed class MainForm : Form
     {
         var page = new Panel { BackColor = Theme.WindowBackground, AutoScroll = true };
 
-        var serverCard = CreateTitledCard("Server", 320);
+        var serverCard = CreateTitledCard("Server", 400, "Endpoints, logging, and model repository.");
         var serverLayout = CreateSettingsTable();
 
         var row = 0;
-        AddSettingsRow(serverLayout, "REST port:", restPortInput = new NumericUpDown { Minimum = 1, Maximum = 65535, Width = 120, Margin = new Padding(3, 6, 3, 3) }, row++);
-        AddSettingsRow(serverLayout, "gRPC port (0 = disabled):", grpcPortInput = new NumericUpDown { Minimum = 0, Maximum = 65535, Width = 120, Margin = new Padding(3, 6, 3, 3) }, row++);
-        AddSettingsRow(serverLayout, "Bind address:", bindAddressInput = new TextBox { Width = 240, Margin = new Padding(3, 6, 3, 3) }, row++);
+        AddSettingsRow(serverLayout, "REST port:", restPortInput = new NumericUpDown { Minimum = 1, Maximum = 65535, Width = 140, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) }, row++);
+        AddSettingsRow(serverLayout, "gRPC port (0 = disabled):", grpcPortInput = new NumericUpDown { Minimum = 0, Maximum = 65535, Width = 140, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) }, row++);
+        AddHelperRow(serverLayout, "Set to 0 to disable the gRPC endpoint.", row++);
+        AddSettingsRow(serverLayout, "Bind address:", bindAddressInput = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(3, 6, 12, 3) }, row++);
+        AddHelperRow(serverLayout, "Use 127.0.0.1 for local-only access. Other addresses may expose the server to your network.", row++);
 
-        logLevelInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 140, Margin = new Padding(3, 6, 3, 3) };
+        logLevelInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 160, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) };
         logLevelInput.Items.AddRange(new object[] { "ERROR", "WARNING", "INFO", "DEBUG", "TRACE" });
         AddSettingsRow(serverLayout, "Log level:", logLevelInput, row++);
 
-        logPathInput = new TextBox { Width = 360, Margin = new Padding(3, 6, 3, 3) };
+        logPathInput = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(3, 6, 3, 3) };
         var browseLogButton = CreateSecondaryButton("Browse...");
-        browseLogButton.Margin = new Padding(6, 3, 3, 3);
+        browseLogButton.Margin = new Padding(8, 3, 3, 3);
         browseLogButton.Click += (_, _) =>
         {
             using var dialog = new SaveFileDialog
@@ -944,9 +960,9 @@ internal sealed class MainForm : Form
         };
         AddSettingsRowWithButton(serverLayout, "Log path:", logPathInput, browseLogButton, row++);
 
-        modelRepoInput = new TextBox { Width = 360, Margin = new Padding(3, 6, 3, 3) };
+        modelRepoInput = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(3, 6, 3, 3) };
         var browseModelRepoButton = CreateSecondaryButton("Browse...");
-        browseModelRepoButton.Margin = new Padding(6, 3, 3, 3);
+        browseModelRepoButton.Margin = new Padding(8, 3, 3, 3);
         browseModelRepoButton.Click += (_, _) =>
         {
             using var dialog = new FolderBrowserDialog
@@ -963,18 +979,18 @@ internal sealed class MainForm : Form
 
         serverCard.Controls.Add(serverLayout);
 
-        var startupCard = CreateTitledCard("Startup & tray", 200);
+        var startupCard = CreateTitledCard("Startup & tray", 240, "How the server runs and whether the tray app launches at sign-in.");
         var startupLayout = CreateSettingsTable();
 
         row = 0;
-        runModeInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180, Margin = new Padding(3, 6, 3, 3) };
+        runModeInput = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) };
         runModeInput.Items.AddRange(new object[] { "user-login", "service", "manual" });
         AddSettingsRow(startupLayout, "Startup mode:", runModeInput, row++);
 
-        showTrayCheckBox = new CheckBox { Margin = new Padding(3, 10, 3, 3) };
+        showTrayCheckBox = new CheckBox { Anchor = AnchorStyles.Left, Margin = new Padding(3, 10, 3, 3) };
         AddSettingsRow(startupLayout, "Show tray icon:", showTrayCheckBox, row++);
 
-        startAtLoginCheckBox = new CheckBox { Margin = new Padding(3, 10, 3, 3) };
+        startAtLoginCheckBox = new CheckBox { Anchor = AnchorStyles.Left, Margin = new Padding(3, 10, 3, 3) };
         AddSettingsRow(startupLayout, "Start at login:", startAtLoginCheckBox, row++);
 
         startupCard.Controls.Add(startupLayout);
@@ -985,9 +1001,10 @@ internal sealed class MainForm : Form
             Height = 56,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Padding = new Padding(0, 14, 0, 0),
-            Margin = new Padding(0)
+            Padding = new Padding(0, 20, 0, 0),
+            Margin = new Padding(0, 4, 0, 0)
         };
+        var footerRule = new Panel { Dock = DockStyle.Top, Height = 1, BackColor = Theme.Border, Margin = new Padding(0) };
         var saveButton = CreatePrimaryButton("", "Save", Theme.Accent);
         var resetButton = CreateSecondaryButton("Reset");
         saveButton.Margin = new Padding(0, 0, 10, 0);
@@ -1015,14 +1032,30 @@ internal sealed class MainForm : Form
         // Dock-Top stacking: add bottom-most visual element first so later
         // Top-docked controls are carved above it (see BuildShell comment).
         page.Controls.Add(footer);
+        page.Controls.Add(footerRule);
         page.Controls.Add(startupCard);
         page.Controls.Add(serverCard);
         return page;
     }
 
-    private static CardPanel CreateTitledCard(string title, int height)
+    private static CardPanel CreateTitledCard(string title, int height, string? subtitle = null)
     {
         var card = new CardPanel { Dock = DockStyle.Top, Height = height, Margin = new Padding(0, 0, 0, 16) };
+
+        if (subtitle is not null)
+        {
+            var subtitleLabel = new Label
+            {
+                Text = subtitle,
+                Font = new Font(Theme.BaseFont.FontFamily, 8.25f),
+                ForeColor = Theme.Muted,
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 0)
+            };
+            card.Controls.Add(subtitleLabel);
+        }
+
         var titleLabel = new Label
         {
             Text = title,
@@ -1030,7 +1063,7 @@ internal sealed class MainForm : Form
             ForeColor = Theme.Text,
             AutoSize = true,
             Dock = DockStyle.Top,
-            Margin = new Padding(0, 0, 0, 12)
+            Margin = new Padding(0, 0, 0, subtitle is null ? 12 : 2)
         };
         card.Controls.Add(titleLabel);
         return card;
@@ -1043,32 +1076,58 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             AutoSize = false,
-            Padding = new Padding(0, 32, 0, 0)
+            Padding = new Padding(0, 24, 0, 0)
         };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180));
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         return table;
     }
 
     private static void AddSettingsRow(TableLayoutPanel table, string label, Control field, int row)
     {
-        table.Controls.Add(new Label { Text = label, AutoSize = true, ForeColor = Theme.Text, Margin = new Padding(3, 10, 16, 3) }, 0, row);
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+        table.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, ForeColor = Theme.Text, Margin = new Padding(3, 10, 16, 3) }, 0, row);
         table.Controls.Add(field, 1, row);
     }
 
     private static void AddSettingsRowWithButton(TableLayoutPanel table, string label, Control field, Control button, int row)
     {
-        var inline = new FlowLayoutPanel
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+
+        var inline = new TableLayoutPanel
         {
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoSize = true,
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            AutoSize = false,
             Margin = new Padding(0)
         };
-        inline.Controls.Add(field);
-        inline.Controls.Add(button);
-        table.Controls.Add(new Label { Text = label, AutoSize = true, ForeColor = Theme.Text, Margin = new Padding(3, 10, 16, 3) }, 0, row);
+        inline.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        inline.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        field.Dock = DockStyle.Fill;
+        field.Margin = new Padding(3, 6, 8, 3);
+        button.Anchor = AnchorStyles.Right;
+        inline.Controls.Add(field, 0, 0);
+        inline.Controls.Add(button, 1, 0);
+
+        table.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, ForeColor = Theme.Text, Margin = new Padding(3, 10, 16, 3) }, 0, row);
         table.Controls.Add(inline, 1, row);
+    }
+
+    private static void AddHelperRow(TableLayoutPanel table, string text, int row)
+    {
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        var helper = new Label
+        {
+            Text = text,
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            Font = new Font(Theme.BaseFont.FontFamily, 8.25f),
+            ForeColor = Theme.Muted,
+            Margin = new Padding(3, 0, 12, 6)
+        };
+        table.Controls.Add(helper, 0, row);
+        table.SetColumnSpan(helper, 2);
     }
 
     private static string SafeDirectoryName(string path)
@@ -1471,6 +1530,138 @@ internal sealed class MainForm : Form
             advancedStatusLabel.Text = "Export Diagnostics: failed.";
             MessageBox.Show(this, ex.Message, "Export Diagnostics", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+}
+
+internal sealed class RuntimeIconButton : Button
+{
+    private bool hovered;
+    private bool pressed;
+
+    public Color ActiveColor { get; set; }
+    public Color DisabledColor { get; set; } = Theme.Muted;
+
+    public RuntimeIconButton(string glyph, Color activeColor)
+    {
+        Text = glyph;
+        ActiveColor = activeColor;
+        Tag = activeColor;
+        Font = new Font("Segoe MDL2 Assets", 13.5f, FontStyle.Regular, GraphicsUnit.Point);
+        FlatStyle = FlatStyle.Flat;
+        FlatAppearance.BorderSize = 0;
+        UseVisualStyleBackColor = false;
+        TextAlign = ContentAlignment.MiddleCenter;
+        Padding = new Padding(0);
+        TabStop = false;
+        Cursor = Cursors.Hand;
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.UserPaint |
+            ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.ResizeRedraw,
+            true);
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        hovered = true;
+        Invalidate();
+        base.OnMouseEnter(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        hovered = false;
+        pressed = false;
+        Invalidate();
+        base.OnMouseLeave(e);
+    }
+
+    protected override void OnMouseDown(MouseEventArgs mevent)
+    {
+        if (Enabled && mevent.Button == MouseButtons.Left)
+        {
+            pressed = true;
+            Invalidate();
+        }
+        base.OnMouseDown(mevent);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs mevent)
+    {
+        pressed = false;
+        Invalidate();
+        base.OnMouseUp(mevent);
+    }
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        hovered = false;
+        pressed = false;
+        Invalidate();
+        base.OnEnabledChanged(e);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        e.Graphics.Clear(Theme.Surface);
+
+        var buttonRect = new Rectangle(7, 6, Width - 14, Height - 13);
+        if (pressed)
+        {
+            buttonRect.Offset(0, 1);
+        }
+
+        if (Enabled && hovered)
+        {
+            using var ambientPath = RoundedRect(new Rectangle(buttonRect.X - 2, buttonRect.Y, buttonRect.Width + 4, buttonRect.Height + 4), 12);
+            using var dropPath = RoundedRect(new Rectangle(buttonRect.X - 1, buttonRect.Y + 5, buttonRect.Width + 2, buttonRect.Height), 12);
+            using var ambientBrush = new SolidBrush(Color.FromArgb(18, 13, 24, 38));
+            using var dropBrush = new SolidBrush(Color.FromArgb(48, 13, 24, 38));
+            e.Graphics.FillPath(ambientBrush, ambientPath);
+            e.Graphics.FillPath(dropBrush, dropPath);
+        }
+
+        var borderColor = Enabled
+            ? (hovered ? Color.FromArgb(86, ActiveColor) : Color.FromArgb(34, 13, 24, 38))
+            : Color.FromArgb(32, Theme.Muted);
+        var fillColor = Enabled
+            ? (hovered ? Color.FromArgb(254, 255, 255) : Color.FromArgb(248, 249, 251))
+            : Color.FromArgb(246, 247, 249);
+
+        using (var buttonPath = RoundedRect(buttonRect, 11))
+        using (var fillBrush = new SolidBrush(fillColor))
+        using (var borderPen = new Pen(borderColor))
+        {
+            e.Graphics.FillPath(fillBrush, buttonPath);
+            e.Graphics.DrawPath(borderPen, buttonPath);
+        }
+
+        var color = Enabled ? ActiveColor : DisabledColor;
+        using var textBrush = new SolidBrush(color);
+        using var iconPath = new GraphicsPath();
+        using var format = StringFormat.GenericTypographic;
+        iconPath.AddString(Text, Font.FontFamily, (int)Font.Style, e.Graphics.DpiY * Font.Size / 72f, Point.Empty, format);
+        var bounds = iconPath.GetBounds();
+        var targetCenter = new PointF(buttonRect.Left + buttonRect.Width / 2f, buttonRect.Top + buttonRect.Height / 2f + (pressed ? 1f : 0f));
+        using var transform = new Matrix();
+        transform.Translate(targetCenter.X - (bounds.Left + bounds.Width / 2f), targetCenter.Y - (bounds.Top + bounds.Height / 2f));
+        iconPath.Transform(transform);
+        e.Graphics.FillPath(textBrush, iconPath);
+    }
+
+    private static GraphicsPath RoundedRect(Rectangle bounds, int radius)
+    {
+        var diameter = radius * 2;
+        var path = new GraphicsPath();
+        path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }
 
