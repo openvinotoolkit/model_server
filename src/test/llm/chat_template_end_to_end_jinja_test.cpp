@@ -38,6 +38,7 @@
 #include "../../llm/chat_template_probe.hpp"
 #include "../../llm/input_workarounds.hpp"
 #include "../../llm/py_jinja_template_processor.hpp"
+#include "../../utils/env_guard.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "../platform_utils.hpp"
@@ -62,7 +63,7 @@ protected:
         TestWithTempDir::SetUp();
         const char* prev = std::getenv("OPENVINO_LOG_LEVEL");
         savedLogLevel = prev ? prev : "";
-        setenv("OPENVINO_LOG_LEVEL", "0", 1);
+        SetEnvironmentVar("OPENVINO_LOG_LEVEL", "0");
         // Copy tokenizer model files to temp dir (required by PyJinjaTemplateProcessor)
         for (const auto& filename : {"openvino_tokenizer.xml", "openvino_tokenizer.bin",
                  "openvino_detokenizer.xml", "openvino_detokenizer.bin"}) {
@@ -76,9 +77,9 @@ protected:
     void TearDown() override {
         servable.reset();
         if (savedLogLevel.empty()) {
-            unsetenv("OPENVINO_LOG_LEVEL");
+            UnSetEnvironmentVar("OPENVINO_LOG_LEVEL");
         } else {
-            setenv("OPENVINO_LOG_LEVEL", savedLogLevel.c_str(), 1);
+            SetEnvironmentVar("OPENVINO_LOG_LEVEL", savedLogLevel);
         }
         TestWithTempDir::TearDown();
     }
