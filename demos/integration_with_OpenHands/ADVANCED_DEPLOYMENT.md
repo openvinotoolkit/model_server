@@ -477,7 +477,7 @@ GPU inference is supported on the following platforms:
 | Native Linux  | ✅ Supported   | Requires Intel GPU runtime and device access  |
 | WSL2          | ✅ Supported   | Requires WSL2 GPU support and `/dev/dxg`      |
 | Windows       | ⚠️ Limited     | GPU plugins available; Docker setup varies     |
-| macOS         | ❌ Unsupported | Intel GPUs not present on Apple hardware      |
+
 
 ## Verifying GPU Availability
 
