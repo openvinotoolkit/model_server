@@ -110,7 +110,7 @@ def get_base_device(device_str):
     E.g. 'GPU:0' -> 'GPU', 'GPU:1' -> 'GPU', 'CPU' -> 'CPU', None -> None.
     For multi-target devices like 'AUTO:GPU,CPU' returns the string unchanged.
     """
-    if device_str is None:
+    if device_str is None or not isinstance(device_str, str):
         return device_str
     if _is_device_with_index(device_str):
         return device_str.split(":", 1)[0]
