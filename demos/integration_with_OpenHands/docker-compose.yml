@@ -7,7 +7,7 @@ services:
     # GPU device access for hardware acceleration.
     # For CPU-only deployments, this device mapping can be removed.
     devices:
-      - /dev/dri:/dev/dri
+      - ${GPU_DEVICE}
     ports:
       - "8000:8000"  # REST API
       - "9000:9000"  # gRPC API
@@ -15,6 +15,8 @@ services:
       # Model cache directory - OVMS will materialize models here on --source_model pull
       # Defaults to ${HOME}/ovms-openhands/models if not set
       - ${MODEL_CACHE_DIR:-./docker/models}:/models:rw
+      # WSL library dependencies for GPU passthrough (harmless on native Linux)
+      - ${WSL_LIBS:-/.nonexistent:/.nonexistent:ro}
     environment:
       # Hugging Face token for gated models.
       HF_TOKEN: ${HF_TOKEN:-}
