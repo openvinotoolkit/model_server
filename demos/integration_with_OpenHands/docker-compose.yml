@@ -9,8 +9,8 @@ services:
     devices:
       - ${GPU_DEVICE}
     ports:
-      - "8000:8000"  # REST API
-      - "9000:9000"  # gRPC API
+      - "${OVMS_REST_PORT:-8000}:8000"  # REST API
+      - "${OVMS_GRPC_PORT:-9000}:9000"  # gRPC API
     volumes:
       # Model cache directory - OVMS will materialize models here on --source_model pull
       # Defaults to ${HOME}/ovms-openhands/models if not set
@@ -20,6 +20,13 @@ services:
     environment:
       # Hugging Face token for gated models.
       HF_TOKEN: ${HF_TOKEN:-}
+      # Proxy configuration (forwarded from host if set)
+      http_proxy: ${http_proxy:-}
+      https_proxy: ${https_proxy:-}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      no_proxy: ${no_proxy:-}
+      NO_PROXY: ${NO_PROXY:-}
     command:
       - --model_repository_path
       - /models
@@ -47,7 +54,7 @@ services:
     depends_on:
       - ovms-llm
     ports:
-      - "3000:3000"  # Web UI
+      - "${OPENHANDS_PORT:-3000}:3000"  # Web UI
     extra_hosts:
       # Allows OpenHands container to reach host services if needed
       - host.docker.internal:host-gateway
@@ -72,6 +79,13 @@ services:
       # Memory limit for OpenHands runtime sandboxes (agent code execution).
       # Adjust based on available host RAM.
       SANDBOX_DOCKER_ARGS: --memory=1536m --memory-swap=1536m
+      # Proxy configuration (forwarded from host if set)
+      http_proxy: ${http_proxy:-}
+      https_proxy: ${https_proxy:-}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      no_proxy: ${no_proxy:-}
+      NO_PROXY: ${NO_PROXY:-}
     volumes:
       # Docker socket for OpenHands to create runtime sandbox containers
       - /var/run/docker.sock:/var/run/docker.sock
