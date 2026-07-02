@@ -359,6 +359,44 @@ Median latency: 20772.09 ms
 Average document length: 10.948 tokens
 ```
 
+## Evaluate transcription accuracy with Open ASR Leaderboard
+
+You can evaluate model accuracy (for example WER/CER) against ASR datasets using the Open ASR Leaderboard tooling.
+
+1. Clone the repository:
+```bash
+git clone https://github.com/huggingface/open_asr_leaderboard.git
+cd open_asr_leaderboard
+```
+
+2. Apply OVMS API compatibility patch:
+```bash
+git apply ../external/open_asr_leaderboard.patch
+```
+
+If you cloned the leaderboard repository in a different location, adjust the patch path accordingly.
+
+3. Set OpenAI-compatible endpoint variables for OVMS:
+```bash
+export OPENAI_BASE_URL=http://localhost:8000/v3
+export OPENAI_API_KEY="unused"
+```
+
+4. Install dependencies:
+```bash
+pip install -r requirements/requirements.txt -r requirements-api.txt torchcodec
+```
+
+5. Run evaluation example:
+```bash
+PYTHONPATH=. python api/run_eval.py \
+  --model_name openai/qwen \
+  --dataset_path "hf-audio/esb-datasets-test-only-sorted" \
+  --dataset "ami"
+```
+
+You can replace `ami` with other datasets supported by the leaderboard configuration.
+
 ## Translation
 To test translations endpoint we first need to prepare audio file with speech in language other than English, e.g. Spanish. To generate such sample we will use finetuned version of microsoft/speecht5_tts model.
 
