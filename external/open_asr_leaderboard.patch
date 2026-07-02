@@ -1,0 +1,45 @@
+From 1137e296a52c795ebb902e0080eea4d4bdc5770d Mon Sep 17 00:00:00 2001
+From: Michal Kulakowski <michalkulakowski@intel.com>
+Date: Thu, 2 Jul 2026 16:07:08 +0200
+Subject: [PATCH] Migrate OpenAI STT from deprecated Audio.transcribe to
+ audio.transcriptions.create
+
+---
+ api/providers/openai_provider.py | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/api/providers/openai_provider.py b/api/providers/openai_provider.py
+index 9f98a81..88a753b 100644
+--- a/api/providers/openai_provider.py
++++ b/api/providers/openai_provider.py
+@@ -2,7 +2,7 @@
+ from io import BytesIO
+ from typing import Optional
+ 
+-import openai
++from openai import OpenAI
+ 
+ from . import APIProvider, register
+ 
+@@ -17,10 +17,11 @@ def transcribe(
+         use_url: bool = False,
+         language: str = "en",
+     ) -> str:
++        client = OpenAI()
+         if use_url:
+             response = requests.get(sample["row"]["audio"][0]["src"])
+             audio_data = BytesIO(response.content)
+-            response = openai.Audio.transcribe(
++            response = client.audio.transcriptions.create(
+                 model=model_variant,
+                 file=audio_data,
+                 response_format="text",
+@@ -29,7 +30,7 @@ def transcribe(
+             )
+         else:
+             with open(audio_file_path, "rb") as audio_file:
+-                response = openai.Audio.transcribe(
++                response = client.audio.transcriptions.create(
+                     model=model_variant,
+                     file=audio_file,
+                     response_format="text",
