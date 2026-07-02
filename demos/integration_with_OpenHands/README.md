@@ -49,11 +49,34 @@ For detailed request flow and configuration requirements, see [ADVANCED_DEPLOYME
 
 | Port | Component | Purpose                     |
 |------|-----------|-----------------------------|
-| 8000 | OVMS      | OpenAI-compatible REST API  |
-| 9000 | OVMS      | gRPC API (not used here)    |
-| 3000 | OpenHands | Web UI                      |
+| 8000 | OVMS      | OpenAI-compatible REST API (default)  |
+| 9000 | OVMS      | gRPC API (not used here, default)    |
+| 3000 | OpenHands | Web UI (default)                      |
 
-Ensure these ports are available on your host.
+The default published ports are 8000 (OVMS REST), 9000 (OVMS gRPC), and 3000 (OpenHands). You can override these defaults by setting environment variables before running the deployment script:
+
+```bash
+export OVMS_REST_PORT=18000
+export OVMS_GRPC_PORT=19000
+export OPENHANDS_PORT=3300
+
+./scripts/deploy_model_ovms.sh OpenVINO/Qwen3-8b-int8-ov
+```
+
+Ensure the required ports are available on your host.
+
+### Proxy Support
+
+In environments requiring HTTP/HTTPS proxies, export standard proxy environment variables before running the deployment script:
+
+```bash
+export http_proxy=http://your-proxy:port
+export https_proxy=http://your-proxy:port
+
+./scripts/deploy_model_ovms.sh OpenVINO/Qwen3-8b-int8-ov
+```
+
+The deployment script automatically forwards these variables to the Docker containers.
 
 ---
 
@@ -135,6 +158,8 @@ For manual Docker deployment, see [ADVANCED_DEPLOYMENT.md](ADVANCED_DEPLOYMENT.m
 ---
 
 ## Verifying the Deployment
+
+> **Note:** The examples below use the default published ports (8000 for OVMS, 3000 for OpenHands). If you have overridden `OVMS_REST_PORT` or `OPENHANDS_PORT`, substitute those values in the examples.
 
 Verify the integration in two stages: first OVMS directly, then OpenHands.
 
@@ -236,7 +261,7 @@ docker compose down
 
 **Model status is not `AVAILABLE`**
 
-Check `curl -s http://localhost:8000/v1/config`. Possible causes:
+Check `curl -s http://localhost:8000/v1/config` (default port; override with `OVMS_REST_PORT`). Possible causes:
 - Model still downloading (wait longer for large models)
 - Out of memory (check host RAM; model may be too large)
 - Tool parser mismatch (verify `TOOL_PARSER` matches model family)
@@ -245,8 +270,8 @@ Check `curl -s http://localhost:8000/v1/config`. Possible causes:
 
 Possible causes:
 - OVMS container not running (`docker ps`)
-- Wrong port (verify `8000:8000` mapping)
-- Firewall blocking port 8000
+- Wrong port mapping (verify the published OVMS REST port matches your configured `OVMS_REST_PORT` setting)
+- Firewall blocking the configured port
 
 ### OpenHands Container Issues
 

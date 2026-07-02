@@ -78,6 +78,19 @@ export TARGET_DEVICE="CPU"
 export TOOL_PARSER="hermes3"
 export MODEL_CACHE_DIR="${HOME}/ovms-openhands/models"
 export HF_TOKEN="${HF_TOKEN:-}"
+
+# Published ports (optional - defaults shown)
+export OVMS_REST_PORT="${OVMS_REST_PORT:-8000}"
+export OVMS_GRPC_PORT="${OVMS_GRPC_PORT:-9000}"
+export OPENHANDS_PORT="${OPENHANDS_PORT:-3000}"
+
+# Proxy configuration (optional - forward to containers if set)
+export http_proxy="${http_proxy:-}"
+export https_proxy="${https_proxy:-}"
+export HTTP_PROXY="${HTTP_PROXY:-}"
+export HTTPS_PROXY="${HTTPS_PROXY:-}"
+export no_proxy="${no_proxy:-}"
+export NO_PROXY="${NO_PROXY:-}"
 ```
 
 ### Step 2: Create the model cache directory
@@ -118,8 +131,8 @@ docker network create ovms-net 2>/dev/null || true
 docker run -d \
     --name ovms-llm \
     --network ovms-net \
-    --publish 8000:8000 \
-    --publish 9000:9000 \
+    --publish ${OVMS_REST_PORT}:8000 \
+    --publish ${OVMS_GRPC_PORT}:9000 \
     --device /dev/dri:/dev/dri \
     --volume "$MODEL_CACHE_DIR:/models:rw" \
     --env HF_TOKEN="${HF_TOKEN:-}" \
@@ -144,7 +157,7 @@ This command downloads the model from Hugging Face (if not cached), converts to 
 docker run -d \
     --name openhands \
     --network ovms-net \
-    --publish 3000:3000 \
+    --publish ${OPENHANDS_PORT}:3000 \
     --add-host host.docker.internal:host-gateway \
     --volume /var/run/docker.sock:/var/run/docker.sock \
     --volume "$(pwd)/.openhands:/.openhands" \
@@ -168,7 +181,7 @@ OVMS needs time to download and initialize the model. Check the status:
 
 ```bash
 # Poll until model is AVAILABLE
-curl -sf http://localhost:8000/v1/config | grep AVAILABLE
+curl -sf http://localhost:${OVMS_REST_PORT}/v1/config | grep AVAILABLE
 ```
 
 Or check container logs:
@@ -204,11 +217,11 @@ Provides GPU device access. For CPU-only deployments, this can be removed.
 **Port publishing:**
 ```yaml
 ports:
-  - "8000:8000"  # REST API
-  - "9000:9000"  # gRPC API
+  - "${OVMS_REST_PORT}:8000"  # REST API (default: 8000)
+  - "${OVMS_GRPC_PORT}:9000"  # gRPC API (default: 9000)
 ```
 
-Exposes the OpenAI-compatible REST API (8000) and gRPC API (9000).
+Exposes the OpenAI-compatible REST API and gRPC API. The published host ports are configurable through environment variables (`OVMS_REST_PORT`, `OVMS_GRPC_PORT`), with defaults of 8000 and 9000 respectively.
 
 **Volume mount:**
 ```yaml
@@ -256,7 +269,7 @@ openhands:
 **Port publishing:**
 ```yaml
 ports:
-  - "3000:3000"  # Web UI
+  - "${OPENHANDS_PORT}:3000"  # Web UI (default: 3000)
 ```
 
 **Volume mounts:**
@@ -359,7 +372,7 @@ docker compose -f "$COMPOSE_FILE" up -d
 
 **7. Waits for health**
 
-Polls `http://localhost:8000/v1/config` until the model reports `AVAILABLE` (up to 3 minutes).
+Polls `http://localhost:${OVMS_REST_PORT}/v1/config` until the model reports `AVAILABLE` (up to 3 minutes).
 
 **8. Prints the manual equivalent**
 
@@ -581,7 +594,7 @@ Available devices for Open VINO: CPU, GPU
 Verify the model reaches `AVAILABLE` status:
 
 ```bash
-curl -s http://localhost:8000/v1/config | grep AVAILABLE
+curl -s http://localhost:${OVMS_REST_PORT}/v1/config | grep AVAILABLE
 ```
 
 Should return output containing `AVAILABLE`.
@@ -647,7 +660,7 @@ Verify GPU acceleration is working by comparing CPU and GPU performance with ide
 **1. Run a test prompt on CPU:**
 
 ```bash
-curl -X POST http://localhost:8000/v3/chat/completions \
+curl -X POST http://localhost:${OVMS_REST_PORT}/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "qwen3-8b-int8-ov",
@@ -683,7 +696,7 @@ GPU acceleration is generally expected to improve throughput and reduce response
 
 ```bash
 # Time the request
-time curl -X POST http://localhost:8000/v3/chat/completions \
+time curl -X POST http://localhost:${OVMS_REST_PORT}/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "qwen3-8b-int8-ov",

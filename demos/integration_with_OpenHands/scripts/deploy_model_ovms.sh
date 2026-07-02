@@ -30,9 +30,20 @@
 #   MODEL_CACHE_DIR   Override model cache directory
 #   TARGET_DEVICE     Override target device
 #   TOOL_PARSER       Override tool parser
+#   OVMS_REST_PORT    OVMS REST API published port (default: 8000)
+#   OVMS_GRPC_PORT    OVMS gRPC API published port (default: 9000)
+#   OPENHANDS_PORT    OpenHands Web UI published port (default: 3000)
+#   http_proxy        HTTP proxy for container network access
+#   https_proxy       HTTPS proxy for container network access
+#   HTTP_PROXY        HTTP proxy (uppercase variant)
+#   HTTPS_PROXY       HTTPS proxy (uppercase variant)
+#   no_proxy          No-proxy list for container network access
+#   NO_PROXY          No-proxy list (uppercase variant)
 #
 # The script exports environment variables consumed by docker-compose.yml:
 #   MODEL_ID, LOCAL_NAME, TARGET_DEVICE, TOOL_PARSER, MODEL_CACHE_DIR, GPU_DEVICE, WSL_LIBS
+#   OVMS_REST_PORT, OVMS_GRPC_PORT, OPENHANDS_PORT
+#   http_proxy, https_proxy, HTTP_PROXY, HTTPS_PROXY, no_proxy, NO_PROXY
 
 set -euo pipefail
 
@@ -47,7 +58,11 @@ DEFAULT_MODEL_CACHE_DIR="${HOME}/ovms-openhands/models"
 OVMS_CONTAINER_NAME="ovms-llm"
 OPENHANDS_CONTAINER_NAME="openhands"
 DOCKER_NETWORK="ovms-net"
-OVMS_REST_PORT="8000"
+
+# Configurable ports with defaults (can be overridden via environment variables)
+OVMS_REST_PORT="${OVMS_REST_PORT:-8000}"
+OVMS_GRPC_PORT="${OVMS_GRPC_PORT:-9000}"
+OPENHANDS_PORT="${OPENHANDS_PORT:-3000}"
 
 # Tool parser mapping: model family patterns to parser names
 declare -A TOOL_PARSERS=(
@@ -254,6 +269,31 @@ export_runtime_configuration() {
     export MODEL_CACHE_DIR
     export HF_TOKEN="${HF_TOKEN:-}"
 
+    # Export configurable ports
+    export OVMS_REST_PORT
+    export OVMS_GRPC_PORT
+    export OPENHANDS_PORT
+
+    # Export proxy variables if set (forward to containers)
+    if [[ -n "${http_proxy:-}" ]]; then
+        export http_proxy
+    fi
+    if [[ -n "${https_proxy:-}" ]]; then
+        export https_proxy
+    fi
+    if [[ -n "${HTTP_PROXY:-}" ]]; then
+        export HTTP_PROXY
+    fi
+    if [[ -n "${HTTPS_PROXY:-}" ]]; then
+        export HTTPS_PROXY
+    fi
+    if [[ -n "${no_proxy:-}" ]]; then
+        export no_proxy
+    fi
+    if [[ -n "${NO_PROXY:-}" ]]; then
+        export NO_PROXY
+    fi
+
     # Select OVMS Docker image based on target device
     case "$TARGET_DEVICE" in
         GPU)
@@ -282,6 +322,9 @@ export_runtime_configuration() {
     echo "  TOOL_PARSER:      $TOOL_PARSER"
     echo "  MODEL_CACHE_DIR:  $MODEL_CACHE_DIR"
     echo "  HF_TOKEN:         ${HF_TOKEN:+<set>}"
+    echo "  OVMS_REST_PORT:   $OVMS_REST_PORT"
+    echo "  OVMS_GRPC_PORT:   $OVMS_GRPC_PORT"
+    echo "  OPENHANDS_PORT:   $OPENHANDS_PORT"
 }
 
 ################################################################################
@@ -365,7 +408,7 @@ print_manual_equivalent() {
     echo "  docker compose -f $COMPOSE_FILE up -d"
     echo ""
     echo "  # Wait for OVMS to become ready"
-    echo "  curl -sf http://localhost:8000/v1/config | grep AVAILABLE"
+    echo "  curl -sf http://localhost:\${OVMS_REST_PORT:-8000}/v1/config | grep AVAILABLE"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
@@ -427,11 +470,11 @@ main() {
     echo ""
     echo "Services running:"
     echo "  - OVMS:        http://localhost:${OVMS_REST_PORT}/v3"
-    echo "  - OpenHands:   http://localhost:3000"
+    echo "  - OpenHands:   http://localhost:${OPENHANDS_PORT}"
     echo ""
     echo "Next steps (from README.md):"
     echo "  1. Verify OVMS: curl http://localhost:${OVMS_REST_PORT}/v3/models"
-    echo "  2. Open OpenHands: http://localhost:3000"
+    echo "  2. Open OpenHands: http://localhost:${OPENHANDS_PORT}"
     echo "  3. Create an agent task to test the integration"
     echo ""
 }
