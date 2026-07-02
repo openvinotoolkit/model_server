@@ -44,12 +44,12 @@ mkdir models
 ::: {tab-item} GPU
 :sync: GPU
 ```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --kv_cache_precision u4 --target_device GPU --cache_size 5 --max_num_batched_tokens 4096
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov --task text_generation --kv_cache_precision u4 --target_device GPU --cache_size 5 --max_num_batched_tokens 4096
 ```
 :::
 :::{tab-item} NPU
 ```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --max_prompt_len 16000 --tool_parser hermes3 --task text_generation --target_device NPU
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --max_prompt_len 16000 --task text_generation --target_device NPU
 ```
 :::
 ::::
