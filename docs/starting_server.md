@@ -106,7 +106,7 @@ hf download OpenVINO/Qwen3-0.6B-int4-ov --local-dir Qwen3-0.6B-int4-ov
 
 ```bash
 docker run -d --rm -v ${PWD}/Qwen3-0.6B-int4-ov:/model -p 8000:8000 openvino/model_server:latest \
---model_path /model/ --model_name qwen3-0.6 --rest_port 8000 --task text_generation --target_device CPU --tool_parser hermes3 --reasoning_parser qwen3
+--model_path /model/ --model_name qwen3-0.6 --rest_port 8000 --task text_generation --target_device CPU
 ```
 
 - Expose the container ports to **open ports** on your host or virtual machine. 
@@ -115,7 +115,7 @@ docker run -d --rm -v ${PWD}/Qwen3-0.6B-int4-ov:/model -p 8000:8000 openvino/mod
 :::{tab-item} On Baremetal Host
 :sync: baremetal
 ```text
-ovms --model_path Qwen3-0.6B-int4-ov --model_name qwen3-0.6 --rest_port 8000 --task text_generation --target_device CPU --tool_parser hermes3 --reasoning_parser qwen3
+ovms --model_path Qwen3-0.6B-int4-ov --model_name qwen3-0.6 --rest_port 8000 --task text_generation --target_device CPU
 ```
 :::
 ::::
