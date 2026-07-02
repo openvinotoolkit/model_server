@@ -508,7 +508,8 @@ def get_marker_args(metafunc, marker_name):
 
 def get_ids_with_target_device(parameter, func):
     # return id for target_device
-    if parameter in vars(TargetDevice).values():
+    if parameter in vars(TargetDevice).values() or (isinstance(parameter, str) and get_base_device(parameter)
+                                                    in vars(TargetDevice).values()):
         return CURRENT_TARGET_DEVICE_DICT.get(parameter, parameter)
     # return custom id
     return func(parameter)
