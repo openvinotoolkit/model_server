@@ -415,7 +415,7 @@ TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithLongVersion) {
 }
 
 TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithEscapedPath) {
-    std::string request = "/v2/models/..iO!.0E/versions/1";
+    std::string request = "/v2/models/..iO!.0?E*/versions/1";
     ovms::HttpRequestComponents comp;
 
     ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);

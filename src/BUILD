@@ -673,6 +673,8 @@ ovms_cc_library(
         "libovmsstatus",
         "//src/dags:pipelinedefinitionstatus",
         "//src/metrics:libovmsmetrics",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
     ],
 )
 

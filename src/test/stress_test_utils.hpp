@@ -342,49 +342,6 @@ static const char* stressTestPipelineOneDummyConfigAddNewPipeline = R"(
             ]
     ]
 })";
-[[maybe_unused]] static const char* stressTestPipelineOneDummyConfigSpecificVersionUsed = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "version": 1,
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "request",
-                               "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "new_dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                         "data_item": "new_dummy_output"}
-                }
-            ]
-        }
-    ]
-})";
-
 static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumRemovedLibraryConfig = R"(
 {
     "custom_node_library_config_list": [
@@ -543,73 +500,6 @@ static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChoos
             "outputs": [
                 {"custom_dummy_output": {"node_name": "choose_max",
                                      "data_item": "maximum_tensor_alias"}
-                }
-            ]
-        }
-    ]
-})";
-
-[[maybe_unused]] static const char* stressPipelineCustomNodeAddOneThenDummy = R"(
-{
-    "custom_node_library_config_list": [
-        {
-            "name": "lib_add_one",
-            "base_path": "/ovms/bazel-bin/src/libcustom_node_add_one.so"
-        }
-    ],
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"all": {}},
-                "nireq": 20,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "lib_add_one",
-                    "type": "custom",
-                    "params": {
-                        "output_queue_size": "20",
-                        "info_queue_size": "20",
-                        "add_number": "1",
-                        "sub_number": "0"
-                    },
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "output_numbers",
-                         "alias": "custom_node_output"}
-                    ]
-                },
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "custom_node",
-                               "data_item": "custom_node_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                     "data_item": "dummy_output"}
                 }
             ]
         }

@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include "config_status_utils.hpp"
 
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,6 +28,8 @@
 #include "model_instance_provider.hpp"
 #include "modelversionstatus.hpp"
 #include "servable_name_checker.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #include "single_version_servable_definition.hpp"
 #include "status.hpp"
 
@@ -84,6 +85,15 @@ Status getAllModelsStatuses(ModelsStatuses& modelsStatuses, ModelInstanceProvide
     return StatusCode::OK;
 }
 
+// Returns the JSON-escaped content of a string value (without surrounding quotes).
+static std::string jsonEscapeStringValue(const std::string& s) {
+    rapidjson::StringBuffer sb;
+    rapidjson::Writer<rapidjson::StringBuffer> w(sb);
+    w.String(s.c_str(), static_cast<rapidjson::SizeType>(s.size()));
+    // w.String() writes "value" including surrounding quotes — strip them.
+    return std::string(sb.GetString() + 1, sb.GetSize() - 2);
+}
+
 Status serializeModelsStatuses2Json(const ModelsStatuses& modelsStatuses, std::string& output) {
     if (modelsStatuses.empty()) {
         output = "{}";
@@ -100,7 +110,7 @@ Status serializeModelsStatuses2Json(const ModelsStatuses& modelsStatuses, std::s
         }
         firstModel = false;
 
-        outputTmp += "\"" + modelName + "\" : \n{\n \"model_version_status\": [";
+        outputTmp += "\"" + jsonEscapeStringValue(modelName) + "\" : \n{\n \"model_version_status\": [";
 
         if (versions.empty()) {
             outputTmp += "]\n}";
@@ -118,7 +128,7 @@ Status serializeModelsStatuses2Json(const ModelsStatuses& modelsStatuses, std::s
                 outputTmp += "   \"state\": \"" + ModelVersionStateToString(v.state) + "\",\n";
                 outputTmp += "   \"status\": {\n";
                 outputTmp += "    \"error_code\": \"" + ModelVersionStatusErrorCodeToString(v.errorCode) + "\",\n";
-                outputTmp += "    \"error_message\": \"" + v.errorMessage + "\"\n";
+                outputTmp += "    \"error_message\": \"" + jsonEscapeStringValue(v.errorMessage) + "\"\n";
                 outputTmp += "   }\n";
                 outputTmp += "  }";
             }
@@ -128,7 +138,6 @@ Status serializeModelsStatuses2Json(const ModelsStatuses& modelsStatuses, std::s
 
     outputTmp += "\n}";
     output = std::move(outputTmp);
-
     return StatusCode::OK;
 }
 

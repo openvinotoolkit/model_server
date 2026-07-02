@@ -37,7 +37,7 @@ class KFSInferenceServiceImpl;
 class Server;
 class ModelManager;
 
-// note since removal of TFS V3 endpounts (from OpenAI are now also accepted as V1)
+// note since removal of TFS V3 endpoints (from OpenAI are now also accepted as V1)
 enum RequestType { ConfigReload,
     ConfigStatus,
     KFS_GetModelReady,
