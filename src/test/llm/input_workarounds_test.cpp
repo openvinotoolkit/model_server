@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,7 +50,11 @@ TEST_F(InputWorkaroundsTest, funcArgsToObjectConvertsStringArgs) {
 
     input_workarounds::funcArgsToObjectHistory(history);
 
-    auto args = history[1]["tool_calls"][0]["function"]["arguments"];
+    ASSERT_GE(history.size(), 2u);
+    auto toolCalls = history[1]["tool_calls"];
+    ASSERT_TRUE(toolCalls.is_array());
+    ASSERT_GE(toolCalls.size(), 1u);
+    auto args = toolCalls[0]["function"]["arguments"];
     ASSERT_TRUE(args.is_object());
     EXPECT_EQ(args["city"].get_string(), "London");
     EXPECT_EQ(args["units"].get_string(), "celsius");
@@ -66,11 +70,16 @@ TEST_F(InputWorkaroundsTest, funcArgsToObjectHandlesMultipleToolCalls) {
 
     input_workarounds::funcArgsToObjectHistory(history);
 
-    auto args1 = history[0]["tool_calls"][0]["function"]["arguments"];
+    ASSERT_GE(history.size(), 1u);
+    auto toolCalls = history[0]["tool_calls"];
+    ASSERT_TRUE(toolCalls.is_array());
+    ASSERT_GE(toolCalls.size(), 2u);
+
+    auto args1 = toolCalls[0]["function"]["arguments"];
     ASSERT_TRUE(args1.is_object());
     EXPECT_EQ(args1.to_json_string(), R"({"a":1})");
 
-    auto args2 = history[0]["tool_calls"][1]["function"]["arguments"];
+    auto args2 = toolCalls[1]["function"]["arguments"];
     ASSERT_TRUE(args2.is_object());
     EXPECT_EQ(args2.to_json_string(), R"({"b":true})");
 }
@@ -84,7 +93,11 @@ TEST_F(InputWorkaroundsTest, funcArgsToObjectSkipsAlreadyObjectArgs) {
 
     input_workarounds::funcArgsToObjectHistory(history);
 
-    auto args = history[0]["tool_calls"][0]["function"]["arguments"];
+    ASSERT_GE(history.size(), 1u);
+    auto toolCalls = history[0]["tool_calls"];
+    ASSERT_TRUE(toolCalls.is_array());
+    ASSERT_GE(toolCalls.size(), 1u);
+    auto args = toolCalls[0]["function"]["arguments"];
     ASSERT_TRUE(args.is_object());
     EXPECT_EQ(args["key"].get_string(), "value");
 }
@@ -98,6 +111,7 @@ TEST_F(InputWorkaroundsTest, funcArgsToObjectSkipsInvalidJsonString) {
 
     input_workarounds::funcArgsToObjectHistory(history);
 
+    ASSERT_GE(history.size(), 1u);
     auto args = history[0]["tool_calls"][0]["function"]["arguments"];
     EXPECT_TRUE(args.is_string());
 }
@@ -109,6 +123,7 @@ TEST_F(InputWorkaroundsTest, funcArgsToObjectNoopWithoutToolCalls) {
 
     input_workarounds::funcArgsToObjectHistory(history);
 
+    ASSERT_GE(history.size(), 1u);
     EXPECT_EQ(history[0]["content"].get_string(), "hello");
 }
 
@@ -123,6 +138,7 @@ TEST_F(InputWorkaroundsTest, ensureNonNullContentSetsNullToEmpty) {
 
     input_workarounds::ensureNonNullContentHistory(history);
 
+    ASSERT_GE(history.size(), 1u);
     ASSERT_TRUE(history[0]["content"].is_string());
     EXPECT_EQ(history[0]["content"].get_string(), "");
 }
@@ -136,6 +152,7 @@ TEST_F(InputWorkaroundsTest, ensureNonNullContentAddsMissingContent) {
 
     input_workarounds::ensureNonNullContentHistory(history);
 
+    ASSERT_GE(history.size(), 1u);
     EXPECT_TRUE(history[0].contains("content"));
     ASSERT_TRUE(history[0]["content"].is_string());
     EXPECT_EQ(history[0]["content"].get_string(), "");
@@ -150,6 +167,7 @@ TEST_F(InputWorkaroundsTest, ensureNonNullContentPreservesExistingString) {
 
     input_workarounds::ensureNonNullContentHistory(history);
 
+    ASSERT_GE(history.size(), 1u);
     ASSERT_TRUE(history[0]["content"].is_string());
     EXPECT_EQ(history[0]["content"].get_string(), "some text");
 }
@@ -162,6 +180,7 @@ TEST_F(InputWorkaroundsTest, ensureNonNullContentSkipsMessagesWithoutToolCalls) 
     input_workarounds::ensureNonNullContentHistory(history);
 
     // User message without tool_calls should not be modified
+    ASSERT_GE(history.size(), 1u);
     EXPECT_TRUE(history[0]["content"].is_null());
 }
 
@@ -179,6 +198,7 @@ TEST_F(InputWorkaroundsTest, applyToHistoryAppliesObjectArgsWhenRequired) {
 
     input_workarounds::applyToHistory(caps, history);
 
+    ASSERT_GE(history.size(), 1u);
     auto args = history[0]["tool_calls"][0]["function"]["arguments"];
     ASSERT_TRUE(args.is_object());
     EXPECT_EQ(args.to_json_string(), R"({"x":42})");
@@ -196,6 +216,7 @@ TEST_F(InputWorkaroundsTest, applyToHistoryAppliesNonNullContentWhenRequired) {
 
     input_workarounds::applyToHistory(caps, history);
 
+    ASSERT_GE(history.size(), 1u);
     ASSERT_TRUE(history[0]["content"].is_string());
     EXPECT_EQ(history[0]["content"].get_string(), "");
 }
@@ -230,6 +251,7 @@ TEST_F(InputWorkaroundsTest, applyToHistoryAppliesBothWorkarounds) {
     input_workarounds::applyToHistory(caps, history);
 
     // Arguments should be converted to object
+    ASSERT_GE(history.size(), 1u);
     auto args = history[0]["tool_calls"][0]["function"]["arguments"];
     ASSERT_TRUE(args.is_object());
     // Content should be non-null

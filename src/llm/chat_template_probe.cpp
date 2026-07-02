@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@
 
 namespace ovms {
 
-bool probeChatTemplateBasicRender(ov::genai::Tokenizer& tokenizer) {
+bool probeChatTemplateBasicRenderMinja(ov::genai::Tokenizer& tokenizer) {
     if (tokenizer.get_chat_template().empty()) {
         return true;
     }
@@ -107,7 +107,6 @@ static bool analyzeProbeResults(bool strOk, const std::string& strOut,
     if (strArgsFailed || objArgsFailed) {
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Dry-run probe: template silently failed to render tool calls");
         caps.supportsToolCalls = false;
-        caps.supportsTools = false;
         return false;
     }
 
@@ -167,7 +166,7 @@ bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
 
 #if (PYTHON_DISABLE == 0)
 
-bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, const std::string& modelsPath, ChatTemplateCaps& caps) {
+bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, ChatTemplateCaps& caps) {
     if (!caps.supportsToolCalls) {
         return true;
     }

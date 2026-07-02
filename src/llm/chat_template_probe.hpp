@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,25 +27,23 @@
 namespace ovms {
 
 // Probes whether a chat template can render a basic user/assistant exchange.
-// Returns false if minja silently fails (e.g. unsupported Jinja extensions like {%- generation -%}).
-// Should be called before tool-specific probing — if this fails, the template is broken.
-bool probeChatTemplateBasicRender(ov::genai::Tokenizer& tokenizer);
+// Returns false if minja silently fails.
+// Should be called before tool-specific probing — if this fails,
+// the template is completely broken even for non-agentic use cases.
+bool probeChatTemplateBasicRenderMinja(ov::genai::Tokenizer& tokenizer);
 
-// Probes a chat template by dry-running it with synthetic tool_call inputs
-// to empirically detect whether the template requires object arguments.
-// Updates caps.requiresObjectArguments based on probe results.
-// Only performs probing if caps.supportsToolCalls is true.
-// Returns false if minja silently failed to render tool calls (template unsupported).
+// Probes a chat template by dry-running it with synthetic inputs
+// to empirically detect whether the template requires special input workarounds.
+// Updates caps parameter based on probe results.
+// Only performs probing if caps.supportsToolCalls is true. TODO: do we need supportsToolCalls?
+// Returns false if minja silently fails to render (template unsupported).
 bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
 
 #if (PYTHON_DISABLE == 0)
 class PyJinjaTemplateProcessor;
 
-// Probes a chat template via Python Jinja by dry-running it with synthetic tool_call inputs.
-// Updates caps.requiresObjectArguments based on probe results.
-// Only performs probing if caps.supportsToolCalls is true.
-// Returns false if Jinja silently failed to render tool calls (template unsupported).
-bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, const std::string& modelsPath, ChatTemplateCaps& caps);
+// The same, but for Jinja.
+bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, ChatTemplateCaps& caps);
 #endif
 
 }  // namespace ovms

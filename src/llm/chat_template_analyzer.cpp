@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,6 @@ static bool contains(const std::string& haystack, const std::string& needle) {
     return haystack.find(needle) != std::string::npos;
 }
 
-// TODO: remove comments before analysis
-// TODO: expect GenAI to fix bug + dry-runs on separate threads?
 ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& templateSource) {
     ChatTemplateAnalysisResult result;
     if (templateSource.empty()) {
@@ -34,21 +32,17 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     // GPT-OSS detection — must be before other checks as it has a unique marker
     if (contains(templateSource, "<|channel|>")) {
         result.detectedToolParser = "gptoss";
-        result.detectedReasoningParser = "gptoss";
+        result.detectedReasoningParser = "gptoss";  // gptoss reasoning is tied to its own parser for reasoning (harmony format)
         result.caps.supportsToolCalls = true;
-        result.caps.supportsTools = true;
-        result.caps.supportsToolResponses = true;
         return result;
     }
 
     // Gemma4 detection
     if (contains(templateSource, "'<|tool_call>call:'") || contains(templateSource, "<|tool_call>call:")) {
         result.detectedToolParser = "gemma4";
-        result.detectedReasoningParser = "gemma4";
+        result.detectedReasoningParser = "gemma4";  // gemma is always tied to its own parser for reasoning
         result.caps.supportsToolCalls = true;
-        result.caps.supportsTools = true;
-        result.caps.supportsToolResponses = true;
-        result.caps.requiresObjectArguments = true;
+        // result.caps.requiresObjectArguments = true;  // we know that gemma4 requires it, but let dry-run do its job
         return result;
     }
 
@@ -56,8 +50,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "<parameter=") && contains(templateSource, "</parameter>") && contains(templateSource, "<function=")) {
         result.detectedToolParser = "qwen3coder";
         result.caps.supportsToolCalls = true;
-        result.caps.supportsTools = true;
-        result.caps.supportsToolResponses = true;
         // Check for reasoning support (think tags)
         if (contains(templateSource, "<think>") || contains(templateSource, "</think>")) {
             result.detectedReasoningParser = "qwen3";
@@ -65,12 +57,11 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
+    // TODO: It does not work for LFM2, but only for LFM2.5? Both use the same parsers
     // LFM2 detection
     if (contains(templateSource, "<|assistant_tool_call|>") || contains(templateSource, "<|tool_call_start|>")) {
         result.detectedToolParser = "lfm2";
         result.caps.supportsToolCalls = true;
-        result.caps.supportsTools = true;
-        result.caps.supportsToolResponses = true;
         return result;
         // TODO: Support reasoning after Pawel adds reasoning parser for it
     }
@@ -79,8 +70,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "functools")) {
         result.detectedToolParser = "phi4";
         result.caps.supportsToolCalls = true;
-        result.caps.supportsTools = true;
-        result.caps.supportsToolResponses = true;
         return result;
     }
 
@@ -88,8 +77,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "[TOOL_CALLS]") && contains(templateSource, "[ARGS]")) {
         result.detectedToolParser = "devstral";
         result.caps.supportsToolCalls = true;
-        result.caps.supportsTools = true;
-        result.caps.supportsToolResponses = true;
         return result;
     }
 
@@ -97,8 +84,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "[TOOL_CALLS]") || (contains(templateSource, "[AVAILABLE_TOOLS]") && contains(templateSource, "[/AVAILABLE_TOOLS]"))) {
         result.detectedToolParser = "mistral";
         result.caps.supportsToolCalls = true;
-        result.caps.supportsTools = true;
-        result.caps.supportsToolResponses = true;
         return result;
     }
 
@@ -106,9 +91,7 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "<|python_tag|>")) {
         result.detectedToolParser = "llama3";
         result.caps.supportsToolCalls = true;
-        result.caps.supportsTools = true;
-        result.caps.supportsToolResponses = true;
-        result.caps.requiresNonNullContent = true;
+        // result.caps.requiresNonNullContent = true;  // TODO: we know that llama3 requires it, but let dry-run do its job
         return result;
     }
 
@@ -116,8 +99,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "<tool_call>") && contains(templateSource, "</tool_call>")) {
         result.detectedToolParser = "hermes3";
         result.caps.supportsToolCalls = true;
-        result.caps.supportsTools = true;
-        result.caps.supportsToolResponses = true;
         // Check for reasoning support (think tags in Qwen3)
         if (contains(templateSource, "<think>") || contains(templateSource, "content.split('</think>')")) {
             result.detectedReasoningParser = "qwen3";

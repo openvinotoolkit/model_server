@@ -62,6 +62,7 @@ static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template
 // template behavior rather than relying solely on string pattern matching.
 // Probes for:
 //   - requiresObjectArguments (workaround: string→object conversion of tool_call arguments)
+//   - requiresNonNullContent (workaround: ensure content="" rather than content=null for tool_call messages)
 static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServableProperties> properties) {
     if (properties->tokenizer.get_chat_template().empty()) {
         return;
@@ -72,8 +73,8 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 
 #if (PYTHON_DISABLE == 0)
     if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->templateProcessor.chatTemplate != nullptr) {
-        if (!probeChatTemplateCapsJinja(properties->templateProcessor, properties->modelsPath, properties->chatTemplateCaps)) {
-            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Disabling tool call support: Jinja cannot render this template's tool calls correctly");
+        if (!probeChatTemplateCapsJinja(properties->templateProcessor, properties->chatTemplateCaps)) {
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Jinja cannot render this template's tool calls correctly");
         }
         return;
     }
@@ -81,7 +82,7 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 
     // Minja path — use the shared probe component
     if (!probeChatTemplateCapsMinja(properties->tokenizer, properties->chatTemplateCaps)) {
-        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Disabling tool call support: minja cannot render this template's tool calls correctly");
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Minja cannot render this template's tool calls correctly");
     }
 }
 
@@ -120,11 +121,9 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
     if (!templateSource.empty()) {
         auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
         properties->chatTemplateCaps = analysisResult.caps;
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: supportsTools={}, supportsToolCalls={}, supportsToolResponses={}, "
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: supportsToolCalls={}, "
                                                    "requiresObjectArguments={}, requiresNonNullContent={}",
-            analysisResult.caps.supportsTools,
             analysisResult.caps.supportsToolCalls,
-            analysisResult.caps.supportsToolResponses,
             analysisResult.caps.requiresObjectArguments,
             analysisResult.caps.requiresNonNullContent);
         // Auto-detect or report manually configured tool parser
@@ -148,7 +147,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 #if (PYTHON_DISABLE == 0)
         if (properties->chatTemplateMode != ChatTemplateMode::JINJA) {
 #endif
-            if (!probeChatTemplateBasicRender(properties->tokenizer)) {
+            if (!probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
                 SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
                                                            "Disabling /chat/completions endpoint for this model.");
                 properties->tokenizer.set_chat_template("");

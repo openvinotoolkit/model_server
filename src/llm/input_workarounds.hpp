@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,21 +22,17 @@
 namespace ovms {
 namespace input_workarounds {
 
-// --- Individual workaround functions (ChatHistory path) ---
 // Operates on ov::genai::ChatHistory for both GenAI C++ tokenizer and PyJinja paths.
 
-// Convert tool_call arguments from string to object in ChatHistory.
+// Converts tool_call arguments from string to object.
 // Models like Gemma require arguments as a dict/object, not a stringified JSON.
 void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory);
 
-// Ensure assistant messages with tool_calls have non-null content in ChatHistory.
-// Some templates require content="" rather than content=null.
+// Ensures assistant messages with tool_calls have non-null content.
+// Some templates require content="" (for example llama) rather than content=null.
 void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory);
 
-// --- Aggregate application ---
-
-// Apply all relevant workarounds to the ChatHistory.
-// Modifies the chat history in-place based on detected capabilities.
+// Apply all relevant workarounds to the ChatHistory based on detected capabilities.
 void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory);
 
 }  // namespace input_workarounds

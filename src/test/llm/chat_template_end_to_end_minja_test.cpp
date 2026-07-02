@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,18 +35,10 @@
 
 using namespace ovms;
 
-// Chat template applicator type
-enum class TemplateApplicator {
-    MINJA,
-    JINJA  // Implemented in separate translation unit
-};
-
 // Test fixture providing end-to-end: analyze → probe → apply workarounds → apply template
 class ChatTemplateEndToEndMinjaTest : public ::testing::Test {
 protected:
-    // Any tokenizer will do the job, the only thing we need to do is to do is to change chat template content before use
-    // TODO: Check if should dump custom template into tokenizer directory before test runs
-    // Minja likes to do some work during initialization and we need to ensure it does that with the correct template content
+    // Any tokenizer will do the job, the only thing we need to do is to change chat template content before use
     const std::string& tokenizerPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m", false);
     const std::string& chatTemplatesPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/chat_templates", false);
 
@@ -68,14 +60,13 @@ protected:
 
     // --- Inputs (set by each test) ---
     std::string chatTemplate;
-    TemplateApplicator applicator = TemplateApplicator::MINJA;
     ov::genai::ChatHistory chatHistory;
 
     // --- Derived state (populated by run()) ---
     ChatTemplateAnalysisResult analysisResult;
     ChatTemplateCaps caps;
     std::string appliedOutput;
-    bool applySuccess = false;
+    bool exceptionThrownDuringApplication = false;
     bool basicRenderOk = false;
 
     // Load template from file
@@ -108,7 +99,7 @@ protected:
         {
             ov::genai::Tokenizer basicTokenizer(tokenizerPath);
             basicTokenizer.set_chat_template(chatTemplate);
-            basicRenderOk = probeChatTemplateBasicRender(basicTokenizer);
+            basicRenderOk = probeChatTemplateBasicRenderMinja(basicTokenizer);
             if (!basicRenderOk) {
                 std::cout << "=== Basic Render Probe FAILED: template incompatible with minja ===" << std::endl;
                 return;
@@ -129,23 +120,17 @@ protected:
         std::cout << "  requiresObjectArguments: " << caps.requiresObjectArguments << std::endl;
 
         // Step 4: Apply workarounds to the chat history
-        if (applicator == TemplateApplicator::MINJA) {
-            input_workarounds::applyToHistory(caps, chatHistory);
-        } else {
-            GTEST_SKIP() << "JINJA applicator not implemented yet";
-        }
+        input_workarounds::applyToHistory(caps, chatHistory);
 
         // Step 5: Apply chat template
-        if (applicator == TemplateApplicator::MINJA) {
-            ov::genai::Tokenizer tokenizer(tokenizerPath);
-            tokenizer.set_chat_template(chatTemplate);
-            try {
-                appliedOutput = tokenizer.apply_chat_template(chatHistory, addGenerationPrompt);
-                applySuccess = true;
-            } catch (const std::exception& e) {
-                std::cout << "apply_chat_template FAILED: " << e.what() << std::endl;
-                applySuccess = false;
-            }
+        ov::genai::Tokenizer tokenizer(tokenizerPath);
+        tokenizer.set_chat_template(chatTemplate);
+        try {
+            appliedOutput = tokenizer.apply_chat_template(chatHistory, addGenerationPrompt);
+            exceptionThrownDuringApplication = false;
+        } catch (const std::exception& e) {
+            std::cout << "apply_chat_template FAILED: " << e.what() << std::endl;
+            exceptionThrownDuringApplication = true;
         }
 
         std::cout << "=== Result ===" << std::endl;
@@ -154,17 +139,15 @@ protected:
 };
 
 // =============================================================================
-// Example: gpt-oss-20b with tool call containing string arguments
-// The probe should detect requiresObjectArguments=false, workaround should not be applied
-// applied, and the final template should render them natively.
+// The chat template we use here contains multiple patches, including one that relates to `string2obj`.
+// Without the workaround, it translates to {"key":"val"}.
+// With, it would translate to {'key': 'val'} which is not correct.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, GptOss_ToolCallWithStringArgs) {
     // Load the real gpt-oss chat template
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_gpt_oss.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load gpt-oss template";
 
-    // Simulate a request with tool_calls where arguments are a JSON string
-    // (as sent by most OpenAI-compatible clients)
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"user","content":"What's the weather in Paris?"})"));
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
@@ -172,16 +155,14 @@ TEST_F(ChatTemplateEndToEndMinjaTest, GptOss_ToolCallWithStringArgs) {
 
     run(true);
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "gptoss");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "gptoss");
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -190,17 +171,13 @@ TEST_F(ChatTemplateEndToEndMinjaTest, GptOss_ToolCallWithStringArgs) {
 }
 
 // =============================================================================
-// Example: Qwen3.6-35B-A3B-int4-ov with tool call containing string arguments
-// The probe should detect requiresObjectArguments=true, workaround should convert
-// string args to object, and the final template should render them natively.
+// Since minja automatically detects str2obj is needed, both: string and object format works.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Qwen36_ToolCallWithStringArgs) {
     // Load the real qwen chat template
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen36.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen36 template";
 
-    // Simulate a request with tool_calls where arguments are a JSON string
-    // (as sent by most OpenAI-compatible clients)
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
         R"({"role":"user","content":"What's the weather in Paris?"})"));
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
@@ -208,16 +185,14 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen36_ToolCallWithStringArgs) {
 
     run(true);
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -245,10 +220,8 @@ celsius
 }
 
 // =============================================================================
-// Example: Gemma4 with tool call containing string arguments
-// The probe should detect requiresObjectArguments=true via the needle:<| pattern,
-// workaround should convert string args to object, and template should render
-// them in Gemma's native key:<|"|>value<|"|> format.
+// Ovms detects str2obj workaround is needed and applies workaround.
+// Minja does not do it automatically, their probe is broken with gemma.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_gemma.jinja");
@@ -261,16 +234,14 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
 
     run(true);
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "gemma4");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "gemma4");
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -283,10 +254,9 @@ What's the weather in Paris?<turn|>
 }
 
 // =============================================================================
-// Example: Qwen3 Coder with tool call containing string arguments
-// Minja silently fails for this template because it uses from_json filter
-// which is not supported by minja. The probe detects this (raw JSON dump in
-// output containing "tool_calls": [) and disables tool call support.
+// This test is running against chat template which contains our patch with `from_json` filter.
+// This filter is unsupported by minja, therefore the test is expected to fail.
+// Model stays unsupported with minja chat template mode.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3coder_instruct.jinja");
@@ -299,26 +269,23 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
 
     run(true);
 
-    ASSERT_TRUE(applySuccess);   // here we dont block people from using such templates that mis-render requests
-    ASSERT_TRUE(basicRenderOk);  // only tool rendering is broken
+    // No exception is thrown by minja even though there is unsupported filter
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+    // Basic probing does not reach the unsupported filter, so it is ok to use it without agentic capabilities
+    ASSERT_TRUE(basicRenderOk);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    // This is bug, how to fix?
-    // TODO: "| from_json" patching?
-    EXPECT_FALSE(caps.supportsTools);
     EXPECT_FALSE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 }
 
 // =============================================================================
-// Example: Phi-4-mini-instruct with tool call containing string arguments
-// This template uses message.tool_calls with direct {{ call.function.arguments }}
-// rendering. The static analyzer detects phi4 via the "functools" marker.
+// Chat template taken from Ovms extras, original chat template does not render tools at all.
+// Model does not need str2obj workaround.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Phi4Mini_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_phi4_mini.jinja");
@@ -330,22 +297,14 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Phi4Mini_ToolCallWithStringArgs) {
         R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
     run(true);
-    // FIXME:
-    // The model does not render available tools
-    // The model renders tool calls
-    // However we have it in agentic demo so I keep it here for documentation
 
-    // It only works when chat template is taken from our extras
-
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "phi4");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -355,9 +314,7 @@ You are a helpful assistant.<|end|><|user|>What's the weather in Paris?<|end|><|
 }
 
 // =============================================================================
-// Example: Qwen3-4B with tool call containing string arguments
-// Uses <tool_call></tool_call> format with tojson for object args.
-// Probe detects requiresObjectArguments=true (tojson adds spaces, string args don't).
+// It works either way, with str2obj conversion or not - does not matter.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3.jinja");
@@ -370,16 +327,14 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_ToolCallWithStringArgs) {
 
     run(true);
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "hermes3");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -399,10 +354,7 @@ What's the weather in Paris?<|im_end|>
 }
 
 // =============================================================================
-// Example: Mistral-7B-Instruct-v0.3 with tool call containing string arguments
-// Uses [TOOL_CALLS] + [TOOL_RESULTS] format (detected as "mistral" by analyzer).
-// Template uses tool_call.function|tojson so object args render natively.
-// Probe detects requiresObjectArguments=true and workaround converts args.
+// It works either way, with str2obj conversion or not - does not matter.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_mistral7b_v03.jinja");
@@ -416,15 +368,13 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
 
     run(true);
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "mistral");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -433,10 +383,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
 }
 
 // =============================================================================
-// Example: LFM2-24B-A2B with tool call containing string arguments
-// Template only injects tools into the system prompt ("List of tools: [...]")
-// and has no tool_call rendering logic — assistant messages render content only.
-// Analyzer does not detect tool support, so probe is never invoked.
+// // TODO: Implement assertions, where to take lfm2 deployments steps from?
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm2.jinja");
@@ -449,17 +396,12 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
 
     run(true);
 
-    // ASSERT_TRUE(applySuccess);
-    // Analyzer does not detect tool support (no tool_call markers in template)
-    // EXPECT_FALSE(caps.supportsToolCalls);
+    // TODO: Implement assertions, where to take lfm2 deployments steps from?
 }
 
 // =============================================================================
-// Example: LFM2.5 with tool call containing string arguments
-// Uses <|tool_call_start|>[func(arg=val)]<|tool_call_end|> format.
-// Template uses {%- generation -%} blocks. Basic render works (simple messages
-// are fine), but tool_calls rendering silently fails — minja dumps raw JSON
-// instead of calling render_tool_calls macro. Tool probe catches this.
+// Minja can't handle this chat template for some reason.
+// TODO(przepeck): ensure this tests the same template as we will publish to HF
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
@@ -472,12 +414,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
 
     run(true);
 
-    // // Basic render works, but tool probe detects minja silent failure
-    // EXPECT_TRUE(basicRenderOk);
-    // EXPECT_FALSE(caps.supportsToolCalls);
-    // EXPECT_FALSE(caps.supportsTools);
-
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
@@ -485,19 +422,16 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
 
     // TODO: It just does not work for now, documented with assertion
 
-    EXPECT_FALSE(caps.supportsTools);
     EXPECT_FALSE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
-    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.requiresObjectArguments);  // TODO(przepeck): change once we have it working
     EXPECT_FALSE(caps.requiresNonNullContent);
 
     // TODO: Expect appliedOutput once fixed
 }
 
 // =============================================================================
-// Example: Qwen3-VL-8B-Instruct with tool call containing string arguments
-// Uses <tool_call>{"name": ..., "arguments": ...}</tool_call> format.
-// Template handles both string and object arguments natively (has is_string check).
+// Minja can't handle this chat template for some reason.
+// TODO(przepeck): ensure this tests the same template as we will publish to HF
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3VL_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3vl.jinja");
@@ -510,15 +444,13 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3VL_ToolCallWithStringArgs) {
 
     run(true);
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "hermes3");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -534,9 +466,8 @@ What's the weather in Paris?<|im_end|>
 }
 
 // =============================================================================
-// Example: Qwen3-30B-A3B-Instruct-2507 with tool call containing string arguments
-// Uses <tool_call>{"name": ..., "arguments": ...}</tool_call> format.
-// Template handles both string and object arguments natively (has is_string check).
+// Minja can't handle this chat template for some reason.
+// TODO(przepeck): ensure this tests the same template as we will publish to HF
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3_30b.jinja");
@@ -549,15 +480,13 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
 
     run(true);
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "hermes3");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -587,5 +516,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, BrokenTemplate_BasicRenderFails) {
 
     run(true);
 
+    // Minja silently fails (without exception), but our basic render check should catch it by parsing results.
+    ASSERT_FALSE(exceptionThrownDuringApplication);
     EXPECT_FALSE(basicRenderOk);
 }

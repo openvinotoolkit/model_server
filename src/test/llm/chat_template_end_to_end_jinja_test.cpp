@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -86,12 +86,13 @@ protected:
 
     // --- Inputs (set by each test) ---
     std::string chatTemplate;
+    ov::genai::ChatHistory chatHistory;
 
     // --- Derived state (populated by run()) ---
     ChatTemplateAnalysisResult analysisResult;
     ChatTemplateCaps caps;
     std::string appliedOutput;
-    bool applySuccess = false;
+    bool exceptionThrownDuringApplication = false;
 
     // Load template from file
     static std::string loadTemplateFile(const std::string& path) {
@@ -113,38 +114,16 @@ protected:
         servable = std::make_shared<ContinuousBatchingServable>();
         servable->getProperties()->modelsPath = directoryPath;
         servable->getProperties()->tokenizer = ov::genai::Tokenizer(directoryPath);
-        // Override the tokenizer's template with our test template
-        servable->getProperties()->tokenizer.set_chat_template(chatTemplate);
 
         ExtraGenerationInfo extraGenInfo = GenAiServableInitializer::readExtraGenerationInfo(
             servable->getProperties(), directoryPath);
         GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), extraGenInfo);
     }
 
-    // Probe tool caps using Python Jinja (same engine as production Jinja path)
-    // Apply workarounds to the JSON request body via ChatHistory path (same as production)
-    std::string applyWorkarounds(const std::string& jsonBody) {
-        if (!caps.requiresObjectArguments && !caps.requiresNonNullContent) {
-            return jsonBody;
-        }
-        // Parse messages from JSON body into ChatHistory
-        auto bodyContainer = ov::genai::JsonContainer::from_json_string(jsonBody);
-        ov::genai::ChatHistory history;
-        auto messages = bodyContainer["messages"];
-        for (size_t i = 0; i < messages.size(); ++i) {
-            history.push_back(messages[i]);
-        }
-        // Apply workarounds on ChatHistory (same as InputWorkaroundsProcessor)
-        input_workarounds::applyToHistory(caps, history);
-        // Serialize back to JSON body format for PyJinja
-        std::string result = "{\"messages\":" + history.get_messages().to_json_string() + "}";
-        return result;
-    }
-
     // Run the full Jinja pipeline: analyze → probe → workarounds → apply via Python Jinja
-    void run(const std::string& requestJson) {
+    void run() {
         ASSERT_FALSE(chatTemplate.empty()) << "chatTemplate must be set before calling run()";
-        ASSERT_FALSE(requestJson.empty()) << "requestJson must be provided";
+        ASSERT_FALSE(chatHistory.empty()) << "chatHistory must be set before calling run()";
 
         // Step 1: Static analysis
         analysisResult = ChatTemplateAnalyzer::analyze(chatTemplate);
@@ -162,24 +141,27 @@ protected:
             << "Failed to load Python Jinja template processor";
 
         // Step 3: Probe tool caps using Python Jinja (same function used in production)
-        if (!probeChatTemplateCapsJinja(servable->getProperties()->templateProcessor,
-                servable->getProperties()->modelsPath, caps)) {
+        if (!probeChatTemplateCapsJinja(servable->getProperties()->templateProcessor, caps)) {
             std::cout << "=== Jinja Probe FAILED: silent failure detected ===" << std::endl;
         }
 
         std::cout << "=== After Probe ===" << std::endl;
         std::cout << "  requiresObjectArguments: " << caps.requiresObjectArguments << std::endl;
 
-        // Step 4: Apply workarounds to JSON
-        std::string modifiedJson = applyWorkarounds(requestJson);
+        // Step 4: Apply workarounds to chat history
+        input_workarounds::applyToHistory(caps, chatHistory);
 
-        // Step 5: Render via Python Jinja
-        applySuccess = PyJinjaTemplateProcessor::applyChatTemplate(
+        // Step 5: Serialize and render via Python Jinja (same as production ChatTemplateProcessor)
+        std::string requestBody = "{\"messages\":" + chatHistory.get_messages().to_json_string() + "}";
+        std::string renderOutput;
+        bool success = PyJinjaTemplateProcessor::applyChatTemplate(
             servable->getProperties()->templateProcessor,
-            modifiedJson, appliedOutput);
+            requestBody, renderOutput);
+        exceptionThrownDuringApplication = !success;
+        appliedOutput = renderOutput;
 
         std::cout << "=== Result (Jinja) ===" << std::endl;
-        if (applySuccess) {
+        if (!exceptionThrownDuringApplication) {
             std::cout << appliedOutput << std::endl;
         } else {
             std::cout << "FAILED: " << appliedOutput << std::endl;
@@ -188,29 +170,29 @@ protected:
 };
 
 // =============================================================================
-// Jinja: gpt-oss-20b with tool call containing string arguments
+// The chat template we use here contains multiple patches, including one that relates to `string2obj`.
+// Without the workaround, it translates to {"key":"val"}.
+// With, it would translate to {'key': 'val'} which is not correct.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, GptOss_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_gpt_oss.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "gptoss");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "gptoss");
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -219,29 +201,27 @@ TEST_F(ChatTemplateEndToEndJinjaTest, GptOss_ToolCallWithStringArgs) {
 }
 
 // =============================================================================
-// Jinja: Qwen3.6-35B with tool call containing string arguments
+// Ovms automatically detects str2obj is needed and applies workaround.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, Qwen36_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen36.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -269,29 +249,27 @@ celsius
 }
 
 // =============================================================================
-// Jinja: Gemma4 with tool call containing string arguments
+// Ovms detects str2obj workaround is needed and applies workaround.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, Gemma4_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_gemma.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "gemma4");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "gemma4");
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -303,29 +281,28 @@ What's the weather in Paris?<turn|>
 }
 
 // =============================================================================
-// Jinja: Qwen3 Coder — Python Jinja supports from_json, so this WORKS
-// unlike the minja path which silently fails.
+// This test is running against chat template which contains our patch with `from_json` filter.
+// This filter is supported by Jinja, therefore the test is expected to pass.
+// Ovms must not apply str2obj, because chat template does it already.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3coder_instruct.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -348,35 +325,27 @@ celsius
 }
 
 // =============================================================================
-// Jinja: Phi4Mini with tool call containing string arguments
+// Chat template taken from Ovms extras, original chat template does not render tools at all.
+// Model does not need str2obj workaround.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, Phi4Mini_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_phi4_mini.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    // FIXME:
-    // The model does not render available tools
-    // The model renders tool calls
-    // However we have it in agentic demo so I keep it here for documentation
-
-    // It only works when chat template is taken from our extras
-
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "phi4");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -386,29 +355,27 @@ You are a helpful assistant.<|end|><|user|>What's the weather in Paris?<|end|><|
 }
 
 // =============================================================================
-// Jinja: Qwen3-4B with tool call containing string arguments
+// It works either way, with str2obj conversion or not - does not matter.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "hermes3");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -428,28 +395,26 @@ What's the weather in Paris?<|im_end|>
 }
 
 // =============================================================================
-// Jinja: Mistral-7B-Instruct-v0.3 with tool call containing string arguments
+// It works either way, with str2obj conversion or not - does not matter.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, Mistral7B_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_mistral7b_v03.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"abc123def","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"abc123def","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "mistral");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -458,50 +423,44 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Mistral7B_ToolCallWithStringArgs) {
 }
 
 // =============================================================================
-// Jinja: LFM2-24B — no tool_call rendering, analyzer doesn't detect tool support
+// TODO: Implement assertions, where to take lfm2 deployments steps from?
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, LFM2_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm2.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    // TODO: It just does not work for now
-
-    // ASSERT_TRUE(applySuccess);
-    // EXPECT_FALSE(caps.supportsToolCalls);
+    // TODO: Implement assertions, where to take lfm2 deployments steps from?
 }
 
 // =============================================================================
-// Jinja: LFM2.5 — Python Jinja supports {%- generation -%}. Without from_json,
-// string args fail (.items() on string), but Jinja probe detects this and sets
-// requiresObjectArguments=true. Workaround converts args → template renders OK.
+// str2obj is required for this template, Ovms detects it and applies the workaround.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, LFM25_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+    // TODO(przepeck): change once we have reasoning tool parser for lfm2.5
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -515,29 +474,27 @@ What's the weather in Paris?<|im_end|>
 }
 
 // =============================================================================
-// Jinja: Qwen3-VL-8B-Instruct with tool call containing string arguments
-// Template handles both string and object arguments natively (has is_string check).
+// Same story as Qwen3-8B.
+// TODO(mzeglars): Do we keep it?
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3VL_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3vl.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "hermes3");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
@@ -553,29 +510,27 @@ What's the weather in Paris?<|im_end|>
 }
 
 // =============================================================================
-// Jinja: Qwen3-30B-A3B-Instruct-2507 with tool call containing string arguments
-// Template handles both string and object arguments natively (has is_string check).
+// Minja can't handle this chat template for some reason.
+// TODO(przepeck): ensure this tests the same template as we will publish to HF
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3_30b.jinja");
     ASSERT_FALSE(chatTemplate.empty());
 
-    std::string requestJson = R"({"messages":[
-        {"role":"user","content":"What's the weather in Paris?"},
-        {"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}
-    ]})";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
 
-    run(requestJson);
+    run();
 
-    ASSERT_TRUE(applySuccess);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "hermes3");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_TRUE(caps.supportsTools);
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_TRUE(caps.supportsToolResponses);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_FALSE(caps.requiresNonNullContent);
 
