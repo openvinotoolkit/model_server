@@ -358,9 +358,12 @@ absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationCon
         if (!kwargsResult.ok()) {
             return kwargsResult.status();
         }
-        if (kwargsResult.value().has_value()) {
-            chatHistory.set_extra_context(kwargsResult.value().value());
-        }
+        // add_generation_prompt is only ever consumed by chat template rendering, so it is
+        // folded into chat_template_kwargs rather than kept as a separate field, and both the
+        // MINJA and Python-Jinja rendering paths read it from this single source.
+        ov::genai::JsonContainer kwargs = kwargsResult.value().value_or(ov::genai::JsonContainer::object());
+        kwargs["add_generation_prompt"] = request.addGenerationPrompt.value_or(true);
+        chatHistory.set_extra_context(kwargs);
     }
     return req;
 }
@@ -523,6 +526,17 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("ignore_eos accepts values true or false");
         request.ignoreEOS = it->value.GetBool();
+    }
+
+    // add_generation_prompt: bool; optional - defaults to true
+    // Extension, unsupported by OpenAI API, however supported by HF transformers and vLLM.
+    // When false, the chat template is rendered without a trailing generation prompt
+    // so a final assistant message can be continued as a prefix (assistant prefill).
+    it = doc.FindMember("add_generation_prompt");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("add_generation_prompt accepts values true or false");
+        request.addGenerationPrompt = it->value.GetBool();
     }
 
     // max_tokens: uint; optional
