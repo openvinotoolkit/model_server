@@ -315,10 +315,10 @@ deploy_ovms() {
 ################################################################################
 
 wait_for_health() {
-    local max_retries=18  # 18 * 600s
-    local retry_interval=600
+    local max_retries=60  # 60 * 5s = 5 minutes total polling
+    local retry_interval=5
 
-    echo "Waiting for OVMS LLM graph to initialize (this may take 30-60 seconds)..."
+    echo "Waiting for OVMS LLM graph to initialize"
 
     # Initial sleep to let container start
     sleep 10
