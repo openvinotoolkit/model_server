@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,20 +15,29 @@
 //*****************************************************************************
 #pragma once
 
-#include <optional>
-#include <set>
+#include <map>
 #include <string>
+#include <vector>
 
-#include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "execution_context.hpp"
+#include "modelversion.hpp"
+#include "modelversionstatus.hpp"
 
 namespace ovms {
+class ModelInstanceProvider;
+class ServableNameChecker;
 class Status;
-Status makeJsonFromPredictResponse(
-    const ::KFSResponse& response_proto,
-    std::string* response_json,
-    std::optional<int>& inferenceHeaderContentLength,
-    const std::set<std::string>& requestedBinaryOutputsNames = {});
 
-Status decodeBase64(std::string& bytes, std::string& decodedBytes);
+struct ModelVersionStatusDetails {
+    model_version_t version;
+    ModelVersionState state;
+    ModelVersionStatusErrorCode errorCode;
+    std::string errorMessage;
+};
+
+using ModelsStatuses = std::map<std::string, std::vector<ModelVersionStatusDetails>>;
+
+Status getAllModelsStatuses(ModelsStatuses& modelsStatuses, ModelInstanceProvider& modelProvider, ServableNameChecker& servableChecker, ExecutionContext context);
+Status serializeModelsStatuses2Json(const ModelsStatuses& modelsStatuses, std::string& output);
 
 }  // namespace ovms

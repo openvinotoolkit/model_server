@@ -27,14 +27,11 @@
 #include <gtest/gtest.h>
 
 #include "../config.hpp"
-#include "../get_model_metadata_impl.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
-#include "../model_service.hpp"
 #include "../precision.hpp"
-#include "../prediction_service.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
@@ -214,123 +211,6 @@ protected:
         ASSERT_EQ(server.getManager().loadConfig(fileToReload), StatusCode::OK);
     }
 };
-
-TEST_F(MetricFlowTest, GrpcPredict) {
-    PredictionServiceImpl impl(server);
-    tensorflow::serving::PredictRequest request;
-    tensorflow::serving::PredictResponse response;
-
-    // Successful single model calls
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        request.Clear();
-        response.Clear();
-        request.mutable_model_spec()->mutable_name()->assign(modelName);
-        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {DUMMY_MODEL_SHAPE, correctPrecision}}};
-        preparePredictRequest(request, inputsMeta);
-        ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    }
-    // Failed single model calls
-    for (int i = 0; i < numberOfFailedRequests; i++) {
-        request.Clear();
-        response.Clear();
-        request.mutable_model_spec()->mutable_name()->assign(modelName);
-        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {DUMMY_MODEL_SHAPE, wrongPrecision}}};
-        preparePredictRequest(request, inputsMeta);
-        ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
-    }
-
-    // Successful DAG calls
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        request.Clear();
-        response.Clear();
-        request.mutable_model_spec()->mutable_name()->assign(dagName);
-        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {ovms::signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, correctPrecision}}};
-        preparePredictRequest(request, inputsMeta);
-        ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    }
-
-    // Failed DAG calls
-    for (int i = 0; i < numberOfFailedRequests; i++) {
-        request.Clear();
-        response.Clear();
-        request.mutable_model_spec()->mutable_name()->assign(dagName);
-        inputs_info_t inputsMeta{{DUMMY_MODEL_INPUT_NAME, {ovms::signed_shape_t{dynamicBatch, 1, DUMMY_MODEL_INPUT_SIZE}, wrongPrecision}}};
-        preparePredictRequest(request, inputsMeta);
-        ASSERT_EQ(impl.Predict(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
-    }
-
-    // ovms_requests_success
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "Predict", "TensorFlowServing", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "Predict", "TensorFlowServing", numberOfSuccessRequests);                                             // ran by real request
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "gRPC", "Predict", "TensorFlowServing", numberOfFailedRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "gRPC", "Predict", "TensorFlowServing", numberOfFailedRequests);    // ran by real request
-
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
-
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
-
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
-
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
-
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
-}
-
-TEST_F(MetricFlowTest, GrpcGetModelMetadata) {
-    PredictionServiceImpl impl(server);
-    tensorflow::serving::GetModelMetadataRequest request;
-    tensorflow::serving::GetModelMetadataResponse response;
-
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        request.Clear();
-        response.Clear();
-        request.mutable_model_spec()->mutable_name()->assign(modelName);
-        request.add_metadata_field("signature_def");
-        ASSERT_EQ(impl.GetModelMetadata(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    }
-
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        request.Clear();
-        response.Clear();
-        request.mutable_model_spec()->mutable_name()->assign(dagName);
-        request.add_metadata_field("signature_def");
-        ASSERT_EQ(impl.GetModelMetadata(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    }
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "GetModelMetadata", "TensorFlowServing", numberOfSuccessRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "GetModelMetadata", "TensorFlowServing", numberOfSuccessRequests);    // ran by real request
-}
-
-TEST_F(MetricFlowTest, GrpcGetModelStatus) {
-    ModelServiceImpl impl(server);
-    tensorflow::serving::GetModelStatusRequest request;
-    tensorflow::serving::GetModelStatusResponse response;
-
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        request.Clear();
-        response.Clear();
-        request.mutable_model_spec()->mutable_name()->assign(modelName);
-        ASSERT_EQ(impl.GetModelStatus(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    }
-
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        request.Clear();
-        response.Clear();
-        request.mutable_model_spec()->mutable_name()->assign(dagName);
-        ASSERT_EQ(impl.GetModelStatus(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    }
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "gRPC", "GetModelStatus", "TensorFlowServing", numberOfSuccessRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "gRPC", "GetModelStatus", "TensorFlowServing", numberOfSuccessRequests);    // ran by real request
-}
 
 TEST_F(MetricFlowTest, GrpcModelInfer) {
     KFSInferenceServiceImpl impl(server);
@@ -573,91 +453,6 @@ TEST_F(MetricFlowTest, GrpcModelReady) {
 #if (MEDIAPIPE_DISABLE == 0)
     checkMediapipeRequestsCounterMetadataReady(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, mpName, "gRPC", "ModelReady", "KServe", numberOfSuccessRequests);  // ran by real request
 #endif
-}
-
-TEST_F(MetricFlowTest, RestPredict) {
-    HttpRestApiHandler handler(server, 0);
-
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        std::string request = R"({"signature_name": "serving_default", "instances": [[1,2,3,4,5,6,7,8,9,10]]})";
-        std::string response;
-        ASSERT_EQ(handler.processPredictRequest(modelName, modelVersion, modelVersionLabel, request, &response), ovms::StatusCode::OK);
-    }
-
-    for (int i = 0; i < numberOfFailedRequests; i++) {
-        std::string request = R"({"signature_name": "serving_default", "instances": [[1,2,3,4,5,6,7,8,9]]})";
-        std::string response;
-        ASSERT_EQ(handler.processPredictRequest(modelName, modelVersion, modelVersionLabel, request, &response), ovms::StatusCode::INVALID_SHAPE);
-    }
-
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        std::string request = R"({"signature_name": "serving_default", "instances": [[[1,2,3,4,5,6,7,8,9,10]],[[1,2,3,4,5,6,7,8,9,10]],[[1,2,3,4,5,6,7,8,9,10]]]})";
-        std::string response;
-        ASSERT_EQ(handler.processPredictRequest(dagName, modelVersion, modelVersionLabel, request, &response), ovms::StatusCode::OK);
-    }
-
-    for (int i = 0; i < numberOfFailedRequests; i++) {
-        std::string request = R"({"signature_name": "serving_default", "instances": [[[1,2,3,4,5,6,7,8,9,10]],[[1,2,3,4,5,6,7,8,9,10]],[[1,2,3,4,5,6,7,8,9]]]})";
-        std::string response;
-        ASSERT_EQ(handler.processPredictRequest(dagName, modelVersion, modelVersionLabel, request, &response), ovms::StatusCode::REST_COULD_NOT_PARSE_INSTANCE);
-    }
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "Predict", "TensorFlowServing", dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests);  // ran by demultiplexer + real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "Predict", "TensorFlowServing", numberOfSuccessRequests);                                             // ran by real request
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, modelName, 1, "REST", "Predict", "TensorFlowServing", numberOfFailedRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_FAIL, dagName, 1, "REST", "Predict", "TensorFlowServing", numberOfFailedRequests);    // ran by real request
-
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"gRPC\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(0)));
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_REQUEST_TIME + std::string{"_count{interface=\"REST\",name=\""} + dagName + std::string{"\",version=\"1\"} "} + std::to_string(numberOfSuccessRequests)));
-
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFERENCE_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
-
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(dynamicBatch * numberOfSuccessRequests + numberOfSuccessRequests)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_WAIT_FOR_INFER_REQ_TIME + std::string{"_count{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
-
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
-
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
-    EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
-}
-
-TEST_F(MetricFlowTest, RestGetModelMetadata) {
-    HttpRestApiHandler handler(server, 0);
-
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        std::string response;
-        ASSERT_EQ(handler.processModelMetadataRequest(modelName, modelVersion, modelVersionLabel, &response), ovms::StatusCode::OK);
-    }
-
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        std::string response;
-        ASSERT_EQ(handler.processModelMetadataRequest(dagName, modelVersion, modelVersionLabel, &response), ovms::StatusCode::OK);
-    }
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "GetModelMetadata", "TensorFlowServing", numberOfSuccessRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "GetModelMetadata", "TensorFlowServing", numberOfSuccessRequests);    // ran by real request
-}
-
-TEST_F(MetricFlowTest, RestGetModelStatus) {
-    HttpRestApiHandler handler(server, 0);
-
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        std::string response;
-        ASSERT_EQ(handler.processModelStatusRequest(modelName, modelVersion, modelVersionLabel, &response), ovms::StatusCode::OK);
-    }
-
-    for (int i = 0; i < numberOfSuccessRequests; i++) {
-        std::string response;
-        ASSERT_EQ(handler.processModelStatusRequest(dagName, modelVersion, modelVersionLabel, &response), ovms::StatusCode::OK);
-    }
-
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, modelName, 1, "REST", "GetModelStatus", "TensorFlowServing", numberOfSuccessRequests);  // ran by real request
-    checkRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_SUCCESS, dagName, 1, "REST", "GetModelStatus", "TensorFlowServing", numberOfSuccessRequests);    // ran by real request
 }
 
 TEST_F(MetricFlowTest, RestModelInfer) {

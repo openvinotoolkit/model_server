@@ -38,7 +38,6 @@
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
-#include "../model_service.hpp"
 #include "../precision.hpp"
 #include "../python/pythoninterpretermodule.hpp"
 #include "../python/pythonnoderesources.hpp"
@@ -46,7 +45,7 @@
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
+#include "src/tensorflow_type_utils.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"

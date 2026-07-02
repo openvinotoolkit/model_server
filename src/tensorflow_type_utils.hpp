@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,20 +15,22 @@
 //*****************************************************************************
 #pragma once
 
-#include <optional>
-#include <set>
-#include <string>
+#pragma warning(push)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#pragma GCC diagnostic ignored "-Wall"
+#include "tensorflow/core/framework/tensor.h"
+#pragma GCC diagnostic pop
+#pragma warning(pop)
 
-#include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "precision.hpp"
+
+using TFSDataType = tensorflow::DataType;  // TODO @atobiszei since we dont have TFS now we can rename to TFDataType?
 
 namespace ovms {
-class Status;
-Status makeJsonFromPredictResponse(
-    const ::KFSResponse& response_proto,
-    std::string* response_json,
-    std::optional<int>& inferenceHeaderContentLength,
-    const std::set<std::string>& requestedBinaryOutputsNames = {});
 
-Status decodeBase64(std::string& bytes, std::string& decodedBytes);
+Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype);
+TFSDataType getPrecisionAsDataType(Precision precision);
 
 }  // namespace ovms

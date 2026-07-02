@@ -17,44 +17,26 @@
 #include <fstream>
 #include <iostream>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "tensorflow_serving/apis/get_model_status.pb.h"
-#include "tensorflow_serving/apis/model_service.grpc.pb.h"
-#include "tensorflow_serving/apis/model_service.pb.h"
-#pragma GCC diagnostic pop
-
 #include "../modelversionstatus.hpp"
 #include "gtest/gtest.h"
 
 using namespace ovms;
 
-TEST(ModelVersionStatus, casting_to_protobuf_enum) {
+TEST(ModelVersionStatus, state_transitions) {
     ModelVersionStatus mvs("SampleModelName", 15);
-    tensorflow::serving::ModelVersionStatus_State tf_state = static_cast<tensorflow::serving::ModelVersionStatus_State>(static_cast<int>(mvs.getState()));
     EXPECT_EQ(mvs.getState(), ovms::ModelVersionState::START);
-    EXPECT_EQ(tf_state, tensorflow::serving::ModelVersionStatus_State_START);
 
     mvs.setLoading(ModelVersionStatusErrorCode::OK);
-    tf_state = static_cast<tensorflow::serving::ModelVersionStatus_State>(static_cast<int>(mvs.getState()));
     EXPECT_EQ(mvs.getState(), ovms::ModelVersionState::LOADING);
-    EXPECT_EQ(tf_state, tensorflow::serving::ModelVersionStatus_State_LOADING);
 
     mvs.setAvailable(ModelVersionStatusErrorCode::OK);
-    tf_state = static_cast<tensorflow::serving::ModelVersionStatus_State>(static_cast<int>(mvs.getState()));
     EXPECT_EQ(mvs.getState(), ovms::ModelVersionState::AVAILABLE);
-    EXPECT_EQ(tf_state, tensorflow::serving::ModelVersionStatus_State_AVAILABLE);
 
     mvs.setUnloading(ModelVersionStatusErrorCode::OK);
-    tf_state = static_cast<tensorflow::serving::ModelVersionStatus_State>(static_cast<int>(mvs.getState()));
     EXPECT_EQ(mvs.getState(), ovms::ModelVersionState::UNLOADING);
-    EXPECT_EQ(tf_state, tensorflow::serving::ModelVersionStatus_State_UNLOADING);
 
     mvs.setEnd(ModelVersionStatusErrorCode::OK);
-    tf_state = static_cast<tensorflow::serving::ModelVersionStatus_State>(static_cast<int>(mvs.getState()));
     EXPECT_EQ(mvs.getState(), ovms::ModelVersionState::END);
-    EXPECT_EQ(tf_state, tensorflow::serving::ModelVersionStatus_State_END);
 }
 
 TEST(ModelVersionStatus, simple_test_flow) {
