@@ -1,0 +1,11 @@
+# Environment variables (local overrides)
+.env
+
+# Log files
+*.log
+
+#OpenHANDS session files
+*.openhands/
+
+openvino-env/
+

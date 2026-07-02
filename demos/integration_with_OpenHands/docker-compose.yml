@@ -1,0 +1,87 @@
+version: "3.8"
+
+services:
+  ovms-llm:
+    image: ${OVMS_IMAGE}
+    container_name: ovms-llm
+    # GPU device access for hardware acceleration.
+    # For CPU-only deployments, this device mapping can be removed.
+    devices:
+      - ${GPU_DEVICE}
+    ports:
+      - "8000:8000"  # REST API
+      - "9000:9000"  # gRPC API
+    volumes:
+      # Model cache directory - OVMS will materialize models here on --source_model pull
+      # Defaults to ${HOME}/ovms-openhands/models if not set
+      - ${MODEL_CACHE_DIR:-./docker/models}:/models:rw
+      # WSL library dependencies for GPU passthrough (harmless on native Linux)
+      - ${WSL_LIBS:-/.nonexistent:/.nonexistent:ro}
+    environment:
+      # Hugging Face token for gated models.
+      HF_TOKEN: ${HF_TOKEN:-}
+    command:
+      - --model_repository_path
+      - /models
+      - --source_model
+      - ${MODEL_ID}
+      - --model_name
+      - ${LOCAL_NAME}
+      - --task
+      - text_generation
+      - --target_device
+      - ${TARGET_DEVICE}
+      - --port
+      - "9000"
+      - --rest_port
+      - "8000"
+      - --tool_parser
+      - ${TOOL_PARSER}
+    networks:
+      - ovms-net
+    restart: unless-stopped
+
+  openhands:
+    image: ghcr.io/all-hands-ai/openhands:latest
+    container_name: openhands
+    depends_on:
+      - ovms-llm
+    ports:
+      - "3000:3000"  # Web UI
+    extra_hosts:
+      # Allows OpenHands container to reach host services if needed
+      - host.docker.internal:host-gateway
+    environment:
+      # OVMS OpenAI-compatible endpoint
+      LLM_BASE_URL: http://ovms-llm:8000/v3
+      # Model identifier - must include 'openai/' prefix for OpenHands.
+      LLM_MODEL: openai/${LOCAL_NAME}
+      # OpenHands requires a non-empty API key even though OVMS doesn't authenticate
+      LLM_API_KEY: unused
+      # Generation parameters
+      LLM_TEMPERATURE: "0.0"
+      # Generation circuit breaker - prevents runaway agent loops.
+      # Increase for complex tasks, but keep conservative for stability.
+      LLM_MAX_OUTPUT_TOKENS: "5000"
+      # Context window limit - adjust based on model's actual capacity.
+      # Some modern models support 32k+ tokens.
+      LLM_MAX_INPUT_TOKENS: "4096"
+      # Request timeout in milliseconds. Increased from default to accommodate
+      # larger models, CPU inference, and first-token latency.
+      LLM_TIMEOUT: "120000"
+      # Memory limit for OpenHands runtime sandboxes (agent code execution).
+      # Adjust based on available host RAM.
+      SANDBOX_DOCKER_ARGS: --memory=1536m --memory-swap=1536m
+    volumes:
+      # Docker socket for OpenHands to create runtime sandbox containers
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persistent OpenHands settings - repo-local for transparency
+      - ./.openhands:/.openhands
+    networks:
+      - ovms-net
+    restart: unless-stopped
+
+networks:
+  ovms-net:
+    name: ovms-net
+    driver: bridge
