@@ -15,27 +15,24 @@
 //*****************************************************************************
 #pragma once
 
+#include <optional>
 #include <string>
 
-#include <openvino/genai/tokenizer.hpp>
-
-#include "../chat_template_caps.hpp"
-#include "input_processing_config.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../py_jinja_template_processor.hpp"
-#endif
+#include "chat_template_caps.hpp"
 
 namespace ovms {
 
-// Holds the per-deployment resources needed by InputProcessor.
-// Created once during servable initialization; reused across requests.
-struct InputProcessorContext {
-    InputProcessingConfig config;
-    ChatTemplateCaps chatTemplateCaps;
-    ov::genai::Tokenizer tokenizer;
-#if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor* templateProcessor = nullptr;
-#endif
+struct ChatTemplateAnalysisResult {
+    ChatTemplateCaps caps;
+    std::optional<std::string> detectedToolParser;
+    std::optional<std::string> detectedReasoningParser;
+};
+
+class ChatTemplateAnalyzer {
+public:
+    // Analyze the chat template source and return detected capabilities and parser names.
+    // Uses pattern matching on template source text (first phase of detection, without dry-runs).
+    static ChatTemplateAnalysisResult analyze(const std::string& templateSource);
 };
 
 }  // namespace ovms

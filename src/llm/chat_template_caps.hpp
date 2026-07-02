@@ -15,27 +15,21 @@
 //*****************************************************************************
 #pragma once
 
-#include <string>
-
-#include <openvino/genai/tokenizer.hpp>
-
-#include "../chat_template_caps.hpp"
-#include "input_processing_config.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../py_jinja_template_processor.hpp"
-#endif
-
 namespace ovms {
 
-// Holds the per-deployment resources needed by InputProcessor.
-// Created once during servable initialization; reused across requests.
-struct InputProcessorContext {
-    InputProcessingConfig config;
-    ChatTemplateCaps chatTemplateCaps;
-    ov::genai::Tokenizer tokenizer;
-#if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor* templateProcessor = nullptr;
-#endif
+struct ChatTemplateCaps {
+    // TODO: Do we keep it?
+    bool supportsToolCalls = false;
+
+    // Some templates require tool_call arguments to be a dict/object rather than a stringified JSON.
+    bool requiresObjectArguments = false;
+
+    // Messages with tool_calls may require content="" rather than content=null for some templates (e.g. llama3).
+    bool requiresNonNullContent = false;
+
+    bool needsWorkarounds() const {
+        return requiresObjectArguments || requiresNonNullContent;
+    }
 };
 
 }  // namespace ovms
