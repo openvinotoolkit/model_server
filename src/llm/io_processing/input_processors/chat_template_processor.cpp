@@ -67,7 +67,6 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "chatHistory.get_extra_context(): {}", chatHistory.get_extra_context().to_json_string());
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "tools: {}", chatHistory.get_tools().empty() ? std::string("<none>") : chatHistory.get_tools().to_json_string());
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "chatTemplateKwargs: {}", chatHistory.get_extra_context().empty() ? std::string("<none>") : chatHistory.get_extra_context().to_json_string());
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "addGenerationPrompt: {}", req.addGenerationPrompt);
     }
 
 #if (PYTHON_DISABLE == 0)
@@ -82,9 +81,16 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         req.promptText = std::move(promptText);
     } else {
 #endif
-        const bool addGenerationPrompt = req.addGenerationPrompt;
         const auto& tools = chatHistory.get_tools();
-        const auto& kwargs = chatHistory.get_extra_context();
+        // add_generation_prompt lives inside chat_template_kwargs; MINJA's apply_chat_template
+        // takes it as a dedicated argument, so extract it here and drop it from the kwargs map
+        // passed alongside so it isn't supplied twice.
+        ov::genai::JsonContainer kwargs = chatHistory.get_extra_context();
+        bool addGenerationPrompt = true;
+        if (kwargs.contains("add_generation_prompt")) {
+            addGenerationPrompt = kwargs["add_generation_prompt"].get_bool();
+            kwargs.erase("add_generation_prompt");
+        }
         const std::optional<ov::genai::JsonContainer> optTools =
             tools.empty() ? std::nullopt : std::make_optional(tools);
         const std::optional<ov::genai::JsonContainer> optKwargs =

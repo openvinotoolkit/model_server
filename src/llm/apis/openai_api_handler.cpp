@@ -498,7 +498,6 @@ absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationCon
     }
     InputRequest req;
     req.generationConfig = configBuilder.getConfig();
-    req.addGenerationPrompt = request.addGenerationPrompt.value_or(true);
     if (endpoint == Endpoint::COMPLETIONS) {
         req.input = request.prompt.value_or("");
     } else {
@@ -519,9 +518,12 @@ absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationCon
         if (!kwargsResult.ok()) {
             return kwargsResult.status();
         }
-        if (kwargsResult.value().has_value()) {
-            chatHistory.set_extra_context(kwargsResult.value().value());
-        }
+        // add_generation_prompt is only ever consumed by chat template rendering, so it is
+        // folded into chat_template_kwargs rather than kept as a separate field, and both the
+        // MINJA and Python-Jinja rendering paths read it from this single source.
+        ov::genai::JsonContainer kwargs = kwargsResult.value().value_or(ov::genai::JsonContainer::object());
+        kwargs["add_generation_prompt"] = request.addGenerationPrompt.value_or(true);
+        chatHistory.set_extra_context(kwargs);
     }
     return req;
 }

@@ -179,7 +179,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateAddGenerationPromptDefaultsTrue) {
             "messages": [{ "role": "user", "content": "hi" }]
         }
     )";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
     ASSERT_NE(finalPrompt.find("<|GEN|>"), std::string::npos) << "default should add generation prompt, got: " << finalPrompt;
 }
 
@@ -188,13 +188,15 @@ TEST_F(LLMChatTemplateTest, ChatTemplateAddGenerationPromptFalse) {
     ASSERT_TRUE(CreateJinjaConfig(jinja));
     LoadTemplateProcessor();
     std::string finalPrompt = "";
+    // add_generation_prompt is folded into chat_template_kwargs by the OpenAI API handler
+    // before applyChatTemplate is ever called; reflect that contract here.
     std::string payloadBody = R"(
         {
             "messages": [{ "role": "user", "content": "hi" }, { "role": "assistant", "content": "partial" }],
-            "add_generation_prompt": false
+            "chat_template_kwargs": { "add_generation_prompt": false }
         }
     )";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt.find("<|GEN|>"), std::string::npos) << "add_generation_prompt=false should omit generation prompt, got: " << finalPrompt;
     ASSERT_NE(finalPrompt.find("partial"), std::string::npos) << "assistant prefill content should be present, got: " << finalPrompt;
 }
