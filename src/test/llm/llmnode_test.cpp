@@ -4621,6 +4621,82 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCacheDirPropagation) {
     LLMNodeOptionsCacheDirPropagation(modelsPath);
 }
 
+// End-to-end regression test for #4230: LLMNodeOptionsCacheDirPropagation above only
+// verifies that --cache_dir lands in properties->pluginConfig; it does not prove that
+// OpenVINO Core actually persists compiled-model cache artifacts, which was the crux of
+// the original bug report (log said "cache enabled", nothing was ever written on disk).
+// This test constructs a real ContinuousBatchingPipeline against --cache_dir and asserts
+// that compiled-model cache artifacts actually land under it.
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCacheDirWritesCacheArtifacts) {
+    std::string cacheDir = std::filesystem::temp_directory_path().string() +
+                            "/LLMNodeOptionsCacheDirWritesCacheArtifacts_" +
+                            ::testing::UnitTest::GetInstance()->current_test_info()->name();
+    std::filesystem::remove_all(cacheDir);
+    std::filesystem::create_directories(cacheDir);
+
+    // Seed the global cache_dir via the CLI parser (same path used in production).
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)cacheDir.c_str()};
+    int arg_count = 9;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), cacheDir);
+
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                             modelsPath + R"("
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<GenAiServable> servable;
+    ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+
+    bool foundCacheArtifact = false;
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(cacheDir)) {
+        if (entry.is_regular_file()) {
+            foundCacheArtifact = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(foundCacheArtifact)
+        << "Expected compiled-model cache artifacts under --cache_dir after constructing the "
+        << "continuous batching pipeline, found none in: " << cacheDir;
+
+    // Restore the global cache_dir so the singleton does not leak into other tests.
+    char* reset_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
+    ovms::Config::instance().parse(7, reset_argv);
+    std::filesystem::remove_all(cacheDir);
+}
+
 void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
