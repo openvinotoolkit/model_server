@@ -33,10 +33,10 @@
 
 #include <openvino/genai/chat_history.hpp>
 
-#include "../../llm/chat_template_analyzer.hpp"
-#include "../../llm/chat_template_caps.hpp"
-#include "../../llm/chat_template_probe.hpp"
-#include "../../llm/input_workarounds.hpp"
+#include "../../llm/io_processing/chat_template_analyzer.hpp"
+#include "../../llm/io_processing/chat_template_caps.hpp"
+#include "../../llm/io_processing/chat_template_probe.hpp"
+#include "../../llm/io_processing/chat_template_adapter.hpp"
 #include "../../llm/py_jinja_template_processor.hpp"
 #include "../../utils/env_guard.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
@@ -149,7 +149,7 @@ protected:
         std::cout << "  requiresObjectArguments: " << caps.requiresObjectArguments << std::endl;
 
         // Step 4: Apply workarounds to chat history
-        input_workarounds::applyToHistory(caps, chatHistory);
+        chat_template_adapter::applyToHistory(caps, chatHistory);
 
         // Step 5: Serialize and render via Python Jinja (same as production ChatTemplateProcessor)
         std::string requestBody = "{\"messages\":" + chatHistory.get_messages().to_json_string() + "}";

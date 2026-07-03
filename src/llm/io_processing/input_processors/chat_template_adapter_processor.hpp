@@ -15,16 +15,16 @@
 //*****************************************************************************
 #pragma once
 
-#include "../../chat_template_caps.hpp"
+#include "../chat_template_caps.hpp"
 #include "../base_input_processor.hpp"
 
 namespace ovms {
 
-// Applies input workarounds to ChatHistory based on detected ChatTemplateCaps.
+// Applies chat template adaptations to ChatHistory based on detected ChatTemplateCaps.
 // Runs before ChatTemplateProcessor so the template receives corrected input.
-class InputWorkaroundsProcessor : public BaseInputProcessor {
+class ChatTemplateAdapter : public BaseInputProcessor {
 public:
-    explicit InputWorkaroundsProcessor(const ChatTemplateCaps& caps);
+    explicit ChatTemplateAdapter(const ChatTemplateCaps& caps);
 
     absl::Status process(InputRequest& req) override;
 

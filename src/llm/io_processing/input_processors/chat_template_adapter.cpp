@@ -13,23 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+
+#include "chat_template_adapter.hpp"
+
+#include <variant>
+
+#include "../chat_template_adapter.hpp"
 
 namespace ovms {
 
-struct ChatTemplateCaps {
-    // TODO: Do we keep it?
-    bool supportsToolCalls = false;
+ChatTemplateAdapter::ChatTemplateAdapter(const ChatTemplateCaps& caps) :
+    caps(caps) {}
 
-    // Some templates require tool_call arguments to be a dict/object rather than a stringified JSON.
-    bool requiresObjectArguments = false;
-
-    // Messages with tool_calls may require content="" rather than content=null for some templates (e.g. llama3).
-    bool requiresNonNullContent = false;
-
-    bool needsWorkarounds() const {
-        return requiresObjectArguments || requiresNonNullContent;
+absl::Status ChatTemplateAdapter::process(InputRequest& req) {
+    if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
+        return absl::OkStatus();
     }
-};
+    auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
+    chat_template_adapter::applyToHistory(caps, chatHistory);
+    return absl::OkStatus();
+}
 
 }  // namespace ovms

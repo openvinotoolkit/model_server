@@ -13,25 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
 
-#include <string>
-#include <vector>
+#include "chat_template_adapter_processor.hpp"
+
+#include <variant>
+
+#include "../chat_template_adapter.hpp"
 
 namespace ovms {
 
-const std::vector<std::string>& getSupportedToolParserNames();
-const std::vector<std::string>& getSupportedReasoningParserNames();
+ChatTemplateAdapter::ChatTemplateAdapter(const ChatTemplateCaps& caps) :
+    caps(caps) {}
 
-// Value that explicitly disables a parser, preventing auto-detection.
-inline constexpr const char* PARSER_DISABLED_VALUE = "none";
-bool isParserDisabled(const std::string& name);
-
-bool isSupportedToolParserName(const std::string& name);
-bool isSupportedReasoningParserName(const std::string& name);
-
-// Comma-separated list of supported names, suitable for log/error messages.
-std::string getSupportedToolParserNamesAsString();
-std::string getSupportedReasoningParserNamesAsString();
+absl::Status ChatTemplateAdapter::process(InputRequest& req) {
+    if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
+        return absl::OkStatus();
+    }
+    auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
+    chat_template_adapter::applyToHistory(caps, chatHistory);
+    return absl::OkStatus();
+}
 
 }  // namespace ovms

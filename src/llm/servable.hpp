@@ -36,7 +36,7 @@
 #include "../http_payload.hpp"
 #include "../sse_utils.hpp"
 #include "apis/openai_api_handler.hpp"
-#include "chat_template_caps.hpp"
+#include "io_processing/chat_template_caps.hpp"
 #include "io_processing/base_generation_config_builder.hpp"
 #include "io_processing/input_processor_context.hpp"
 #include "io_processing/input_request.hpp"

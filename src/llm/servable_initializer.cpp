@@ -41,8 +41,9 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
-#include "chat_template_analyzer.hpp"
-#include "chat_template_probe.hpp"
+#include "io_processing/chat_template_analyzer.hpp"
+#include "io_processing/chat_template_probe.hpp"
+#include "io_processing/parser_config_validation.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
@@ -121,20 +122,23 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
     if (!templateSource.empty()) {
         auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
         properties->chatTemplateCaps = analysisResult.caps;
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: supportsToolCalls={}, "
-                                                   "requiresObjectArguments={}, requiresNonNullContent={}",
-            analysisResult.caps.supportsToolCalls,
-            analysisResult.caps.requiresObjectArguments,
-            analysisResult.caps.requiresNonNullContent);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
+            analysisResult.caps.toString());
         // Auto-detect or report manually configured tool parser
-        if (!properties->toolParserName.empty()) {
+        if (isParserDisabled(properties->toolParserName)) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
+            properties->toolParserName.clear();
+        } else if (!properties->toolParserName.empty()) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
         } else if (analysisResult.detectedToolParser.has_value()) {
             properties->toolParserName = analysisResult.detectedToolParser.value();
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
         }
         // Auto-detect or report manually configured reasoning parser
-        if (!properties->reasoningParserName.empty()) {
+        if (isParserDisabled(properties->reasoningParserName)) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
+            properties->reasoningParserName.clear();
+        } else if (!properties->reasoningParserName.empty()) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
         } else if (analysisResult.detectedReasoningParser.has_value()) {
             properties->reasoningParserName = analysisResult.detectedReasoningParser.value();

@@ -13,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "input_workarounds.hpp"
+#include "chat_template_adapter.hpp"
 
 #include <string>
 
-#include "../logging.hpp"
+#include "../../logging.hpp"
 
 namespace ovms {
-namespace input_workarounds {
+namespace chat_template_adapter {
 
 // --- ChatHistory path implementations ---
 
@@ -53,6 +53,7 @@ void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory) {
                 function["arguments"] = ov::genai::JsonContainer::from_json_string(argsStr);
             } catch (...) {
                 // If parsing fails, leave as-is
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse function arguments as JSON: {}", argsStr);
                 continue;
             }
         }
@@ -74,9 +75,7 @@ void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory) {
 }
 
 void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory) {
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Applying input workarounds: "
-                                               "requiresObjectArguments={}, requiresNonNullContent={}",
-        caps.requiresObjectArguments, caps.requiresNonNullContent);
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Applying chat template adaptations: {}", caps.toString());
     if (caps.requiresObjectArguments) {
         funcArgsToObjectHistory(chatHistory);
     }
@@ -85,5 +84,5 @@ void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHi
     }
 }
 
-}  // namespace input_workarounds
+}  // namespace chat_template_adapter
 }  // namespace ovms

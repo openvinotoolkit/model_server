@@ -20,7 +20,7 @@
 #include "chat_template_caps.hpp"
 
 namespace ovms {
-namespace input_workarounds {
+namespace chat_template_adapter {
 
 // Operates on ov::genai::ChatHistory for both GenAI C++ tokenizer and PyJinja paths.
 
@@ -35,5 +35,5 @@ void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory);
 // Apply all relevant workarounds to the ChatHistory based on detected capabilities.
 void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory);
 
-}  // namespace input_workarounds
+}  // namespace chat_template_adapter
 }  // namespace ovms

@@ -24,7 +24,7 @@
 #include "../../logging.hpp"
 #include "input_processors/chat_template_processor.hpp"
 #include "input_processors/image_decoding_processor.hpp"
-#include "input_processors/input_workarounds_processor.hpp"
+#include "input_processors/chat_template_adapter.hpp"
 #include "input_processors/raw_prompt_extractor.hpp"
 #include "input_processors/text_content_normalization_processor.hpp"
 #include "input_processors/tokenization_processor.hpp"
@@ -49,7 +49,7 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
     }
 
     if (isChatPath && context.chatTemplateCaps.needsWorkarounds()) {
-        processors.emplace_back(std::make_unique<InputWorkaroundsProcessor>(context.chatTemplateCaps));
+        processors.emplace_back(std::make_unique<ChatTemplateAdapter>(context.chatTemplateCaps));
     }
 
     if (isChatPath) {

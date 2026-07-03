@@ -22,9 +22,9 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../logging.hpp"
+#include "../../logging.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "py_jinja_template_processor.hpp"
+#include "../py_jinja_template_processor.hpp"
 #endif
 
 namespace ovms {
@@ -57,7 +57,7 @@ bool probeChatTemplateBasicRenderMinja(ov::genai::Tokenizer& tokenizer) {
         }
 
         // Check for raw JSON dump markers — if minja silently failed, it dumps
-        // the message object as JSON containing "content": and "role":
+        // the message object as JSON containing "content".
         if (output.find("\"content\": \"" + contentNeedle + "\"") != std::string::npos ||
             output.find("\"content\":\"" + contentNeedle + "\"") != std::string::npos) {
             SPDLOG_LOGGER_WARN(llm_calculator_logger, "Basic render probe: output contains raw JSON dump of message object. "
@@ -77,6 +77,12 @@ bool probeChatTemplateBasicRenderMinja(ov::genai::Tokenizer& tokenizer) {
 }
 
 static const std::string PROBE_NEEDLE = "probe_needle_xK9m";
+
+// Probe message JSON fragments — only the "arguments" portion differs.
+static const std::string PROBE_STR_ARGS_MSG =
+    R"({"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":"{\")" + PROBE_NEEDLE + R"(\":\"val\"}"}}]})";
+static const std::string PROBE_OBJ_ARGS_MSG =
+    R"({"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":{")" + PROBE_NEEDLE + R"(":"val"}}}]})";
 
 // Analyze dry-run probe outputs and update caps accordingly.
 // Returns false if the template silently failed (tool calls not supported).
@@ -123,39 +129,35 @@ static bool analyzeProbeResults(bool strOk, const std::string& strOut,
     return true;
 }
 
+static std::pair<bool, std::string> renderProbeMessage(ov::genai::Tokenizer& tokenizer, const std::string& assistantMsg) {
+    try {
+        ov::genai::ChatHistory history;
+        history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
+        history.push_back(ov::genai::JsonContainer::from_json_string(assistantMsg));
+        std::string output = tokenizer.apply_chat_template(history, true);
+        return {true, std::move(output)};
+    } catch (...) {
+        return {false, ""};
+    }
+}
+
 bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps) {
     if (tokenizer.get_chat_template().empty()) {
         return true;
     }
+
+    // For now the capabilities are only related to tool calls, therefore we early exit here.
+    // In the future, if we add more capabilities to probe, we will need to remove this early exit and probe for those capabilities as well.
     if (!caps.supportsToolCalls) {
         return true;
     }
 
     // Async because apply_chat_template is slow: CVS-189192
-    auto strArgsFuture = std::async(std::launch::async, [&tokenizer]() -> std::pair<bool, std::string> {
-        try {
-            ov::genai::ChatHistory history;
-            history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
-            history.push_back(ov::genai::JsonContainer::from_json_string(
-                R"({"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":"{\")" + PROBE_NEEDLE + R"(\":\"val\"}"}}]})"));
-            std::string output = tokenizer.apply_chat_template(history, true);
-            return {true, std::move(output)};
-        } catch (...) {
-            return {false, ""};
-        }
+    auto strArgsFuture = std::async(std::launch::async, [&tokenizer]() {
+        return renderProbeMessage(tokenizer, PROBE_STR_ARGS_MSG);
     });
-
-    auto objArgsFuture = std::async(std::launch::async, [&tokenizer]() -> std::pair<bool, std::string> {
-        try {
-            ov::genai::ChatHistory history;
-            history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
-            history.push_back(ov::genai::JsonContainer::from_json_string(
-                R"({"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":{")" + PROBE_NEEDLE + R"(":"val"}}}]})"));
-            std::string output = tokenizer.apply_chat_template(history, true);
-            return {true, std::move(output)};
-        } catch (...) {
-            return {false, ""};
-        }
+    auto objArgsFuture = std::async(std::launch::async, [&tokenizer]() {
+        return renderProbeMessage(tokenizer, PROBE_OBJ_ARGS_MSG);
     });
 
     auto [strOk, strOut] = strArgsFuture.get();
@@ -167,12 +169,16 @@ bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
 #if (PYTHON_DISABLE == 0)
 
 bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, ChatTemplateCaps& caps) {
+    // For now the capabilities are only related to tool calls, therefore we early exit here.
+    // In the future, if we add more capabilities to probe, we will need to remove this early exit and probe for those capabilities as well.
     if (!caps.supportsToolCalls) {
         return true;
     }
 
-    std::string strArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":"{\")" + PROBE_NEEDLE + R"(\":\"val\"}"}}]}]})";
-    std::string objArgsJson = R"({"messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":{")" + PROBE_NEEDLE + R"(":"val"}}}]}]})";
+    static const std::string strArgsJson =
+        R"({"messages":[{"role":"user","content":"Hello"},)" + PROBE_STR_ARGS_MSG + R"(]})";
+    static const std::string objArgsJson =
+        R"({"messages":[{"role":"user","content":"Hello"},)" + PROBE_OBJ_ARGS_MSG + R"(]})";
 
     std::string strOut, objOut;
     bool strOk = false, objOk = false;
@@ -180,11 +186,15 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, Cha
     try {
         strOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, strArgsJson, strOut);
     } catch (...) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Dry-run probe: exception while applying chat template with string arguments");
+        return false;
     }
 
     try {
         objOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, objArgsJson, objOut);
     } catch (...) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Dry-run probe: exception while applying chat template with object arguments");
+        return false;
     }
 
     return analyzeProbeResults(strOk, strOut, objOk, objOut, caps);

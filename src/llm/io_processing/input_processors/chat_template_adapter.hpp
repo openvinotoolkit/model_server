@@ -13,25 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
-#include "input_workarounds_processor.hpp"
-
-#include <variant>
-
-#include "../../input_workarounds.hpp"
+#include "../chat_template_caps.hpp"
+#include "../base_input_processor.hpp"
 
 namespace ovms {
 
-InputWorkaroundsProcessor::InputWorkaroundsProcessor(const ChatTemplateCaps& caps) :
-    caps(caps) {}
+// Applies chat template adaptations to ChatHistory based on detected ChatTemplateCaps.
+// Runs before ChatTemplateProcessor so the template receives corrected input.
+class ChatTemplateAdapter : public BaseInputProcessor {
+public:
+    explicit ChatTemplateAdapter(const ChatTemplateCaps& caps);
 
-absl::Status InputWorkaroundsProcessor::process(InputRequest& req) {
-    if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
-        return absl::OkStatus();
-    }
-    auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
-    input_workarounds::applyToHistory(caps, chatHistory);
-    return absl::OkStatus();
-}
+    absl::Status process(InputRequest& req) override;
+
+private:
+    const ChatTemplateCaps& caps;
+};
 
 }  // namespace ovms

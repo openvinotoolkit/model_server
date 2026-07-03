@@ -3045,14 +3045,14 @@ cc_library(
     alwayslink = True,
     srcs = [
         "test/llm/chat_template_analyzer_test.cpp",
-        "test/llm/input_workarounds_test.cpp",
+        "test/llm/chat_template_adapter_test.cpp",
         "test/llm/chat_template_end_to_end_minja_test.cpp",
     ],
     deps = [
         "@com_google_googletest//:gtest",
         "//src/llm:chat_template_analyzer",
         "//src/llm:chat_template_probe",
-        "//src/llm:input_workarounds",
+        "//src/llm:chat_template_adapter",
         "//src/utils:env_guard",
         "//third_party:genai",
         ":test_platform_utils",

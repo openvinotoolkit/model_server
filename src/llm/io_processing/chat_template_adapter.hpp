@@ -15,27 +15,25 @@
 //*****************************************************************************
 #pragma once
 
-#include <string>
-
-#include <openvino/genai/tokenizer.hpp>
+#include <openvino/genai/chat_history.hpp>
 
 #include "chat_template_caps.hpp"
-#include "input_processing_config.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../py_jinja_template_processor.hpp"
-#endif
 
 namespace ovms {
+namespace chat_template_adapter {
 
-// Holds the per-deployment resources needed by InputProcessor.
-// Created once during servable initialization; reused across requests.
-struct InputProcessorContext {
-    InputProcessingConfig config;
-    ChatTemplateCaps chatTemplateCaps;
-    ov::genai::Tokenizer tokenizer;
-#if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor* templateProcessor = nullptr;
-#endif
-};
+// Operates on ov::genai::ChatHistory for both GenAI C++ tokenizer and PyJinja paths.
 
+// Converts tool_call arguments from string to object.
+// Models like Gemma require arguments as a dict/object, not a stringified JSON.
+void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory);
+
+// Ensures assistant messages with tool_calls have non-null content.
+// Some templates require content="" (for example llama) rather than content=null.
+void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory);
+
+// Apply all relevant workarounds to the ChatHistory based on detected capabilities.
+void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory);
+
+}  // namespace chat_template_adapter
 }  // namespace ovms

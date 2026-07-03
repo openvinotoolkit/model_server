@@ -26,10 +26,10 @@
 #include <openvino/genai/tokenizer.hpp>
 #pragma GCC diagnostic pop
 
-#include "../../llm/chat_template_analyzer.hpp"
-#include "../../llm/chat_template_caps.hpp"
-#include "../../llm/chat_template_probe.hpp"
-#include "../../llm/input_workarounds.hpp"
+#include "../../llm/io_processing/chat_template_analyzer.hpp"
+#include "../../llm/io_processing/chat_template_caps.hpp"
+#include "../../llm/io_processing/chat_template_probe.hpp"
+#include "../../llm/io_processing/chat_template_adapter.hpp"
 #include "../../utils/env_guard.hpp"
 #include "../platform_utils.hpp"
 
@@ -120,7 +120,7 @@ protected:
         std::cout << "  requiresObjectArguments: " << caps.requiresObjectArguments << std::endl;
 
         // Step 4: Apply workarounds to the chat history
-        input_workarounds::applyToHistory(caps, chatHistory);
+        chat_template_adapter::applyToHistory(caps, chatHistory);
 
         // Step 5: Apply chat template
         ov::genai::Tokenizer tokenizer(tokenizerPath);

@@ -35,7 +35,6 @@ bool probeChatTemplateBasicRenderMinja(ov::genai::Tokenizer& tokenizer);
 // Probes a chat template by dry-running it with synthetic inputs
 // to empirically detect whether the template requires special input workarounds.
 // Updates caps parameter based on probe results.
-// Only performs probing if caps.supportsToolCalls is true. TODO: do we need supportsToolCalls?
 // Returns false if minja silently fails to render (template unsupported).
 bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
 

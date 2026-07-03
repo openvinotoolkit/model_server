@@ -42,7 +42,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         result.detectedToolParser = "gemma4";
         result.detectedReasoningParser = "gemma4";  // gemma is always tied to its own parser for reasoning
         result.caps.supportsToolCalls = true;
-        // result.caps.requiresObjectArguments = true;  // we know that gemma4 requires it, but let dry-run do its job
         return result;
     }
 
@@ -91,7 +90,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "<|python_tag|>")) {
         result.detectedToolParser = "llama3";
         result.caps.supportsToolCalls = true;
-        // result.caps.requiresNonNullContent = true;  // TODO: we know that llama3 requires it, but let dry-run do its job
         return result;
     }
 
