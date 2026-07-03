@@ -48,9 +48,6 @@ struct OpenAIRequest {
     int logprobschat{0};
     bool echo{false};
     std::optional<bool> ignoreEOS{std::nullopt};
-    // When false, the chat template is rendered without a trailing generation prompt
-    // (e.g. for assistant prefill). Defaults to true. Extension supported by HF/vLLM.
-    std::optional<bool> addGenerationPrompt{std::nullopt};
     std::optional<std::set<std::string>> stop{std::nullopt};
     std::optional<bool> includeStopStrInOutput{std::nullopt};
     std::optional<int> numReturnSequences{std::nullopt};  // effective for beam search and multinomial decoding

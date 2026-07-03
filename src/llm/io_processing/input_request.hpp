@@ -37,8 +37,7 @@ using InputPayload = std::variant<ov::genai::ChatHistory, std::string>;
 struct InputRequest {
     InputPayload input;                            // set in parseRequest()
     ov::genai::GenerationConfig generationConfig;  // set in parseRequest()
-    // add_generation_prompt is folded into ChatHistory's extra_context (chat_template_kwargs)
-    // by extractInputRequest() since it is only ever consumed by chat template rendering.
+    // add_generation_prompt is folded into ChatHistory's extra_context (chat_template_kwargs).
 
     std::string promptText;               // written by ChatTemplateProcessor / RawPromptExtractor
     ov::Tensor inputIds;                  // written by TokenizationProcessor (all paths)

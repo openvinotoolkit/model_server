@@ -88,7 +88,12 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         ov::genai::JsonContainer kwargs = chatHistory.get_extra_context();
         bool addGenerationPrompt = true;
         if (kwargs.contains("add_generation_prompt")) {
-            addGenerationPrompt = kwargs["add_generation_prompt"].get_bool();
+            const auto asBool = kwargs["add_generation_prompt"].as_bool();
+            if (!asBool.has_value()) {
+                return absl::Status(absl::StatusCode::kInvalidArgument,
+                    "add_generation_prompt accepts values true or false");
+            }
+            addGenerationPrompt = asBool.value();
             kwargs.erase("add_generation_prompt");
         }
         const std::optional<ov::genai::JsonContainer> optTools =
