@@ -91,4 +91,61 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
     }
     return std::string::npos;
 }
+
+void trimNewline(std::string& str) {
+    if (str.empty()) {
+        return;
+    }
+    if (str.back() == '\n') {
+        str.pop_back();
+    }
+    if (str.empty()) {
+        return;
+    }
+    if (str.front() == '\n') {
+        str.erase(str.begin());
+    }
+}
+
+const char* jsonTypeOf(const rapidjson::Value& val) {
+    if (val.IsObject())
+        return "object";
+    if (val.IsArray())
+        return "array";
+    if (val.IsString())
+        return "string";
+    if (val.IsBool())
+        return "bool";
+    if (val.IsInt())
+        return "int";
+    if (val.IsUint())
+        return "uint";
+    if (val.IsInt64())
+        return "int64";
+    if (val.IsUint64())
+        return "uint64";
+    if (val.IsDouble())
+        return "double";
+    if (val.IsNumber())
+        return "number";
+    if (val.IsNull())
+        return "null";
+    return "unknown";
+}
+
+void enforceStringValue(rapidjson::Value& v, rapidjson::Document::AllocatorType& alloc) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    v.Accept(writer);
+    v.SetString(buffer.GetString(), buffer.GetLength(), alloc);
+}
+
+void normalizeBooleanString(std::string& value) {
+    if (value == "True" || value == "TRUE") {
+        value = "true";
+    } else if (value == "False" || value == "FALSE") {
+        value = "false";
+    }
+}
+
 }  // namespace ovms
