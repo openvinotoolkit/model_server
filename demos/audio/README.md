@@ -382,7 +382,7 @@ export OPENAI_API_KEY="unused"
 
 4. Install dependencies:
 ```bash
-pip install -r requirements/requirements.txt -r requirements-api.txt torchcodec
+pip install -r requirements/requirements.txt -r requirements/requirements-api.txt torchcodec==0.12
 ```
 
 5. Run evaluation example:
@@ -393,7 +393,7 @@ PYTHONPATH=. python api/run_eval.py \
   --dataset "ami"
 ```
 
-You can replace `ami` with other datasets supported by the leaderboard configuration.
+You can replace `ami` with other datasets supported by the leaderboard configuration. For multilanguage models run_eval_ml.py should be used.
 
 ## Translation
 To test translations endpoint we first need to prepare audio file with speech in language other than English, e.g. Spanish. To generate such sample we will use finetuned version of microsoft/speecht5_tts model.
