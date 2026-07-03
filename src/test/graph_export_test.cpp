@@ -809,12 +809,6 @@ TEST_F(GraphCreationTest, textToSpeechPositiveDefault) {
 }
 
 TEST_F(GraphCreationTest, textToSpeechPositiveKokoro) {
-    // Pre-create the voices/ directory that optimum-cli would have populated for kokoro.
-    std::filesystem::path voicesDir = std::filesystem::path(this->directoryPath) / "voices";
-    std::filesystem::create_directories(voicesDir);
-    { std::ofstream f(voicesDir / "af_alloy.bin"); }
-    { std::ofstream f(voicesDir / "am_adam.bin"); }
-
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
     hfSettings.exportSettings.modelName = "myModel";

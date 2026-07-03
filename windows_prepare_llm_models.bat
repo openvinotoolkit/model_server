@@ -33,7 +33,7 @@ set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=HuggingFaceTB/SmolLM2-360M-Instruct"
 set "FACEBOOK_MODEL=facebook/opt-125m"
 set "VLM_MODEL=OpenVINO/InternVL2-1B-int4-ov"
-set "TTS_MODEL=microsoft/speecht5_tts"
+set "TTS_MODEL=hexgrad/Kokoro-82M"
 set "STT_MODEL=openai/whisper-tiny"
 
 :: Models for tools testing. Only tokenizers are downloaded.
@@ -64,7 +64,7 @@ if not exist "%~1" mkdir "%~1"
 
 
 :: Export models
-call :download_export_model_tts "%TTS_MODEL%" "text2speech" "--weight-format int4" "%~1"
+call :download_export_model_tts "%TTS_MODEL%" "text2speech" "--model_type kokoro --weight-format int8" "%~1"
 call :download_export_model "%STT_MODEL%" "speech2text" "--weight-format int4" "%~1"
 call :download_openvino "%VLM_MODEL%" "%~1" OpenGVLab/InternVL2-1B
 call :download_export_model "%TEXT_GENERATION_MODEL%" "text_generation" "--weight-format int8" "%~1"
@@ -113,11 +113,11 @@ set "model_type=%~2"
 set "export_args=%~3"
 set "repository=%~4"
 
-if not exist "%repository%\%model%\openvino_tokenizer.bin" (
+if not exist "%repository%\%model%\openvino_model.xml" (
   echo Downloading %model_type% model to %repository%\%model% directory.
-  python demos\common\export_models\export_model.py %model_type% --source_model "%model%" %export_args% --vocoder microsoft/speecht5_hifigan --model_repository_path %repository%
+  python demos\common\export_models\export_model.py %model_type% --source_model "%model%" %export_args% --model_repository_path %repository%
 ) else (
-  echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
+  echo Models file %repository%\%model%\openvino_model.xml exists. Skipping downloading models.
 )
 exit /b 0
 

@@ -21,7 +21,6 @@
 #include "../../audio/audio_utils.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../server.hpp"
-#include "rapidjson/document.h"
 #include "../test_http_utils.hpp"
 #include "../test_utils.hpp"
 #include "../platform_utils.hpp"
@@ -58,7 +57,8 @@ TEST_F(Text2SpeechHttpTest, simplePositive) {
         {
             "model": ")" + modelName +
                               R"(",
-            "input": "The quick brown fox jumped over the lazy dog."
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy"
         }
     )";
     ASSERT_EQ(
@@ -74,7 +74,8 @@ TEST_F(Text2SpeechHttpTest, emptyInput) {
         {
             "model": ")" + modelName +
                               R"(",
-            "input": ""
+            "input": "",
+            "voice": "af_alloy"
         }
     )";
     ASSERT_EQ(
@@ -103,7 +104,7 @@ TEST_F(Text2SpeechHttpTest, positiveWithVoice) {
             "model": ")" + modelName +
                               R"(",
             "input": "The quick brown fox jumped over the lazy dog.",
-            "voice": "speaker1"
+            "voice": "af_alloy"
         }
     )";
     ASSERT_EQ(
@@ -143,7 +144,7 @@ TEST_F(Text2SpeechConfigTest, NodeNameMissing) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             target_device: "CPU"
         }
         }
@@ -169,7 +170,7 @@ TEST_F(Text2SpeechConfigTest, SidePacketMissing) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             target_device: "CPU"
         }
         }
@@ -222,7 +223,7 @@ TEST_F(Text2SpeechConfigTest, InvalidPluginConfig) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             plugin_config: 'INVALID',
             target_device: "CPU"
         }
@@ -234,6 +235,34 @@ TEST_F(Text2SpeechConfigTest, InvalidPluginConfig) {
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST_F(Text2SpeechConfigTest, MissingVoicesInGraphUsesModelVoicesDir) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+    node {
+    name: "ttsNode1"
+    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+    calculator: "T2sCalculator"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node_options: {
+        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            plugin_config: '{"NUM_STREAMS": "1" }',
+            target_device: "CPU"
+        }
+        }
+    }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
 }
 
 TEST_F(Text2SpeechConfigTest, NonExistingVoicePath) {
@@ -250,7 +279,7 @@ TEST_F(Text2SpeechConfigTest, NonExistingVoicePath) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [
@@ -284,7 +313,7 @@ TEST_F(Text2SpeechConfigTest, VoiceMissingPath) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [
@@ -317,7 +346,7 @@ TEST_F(Text2SpeechConfigTest, VoiceInvalidFile) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [

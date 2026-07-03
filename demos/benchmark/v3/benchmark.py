@@ -52,6 +52,7 @@ parser.add_argument('--api_url', required=False, help='API URL for embeddings en
 parser.add_argument('--model', required=False, default='Alibaba-NLP/gte-large-en-v1.5', help='HF model name', dest='model')
 parser.add_argument('--request_rate', required=False, default='inf', help='Average amount of requests per seconds in random distribution', dest='request_rate')
 parser.add_argument('--batch_size', required=False, type=int, default=16, help='Number of strings in every requests', dest='batch_size')
+parser.add_argument('--voice', required=False, help='Voice name for text2speech backend', dest='voice')
 parser.add_argument('--backend', required=False, default='ovms-embeddings', choices=['ovms-embeddings','tei-embed','infinity-embeddings','ovms_rerank','text2speech','speech2text', 'translations'], help='Backend serving API type', dest='backend')
 parser.add_argument('--limit', required=False, type=int, default=1000, help='Number of documents to use in testing', dest='limit')
 parser.add_argument('--split', required=False, default='train', help='Dataset split', dest='split')
@@ -104,6 +105,7 @@ class RequestFuncOutput:
     success: bool = False
     latency: float = 0.0
     tokens_len: int = 0
+    audio_duration: float = 0.0
     error: str = ""
     text: str = ""
 
@@ -128,10 +130,13 @@ async def async_request_text2speech(
             "model": request_func_input.model,
             "input": request_func_input.documents[0],
         }
+        if args["voice"] is not None:
+            payload["voice"] = args["voice"]
         headers = application_json_headers
 
         output = RequestFuncOutput()
         st = time.perf_counter()
+        audio_bytes = bytearray()
         try:
             async with session.post(url=api_url, json=payload,
                                     headers=headers) as response:
@@ -139,13 +144,14 @@ async def async_request_text2speech(
                     async for chunk_bytes in response.content:
                         if not chunk_bytes:
                             continue
-                        # uncomment for response debugging
-                        # chunk_bytes = chunk_bytes.decode("utf-8")
-                        # data = json.loads(chunk_bytes)
-                        # TBD: saving response to file
-                        timestamp = time.perf_counter()
-                        output.success = True
-                        output.latency =  timestamp - st
+                        audio_bytes.extend(chunk_bytes)
+                    output.success = True
+                    output.latency = time.perf_counter() - st
+                    try:
+                        output.audio_duration = soundfile.info(io.BytesIO(audio_bytes)).duration
+                    except Exception as e:
+                        output.success = False
+                        output.error = f"Could not decode WAV response to compute audio duration: {e}"
                 else:
                     output.error = response.reason or ""
                     output.success = False
@@ -387,6 +393,7 @@ async def benchmark(docs, model, api_url, request_rate, backend_function):
         "latencies": [output.latency for output in outputs],
         "successes": [output.success for output in outputs],
         "token_count": [output.tokens_len for output in outputs],
+        "audio_durations": [output.audio_duration for output in outputs],
     }
     return result
 
@@ -428,18 +435,47 @@ if args["api_url"] is None:
     args["api_url"] = default_api_url
 
 benchmark_results = asyncio.run(benchmark(docs=docs, model=args["model"], api_url=args["api_url"], request_rate=float(args["request_rate"]), backend_function=backend_function))
-if args["backend"] == "speech2text" or args["backend"] == "translations":
+
+success_count = sum(benchmark_results['successes'])
+total_count = len(benchmark_results['successes'])
+success_rate = (success_count / total_count * 100.0) if total_count else 0.0
+
+if args["backend"] == "text2speech":
+    rtfx_values = []
+    for latency, audio_duration, success in zip(
+        benchmark_results['latencies'],
+        benchmark_results['audio_durations'],
+        benchmark_results['successes'],
+    ):
+        if success and latency > 0 and audio_duration > 0:
+            # RTFx = generated audio seconds per one second of processing time.
+            rtfx_values.append(audio_duration / latency)
+
+    print(f"Success rate: {success_rate}%. ({success_count}/{total_count})")
+    print(f"Mean latency: {np.mean(benchmark_results['latencies'])*1000:.2f} ms")
+    print(f"Median latency: {np.median(benchmark_results['latencies'])*1000:.2f} ms")
+
+    if len(rtfx_values) > 0:
+        print(f"Mean RTFx: {np.mean(rtfx_values):.3f}x")
+        print(f"Median RTFx: {np.median(rtfx_values):.3f}x")
+    else:
+        print("Mean RTFx: n/a")
+        print("Median RTFx: n/a")
+elif args["backend"] == "speech2text" or args["backend"] == "translations":
     num_tokens = sum(benchmark_results['token_count'])
+    #print(benchmark_results)
+    print("Tokens:",num_tokens)
+    print(f"Success rate: {success_rate}%. ({success_count}/{total_count})")
+    print(f"Throughput - Tokens per second: {num_tokens / benchmark_results['duration']:^,.1f}")
+    print(f"Mean latency: {np.mean(benchmark_results['latencies'])*1000:.2f} ms")
+    print(f"Median latency: {np.median(benchmark_results['latencies'])*1000:.2f} ms")
+    print(f"Average document length: {num_tokens / len(docs)} tokens")
 else:
     num_tokens = count_tokens(docs=docs,model=args["model"])
-#print(benchmark_results)
-print("Tokens:",num_tokens)
-print(f"Success rate: {sum(benchmark_results['successes'])/len(benchmark_results['successes'])*100}%. ({sum(benchmark_results['successes'])}/{len(benchmark_results['successes'])})")
-print(f"Throughput - Tokens per second: {num_tokens / benchmark_results['duration']:^,.1f}")
-print(f"Mean latency: {np.mean(benchmark_results['latencies'])*1000:.2f} ms")
-print(f"Median latency: {np.median(benchmark_results['latencies'])*1000:.2f} ms")
-# add printing 10 percentiles of latency to better understand latency distribution
-percentiles = [10, 25, 50, 75, 90, 95, 99]
-for p in percentiles:
-    print(f"{p}th percentile latency: {np.percentile(benchmark_results['latencies'], p)*1000:.2f} ms")
-print(f"Average document length: {num_tokens / len(docs)} tokens")
+    #print(benchmark_results)
+    print("Tokens:",num_tokens)
+    print(f"Success rate: {success_rate}%. ({success_count}/{total_count})")
+    print(f"Throughput - Tokens per second: {num_tokens / benchmark_results['duration']:^,.1f}")
+    print(f"Mean latency: {np.mean(benchmark_results['latencies'])*1000:.2f} ms")
+    print(f"Median latency: {np.median(benchmark_results['latencies'])*1000:.2f} ms")
+    print(f"Average document length: {num_tokens / len(docs)} tokens")
