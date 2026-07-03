@@ -60,11 +60,11 @@ docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_ser
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/client/python/tensorflow-serving-api/samples
+cd model_server/client/python/kserve-api/samples
 virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-python grpc_predict_binary_resnet.py --grpc_address localhost --model_name resnet --input_name input_tensor --output_name softmax_tensor:0 --grpc_port 9000 --images ../../resnet_input_images.txt
+python grpc_infer_binary_resnet.py --grpc_address localhost --model_name resnet --input_name input_tensor --output_name softmax_tensor:0 --grpc_port 9000 --images ../../resnet_input_images.txt
 
 Start processing:
         Model name: resnet

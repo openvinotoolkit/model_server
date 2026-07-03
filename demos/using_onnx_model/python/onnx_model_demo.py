@@ -20,7 +20,7 @@ sys.path.append("../../common/python")
 import argparse
 import numpy as np
 from PIL import Image
-from ovmsclient import make_grpc_client
+import tritonclient.grpc as grpcclient
 import classes
 
 
@@ -35,21 +35,20 @@ def load_image(path):
 parser = argparse.ArgumentParser(description='Run prediction on ONNX ResNet50 Model')
 parser.add_argument('--image_path', required=False, default='../../common/static/images/bee.jpeg', help='Path to a file with a JPEG image')
 parser.add_argument('--service_url',required=False, default='localhost:9001',  help='Specify url to grpc service. default:localhost:9001')
-parser.add_argument('--send_tensor', action="store_true", required=False, help='Send image after loading it with Pillow')
+parser.add_argument('--output_name', required=False, default='gpu_0/softmax_1', help='Output tensor name. default: gpu_0/softmax_1')
 args = vars(parser.parse_args())
-
-print(f"Running inference with image: {args['image_path']}")
-if args["send_tensor"]:
-    img = load_image(args["image_path"])
-else:
-    with open(args["image_path"], "rb") as f:
-        img = f.read()
 
 input_name = "gpu_0/data_0"
 
-client = make_grpc_client(args["service_url"])
-output = client.predict({input_name: img}, "resnet")
+print(f"Running inference with image: {args['image_path']}")
+img = load_image(args["image_path"])
 
-max = np.argmax(output)
-print(f"Class with highest score: {max}")
-print(f"Detected class name: {classes.imagenet_classes[max]}")
+client = grpcclient.InferenceServerClient(url=args["service_url"])
+infer_input = grpcclient.InferInput(input_name, img.shape, "UINT8")
+infer_input.set_data_from_numpy(img)
+result = client.infer("resnet", [infer_input])
+output = result.as_numpy(args['output_name'])
+
+max_idx = np.argmax(output)
+print(f"Class with highest score: {max_idx}")
+print(f"Detected class name: {classes.imagenet_classes[max_idx]}")

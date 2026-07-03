@@ -26,9 +26,9 @@ Before building the image let's copy single zebra image, here so it's included i
 ```bash
 cp ../../common/static/images/zebra.jpeg .
 ```
-Then build the docker image and tag it `ovmsclient`:
+Then build the docker image and tag it `grpc_client`:
 ```bash
-docker build . -t ovmsclient
+docker build . -t grpc_client
 ```
 
 ## Start OpenVINO Model Server with ResNet model
@@ -46,7 +46,7 @@ docker run -d --rm -p 9000:9000  -v ${PWD}/models:/models openvino/model_server:
 In order to run prediction on the model served by the OVMS using Go client run the following command:
 
 ```bash
-docker run --net=host --rm ovmsclient --serving-address localhost:9000 zebra.jpeg
+docker run --net=host --rm grpc_client --serving-address localhost:9000 zebra.jpeg
 ```
 Exemplary output:
 ```
@@ -64,7 +64,7 @@ You can also choose if the image should be sent as binary input (raw JPG or PNG 
 To send raw bytes just add `--binary-input` flag like this:
 
 ```bash
-docker run --net=host --rm ovmsclient --serving-address localhost:9000 --binary-input zebra.jpeg
+docker run --net=host --rm grpc_client --serving-address localhost:9000 --binary-input zebra.jpeg
 ```
 Exemplary output:
 ```

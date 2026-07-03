@@ -37,7 +37,7 @@ usage: face_detection.py [-h] [--input_images_dir INPUT_IMAGES_DIR]
                          [--server_cert SERVER_CERT]
                          [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
 
-Demo for face detection requests via TFS gRPC API analyses input images and
+Demo for face detection requests via gRPC API analyses input images and
 saves images with bounding boxes drawn around detected faces. It relies on
 face_detection model...
 
