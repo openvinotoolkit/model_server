@@ -388,11 +388,11 @@ pip install -r requirements/requirements.txt -r requirements/requirements-api.tx
 5. Run evaluation example:
 ```bash
 PYTHONPATH=. python api/run_eval.py \
-  --model_name openai/qwen \
+  --model_name openai/whisper-large-v3-turbo \
   --dataset_path "hf-audio/esb-datasets-test-only-sorted" \
   --dataset "ami"
 ```
-
+**Model should be deployed with --model_name whisper-large-v3-turbo (leaderboard strips `openai/` prefix)**
 You can replace `ami` with other datasets supported by the leaderboard configuration. For multilanguage models run_eval_ml.py should be used.
 
 ## Translation
