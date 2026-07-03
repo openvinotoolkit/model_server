@@ -19,7 +19,7 @@
 # Any variable can be overridden by the environment or command-line.
 
 # Source repository git commits / branches (used for source builds)
-OV_SOURCE_BRANCH ?= 6830129f5399fbbe9ed7b295156fee50da1de32c
+OV_SOURCE_BRANCH ?= a04834c6ca3ef96e9c3fdac2677b0e656a6c9352
 OV_TOKENIZERS_BRANCH ?= cdedc4fea12fa5505bb644efb7993f649082cd19
 OV_GENAI_BRANCH ?= 2fdb24323b955f1b475b312ced173d07bc3fedd2
 
