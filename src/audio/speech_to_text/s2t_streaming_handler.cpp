@@ -19,6 +19,7 @@
 #include <utility>
 #include <vector>
 
+#include "openvino/genai/automatic_speech_recognition/pipeline.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include "src/http_payload.hpp"
@@ -63,7 +64,7 @@ std::string S2tStreamingHandler::serializeDoneEvent(const std::string& text) {
 absl::Status S2tStreamingHandler::start(std::shared_ptr<ovms::SttServable> pipe,
     const ovms::HttpPayload& payload,
     std::vector<float> rawSpeech,
-    const ov::genai::WhisperGenerationConfig& config) {
+    const ov::genai::ASRGenerationConfig& config) {
     if (isStreaming_) {
         return absl::FailedPreconditionError("Streaming request is already active");
     }
@@ -125,7 +126,7 @@ absl::Status S2tStreamingHandler::processIteration(std::string& ssePayload,
         std::string finalText;
         try {
             if (executionContext_ && executionContext_->finished.valid()) {
-                const ov::genai::WhisperDecodedResults result = executionContext_->finished.get();
+                const ov::genai::ASRDecodedResults result = executionContext_->finished.get();
                 finalText = result;
             }
         } catch (ov::AssertFailure& e) {

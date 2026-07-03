@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+# pylint: disable=deprecated-argument
+# pylint: disable=too-many-positional-arguments
+
 import os
 import re
 import shutil
@@ -294,14 +297,15 @@ def swap_directory(target_path, staging_path, backup_path=None):
     old_path = target_path + "_old"
     if os.path.exists(old_path):
         remove_dir_tree(old_path)
-    target_moved = False
+    parent_dir = os.path.dirname(target_path)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
     if os.path.exists(target_path):
         os.rename(target_path, old_path)
-        target_moved = True
     try:
         os.rename(staging_path, target_path)
     except OSError:
-        if target_moved and os.path.exists(old_path) and not os.path.exists(target_path):
+        if os.path.exists(old_path) and not os.path.exists(target_path):
             try:
                 os.rename(old_path, target_path)
             except OSError:

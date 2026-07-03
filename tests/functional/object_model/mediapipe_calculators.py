@@ -35,7 +35,7 @@ from tests.functional.config import (
     mediapipe_repo_branch,
     ovms_c_repo_path,
 )
-from ovms.constants.models import ModelInfo
+from tests.functional.models.models import ModelInfo
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms import Config, MediaPipeConstants
 from tests.functional.constants.paths import Paths

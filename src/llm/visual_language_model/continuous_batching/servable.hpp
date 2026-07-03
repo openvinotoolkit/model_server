@@ -32,16 +32,17 @@ This servable also reuses CB servable initializer.
 using VisualLanguageModelServableProperties = ContinuousBatchingServableProperties;
 
 struct VisualLanguageModelServableExecutionContext : public ContinuousBatchingServableExecutionContext {
-    // Currently, scheduleExecution uses add_request call with prompt as std::string and images as std::vector<ov::Tensor>
-    // so prepareInputs provides inputText and inputImages instead of inputIds from the base class.
-    std::vector<ov::Tensor> inputImages;
-    std::string inputText;
 };
 
 class VisualLanguageModelServable : public ContinuousBatchingServable {
 public:
     VisualLanguageModelServable() {
         properties = std::make_shared<VisualLanguageModelServableProperties>();
+        properties->inputProcessorContext.config.isVLM = true;
+#if (PYTHON_DISABLE == 0)
+        // TODO(dkalinow): once we have server-side workaround, set default back to JINJA
+        properties->chatTemplateMode = ChatTemplateMode::MINJA;
+#endif
     }
 
     // Overriding ContinuousBatchingServable method
@@ -51,6 +52,5 @@ public:
     absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const HttpPayload& payload) override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
-    absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
 };
 }  // namespace ovms
