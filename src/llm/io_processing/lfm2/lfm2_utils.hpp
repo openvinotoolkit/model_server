@@ -56,7 +56,7 @@ Argument parseSingleArgument(const std::string& argumentStr);
 std::vector<Argument> parseArguments(const std::string& argumentsStr);
 bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const TagIds& tagIds);
 bool parseInToolCallState(const std::string& streamingContent, ToolCall& toolCall, size_t& streamingPosition, State& currentState);
-bool parseToolCallParametersState(const std::string& streamingContent, ToolCall& toolCall, size_t& streamingPosition, State& currentState);
+bool parseInToolCallParametersState(const std::string& streamingContent, ToolCall& toolCall, size_t& streamingPosition, State& currentState);
 bool parseInToolCallEndedState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const std::string& toolCallEndTag);
 rapidjson::Document wrapDeltaContent(const std::string& content);
 rapidjson::Document wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);

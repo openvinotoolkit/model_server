@@ -36,7 +36,7 @@ bool Lfm2ToolParser::parseNewContent() {
         return wasParsedCorrectly;
     }
     case State::ToolCallParameters: {
-        return parseToolCallParametersState(this->streamingContent, this->toolCall, this->streamingPosition, this->currentState);
+        return parseInToolCallParametersState(this->streamingContent, this->toolCall, this->streamingPosition, this->currentState);
     }
     case State::ToolCallEnded: {
         return parseInToolCallEndedState(this->streamingContent, this->streamingPosition, this->currentState, TOOL_CALL_END_TAG);

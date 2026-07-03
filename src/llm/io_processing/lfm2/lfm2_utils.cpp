@@ -231,7 +231,7 @@ bool parseInToolCallState(const std::string& streamingContent, ToolCall& toolCal
     return true;
 }
 
-bool parseToolCallParametersState(const std::string& streamingContent, ToolCall& toolCall, size_t& streamingPosition, State& currentState) {
+bool parseInToolCallParametersState(const std::string& streamingContent, ToolCall& toolCall, size_t& streamingPosition, State& currentState) {
     size_t pos = findInStringRespectingSpecialChars(streamingContent, TOOL_ARGS_END_INDICATOR, streamingPosition);
     if (pos == std::string::npos) {
         return false;
