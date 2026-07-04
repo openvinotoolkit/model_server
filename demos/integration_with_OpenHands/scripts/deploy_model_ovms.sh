@@ -15,11 +15,12 @@
 #   model_id          Hugging Face model ID (e.g., "OpenVINO/qwen3-0.6b-int8-ov")
 #
 # Options:
-#   --device DEVICE       Target device: CPU or GPU (default: CPU)
-#   --parser PARSER       Tool parser: hermes3, qwen, or none (default: auto-resolved)
-#   --cache-dir DIR       Model cache directory (default: ${HOME}/ovms-openhands/models)
-#   --compose-file FILE   Path to docker-compose.yml (default: <demo_root>/docker-compose.yml)
-#   --skip-wait           Skip health check and return immediately after deploy
+#   --device DEVICE           Target device: CPU or GPU (default: CPU)
+#   --parser PARSER           Tool parser: hermes3, qwen3coder, devstral, gemma4, gptoss, llama3, mistral, phi4, or none (default: auto-resolved)
+#   --reasoning-parser PARSER Reasoning parser: gemma4, gptoss, or none (default: auto-resolved)
+#   --cache-dir DIR           Model cache directory (default: ${HOME}/ovms-openhands/models)
+#   --compose-file FILE       Path to docker-compose.yml (default: <demo_root>/docker-compose.yml)
+#   --skip-wait               Skip health check and return immediately after deploy
 #
 # Example:
 #   ./scripts/deploy_model_ovms.sh OpenVINO/qwen3-0.6b-int8-ov --device CPU
@@ -30,6 +31,7 @@
 #   MODEL_CACHE_DIR   Override model cache directory
 #   TARGET_DEVICE     Override target device
 #   TOOL_PARSER       Override tool parser
+#   REASONING_PARSER  Override reasoning parser
 #   OVMS_REST_PORT    OVMS REST API published port (default: 8000)
 #   OVMS_GRPC_PORT    OVMS gRPC API published port (default: 9000)
 #   OPENHANDS_PORT    OpenHands Web UI published port (default: 3000)
@@ -41,7 +43,7 @@
 #   NO_PROXY          No-proxy list (uppercase variant)
 #
 # The script exports environment variables consumed by docker-compose.yml:
-#   MODEL_ID, LOCAL_NAME, TARGET_DEVICE, TOOL_PARSER, MODEL_CACHE_DIR, GPU_DEVICE, WSL_LIBS
+#   MODEL_ID, LOCAL_NAME, TARGET_DEVICE, TOOL_PARSER, REASONING_PARSER, MODEL_CACHE_DIR, GPU_DEVICE, WSL_LIBS
 #   OVMS_REST_PORT, OVMS_GRPC_PORT, OPENHANDS_PORT
 #   http_proxy, https_proxy, HTTP_PROXY, HTTPS_PROXY, no_proxy, NO_PROXY
 
@@ -76,6 +78,24 @@ declare -A TOOL_PARSERS=(
     ["mistral"]="mistral"
     ["Phi4"]="phi4"
     ["phi4"]="phi4"
+    ["Devstral"]="devstral"
+    ["devstral"]="devstral"
+    ["Gemma4"]="gemma4"
+    ["gemma4"]="gemma4"
+    ["Gemma-4"]="gemma4"
+    ["gemma-4"]="gemma4"
+    ["GPT-OSS"]="gptoss"
+    ["gpt-oss"]="gptoss"
+)
+
+# Reasoning parser mapping: model family patterns to parser names
+declare -A REASONING_PARSERS=(
+    ["Gemma4"]="gemma4"
+    ["gemma4"]="gemma4"
+    ["Gemma-4"]="gemma4"
+    ["gemma-4"]="gemma4"
+    ["GPT-OSS"]="gptoss"
+    ["gpt-oss"]="gptoss"
 )
 
 ################################################################################
@@ -118,6 +138,7 @@ parse_args() {
     # Initialize from environment or defaults
     TARGET_DEVICE="${TARGET_DEVICE:-CPU}"
     TOOL_PARSER="${TOOL_PARSER:-}"
+    REASONING_PARSER="${REASONING_PARSER:-}"
     MODEL_CACHE_DIR="${MODEL_CACHE_DIR:-${DEFAULT_MODEL_CACHE_DIR}}"
     COMPOSE_FILE="${DEFAULT_COMPOSE_FILE}"
     SKIP_WAIT=false
@@ -130,6 +151,10 @@ parse_args() {
                 ;;
             --parser)
                 TOOL_PARSER="$2"
+                shift 2
+                ;;
+            --reasoning-parser)
+                REASONING_PARSER="$2"
                 shift 2
                 ;;
             --cache-dir)
@@ -239,6 +264,28 @@ resolve_tool_parser() {
     echo "none"
 }
 
+resolve_reasoning_parser() {
+    local model_id="$1"
+    local override="${2:-}"
+
+    # If override provided, use it
+    if [[ -n "$override" ]]; then
+        echo "$override"
+        return
+    fi
+
+    # Try to match against known model families
+    for pattern in "${!REASONING_PARSERS[@]}"; do
+        if [[ "$model_id" == *"$pattern"* ]]; then
+            echo "${REASONING_PARSERS[$pattern]}"
+            return
+        fi
+    done
+
+    # Default: no reasoning parser
+    echo "none"
+}
+
 ################################################################################
 # Workspace Preparation
 ################################################################################
@@ -266,6 +313,7 @@ export_runtime_configuration() {
     export LOCAL_NAME
     export TARGET_DEVICE
     export TOOL_PARSER
+    export REASONING_PARSER
     export MODEL_CACHE_DIR
     export HF_TOKEN="${HF_TOKEN:-}"
 
@@ -316,15 +364,16 @@ export_runtime_configuration() {
     fi
 
     echo "Runtime configuration:"
-    echo "  MODEL_ID:        $MODEL_ID"
-    echo "  LOCAL_NAME:       $LOCAL_NAME"
-    echo "  TARGET_DEVICE:    $TARGET_DEVICE"
-    echo "  TOOL_PARSER:      $TOOL_PARSER"
-    echo "  MODEL_CACHE_DIR:  $MODEL_CACHE_DIR"
-    echo "  HF_TOKEN:         ${HF_TOKEN:+<set>}"
-    echo "  OVMS_REST_PORT:   $OVMS_REST_PORT"
-    echo "  OVMS_GRPC_PORT:   $OVMS_GRPC_PORT"
-    echo "  OPENHANDS_PORT:   $OPENHANDS_PORT"
+    echo "  MODEL_ID:          $MODEL_ID"
+    echo "  LOCAL_NAME:         $LOCAL_NAME"
+    echo "  TARGET_DEVICE:      $TARGET_DEVICE"
+    echo "  TOOL_PARSER:        $TOOL_PARSER"
+    echo "  REASONING_PARSER:   $REASONING_PARSER"
+    echo "  MODEL_CACHE_DIR:    $MODEL_CACHE_DIR"
+    echo "  HF_TOKEN:           ${HF_TOKEN:+<set>}"
+    echo "  OVMS_REST_PORT:     $OVMS_REST_PORT"
+    echo "  OVMS_GRPC_PORT:     $OVMS_GRPC_PORT"
+    echo "  OPENHANDS_PORT:     $OPENHANDS_PORT"
 }
 
 ################################################################################
@@ -401,6 +450,7 @@ print_manual_equivalent() {
     echo "  export LOCAL_NAME=\"$LOCAL_NAME\""
     echo "  export TARGET_DEVICE=\"$TARGET_DEVICE\""
     echo "  export TOOL_PARSER=\"$TOOL_PARSER\""
+    echo "  export REASONING_PARSER=\"$REASONING_PARSER\""
     echo "  export MODEL_CACHE_DIR=\"$MODEL_CACHE_DIR"
     echo "  export HF_TOKEN=\"\${HF_TOKEN:-}\""
     echo ""
@@ -442,6 +492,9 @@ main() {
 
     # Resolve tool parser if not overridden
     TOOL_PARSER="$(resolve_tool_parser "$MODEL_ID" "$TOOL_PARSER")"
+
+    # Resolve reasoning parser if not overridden
+    REASONING_PARSER="$(resolve_reasoning_parser "$MODEL_ID" "$REASONING_PARSER")"
 
     # Prepare workspace
     prepare_model_workspace "$MODEL_CACHE_DIR"
