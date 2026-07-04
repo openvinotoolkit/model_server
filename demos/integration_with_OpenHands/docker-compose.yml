@@ -28,22 +28,25 @@ services:
       no_proxy: ${no_proxy:-}
       NO_PROXY: ${NO_PROXY:-}
     command:
-      - --model_repository_path
-      - /models
-      - --source_model
-      - ${MODEL_ID}
-      - --model_name
-      - ${LOCAL_NAME}
-      - --task
-      - text_generation
-      - --target_device
-      - ${TARGET_DEVICE}
-      - --port
-      - "9000"
-      - --rest_port
-      - "8000"
-      - --tool_parser
-      - ${TOOL_PARSER}
+      - /bin/bash
+      - -c
+      - |
+        CMD_ARGS=(
+          --model_repository_path /models
+          --source_model "${MODEL_ID}"
+          --model_name "${LOCAL_NAME}"
+          --task text_generation
+          --target_device "${TARGET_DEVICE}"
+          --port "9000"
+          --rest_port "8000"
+        )
+        if [[ "${TOOL_PARSER}" != "none" ]]; then
+          CMD_ARGS+=(--tool_parser "${TOOL_PARSER}")
+        fi
+        if [[ "${REASONING_PARSER}" != "none" ]]; then
+          CMD_ARGS+=(--reasoning_parser "${REASONING_PARSER}")
+        fi
+        exec ovms "${CMD_ARGS[@]}"
     networks:
       - ovms-net
     restart: unless-stopped
