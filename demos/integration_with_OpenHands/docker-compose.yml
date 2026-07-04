@@ -20,6 +20,12 @@ services:
     environment:
       # Hugging Face token for gated models.
       HF_TOKEN: ${HF_TOKEN:-}
+      # Model configuration variables
+      MODEL_ID: ${MODEL_ID}
+      LOCAL_NAME: ${LOCAL_NAME}
+      TARGET_DEVICE: ${TARGET_DEVICE}
+      TOOL_PARSER: ${TOOL_PARSER}
+      REASONING_PARSER: ${REASONING_PARSER}
       # Proxy configuration (forwarded from host if set)
       http_proxy: ${http_proxy:-}
       https_proxy: ${https_proxy:-}
@@ -33,20 +39,20 @@ services:
       - |
         CMD_ARGS=(
           --model_repository_path /models
-          --source_model "${MODEL_ID}"
-          --model_name "${LOCAL_NAME}"
+          --source_model "$${MODEL_ID}"
+          --model_name "$${LOCAL_NAME}"
           --task text_generation
-          --target_device "${TARGET_DEVICE}"
+          --target_device "$${TARGET_DEVICE}"
           --port "9000"
           --rest_port "8000"
         )
-        if [[ "${TOOL_PARSER}" != "none" ]]; then
-          CMD_ARGS+=(--tool_parser "${TOOL_PARSER}")
+        if [[ "$${TOOL_PARSER}" != "none" ]]; then
+          CMD_ARGS+=(--tool_parser "$${TOOL_PARSER}")
         fi
-        if [[ "${REASONING_PARSER}" != "none" ]]; then
-          CMD_ARGS+=(--reasoning_parser "${REASONING_PARSER}")
+        if [[ "$${REASONING_PARSER}" != "none" ]]; then
+          CMD_ARGS+=(--reasoning_parser "$${REASONING_PARSER}")
         fi
-        exec ovms "${CMD_ARGS[@]}"
+        exec ovms "$${CMD_ARGS[@]}"
     networks:
       - ovms-net
     restart: unless-stopped
