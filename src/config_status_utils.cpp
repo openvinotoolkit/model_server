@@ -45,12 +45,7 @@ Status getAllModelsStatuses(ModelsStatuses& modelsStatuses, ModelInstanceProvide
         auto model_ptr = modelProvider.findModelByName(servableName);
         if (model_ptr) {
             auto modelVersionsInstances = model_ptr->getModelVersionsMapCopy();
-            bool reported = false;
             for (const auto& [modelVersion, modelInstance] : modelVersionsInstances) {
-                if (!reported) {
-                    INCREMENT_IF_ENABLED(modelInstance.getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
-                    reported = true;
-                }
                 const auto& status = modelInstance.getStatus();
                 ModelVersionStatusDetails details{
                     modelVersion,
@@ -68,7 +63,6 @@ Status getAllModelsStatuses(ModelsStatuses& modelsStatuses, ModelInstanceProvide
             if (!svsd) {
                 continue;
             }
-            INCREMENT_IF_ENABLED(svsd->getMetricReporter().getGetModelStatusRequestSuccessMetric(context));
             auto [state, error_code] = svsd->getStatus().convertToModelStatus();
             ModelVersionStatusDetails details{
                 svsd->getVersion(),

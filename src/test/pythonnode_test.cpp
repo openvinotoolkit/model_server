@@ -75,7 +75,7 @@ std::unique_ptr<std::thread> serverThread;
 
 class PythonFlowTest : public ::testing::Test {
 protected:
-    ovms::ExecutionContext defaultExecutionContext{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::Predict};
+    ovms::ExecutionContext defaultExecutionContext{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::ModelInfer};
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
 
 public:

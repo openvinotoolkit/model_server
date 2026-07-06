@@ -41,7 +41,7 @@ void mediaexec<KFSRequest, KFSResponse>(std::unique_ptr<MediapipeGraphExecutor>&
         &response,
         ovms::ExecutionContext(
             ovms::ExecutionContext::Interface::GRPC,
-            ovms::ExecutionContext::Method::Predict));
+            ovms::ExecutionContext::Method::ModelInfer));
 }
 
 template <>

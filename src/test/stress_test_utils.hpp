@@ -1506,7 +1506,7 @@ public:
             KFSModelExtraMetadata extraMetadata;
             ovms::Server& server = ovms::Server::instance();
             KFSInferenceServiceImpl impl(server);
-            auto status = impl.ModelMetadataImpl(nullptr, &request, &response, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::GetModelMetadata), extraMetadata);
+            auto status = impl.ModelMetadataImpl(nullptr, &request, &response, ovms::ExecutionContext(ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::ModelMetadata), extraMetadata);
             createPipelineRetCodesCounters[status.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(status.getCode()) != requiredLoadResults.end()) ||
                         (allowedLoadResults.find(status.getCode()) != allowedLoadResults.end()))
@@ -1597,7 +1597,7 @@ public:
             if (typeid(ServableType) == typeid(ovms::Pipeline)) {
                 executePipelineStatus = pipelinePtr->execute(ovms::ExecutionContext(
                     ovms::ExecutionContext::Interface::GRPC,
-                    ovms::ExecutionContext::Method::Predict));
+                    ovms::ExecutionContext::Method::ModelInfer));
 #if (MEDIAPIPE_DISABLE == 0)
             } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
                 mediaexec(executorPtr, *(this->manager), request, response, executePipelineStatus);

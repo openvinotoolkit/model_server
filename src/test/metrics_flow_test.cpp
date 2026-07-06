@@ -51,32 +51,16 @@ using testing::Not;
 // This checks for counter to be present with exact value and other remaining metrics of the family to be 0.
 static void checkRequestsCounter(const std::string& collectedMetricData, const std::string& metricName, const std::string& endpointName, std::optional<model_version_t> endpointVersion, const std::string& interfaceName, const std::string& method, const std::string& api, int value) {
     for (std::string _interface : std::set<std::string>{"gRPC", "REST"}) {
-        for (std::string _api : std::set<std::string>{"TensorFlowServing", "KServe"}) {
-            if (_api == "KServe") {
-                for (std::string _method : std::set<std::string>{"ModelInfer", "ModelMetadata", "ModelReady"}) {
-                    std::stringstream ss;
-                    ss << metricName << "{api=\"" << _api << "\",interface=\"" << _interface << "\",method=\"" << _method << "\",name=\"" << endpointName << "\"";
-                    if (_method != "ModelReady") {
-                        ss << ",version=\"" << endpointVersion.value() << "\"";
-                    }
-                    ss << "}";
-                    int expectedValue = interfaceName == _interface && method == _method && api == _api ? value : 0;
-                    ss << " " << expectedValue << "\n";
-                    ASSERT_THAT(collectedMetricData, HasSubstr(ss.str()));
-                }
-            } else {
-                for (std::string _method : std::set<std::string>{"Predict", "GetModelMetadata", "GetModelStatus"}) {
-                    std::stringstream ss;
-                    ss << metricName << "{api=\"" << _api << "\",interface=\"" << _interface << "\",method=\"" << _method << "\",name=\"" << endpointName << "\"";
-                    if (_method != "GetModelStatus") {
-                        ss << ",version=\"" << endpointVersion.value() << "\"";
-                    }
-                    ss << "}";
-                    int expectedValue = interfaceName == _interface && method == _method && api == _api ? value : 0;
-                    ss << " " << expectedValue << "\n";
-                    ASSERT_THAT(collectedMetricData, HasSubstr(ss.str()));
-                }
+        for (std::string _method : std::set<std::string>{"ModelInfer", "ModelMetadata", "ModelReady"}) {
+            std::stringstream ss;
+            ss << metricName << "{api=\"KServe\",interface=\"" << _interface << "\",method=\"" << _method << "\",name=\"" << endpointName << "\"";
+            if (_method != "ModelReady") {
+                ss << ",version=\"" << endpointVersion.value() << "\"";
             }
+            ss << "}";
+            int expectedValue = interfaceName == _interface && method == _method && api == "KServe" ? value : 0;
+            ss << " " << expectedValue << "\n";
+            ASSERT_THAT(collectedMetricData, HasSubstr(ss.str()));
         }
     }
 }

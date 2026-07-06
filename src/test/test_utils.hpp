@@ -63,7 +63,7 @@ using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovm
 
 void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfig);
 
-static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::Predict};
+static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::ModelInfer};
 
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
