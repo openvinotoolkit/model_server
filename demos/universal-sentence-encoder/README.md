@@ -77,6 +77,7 @@ result = client.infer("my_model", [infer_input])
 Clone the repo:
 ```console
 git clone https://github.com/openvinotoolkit/model_server
+git -C model_server checkout atobisze_remove_tfs
 ```
 
 Here is a basic client execution:

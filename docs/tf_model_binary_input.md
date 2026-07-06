@@ -60,7 +60,7 @@ docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_ser
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
-git checkout atobisze_remove_tfs
+git -C model_server checkout atobisze_remove_tfs
 cd model_server/client/python/kserve-api/samples
 virtualenv .venv
 . .venv/bin/activate
