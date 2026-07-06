@@ -31,7 +31,7 @@ docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:l
 ### Download Client Package
 
 ```bash
-pip3 install tritonclient[grpc] numpy
+pip3 install tritonclient[grpc] numpy opencv-python-headless
 ```
 
 ### Download a Sample Image and Label Mappings
@@ -46,6 +46,7 @@ wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/c
 ```bash
 echo '
 import numpy as np
+import cv2
 from classes import imagenet_classes
 import tritonclient.grpc as grpcclient
 
@@ -54,11 +55,13 @@ metadata = client.get_model_metadata("resnet")
 input_name = metadata.inputs[0].name
 output_name = metadata.outputs[0].name
 
-with open("zebra.jpeg", "rb") as f:
-    img_bytes = f.read()
+img = cv2.imread("zebra.jpeg")
+img = cv2.resize(img, (224, 224))
+img = img.astype(np.float32)
+img = img.reshape(1, img.shape[0], img.shape[1], 3)
 
-infer_input = grpcclient.InferInput(input_name, [1], "BYTES")
-infer_input.set_data_from_numpy(np.array([img_bytes], dtype=object))
+infer_input = grpcclient.InferInput(input_name, img.shape, "FP32")
+infer_input.set_data_from_numpy(img)
 result = client.infer("resnet", [infer_input])
 output = result.as_numpy(output_name)
 result_index = np.argmax(output[0])

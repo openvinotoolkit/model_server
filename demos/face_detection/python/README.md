@@ -18,9 +18,8 @@ The example relies on the model [face-detection-retail-0004](https://github.com/
 
 Clone the repository and enter face_detection directory
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
-git -C model_server checkout atobisze_remove_tfs
-cd model_server/demos/face_detection/python
+git clone -b atobisze_remove_tfs https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/face_detection/python/
 ```
 
 Prepare environment:
