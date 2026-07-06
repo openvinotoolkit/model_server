@@ -274,7 +274,7 @@ In different use cases and load specification, requests and tokens scheduling mi
 
 ### Output parsing settings
 
-When using models with more complex templates and support for `tools` or `reasoning`, you need to pass `tool_parser` or `reasoning_parser` option that defines which parser should be used for processing model output and creating final response. Currently, model server supports following parsers: 
+When using models with more complex templates and support for `tools` or `reasoning`, you may pass `tool_parser` or `reasoning_parser` option that defines which parser should be used for processing model output and creating final response. Currently, model server supports following parsers: 
 
 __Tool parsers:__
 - `hermes3` (also works for Qwen3 models)
@@ -284,9 +284,24 @@ __Tool parsers:__
 - `devstral`
 - `gptoss`
 - `qwen3coder`
+- `lfm2`
+- `gemma4`
 
 __Reasoning parsers:__
 - `qwen3`
+- `gemma4`
+- `gptoss`
+
+#### Automatic parser detection
+
+For most models with recognized chat templates, the server automatically detects the appropriate `tool_parser` and `reasoning_parser` at startup. This means you can deploy a model without explicitly specifying parsers — the server will analyze the chat template and select the correct one.
+
+If the auto-detected parser is not what you want, you can always override it by explicitly passing `--tool_parser` or `--reasoning_parser`.
+
+To explicitly disable parser auto-detection and run without any parser, set the value to `none`:
+```bash
+ovms --rest_port 8000 --model_path /model --model_name my-model --task text_generation --tool_parser none --reasoning_parser none
+```
 
 Note that using `tools` might require a chat template other than the original. 
 We recommend using templates from the [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4`, `mistral`, `devstral`, `gptoss`, and `qwen3coder` models (if available). Save the selected template as `chat_template.jinja` in the model directory and it will be used instead of the default one. If a template is not available for your model, please refer to the model's documentation or use the default template provided by the model server.
