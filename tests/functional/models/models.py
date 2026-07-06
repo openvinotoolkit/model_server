@@ -40,6 +40,7 @@ from tests.functional.object_model.custom_loader import CustomLoader
 from tests.functional.object_model.ovms_mapping_config import OvmsMappingConfig
 from tests.functional.object_model.shape import Shape
 from tests.functional.object_model.test_environment import TestEnvironment
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -441,7 +442,7 @@ class ModelInfo:
 
     def get_ovms_loading_time(self):
         loading_file_speed = 0.60 if self.is_on_cloud else 300.0
-        model_loading_speed = DEVICE_LOADING_SPEED[self.target_device][self.model_type]
+        model_loading_speed = DEVICE_LOADING_SPEED[get_base_device(self.target_device)][self.model_type]
         if self.custom_loader:
             model_loading_speed = model_loading_speed * 0.10
         size = self.size
