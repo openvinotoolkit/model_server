@@ -14,42 +14,40 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
-#include <openvino/genai/tokenizer.hpp>
+#include "../base_output_parser.hpp"
 #include <vector>
-
-#include "src/llm/io_processing/qwen3/reasoning_parser.hpp"
+#include <string>
 
 namespace ovms {
-
-// MiniCPM5's <think> / </think> reasoning tags are dedicated special tokens in its tokenizer
-// (added_tokens_decoder ids 8 and 9 respectively), not incidental text. This mirrors
-// Gemma4ReasoningParser: parse() locates the reasoning segment by scanning generatedTokens
-// for these token ids directly, instead of searching decoded text for the "<think>"/"</think>"
-// substrings the way the inherited Qwen3ReasoningParser::parse() does.
-//
-// getParsingStartTags()/getParsingEndTag() (used by the streaming parseChunk() path, inherited
-// from Qwen3ReasoningParser) still report the literal "<think>"/"</think>" strings, since that
-// is what the streamed, special-tokens-preserved text actually contains.
-//
-// requiresStreamingWithSpecialTokens() is true because MiniCPM5's tool-call tags (<function>,
-// <param>, etc. -- see Minicpm5ToolParser) are also special tokens, and the framework requires
-// the paired tool/reasoning parser to agree on this setting.
-class Minicpm5ReasoningParser : public Qwen3ReasoningParser {
+class Minicpm5ReasoningParser : public BaseOutputParser {
 protected:
-    static constexpr int64_t thinkStartTokenId = 8;  // <think>
-    static constexpr int64_t thinkEndTokenId = 9;    // </think>
+    const std::string parsingStartTag = "<think>";
+    const std::string parsingEndTag = "</think>";
+
+    const int64_t reasoningStartTokenId = 8;  // <think>
+    const int64_t reasoningEndTokenId = 9;    // </think>
 
 public:
     Minicpm5ReasoningParser() = delete;
     explicit Minicpm5ReasoningParser(ov::genai::Tokenizer& tokenizer) :
-        Qwen3ReasoningParser(tokenizer) {}
+        BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+    const std::vector<std::string>& getParsingStartTags() const override {
+        static const std::vector<std::string> parsingStartTags{this->parsingStartTag};
+        return parsingStartTags;
+    }
+    const std::vector<std::string>& getSpecialParsingStartTags() const override {
+        static const std::vector<std::string> specialParsingStartTags{};
+        return specialParsingStartTags;
+    }
+    const std::string& getParsingEndTag() const override {
+        return parsingEndTag;
+    }
 
     bool requiresStreamingWithSpecialTokens() const override {
         return true;
     }
 };
-
 }  // namespace ovms

@@ -26,17 +26,10 @@
 
 using namespace ovms;
 
-// There is no MiniCPM5 tokenizer among the test assets, so this reuses the existing
-// Qwen3-8B tokenizer instead of adding a new asset. This is safe here: the Minicpm5
-// parser (see minicpm5_tool_parser.cpp) operates on OutputParser::parse's decoded text
-// (tokenizer.decode(generatedTokens)) via plain string/XML-tag matching -- it never reads
-// token ids or vocab-specific special tokens. Every test string below is round-tripped
-// through encode() then decode() with this same tokenizer instance, so the parser sees
-// back the exact text it was given regardless of whose vocabulary produced the token ids.
 #ifdef _WIN32
-const std::string minicpm5TokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\Qwen\\Qwen3-8B";
+const std::string minicpm5TokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\openbmb\\MiniCPM5-1B";
 #else
-const std::string minicpm5TokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
+const std::string minicpm5TokenizerPath = "/ovms/src/test/llm_testing/openbmb/MiniCPM5-1B";
 #endif
 
 using ovms::ParameterType;
@@ -161,19 +154,6 @@ TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"ticker":"INTC","count":42})");
 }
 
-// Reasoning (<think>...</think>) stripping is the reasoning parser's job, not the tool
-// parser's. With the minicpm5 reasoning parser in front, the <think> block is moved to
-// reasoning and the tool call is still parsed from the remaining content. (minicpm5 is used
-// rather than qwen3 because the tool parser requires special tokens to be streamed, and the
-// paired reasoning parser must agree on that flag.)
-//
-// Minicpm5ReasoningParser locates the reasoning segment by real MiniCPM5 special-token ids
-// (8 = <think>, 9 = </think>; see minicpm5_reasoning_parser.hpp), not by decoded-text
-// substring search. The Qwen3-8B stand-in tokenizer used in this file has its OWN, different
-// ids for the literal "<think>"/"</think>" strings, so encoding that text here would not
-// exercise the real boundary check at all. Instead, the token sequence is assembled directly
-// with the real ids as delimiters, and the Qwen3 tokenizer is used only to encode/decode the
-// free-form text around them (which round-trips correctly regardless of whose vocab it is).
 TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
     constexpr int64_t thinkStartTokenId = 8;  // <think>, per Minicpm5ReasoningParser
     constexpr int64_t thinkEndTokenId = 9;    // </think>, per Minicpm5ReasoningParser
@@ -199,9 +179,9 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "search");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"query":"Intel"})");
-    // Reasoning was extracted by the reasoning parser, not left in content.
     EXPECT_NE(parsedOutput.reasoning.find("internal reasoning"), std::string::npos);
     EXPECT_EQ(parsedOutput.content.find("<think>"), std::string::npos);
+    EXPECT_EQ(parsedOutput.content, "");
 }
 
 // MiniCPM5's tool tags (<function>, <param>, ...) are special tokens, so the tool parser must
@@ -229,8 +209,9 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockNotStrippedWhenNoReasoningPa
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "search");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"query":"Intel"})");
-    // The tool parser leaves the <think> block in content.
-    EXPECT_NE(parsedOutput.content.find("<think>"), std::string::npos);
+    EXPECT_EQ(parsedOutput.content.find("<think>"), std::string::npos);
+    EXPECT_EQ(parsedOutput.content.find("</think>"), std::string::npos);
+    EXPECT_EQ(parsedOutput.content, "");
 }
 
 // Plain content with no tool calls must pass through unchanged

@@ -323,7 +323,6 @@ ovms_cc_library(
         "//src/utils:rapidjson_utils",
         ":io_processing_utils",
         ":io_processing_base_output_parser",
-        ":io_processing_qwen3_reasoning_parser",
         ":apis_tool_schema_wrapper",
         "//third_party:genai",
     ],

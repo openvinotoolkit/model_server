@@ -104,27 +104,14 @@ private:
 
     void addParameterToCurrentFunctionDoc(std::string& parameterValueAsString);
 
-    /*
-     * Process streamContent from lastProcessedPosition until a state change.
-     * Returns true if the state changed, false when no further progress is possible.
-     * Dispatches to the per-state handlers below.
-     */
     bool parseUntilStateChange(ToolCalls_t& toolCalls);
 
-    // Per-state handlers. Each advances lastProcessedPosition and/or currentState as far
-    // as the currently buffered streamContent allows. Extracted from parseUntilStateChange.
-    void handleContentState();
+    void handleInsideContentState();
     void handleInsideFunctionNameState();
     void handleInsideFunctionState(ToolCalls_t& toolCalls);
     void handleInsideParamNameState();
     void handleInsideParamState();
 
-    /*
-     * Extract the value of the name="..." (or name='...') attribute from an opening tag
-     * that starts at tagStart (the '<') in streamContent.  The tag ends at the first '>'
-     * after tagStart.  Returns the attribute value, or empty string on failure.
-     * Sets *closingAngle (if non-null) to the position of the '>' that closes the tag.
-     */
     static std::string extractNameAttribute(const std::string& content, size_t nameAttrValueStart, size_t tagEnd);
 };
 
@@ -137,6 +124,9 @@ public:
     static const std::string PARAM_START_TAG;     // <param
     static const std::string PARAM_END_TAG;       // </param>
     static const std::string FUNCTION_END_TAG;    // </function>
+
+    static const int64_t reasoningStartTokenId = 8;  // <think>
+    static const int64_t reasoningEndTokenId = 9;    // </think>
 
 private:
     const ToolsSchemas_t& toolSchemas;
@@ -168,14 +158,13 @@ public:
         static const std::string EMPTY_STRING = "";
         return EMPTY_STRING;
     }
-    // MiniCPM5 emits its tool-call tags (<function, </function>, <param, </param>) as special
-    // tokens, which the streamer skips by default; they must be preserved so the parser can see
-    // them. (The <think> reasoning tags are NOT special tokens, so reasoning parsing is unaffected.)
+
     bool requiresStreamingWithSpecialTokens() const override {
         return true;
     }
 
 private:
+    const std::vector<int64_t> removeReasoningTokens(const std::vector<int64_t>& generatedTokens);
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
     std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
     void lazyFillInitToolParametersTypesMap();

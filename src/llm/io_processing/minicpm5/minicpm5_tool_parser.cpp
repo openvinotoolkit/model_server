@@ -136,12 +136,7 @@ Status Minicpm5ToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& o
     return StatusCode::OK;
 }
 
-// parseUntilStateChange is a small dispatcher: it records the previous state, runs the
-// handler for the current state and reports whether the state changed. Reasoning (<think>)
-// stripping is handled earlier in the chain by the reasoning parser, so the tool parser
-// only looks for <function ...> blocks.
-
-void Minicpm5ToolParserImpl::handleContentState() {
+void Minicpm5ToolParserImpl::handleInsideContentState() {
     // Look for the next <function tag; everything else is plain content.
     auto posFunc = this->streamContent.find(Minicpm5ToolParser::FUNCTION_START_TAG, this->lastProcessedPosition);
     if (posFunc == std::string::npos) {
@@ -262,7 +257,7 @@ bool Minicpm5ToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
 
     switch (this->currentState) {
     case State::Content:
-        handleContentState();
+        handleInsideContentState();
         break;
     case State::InsideFunctionName:
         handleInsideFunctionNameState();
@@ -312,16 +307,37 @@ Minicpm5ToolParser::Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const To
     toolSchemas(toolSchemas),
     streamParser(this->toolsParametersTypes) {}
 
+const std::vector<int64_t> Minicpm5ToolParser::removeReasoningTokens(const std::vector<int64_t>& generatedTokens) {
+    std::vector<int64_t> tokensWithoutReasoning;
+    tokensWithoutReasoning.reserve(generatedTokens.size());
+    auto reasoningStartIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningStartTokenId);
+    auto reasoningEndIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId);
+    if (reasoningStartIt == generatedTokens.end() || reasoningEndIt == generatedTokens.end() || reasoningStartIt >= reasoningEndIt) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Minicpm5ToolParser: Reasoning start or end token not found in the generated tokens, or in wrong order. Start token found: {}, End token found: {}, Start position: {}, End position: {}",
+            reasoningStartIt != generatedTokens.end(), reasoningEndIt != generatedTokens.end(), std::distance(generatedTokens.begin(), reasoningStartIt), std::distance(generatedTokens.begin(), reasoningEndIt));
+        tokensWithoutReasoning.insert(tokensWithoutReasoning.end(), generatedTokens.begin(), generatedTokens.end());
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Minicpm5ToolParser: Reasoning tokens found. Start position: {}, End position: {}",
+            std::distance(generatedTokens.begin(), reasoningStartIt), std::distance(generatedTokens.begin(), reasoningEndIt));
+        tokensWithoutReasoning.insert(tokensWithoutReasoning.end(), generatedTokens.begin(), reasoningStartIt);
+        tokensWithoutReasoning.insert(tokensWithoutReasoning.end(), reasoningEndIt + 1, generatedTokens.end());
+    }
+    return tokensWithoutReasoning;
+}
+
 void Minicpm5ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
+    auto tokensWithoutReasoning = this->removeReasoningTokens(generatedTokens);
+    std::string contentWithSpecialTokens = this->tokenizer.decode(tokensWithoutReasoning, ov::genai::skip_special_tokens(false));
     this->lazyFillInitToolParametersTypesMap();
-    auto toolCallsOpt = this->streamParser.parseChunk(parsedOutput.content);
+    auto toolCallsOpt = this->streamParser.parseChunk(contentWithSpecialTokens);
     if (toolCallsOpt.has_value()) {
         parsedOutput.toolCalls = std::move(toolCallsOpt.value());
         SPDLOG_DEBUG("Minicpm5ToolParser: parse done, removing tool calls from content");
-        auto status = this->streamParser.removeToolCallsFromContentIfNeeded(parsedOutput.content);
+        auto status = this->streamParser.removeToolCallsFromContentIfNeeded(contentWithSpecialTokens);
         if (!status.ok()) {
             SPDLOG_DEBUG("Minicpm5ToolParser: failed to remove tool calls from content: {}", status.string());
         }
+        parsedOutput.content = std::move(contentWithSpecialTokens);
         return;
     }
     SPDLOG_DEBUG("Minicpm5ToolParser: parse done, no tool calls found");
