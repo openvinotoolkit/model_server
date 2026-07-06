@@ -3052,7 +3052,7 @@ cc_library(
         "@com_google_googletest//:gtest",
         "//src/llm:chat_template_analyzer",
         "//src/llm:chat_template_probe",
-        "//src/llm:chat_template_adapter",
+        "//src/llm:io_processing_input_processors",
         "//src/utils:env_guard",
         "//third_party:genai",
         ":test_platform_utils",

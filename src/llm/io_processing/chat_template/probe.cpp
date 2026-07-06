@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "chat_template_probe.hpp"
+#include "probe.hpp"
 
 #include <chrono>
 #include <future>
@@ -22,9 +22,9 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../../logging.hpp"
+#include "../../../logging.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "../py_jinja_template_processor.hpp"
+#include "../../py_jinja_template_processor.hpp"
 #endif
 
 namespace ovms {

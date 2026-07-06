@@ -15,12 +15,29 @@
 //*****************************************************************************
 #pragma once
 
-#include "../chat_template_caps.hpp"
+#include <openvino/genai/chat_history.hpp>
+
+#include "../chat_template/caps.hpp"
 #include "../base_input_processor.hpp"
 
 namespace ovms {
 
-// Applies chat template adaptations to ChatHistory based on detected ChatTemplateCaps.
+namespace chat_template_adapter {
+
+// Converts tool_call arguments from string to object.
+// Models like Gemma require arguments as a dict/object, not a stringified JSON.
+void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory);
+
+// Ensures assistant messages with tool_calls have non-null content.
+// Some templates require content="" (for example llama) rather than content=null.
+void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory);
+
+// Apply all relevant adaptations to the ChatHistory based on detected capabilities.
+void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory);
+
+}  // namespace chat_template_adapter
+
+// Input processor that applies chat template adaptations to ChatHistory.
 // Runs before ChatTemplateProcessor so the template receives corrected input.
 class ChatTemplateAdapter : public BaseInputProcessor {
 public:

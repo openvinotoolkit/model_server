@@ -33,10 +33,10 @@
 
 #include <openvino/genai/chat_history.hpp>
 
-#include "../../llm/io_processing/chat_template_analyzer.hpp"
-#include "../../llm/io_processing/chat_template_caps.hpp"
-#include "../../llm/io_processing/chat_template_probe.hpp"
-#include "../../llm/io_processing/chat_template_adapter.hpp"
+#include "../../llm/io_processing/chat_template/analyzer.hpp"
+#include "../../llm/io_processing/chat_template/caps.hpp"
+#include "../../llm/io_processing/chat_template/probe.hpp"
+#include "../../llm/io_processing/input_processors/chat_template_adapter.hpp"
 #include "../../llm/py_jinja_template_processor.hpp"
 #include "../../utils/env_guard.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"

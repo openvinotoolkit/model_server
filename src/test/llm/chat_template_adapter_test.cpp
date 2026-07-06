@@ -19,7 +19,7 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/chat_history.hpp>
 
-#include "../../llm/io_processing/chat_template_adapter.hpp"
+#include "../../llm/io_processing/input_processors/chat_template_adapter.hpp"
 
 using namespace ovms;
 

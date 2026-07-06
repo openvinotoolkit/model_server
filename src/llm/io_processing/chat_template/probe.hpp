@@ -17,7 +17,7 @@
 
 #include <string>
 
-#include "chat_template_caps.hpp"
+#include "caps.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

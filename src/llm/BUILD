@@ -137,7 +137,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "io_processing_input_processor_context",
     hdrs = ["io_processing/input_processor_context.hpp",
-            "io_processing/chat_template_caps.hpp"],
+            "io_processing/chat_template/caps.hpp"],
     srcs = [],
     deps = [
         ":io_processing_input_request",
@@ -154,6 +154,7 @@ ovms_cc_library(
     hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
             "io_processing/input_processors/chat_template_processor.hpp",
             "io_processing/input_processors/chat_template_adapter.hpp",
+            "io_processing/chat_template/caps.hpp",
             "io_processing/input_processors/raw_prompt_extractor.hpp",
             "io_processing/input_processors/text_content_normalization_processor.hpp",
             "io_processing/input_processors/tokenization_processor.hpp"],
@@ -166,7 +167,6 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmsprofiler",
         ":image_utils",
-        ":chat_template_adapter",
         ":io_processing_input_request",
         "//third_party:genai",
         "//src:libovmslogging",
@@ -214,18 +214,18 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "chat_template_analyzer",
-    hdrs = ["io_processing/chat_template_caps.hpp",
-            "io_processing/chat_template_analyzer.hpp"],
-    srcs = ["io_processing/chat_template_analyzer.cpp"],
+    hdrs = ["io_processing/chat_template/caps.hpp",
+            "io_processing/chat_template/analyzer.hpp"],
+    srcs = ["io_processing/chat_template/analyzer.cpp"],
     deps = [],
     visibility = ["//visibility:public"],
 )
 
 ovms_cc_library(
     name = "chat_template_probe",
-    hdrs = ["io_processing/chat_template_probe.hpp",
-            "io_processing/chat_template_caps.hpp"],
-    srcs = ["io_processing/chat_template_probe.cpp"],
+    hdrs = ["io_processing/chat_template/probe.hpp",
+            "io_processing/chat_template/caps.hpp"],
+    srcs = ["io_processing/chat_template/probe.cpp"],
     deps = [
         "//third_party:genai",
         "//src:libovmslogging",
@@ -236,17 +236,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
-ovms_cc_library(
-    name = "chat_template_adapter",
-    hdrs = ["io_processing/chat_template_adapter.hpp",
-            "io_processing/chat_template_caps.hpp"],
-    srcs = ["io_processing/chat_template_adapter.cpp"],
-    deps = [
-        "//third_party:genai",
-        "//src:libovmslogging",
-    ],
-    visibility = ["//visibility:public"],
-)
 
 ovms_cc_library(
     name = "partial_json_builder",

@@ -18,7 +18,7 @@
 #include <optional>
 #include <string>
 
-#include "chat_template_caps.hpp"
+#include "caps.hpp"
 
 namespace ovms {
 
