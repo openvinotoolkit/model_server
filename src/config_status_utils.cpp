@@ -42,9 +42,9 @@ Status getAllModelsStatuses(ModelsStatuses& modelsStatuses, ModelInstanceProvide
     for (const auto& servableName : servableNames) {
         std::vector<ModelVersionStatusDetails> versions;
 
-        auto model_ptr = modelProvider.findModelByName(servableName);
-        if (model_ptr) {
-            auto modelVersionsInstances = model_ptr->getModelVersionsMapCopy();
+        auto model = modelProvider.findModelByName(servableName);
+        if (model) {
+            auto modelVersionsInstances = model->getModelVersionsMapCopy();
             for (const auto& [modelVersion, modelInstance] : modelVersionsInstances) {
                 const auto& status = modelInstance.getStatus();
                 ModelVersionStatusDetails details{
@@ -63,12 +63,12 @@ Status getAllModelsStatuses(ModelsStatuses& modelsStatuses, ModelInstanceProvide
             if (!svsd) {
                 continue;
             }
-            auto [state, error_code] = svsd->getStatus().convertToModelStatus();
+            auto [state, errorCode] = svsd->getStatus().convertToModelStatus();
             ModelVersionStatusDetails details{
                 svsd->getVersion(),
                 state,
-                error_code,
-                ModelVersionStatusErrorCodeToString(error_code)};
+                errorCode,
+                ModelVersionStatusErrorCodeToString(errorCode)};
             versions.push_back(std::move(details));
         }
 
