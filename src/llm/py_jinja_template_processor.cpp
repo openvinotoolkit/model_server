@@ -35,7 +35,7 @@
 
 namespace ovms {
 
-bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, std::string modelsPath, const std::string& requestBody, std::string& output) {
+bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output) {
     if (templateProcessor.chatTemplate == nullptr) {
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;
@@ -43,7 +43,7 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = templateProcessor.chatTemplate->getObject(),
-            "tool_chat_template"_a = templateProcessor.toolTemplate->getObject(), "models_path"_a = modelsPath,
+            "tool_chat_template"_a = templateProcessor.toolTemplate->getObject(),
             "bos_token"_a = templateProcessor.bosToken, "eos_token"_a = templateProcessor.eosToken);
         py::exec(R"(
             output = ""
