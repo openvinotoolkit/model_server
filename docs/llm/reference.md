@@ -299,7 +299,7 @@ For most models with recognized chat templates, the server automatically detects
 If the auto-detected parser is not what you want, you can always override it by explicitly passing `--tool_parser` or `--reasoning_parser`.
 
 To explicitly disable parser auto-detection and run without any parser, set the value to `none`:
-```bash
+```text
 ovms --rest_port 8000 --model_path /model --model_name my-model --task text_generation --tool_parser none --reasoning_parser none
 ```
 

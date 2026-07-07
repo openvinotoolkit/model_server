@@ -46,7 +46,6 @@ TEST_F(ChatTemplateAnalyzerTest, emptyTemplateReturnsDefaults) {
     EXPECT_FALSE(result.detectedReasoningParser.has_value());
     EXPECT_FALSE(result.caps.supportsToolCalls);
     EXPECT_FALSE(result.caps.requiresObjectArguments);
-    EXPECT_FALSE(result.caps.requiresNonNullContent);
 }
 
 // --- GPT-OSS ---
@@ -205,5 +204,4 @@ TEST_F(ChatTemplateAnalyzerTest, defaultCapsValues) {
     ChatTemplateCaps caps;
     EXPECT_FALSE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
-    EXPECT_FALSE(caps.requiresNonNullContent);
 }

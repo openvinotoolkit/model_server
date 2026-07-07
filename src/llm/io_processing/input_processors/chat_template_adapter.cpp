@@ -60,27 +60,10 @@ void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory) {
     }
 }
 
-void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory) {
-    for (size_t msgIdx = 0; msgIdx < chatHistory.size(); ++msgIdx) {
-        auto message = chatHistory[msgIdx];
-        if (!message.contains("tool_calls")) {
-            continue;
-        }
-        if (!message.contains("content")) {
-            message["content"] = "";
-        } else if (message["content"].is_null()) {
-            message["content"] = "";
-        }
-    }
-}
-
 void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory) {
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Applying chat template adaptations: {}", caps.toString());
     if (caps.requiresObjectArguments) {
         funcArgsToObjectHistory(chatHistory);
-    }
-    if (caps.requiresNonNullContent) {
-        ensureNonNullContentHistory(chatHistory);
     }
 }
 

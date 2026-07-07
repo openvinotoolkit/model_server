@@ -14,8 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #include <filesystem>
-#include <chrono>
-#include <future>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -63,7 +61,6 @@ static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template
 // template behavior rather than relying solely on string pattern matching.
 // Probes for:
 //   - requiresObjectArguments (workaround: string→object conversion of tool_call arguments)
-//   - requiresNonNullContent (workaround: ensure content="" rather than content=null for tool_call messages)
 static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServableProperties> properties) {
     if (properties->tokenizer.get_chat_template().empty()) {
         return;
@@ -145,7 +142,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
         }
 
-        // Dry-run probes: empirically verify requiresObjectArguments and requiresNonNullContent
+        // Dry-run probes: empirically verify requiresObjectArguments
         // by rendering synthetic messages through GenAI's minja and checking the output.
         // First check if minja can render basic chat at all (catches unsupported Jinja extensions)
 #if (PYTHON_DISABLE == 0)

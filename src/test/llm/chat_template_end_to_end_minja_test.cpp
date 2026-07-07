@@ -93,7 +93,6 @@ protected:
         std::cout << "  reasoningParser: " << analysisResult.detectedReasoningParser.value_or("(none)") << std::endl;
         std::cout << "  supportsToolCalls: " << caps.supportsToolCalls << std::endl;
         std::cout << "  requiresObjectArguments: " << caps.requiresObjectArguments << std::endl;
-        std::cout << "  requiresNonNullContent: " << caps.requiresNonNullContent << std::endl;
 
         // Step 2: Basic render probe (can minja render this template at all?)
         {
@@ -164,7 +163,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, GptOss_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
-    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(<|start|>user<|message|>What's the weather in Paris?<|end|><|start|>assistant to=functions.get_weather <|channel|>commentary json<|message|>{"location":"Paris","unit":"celsius"}<|end|><|start|>assistant)";
     EXPECT_NE(appliedOutput.find(expectedOutput), std::string::npos) << appliedOutput;
@@ -194,7 +192,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen36_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -243,7 +240,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_FALSE(caps.requiresNonNullContent);
 
     // FIXME: Why is </s> here? because of facebook-opt125?
     std::string expectedOutput = R"(</s><|turn>user
@@ -280,7 +276,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
 
     EXPECT_FALSE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
-    EXPECT_FALSE(caps.requiresNonNullContent);
 }
 
 // =============================================================================
@@ -306,7 +301,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Phi4Mini_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
-    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(<|system|>
 You are a helpful assistant.<|end|><|user|>What's the weather in Paris?<|end|><|assistant|>{"name": "get_weather", "arguments": {"location":"Paris","unit":"celsius"}}<|end|><|assistant|>)";
@@ -336,7 +330,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -376,7 +369,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(</s>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]</s>)";
     EXPECT_EQ(appliedOutput, expectedOutput);
@@ -424,14 +416,12 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
 
     EXPECT_FALSE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);  // TODO(przepeck): change once we have it working
-    EXPECT_FALSE(caps.requiresNonNullContent);
 
     // TODO: Expect appliedOutput once fixed
 }
 
 // =============================================================================
-// Minja can't handle this chat template for some reason.
-// TODO(przepeck): ensure this tests the same template as we will publish to HF
+// Same story as Qwen3-8B, but with image tags.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3VL_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3vl.jinja");
@@ -452,7 +442,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3VL_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -466,8 +455,7 @@ What's the weather in Paris?<|im_end|>
 }
 
 // =============================================================================
-// Minja can't handle this chat template for some reason.
-// TODO(przepeck): ensure this tests the same template as we will publish to HF
+// Same story as Qwen3-8B, but without reasoning.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3_30b.jinja");
@@ -488,7 +476,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_FALSE(caps.requiresNonNullContent);
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>

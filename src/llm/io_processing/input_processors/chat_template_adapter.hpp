@@ -28,10 +28,6 @@ namespace chat_template_adapter {
 // Models like Gemma require arguments as a dict/object, not a stringified JSON.
 void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory);
 
-// Ensures assistant messages with tool_calls have non-null content.
-// Some templates require content="" (for example llama) rather than content=null.
-void ensureNonNullContentHistory(ov::genai::ChatHistory& chatHistory);
-
 // Apply all relevant adaptations to the ChatHistory based on detected capabilities.
 void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory);
 

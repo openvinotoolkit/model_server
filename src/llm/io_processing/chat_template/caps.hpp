@@ -25,17 +25,13 @@ struct ChatTemplateCaps {
     // Some templates require tool_call arguments to be a dict/object rather than a stringified JSON.
     bool requiresObjectArguments = false;
 
-    // Messages with tool_calls may require content="" rather than content=null for some templates (e.g. llama3).
-    bool requiresNonNullContent = false;
-
     bool needsWorkarounds() const {
-        return requiresObjectArguments || requiresNonNullContent;
+        return requiresObjectArguments;
     }
 
     std::string toString() const {
         return std::string("supportsToolCalls=") + (supportsToolCalls ? "true" : "false") +
-               ", requiresObjectArguments=" + (requiresObjectArguments ? "true" : "false") +
-               ", requiresNonNullContent=" + (requiresNonNullContent ? "true" : "false");
+               ", requiresObjectArguments=" + (requiresObjectArguments ? "true" : "false");
     }
 };
 

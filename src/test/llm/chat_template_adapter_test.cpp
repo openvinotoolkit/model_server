@@ -127,63 +127,6 @@ TEST_F(ChatTemplateAdapterTest, funcArgsToObjectNoopWithoutToolCalls) {
     EXPECT_EQ(history[0]["content"].get_string(), "hello");
 }
 
-// --- ensureNonNullContentHistory ---
-
-TEST_F(ChatTemplateAdapterTest, ensureNonNullContentSetsNullToEmpty) {
-    auto history = buildHistory(R"([
-        {"role": "assistant", "content": null, "tool_calls": [
-            {"function": {"name": "fn"}}
-        ]}
-    ])");
-
-    chat_template_adapter::ensureNonNullContentHistory(history);
-
-    ASSERT_GE(history.size(), 1u);
-    ASSERT_TRUE(history[0]["content"].is_string());
-    EXPECT_EQ(history[0]["content"].get_string(), "");
-}
-
-TEST_F(ChatTemplateAdapterTest, ensureNonNullContentAddsMissingContent) {
-    auto history = buildHistory(R"([
-        {"role": "assistant", "tool_calls": [
-            {"function": {"name": "fn"}}
-        ]}
-    ])");
-
-    chat_template_adapter::ensureNonNullContentHistory(history);
-
-    ASSERT_GE(history.size(), 1u);
-    EXPECT_TRUE(history[0].contains("content"));
-    ASSERT_TRUE(history[0]["content"].is_string());
-    EXPECT_EQ(history[0]["content"].get_string(), "");
-}
-
-TEST_F(ChatTemplateAdapterTest, ensureNonNullContentPreservesExistingString) {
-    auto history = buildHistory(R"([
-        {"role": "assistant", "content": "some text", "tool_calls": [
-            {"function": {"name": "fn"}}
-        ]}
-    ])");
-
-    chat_template_adapter::ensureNonNullContentHistory(history);
-
-    ASSERT_GE(history.size(), 1u);
-    ASSERT_TRUE(history[0]["content"].is_string());
-    EXPECT_EQ(history[0]["content"].get_string(), "some text");
-}
-
-TEST_F(ChatTemplateAdapterTest, ensureNonNullContentSkipsMessagesWithoutToolCalls) {
-    auto history = buildHistory(R"([
-        {"role": "user", "content": null}
-    ])");
-
-    chat_template_adapter::ensureNonNullContentHistory(history);
-
-    // User message without tool_calls should not be modified
-    ASSERT_GE(history.size(), 1u);
-    EXPECT_TRUE(history[0]["content"].is_null());
-}
-
 // --- applyToHistory ---
 
 TEST_F(ChatTemplateAdapterTest, applyToHistoryAppliesObjectArgsWhenRequired) {
@@ -204,23 +147,6 @@ TEST_F(ChatTemplateAdapterTest, applyToHistoryAppliesObjectArgsWhenRequired) {
     EXPECT_EQ(args.to_json_string(), R"({"x":42})");
 }
 
-TEST_F(ChatTemplateAdapterTest, applyToHistoryAppliesNonNullContentWhenRequired) {
-    ChatTemplateCaps caps;
-    caps.requiresNonNullContent = true;
-
-    auto history = buildHistory(R"([
-        {"role": "assistant", "content": null, "tool_calls": [
-            {"function": {"name": "fn"}}
-        ]}
-    ])");
-
-    chat_template_adapter::applyToHistory(caps, history);
-
-    ASSERT_GE(history.size(), 1u);
-    ASSERT_TRUE(history[0]["content"].is_string());
-    EXPECT_EQ(history[0]["content"].get_string(), "");
-}
-
 TEST_F(ChatTemplateAdapterTest, applyToHistoryDoesNothingWhenNoCapsSet) {
     ChatTemplateCaps caps;  // all defaults (false)
 
@@ -235,26 +161,4 @@ TEST_F(ChatTemplateAdapterTest, applyToHistoryDoesNothingWhenNoCapsSet) {
     std::string after = history.get_messages().to_json_string();
 
     EXPECT_EQ(before, after);
-}
-
-TEST_F(ChatTemplateAdapterTest, applyToHistoryAppliesBothWorkarounds) {
-    ChatTemplateCaps caps;
-    caps.requiresObjectArguments = true;
-    caps.requiresNonNullContent = true;
-
-    auto history = buildHistory(R"([
-        {"role": "assistant", "content": null, "tool_calls": [
-            {"function": {"name": "fn", "arguments": "{\"key\": \"val\"}"}}
-        ]}
-    ])");
-
-    chat_template_adapter::applyToHistory(caps, history);
-
-    // Arguments should be converted to object
-    ASSERT_GE(history.size(), 1u);
-    auto args = history[0]["tool_calls"][0]["function"]["arguments"];
-    ASSERT_TRUE(args.is_object());
-    // Content should be non-null
-    ASSERT_TRUE(history[0]["content"].is_string());
-    EXPECT_EQ(history[0]["content"].get_string(), "");
 }
