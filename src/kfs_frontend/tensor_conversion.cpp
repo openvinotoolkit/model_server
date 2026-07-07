@@ -61,7 +61,35 @@ Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::InferInput
     return StatusCode::OK;
 }
 
-template Status convertStringRequestToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+template <>
+Status convertStringRequestToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
+    OVMS_PROFILE_FUNCTION();
+    if (buffer != nullptr) {
+        return convertBinaryExtensionStringFromBufferToNativeOVTensor(src, tensor, buffer);
+    }
+    int numElements = getBinaryInputsSize(src);
+    // Build ov::Shape from request shape, preserving multi-dimensional shapes (e.g. [1,5]).
+    ov::Shape shape;
+    if (src.shape_size() > 0) {
+        size_t shapeElements = 1;
+        for (int i = 0; i < src.shape_size(); i++) {
+            shape.push_back(static_cast<size_t>(src.shape().at(i)));
+            shapeElements *= static_cast<size_t>(src.shape().at(i));
+        }
+        if (static_cast<int>(shapeElements) != numElements) {
+            SPDLOG_DEBUG("String input shape product {} != contents size {}; falling back to 1D", shapeElements, numElements);
+            shape = ov::Shape{static_cast<size_t>(numElements)};
+        }
+    } else {
+        shape = ov::Shape{static_cast<size_t>(numElements)};
+    }
+    tensor = ov::Tensor(ov::element::Type_t::string, shape);
+    std::string* data = tensor.data<std::string>();
+    for (int i = 0; i < numElements; i++) {
+        data[i].assign(getBinaryInput(src, i));
+    }
+    return StatusCode::OK;
+}
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const TensorInfo& tensorInfo, const std::string* buffer);
 }  // namespace ovms
 
