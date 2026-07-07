@@ -36,6 +36,7 @@
 #include "../http_payload.hpp"
 #include "../sse_utils.hpp"
 #include "apis/openai_api_handler.hpp"
+#include "io_processing/chat_template/caps.hpp"
 #include "io_processing/base_generation_config_builder.hpp"
 #include "io_processing/input_processor_context.hpp"
 #include "io_processing/input_request.hpp"
@@ -176,6 +177,8 @@ struct GenAiServableProperties {
 #else
     ChatTemplateMode chatTemplateMode = ChatTemplateMode::MINJA;
 #endif
+    // Chat template analysis
+    ChatTemplateCaps chatTemplateCaps;
     // Sampling
     DecodingMethod decodingMethod;
     std::optional<uint32_t> maxTokensLimit;

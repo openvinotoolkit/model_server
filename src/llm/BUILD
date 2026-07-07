@@ -136,7 +136,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "io_processing_input_processor_context",
-    hdrs = ["io_processing/input_processor_context.hpp"],
+    hdrs = ["io_processing/input_processor_context.hpp",
+            "io_processing/chat_template/caps.hpp"],
     srcs = [],
     deps = [
         ":io_processing_input_request",
@@ -152,11 +153,14 @@ ovms_cc_library(
     name = "io_processing_input_processors",
     hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
             "io_processing/input_processors/chat_template_processor.hpp",
+            "io_processing/input_processors/chat_template_adapter.hpp",
+            "io_processing/chat_template/caps.hpp",
             "io_processing/input_processors/raw_prompt_extractor.hpp",
             "io_processing/input_processors/text_content_normalization_processor.hpp",
             "io_processing/input_processors/tokenization_processor.hpp"],
     srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
             "io_processing/input_processors/chat_template_processor.cpp",
+            "io_processing/input_processors/chat_template_adapter.cpp",
             "io_processing/input_processors/text_content_normalization_processor.cpp",
             "io_processing/input_processors/tokenization_processor.cpp"],
     deps = [
@@ -207,6 +211,32 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "chat_template_analyzer",
+    hdrs = ["io_processing/chat_template/caps.hpp",
+            "io_processing/chat_template/analyzer.hpp"],
+    srcs = ["io_processing/chat_template/analyzer.cpp"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "chat_template_probe",
+    hdrs = ["io_processing/chat_template/probe.hpp",
+            "io_processing/chat_template/caps.hpp"],
+    srcs = ["io_processing/chat_template/probe.cpp"],
+    deps = [
+        "//third_party:genai",
+        "//src:libovmslogging",
+    ] + select({
+        "//:not_disable_python": [":py_jinja_template_processor"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+
 ovms_cc_library(
     name = "partial_json_builder",
     hdrs = ["io_processing/partial_json_builder.hpp"],
@@ -429,6 +459,8 @@ ovms_cc_library(
         ":openai_completions_api_handler",
         ":openai_responses_handler",
         ":generation_config_builders",
+        ":chat_template_analyzer",
+        ":chat_template_probe",
         ":io_processing_input_processor_context",
         "//src:httppayload",
         "//src:libhttpclientconnection",
