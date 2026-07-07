@@ -32,7 +32,7 @@ namespace inference {
 class ModelInferRequest;
 class ModelInferResponse;
 class ModelStreamInferResponse;
-}
+}  // namespace inference
 
 namespace ovms {
 
@@ -75,6 +75,7 @@ public:
     Status createServableConfig(const std::string& directoryPath,
         const HFSettingsImpl& hfSettings,
         bool writeToFile) const;
+
 private:
     struct ApiSymbols;
     std::unique_ptr<ApiSymbols> api;

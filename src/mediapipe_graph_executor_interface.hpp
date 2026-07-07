@@ -29,7 +29,7 @@ namespace inference {
 class ModelInferRequest;
 class ModelInferResponse;
 class ModelStreamInferResponse;
-}
+}  // namespace inference
 
 namespace ovms {
 
