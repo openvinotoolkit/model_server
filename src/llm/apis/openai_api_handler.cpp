@@ -358,9 +358,6 @@ absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationCon
         if (!kwargsResult.ok()) {
             return kwargsResult.status();
         }
-        // add_generation_prompt is only ever consumed by chat template rendering, so it is
-        // read directly out of chat_template_kwargs (both the MINJA and Python-Jinja rendering
-        // paths default it to true when absent) rather than kept as a separate request field.
         if (kwargsResult.value().has_value()) {
             chatHistory.set_extra_context(kwargsResult.value().value());
         }

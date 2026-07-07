@@ -56,6 +56,22 @@ ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
     tokenizer(tokenizer) {}
 #endif
 
+absl::Status ChatTemplateProcessor::extractAddGenerationPrompt(const ov::genai::ChatHistory& chatHistory,
+    ov::genai::JsonContainer& kwargs, bool& addGenerationPrompt) {
+    kwargs = chatHistory.get_extra_context();
+    addGenerationPrompt = true;
+    if (kwargs.contains("add_generation_prompt")) {
+        const auto asBool = kwargs["add_generation_prompt"].as_bool();
+        if (!asBool.has_value()) {
+            return absl::Status(absl::StatusCode::kInvalidArgument,
+                "add_generation_prompt accepts values true or false");
+        }
+        addGenerationPrompt = asBool.value();
+        kwargs.erase("add_generation_prompt");
+    }
+    return absl::OkStatus();
+}
+
 absl::Status ChatTemplateProcessor::process(InputRequest& req) {
     if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
         return absl::Status(absl::StatusCode::kInternal,
@@ -82,19 +98,11 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
     } else {
 #endif
         const auto& tools = chatHistory.get_tools();
-        // add_generation_prompt lives inside chat_template_kwargs; MINJA's apply_chat_template
-        // takes it as a dedicated argument, so extract it here and drop it from the kwargs map
-        // passed alongside so it isn't supplied twice.
-        ov::genai::JsonContainer kwargs = chatHistory.get_extra_context();
+        ov::genai::JsonContainer kwargs;
         bool addGenerationPrompt = true;
-        if (kwargs.contains("add_generation_prompt")) {
-            const auto asBool = kwargs["add_generation_prompt"].as_bool();
-            if (!asBool.has_value()) {
-                return absl::Status(absl::StatusCode::kInvalidArgument,
-                    "add_generation_prompt accepts values true or false");
-            }
-            addGenerationPrompt = asBool.value();
-            kwargs.erase("add_generation_prompt");
+        auto status = extractAddGenerationPrompt(chatHistory, kwargs, addGenerationPrompt);
+        if (!status.ok()) {
+            return status;
         }
         const std::optional<ov::genai::JsonContainer> optTools =
             tools.empty() ? std::nullopt : std::make_optional(tools);
