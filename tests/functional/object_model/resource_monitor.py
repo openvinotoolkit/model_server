@@ -77,7 +77,9 @@ class DockerResourceMonitor(ResourceMonitor):
         "PIDS_COUNT": lambda x: int(x["pids_stats"].get("current", "0")),
         MEMORY_USAGE: lambda x: "{:.2f}M".format(float(x["memory_stats"].get("usage", "0.0")) / (2**20)),
         PRIVATE_MEMORY: lambda x: "{:.2f}M".format(
-            float(x["memory_stats"].get("stats", {}).get("anon", 0)) / (2**20)
+            float(x["memory_stats"].get("stats", {}).get(
+                "anon", x["memory_stats"].get("stats", {}).get("rss", 0)
+            )) / (2**20)
         ),
         MEMORY_CACHE: lambda x: "{:.2f}M".format(
             _cgroup_cache_bytes(x["memory_stats"].get("stats", {})) / (2**20)
