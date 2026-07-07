@@ -16,22 +16,23 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 namespace ovms {
 
-const std::vector<std::string>& getSupportedToolParserNames();
-const std::vector<std::string>& getSupportedReasoningParserNames();
+struct ChatTemplateCaps {
+    bool supportsToolCalls = false;
 
-// Value that explicitly disables a parser, preventing auto-detection.
-inline constexpr const char* PARSER_DISABLED_VALUE = "none";
-bool isParserDisabled(const std::string& name);
+    // Some templates require tool_call arguments to be a dict/object rather than a stringified JSON.
+    bool requiresObjectArguments = false;
 
-bool isSupportedToolParserName(const std::string& name);
-bool isSupportedReasoningParserName(const std::string& name);
+    bool needsWorkarounds() const {
+        return requiresObjectArguments;
+    }
 
-// Comma-separated list of supported names, suitable for log/error messages.
-std::string getSupportedToolParserNamesAsString();
-std::string getSupportedReasoningParserNamesAsString();
+    std::string toString() const {
+        return std::string("supportsToolCalls=") + (supportsToolCalls ? "true" : "false") +
+               ", requiresObjectArguments=" + (requiresObjectArguments ? "true" : "false");
+    }
+};
 
 }  // namespace ovms
