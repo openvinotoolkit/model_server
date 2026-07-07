@@ -39,6 +39,7 @@ from tests.functional.models.models import ModelInfo
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms import Config, MediaPipeConstants
 from tests.functional.constants.paths import Paths
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.object_model.test_environment import TestEnvironment
 
 logger = get_logger(__name__)
@@ -829,7 +830,7 @@ class EmbeddingsCalculatorOV(LLMCalculator):
             pooling_str = f'pooling: {model_obj.pooling},'
 
         target_device_str = f'target_device: "{self.device}",' if self.device is not None else ""
-        num_streams = 2 if self.device == TargetDevice.GPU else 1
+        num_streams = 2 if get_base_device(self.device) == TargetDevice.GPU else 1
         plugin_config_str = f'plugin_config: \'{{ "NUM_STREAMS": "{num_streams}" }}\','
 
         content =f"""{header}
@@ -879,7 +880,7 @@ class RerankCalculatorOV(LLMCalculator):
 
     def create_node_content(self, header, input_streams, output_streams):
         target_device_str = f'target_device: "{self.device}",' if self.device is not None else ""
-        num_streams = 2 if self.device == TargetDevice.GPU else 1
+        num_streams = 2 if get_base_device(self.device) == TargetDevice.GPU else 1
         plugin_config_str = f'plugin_config: \'{{ "NUM_STREAMS": "{num_streams}" }}\','
         content = f"""{header}
 node {{
@@ -924,7 +925,7 @@ class S2tCalculator(LLMCalculator):
 
     def create_node_content(self, header, input_streams, output_streams):
         target_device_str = f'target_device: "{self.device}",' if self.device is not None else ""
-        num_streams = 2 if self.device == TargetDevice.GPU else 1
+        num_streams = 2 if get_base_device(self.device) == TargetDevice.GPU else 1
         plugin_config_str = f'plugin_config: \'{{ "NUM_STREAMS": "{num_streams}" }}\','
         content = f"""{header}
 node {{
@@ -984,7 +985,7 @@ class T2sCalculator(LLMCalculator):
 
     def create_node_content(self, header, input_streams, output_streams):
         target_device_str = f'target_device: "{self.device}",' if self.device is not None else ""
-        num_streams = 2 if self.device == TargetDevice.GPU else 1
+        num_streams = 2 if get_base_device(self.device) == TargetDevice.GPU else 1
         plugin_config_str = f'plugin_config: \'{{ "NUM_STREAMS": "{num_streams}" }}\','
         content = f"""{header}
 node {{

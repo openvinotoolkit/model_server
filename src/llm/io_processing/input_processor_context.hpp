@@ -19,6 +19,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 
+#include "chat_template/caps.hpp"
 #include "input_processing_config.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "../py_jinja_template_processor.hpp"
@@ -30,6 +31,7 @@ namespace ovms {
 // Created once during servable initialization; reused across requests.
 struct InputProcessorContext {
     InputProcessingConfig config;
+    ChatTemplateCaps chatTemplateCaps;
     ov::genai::Tokenizer tokenizer;
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor* templateProcessor = nullptr;

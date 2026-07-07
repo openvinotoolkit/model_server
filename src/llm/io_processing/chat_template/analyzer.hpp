@@ -15,23 +15,24 @@
 //*****************************************************************************
 #pragma once
 
+#include <optional>
 #include <string>
-#include <vector>
+
+#include "caps.hpp"
 
 namespace ovms {
 
-const std::vector<std::string>& getSupportedToolParserNames();
-const std::vector<std::string>& getSupportedReasoningParserNames();
+struct ChatTemplateAnalysisResult {
+    ChatTemplateCaps caps;
+    std::optional<std::string> detectedToolParser;
+    std::optional<std::string> detectedReasoningParser;
+};
 
-// Value that explicitly disables a parser, preventing auto-detection.
-inline constexpr const char* PARSER_DISABLED_VALUE = "none";
-bool isParserDisabled(const std::string& name);
-
-bool isSupportedToolParserName(const std::string& name);
-bool isSupportedReasoningParserName(const std::string& name);
-
-// Comma-separated list of supported names, suitable for log/error messages.
-std::string getSupportedToolParserNamesAsString();
-std::string getSupportedReasoningParserNamesAsString();
+class ChatTemplateAnalyzer {
+public:
+    // Analyze the chat template source and return detected capabilities and parser names.
+    // Uses pattern matching on template source text (first phase of detection, without dry-runs).
+    static ChatTemplateAnalysisResult analyze(const std::string& templateSource);
+};
 
 }  // namespace ovms

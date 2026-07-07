@@ -61,6 +61,16 @@ TEST_F(ParserConfigValidationTest, RegistryHasExpectedToolParsers) {
     EXPECT_FALSE(isSupportedToolParserName(""));
 }
 
+TEST_F(ParserConfigValidationTest, NoneIsAcceptedAsDisabledParser) {
+    EXPECT_TRUE(isParserDisabled("none"));
+    EXPECT_FALSE(isParserDisabled(""));
+    EXPECT_FALSE(isParserDisabled("hermes3"));
+    EXPECT_FALSE(isParserDisabled("None"));  // case-sensitive
+    // "none" passes validation (not rejected as unsupported)
+    EXPECT_TRUE(isSupportedToolParserName("none"));
+    EXPECT_TRUE(isSupportedReasoningParserName("none"));
+}
+
 TEST_F(ParserConfigValidationTest, RegistryHasExpectedReasoningParsers) {
     const auto& names = getSupportedReasoningParserNames();
     for (const auto& expected : {"qwen3", "gemma4", "gptoss"}) {
