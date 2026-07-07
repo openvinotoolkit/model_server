@@ -57,7 +57,8 @@ ovms_cc_library(
     srcs = ["apis/openai_api_handler.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
-        "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "//src:libovmsprofiler",
         "//third_party:curl",
         "//src:image_conversion",
@@ -75,7 +76,8 @@ ovms_cc_library(
     srcs = ["apis/openai_completions.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
-        "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "//src:libovmsprofiler",
         "//third_party:curl",
         "//src:image_conversion",
@@ -94,7 +96,8 @@ ovms_cc_library(
     srcs = ["apis/openai_responses.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
-        "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "//src:libovmsprofiler",
         "//third_party:curl",
         "//src:image_conversion",
@@ -370,10 +373,27 @@ ovms_cc_library(
             "//:not_disable_python": [],
             "//:disable_python": []
         }) + [
-        ":genai_servables",
+        ":genai_servable_interface",
         "//src/mediapipe_internal:graph_side_packets",
         "//src:libovmslogging",
         "//src:libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "genai_servable_interface",
+    hdrs = ["servable.hpp"],
+    deps = [
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:httppayload",
+        "//src:sse_utils",
+        ":openai_completions_api_handler",
+        ":openai_responses_handler",
+        ":generation_config_builders",
+        ":runtime_chat_template_loader",
     ],
     visibility = ["//visibility:public"],
 )

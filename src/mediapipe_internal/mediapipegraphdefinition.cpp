@@ -30,7 +30,7 @@
 #include "../config.hpp"
 #include "src/utils/env_guard.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "src/graph_export/graph_export.hpp"
+#include "src/graph_export/in_memory_graph_store.hpp"
 #include "src/metrics/metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../ov_utils.hpp"
@@ -66,8 +66,8 @@ const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
-    if (GraphExport::hasInMemoryGraphContent() && ovms::Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
-        const std::string& content = GraphExport::getInMemoryGraphContent();
+    if (InMemoryGraphStore::hasContent() && ovms::Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
+        const std::string& content = InMemoryGraphStore::getContent();
         this->chosenConfig = content;
         this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(content));
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using in-memory graph content for mediapipe graph definition: {}", this->getName());

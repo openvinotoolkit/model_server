@@ -22,7 +22,7 @@ diff --git a/third_party/BUILD b/third_party/BUILD
 index 2f4f4de..3ab13d4 100644
 --- a/third_party/BUILD
 +++ b/third_party/BUILD
-@@ -51,7 +51,7 @@ cc_library(
+@@ -51,10 +51,10 @@ cc_library(
          "//mediapipe:macos": [
              "@com_github_glog_glog//:glog",
          ],
@@ -31,4 +31,8 @@ index 2f4f4de..3ab13d4 100644
 +            "@com_github_glog_glog//:glog",
          ],
          "//conditions:default": [
-             "@com_github_glog_glog//:glog",
+-            "@com_github_glog_glog//:glog",
++            "@com_github_glog_glog_no_gflags//:glog",
+         ],
+     }),
+ )

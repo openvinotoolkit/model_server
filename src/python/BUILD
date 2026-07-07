@@ -401,12 +401,8 @@ cc_import(
     visibility = ["//visibility:private"],
 )
 
-# Plugin shared library containing MediaPipe Python calculators
-# This library is loaded dynamically at runtime, making Python calculators
-# optional and keeping the main ovms binary free from direct Python dependencies
-cc_binary(
-    name = "libpython_calculators.so",
-    linkshared = True,
+ovms_cc_library(
+    name = "python_calculators_runtime_objects",
     srcs = [
         "kfs_python_tensor_bridge_impl.cpp",
         "python_calculators_plugin.cpp",
@@ -414,6 +410,8 @@ cc_binary(
         "python_node_initializer.cpp",
         "pytensor_ovtensor_converter_calculator.cc",
         "pythonnoderesources.cpp",
+    ],
+    hdrs = [
         "pythonnoderesources.hpp",
         "python_backend.hpp",
         "utils.hpp",
@@ -422,12 +420,11 @@ cc_binary(
         "//src:kfs_python_tensor_bridge_hdrs",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
-        "libmediapipe_framework_import",
         "//src:libovmslogging",
         "//src:libovmsstatus",
+        "//src:libovmsprecision",
         "//src/mediapipe_internal:mediapipe_utils",
         "//src/mediapipe_internal:node_initializer",
-        "//src:libovmsprecision",
         "ovmspytensor",
         "pythonexecutorcalculator_cc_proto",
         "pytensorovtensorconvertercalculator_cc_proto",
@@ -435,6 +432,20 @@ cc_binary(
         "utils",
     ],
     copts = COPTS_SO,
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+# Plugin shared library containing MediaPipe Python calculators
+# This library is loaded dynamically at runtime, making Python calculators
+# optional and keeping the main ovms binary free from direct Python dependencies
+cc_binary(
+    name = "libpython_calculators.so",
+    linkshared = True,
+    srcs = [
+        "python_calculators_plugin.cpp",
+    ],
+    deps = [],
     linkopts = LINKOPTS_SO + select({
         "//src:windows": [
             "/FORCE:MULTIPLE",  # Allow multiple symbol definitions for glog (linked in both this DLL and main binary)

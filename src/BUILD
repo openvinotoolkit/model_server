@@ -202,6 +202,24 @@ cc_import(
     visibility = ["//visibility:public"],
 )
 
+# Build OVMS MediaPipe integration as a shared runtime component to avoid
+# embedding calculator/extension registration directly into ovms executable.
+cc_binary(
+    name = "ovms_mediapipe_runtime_shared",
+    srcs = [],
+    deps = [
+        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
+    ],
+    linkshared = 1,
+    visibility = ["//visibility:public"],
+)
+
+cc_import(
+    name = "ovms_mediapipe_runtime_shared_import",
+    shared_library = ":ovms_mediapipe_runtime_shared",
+    visibility = ["//visibility:public"],
+)
+
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 mediapipe_proto_library(
@@ -572,6 +590,41 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "mediapipe_executor_interface",
+    hdrs = ["mediapipe_graph_executor_interface.hpp"],
+    deps = [
+        "libovms_execution_context",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "libovms_mediapipe_kfs_executor_h",
+    hdrs = [
+        "kfs_frontend/kfs_graph_executor_impl.hpp",
+    ],
+    deps = [
+        "libovms_kfs_grpc_inference_service_h",
+        "@mediapipe//mediapipe/framework:packet",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_http_executor_h",
+    hdrs = [
+        "http_frontend/http_graph_executor_impl.hpp",
+    ],
+    deps = [
+        "httppayload",
+        "libhttp_async_writer_interface",
+        "libovmsstatus",
+        "@mediapipe//mediapipe/framework:packet",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "libovms_mediapipe_kfs_executor",
     srcs = [
         "kfs_frontend/kfs_graph_executor_impl.cpp",
@@ -579,17 +632,48 @@ ovms_cc_library(
     ],
     deps = [
         "kfs_python_tensor_bridge",
-        "//src/mediapipe_internal:libovms_mediapipe",
+        "//src/mediapipe_internal:mediapipegraphexecutor_h",
         "predict_request_validation_utils",
         "tfs_utils",
         "libovms_kfs_utils",
         "libovms_kfs_grpc_inference_service_h",
+        "libovms_single_version_servable_definition",
         "//src/kfserving_api:kfserving_api_cpp",
         "opencv_dep",
         "@mediapipe//mediapipe/framework/formats:image_frame",
         "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
         "@mediapipe//mediapipe/framework/formats:tensor",
     ],
+    additional_copts = select({
+        "//conditions:default": ["-fvisibility=default"],
+        "//src:windows": [],
+    }),
+    visibility = ["//visibility:public",],
+    alwayslink = 1,
+)
+ovms_cc_library(
+    name = "libovms_mediapipe_kfs_runtime_executor",
+    srcs = [
+        "kfs_frontend/kfs_graph_executor_impl.cpp",
+        "kfs_frontend/kfs_graph_executor_impl.hpp",
+    ],
+    deps = [
+        "kfs_python_tensor_bridge",
+        "//src/mediapipe_internal:mediapipegraphexecutor_h",
+        "predict_request_validation_utils",
+        "libovms_kfs_utils",
+        "libovms_kfs_grpc_inference_service_h",
+        "libovms_single_version_servable_definition",
+        "//src/kfserving_api:kfserving_api_cpp",
+        "opencv_dep",
+        "@mediapipe//mediapipe/framework/formats:image_frame",
+        "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
+        "@mediapipe//mediapipe/framework/formats:tensor",
+    ],
+    additional_copts = select({
+        "//conditions:default": ["-fvisibility=default", "-DOVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME=1"],
+        "//src:windows": [],
+    }),
     visibility = ["//visibility:public",],
     alwayslink = 1,
 )
@@ -600,7 +684,7 @@ ovms_cc_library(
         "http_frontend/http_graph_executor_impl.hpp",
     ],
     deps = [
-        "//src/mediapipe_internal:libovms_mediapipe",
+        "//src/mediapipe_internal:mediapipegraphexecutor_h",
         "httppayload",
         "libhttp_async_writer_interface",
         "opencv_dep",
@@ -610,6 +694,10 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
         "@mediapipe//mediapipe/framework/formats:tensor",
     ],
+    additional_copts = select({
+        "//conditions:default": ["-fvisibility=default"],
+        "//src:windows": [],
+    }),
     visibility = ["//visibility:public",],
     alwayslink = 1,
 )
@@ -632,13 +720,28 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "mediapipe_runtime_api",
+    hdrs = ["mediapipe_runtime_api.hpp"],
+    srcs = ["mediapipe_runtime_api.cpp"],
+    deps = [
+        "cpp_headers",
+        "mediapipe_executor_interface",
+        "libovms_execution_context",
+        "libovmsstatus",
+        "libovmslogging",
+        "libovms_servable_definition",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "modelmanager",
     hdrs = ["modelmanager.hpp"],
     srcs = ["modelmanager.cpp"],
     deps = select({
         "//conditions:default": [],
         "//:not_disable_mediapipe" : [
-            "//src/mediapipe_internal:libovms_mediapipe",
+            "mediapipe_runtime_api",
+            "//src/mediapipe_internal:mediapipegraphconfig",
         ],
     }) + [
         "cleaner_utils",
@@ -664,7 +767,7 @@ ovms_cc_library(
         "//src/dags:pipelinedefinition",
         "//src/filesystem:libovmsfilesystem",
         "//src/filesystem:libovmsfilesystemfactory",
-        "//src/graph_export:graph_export",
+        "//src/graph_export:in_memory_graph_store",
         "//src/metrics:libovms_metric_provider",
         "//src/metrics:libovmsmetrics",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -785,22 +888,8 @@ ovms_cc_library(
             "//:disable_python": []
         }) + select({
             "//:not_disable_mediapipe" : [
-                # Link to shared MediaPipe library instead of static linking
-                # This allows plugin to load dynamically without type-id collisions
-                "//src:mediapipe_framework_shared",
-                "//src/mediapipe_internal:libovms_mediapipe",
-                "libovms_mediapipe_kfs_executor",
-                "libovms_mediapipe_http_executor",
-                "//src/llm:openai_completions_api_handler",
-                "//src/image_gen:image_gen_calculator",
-                "//src/audio/speech_to_text:s2t_calculator",
-                "//src/audio/text_to_speech:t2s_calculator",
                 "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
-                "//src/llm:openai_responses_handler",
-                "//src/embeddings:embeddingscalculator_ov",
-                "//src/rerank:rerankcalculator_ov",
-                "//src/llm:llmcalculator",
             ],
             "//conditions:default": [],
         }) + select({
@@ -872,6 +961,7 @@ ovms_cc_library(
             "grpc_utils",
             "libovms_kfs_utils",
             "libovms_kfs_grpc_inference_service_h",
+            "mediapipe_executor_interface",
             "modelchangesubscription",
             "modelmanager",
             "servablemanagermodule",
@@ -912,8 +1002,8 @@ ovms_cc_library(
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
+            "mediapipe_runtime_api",
             "//src/pull_module:hf_pull_model_module",
-            "//src/graph_export:graph_export",
             "//src/servables_config_manager_module:servablesconfigmanagermodule",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",
@@ -998,7 +1088,6 @@ ovms_cc_library(
     deps = [
         "//src/utils:env_guard",
         "@com_github_gabime_spdlog//:spdlog",
-        "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
     ],
     visibility = ["//visibility:public",],
     additional_copts = COPTS_OV_TRACE,
@@ -2273,9 +2362,7 @@ cc_binary(
             "//src:windows" : ["@winreg//:winreg"],
         })
      + select({
-            "//conditions:default": [
-                "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
-            ],
+            "//conditions:default": [],
             "//:disable_mediapipe" : [],
         }),
     data = select({

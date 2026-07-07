@@ -73,6 +73,7 @@ build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 build --enable_platform_specific_config
 build --experimental_repo_remote_exec
 build --experimental_cc_shared_library
+build --experimental_cc_implementation_deps
 build --check_visibility=true
 # Disable leaking LD_LIBRARY_PATH & PATH into build resulting in cache misses
 # and frequent rebuilds

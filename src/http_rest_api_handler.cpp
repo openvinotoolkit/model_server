@@ -47,6 +47,7 @@
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
+#include "mediapipe_graph_executor_interface.hpp"
 #include "metrics/metric_config.hpp"
 #include "metrics/metric_module.hpp"
 #include "metrics/metric_registry.hpp"
@@ -69,9 +70,6 @@
 #include "copyable_object_wrapper.hpp"
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
-#include "http_frontend/http_graph_executor_impl.hpp"
-#include "mediapipe_internal/mediapipefactory.hpp"
-#include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
 #include "tfs_frontend/tfs_utils.hpp"
@@ -622,7 +620,7 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     // MediaPipe first, it is most likely that anyone will check llms
 #if (MEDIAPIPE_DISABLE == 0)
     if (!available) {
-        auto names = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
+        auto names = modelManager.getNamesOfAvailableMediapipePipelines();
         if (std::find(names.begin(), names.end(), name) != names.end()) {
             available = true;
         }
@@ -684,7 +682,7 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
 
     // MediaPipe
 #if (MEDIAPIPE_DISABLE == 0)
-    auto availableMediapipes = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
+    auto availableMediapipes = modelManager.getNamesOfAvailableMediapipePipelines();
     for (auto const& graphName : availableMediapipes) {
         parseModel(writer, graphName, timestamp);
     }
@@ -717,7 +715,6 @@ bool HttpRestApiHandler::isAuthorized(const std::unordered_map<std::string, std:
 
 #if (MEDIAPIPE_DISABLE == 0)
 struct V3StreamCallbackResourceGuard {
-    CopyableObjectWrapper<MediapipeGraphExecutor>& executorWrapper;
     CopyableObjectWrapper<HttpPayload>& requestWrapper;
     std::shared_ptr<HttpAsyncWriter>& serverReaderWriter;
 
@@ -728,16 +725,12 @@ struct V3StreamCallbackResourceGuard {
     V3StreamCallbackResourceGuard(V3StreamCallbackResourceGuard&&) = delete;
 
     V3StreamCallbackResourceGuard(
-        CopyableObjectWrapper<MediapipeGraphExecutor>& executorWrapper,
         CopyableObjectWrapper<HttpPayload>& requestWrapper,
         std::shared_ptr<HttpAsyncWriter>& serverReaderWriter) :
-        executorWrapper(executorWrapper),
         requestWrapper(requestWrapper),
         serverReaderWriter(serverReaderWriter) {}
 
     ~V3StreamCallbackResourceGuard() {
-        auto& executor = executorWrapper.getObjectHolder()->get();
-        executor.reset();
         if (serverReaderWriter) {
             // This part must execute before request cleanup as request holds the client connection
             serverReaderWriter->PartialReplyEnd();
@@ -771,16 +764,11 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         return status;
     }
 
-    CopyableObjectWrapper<MediapipeGraphExecutor> executorWrapper;
-    auto& executor = executorWrapper.getObjectHolder()->get();
-    status = this->modelManager.createPipeline(executor, modelName);
+    std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+    status = this->modelManager.createPipelineHandle(executor, modelName);
     if (!status.ok()) {
+        SPDLOG_ERROR("MediaPipe executor creation failed for model: {} with error: {}", modelName, status.string());
         return status;
-    }
-
-    if (!executorWrapper.getObjectHolder()->valid()) {
-        SPDLOG_ERROR("Failed to acquire MediaPipe graph executor for model: {}", modelName);
-        return StatusCode::INTERNAL_ERROR;
     }
 
     if (streamFieldVal == false) {
@@ -791,11 +779,11 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
 
-        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), requestWrapper = requestWrapper]() mutable {
+        serverReaderWriter->PartialReplyBegin([this, modelName, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), requestWrapper = requestWrapper]() mutable {
             // Lock the weak_ptr to get shared_ptr - this keeps the object alive during execution
             auto serverReaderWriter = weakWriter.lock();
             // Create guard to clean up resources after streaming is done
-            auto resourceGuard = V3StreamCallbackResourceGuard(executorWrapper, requestWrapper, serverReaderWriter);
+            auto resourceGuard = V3StreamCallbackResourceGuard(requestWrapper, serverReaderWriter);
 
             if (!serverReaderWriter) {
                 SPDLOG_DEBUG("Connection was closed before streaming could begin");
@@ -803,14 +791,26 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             }
 
             auto& request = requestWrapper.getObjectHolder()->get();
-            auto& executor = executorWrapper.getObjectHolder()->get();
 
-            if (request == nullptr || executor == nullptr) {  // should not happen
+            if (request == nullptr) {  // should not happen
                 throw std::runtime_error("Not all resources for streaming inference have been properly initialized");
             }
 
+            std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+            auto status = this->modelManager.createPipelineHandle(executor, modelName);
+            if (!status.ok()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                writer.StartObject();
+                writer.String("error");
+                writer.String(status.string().c_str());
+                writer.EndObject();
+                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
+                return;
+            }
+
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
-            auto status = executor->inferStream(*request, *serverReaderWriter, executionContext);
+            status = executor->inferStream(*request, *serverReaderWriter, executionContext);
 
             if (!status.ok()) {
                 rapidjson::StringBuffer buffer;

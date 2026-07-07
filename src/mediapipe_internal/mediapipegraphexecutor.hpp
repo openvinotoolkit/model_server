@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "../execution_context.hpp"
+#include "../mediapipe_graph_executor_interface.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
@@ -121,7 +122,7 @@ struct StreamingFunctor : public OutputStreamObserverI {
     absl::Status handlePacket(const ::mediapipe::Packet& packet) override;
     ~StreamingFunctor() = default;
 };
-class MediapipeGraphExecutor {
+class MediapipeGraphExecutor : public MediapipeGraphExecutorInterface {
 public:
     const std::string name;
     const std::string version;
@@ -161,6 +162,19 @@ public:
         const GraphSidePackets& sidePacketMaps,
         PythonBackend* pythonBackend,
         MediapipeServableMetricReporter* mediapipeServableMetricReporter);
+
+    Status infer(const inference::ModelInferRequest* request,
+        inference::ModelInferResponse* response,
+        const ExecutionContext& executionContext) override;
+    Status inferStream(const inference::ModelInferRequest& firstRequest,
+        grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
+        const ExecutionContext& executionContext) override;
+    Status infer(const HttpPayload* request,
+        std::string* response,
+        const ExecutionContext& executionContext) override;
+    Status inferStream(const HttpPayload& firstRequest,
+        HttpAsyncWriter& serverReaderWriter,
+        const ExecutionContext& executionContext) override;
 
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {

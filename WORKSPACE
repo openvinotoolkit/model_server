@@ -267,6 +267,16 @@ http_archive(
     ],
 )
 
+http_archive(
+    name = "com_github_glog_glog_no_gflags",
+    strip_prefix = "glog-3a0d4d22c5ae0b9a2216988411cfa6bf860cc372",
+    sha256 = "170d08f80210b82d95563f4723a15095eff1aad1863000e8eeb569c96a98fefb",
+    urls = [
+        "https://github.com/google/glog/archive/3a0d4d22c5ae0b9a2216988411cfa6bf860cc372.zip",
+    ],
+    build_file = "@mediapipe//third_party:glog_no_gflags.BUILD",
+)
+
 load("@mediapipe//third_party:external_files.bzl", "external_files")
 external_files()
 

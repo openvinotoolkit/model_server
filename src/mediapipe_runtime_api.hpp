@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2023 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,62 +15,73 @@
 //*****************************************************************************
 #pragma once
 
-#include <map>
 #include <memory>
 #include <set>
-#include <shared_mutex>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
 #include <vector>
+
+#include "execution_context.hpp"
+#include "status.hpp"
+
+namespace grpc_impl {
+template <typename W, typename R>
+class ServerReaderWriterInterface;
+}
+
+namespace inference {
+class ModelInferRequest;
+class ModelInferResponse;
+class ModelStreamInferResponse;
+}
 
 namespace ovms {
 
 class MetricProvider;
 class ServableNameChecker;
-class Status;
 class MediapipeGraphConfig;
-class MediapipeGraphDefinition;
-class MediapipeGraphExecutor;
 class MediapipeGraphExecutorInterface;
+class MediapipeGraphExecutor;
+class ServableDefinition;
 class PythonBackend;
+struct HFSettingsImpl;
+class HttpPayload;
+class HttpAsyncWriter;
 
-class MediapipeFactory {
-    std::map<std::string, std::shared_ptr<MediapipeGraphDefinition>> definitions;
-    std::map<std::string, std::string> loraAliases;  // alias -> real graph definition name
-    mutable std::shared_mutex definitionsMtx;
-    PythonBackend* pythonBackend{nullptr};
-
+class MediapipeRuntimeApi {
 public:
-    MediapipeFactory() = delete;
-    MediapipeFactory(PythonBackend* pythonBackend = nullptr);
-    Status createDefinition(const std::string& pipelineName,
-        const MediapipeGraphConfig& config,
+    explicit MediapipeRuntimeApi(PythonBackend* pythonBackend);
+    ~MediapipeRuntimeApi();
+
+    MediapipeRuntimeApi(const MediapipeRuntimeApi&) = delete;
+    MediapipeRuntimeApi& operator=(const MediapipeRuntimeApi&) = delete;
+
+    bool isLoaded() const;
+
+    Status processConfig(const MediapipeGraphConfig& config,
         MetricProvider& metrics,
         const ServableNameChecker& checker);
 
-    bool definitionExists(const std::string& name) const;
-
-public:
     Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
         const std::string& name) const;
     Status createHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& pipeline,
         const std::string& name) const;
 
-    MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;
-    void registerLoraAlias(const std::string& alias, const std::string& graphName);
-    void clearLoraAliases(const std::string& graphName);
+    bool definitionExists(const std::string& name) const;
     bool aliasesConflictExcluding(const std::vector<std::string>& aliases, const std::string& ownGraphName) const;
-    Status reloadDefinition(const std::string& pipelineName,
-        const MediapipeGraphConfig& config,
-        const ServableNameChecker& checker);
-
-    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile);
-    Status revalidatePipelines();
+    void retireOtherThan(const std::set<std::string>& graphsInConfigFile);
     const std::vector<std::string> getMediapipePipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
-    ~MediapipeFactory();
+    ServableDefinition* findServableDefinitionByName(const std::string& name) const;
+    Status createServableConfig(const std::string& directoryPath,
+        const HFSettingsImpl& hfSettings,
+        bool writeToFile) const;
+private:
+    struct ApiSymbols;
+    std::unique_ptr<ApiSymbols> api;
+
+    static std::string joinWithNewlines(const std::vector<std::string>& values);
+    static std::string joinWithNewlines(const std::set<std::string>& values);
+    static std::vector<std::string> splitNewlineDelimited(const std::string& data);
 };
 
 }  // namespace ovms

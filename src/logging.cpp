@@ -17,10 +17,6 @@
 
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
-
-#if (MEDIAPIPE_DISABLE == 0)
-#include <glog/logging.h>
-#endif
 #include <vector>
 
 #include "src/utils/env_guard.hpp"
@@ -144,23 +140,14 @@ void configure_logger(const std::string& log_level, const std::string& log_path)
     register_loggers(log_level, sinks);
     const int OVMS_SPDLOG_FLUSH_EVERY_SECONDS = 1;
     spdlog::flush_every(std::chrono::seconds(OVMS_SPDLOG_FLUSH_EVERY_SECONDS));
-#if (MEDIAPIPE_DISABLE == 0)
-#ifdef __linux__
-    if (log_level == "DEBUG" || log_level == "TRACE")
-        FLAGS_minloglevel = google::INFO;
-    else if (log_level == "WARNING")
-        FLAGS_minloglevel = google::WARNING;
-    else  // ERROR, FATAL
-        FLAGS_minloglevel = google::ERROR;
-#elif _WIN32
-    if (log_level == "DEBUG" || log_level == "TRACE")
-        FLAGS_minloglevel = google::GLOG_INFO;
-    else if (log_level == "WARNING")
-        FLAGS_minloglevel = google::GLOG_WARNING;
-    else  // ERROR, FATAL
-        FLAGS_minloglevel = google::GLOG_ERROR;
-#endif
-#endif
+    // Keep glog-based dependencies aligned with OVMS log level without direct glog API usage.
+    if (log_level == "DEBUG" || log_level == "TRACE") {
+        SetEnvironmentVar("GLOG_minloglevel", "0");
+    } else if (log_level == "WARNING") {
+        SetEnvironmentVar("GLOG_minloglevel", "1");
+    } else {
+        SetEnvironmentVar("GLOG_minloglevel", "2");
+    }
     if (log_level == "DEBUG" || log_level == "TRACE") {
         SetEnvironmentVar("OPENVINO_LOG_LEVEL", "4");
     }

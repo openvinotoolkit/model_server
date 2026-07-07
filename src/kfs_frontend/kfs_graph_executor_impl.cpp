@@ -26,11 +26,14 @@
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/graph_executor_constants.hpp"
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../predict_request_validation_utils.hpp"
+#include "../single_version_servable_definition.hpp"
 #include "../status.hpp"
+#if !(defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME)
 #include "../tfs_frontend/tfs_utils.hpp"
+#endif
 #include "../kfs_python_tensor_bridge.hpp"
 
 #pragma warning(push)
@@ -53,6 +56,17 @@
 #pragma warning(pop)
 
 namespace ovms {
+
+Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, const ExecutionContext& executionContext) {
+    return this->infer<KFSRequest, KFSResponse>(request, response, executionContext);
+}
+
+Status MediapipeGraphExecutor::inferStream(
+    const KFSRequest& firstRequest,
+    grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
+    const ExecutionContext& executionContext) {
+    return this->inferStream<KFSRequest, grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>>(firstRequest, serverReaderWriter, executionContext);
+}
 
 // Utilities
 
@@ -154,6 +168,14 @@ static const KFSDataType& MPPrecisionToKFSPrecision(::mediapipe::Tensor::Element
 
 template <typename T>
 static Status receiveAndSerializePacket(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName);
+
+static Status tfTensorRuntimeUnavailable(const std::string& streamName) {
+    std::stringstream ss;
+    ss << "TFTENSOR is not available in MediaPipe runtime KFS bridge for stream: " << streamName;
+    const std::string details = ss.str();
+    SPDLOG_DEBUG(details);
+    return Status(StatusCode::NOT_IMPLEMENTED, details);
+}
 
 static Status kfsPyTensorBridgeUnavailable(const std::string& streamName) {
     std::stringstream ss;
@@ -320,6 +342,7 @@ static Status serializeKfsTypedContentToRawBuffer(
     return StatusCode::OK;
 }
 
+#if !(defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME)
 template <>
 Status receiveAndSerializePacket<tensorflow::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
@@ -339,6 +362,7 @@ Status receiveAndSerializePacket<tensorflow::Tensor>(const ::mediapipe::Packet& 
     }
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();
 }
+#endif
 
 template <>
 Status receiveAndSerializePacket<::mediapipe::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
@@ -565,6 +589,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     return StatusCode::OK;
 }
 
+#if !(defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME)
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<tensorflow::Tensor>& outTensor, PythonBackend* pythonBackend) {
     using tensorflow::Tensor;
     using tensorflow::TensorShape;
@@ -668,6 +693,7 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     HANDLE_DESERIALIZATION_EXCEPTION("Tensorflow tensor")
     return StatusCode::OK;
 }
+#endif
 
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<ov::Tensor>& outTensor, PythonBackend* pythonBackend) {
     auto requestInputItr = request.inputs().begin();
@@ -886,7 +912,7 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
         return StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM;
     }
     SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
-    OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), MediapipeGraphDefinition::VERSION));
+    OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), SingleVersionServableDefinition::VERSION));
     if (!request->raw_input_contents().empty() && (request->raw_input_contents().size() != request->inputs().size())) {
         std::stringstream ss;
         ss << "Size of raw_input_contents: " << request->raw_input_contents().size() << " is different than number of inputs: " << request->inputs().size();
@@ -965,7 +991,11 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
         status = createPacketAndPushIntoGraph<Holder>(inputName, request, graph, timestamp, nullptr);
     } else if (inputPacketType == mediapipe_packet_type_enum::TFTENSOR) {
         SPDLOG_DEBUG("Request processing TF tensor: {}", inputName);
+#if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
+        status = tfTensorRuntimeUnavailable(inputName);
+#else
         status = createPacketAndPushIntoGraph<tensorflow::Tensor, Holder>(inputName, request, graph, timestamp, nullptr);
+#endif
     } else if (inputPacketType == mediapipe_packet_type_enum::MPTENSOR) {
         SPDLOG_DEBUG("Request processing MP tensor: {}", inputName);
         status = createPacketAndPushIntoGraph<mediapipe::Tensor, Holder>(inputName, request, graph, timestamp, nullptr);
@@ -1120,11 +1150,6 @@ static Status deserializeTimestampIfAvailable(
 
 // Implementation
 
-const std::string& getRequestId(
-    const KFSRequest& request) {
-    return request.id();
-}
-
 Status onPacketReadySerializeAndSendImpl(
     const std::string& requestId,
     const std::string& endpointName,
@@ -1167,7 +1192,11 @@ Status onPacketReadySerializeImpl(
         status = receiveAndSerializePacket<KFSResponse>(packet, response, packetName);
     } else if (packetType == mediapipe_packet_type_enum::TFTENSOR) {
         SPDLOG_DEBUG("Response processing packet type TF Tensor name: {}", packetName);
+#if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
+        status = tfTensorRuntimeUnavailable(packetName);
+#else
         status = receiveAndSerializePacket<tensorflow::Tensor>(packet, response, packetName);
+#endif
     } else if (packetType == mediapipe_packet_type_enum::TFLITETENSOR) {
         SPDLOG_DEBUG("Response processing packet type TFLite Tensor name: {}", packetName);
         std::string details{"Response processing packet type TFLite Tensor is not supported"};
@@ -1232,7 +1261,7 @@ Status createAndPushPacketsImpl(
 
     OVMS_RETURN_ON_FAIL(deserializeTimestampIfAvailable(*request, currentTimestamp));
     OVMS_RETURN_ON_FAIL(checkTimestamp(*request, currentTimestamp));
-    OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), MediapipeGraphDefinition::VERSION));
+    OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), SingleVersionServableDefinition::VERSION));
 
     numberOfPacketsCreated = 0;
     for (const auto& input : request->inputs()) {
@@ -1246,16 +1275,6 @@ Status createAndPushPacketsImpl(
     }
 
     return StatusCode::OK;
-}
-
-bool requestHasInputSidePackets(const KFSRequest& request) {
-    static const std::string TIMESTAMP_PARAM{"OVMS_MP_TIMESTAMP"};
-    for (const auto& [name, valueChoice] : request.parameters()) {
-        if (name != TIMESTAMP_PARAM) {
-            return true;
-        }
-    }
-    return false;
 }
 
 Status deserializeInputSidePacketsFromFirstRequestImpl(
@@ -1284,41 +1303,6 @@ Status deserializeInputSidePacketsFromFirstRequestImpl(
         }
     }
     return StatusCode::OK;
-}
-
-Status validateSubsequentRequestImpl(
-    const KFSRequest& request,
-    const std::string& endpointName,
-    const std::string& endpointVersion,
-    stream_types_mapping_t& inputTypes) {
-    if (request.model_name() != endpointName) {
-        return StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME;
-    }
-    if (request.model_version() != endpointVersion &&
-        request.model_version() != "0" &&    // default version does not matter for user
-        !request.model_version().empty()) {  // empty the same as default
-        return StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION;
-    }
-    return StatusCode::OK;
-}
-
-Status sendErrorImpl(
-    const std::string& message,
-    KFSServerReaderWriter& serverReaderWriter) {
-    ::inference::ModelStreamInferResponse resp;
-    *resp.mutable_error_message() = message;
-
-    if (serverReaderWriter.Write(resp)) {
-        return StatusCode::OK;
-    }
-
-    return Status(StatusCode::UNKNOWN_ERROR, "error during sending an error response");
-}
-
-bool waitForNewRequest(
-    KFSServerReaderWriter& serverReaderWriter,
-    KFSRequest& newRequest) {
-    return serverReaderWriter.Read(&newRequest);
 }
 
 }  // namespace ovms

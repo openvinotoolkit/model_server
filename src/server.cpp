@@ -55,7 +55,7 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
-#include "graph_export/graph_export.hpp"
+#include "graph_export/in_memory_graph_store.hpp"
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
@@ -70,6 +70,7 @@
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
 #include "python_calculators_plugin_loader.hpp"
+#include "mediapipe_runtime_api.hpp"
 #include "servablemanagermodule.hpp"
 #include "shutdown_state.hpp"
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
@@ -235,6 +236,7 @@ void unloadPythonRuntime() {
 }
 }  // namespace
 #endif
+
 // On Windows the import declarations must be marked dllimport so MSVC binds
 // them to the git2.dll exports rather than (silently) to a duplicate
 // static-archive copy with its own backing storage for g_lfs_cancel_requested.
@@ -569,10 +571,6 @@ Status Server::startModules(ovms::Config& config) {
 
 #if (PYTHON_DISABLE == 0)
     if (config.getServerSettings().withPython) {
-        // Load MediaPipe Python calculators from the plugin library
-        // This is optional and won't fail if the plugin isn't available
-        loadPythonCalculatorsPlugin();
-
         auto pythonModule = this->createModule(PYTHON_INTERPRETER_MODULE_NAME);
         if (pythonModule == nullptr) {
             SPDLOG_WARN("Python requested in configuration, but runtime library could not be loaded. Continuing with Python features disabled.");
@@ -583,6 +581,11 @@ Status Server::startModules(ovms::Config& config) {
             if (!status.ok()) {
                 SPDLOG_WARN("Python runtime is not operational ({}). Continuing with Python features disabled.", status.string());
             } else {
+                // Load MediaPipe Python calculators only after Python runtime is operational.
+                // This avoids loading optional calculator/runtime glue in environments where
+                // Python support cannot start successfully.
+                loadPythonCalculatorsPlugin();
+
                 std::unique_lock lock(modulesMtx);
                 std::tie(it, inserted) = this->modules.emplace(PYTHON_INTERPRETER_MODULE_NAME, std::move(pythonModule));
                 if (!inserted)
@@ -622,9 +625,9 @@ Status Server::startModules(ovms::Config& config) {
     }
     if (config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
         // --task with --model_path: create graph in memory without HF download
-        GraphExport graphExporter;
+        MediapipeRuntimeApi runtimeApi(nullptr);
         const auto& hfSettings = config.getServerSettings().hfSettings;
-        status = graphExporter.createServableConfig(config.modelPath(), hfSettings, false);
+        status = runtimeApi.createServableConfig(config.modelPath(), hfSettings, false);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to create in-memory graph config: {}", status.string());
             return status;
@@ -696,7 +699,7 @@ void Server::shutdownModules() {
         ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
     }
 #endif
-    GraphExport::clearInMemoryGraphContent();
+    InMemoryGraphStore::clearContent();
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     std::shared_lock lock(modulesMtx);

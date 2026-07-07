@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #include "graph_export.hpp"
+#include "in_memory_graph_store.hpp"
+#include "graph_export_paths.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -54,18 +56,16 @@
 #endif
 namespace ovms {
 
-static std::string inMemoryGraphContent;
-
 bool GraphExport::hasInMemoryGraphContent() {
-    return !inMemoryGraphContent.empty();
+    return InMemoryGraphStore::hasContent();
 }
 
 const std::string& GraphExport::getInMemoryGraphContent() {
-    return inMemoryGraphContent;
+    return InMemoryGraphStore::getContent();
 }
 
 void GraphExport::clearInMemoryGraphContent() {
-    inMemoryGraphContent.clear();
+    InMemoryGraphStore::clearContent();
 }
 
 static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
@@ -99,13 +99,11 @@ static std::string constructModelsPath(const std::string& modelPath, const std::
 }
 
 std::string GraphExport::getDraftModelDirectoryName(std::string draftModel) {
-    std::replace(draftModel.begin(), draftModel.end(), '/', '-');
-    return draftModel;
+    return ovms::getDraftModelDirectoryName(std::move(draftModel));
 }
 
 std::string GraphExport::getDraftModelDirectoryPath(const std::string& directoryPath, const std::string& draftModel) {
-    std::string fullPath = FileSystem::joinPath({directoryPath, GraphExport::getDraftModelDirectoryName(draftModel)});
-    return fullPath;
+    return ovms::getDraftModelDirectoryPath(directoryPath, draftModel);
 }
 #define GET_PLUGIN_CONFIG_OPT_OR_FAIL_AND_RETURN(EXPORT_SETTINGS)                 \
     auto pluginConfigOrStatus = GraphExport::createPluginString(EXPORT_SETTINGS); \
@@ -127,7 +125,7 @@ static Status createPbtxtFile(const std::string& directoryPath, const std::strin
     }
 #endif
     if (!writeToFile) {
-        inMemoryGraphContent = pbtxtContent;
+        InMemoryGraphStore::setContent(pbtxtContent);
         return StatusCode::OK;
     }
     // clang-format on
@@ -404,7 +402,7 @@ node {
 #endif
     // clang-format on
     if (!writeToFile) {
-        inMemoryGraphContent = oss.str();
+        InMemoryGraphStore::setContent(oss.str());
         return StatusCode::OK;
     }
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
@@ -474,7 +472,7 @@ node {
 #endif
     // clang-format on
     if (!writeToFile) {
-        inMemoryGraphContent = oss.str();
+        InMemoryGraphStore::setContent(oss.str());
         return StatusCode::OK;
     }
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});

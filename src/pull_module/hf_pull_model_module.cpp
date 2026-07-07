@@ -30,8 +30,9 @@
 #include "optimum_export.hpp"
 #include "curl_downloader.hpp"
 #include "gguf_downloader.hpp"
-#include "../graph_export/graph_export.hpp"
+#include "../graph_export/graph_export_paths.hpp"
 #include "../logging.hpp"
+#include "../mediapipe_runtime_api.hpp"
 #include "../module_names.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
@@ -264,13 +265,13 @@ Status HfPullModelModule::clone() {
     if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()) {
         auto& graphSettings = std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings);
         std::unique_ptr<IModelDownloader> draftModelDownloader;
-        draftModelDownloader = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
+        draftModelDownloader = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
         status = draftModelDownloader->downloadModel();
         if (!status.ok()) {
             return status;
         }
 
-        std::cout << "Draft model: " << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << " downloaded to: " << GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()) << std::endl;
+        std::cout << "Draft model: " << getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << " downloaded to: " << getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()) << std::endl;
     }
 
     // Image gen with LoRA adapters case - resolve filenames and download safetensors files
@@ -279,8 +280,8 @@ Status HfPullModelModule::clone() {
         return status;
     }
 
-    GraphExport graphExporter;
-    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings, true);  // when downloading from HF we always create config file, but when using local model with --task we create config in memory without writing to file
+    MediapipeRuntimeApi runtimeApi(nullptr);
+    status = runtimeApi.createServableConfig(graphDirectory, this->hfSettings, true);  // when downloading from HF we always create config file, but when using local model with --task we create config in memory without writing to file
     if (!status.ok()) {
         return status;
     }

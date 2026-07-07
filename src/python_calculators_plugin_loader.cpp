@@ -24,10 +24,6 @@
 #include <string>
 #include <vector>
 
-#if MEDIAPIPE_DISABLE == 0
-#include "mediapipe/framework/calculator_framework.h"
-#endif
-
 #ifdef __linux__
 #include <cerrno>
 #include <dlfcn.h>
@@ -55,6 +51,42 @@ using GetKfsPyTensorBridgeVTableFn = const KfsPyTensorBridgeVTable* (*)();
 
 static PluginHandle pythonCalculatorsHandle = nullptr;
 static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
+static PluginHandle pythonCalculatorsRuntimeHandle = nullptr;
+
+#ifdef __linux__
+std::string safeDlerror() {
+    if (const char* error = dlerror(); error != nullptr) {
+        return std::string(error);
+    }
+    return std::string("dlerror returned null");
+}
+
+bool ensurePythonCalculatorsRuntimeLoaded() {
+    if (pythonCalculatorsRuntimeHandle != nullptr) {
+        return true;
+    }
+
+    std::vector<std::string> candidates{
+        "libovms_mediapipe_runtime_shared.so",
+        "/ovms/lib/libovms_mediapipe_runtime_shared.so",
+        "./libovms_mediapipe_runtime_shared.so",
+        "src/libovms_mediapipe_runtime_shared.so",
+        "./src/libovms_mediapipe_runtime_shared.so",
+        "bazel-bin/src/libovms_mediapipe_runtime_shared.so",
+        "./bazel-bin/src/libovms_mediapipe_runtime_shared.so"};
+
+    for (const auto& candidate : candidates) {
+        pythonCalculatorsRuntimeHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
+        if (pythonCalculatorsRuntimeHandle != nullptr) {
+            SPDLOG_INFO("Python calculators runtime loaded from: {}", candidate);
+            return true;
+        }
+    }
+
+    SPDLOG_DEBUG("Python calculators runtime library not preloaded: {}", safeDlerror());
+    return false;
+}
+#endif
 
 #ifdef __linux__
 // Weak reference allows using in-process bridge when linked into the binary
@@ -197,33 +229,9 @@ bool loadPythonCalculatorsPlugin() {
         return true;
     }
 
-    bool calculatorsAlreadyRegistered = false;
-#if MEDIAPIPE_DISABLE == 0
-    if (const auto& registeredCalculators = mediapipe::CalculatorBaseRegistry::GetRegisteredNames();
-        registeredCalculators.find("PythonExecutorCalculator") != registeredCalculators.end() &&
-        registeredCalculators.find("PyTensorOvTensorConverterCalculator") != registeredCalculators.end()) {
-        SPDLOG_INFO("Python calculators are already registered in-process, will skip calculator re-registration");
-        calculatorsAlreadyRegistered = true;
-        // If the vtable is already set, there is nothing more to do.
-        if (getKfsPyTensorBridgeVTable() != nullptr) {
-            return true;
-        }
 #ifdef __linux__
-        // In unit tests the bridge runtime can be linked into the test binary.
-        // Use a direct weak symbol call so we do not depend on -rdynamic.
-        if (OVMS_getKfsPyTensorBridgeVTable != nullptr) {
-            if (auto* vtable = OVMS_getKfsPyTensorBridgeVTable(); vtable != nullptr) {
-                setKfsPyTensorBridgeVTable(vtable);
-                SPDLOG_INFO("KFS Python tensor bridge activated from in-process weak symbol");
-                return true;
-            }
-        }
-#endif
-        // Vtable is not set — fall through to load the DLL so we can retrieve it.
-    }
-#endif
+    ensurePythonCalculatorsRuntimeLoaded();
 
-#ifdef __linux__
     auto* alreadyLoadedRegisterFn = reinterpret_cast<RegisterPythonCalculatorsFn>(dlsym(RTLD_DEFAULT, "registerPythonCalculators"));
     if (alreadyLoadedRegisterFn != nullptr) {
         registerPythonCalculatorsFn = alreadyLoadedRegisterFn;
@@ -283,9 +291,10 @@ bool loadPythonCalculatorsPlugin() {
     // has forward references to OVMS code that's only available in the main binary.
     void* mainProcessSymbols = dlopen(NULL, RTLD_NOW | RTLD_GLOBAL);
     if (mainProcessSymbols == nullptr) {
+        const std::string errorDetails = safeDlerror();
         SPDLOG_WARN("Failed to expose main process symbols: {}. "
                     "Plugin loading may fail if shared libraries have unresolved symbols.",
-            dlerror());
+            errorDetails);
     }
 
     for (const auto& candidate : candidates) {
@@ -306,23 +315,26 @@ bool loadPythonCalculatorsPlugin() {
             SPDLOG_INFO("Successfully loaded Python calculators plugin from: {}", candidate);
             break;
         } else {
-            SPDLOG_DEBUG("Failed to load Python calculators plugin candidate {}: {}", candidate, dlerror());
+            const std::string errorDetails = safeDlerror();
+            SPDLOG_DEBUG("Failed to load Python calculators plugin candidate {}: {}", candidate, errorDetails);
         }
     }
 
     if (pythonCalculatorsHandle == nullptr) {
+        const std::string errorDetails = safeDlerror();
         SPDLOG_WARN("Python calculators plugin libpython_calculators.so failed to load: {}. "
                     "MediaPipe Python calculators will not be available.",
-            dlerror());
+            errorDetails);
         return false;
     }
 
     registerPythonCalculatorsFn = reinterpret_cast<RegisterPythonCalculatorsFn>(
         dlsym(pythonCalculatorsHandle, "registerPythonCalculators"));
     if (registerPythonCalculatorsFn == nullptr) {
+        const std::string errorDetails = safeDlerror();
         SPDLOG_WARN("Python calculators plugin libpython_calculators.so missing symbol registerPythonCalculators: {}. "
                     "MediaPipe Python calculators will not be available.",
-            dlerror());
+            errorDetails);
         dlclose(pythonCalculatorsHandle);
         pythonCalculatorsHandle = nullptr;
         return false;
@@ -342,14 +354,9 @@ bool loadPythonCalculatorsPlugin() {
                 if (auto* vtable = inProcessBridgeFn(); vtable != nullptr) {
                     setKfsPyTensorBridgeVTable(vtable);
                     SPDLOG_INFO("KFS Python tensor bridge activated from current process exports");
-                    if (calculatorsAlreadyRegistered) {
-                        return true;
-                    }
                 }
             }
         }
-    } else if (calculatorsAlreadyRegistered) {
-        return true;
     }
 
     std::vector<std::string> candidates{
@@ -448,11 +455,7 @@ bool loadPythonCalculatorsPlugin() {
     }
 #endif
 
-    // Call the registration function only if the calculators were not already registered
-    // (e.g. they may be statically compiled in the test binary).
-    if (!calculatorsAlreadyRegistered) {
-        registerPythonCalculatorsFn();
-    }
+    registerPythonCalculatorsFn();
 
     SPDLOG_INFO("Python calculators plugin loaded successfully");
     // Also load the KFS Python tensor bridge vtable from the same plugin.
