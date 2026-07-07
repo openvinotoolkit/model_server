@@ -41,6 +41,9 @@ void Minicpm5ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vecto
     std::string reasoningContent = tokenizer.decode(std::vector<int64_t>(startPos + generatedTokens.begin() + 1, endPos + generatedTokens.begin()), ov::genai::skip_special_tokens(true));
 
     parsedOutput.reasoning = reasoningContent;
+
+    std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(endPos + generatedTokens.begin() + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true));
+    parsedOutput.content = contentWithoutReasoning;
 }
 
 std::optional<rapidjson::Document> Minicpm5ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) {
