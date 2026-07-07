@@ -42,8 +42,8 @@ enum class State {
 };
 
 struct TagIds {
-    std::string toolCallStartToken;
-    std::string toolCallEndToken;
+    std::string toolCallStartTag;
+    std::string toolCallEndTag;
     int64_t toolCallStartTokenId;
     int64_t toolCallEndTokenId;
     std::optional<int64_t> reasoningStartTokenId = std::nullopt;

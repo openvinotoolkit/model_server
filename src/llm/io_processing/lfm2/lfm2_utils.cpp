@@ -190,11 +190,11 @@ std::vector<Argument> parseArguments(const std::string& argumentsStr) {
 }
 
 bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const TagIds& tagIds) {
-    size_t toolCallStartTagPos = streamingContent.find(tagIds.toolCallStartToken, streamingPosition);
-    size_t toolCallEndTagPos = streamingContent.find(tagIds.toolCallEndToken, streamingPosition);
+    size_t toolCallStartTagPos = streamingContent.find(tagIds.toolCallStartTag, streamingPosition);
+    size_t toolCallEndTagPos = streamingContent.find(tagIds.toolCallEndTag, streamingPosition);
     if (toolCallEndTagPos != std::string::npos && toolCallStartTagPos == std::string::npos) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected end of tool call at position: {}", toolCallEndTagPos);
-        streamingPosition = toolCallEndTagPos + 1;
+        streamingPosition = toolCallEndTagPos + tagIds.toolCallEndTag.length();
         return false;
     }
     if (toolCallStartTagPos != std::string::npos) {
@@ -203,13 +203,14 @@ bool parseInContentState(const std::string& streamingContent, size_t& streamingP
             return true;
         }
         currentState = State::ToolCallStarted;
-        streamingPosition = toolCallStartTagPos + 1;
+        streamingPosition = toolCallStartTagPos + tagIds.toolCallStartTag.length();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected start of tool call at position: {}", toolCallStartTagPos);
         return false;
     }
 
     return true;
 }
+
 bool parseInToolCallState(const std::string& streamingContent, ToolCall& toolCall, size_t& streamingPosition, State& currentState) {
     size_t toolListStartPos = streamingContent.find(TOOL_LIST_START_INDICATOR, streamingPosition);
     size_t argsPos = streamingContent.find(TOOL_ARGS_START_INDICATOR, streamingPosition);
