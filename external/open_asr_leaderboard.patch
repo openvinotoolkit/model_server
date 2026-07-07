@@ -1,8 +1,8 @@
 diff --git a/api/providers/openai_provider.py b/api/providers/openai_provider.py
-index 9f98a81..88a753b 100644
+index 9f98a81..e79b955 100644
 --- a/api/providers/openai_provider.py
 +++ b/api/providers/openai_provider.py
-@@ -2,7 +2,7 @@
+@@ -2,7 +2,7 @@ import requests
  from io import BytesIO
  from typing import Optional
  
@@ -11,7 +11,7 @@ index 9f98a81..88a753b 100644
  
  from . import APIProvider, register
  
-@@ -17,10 +17,11 @@ def transcribe(
+@@ -17,23 +17,22 @@ class OpenAIProvider(APIProvider):
          use_url: bool = False,
          language: str = "en",
      ) -> str:
@@ -23,8 +23,9 @@ index 9f98a81..88a753b 100644
 +            response = client.audio.transcriptions.create(
                  model=model_variant,
                  file=audio_data,
-                 response_format="text",
-@@ -29,7 +30,7 @@ def transcribe(
+-                response_format="text",
+                 language=language,
+                 temperature=0.0,
              )
          else:
              with open(audio_file_path, "rb") as audio_file:
@@ -32,4 +33,9 @@ index 9f98a81..88a753b 100644
 +                response = client.audio.transcriptions.create(
                      model=model_variant,
                      file=audio_file,
-                     response_format="text",
+-                    response_format="text",
+                     language=language,
+                     temperature=0.0,
+                 )
+-        return response.strip()
++        return response.text
