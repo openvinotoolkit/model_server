@@ -58,7 +58,7 @@ protected:
 
     void SetUp() override {
         // For LFM2 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*lfm25Tokenizer, "lfm2.5", "lfm2.5", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*lfm25Tokenizer, "lfm2", "lfm2.5", EMPTY_TOOLS_SCHEMA);
     }
 
     void assertChunkEqual(const std::optional<rapidjson::Document>& doc, const std::optional<std::string>& expectedDelta, const std::string& chunk) {
@@ -597,7 +597,7 @@ TEST_F(LFM25OutputParserTest, StreamingWithContentBetweenToolCalls) {
         {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ANOTHER_CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"ANOTHER_CONTENT_AFTER_TOOL_CALL"}})"},
         {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"solve", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[solve", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"(e", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":2,"function":{"name":"solve"}}]}})"},
         {"quation", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"=\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -866,4 +866,14 @@ TEST_F(LFM25OutputParserTest, ParseOutputWithReasoningAndContent) {
     EXPECT_EQ(parsedOutput.content, " The difference between \"foo\" and \"bar\" is that \"foo\" is often used as a placeholder name in programming, while \"bar\" is another placeholder name that is commonly used alongside \"foo\".");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, R"(User wants me to answer what is the difference between "foo" and "bar". I should answer with a short explanation. [...])");
+}
+
+TEST_F(LFM25OutputParserTest, ParseOutputWithoutReasoningAndTools) {
+    std::string input = R"(This is a simple output without reasoning and tools.)";
+    auto generatedTensor = lfm25Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    EXPECT_EQ(parsedOutput.content, "This is a simple output without reasoning and tools.");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    EXPECT_EQ(parsedOutput.reasoning, "");
 }

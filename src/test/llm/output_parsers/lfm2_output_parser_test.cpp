@@ -597,7 +597,7 @@ TEST_F(LFM2OutputParserTest, StreamingWithContentBetweenToolCalls) {
         {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ANOTHER_CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"ANOTHER_CONTENT_AFTER_TOOL_CALL"}})"},
         {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"solve", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[solve", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"(e", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":2,"function":{"name":"solve"}}]}})"},
         {"quation", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"=\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},

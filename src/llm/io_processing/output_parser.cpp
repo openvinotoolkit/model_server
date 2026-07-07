@@ -199,8 +199,10 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         auto token = vocab.find(Lfm25ToolParser::TOOL_CALL_START_TAG);
         auto tokenId = token != vocab.end() ? token->second : -1;
         if (tokenId == Lfm25ToolParser::toolCallStartTokenId) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using Lfm25ToolParser for tool parsing");
             toolParser = std::make_unique<Lfm25ToolParser>(tokenizer);
         } else {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using Lfm2ToolParser for tool parsing");
             toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
         }
     } else if (toolParserName == "gemma4") {
@@ -223,6 +225,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
     }
 
+    // TODO: To be considered: If we still need this check after introduction of OvmsTextStreamer.
     if (toolParser && reasoningParser) {
         if (toolParser->requiresStreamingWithSpecialTokens() != reasoningParser->requiresStreamingWithSpecialTokens()) {
             throw std::runtime_error("Cannot use tool parser " + toolParserName + " with reasoning parser " + reasoningParserName +

@@ -26,8 +26,8 @@ protected:
     static const std::string TOOL_CALL_START_TAG;
     static const std::string TOOL_CALL_END_TAG;
 
-    static const int64_t botTokenId;
-    static const int64_t eotTokenId;
+    static const int64_t toolCallStartTokenId;
+    static const int64_t toolCallEndTokenId;
 
 public:
     Lfm2ToolParser() = delete;
@@ -64,7 +64,7 @@ private:
     size_t streamingPosition{0};
     State currentState{State::Content};
     ToolCall toolCall;
-    TagIds tagIds{botTokenId, eotTokenId};
+    TagIds tagIds{TOOL_CALL_START_TAG, TOOL_CALL_END_TAG, toolCallStartTokenId, toolCallEndTokenId};
 
     int toolCallIndex{TOOL_CALL_INDEX_START};
 

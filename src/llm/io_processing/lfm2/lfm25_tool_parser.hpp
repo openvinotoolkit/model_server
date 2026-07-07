@@ -63,7 +63,7 @@ private:
     size_t streamingPosition{0};
     State currentState{State::Content};
     ToolCall toolCall;
-    TagIds tagIds{toolCallStartTokenId, toolCallEndTokenId, reasoningStartTokenId, reasoningEndTokenId};
+    TagIds tagIds{TOOL_CALL_START_TAG, TOOL_CALL_END_TAG, toolCallStartTokenId, toolCallEndTokenId, reasoningStartTokenId, reasoningEndTokenId};
 
     int toolCallIndex{TOOL_CALL_INDEX_START};
 

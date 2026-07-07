@@ -190,8 +190,8 @@ std::vector<Argument> parseArguments(const std::string& argumentsStr) {
 }
 
 bool parseInContentState(const std::string& streamingContent, size_t& streamingPosition, State& currentState, const TagIds& tagIds) {
-    size_t toolCallStartTagPos = streamingContent.find(tagIds.toolCallStartTokenId, streamingPosition);
-    size_t toolCallEndTagPos = streamingContent.find(tagIds.toolCallEndTokenId, streamingPosition);
+    size_t toolCallStartTagPos = streamingContent.find(tagIds.toolCallStartToken, streamingPosition);
+    size_t toolCallEndTagPos = streamingContent.find(tagIds.toolCallEndToken, streamingPosition);
     if (toolCallEndTagPos != std::string::npos && toolCallStartTagPos == std::string::npos) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected end of tool call at position: {}", toolCallEndTagPos);
         streamingPosition = toolCallEndTagPos + 1;
