@@ -59,7 +59,7 @@ docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_ser
 ### Running the inference requests from the client
 
 ```bash
-git clone -b atobisze_remove_tfs https://github.com/openvinotoolkit/model_server.git
+git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/client/python/kserve-api/samples
 virtualenv .venv
 . .venv/bin/activate
