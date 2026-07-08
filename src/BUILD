@@ -673,7 +673,7 @@ ovms_cc_library(
     ],
     additional_copts = select({
         "//conditions:default": ["-fvisibility=default", "-DOVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME=1"],
-        "//src:windows": [],
+        "//src:windows": ["-DOVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME=1"],
     }),
     visibility = ["//visibility:public",],
     alwayslink = 1,
