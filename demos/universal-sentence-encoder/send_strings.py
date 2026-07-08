@@ -18,7 +18,6 @@ import numpy as np
 import datetime
 import argparse
 import tritonclient.grpc as grpcclient
-from tritonclient.utils import serialize_byte_tensor
 
 
 parser = argparse.ArgumentParser(description='Do requests to OpenVINO Model Server using strings in KServe gRPC format')
@@ -32,9 +31,9 @@ args = vars(parser.parse_args())
 
 client = grpcclient.InferenceServerClient(url="{}:{}".format(args['grpc_address'], args['grpc_port']))
 
-data_bytes = serialize_byte_tensor(np.array([args['string']], dtype=np.object_)).item()
-infer_input = grpcclient.InferInput(args['input_name'], [len(data_bytes)], "BYTES")
-infer_input._raw_content = data_bytes
+input_data = np.array([args['string']], dtype=np.object_)
+infer_input = grpcclient.InferInput(args['input_name'], [len(input_data)], "BYTES")
+infer_input.set_data_from_numpy(input_data)
 
 start_time = datetime.datetime.now()
 result = client.infer(args['model_name'], [infer_input])

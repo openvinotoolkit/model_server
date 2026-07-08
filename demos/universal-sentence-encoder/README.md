@@ -65,12 +65,11 @@ ovms --model_name usem --model_path universal-sentence-encoder-multilingual/ --p
 OpenVINO Model Server can accept the input in a form of strings. Below is a code snippet based on `tritonclient` python library (KServe gRPC API):
 ```python
 import tritonclient.grpc as grpcclient
-from tritonclient.utils import serialize_byte_tensor
 
 client = grpcclient.InferenceServerClient(url="localhost:9000")
-data_bytes = serialize_byte_tensor(np.array(["string1", "string2"], dtype=np.object_)).item()
-infer_input = grpcclient.InferInput("inputs", [len(data_bytes)], "BYTES")
-infer_input._raw_content = data_bytes
+input_data = np.array(["string1", "string2"], dtype=np.object_)
+infer_input = grpcclient.InferInput("inputs", [len(input_data)], "BYTES")
+infer_input.set_data_from_numpy(input_data)
 result = client.infer("my_model", [infer_input])
 ```
 
