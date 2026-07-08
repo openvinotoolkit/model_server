@@ -681,7 +681,7 @@ TEST_F(LFM25OutputParserTest, ParseToolCallWithArgumentMissingEquals) {
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "broken");
 }
 
-TEST_F (LFM25OutputParserTest, ParseToolCallWithMissingSquareBracket) {
+TEST_F(LFM25OutputParserTest, ParseToolCallWithMissingSquareBracket) {
     std::string input = "<|tool_call_start|>broken(arg1=1)<|tool_call_end|>";
     auto generatedTensor = lfm25Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
