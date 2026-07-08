@@ -2514,6 +2514,7 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
+                "test/llm/chat_template_end_to_end_jinja_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({
@@ -2718,6 +2719,9 @@ cc_test(
                 "//src:libovms_mediapipe_kfs_executor",
                 "//src:libmediapipe_framework_impl",
                 "//src:libovms_mediapipe_kfs_executor_h",
+                ":test_chat_template_workarounds",
+                ":test_llm_input_processing_tests",
+                ":test_llm_input_processing_integration_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -3302,6 +3306,63 @@ cc_library(
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
         "//src/llm:output_parsers",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "test_chat_template_workarounds",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = [
+        "test/llm/chat_template_analyzer_test.cpp",
+        "test/llm/chat_template_adapter_test.cpp",
+        "test/llm/chat_template_end_to_end_minja_test.cpp",
+    ],
+    deps = [
+        "@com_google_googletest//:gtest",
+        "//src/llm:chat_template_analyzer",
+        "//src/llm:chat_template_probe",
+        "//src/llm:io_processing_input_processors",
+        "//src/utils:env_guard",
+        "//third_party:genai",
+        ":test_platform_utils",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "test_llm_input_processing_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = glob(
+        ["test/llm/input_processing/*_test.cpp"],
+        exclude = ["test/llm/input_processing/input_processing_integration_test.cpp"],
+    ),
+    deps = [
+        "@com_google_googletest//:gtest",
+        ":test_platform_utils",
+        "//src/llm:io_processing_input_processors",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "test_llm_input_processing_integration_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/llm/input_processing/input_processing_integration_test.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest",
+        ":test_platform_utils",
+        "//src/llm:openai_completions_api_handler",
+        "//src/llm:openai_responses_handler",
+        "//src/llm:io_processing_input_processor",
+        "//src/llm:io_processing_input_processor_context",
+        "//src/llm:generation_config_builders",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

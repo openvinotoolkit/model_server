@@ -268,7 +268,6 @@ class CustomNodeImageTransformation(OvmsCCustomNode):
             "debug": "true",
         }
 
-
 @dataclass
 class CustomNodeDemultiply(OvmsTestDevCustomNode):
     ORIGINAL_DEMULTIPLY_COUNT = 3

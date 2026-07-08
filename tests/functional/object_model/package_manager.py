@@ -29,6 +29,7 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.constants.os_type import OsType
 from tests.functional.utils.process import Process
 from tests.functional.constants.target_device import TargetDevice
+from tests.functional.utils.helpers import get_base_device
 
 logger = get_logger(__name__)
 
@@ -89,7 +90,7 @@ class PackageManager(ABC):
     def install_missing_packages_on_host(self, container_pkg_list, host_pkg_list, missing_pkg_list):
         pkgs_to_install = {}
         for pkg, version in missing_pkg_list.items():
-            if self.context.target_device == TargetDevice.GPU and pkg in GPU_LIBS_TO_SKIP:
+            if get_base_device(self.context.target_device) == TargetDevice.GPU and pkg in GPU_LIBS_TO_SKIP:
                 logger.debug(f"Skip package {pkg} - will be downloaded in GpuDriverInstaller.")
                 continue
             logger.debug(f"Installing {pkg} ...")
