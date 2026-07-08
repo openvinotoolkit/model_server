@@ -41,7 +41,7 @@ docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:l
 #### Run the Client
 ```bash
 cd client/python/kserve-api/samples
-virtualenv .venv
+python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 
