@@ -637,7 +637,7 @@ TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Positive) {
 
 TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Positive_batchSizeBiggerThan1) {
     uint8_t rgb_expected_tensor[] = {0x24, 0x1b, 0xed, 0x24, 0x1b, 0xed};
-    requestTensor.mutable_shape()->Clear();
+    this->requestTensor.mutable_shape()->Clear();
     this->requestTensor.mutable_shape()->Add(2);
 
     size_t filesize;
@@ -658,7 +658,7 @@ TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Positive_batchSizeBigg
 }
 
 TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_batchSizeBiggerThan1WithEmptyString) {
-    requestTensor.mutable_shape()->Clear();
+    this->requestTensor.mutable_shape()->Clear();
     this->requestTensor.mutable_shape()->Add(2);
 
     uint8_t imageSize[] = {0x00, 0x00, 0x00, 0x00};
@@ -681,7 +681,7 @@ TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_emptyString) 
 }
 
 TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_invalidFormat) {
-    requestTensor.mutable_shape()->Clear();
+    this->requestTensor.mutable_shape()->Clear();
     this->requestTensor.mutable_shape()->Add(2);
 
     uint8_t imageSize[] = {0x01, 0x00, 0x00, 0x00};
@@ -833,7 +833,7 @@ TEST(StringInputsConversionKFSTest, native_ov_string_2d_shape) {
     requestTensor.mutable_shape()->Clear();
     requestTensor.add_shape(1);
     requestTensor.add_shape(5);
-    std::vector<std::string> expectedStrings = {"a", "b", "c", "d", "e"};
+    std::vector<std::string> expectedStrings = {"aa", "bbb", "c", "dddd", "e"};
     for (const auto& s : expectedStrings) {
         auto bytes_val = requestTensor.mutable_contents()->mutable_bytes_contents()->Add();
         bytes_val->append(s.data(), s.size());
@@ -856,7 +856,7 @@ TEST(StringInputsConversionKFSTest, rawInputContents_native_ov_string_2d_shape) 
     requestTensor.mutable_shape()->Clear();
     requestTensor.add_shape(1);
     requestTensor.add_shape(5);
-    std::vector<std::string> expectedStrings = {"a", "b", "c", "d", "e"};
+    std::vector<std::string> expectedStrings = {"a", "bbbbb", "c", "dd", "eee"};
     std::string rawInputContents;
     size_t dataSize = 0;
     for (const auto& s : expectedStrings) {
