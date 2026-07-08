@@ -242,8 +242,6 @@ TEST(OVUtils, ValidatePluginConfigurationAllowEnableMmap) {
 }
 
 #ifdef __linux__
-#include "../systeminfo.hpp"
-
 // Tests using the testable overload with explicit system parameters
 
 TEST(OVUtils, ApplyDefaultCpuPropertiesLatencyConstrainedContainer) {
