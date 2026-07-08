@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#ifndef OVMS_MEDIAPIPE_RUNTIME_API_HPP
-#define OVMS_MEDIAPIPE_RUNTIME_API_HPP
+#ifndef SRC_MEDIAPIPE_RUNTIME_API_HPP_
+#define SRC_MEDIAPIPE_RUNTIME_API_HPP_
 
 #include <memory>
 #include <set>
@@ -90,4 +90,4 @@ private:
 
 }  // namespace ovms
 
-#endif  // OVMS_MEDIAPIPE_RUNTIME_API_HPP
+#endif  // SRC_MEDIAPIPE_RUNTIME_API_HPP_
