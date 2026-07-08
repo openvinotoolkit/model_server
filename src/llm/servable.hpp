@@ -36,8 +36,13 @@
 #include "../http_payload.hpp"
 #include "../sse_utils.hpp"
 #include "apis/openai_api_handler.hpp"
-#include "io_processing/generation_config_builder.hpp"
-#include "runtime_chat_template.hpp"
+#include "io_processing/chat_template/caps.hpp"
+#include "io_processing/base_generation_config_builder.hpp"
+#include "io_processing/input_processor_context.hpp"
+#include "io_processing/input_request.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "py_jinja_template_processor.hpp"
+#endif
 
 namespace ovms {
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
@@ -70,11 +75,6 @@ enum class GenerationPhase {
 enum class ChatTemplateMode {
     MINJA,  // Use GenAI's apply_chat_template (minja-based)
     JINJA,  // Use Python Jinja2 module for chat template processing
-};
-
-enum class ChatTemplateBackend {
-    TOKENIZER,
-    PYTHON_RUNTIME,
 };
 
 // Thread-safe channel for parsed streaming deltas.
@@ -140,10 +140,8 @@ struct GenAiServableExecutionContext {
     HttpPayload payload;
     Endpoint endpoint;
     std::shared_ptr<OpenAIApiHandler> apiHandler;
-    std::shared_ptr<GenerationConfigBuilder> generationConfigBuilder;
-    // Single tensor with inputIds for the model. This is considered general for all pipelines,
-    // but depending on particular pipeline implementation it might be not required or on the other hand, insufficient.
-    ov::Tensor inputIds;
+    // Populated in parseRequest(); carries all GenAI inputs including the generation config.
+    InputRequest inputRequest;
     // Required for generating output and handle request on the calculator side
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::string response;
@@ -152,6 +150,16 @@ struct GenAiServableExecutionContext {
     bool lifecyclePrimed = false;  // true once RESPONSES lifecycle events have been primed
     DeltaChannel deltaChannel;     // thread-safe delta queue used by all streaming paths
     GenerationPhase generationPhase = GenerationPhase::INPUT_TOKEN_PROCESSING;
+};
+
+struct ExtraGenerationInfo {
+    std::string bosTokenFromTokenizer;
+    std::string bosTokenIdFromTokenizer;
+    std::string eosTokenFromTokenizer;
+    std::string eosTokenIdFromTokenizer;
+    std::string chatTemplateFromTokenizer;
+    std::string chatTemplateDirectory;
+    bool isGgufModel;
 };
 
 struct GenAiServableProperties {
@@ -169,8 +177,8 @@ struct GenAiServableProperties {
 #else
     ChatTemplateMode chatTemplateMode = ChatTemplateMode::MINJA;
 #endif
-    ChatTemplateBackend chatTemplateBackend = ChatTemplateBackend::TOKENIZER;
-    PreparedRuntimeChatTemplate preparedChatTemplate;
+    // Chat template analysis
+    ChatTemplateCaps chatTemplateCaps;
     // Sampling
     DecodingMethod decodingMethod;
     std::optional<uint32_t> maxTokensLimit;
@@ -180,6 +188,13 @@ struct GenAiServableProperties {
     ov::genai::Tokenizer tokenizer;
     // Specific pipeline properties
     bool eagle3Mode = false;
+    // Controls which steps InputProcessor builds for this servable type.
+    // Aggregated per-deployment context for InputProcessor.
+    InputProcessorContext inputProcessorContext;
+
+#if (PYTHON_DISABLE == 0)
+    PyJinjaTemplateProcessor templateProcessor;
+#endif
 };
 
 class GenAiServable {
@@ -223,10 +238,18 @@ public:
     virtual absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     /*
-    prepareInputs method implementation MUST fill executionContext inputIds field.
+    prepareInputs method implementation MUST fill executionContext inputRequest.inputIds field.
     Base implementation applies chat template to the payload body and encodes it with tokenizer.
     */
     virtual absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
+    /*
+    validateInputCompatibility checks whether the request input is compatible with this servable type.
+    Called from prepareInputs before the InputProcessor chain runs.
+    Base implementation rejects image_url content for non-VLM (text-only) servables.
+    Derived classes may override to add or relax constraints.
+    */
+    virtual absl::Status validateInputCompatibility(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     /*
     scheduleExecution method should implement any necessary queueing mechanism or start asynchronous execution.

@@ -19,7 +19,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
@@ -29,16 +28,18 @@
 #include "../../../config.hpp"
 #include "../../../logging.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
-#include "../../runtime_chat_template.hpp"
 #include "../../text_utils.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "../../py_jinja_template_processor.hpp"
+#endif
 
 namespace ovms {
 
 absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
     vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
-        vlmExecutionContext->inputText, vlmExecutionContext->inputImages,
-        vlmExecutionContext->generationConfigBuilder->getConfig());
+        vlmExecutionContext->inputRequest.promptText, vlmExecutionContext->inputRequest.inputImages,
+        vlmExecutionContext->inputRequest.generationConfig);
     return absl::OkStatus();
 }
 
@@ -70,130 +71,4 @@ std::shared_ptr<GenAiServableProperties> VisualLanguageModelServable::getPropert
     return properties;
 }
 
-absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-    if (vlmExecutionContext->apiHandler == nullptr) {
-        return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
-    }
-    if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
-        ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
-
-        for (size_t i = 0; i < chatHistory.size(); i++) {
-            const auto& message = chatHistory[i];
-            if (message["content"].as_string().value_or("").find("<ov_genai_image_") != std::string::npos) {
-                return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
-            }
-        }
-
-        const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
-        size_t imageIndex = 0;
-        std::unordered_map<size_t, std::string> imageTags;
-        for (const auto& image : imageHistory) {
-            const auto& [chatTurnIndex, imageTensor] = image;
-            std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
-            vlmExecutionContext->inputImages.push_back(imageTensor);
-        }
-
-        for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
-            std::string messageContent = chatHistory[chatTurnIndex]["content"].as_string().value_or("");
-            chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
-        }
-
-#if (PYTHON_DISABLE == 0)
-        bool templateApplied = false;
-        if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
-            std::string jsonForTemplate;
-            if (vlmExecutionContext->apiHandler->getProcessedJson().size() > 0) {
-                jsonForTemplate = vlmExecutionContext->apiHandler->getProcessedJson();
-            } else {
-                jsonForTemplate = vlmExecutionContext->payload.body;
-            }
-            // Inject image tags into the JSON messages for Python Jinja template processing
-            if (!imageTags.empty()) {
-                rapidjson::Document jsonDoc;
-                jsonDoc.Parse(jsonForTemplate.c_str());
-                if (!jsonDoc.HasParseError() && jsonDoc.IsObject() && jsonDoc.HasMember("messages") && jsonDoc["messages"].IsArray()) {
-                    auto& messages = jsonDoc["messages"];
-                    for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
-                        if (chatTurnIndex < messages.Size()) {
-                            auto& msg = messages[chatTurnIndex];
-                            if (msg.IsObject() && msg.HasMember("content") && msg["content"].IsString()) {
-                                std::string newContent = imageTagString + msg["content"].GetString();
-                                msg["content"].SetString(newContent.c_str(), newContent.length(), jsonDoc.GetAllocator());
-                            }
-                        }
-                    }
-                    rapidjson::StringBuffer buffer;
-                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                    jsonDoc.Accept(writer);
-                    jsonForTemplate = buffer.GetString();
-                }
-            }
-            auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
-                getProperties()->preparedChatTemplate,
-                jsonForTemplate,
-                vlmExecutionContext->inputText);
-            if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
-                return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
-            }
-            templateApplied = (runtimeStatus == RuntimeChatTemplateStatus::APPLIED);
-        } else  // NOLINT(readability/braces)
-#endif
-            if (
-#if (PYTHON_DISABLE == 0)
-                !templateApplied
-#else
-            true
-#endif
-            ) {
-            constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
-            auto toolParsingResult = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
-            if (!toolParsingResult.ok()) {
-                return toolParsingResult.status();
-            }
-            const auto& tools = toolParsingResult.value();
-            auto chatTemplateKwargsParsingResult = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-            if (!chatTemplateKwargsParsingResult.ok()) {
-                return chatTemplateKwargsParsingResult.status();
-            }
-            const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
-            if (llm_calculator_logger->should_log(spdlog::level::trace)) {
-                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory messages: {}", chatHistory.get_messages().to_json_string());
-                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory.get_tools(): {}", chatHistory.get_tools().to_json_string());
-                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatHistory.get_extra_context(): {}", chatHistory.get_extra_context().to_json_string());
-                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM tools: {}", tools.has_value() ? tools->to_json_string() : std::string("<none>"));
-                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM chatTemplateKwargs: {}", chatTemplateKwargs.has_value() ? chatTemplateKwargs->to_json_string() : std::string("<none>"));
-                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM addGenerationPrompt: {}", addGenerationPrompt);
-            }
-            try {
-                vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
-            } catch (const std::exception& e) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
-                return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
-            }
-        }
-        if (vlmExecutionContext->inputText.empty()) {
-            return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
-        }
-        if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
-            vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
-        }
-    } else {
-        return absl::InvalidArgumentError("Unsupported endpoint");
-    }
-
-    if (Config::instance().getServerSettings().verboseResponse) {
-        vlmExecutionContext->apiHandler->enableVerboseResponse(vlmExecutionContext->inputText);
-    }
-
-    // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM input text: {}", vlmExecutionContext->inputText);
-    bool encodeAddSpecialTokens = false;  // assuming chat template application added special tokens
-    ov::Tensor inputTextIds = getProperties()->tokenizer.encode(vlmExecutionContext->inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
-    vlmExecutionContext->apiHandler->setPromptTokensUsage(inputTextIds.get_size());
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(inputTextIds));
-
-    return absl::OkStatus();
-}
 }  // namespace ovms

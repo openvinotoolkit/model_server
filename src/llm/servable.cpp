@@ -36,7 +36,8 @@
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "apis/openai_responses.hpp"
-#include "runtime_chat_template.hpp"
+#include "io_processing/generation_config_builder.hpp"
+#include "io_processing/input_processor.hpp"
 #include "ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
@@ -159,19 +160,36 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
             std::move(ovmsCallback),
             streamerConfig);
     }
-    executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
+    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
         getProperties()->decodingMethod);
-    executionContext->generationConfigBuilder->parseConfigFromRequest(executionContext->apiHandler->getRequest());
-    executionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
-    try {
-        executionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
-    } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
-        executionContext->generationConfigBuilder->unsetStructuredOutputConfig();
+    auto inputRequestResult = executionContext->apiHandler->extractInputRequest(configBuilder);
+    if (!inputRequestResult.ok()) {
+        return inputRequestResult.status();
     }
+    executionContext->inputRequest = std::move(*inputRequestResult);
+    return absl::OkStatus();
+}
 
+absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    // LM servables reject requests containing image content. Images are preserved
+    // as JsonContainer arrays in chatHistory. Reject if any message's content array
+    // contains an image_url entry.
+    if (!getProperties()->inputProcessorContext.config.isVLM &&
+        std::holds_alternative<ov::genai::ChatHistory>(executionContext->inputRequest.input)) {
+        const auto& ch = std::get<ov::genai::ChatHistory>(executionContext->inputRequest.input);
+        for (size_t i = 0; i < ch.size(); i++) {
+            const auto content = ch[i]["content"];
+            if (content.is_array()) {
+                for (size_t j = 0; j < content.size(); j++) {
+                    if (content[j]["type"].as_string().value_or("") == "image_url") {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but image_url has been provided");
+                    }
+                }
+            }
+        }
+    }
     return absl::OkStatus();
 }
 
@@ -180,150 +198,46 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
     }
 
-    // Base servable cannot process images
-    if (executionContext->apiHandler->getImageHistory().size() > 0) {
-        return absl::InternalError("This servable supports only text input, but image_url has been provided");
+    auto status = validateInputCompatibility(executionContext);
+    if (!status.ok()) {
+        return status;
     }
 
-    std::string inputText;
-    auto applyWithTokenizer = [&](std::string& outText) -> absl::Status {
-        ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
-        constexpr bool addGenerationPrompt = true;
-        auto toolsStatus = executionContext->apiHandler->parseToolsToJsonContainer();
-        if (!toolsStatus.ok()) {
-            return toolsStatus.status();
-        }
-        const auto& tools = toolsStatus.value();
-        auto chatTemplateKwargsStatus = executionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-        if (!chatTemplateKwargsStatus.ok()) {
-            return chatTemplateKwargsStatus.status();
-        }
-        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
-        try {
-            outText = getProperties()->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
-            return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
-        }
-        return absl::OkStatus();
-    };
-#if (PYTHON_DISABLE == 0)
-    auto applyWithPreparedRuntime = [&](const std::string& requestBody, std::string& outText) -> absl::StatusOr<bool> {
-        if (getProperties()->chatTemplateMode != ChatTemplateMode::JINJA ||
-            getProperties()->chatTemplateBackend != ChatTemplateBackend::PYTHON_RUNTIME) {
-            return false;
-        }
-        auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
-            getProperties()->preparedChatTemplate,
-            requestBody,
-            outText);
-        if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
-            return absl::Status(absl::StatusCode::kInvalidArgument, outText);
-        }
-        return runtimeStatus == RuntimeChatTemplateStatus::APPLIED;
-    };
-#endif
+    InputRequest& req = executionContext->inputRequest;
+    InputProcessor processor(getProperties()->inputProcessorContext, req);
+    status = processor.process(req);
+    if (!status.ok()) {
+        return status;
+    }
 
-    switch (executionContext->endpoint) {
-    case Endpoint::CHAT_COMPLETIONS: {
-#if (PYTHON_DISABLE == 0)
-        bool templateApplied = false;
-        if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
-            const std::string requestBody = (executionContext->apiHandler->getProcessedJson().size() > 0) ? executionContext->apiHandler->getProcessedJson() : executionContext->payload.body;
-            auto runtimeStatus = applyWithPreparedRuntime(requestBody, inputText);
-            if (!runtimeStatus.ok()) {
-                return runtimeStatus.status();
-            }
-            templateApplied = runtimeStatus.value();
-        }
-        if (!templateApplied) {
-            auto tokenizerStatus = applyWithTokenizer(inputText);
-            if (!tokenizerStatus.ok()) {
-                return tokenizerStatus;
-            }
-        }
-#else
-        auto tokenizerStatus = applyWithTokenizer(inputText);
-        if (!tokenizerStatus.ok()) {
-            return tokenizerStatus;
-        }
-#endif
-        if (inputText.size() == 0) {
-            return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
-        }
-        if (executionContext->apiHandler->getOutputParser() != nullptr) {
-            executionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(inputText);
-        }
-        break;
-    }
-    case Endpoint::RESPONSES: {
-        if (executionContext->apiHandler->getChatHistory().size() > 0) {
-#if (PYTHON_DISABLE == 0)
-            bool templateApplied = false;
-            if (getProperties()->chatTemplateBackend == ChatTemplateBackend::PYTHON_RUNTIME) {
-                auto runtimeStatus = applyWithPreparedRuntime(executionContext->apiHandler->getProcessedJson(), inputText);
-                if (!runtimeStatus.ok()) {
-                    return runtimeStatus.status();
-                }
-                templateApplied = runtimeStatus.value();
-            }
-            if (!templateApplied) {
-                auto tokenizerStatus = applyWithTokenizer(inputText);
-                if (!tokenizerStatus.ok()) {
-                    return tokenizerStatus;
-                }
-            }
-#else
-            auto tokenizerStatus = applyWithTokenizer(inputText);
-            if (!tokenizerStatus.ok()) {
-                return tokenizerStatus;
-            }
-#endif
-            if (inputText.size() == 0) {
-                return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
-            }
-            if (executionContext->apiHandler->getOutputParser() != nullptr) {
-                executionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(inputText);
-            }
-        } else {
-            auto prompt = executionContext->apiHandler->getPrompt();
-            if (!prompt.has_value()) {
-                return absl::Status(absl::StatusCode::kInvalidArgument, "input is missing");
-            }
-            inputText = prompt.value();
-        }
-        break;
-    }
-    case Endpoint::COMPLETIONS: {
-        inputText = executionContext->apiHandler->getPrompt().value();
-        break;
-    }
-    case Endpoint::TOKENIZE:
-        return absl::InternalError("Tokenize endpoint should not reach prepareInputs stage");
+    if (executionContext->apiHandler->getOutputParser() != nullptr) {
+        executionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(req.promptText);
     }
     if (Config::instance().getServerSettings().verboseResponse) {
-        executionContext->apiHandler->enableVerboseResponse(inputText);
+        executionContext->apiHandler->enableVerboseResponse(req.promptText);
     }
-    bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
-    executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     if (getProperties()->maxModelLength.has_value()) {
-        if (executionContext->inputIds.get_size() > getProperties()->maxModelLength.value()) {
+        if (req.inputIds.get_size() > getProperties()->maxModelLength.value()) {
             std::stringstream ss;
-            ss << "Number of prompt tokens: " << executionContext->inputIds.get_size() << " exceeds model max length: " << getProperties()->maxModelLength.value();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+            ss << "Number of prompt tokens: " << req.inputIds.get_size()
+               << " exceeds model max length: " << getProperties()->maxModelLength.value();
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, ss.str());
             return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
         }
-        if (executionContext->apiHandler->getMaxTokens().has_value() && executionContext->inputIds.get_size() + executionContext->apiHandler->getMaxTokens().value() > getProperties()->maxModelLength.value()) {
+        if (executionContext->apiHandler->getMaxTokens().has_value() &&
+            req.inputIds.get_size() + static_cast<size_t>(executionContext->apiHandler->getMaxTokens().value()) >
+                getProperties()->maxModelLength.value()) {
             std::stringstream ss;
-            ss << "Number of prompt tokens: " << executionContext->inputIds.get_size() << " + max tokens value: " << executionContext->apiHandler->getMaxTokens().value() << " exceeds model max length: " << getProperties()->maxModelLength.value();
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+            ss << "Number of prompt tokens: " << req.inputIds.get_size()
+               << " + max tokens value: " << executionContext->apiHandler->getMaxTokens().value()
+               << " exceeds model max length: " << getProperties()->maxModelLength.value();
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, ss.str());
             return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
         }
     }
-
-    executionContext->apiHandler->setPromptTokensUsage(executionContext->inputIds.get_size());
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Pipeline input text: {}", inputText);
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(executionContext->inputIds));
+    executionContext->apiHandler->setPromptTokensUsage(req.inputIds.get_size());
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(req.inputIds));
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Pipeline input text: {}", req.promptText);
 
     return absl::OkStatus();
 }
