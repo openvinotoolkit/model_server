@@ -32,12 +32,21 @@ absl::Status TextContentNormalizationProcessor::process(InputRequest& req) {
         if (!content.is_array()) {
             continue;
         }
+        // Only flatten arrays that contain exclusively text parts. Arrays with
+        // images (or other modalities) are left untouched for ImageDecodingProcessor.
+        bool allText = true;
+        for (size_t j = 0; j < content.size(); j++) {
+            if (content[j]["type"].as_string().value_or("") != "text") {
+                allText = false;
+                break;
+            }
+        }
+        if (!allText) {
+            continue;
+        }
         std::string combined;
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
-            if (part["type"].as_string().value_or("") != "text") {
-                continue;
-            }
             if (!combined.empty()) {
                 combined += "\n";
             }

@@ -195,10 +195,9 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                 continue;
             }
             if (memberName == "content" && member->value.IsArray()) {
-                // Validate the content array and check whether it contains images.
-                if (member->value.GetArray().Size() == 0) {
-                    return absl::InvalidArgumentError("Invalid message structure - content array is empty");
-                }
+                // Empty content arrays are accepted and preserved as-is. The
+                // EmptyContentNormalizationProcessor converts them to null before
+                // downstream processing.
                 for (const auto& v : member->value.GetArray()) {
                     if (!v.IsObject()) {
                         return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");

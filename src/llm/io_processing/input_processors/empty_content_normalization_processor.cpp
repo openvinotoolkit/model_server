@@ -13,20 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
 
-#include "../base_input_processor.hpp"
+#include "empty_content_normalization_processor.hpp"
+
+#include <variant>
 
 namespace ovms {
 
-// Flattens text-only content arrays in ChatHistory messages to plain strings.
-// Parts are joined with "\n" for backward compatibility with chat templates.
-// Runs for both LM and VLM chat paths: arrays that contain images (or other
-// non-text modalities) are left untouched for ImageDecodingProcessor.
-// Must run before ChatTemplateProcessor.
-class TextContentNormalizationProcessor : public BaseInputProcessor {
-public:
-    absl::Status process(InputRequest& req) override;
-};
+absl::Status EmptyContentNormalizationProcessor::process(InputRequest& req) {
+    if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
+        return absl::Status(absl::StatusCode::kInternal,
+            "EmptyContentNormalizationProcessor received input that is not a ChatHistory");
+    }
+    ov::genai::ChatHistory& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
+    for (size_t i = 0; i < chatHistory.size(); i++) {
+        const auto content = chatHistory[i]["content"];
+        if (content.is_array() && content.size() == 0) {
+            chatHistory[i]["content"] = ov::genai::JsonContainer(nullptr);
+        }
+    }
+    return absl::OkStatus();
+}
 
 }  // namespace ovms
