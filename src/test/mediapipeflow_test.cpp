@@ -1474,7 +1474,7 @@ protected:
     MediapipeGraphDefinition* getMPDefinitionByName(const std::string& name) {
         const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
         ModelManager& modelManager = smm->getServableManager();
-        const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+        const auto& factory = modelManager.getMediapipeFactory();
         return factory.findDefinitionByName(name);
     }
 };
@@ -2681,7 +2681,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenChangeInputNameInDefinition) {
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2723,7 +2723,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2898,7 +2898,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2917,7 +2917,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2949,7 +2949,7 @@ TEST_F(MediapipeConfigChanges, AddImproperGraphThenFixWithReloadThenBreakAgain) 
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
@@ -2983,7 +2983,7 @@ TEST_F(MediapipeConfigChanges, GraphWithNonexistentCalcShouldBeInNotLoadedYet) {
     createConfigFileWithContent(pbtxtContentNonexistentCalc, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
@@ -3004,7 +3004,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);

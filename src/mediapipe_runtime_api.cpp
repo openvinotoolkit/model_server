@@ -277,6 +277,10 @@ const std::vector<std::string> MediapipeRuntimeApi::getNamesOfAvailableMediapipe
     return splitNewlineDelimited(names);
 }
 
+MediapipeGraphDefinition* MediapipeRuntimeApi::findDefinitionByName(const std::string& name) const {
+    return reinterpret_cast<MediapipeGraphDefinition*>(findServableDefinitionByName(name));
+}
+
 ServableDefinition* MediapipeRuntimeApi::findServableDefinitionByName(const std::string& name) const {
     if (!isLoaded()) {
         return nullptr;

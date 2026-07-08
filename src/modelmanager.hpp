@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "dags/dag_resource_manager.hpp"
+#include "mediapipe_runtime_api.hpp"
 #include "metrics/metric_provider.hpp"
 #include "model_instance_provider.hpp"
 #include "modelconfig.hpp"
@@ -54,7 +55,6 @@ class MediapipeGraphExecutorInterface;
 class Model;
 class ModelConfig;
 class FileSystem;
-class MediapipeRuntimeApi;
 class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
 class ModelInstance;
@@ -313,6 +313,9 @@ public:
 
 #if (MEDIAPIPE_DISABLE == 0)
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
+    const MediapipeRuntimeApi& getMediapipeFactory() const {
+        return *mediapipeFactory;
+    }
 #endif
 
     const CustomNodeLibraryManager& getCustomNodeLibraryManager() const;

@@ -511,7 +511,7 @@ TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSend
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli/subconfig").c_str(), "my_graph");
     const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
     ModelManager& manager = smm->getServableManager();
-    const MediapipeFactory& factory = manager.getMediapipeFactory();
+    const auto& factory = manager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(name);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -549,7 +549,7 @@ TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSep
     SetUpServer(configFilePath.c_str());
     const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
     ModelManager& manager = smm->getServableManager();
-    const MediapipeFactory& factory = manager.getMediapipeFactory();
+    const auto& factory = manager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(name);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);

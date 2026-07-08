@@ -169,6 +169,7 @@ static const KFSDataType& MPPrecisionToKFSPrecision(::mediapipe::Tensor::Element
 template <typename T>
 static Status receiveAndSerializePacket(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName);
 
+#if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
 static Status tfTensorRuntimeUnavailable(const std::string& streamName) {
     std::stringstream ss;
     ss << "TFTENSOR is not available in MediaPipe runtime KFS bridge for stream: " << streamName;
@@ -176,6 +177,7 @@ static Status tfTensorRuntimeUnavailable(const std::string& streamName) {
     SPDLOG_DEBUG(details);
     return Status(StatusCode::NOT_IMPLEMENTED, details);
 }
+#endif
 
 static Status kfsPyTensorBridgeUnavailable(const std::string& streamName) {
     std::stringstream ss;

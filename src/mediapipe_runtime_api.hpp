@@ -13,7 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#ifndef OVMS_MEDIAPIPE_RUNTIME_API_HPP
+#define OVMS_MEDIAPIPE_RUNTIME_API_HPP
 
 #include <memory>
 #include <set>
@@ -39,6 +40,7 @@ namespace ovms {
 class MetricProvider;
 class ServableNameChecker;
 class MediapipeGraphConfig;
+class MediapipeGraphDefinition;
 class MediapipeGraphExecutorInterface;
 class MediapipeGraphExecutor;
 class ServableDefinition;
@@ -71,6 +73,7 @@ public:
     void retireOtherThan(const std::set<std::string>& graphsInConfigFile);
     const std::vector<std::string> getMediapipePipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
+    MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;
     ServableDefinition* findServableDefinitionByName(const std::string& name) const;
     Status createServableConfig(const std::string& directoryPath,
         const HFSettingsImpl& hfSettings,
@@ -86,3 +89,5 @@ private:
 };
 
 }  // namespace ovms
+
+#endif  // OVMS_MEDIAPIPE_RUNTIME_API_HPP
