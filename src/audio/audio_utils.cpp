@@ -31,7 +31,7 @@
 #pragma warning(push)
 #define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
 
-using namespace ovms;
+namespace ovms::audio_utils {
 
 static void validateAudioFileSizeAgainstMaxValue(size_t fileSize);
 
@@ -257,7 +257,7 @@ static void validateAudioFileSizeAgainstMaxValue(size_t fileSize) {
     size_t maxFileSize = DEFAULT_MAX_FILE_SIZE;
     const char* env = std::getenv("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
     if (env && *env) {
-        auto parsed = ovms::stou64(env);
+        auto parsed = stou64(env);
         if (parsed.has_value() && parsed.value() > 0) {
             maxFileSize = parsed.value();
         }
@@ -300,3 +300,66 @@ void validateAudioFileSize(
     expectedSize *= bytesPerSample;
     validateAudioFileSizeAgainstMaxValue(expectedSize);
 }
+
+std::vector<float> readWithoutResample(const std::string_view& audioData, const std::string& format) {
+    std::vector<float> pcmf32;
+    if (format == "wav") {
+        drwav wav;
+        if (!drwav_init_memory(&wav, audioData.data(), audioData.size(), nullptr)) {
+            throw std::runtime_error("WAV audio parsing failed");
+        }
+        if (wav.channels != 1 && wav.channels != 2) {
+            drwav_uninit(&wav);
+            throw std::runtime_error("WAV audio must be mono or stereo");
+        }
+        if (wav.bitsPerSample < 8 || (wav.bitsPerSample % 8) != 0) {
+            drwav_uninit(&wav);
+            throw std::runtime_error("WAV audio has unsupported bits per sample");
+        }
+        const uint64_t n = wav.totalPCMFrameCount;
+        std::vector<int16_t> pcm16(n * wav.channels);
+        drwav_read_pcm_frames_s16(&wav, n, pcm16.data());
+        drwav_uninit(&wav);
+
+        pcmf32.resize(n);
+        if (wav.channels == 1) {
+            for (uint64_t i = 0; i < n; i++) {
+                pcmf32[i] = float(pcm16[i]) / 32768.0f;
+            }
+        } else {
+            for (uint64_t i = 0; i < n; i++) {
+                pcmf32[i] = float(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0f;
+            }
+        }
+    } else if (format == "mp3") {
+        drmp3 mp3;
+        if (!drmp3_init_memory(&mp3, audioData.data(), audioData.size(), nullptr)) {
+            throw std::runtime_error("MP3 audio parsing failed");
+        }
+        if (mp3.channels != 1 && mp3.channels != 2) {
+            drmp3_uninit(&mp3);
+            throw std::runtime_error("MP3 audio must be mono or stereo");
+        }
+        constexpr size_t CHUNK_FRAMES = 1152;
+        float tempBuffer[CHUNK_FRAMES * 2];
+        for (;;) {
+            drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, CHUNK_FRAMES, tempBuffer);
+            if (framesRead == 0)
+                break;
+            if (mp3.channels == 1) {
+                pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead);
+            } else {
+                for (drmp3_uint64 i = 0; i < framesRead; i++) {
+                    pcmf32.push_back((tempBuffer[2 * i] + tempBuffer[2 * i + 1]) * 0.5f);
+                }
+            }
+        }
+        drmp3_uninit(&mp3);
+    } else {
+        throw std::runtime_error("Unsupported audio format: " + format);
+    }
+
+    return pcmf32;
+}
+
+}  // namespace ovms::audio_utils

@@ -24,6 +24,7 @@
 #include "../../logging.hpp"
 #include "input_processors/chat_template_processor.hpp"
 #include "input_processors/image_decoding_processor.hpp"
+#include "input_processors/audio_decoding_processor.hpp"
 #include "input_processors/chat_template_adapter.hpp"
 #include "input_processors/raw_prompt_extractor.hpp"
 #include "input_processors/text_content_normalization_processor.hpp"
@@ -42,6 +43,10 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
             settings.allowedLocalMediaPath,
             settings.allowedMediaDomains));
+    }
+
+    if (context.config.isOmni && isChatPath) {
+        processors.emplace_back(std::make_unique<AudioDecodingProcessor>());
     }
 
     if (!context.config.isVLM && isChatPath) {

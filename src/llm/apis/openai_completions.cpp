@@ -220,6 +220,14 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
                         }
+                    } else if (entryType == "input_audio") {
+                        if (!entry.HasMember("input_audio") || !entry["input_audio"].IsObject()) {
+                            return absl::InvalidArgumentError("Invalid message structure - input_audio object missing");
+                        }
+                        const auto inputAudio = entry["input_audio"].GetObject();
+                        if (!inputAudio.HasMember("data") || !inputAudio["data"].IsString()) {
+                            return absl::InvalidArgumentError("Invalid message structure - input_audio does not have data field");
+                        }
                     } else {
                         return absl::InvalidArgumentError("Unsupported content type");
                     }

@@ -152,6 +152,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "io_processing_input_processors",
     hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
+            "io_processing/input_processors/audio_decoding_processor.hpp",
             "io_processing/input_processors/chat_template_processor.hpp",
             "io_processing/input_processors/chat_template_adapter.hpp",
             "io_processing/chat_template/caps.hpp",
@@ -159,6 +160,7 @@ ovms_cc_library(
             "io_processing/input_processors/text_content_normalization_processor.hpp",
             "io_processing/input_processors/tokenization_processor.hpp"],
     srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
+            "io_processing/input_processors/audio_decoding_processor.cpp",
             "io_processing/input_processors/chat_template_processor.cpp",
             "io_processing/input_processors/chat_template_adapter.cpp",
             "io_processing/input_processors/text_content_normalization_processor.cpp",
@@ -170,6 +172,7 @@ ovms_cc_library(
         ":io_processing_input_request",
         "//third_party:genai",
         "//src:libovmslogging",
+        "//src/audio:audio_utils",
     ] + select({
         "//:disable_python": [],
         "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,

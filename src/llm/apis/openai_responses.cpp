@@ -439,6 +439,10 @@ public:
                 auto status = buildImageEntry(contentObj);
                 if (!status.ok())
                     return status;
+            } else if (type == "input_audio") {
+                auto status = buildAudioEntry(contentObj);
+                if (!status.ok())
+                    return status;
             } else {
                 return absl::InvalidArgumentError(absl::StrCat("unsupported input content item type: ", type));
             }
@@ -533,6 +537,33 @@ private:
         rapidjson::Value entry(rapidjson::kObjectType);
         entry.AddMember("type", rapidjson::Value("image_url", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
         entry.AddMember("image_url", imageUrlObj, scratchDoc.GetAllocator());
+        pendingContentArray.PushBack(entry, scratchDoc.GetAllocator());
+        return absl::OkStatus();
+    }
+
+    // Append a {"type":"input_audio","input_audio":{"data":"..."}} entry to
+    // pendingContentArray. Actual audio decoding is deferred to AudioDecodingProcessor.
+    absl::Status buildAudioEntry(const rapidjson::Value::ConstObject& contentObj) {
+        auto inputAudioIt = contentObj.FindMember("input_audio");
+        if (inputAudioIt == contentObj.MemberEnd() || !inputAudioIt->value.IsObject())
+            return absl::InvalidArgumentError("input_audio requires input_audio object field");
+
+        auto audioObj = inputAudioIt->value.GetObject();
+        auto dataIt = audioObj.FindMember("data");
+        if (dataIt == audioObj.MemberEnd() || !dataIt->value.IsString())
+            return absl::InvalidArgumentError("input_audio.data is missing or invalid");
+
+        std::string format = "wav";
+        auto formatIt = audioObj.FindMember("format");
+        if (formatIt != audioObj.MemberEnd() && formatIt->value.IsString())
+            format = formatIt->value.GetString();
+
+        rapidjson::Value audioDataObj(rapidjson::kObjectType);
+        audioDataObj.AddMember("data", rapidjson::Value(dataIt->value.GetString(), scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
+        audioDataObj.AddMember("format", rapidjson::Value(format.c_str(), scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
+        rapidjson::Value entry(rapidjson::kObjectType);
+        entry.AddMember("type", rapidjson::Value("input_audio", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
+        entry.AddMember("input_audio", audioDataObj, scratchDoc.GetAllocator());
         pendingContentArray.PushBack(entry, scratchDoc.GetAllocator());
         return absl::OkStatus();
     }

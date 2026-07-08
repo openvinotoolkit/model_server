@@ -56,6 +56,7 @@ public:
     OmniModelLegacyServable() {
         properties = std::make_shared<OmniModelLegacyServableProperties>();
         properties->inputProcessorContext.config.isVLM = true;
+        properties->inputProcessorContext.config.isOmni = true;
     }
 
     absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const HttpPayload& payload);
