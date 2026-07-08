@@ -8,7 +8,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 ## Prerequisites
 
-**OVMS version 2025.4** This demo require version 2025.4 or nightly release.
+**OVMS version 2025.4** This demo requires version 2025.4 or nightly release.
 
 **Model preparation**: Python 3.10 or higher with pip
 
@@ -155,7 +155,7 @@ An asynchronous benchmarking client can be used to access the model server perfo
 ```console
 pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/requirements.txt
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/benchmark.py -o benchmark.py
-python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset ihm --tokenizer openai/whisper-large-v3-turbo --trust-remote-code True
+python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model microsoft/speecht5_tts --batch_size 1 --limit 100 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset ihm --tokenizer OpenVINO/whisper-large-v3-turbo-fp16-ov --trust-remote-code True
 Number of documents: 100
 100%|████████████████████████████████████████████████████████████████████████████████| 100/100 [01:58<00:00,  1.19s/it]
 Tokens: 1802
@@ -169,37 +169,7 @@ Average document length: 18.02 tokens
 ## Transcription
 ### Model preparation
 Many variances of Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translations and transcriptions endpoints.
-However in this demo we will use openai/whisper-large-v3-turbo which needs to be converted to IR format before using in OVMS.
-
-Here, the original Speech to Text model will be converted to IR format and quantized.
-That ensures faster initialization time, better performance and lower memory consumption.
-Execution parameters will be defined inside the `graph.pbtxt` file.
-
-Download export script, install it's dependencies and create directory for the models:
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir models
-```
-
-Run `export_model.py` script to download and quantize the model:
-
-> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
-
-**CPU**
-```console
-python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name openai/whisper-large-v3-turbo --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps
-```
-
-**GPU**
-```console
-python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name openai/whisper-large-v3-turbo --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps --target_device GPU
-```
-
-> **Note:** Change the `--weight-format` to quantize the model to `int8` precision to reduce memory consumption and improve performance.
-> **Note:** `--enable_word_timestamps` can be omitted if there is no need for word timestamps support. 
-
-### Deployment
+In this demo we will use OpenVINO/whisper-large-v3-turbo-fp16-ov which is finetuned version of Whisper large-v3. 
 
 :::{dropdown} **Deploying with Docker**
 
@@ -210,7 +180,7 @@ Select deployment option depending on how you prepared models in the previous st
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --model_path /models/openai/whisper-large-v3-turbo --model_name openai/whisper-large-v3-turbo
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name OpenVINO/whisper-large-v3-turbo-fp16-ov --model_repository_path /models --enable_word_timestamps
 ```
 **GPU**
 
@@ -219,7 +189,7 @@ to `docker run` command, use the image with GPU support.
 It can be applied using the commands below:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_path /models/openai/whisper-large-v3-turbo --model_name openai/whisper-large-v3-turbo
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name OpenVINO/whisper-large-v3-turbo-fp16-ov --model_repository_path /models --target_device GPU --enable_word_timestamps
 ```
 :::
 
@@ -228,11 +198,13 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-a
 If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-ovms --rest_port 8000 --model_path /models/openai/whisper-large-v3-turbo --model_name openai/whisper-large-v3-turbo
+ovms --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name OpenVINO/whisper-large-v3-turbo-fp16-ov --model_repository_path models --target_device GPU --enable_word_timestamps
 ```
 :::
 
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [s2t calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
+> **Note:** `--enable_word_timestamps` can be omitted if there is no need for word timestamps support. 
+
+The default configuration should work in most cases but the parameters can be tuned via OVMS arguments. See the [s2t calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
 
 ### Request Generation 
 Transcript file that was previously generated with audio/speech endpoint.
@@ -243,7 +215,7 @@ Transcript file that was previously generated with audio/speech endpoint.
 
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="openai/whisper-large-v3-turbo" -F language="en"
+curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="OpenVINO/whisper-large-v3-turbo-fp16-ov" -F language="en"
 ```
 ```json
 {"text": " The quick brown fox jumped over the lazy dog."}
@@ -265,7 +237,7 @@ client = OpenAI(base_url=url, api_key="not_used")
 
 audio_file = open(filename, "rb")
 transcript = client.audio.transcriptions.create(
-  model="openai/whisper-large-v3-turbo",
+  model="OpenVINO/whisper-large-v3-turbo-fp16-ov",
   language="en",
   file=audio_file
 )
@@ -283,7 +255,7 @@ The quick brown fox jumped over the lazy dog.
 curl -N http://localhost:8000/v3/audio/transcriptions \
   -H "Content-Type: multipart/form-data" \
   -F file="@speech.wav" \
-  -F model="openai/whisper-large-v3-turbo" \
+  -F model="OpenVINO/whisper-large-v3-turbo-fp16-ov" \
   -F language="en" \
   -F stream="true"
 ```
@@ -302,7 +274,7 @@ data: {"type":"transcript.text.done","text":"The quick brown fox jumped over the
 
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="openai/whisper-large-v3-turbo" -F language="en" -F timestamp_granularities[]="segment" -F timestamp_granularities[]="word" 
+curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="OpenVINO/whisper-large-v3-turbo-fp16-ov" -F language="en" -F timestamp_granularities[]="segment" -F timestamp_granularities[]="word" 
 ```
 ```json
 {"text":" A quick brown fox jumped over the lazy dog","words":[{"word":" A","start":0.0,"end":0.14000000059604645},{"word":" quick","start":0.14000000059604645,"end":0.3400000035762787},{"word":" brown","start":0.3400000035762787,"end":0.7799999713897705},{"word":" fox","start":0.7799999713897705,"end":1.3199999332427979},{"word":" jumped","start":1.3199999332427979,"end":1.7799999713897705},{"word":" over","start":1.7799999713897705,"end":2.0799999237060547},{"word":" the","start":2.0799999237060547,"end":2.259999990463257},{"word":" lazy","start":2.259999990463257,"end":2.5399999618530273},{"word":" dog","start":2.5399999618530273,"end":2.919999837875366}],"segments":[{"text":" A quick brown fox jumped over the lazy dog","start":0.0,"end":3.1399998664855957}]}
@@ -324,7 +296,7 @@ client = OpenAI(base_url=url, api_key="not_used")
 
 audio_file = open(filename, "rb")
 transcript = client.audio.transcriptions.create(
-  model="openai/whisper-large-v3-turbo",
+  model="OpenVINO/whisper-large-v3-turbo-fp16-ov",
   language="en",
   response_format="verbose_json",
   timestamp_granularities=["segment", "word"],
@@ -342,58 +314,61 @@ print(transcript.words)
 ```
 :::
 
-## Benchmarking transcription
-An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra 7 258V.
-
-```console
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/requirements.txt
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/benchmark.py -o benchmark.py
-python benchmark.py --api_url http://localhost:8000/v3/audio/transcriptions --model openai/whisper-large-v3-turbo --batch_size 1 --limit 1000 --request_rate inf --dataset edinburghcstr/ami --hf-subset ihm --backend speech2text --trust-remote-code True
-Number of documents: 1000
-100%|██████████████████████████████████████████████████████████████████████████████| 1000/1000 [04:44<00:00,  3.51it/s]
-Tokens: 10948
-Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 38.5
-Mean latency: 26670.64 ms
-Median latency: 20772.09 ms
-Average document length: 10.948 tokens
-```
-
-## Evaluate transcription accuracy with Open ASR Leaderboard
+## Evaluate transcription accuracy and performance with Open ASR Leaderboard
 
 You can evaluate model accuracy (for example WER/CER) against ASR datasets using the Open ASR Leaderboard tooling.
 
-1. Clone the repository:
-```bash
+Clone the repository:
+```console
 git clone https://github.com/huggingface/open_asr_leaderboard.git
 cd open_asr_leaderboard
 ```
 
-2. Download and apply OVMS API compatibility patch:
+Download and apply OVMS API compatibility patch:
 
     curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/external/open_asr_leaderboard.patch -o ovms_open_asr_leaderboard.patch
     git apply ovms_open_asr_leaderboard.patch
 
-3. Set OpenAI-compatible endpoint variables for OVMS:
-```bash
+Set OpenAI-compatible endpoint variables for OVMS:
+```console
 export OPENAI_BASE_URL=http://localhost:8000/v3
 export OPENAI_API_KEY="unused"
 ```
 
-4. Install dependencies:
-```bash
+Install dependencies:
+```console
 pip install -r requirements/requirements.txt -r requirements/requirements-api.txt torchcodec==0.12
 ```
 
-5. Run evaluation example:
-```bash
+Run evaluation example:
+```console
 PYTHONPATH=. python api/run_eval.py \
-  --model_name openai/whisper-large-v3-turbo \
+  --model_name openai/OpenVINO/whisper-large-v3-turbo-fp16-ov \
   --dataset_path "hf-audio/esb-datasets-test-only-sorted" \
-  --dataset "ami"
+  --max_workers 1 \
+  --split test.clean  \
+  --dataset "librispeech"
 ```
-**Model should be deployed with --model_name whisper-large-v3-turbo (leaderboard strips `openai/` prefix)**
-You can replace `ami` with other datasets supported by the leaderboard configuration. For multilanguage models run_eval_ml.py should be used.
+Results:
+```console
+...
+Transcribing: 100%|█████████▉| 2617/2620 [12:15<00:00,  5.23it/s]
+Transcribing: 100%|█████████▉| 2618/2620 [12:15<00:00,  5.31it/s]
+Transcribing: 100%|█████████▉| 2619/2620 [12:16<00:00,  5.41it/s]
+Transcribing: 100%|██████████| 2620/2620 [12:16<00:00,  5.20it/s]
+Transcribing: 100%|██████████| 2620/2620 [12:16<00:00,  3.56it/s]
+Results saved at path: ./results/MODEL_openai-OpenVINO-whisper-large-v3-turbo-fp16-ov_DATASET_hf-audio-esb-datasets-test-only-sorted_librispeech_test.clean.jsonl
+WER: 1.97 %
+RTFx: 28.87
+```
+
+Where:
+- WER (Word Error Rate) is the percentage of transcription errors compared to the reference text (substitutions + deletions + insertions). Lower is better.
+- RTFx (Real-Time Factor, expressed as speedup) indicates processing speed relative to audio duration. Values above 1 mean faster-than-real-time transcription (for example, 5.16 means about 5.16x real time).
+
+**For Open ASR Leaderboard, run `run_eval.py` with model name prefixed by `openai/` (for example `openai/OpenVINO/whisper-large-v3-turbo-fp16-ov`).**
+**OVMS should still be deployed with `--model_name OpenVINO/whisper-large-v3-turbo-fp16-ov` (evaluation script does not include `openai/` prefix in requests).**
+You can replace `librispeech` with other datasets supported by the leaderboard configuration. For multilingual models run_eval_ml.py should be used.
 
 ## Translation
 To test translations endpoint we first need to prepare audio file with speech in language other than English, e.g. Spanish. To generate such sample we will use finetuned version of microsoft/speecht5_tts model.
@@ -444,7 +419,7 @@ to `docker run` command, use the image with GPU support.
 It can be applied using the commands below:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path models --model_name OpenVINO/whisper-large-v3-fp16-ov --task speech2text --target_device GPU
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path /models --model_name OpenVINO/whisper-large-v3-fp16-ov --task speech2text --target_device GPU
 ```
 :::
 
