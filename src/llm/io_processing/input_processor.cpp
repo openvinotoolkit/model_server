@@ -23,7 +23,7 @@
 #include "../../config.hpp"
 #include "../../logging.hpp"
 #include "input_processors/chat_template_processor.hpp"
-#include "input_processors/empty_content_normalization_processor.hpp"
+#include "input_processors/empty_content_array_normalization_processor.hpp"
 #include "input_processors/image_decoding_processor.hpp"
 #include "input_processors/chat_template_adapter.hpp"
 #include "input_processors/raw_prompt_extractor.hpp"
@@ -40,7 +40,7 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
 
     if (isChatPath) {
         // Normalize empty content arrays to null before any content-aware processor runs.
-        processors.emplace_back(std::make_unique<EmptyContentNormalizationProcessor>());
+        processors.emplace_back(std::make_unique<EmptyContentArrayNormalizationProcessor>());
 
         // Flatten text-only content arrays for both LM and VLM. Arrays that contain
         // images (or other modalities) are left untouched for ImageDecodingProcessor.

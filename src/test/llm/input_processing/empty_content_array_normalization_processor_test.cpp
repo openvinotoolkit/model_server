@@ -18,7 +18,7 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/chat_history.hpp>
 
-#include "../../../llm/io_processing/input_processors/empty_content_normalization_processor.hpp"
+#include "../../../llm/io_processing/input_processors/empty_content_array_normalization_processor.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 
 using namespace ovms;
@@ -33,14 +33,14 @@ static InputRequest makeChatRequest(ov::genai::ChatHistory chatHistory) {
 
 // Tests ------------------------------------------------------------------
 
-TEST(EmptyContentNormalizationProcessorTest, EmptyArrayConvertedToNull) {
+TEST(EmptyContentArrayNormalizationProcessorTest, EmptyArrayConvertedToNull) {
     ov::genai::ChatHistory history;
     ov::AnyMap msg = {{"role", std::string("user")}};
     msg["content"] = ov::genai::JsonContainer::from_json_string("[]");
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    EmptyContentNormalizationProcessor processor;
+    EmptyContentArrayNormalizationProcessor processor;
     const auto status = processor.process(req);
 
     EXPECT_TRUE(status.ok());
@@ -49,7 +49,7 @@ TEST(EmptyContentNormalizationProcessorTest, EmptyArrayConvertedToNull) {
     EXPECT_TRUE(result[0]["content"].is_null());
 }
 
-TEST(EmptyContentNormalizationProcessorTest, NonEmptyArrayPreserved) {
+TEST(EmptyContentArrayNormalizationProcessorTest, NonEmptyArrayPreserved) {
     ov::genai::ChatHistory history;
     ov::AnyMap msg = {{"role", std::string("user")}};
     msg["content"] = ov::genai::JsonContainer::from_json_string(
@@ -57,7 +57,7 @@ TEST(EmptyContentNormalizationProcessorTest, NonEmptyArrayPreserved) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    EmptyContentNormalizationProcessor processor;
+    EmptyContentArrayNormalizationProcessor processor;
     const auto status = processor.process(req);
 
     EXPECT_TRUE(status.ok());
@@ -66,12 +66,12 @@ TEST(EmptyContentNormalizationProcessorTest, NonEmptyArrayPreserved) {
     EXPECT_EQ(result[0]["content"].size(), 1u);
 }
 
-TEST(EmptyContentNormalizationProcessorTest, StringContentPassedThrough) {
+TEST(EmptyContentArrayNormalizationProcessorTest, StringContentPassedThrough) {
     ov::genai::ChatHistory history;
     history.push_back({{"role", "user"}, {"content", "Hello, world!"}});
 
     InputRequest req = makeChatRequest(history);
-    EmptyContentNormalizationProcessor processor;
+    EmptyContentArrayNormalizationProcessor processor;
     const auto status = processor.process(req);
 
     EXPECT_TRUE(status.ok());
@@ -79,10 +79,10 @@ TEST(EmptyContentNormalizationProcessorTest, StringContentPassedThrough) {
     EXPECT_EQ(result[0]["content"].as_string().value_or(""), "Hello, world!");
 }
 
-TEST(EmptyContentNormalizationProcessorTest, RawPromptInputRejected) {
+TEST(EmptyContentArrayNormalizationProcessorTest, RawPromptInputRejected) {
     InputRequest req;
     req.input = std::string("raw prompt");
-    EmptyContentNormalizationProcessor processor;
+    EmptyContentArrayNormalizationProcessor processor;
     const auto status = processor.process(req);
 
     EXPECT_EQ(status.code(), absl::StatusCode::kInternal);

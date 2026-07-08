@@ -2339,7 +2339,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayPreservesAr
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     // Empty content arrays are accepted and preserved as-is. The
-    // EmptyContentNormalizationProcessor converts them to null downstream.
+    // EmptyContentArrayNormalizationProcessor converts them to null downstream.
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 1u);

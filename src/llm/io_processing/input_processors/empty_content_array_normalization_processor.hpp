@@ -13,26 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
-#include "empty_content_normalization_processor.hpp"
-
-#include <variant>
+#include "../base_input_processor.hpp"
 
 namespace ovms {
 
-absl::Status EmptyContentNormalizationProcessor::process(InputRequest& req) {
-    if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
-        return absl::Status(absl::StatusCode::kInternal,
-            "EmptyContentNormalizationProcessor received input that is not a ChatHistory");
-    }
-    ov::genai::ChatHistory& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
-    for (size_t i = 0; i < chatHistory.size(); i++) {
-        const auto content = chatHistory[i]["content"];
-        if (content.is_array() && content.size() == 0) {
-            chatHistory[i]["content"] = ov::genai::JsonContainer(nullptr);
-        }
-    }
-    return absl::OkStatus();
-}
+// Replaces empty content arrays ("content": []) in ChatHistory messages with null.
+// Runs for all chat paths (LM and VLM) and must execute before ImageDecodingProcessor
+// and TextContentNormalizationProcessor so downstream processors and chat templates
+// see a null content instead of an empty array.
+class EmptyContentArrayNormalizationProcessor : public BaseInputProcessor {
+public:
+    absl::Status process(InputRequest& req) override;
+};
 
 }  // namespace ovms

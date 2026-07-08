@@ -196,7 +196,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             }
             if (memberName == "content" && member->value.IsArray()) {
                 // Empty content arrays are accepted and preserved as-is. The
-                // EmptyContentNormalizationProcessor converts them to null before
+                // EmptyContentArrayNormalizationProcessor converts them to null before
                 // downstream processing.
                 for (const auto& v : member->value.GetArray()) {
                     if (!v.IsObject()) {
