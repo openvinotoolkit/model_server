@@ -43,6 +43,7 @@ from tests.functional.constants.target_device_configuration import (
     TARGET_DEVICE_CONFIGURATION,
     VOLUMES,
 )
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.utils.docker import DockerContainer, Limits
 from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator
 from tests.functional.object_model.ovms_config import OvmsConfig
@@ -273,7 +274,7 @@ class OvmsDockerLauncher(object):
         OvmsInfo.get_local_image(parameters.image)
         image = OvmsInfo.IMAGES[parameters.image]
 
-        target_device_is_valid = parameters.target_device in TARGET_DEVICE_CONFIGURATION
+        target_device_is_valid = get_base_device(parameters.target_device) in TARGET_DEVICE_CONFIGURATION
 
         extra_docker_params = {}
         batch_size, shape = None, None
@@ -333,7 +334,7 @@ class OvmsDockerLauncher(object):
         if target_device_is_valid and not parameters.check_version:
             # Note: currently we use lambda: expression for performing 'lazy init' of syscalls:
             # getuid() & getgrnam('users')/getgrnam('render')
-            target_device_conf = TARGET_DEVICE_CONFIGURATION[parameters.target_device]()
+            target_device_conf = TARGET_DEVICE_CONFIGURATION[get_base_device(parameters.target_device)]()
             devices = target_device_conf[DEVICES]
             network = parameters.network if parameters.network is not None else target_device_conf[NETWORK]
             if DOCKER_PARAMS in target_device_conf:
