@@ -18,6 +18,7 @@
 #include "../tensor_conversion_common.hpp"
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -72,13 +73,24 @@ Status convertStringRequestToOVTensor<::KFSRequest::InferInputTensor>(const ::KF
     ov::Shape shape;
     if (src.shape_size() > 0) {
         size_t shapeElements = 1;
-        for (int i = 0; i < src.shape_size(); i++) {
-            shape.push_back(static_cast<size_t>(src.shape().at(i)));
-            shapeElements *= static_cast<size_t>(src.shape().at(i));
+        bool validShape = (numElements >= 0);
+        for (int i = 0; i < src.shape_size() && validShape; i++) {
+            int64_t dim = src.shape().at(i);
+            if (dim < 0) {
+                validShape = false;
+                break;
+            }
+            size_t dimSize = static_cast<size_t>(dim);
+            if (dimSize != 0 && shapeElements > std::numeric_limits<size_t>::max() / dimSize) {
+                validShape = false;  // multiplication would overflow
+                break;
+            }
+            shape.push_back(dimSize);
+            shapeElements *= dimSize;
         }
-        if (static_cast<int>(shapeElements) != numElements) {
-            SPDLOG_DEBUG("String input shape product {} != contents size {}; falling back to 1D", shapeElements, numElements);
-            shape = ov::Shape{static_cast<size_t>(numElements)};
+        if (!validShape || shapeElements != static_cast<size_t>(numElements)) {
+            SPDLOG_DEBUG("String input shape product {} != contents size {}; rejecting request", shapeElements, numElements);
+            return StatusCode::INVALID_STRING_INPUT;
         }
     } else {
         shape = ov::Shape{static_cast<size_t>(numElements)};

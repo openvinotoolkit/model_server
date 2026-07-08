@@ -882,6 +882,46 @@ TEST(StringInputsConversionKFSTest, rawInputContents_native_ov_string_2d_shape) 
     }
 }
 
+TEST(StringInputsConversionKFSTest, native_ov_string_shape_mismatch_invalid) {
+    // Shape product [2,5]=10 does not match 3 provided strings - request must be rejected
+    ::KFSRequest::InferInputTensor requestTensor;
+    requestTensor.set_datatype("BYTES");
+    requestTensor.add_shape(2);
+    requestTensor.add_shape(5);
+    std::vector<std::string> strings = {"aa", "bbb", "c"};
+    for (const auto& s : strings) {
+        auto bytes_val = requestTensor.mutable_contents()->mutable_bytes_contents()->Add();
+        bytes_val->append(s.data(), s.size());
+    }
+    ov::Tensor tensor;
+    ASSERT_EQ(convertStringRequestToOVTensor(requestTensor, tensor, nullptr), ovms::StatusCode::INVALID_STRING_INPUT);
+}
+
+TEST(StringInputsConversionKFSTest, rawInputContents_native_ov_string_shape_mismatch_invalid) {
+    // Shape product [2,5]=10 does not match 3 strings in buffer - request must be rejected
+    ::KFSRequest::InferInputTensor requestTensor;
+    requestTensor.set_datatype("BYTES");
+    requestTensor.add_shape(2);
+    requestTensor.add_shape(5);
+    std::vector<std::string> strings = {"a", "bb", "ccc"};
+    std::string rawInputContents;
+    size_t dataSize = 0;
+    for (const auto& s : strings) {
+        dataSize += s.size() + sizeof(uint32_t);
+    }
+    rawInputContents.resize(dataSize);
+    size_t offset = 0;
+    for (const auto& s : strings) {
+        uint32_t inputSize = s.size();
+        std::memcpy(rawInputContents.data() + offset, &inputSize, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        std::memcpy(rawInputContents.data() + offset, s.data(), s.size());
+        offset += s.size();
+    }
+    ov::Tensor tensor;
+    ASSERT_EQ(convertStringRequestToOVTensor(requestTensor, tensor, &rawInputContents), ovms::StatusCode::INVALID_STRING_INPUT);
+}
+
 template <typename TensorType>
 class StringOutputsConversionTest : public ::testing::Test {
 public:
