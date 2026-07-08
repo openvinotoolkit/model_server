@@ -40,18 +40,18 @@ services:
       - |
         CMD_ARGS=(
           --model_repository_path /models
-          --source_model "$${MODEL_ID}"
-          --model_name "$${LOCAL_NAME}"
+          --source_model "${MODEL_ID}"
+          --model_name "${LOCAL_NAME}"
           --task text_generation
-          --target_device "$${TARGET_DEVICE}"
+          --target_device "${TARGET_DEVICE}"
           --port "9000"
           --rest_port "8000"
         )
-        if [[ "$${TOOL_PARSER}" != "none" ]]; then
-          CMD_ARGS+=(--tool_parser "$${TOOL_PARSER}")
+        if [[ "${TOOL_PARSER}" != "none" ]]; then
+          CMD_ARGS+=(--tool_parser "${TOOL_PARSER}")
         fi
-        if [[ "$${REASONING_PARSER}" != "none" ]]; then
-          CMD_ARGS+=(--reasoning_parser "$${REASONING_PARSER}")
+        if [[ "${REASONING_PARSER}" != "none" ]]; then
+          CMD_ARGS+=(--reasoning_parser "${REASONING_PARSER}")
         fi
         exec ovms "$${CMD_ARGS[@]}"
     networks:

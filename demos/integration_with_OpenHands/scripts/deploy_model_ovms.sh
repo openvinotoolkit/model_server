@@ -8,6 +8,15 @@
 # in the README.md. It is optional - users can achieve the same result by following
 # the manual workflow documented in the README.
 #
+# Compose file workflow:
+#   - docker-compose.template.yml is the immutable template (tracked in Git)
+#   - docker-compose.yml is generated from the template (not tracked)
+#   - .ovms-deployment stores the complete deployment fingerprint
+#   - The script compares the deployment fingerprint:
+#     * Identical fingerprint: preserves existing compose (user edits kept)
+#     * Different fingerprint: regenerates compose (discards old edits)
+#   - Users may freely edit the generated docker-compose.yml after deployment
+#
 # Usage:
 #   ./scripts/deploy_model_ovms.sh <model_id> [OPTIONS]
 #
@@ -19,7 +28,7 @@
 #   --parser PARSER           Tool parser: hermes3, qwen3coder, devstral, gemma4, gptoss, llama3, mistral, phi4, or none (default: auto-resolved)
 #   --reasoning-parser PARSER Reasoning parser: gemma4, gptoss, or none (default: auto-resolved)
 #   --cache-dir DIR           Model cache directory (default: ${HOME}/ovms-openhands/models)
-#   --compose-file FILE       Path to docker-compose.yml (default: <demo_root>/docker-compose.yml)
+#   --compose-file FILE       Path to docker-compose.yml (default: <demo_root>/docker-compose.yml, generated from template)
 #   --skip-wait               Skip health check and return immediately after deploy
 #
 # Example:
@@ -55,7 +64,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEMO_ROOT="$(dirname "$SCRIPT_DIR")"
+COMPOSE_TEMPLATE="${DEMO_ROOT}/docker-compose.template.yml"
 DEFAULT_COMPOSE_FILE="${DEMO_ROOT}/docker-compose.yml"
+DEPLOYMENT_METADATA="${DEMO_ROOT}/.ovms-deployment"
 DEFAULT_MODEL_CACHE_DIR="${HOME}/ovms-openhands/models"
 OVMS_CONTAINER_NAME="ovms-llm"
 OPENHANDS_CONTAINER_NAME="openhands"
@@ -206,9 +217,9 @@ validate_prerequisites() {
         fi
     fi
 
-    # Validate compose file
-    if [[ ! -f "$COMPOSE_FILE" ]]; then
-        echo "ERROR: docker-compose.yml not found: $COMPOSE_FILE" >&2
+    # Validate compose template exists
+    if [[ ! -f "$COMPOSE_TEMPLATE" ]]; then
+        echo "ERROR: docker-compose.template.yml not found: $COMPOSE_TEMPLATE" >&2
         errors=$((errors + 1))
     fi
 
@@ -377,25 +388,177 @@ export_runtime_configuration() {
 }
 
 ################################################################################
+# Compose File Generation and Management
+################################################################################
+
+# Metadata file management
+# .ovms-deployment stores the complete deployment fingerprint for comparison
+
+write_deployment_metadata() {
+    local metadata_file="$1"
+    local timestamp="$2"
+
+    cat > "$metadata_file" << EOF
+METADATA_VERSION=1
+MODEL_ID=${MODEL_ID}
+TARGET_DEVICE=${TARGET_DEVICE}
+LOCAL_NAME=${LOCAL_NAME}
+TOOL_PARSER=${TOOL_PARSER}
+REASONING_PARSER=${REASONING_PARSER}
+OVMS_IMAGE=${OVMS_IMAGE}
+GPU_DEVICE=${GPU_DEVICE}
+MODEL_CACHE_DIR=${MODEL_CACHE_DIR}
+OVMS_REST_PORT=${OVMS_REST_PORT}
+OVMS_GRPC_PORT=${OVMS_GRPC_PORT}
+OPENHANDS_PORT=${OPENHANDS_PORT}
+http_proxy=${http_proxy:-}
+https_proxy=${https_proxy:-}
+HTTP_PROXY=${HTTP_PROXY:-}
+HTTPS_PROXY=${HTTPS_PROXY:-}
+no_proxy=${no_proxy:-}
+NO_PROXY=${NO_PROXY:-}
+GENERATION_TIMESTAMP=${timestamp}
+EOF
+}
+
+# Compare current deployment fingerprint with stored metadata
+# Returns 0 if all deployment parameters match, 1 if any differ
+# Sets METADATA_OUTDATED to 1 if metadata version is incompatible
+compare_deployment_fingerprint() {
+    local metadata_file="$1"
+
+    if [[ ! -f "$metadata_file" ]]; then
+        return 1
+    fi
+
+    # Export current runtime values with CURRENT_ prefix for comparison
+    # Source metadata in a subshell to avoid overwriting global variables
+    # The subshell outputs a status code and outdated flag
+    local result
+    result=$(
+        # Current runtime values (from caller's scope)
+        export CURRENT_MODEL_ID="$MODEL_ID"
+        export CURRENT_TARGET_DEVICE="$TARGET_DEVICE"
+        export CURRENT_LOCAL_NAME="$LOCAL_NAME"
+        export CURRENT_TOOL_PARSER="$TOOL_PARSER"
+        export CURRENT_REASONING_PARSER="$REASONING_PARSER"
+        export CURRENT_OVMS_IMAGE="$OVMS_IMAGE"
+        export CURRENT_GPU_DEVICE="$GPU_DEVICE"
+        export CURRENT_MODEL_CACHE_DIR="$MODEL_CACHE_DIR"
+        export CURRENT_OVMS_REST_PORT="$OVMS_REST_PORT"
+        export CURRENT_OVMS_GRPC_PORT="$OVMS_GRPC_PORT"
+        export CURRENT_OPENHANDS_PORT="$OPENHANDS_PORT"
+        export CURRENT_http_proxy="${http_proxy:-}"
+        export CURRENT_https_proxy="${https_proxy:-}"
+        export CURRENT_HTTP_PROXY="${HTTP_PROXY:-}"
+        export CURRENT_HTTPS_PROXY="${HTTPS_PROXY:-}"
+        export CURRENT_no_proxy="${no_proxy:-}"
+        export CURRENT_NO_PROXY="${NO_PROXY:-}"
+
+        # Source metadata file (overwrites variables with stored values)
+        source "$metadata_file"
+
+        # Check metadata version compatibility
+        if [[ "${METADATA_VERSION:-}" != "1" ]]; then
+            echo "outdated"
+            exit 1
+        fi
+
+        # Compare stored values (from source) against current values (CURRENT_ prefix)
+        [[ "$MODEL_ID" == "$CURRENT_MODEL_ID" ]] || exit 1
+        [[ "$TARGET_DEVICE" == "$CURRENT_TARGET_DEVICE" ]] || exit 1
+        [[ "$LOCAL_NAME" == "$CURRENT_LOCAL_NAME" ]] || exit 1
+        [[ "$TOOL_PARSER" == "$CURRENT_TOOL_PARSER" ]] || exit 1
+        [[ "$REASONING_PARSER" == "$CURRENT_REASONING_PARSER" ]] || exit 1
+        [[ "$OVMS_IMAGE" == "$CURRENT_OVMS_IMAGE" ]] || exit 1
+        [[ "$GPU_DEVICE" == "$CURRENT_GPU_DEVICE" ]] || exit 1
+        [[ "$MODEL_CACHE_DIR" == "$CURRENT_MODEL_CACHE_DIR" ]] || exit 1
+        [[ "$OVMS_REST_PORT" == "$CURRENT_OVMS_REST_PORT" ]] || exit 1
+        [[ "$OVMS_GRPC_PORT" == "$CURRENT_OVMS_GRPC_PORT" ]] || exit 1
+        [[ "$OPENHANDS_PORT" == "$CURRENT_OPENHANDS_PORT" ]] || exit 1
+        [[ "${http_proxy:-}" == "$CURRENT_http_proxy" ]] || exit 1
+        [[ "${https_proxy:-}" == "$CURRENT_https_proxy" ]] || exit 1
+        [[ "${HTTP_PROXY:-}" == "$CURRENT_HTTP_PROXY" ]] || exit 1
+        [[ "${HTTPS_PROXY:-}" == "$CURRENT_HTTPS_PROXY" ]] || exit 1
+        [[ "${no_proxy:-}" == "$CURRENT_no_proxy" ]] || exit 1
+        [[ "${NO_PROXY:-}" == "$CURRENT_NO_PROXY" ]] || exit 1
+
+        echo "ok"
+        exit 0
+    )
+
+    # Check if metadata is outdated
+    if [[ "$result" == "outdated" ]]; then
+        METADATA_OUTDATED=1
+        return 1
+    fi
+
+    # Check if all comparisons succeeded (result is "ok")
+    if [[ "$result" != "ok" ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Generate docker-compose.yml from the template
+# Uses explicit variable allowlist to avoid unintended substitutions
+generate_compose_from_template() {
+    local template_file="$1"
+    local output_file="$2"
+
+    echo "Generating docker-compose.yml from template..."
+
+    # envsubst requires space-separated variable names, not comma-separated
+    # Substitute ALL deployment-managed variables to generate a complete, self-contained
+    # runtime compose file. The generated docker-compose.yml contains concrete values,
+    # not placeholders.
+    envsubst '$MODEL_ID $LOCAL_NAME $TARGET_DEVICE $TOOL_PARSER $REASONING_PARSER $MODEL_CACHE_DIR $HF_TOKEN $OVMS_IMAGE $GPU_DEVICE $WSL_LIBS $OVMS_REST_PORT $OVMS_GRPC_PORT $OPENHANDS_PORT $http_proxy $https_proxy $HTTP_PROXY $HTTPS_PROXY $no_proxy $NO_PROXY' < "$template_file" > "$output_file"
+    echo "  Generated: $output_file"
+}
+
+################################################################################
 # Docker Compose Deployment
 ################################################################################
 
 deploy_ovms() {
     local compose_file="$1"
+    local template_file="$COMPOSE_TEMPLATE"
+    local metadata_file="$DEPLOYMENT_METADATA"
+    local generation_timestamp
+    generation_timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
     echo "Deploying OVMS and OpenHands via Docker Compose..."
 
-    # Stop existing containers if running
-    if docker ps -a --format '{{.Names}}' | grep -q "^${OVMS_CONTAINER_NAME}$"; then
-        echo "Stopping existing OVMS container: $OVMS_CONTAINER_NAME"
-        docker stop "$OVMS_CONTAINER_NAME" >/dev/null 2>&1 || true
-        docker rm "$OVMS_CONTAINER_NAME" >/dev/null 2>&1 || true
-    fi
-
-    if docker ps -a --format '{{.Names}}' | grep -q "^${OPENHANDS_CONTAINER_NAME}$"; then
-        echo "Stopping existing OpenHands container: $OPENHANDS_CONTAINER_NAME"
-        docker stop "$OPENHANDS_CONTAINER_NAME" >/dev/null 2>&1 || true
-        docker rm "$OPENHANDS_CONTAINER_NAME" >/dev/null 2>&1 || true
+    # Determine deployment action based on existing state
+    if [[ -f "$compose_file" ]]; then
+        # Compose file exists - compare deployment fingerprint
+        METADATA_OUTDATED=0
+        if compare_deployment_fingerprint "$metadata_file"; then
+            # Identical deployment fingerprint - preserve existing compose and user edits
+            echo "Deployment fingerprint matches - reusing existing docker-compose.yml"
+            echo "  (User modifications preserved)"
+            # Update timestamp in metadata
+            sed -i.bak "s/^GENERATION_TIMESTAMP=.*/GENERATION_TIMESTAMP=${generation_timestamp}/" "$metadata_file"
+            rm -f "${metadata_file}.bak"
+        else
+            # Deployment fingerprint differs - regenerate compose
+            if [[ "$METADATA_OUTDATED" -eq 1 ]]; then
+                echo "Deployment metadata is outdated or incompatible. Regenerating deployment configuration..."
+            else
+                echo "Deployment configuration changed - regenerating compose..."
+            fi
+            docker compose -f "$compose_file" down 2>/dev/null || true
+            rm -f "$compose_file"
+            generate_compose_from_template "$template_file" "$compose_file"
+            write_deployment_metadata "$metadata_file" "$generation_timestamp"
+        fi
+    else
+        # No existing compose - fresh deployment
+        echo "No existing docker-compose.yml found."
+        echo "Generating from: $template_file"
+        generate_compose_from_template "$template_file" "$compose_file"
+        write_deployment_metadata "$metadata_file" "$generation_timestamp"
     fi
 
     # Deploy via docker compose
