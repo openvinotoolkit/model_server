@@ -143,13 +143,13 @@ new_local_repository(
 cc_import(
     name = "curl_lib",
     hdrs = [],
+    interface_library = "bin/libcurl-x64.lib",
     shared_library = "bin/libcurl-x64.dll",
     visibility = ["//visibility:public"],
 )
 cc_library(
     name = "curl",
     hdrs = glob(["include/curl/curl.h"]),
-    srcs = glob(["lib/libcurl.dll.a"]),
     includes = ["include/"],
     visibility = ["//visibility:public"],
     deps = [":curl_lib"],

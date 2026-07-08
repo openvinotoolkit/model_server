@@ -1193,6 +1193,7 @@ ovms_cc_library(
     hdrs = ["tensor_conversion_common.hpp"],
     srcs = ["tensor_conversion_common.cpp",],
     deps = [
+        "tensor_conversion",
         "//third_party:openvino",
         "opencv_dep",
         "libovmsprecision",
