@@ -33,7 +33,6 @@
 
 #include "logging.hpp"
 #include "mediapipe_graph_executor_interface.hpp"
-#include "servable_definition.hpp"
 
 #ifdef __linux__
 extern "C" void* OVMS_MPFactoryCreate(void*) __attribute__((weak));
