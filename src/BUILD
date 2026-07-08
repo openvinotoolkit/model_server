@@ -209,6 +209,7 @@ cc_binary(
     srcs = [],
     deps = [
         "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
+        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
     ],
     linkshared = 1,
     visibility = ["//visibility:public"],

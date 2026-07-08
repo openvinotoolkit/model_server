@@ -34,7 +34,7 @@ class ModelStreamInferResponse;
 namespace ovms {
 
 class HttpAsyncWriter;
-class HttpPayload;
+struct HttpPayload;
 
 class MediapipeGraphExecutorInterface {
 public:

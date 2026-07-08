@@ -44,7 +44,7 @@ class MediapipeGraphExecutor;
 class ServableDefinition;
 class PythonBackend;
 struct HFSettingsImpl;
-class HttpPayload;
+struct HttpPayload;
 class HttpAsyncWriter;
 
 class MediapipeRuntimeApi {

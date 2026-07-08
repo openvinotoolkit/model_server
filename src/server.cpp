@@ -110,7 +110,9 @@ bool ensurePythonRuntimeLoaded() {
         "./bazel-bin/src/python/libovmspython.so"};
 
     for (const auto& candidate : candidates) {
-        pythonRuntimeHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_LOCAL);
+        // pyovms.so resolves Python C-API symbols from the process-wide dynamic symbol table.
+        // Use RTLD_GLOBAL so symbols from libovmspython/libpython are visible during import.
+        pythonRuntimeHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
         if (pythonRuntimeHandle != nullptr) {
             break;
         }

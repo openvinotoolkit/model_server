@@ -177,7 +177,6 @@ ovms_cc_library(
     srcs = [
         "mediapipefactory.cpp",
         "mediapipefactory.hpp",
-        "mediapipe_runtime_c_api.cpp",
         "mediapipegraphdefinition.cpp",
         "mediapipegraphdefinition.hpp",
         "mediapipegraphexecutor.cpp",
@@ -228,6 +227,18 @@ ovms_cc_library(
         ":libovms_mediapipe",
         "//src:libovms_mediapipe_kfs_runtime_executor",
         "//src:libovms_mediapipe_http_executor",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_runtime_c_api_exports",
+    srcs = [
+        "mediapipe_runtime_c_api.cpp",
+    ],
+    deps = [
+        ":libovms_mediapipe",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
