@@ -12,7 +12,6 @@ libespeak-ng.so->libespeak-ng.so.1
 libespeak-ng.so.1->libespeak-ng.so.1.52.0.1
 libespeak-ng.so.1.52.0.1
 libgit2.so
-libmediapipe_framework.so
 libmediapipe_framework_shared.so
 libopencv_calib3d.so->libopencv_calib3d.so.413
 libopencv_calib3d.so.4.13.0
@@ -88,5 +87,4 @@ libpython_calculators.so
 libtbb.so->libtbb.so.12
 libtbb.so.12->libtbb.so.12.13
 libtbb.so.12.13
-mediapipe_framework_shared.so
 python
