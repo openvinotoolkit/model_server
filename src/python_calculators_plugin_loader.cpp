@@ -234,12 +234,12 @@ bool loadPythonCalculatorsPlugin() {
         return true;
     }
 
+#ifdef __linux__
     const bool forceInProcessForTests = []() {
         const char* value = std::getenv("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS");
         return value != nullptr && std::string(value) == "1";
     }();
 
-#ifdef __linux__
     if (registerPythonCalculators != nullptr) {
         registerPythonCalculatorsFn = registerPythonCalculators;
         if (getKfsPyTensorBridgeVTable() == nullptr && OVMS_getKfsPyTensorBridgeVTable != nullptr) {
