@@ -139,18 +139,30 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             SPDLOG_INFO("MediaPipe runtime API resolved from in-process symbols");
         } else {
             std::vector<std::string> missingSymbols;
-            if (api->create == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryCreate");
-            if (api->destroy == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryDestroy");
-            if (api->lastError == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryGetLastError");
-            if (api->processConfig == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryProcessConfig");
-            if (api->createExecutor == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryCreateExecutor");
-            if (api->createExecutorHandle == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryCreateExecutorHandle");
-            if (api->definitionExists == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryDefinitionExists");
-            if (api->aliasesConflictExcluding == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryAliasesConflictExcluding");
-            if (api->retireOtherThan == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryRetireOtherThan");
-            if (api->getNames == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryGetNames");
-            if (api->findServableDefinition == nullptr) missingSymbols.emplace_back("OVMS_MPFactoryFindServableDefinitionByName");
-            if (api->createServableConfig == nullptr) missingSymbols.emplace_back("OVMS_MPGraphExportCreateServableConfig");
+            if (api->create == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryCreate");
+            if (api->destroy == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryDestroy");
+            if (api->lastError == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryGetLastError");
+            if (api->processConfig == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryProcessConfig");
+            if (api->createExecutor == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryCreateExecutor");
+            if (api->createExecutorHandle == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryCreateExecutorHandle");
+            if (api->definitionExists == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryDefinitionExists");
+            if (api->aliasesConflictExcluding == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryAliasesConflictExcluding");
+            if (api->retireOtherThan == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryRetireOtherThan");
+            if (api->getNames == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryGetNames");
+            if (api->findServableDefinition == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryFindServableDefinitionByName");
+            if (api->createServableConfig == nullptr)
+                missingSymbols.emplace_back("OVMS_MPGraphExportCreateServableConfig");
             SPDLOG_WARN("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS=1 but in-process runtime API symbols are incomplete. Missing: {}", joinWithNewlines(missingSymbols));
         }
     }
@@ -162,56 +174,56 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
 
     if (!loadedFromInProcessSymbols) {
 #ifdef __linux__
-    std::vector<std::string> candidates{
-        "libovms_mediapipe_runtime_shared.so",
-        "/ovms/lib/libovms_mediapipe_runtime_shared.so",
-        "./libovms_mediapipe_runtime_shared.so",
-        "src/libovms_mediapipe_runtime_shared.so",
-        "./src/libovms_mediapipe_runtime_shared.so",
-        "bazel-bin/src/libovms_mediapipe_runtime_shared.so",
-        "./bazel-bin/src/libovms_mediapipe_runtime_shared.so"};
+        std::vector<std::string> candidates{
+            "libovms_mediapipe_runtime_shared.so",
+            "/ovms/lib/libovms_mediapipe_runtime_shared.so",
+            "./libovms_mediapipe_runtime_shared.so",
+            "src/libovms_mediapipe_runtime_shared.so",
+            "./src/libovms_mediapipe_runtime_shared.so",
+            "bazel-bin/src/libovms_mediapipe_runtime_shared.so",
+            "./bazel-bin/src/libovms_mediapipe_runtime_shared.so"};
 
-    if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr) {
-        std::vector<std::string> runfilesCandidates{
-            std::string(testSrcDir) + "/_main/src/libovms_mediapipe_runtime_shared.so",
-            std::string(testSrcDir) + "/ovms/src/libovms_mediapipe_runtime_shared.so"};
-        candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
-    }
-
-    std::array<char, 4096> exePath{};
-    ssize_t exePathLength = readlink("/proc/self/exe", exePath.data(), exePath.size() - 1);
-    if (exePathLength > 0) {
-        exePath[exePathLength] = '\0';
-        std::filesystem::path exeDir = std::filesystem::path(exePath.data()).parent_path();
-        std::vector<std::string> exeRelativeCandidates{
-            (exeDir / "libovms_mediapipe_runtime_shared.so").string(),
-            (exeDir / "src/libovms_mediapipe_runtime_shared.so").string()};
-        candidates.insert(candidates.end(), exeRelativeCandidates.begin(), exeRelativeCandidates.end());
-    }
-
-    for (const auto& candidate : candidates) {
-        api->handle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
-        if (api->handle != nullptr) {
-            SPDLOG_INFO("MediaPipe runtime API loaded from: {}", candidate);
-            break;
+        if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr) {
+            std::vector<std::string> runfilesCandidates{
+                std::string(testSrcDir) + "/_main/src/libovms_mediapipe_runtime_shared.so",
+                std::string(testSrcDir) + "/ovms/src/libovms_mediapipe_runtime_shared.so"};
+            candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
         }
-    }
+
+        std::array<char, 4096> exePath{};
+        ssize_t exePathLength = readlink("/proc/self/exe", exePath.data(), exePath.size() - 1);
+        if (exePathLength > 0) {
+            exePath[exePathLength] = '\0';
+            std::filesystem::path exeDir = std::filesystem::path(exePath.data()).parent_path();
+            std::vector<std::string> exeRelativeCandidates{
+                (exeDir / "libovms_mediapipe_runtime_shared.so").string(),
+                (exeDir / "src/libovms_mediapipe_runtime_shared.so").string()};
+            candidates.insert(candidates.end(), exeRelativeCandidates.begin(), exeRelativeCandidates.end());
+        }
+
+        for (const auto& candidate : candidates) {
+            api->handle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
+            if (api->handle != nullptr) {
+                SPDLOG_INFO("MediaPipe runtime API loaded from: {}", candidate);
+                break;
+            }
+        }
 #elif _WIN32
-    std::vector<std::string> candidates{
-        "libovms_mediapipe_runtime_shared.dll",
-        ".\\libovms_mediapipe_runtime_shared.dll",
-        "src\\libovms_mediapipe_runtime_shared.dll",
-        ".\\src\\libovms_mediapipe_runtime_shared.dll",
-        "bazel-bin\\src\\libovms_mediapipe_runtime_shared.dll",
-        ".\\bazel-bin\\src\\libovms_mediapipe_runtime_shared.dll"};
+        std::vector<std::string> candidates{
+            "libovms_mediapipe_runtime_shared.dll",
+            ".\\libovms_mediapipe_runtime_shared.dll",
+            "src\\libovms_mediapipe_runtime_shared.dll",
+            ".\\src\\libovms_mediapipe_runtime_shared.dll",
+            "bazel-bin\\src\\libovms_mediapipe_runtime_shared.dll",
+            ".\\bazel-bin\\src\\libovms_mediapipe_runtime_shared.dll"};
 
-    for (const auto& candidate : candidates) {
-        api->handle = LoadLibraryA(candidate.c_str());
-        if (api->handle != nullptr) {
-            SPDLOG_INFO("MediaPipe runtime API loaded from: {}", candidate);
-            break;
+        for (const auto& candidate : candidates) {
+            api->handle = LoadLibraryA(candidate.c_str());
+            if (api->handle != nullptr) {
+                SPDLOG_INFO("MediaPipe runtime API loaded from: {}", candidate);
+                break;
+            }
         }
-    }
 #endif
     }
 
