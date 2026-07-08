@@ -80,6 +80,8 @@ message LLMCalculatorOptions {
       VLM_CB = 3;
       // Default option. If selected, pipeline type will be inferred by the serving
       AUTO = 4;
+      // Omni model (text, image, audio input; text + speech output) based on OmniPipeline
+      OMNI = 5;
     }
 
     required string models_path = 1;
