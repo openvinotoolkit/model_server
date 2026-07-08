@@ -2399,6 +2399,11 @@ sh_test(
 cc_test(
     name = "ovms_test",
     linkstatic = 1,
+    env = {
+        "OVMS_TEST_PYTHON_CALCULATORS_INPROCESS": "1",
+        "OVMS_TEST_SKIP_GLOBAL_PY_ENV": "1",
+        "OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS": "1",
+    },
     srcs = [
         "test/c_api_stress_tests.cpp",
         "test/c_api_tests.cpp",
@@ -2651,6 +2656,11 @@ cc_test(
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
     ] + select({
+        "//:not_disable_mediapipe": [
+            "//src:ovms_mediapipe_runtime_shared",
+        ],
+        "//:disable_mediapipe": [],
+    }) + select({
         "//:is_windows_and_python_is_enabled": [
             "//src/python:libovmspython.dll",
             "//src/python:libpython_calculators",
@@ -2723,17 +2733,22 @@ cc_test(
             "//:not_disable_python": PYBIND_HEADERS_ONLY + [
                 "//src/python:python_headers_only",
                 "//src/python:libovmspythonmodule",
+                "//src/python:python_runtime_entry_static",
             ],
             "//:disable_python": [],
         }) + select({
             "//:not_disable_mediapipe": [
                 "//src/audio/speech_to_text:s2t_streaming_handler",
+                "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
             ],
             "//:disable_mediapipe": [],
         }),
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//conditions:default": ["-Wl,--export-dynamic"],
+        "//src:windows": [],
+    }),
 )
 
 cc_library(

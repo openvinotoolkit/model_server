@@ -100,6 +100,48 @@ bool ensurePythonRuntimeLoaded() {
         return true;
     }
 
+    const bool preferInProcessPythonRuntime = []() {
+        const char* value = std::getenv("OVMS_TEST_PYTHON_RUNTIME_INPROCESS");
+        return value != nullptr && std::string(value) == "1";
+    }();
+
+    if (preferInProcessPythonRuntime) {
+#ifdef __linux__
+        createPythonInterpreterModuleFn = reinterpret_cast<CreatePythonInterpreterModuleFn>(dlsym(RTLD_DEFAULT, "OVMS_createPythonInterpreterModule"));
+        validatePythonEnvironmentFn = reinterpret_cast<ValidatePythonEnvironmentFn>(dlsym(RTLD_DEFAULT, "OVMS_validatePythonEnvironment"));
+        if (createPythonInterpreterModuleFn != nullptr && validatePythonEnvironmentFn != nullptr) {
+            const char* pythonRuntimeValidationError = nullptr;
+            if (!validatePythonEnvironmentFn(&pythonRuntimeValidationError)) {
+                SPDLOG_WARN("In-process python runtime environment validation failed. Details: {}",
+                    pythonRuntimeValidationError != nullptr ? pythonRuntimeValidationError : "Unknown error");
+                createPythonInterpreterModuleFn = nullptr;
+                validatePythonEnvironmentFn = nullptr;
+                return false;
+            }
+            SPDLOG_INFO("Python runtime entry points resolved from in-process symbols");
+            return true;
+        }
+#elif _WIN32
+        HMODULE currentProcess = GetModuleHandleA(nullptr);
+        if (currentProcess != nullptr) {
+            createPythonInterpreterModuleFn = reinterpret_cast<CreatePythonInterpreterModuleFn>(GetProcAddress(currentProcess, "OVMS_createPythonInterpreterModule"));
+            validatePythonEnvironmentFn = reinterpret_cast<ValidatePythonEnvironmentFn>(GetProcAddress(currentProcess, "OVMS_validatePythonEnvironment"));
+        }
+        if (createPythonInterpreterModuleFn != nullptr && validatePythonEnvironmentFn != nullptr) {
+            const char* pythonRuntimeValidationError = nullptr;
+            if (!validatePythonEnvironmentFn(&pythonRuntimeValidationError)) {
+                SPDLOG_WARN("In-process python runtime environment validation failed. Details: {}",
+                    pythonRuntimeValidationError != nullptr ? pythonRuntimeValidationError : "Unknown error");
+                createPythonInterpreterModuleFn = nullptr;
+                validatePythonEnvironmentFn = nullptr;
+                return false;
+            }
+            SPDLOG_INFO("Python runtime entry points resolved from in-process symbols");
+            return true;
+        }
+#endif
+    }
+
 #ifdef __linux__
     std::vector<std::string> candidates{
         "libovmspython.so",

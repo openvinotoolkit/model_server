@@ -39,6 +39,11 @@ bool isDeathTestSubprocess(int argc, char** argv) {
     return false;
 }
 
+bool shouldSkipGlobalPythonEnvironment() {
+    const char* skipPythonEnv = std::getenv("OVMS_TEST_SKIP_GLOBAL_PY_ENV");
+    return skipPythonEnv != nullptr && std::string(skipPythonEnv) == "1";
+}
+
 }  // namespace
 
 #include "environment.hpp"
@@ -57,7 +62,9 @@ int main(int argc, char** argv) {
     if (!deathTestSubprocess) {
         ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
         ::testing::AddGlobalTestEnvironment(new GGUFEnvironment);
-        ::testing::AddGlobalTestEnvironment(new PythonEnvironment);
+        if (!shouldSkipGlobalPythonEnvironment()) {
+            ::testing::AddGlobalTestEnvironment(new PythonEnvironment);
+        }
     }
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
     return RUN_ALL_TESTS();

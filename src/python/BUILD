@@ -258,6 +258,25 @@ ovms_cc_library(
     data = ["//src/python/binding:pyovms.so"],
 )
 
+# Runtime C entry symbols as a static library.
+# This allows binaries like ovms_test to provide
+# OVMS_createPythonInterpreterModule/OVMS_validatePythonEnvironment
+# in-process, avoiding a second libovmspython.so image in the same process.
+ovms_cc_library(
+    name = "python_runtime_entry_static",
+    srcs = ["python_runtime_entry.cpp"],
+    deps = PYBIND_DEPS + [
+        "libovmspythonmodule",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_module",
+        "//src:cpp_headers",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+    data = ["//src/python/binding:pyovms.so"],
+)
+
 # Lightweight target for tests that need direct PythonInterpreterModule usage
 # without pulling MediaPipe calculator registration code.
 ovms_cc_library(

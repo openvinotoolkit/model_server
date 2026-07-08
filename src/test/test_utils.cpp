@@ -1003,18 +1003,20 @@ void SetUpServerForDownloadAndStartGGUF(std::unique_ptr<std::thread>& t, ovms::S
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
 
-void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds, std::string api_key) {
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds, std::string api_key, bool withPython) {
     server.setShutdownRequest(0);
     randomizeAndEnsureFree(port);
+    const char* withPythonArg = withPython ? "--with_python=true" : "--with_python=false";
     if (!api_key.empty()) {
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configPath,
             (char*)"--port",
             (char*)port.c_str(),
+            (char*)withPythonArg,
             (char*)"--api_key_file",
             (char*)api_key.c_str()};
-        int argc = 7;
+        int argc = 8;
         t.reset(new std::thread([&argc, &argv, &server]() {
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
         }));
@@ -1024,8 +1026,9 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
             (char*)"--config_path",
             (char*)configPath,
             (char*)"--port",
-            (char*)port.c_str()};
-        int argc = 5;
+            (char*)port.c_str(),
+            (char*)withPythonArg};
+        int argc = 6;
         t.reset(new std::thread([&argc, &argv, &server]() {
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
         }));
