@@ -467,11 +467,14 @@ class LLMInferenceRequest(InferenceRequest):
     def create_audio_speech(self, input_text, speech_file_path, model_name=None, timeout=None):
         model = model_name if model_name is not None else self.api_type.model.name
         voice = self.request_parameters_dict.pop("voice", None)
+        speech_kwargs = dict(self.request_parameters_dict)
+        if voice is not None:
+            # OVMS rejects a null voice; omit the field to use the model's default speaker.
+            speech_kwargs["voice"] = voice
         with self.openai_client.audio.speech.with_streaming_response.create(
             model=model,
-            voice=voice,  # voice is a required parameter in OpenAI API; OVMS accepts None for default
             input=input_text,
-            **self.request_parameters_dict,
+            **speech_kwargs,
             timeout=timeout,
         ) as response:
             response.stream_to_file(speech_file_path)
