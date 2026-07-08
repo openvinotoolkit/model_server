@@ -27,13 +27,16 @@
 #include <vector>
 
 #include "dags/dag_resource_manager.hpp"
-#include "mediapipe_runtime_api.hpp"
 #include "metrics/metric_provider.hpp"
 #include "model_instance_provider.hpp"
 #include "modelconfig.hpp"
 #include "resources_cleaner.hpp"
 #include "servable_name_checker.hpp"
 #include "status.hpp"
+
+#if (MEDIAPIPE_DISABLE == 0)
+#include "mediapipe_runtime_api.hpp"
+#endif
 
 namespace ov {
 class Core;
@@ -57,6 +60,7 @@ class ModelConfig;
 class FileSystem;
 class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
+class MediapipeRuntimeApi;
 class ModelInstance;
 class ServableDefinition;
 class ModelInstanceUnloadGuard;
