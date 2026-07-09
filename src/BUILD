@@ -891,7 +891,6 @@ ovms_cc_library(
         }) + select({
             "//:not_disable_mediapipe" : [
                 "//src/audio:audio_utils",
-                "//src/image_gen:imagegen_init",
             ],
             "//conditions:default": [],
         }) + select({
