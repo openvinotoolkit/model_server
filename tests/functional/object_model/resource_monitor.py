@@ -57,10 +57,10 @@ class ResourceMonitor(threading.Thread, ABC):
         pass
 
 
-def _cgroup_cache_bytes(memory_stats_stats):
-    if "cache" in memory_stats_stats:
-        return float(memory_stats_stats.get("cache", 0))
-    return float(memory_stats_stats.get("file", 0))
+def _cgroup_cache_bytes(cgroup_memory_stats):
+    if "cache" in cgroup_memory_stats:
+        return float(cgroup_memory_stats.get("cache", 0))
+    return float(cgroup_memory_stats.get("file", 0))
 
 
 class DockerResourceMonitor(ResourceMonitor):
@@ -212,6 +212,7 @@ class WindowsResourceMonitor(ResourceMonitor):
     LOGGED_MEMORY_FIELDS = [PAGE_FILE_USAGE]
     COUNTER_FIELDS = [PAGE_FAULTS]
     LOGGED_FIELDS = LOGGED_MEMORY_FIELDS + COUNTER_FIELDS
+    SAMPLE_INTERVAL_SEC = 1.0
 
     PS_COMMAND_TEMPLATE = (
         "powershell -NoProfile -Command \""
@@ -256,6 +257,7 @@ class WindowsResourceMonitor(ResourceMonitor):
     def check_resources(self):
         result = self._get_resource_data()
         self._stats_data_raw.append(result)
+        self._stop_event.wait(self.SAMPLE_INTERVAL_SEC)
 
     def save_data(self):
         self.rows = list(self._stats_data_raw)
