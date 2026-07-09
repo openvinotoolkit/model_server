@@ -209,12 +209,12 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         }
 #elif _WIN32
         std::vector<std::string> candidates{
-            "libovms_mediapipe_runtime_shared.dll",
-            ".\\libovms_mediapipe_runtime_shared.dll",
-            "src\\libovms_mediapipe_runtime_shared.dll",
-            ".\\src\\libovms_mediapipe_runtime_shared.dll",
-            "bazel-bin\\src\\libovms_mediapipe_runtime_shared.dll",
-            ".\\bazel-bin\\src\\libovms_mediapipe_runtime_shared.dll"};
+            "ovms_mediapipe_runtime_shared.dll",
+            ".\\ovms_mediapipe_runtime_shared.dll",
+            "src\\ovms_mediapipe_runtime_shared.dll",
+            ".\\src\\ovms_mediapipe_runtime_shared.dll",
+            "bazel-bin\\src\\ovms_mediapipe_runtime_shared.dll",
+            ".\\bazel-bin\\src\\ovms_mediapipe_runtime_shared.dll"};
 
         for (const auto& candidate : candidates) {
             api->handle = LoadLibraryA(candidate.c_str());
