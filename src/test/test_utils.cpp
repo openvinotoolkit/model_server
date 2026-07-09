@@ -750,10 +750,21 @@ void startServerWithArgs(std::unique_ptr<std::thread>& t, ovms::Server& server, 
 
 void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     auto start = std::chrono::high_resolution_clock::now();
+    auto failureDetectionGrace = std::chrono::milliseconds(2000);
     int timestepMs = 20;
+    bool startFailedEarly = false;
     while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeoutSeconds)) {
+        const auto elapsed = std::chrono::high_resolution_clock::now() - start;
+        if (elapsed > failureDetectionGrace && server.getExitStatus() != 0) {
+            startFailedEarly = true;
+            break;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(timestepMs));
+    }
+    if (startFailedEarly) {
+        FAIL() << "OVMS startup thread exited early with non-zero status: " << server.getExitStatus();
+        return;
     }
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
 }
@@ -762,6 +773,8 @@ void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int comp
     const auto startupTimeout = std::chrono::seconds(10);
     const auto completionTimeout = std::chrono::seconds(completionTimeoutSeconds);
     const auto pollInterval = std::chrono::microseconds(200);
+    const auto failureDetectionGrace = std::chrono::milliseconds(2000);
+    const auto globalStart = std::chrono::high_resolution_clock::now();
     auto state = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);
 
     // Phase 1: yield until the HF pull module appears in the server's module map.
@@ -770,6 +783,10 @@ void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int comp
     const auto phase1Start = std::chrono::high_resolution_clock::now();
     while (state == ovms::ModuleState::NOT_INITIALIZED &&
            (std::chrono::high_resolution_clock::now() - phase1Start) < startupTimeout) {
+        if ((std::chrono::high_resolution_clock::now() - globalStart) > failureDetectionGrace && server.getExitStatus() != 0) {
+            FAIL() << "OVMS startup thread exited early with non-zero status: " << server.getExitStatus();
+            return;
+        }
         std::this_thread::yield();
         std::this_thread::sleep_for(pollInterval);
         state = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);
@@ -793,6 +810,10 @@ void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int comp
     while (state != ovms::ModuleState::SHUTDOWN &&
            state != ovms::ModuleState::NOT_INITIALIZED &&
            (std::chrono::high_resolution_clock::now() - phase2Start) < remainingCompletionTimeout) {
+        if ((std::chrono::high_resolution_clock::now() - globalStart) > failureDetectionGrace && server.getExitStatus() != 0) {
+            FAIL() << "OVMS startup thread exited early with non-zero status: " << server.getExitStatus();
+            return;
+        }
         std::this_thread::yield();
         std::this_thread::sleep_for(pollInterval);
         state = server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME);

@@ -213,6 +213,8 @@ ovms_cc_library(
     implementation_deps = [
         "@mediapipe//mediapipe/framework:calculator_graph",
         "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler_cc_proto",
+        "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",
     ],
     additional_copts = select({
         "//conditions:default": ["-fvisibility=default"],

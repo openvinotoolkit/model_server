@@ -2397,6 +2397,15 @@ sh_test(
     data = [":ovms"],
 )
 
+sh_test(
+    name = "ovms_no_duplicate_calculator_extensions_smoke_test",
+    srcs = ["test/ovms_no_duplicate_calculator_extensions_smoke.sh"],
+    data = [
+        ":ovms",
+        ":ovms_mediapipe_runtime_shared",
+    ],
+)
+
 cc_test(
     name = "ovms_test",
     linkstatic = 1,
@@ -2745,6 +2754,8 @@ cc_test(
             "//:not_disable_mediapipe": [
                 "//src/audio/speech_to_text:s2t_streaming_handler",
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+                "//src/llm:llmcalculator",
+                "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",
             ],
             "//:disable_mediapipe": [],
         }),

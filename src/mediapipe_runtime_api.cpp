@@ -403,7 +403,8 @@ ServableDefinition* MediapipeRuntimeApi::findServableDefinitionByName(const std:
 Status MediapipeRuntimeApi::createServableConfig(const std::string& directoryPath,
     const HFSettingsImpl& hfSettings,
     bool writeToFile) const {
-    if (api == nullptr || api->handle == nullptr || api->createServableConfig == nullptr) {
+    // In-process runtime API mode intentionally has no dynamic library handle.
+    if (api == nullptr || api->createServableConfig == nullptr) {
         return StatusCode::INTERNAL_ERROR;
     }
     int code = api->createServableConfig(directoryPath.c_str(), &hfSettings, writeToFile ? 1 : 0);

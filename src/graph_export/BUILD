@@ -61,6 +61,7 @@ ovms_cc_library(
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework:calculator_graph",
+                "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler_cc_proto",
                 ],
             "//:disable_mediapipe": []
             }),
