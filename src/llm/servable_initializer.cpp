@@ -85,10 +85,11 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 }
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
+    bool shouldWarnOnEmptyTemplate = true;
 #if (PYTHON_DISABLE == 0)
-    if (properties->chatTemplateMode != ChatTemplateMode::JINJA)
+    shouldWarnOnEmptyTemplate = properties->chatTemplateMode != ChatTemplateMode::JINJA;
 #endif
-    {
+    if (shouldWarnOnEmptyTemplate) {
         if (properties->tokenizer.get_chat_template().empty()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
         }
