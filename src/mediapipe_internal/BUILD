@@ -227,6 +227,8 @@ ovms_cc_library(
         ":libovms_mediapipe",
         "//src:libovms_mediapipe_kfs_runtime_executor",
         "//src:libovms_mediapipe_http_executor",
+        "//src/embeddings:embeddingscalculator_ov",
+        "//src/rerank:rerankcalculator_ov",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
