@@ -4500,11 +4500,31 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
 }
 
+// RAII guard that restores the global Config singleton (and optionally removes a temporary
+// cache directory) on scope exit. The cache_dir tests below mutate the process-wide Config
+// singleton; without this guard a failed ASSERT_* mid-test (which returns early) would leak
+// the modified --cache_dir into subsequent tests in this suite.
+struct GlobalCacheDirGuard {
+    std::string cacheDirToRemove;
+    explicit GlobalCacheDirGuard(std::string cacheDirToRemove = "") :
+        cacheDirToRemove(std::move(cacheDirToRemove)) {}
+    ~GlobalCacheDirGuard() {
+        char* reset_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
+        ovms::Config::instance().parse(7, reset_argv);
+        if (!cacheDirToRemove.empty()) {
+            std::error_code ec;
+            std::filesystem::remove_all(cacheDirToRemove, ec);
+        }
+    }
+};
+
 // Verifies that the global --cache_dir (ServerSettings) is propagated into the
 // continuous batching pipeline plugin config, and that an explicit CACHE_DIR in
 // the node's plugin_config takes precedence over the global value.
 // Regression test for openvinotoolkit/model_server#4230.
 void LLMNodeOptionsCacheDirPropagation(std::string& modelsPath) {
+    // Restore the global cache_dir on scope exit even if an ASSERT below fails early.
+    GlobalCacheDirGuard cacheDirGuard;
     // Seed the global cache_dir via the CLI parser (same path used in production).
     char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)"/tmp/ovms_global_cache"};
     int arg_count = 9;
@@ -4607,10 +4627,7 @@ void LLMNodeOptionsCacheDirPropagation(std::string& modelsPath) {
         ASSERT_NE(nodeCacheDir.find("ovms_node_cache"), std::string::npos) << "Explicit node CACHE_DIR should be used, got: " << nodeCacheDir;
         ASSERT_EQ(nodeCacheDir.find("ovms_global_cache"), std::string::npos) << "Global cache_dir must not override explicit node CACHE_DIR, got: " << nodeCacheDir;
     }
-
-    // Restore the global cache_dir so the singleton does not leak into other tests.
-    char* reset_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
-    ovms::Config::instance().parse(7, reset_argv);
+    // GlobalCacheDirGuard restores the global cache_dir on scope exit.
 }
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCacheDirPropagation) {
     LLMNodeOptionsCacheDirPropagation(modelsPath);
@@ -4631,6 +4648,9 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCacheDirWritesCacheArtifacts) {
                             ::testing::UnitTest::GetInstance()->current_test_info()->name();
     std::filesystem::remove_all(cacheDir);
     std::filesystem::create_directories(cacheDir);
+    // Restore the global cache_dir and remove the temp cache dir on scope exit, even if an
+    // ASSERT below fails early.
+    GlobalCacheDirGuard cacheDirGuard(cacheDir);
 
     // Seed the global cache_dir via the CLI parser (same path used in production).
     char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)cacheDir.c_str()};
@@ -4688,11 +4708,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCacheDirWritesCacheArtifacts) {
     EXPECT_TRUE(foundCacheArtifact)
         << "Expected compiled-model cache artifacts under --cache_dir after constructing the "
         << "continuous batching pipeline, found none in: " << cacheDir;
-
-    // Restore the global cache_dir so the singleton does not leak into other tests.
-    char* reset_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
-    ovms::Config::instance().parse(7, reset_argv);
-    std::filesystem::remove_all(cacheDir);
+    // GlobalCacheDirGuard restores the global cache_dir and removes cacheDir on scope exit.
 }
 
 void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {

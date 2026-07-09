@@ -97,6 +97,8 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         return status;
     }
 
+    applyGlobalCacheDir(properties);
+
     try {
         properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
         properties->tokenizer = properties->pipeline->get_tokenizer();
