@@ -359,7 +359,9 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             !result->count("pull") &&
             !result->count("source_model") &&
             result->count("model_path") &&
-            !isConfigManagementFlow) {
+            !isConfigManagementFlow &&
+            !result->count("help") &&
+            !result->count("version")) {
             const std::optional<std::string> modelPath = std::make_optional(result->operator[]("model_path").as<std::string>());
             const auto configPath = std::filesystem::path(*modelPath) / MODEL_CONFIG_FILENAME;
             const auto indexPath = std::filesystem::path(*modelPath) / MODEL_INDEX_FILENAME;
@@ -387,7 +389,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             std::vector<std::string> unmatchedOptions;
             GraphExportType task;
             std::string taskValue;
-            if (!result->count("task")) {
+            if (!result->count("task") && !result->count("help") && !result->count("version")) {
                 const std::optional<std::string> modelPath = result->count("model_path") ? std::make_optional(result->operator[]("model_path").as<std::string>()) : std::nullopt;
                 const std::optional<std::string> sourceModel = result->count("source_model") ? std::make_optional(result->operator[]("source_model").as<std::string>()) : std::nullopt;
                 const std::optional<std::string> modelRepositoryPath = result->count("model_repository_path") ? std::make_optional(result->operator[]("model_repository_path").as<std::string>()) : std::nullopt;
