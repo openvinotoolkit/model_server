@@ -157,7 +157,7 @@ def check_dir(start_dir):
         "dummy_facebook_template.jinja",
         ]
 
-    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples']
+    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates']
 
     for (d_path, _, file_set) in os.walk(start_dir):
         for f_name in file_set:

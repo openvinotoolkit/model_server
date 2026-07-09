@@ -36,6 +36,7 @@
 #include "absl/status/statusor.h"
 #pragma warning(pop)
 #include "../io_processing/output_parser.hpp"
+#include "../io_processing/input_request.hpp"
 #include "openai_request.hpp"
 
 // Forward declarations for types only used by reference in virtual method signatures
@@ -49,6 +50,8 @@ class VLMDecodedResults;
 using namespace rapidjson;
 
 namespace ovms {
+
+class GenerationConfigBuilder;
 
 ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value);
 
@@ -113,7 +116,7 @@ protected:
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
     absl::Status parseResponseFormat();
-    absl::Status ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged);
+    absl::Status ensureArgumentsInToolCalls(Value& messageObj);
     ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
 
     // Shared VLM workaround: encode text to tokens using tokenizer, validates shape
@@ -156,8 +159,6 @@ public:
     std::optional<std::string> getPrompt() const;
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
-    const std::string& getProcessedJson() const;
-    const ImageHistory& getImageHistory() const;
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
     std::optional<std::string> getResponseFormat() const;
@@ -166,6 +167,10 @@ public:
     std::string getModel() const;
     std::string getToolChoice() const;
     const std::shared_ptr<OutputParser>& getOutputParser() const;
+    // Builds a complete InputRequest: runs the full generation config pipeline
+    // (parse → adjust → validate) on the provided builder using this handler's
+    // request and tokenizer, then populates input from the parsed request.
+    absl::StatusOr<InputRequest> extractInputRequest(GenerationConfigBuilder& configBuilder);
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {
@@ -210,18 +215,5 @@ public:
 void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& generatedIds, bool echoPrompt);
 std::optional<std::string> mapFinishReason(ov::genai::GenerationFinishReason finishReason, bool hasToolCalls);
 std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjson::Value& openAIFormat);
-
-// Constants shared by parseMessages and parseInput
-constexpr std::string_view BASE64_PREFIX = "base64,";
-constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
-
-// Image download utilities shared by parseMessages and parseInput
-absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit);
-bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char* url);
-
-// Loads image from base64 string, URL, or local file path; returns the decoded tensor
-absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
-    const std::optional<std::string>& allowedLocalMediaPath,
-    const std::optional<std::vector<std::string>>& allowedMediaDomains);
 
 }  // namespace ovms

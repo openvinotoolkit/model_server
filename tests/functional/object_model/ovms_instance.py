@@ -53,13 +53,14 @@ from tests.functional.config import (
     wait_for_messages_timeout,
 )
 from tests.functional.constants.core import CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
-from ovms.constants.models import ModelInfo
+from tests.functional.models.models import ModelInfo
 from tests.functional.constants.target_device import MAX_WORKERS_PER_TARGET_DEVICE
 from tests.functional.constants.ovms import CurrentTarget as ct
 from tests.functional.constants.ovms import Ovms
 from tests.functional.constants.ovms_messages import OvmsMessages
 from tests.functional.constants.paths import Paths
 from tests.functional.constants.pipelines import Pipeline
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.utils.log_monitor import LogMonitor
 from tests.functional.object_model.dmesg_log_monitor import DmesgLogMonitor, DummyLogMonitor
 from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator
@@ -475,7 +476,7 @@ class OvmsInstance(ABC):
     @staticmethod
     def acquire_target_device_lock(target_device):
         target_device = target_device.strip("'").split(" ")[0] if type(target_device) == str else target_device
-        max_locks = MAX_WORKERS_PER_TARGET_DEVICE[target_device]
+        max_locks = MAX_WORKERS_PER_TARGET_DEVICE[get_base_device(target_device)]
         if max_locks == 0:  # No lock required
             return None
         if max_locks == 1:

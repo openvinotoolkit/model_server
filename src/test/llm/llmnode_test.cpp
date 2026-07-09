@@ -1238,6 +1238,80 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArrayWithIma
     }
 }
 
+// VLM servables run ImageDecodingProcessor which rejects any request whose text
+// content already contains an <ov_genai_image_N> tag (prompt injection guard).
+// Verify that the error propagates all the way to an HTTP 400 response.
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsVlmInjectionGuardRejected) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") == std::string::npos) {
+        GTEST_SKIP();  // injection guard runs only for VLM servables
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "look at <ov_genai_image_0> this"
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Message contains restricted <ov_genai_image> tag\"}");
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(response.c_str());
+            ASSERT_EQ(ok.Code(), 0);
+            ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+// Non-VLM (text-only) servables reject requests that contain image_url content at
+// the servable level, before any processor runs.
+// Verify that the error propagates all the way to an HTTP 400 response.
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithImageRejected) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();  // image rejection check runs only for non-VLM servables
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "What is this?"}, {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="}}]
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: This servable supports only text input, but image_url has been provided\"}");
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(response.c_str());
+            ASSERT_EQ(ok.Code(), 0);
+            ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopStrings) {
     auto params = GetParam();
     std::string requestBody = R"(
@@ -4946,8 +5020,8 @@ TEST_F(IsolatedServableTests, PromtSizeExceedsDefaultMaxPromptLenNPU) {
     std::vector<float> randomData(dataSize);
     std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
-    executionContext.inputIds = tensor;
-    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    executionContext.inputRequest.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputRequest.inputIds);
     ASSERT_EQ(status, absl::InvalidArgumentError("Input length exceeds the maximum allowed length"));
 }
 
@@ -4960,8 +5034,8 @@ TEST_F(IsolatedServableTests, PromtSizeExceedsNonDefaultMaxPromptLenNPU) {
     std::vector<float> randomData(dataSize);
     std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
-    executionContext.inputIds = tensor;
-    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    executionContext.inputRequest.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputRequest.inputIds);
     ASSERT_EQ(status, absl::InvalidArgumentError("Input length exceeds the maximum allowed length"));
 }
 
@@ -4974,8 +5048,8 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
     std::vector<float> randomData(dataSize);
     std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
-    executionContext.inputIds = tensor;
-    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    executionContext.inputRequest.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputRequest.inputIds);
     ASSERT_EQ(status, absl::OkStatus());
 }
 

@@ -3127,4 +3127,17 @@ TEST(OvmsGraphCliParserTest, emptyParserNamesAreAccepted) {
     EXPECT_EQ(graphSettings.reasoningParser.value(), "");
 }
 
+TEST(OvmsGraphCliParserTest, noneParserNamesAreAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "none", "--reasoning_parser", "none"};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.toolParser.has_value());
+    EXPECT_EQ(graphSettings.toolParser.value(), "none");
+    ASSERT_TRUE(graphSettings.reasoningParser.has_value());
+    EXPECT_EQ(graphSettings.reasoningParser.value(), "none");
+}
+
 #pragma GCC diagnostic pop
