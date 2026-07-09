@@ -76,9 +76,22 @@ protected:
             FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;
         }
     }
+
+    std::vector<int64_t> encodeChunk(const std::string& chunk) {
+        if (chunk == "<think>") {
+            return {124901};  // <think> token ID
+        } else if (chunk == "</think>") {
+            return {124902};  // </think> token ID
+        }
+        auto generatedTensor = lfm25Tokenizer->encode(chunk, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> tokensVec(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        return tokensVec;
+    }
+
     void assertStreamingVec(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
-            std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
+            auto tokens = encodeChunk(chunk);
+            std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, tokens, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }
@@ -612,6 +625,94 @@ TEST_F(LFM25OutputParserTest, StreamingWithContentBetweenToolCalls) {
         {"\")]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"{\"equation\":\"2*(x+5) = 13\"}"}}]}})"},
         {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"And some content after second tool call", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"And some content after second tool call"}})"},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
+TEST_F(LFM25OutputParserTest, StreamingWithReasoningAndToolCall) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"I ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"I "}})"},
+        {"need ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"need "}})"},
+        {"to ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"to "}})"},
+        {"sort ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"sort "}})"},
+        {"an ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"an "}})"},
+        {"array ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"array "}})"},
+        {"of ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"of "}})"},
+        {"numbers ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"numbers "}})"},
+        {"in ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"in "}})"},
+        {"descending ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"descending "}})"},
+        {"order.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"order."}})"},
+        {"</think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"sort", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"(array", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"sort"}}]}})"},
+        {"=[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"42", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 17", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 89", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 5", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 33", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"],", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" order", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"desc", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ending", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\")]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"array\":[42,17,89,5,33],\"order\":\"descending\"}"}}]}})"},
+        {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
+TEST_F(LFM25OutputParserTest, StreamingWithReasoningAndToolCallAndContent) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"I ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"I "}})"},
+        {"need ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"need "}})"},
+        {"to ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"to "}})"},
+        {"sort ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"sort "}})"},
+        {"an ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"an "}})"},
+        {"array ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"array "}})"},
+        {"of ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"of "}})"},
+        {"numbers ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"numbers "}})"},
+        {"in ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"in "}})"},
+        {"descending ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"descending "}})"},
+        {"order.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"order."}})"},
+        {"</think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"sort", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"(array", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"sort"}}]}})"},
+        {"=[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"42", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 17", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 89", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 5", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" 33", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"],", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" order", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"desc", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ending", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\")]", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"array\":[42,17,89,5,33],\"order\":\"descending\"}"}}]}})"},
+        {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"Some", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"Some"}})"},
+        {" content", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" content"}})"},
+        {" after", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" after"}})"},
+        {" the", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" the"}})"},
+        {" tool", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" tool"}})"},
+        {" call.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" call."}})"},
     };
 
     assertStreamingVec(chunkToDeltaVec);
