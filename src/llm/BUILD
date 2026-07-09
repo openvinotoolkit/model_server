@@ -147,6 +147,7 @@ ovms_cc_library(
     srcs = [],
     deps = [
         ":io_processing_input_request",
+        ":runtime_chat_template_loader",
         "//third_party:genai",
     ] + select({
         "//:disable_python": [],
@@ -176,6 +177,7 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         ":image_utils",
         ":io_processing_input_request",
+        ":runtime_chat_template_loader",
         "//third_party:genai",
         "//src:libovmslogging",
     ] + select({

@@ -58,16 +58,23 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         }
 
 #if (PYTHON_DISABLE == 0)
-        // Select the path at construction time. If !useMinja but templateProcessor is null
-        // (shouldn't happen on a properly initialized servable), fall back to the native path.
-        if (!context.config.useMinja && context.templateProcessor != nullptr) {
+    // Select Jinja path (runtime-prepared first, then optional in-process fallback).
+    if (!context.config.useMinja) {
             processors.emplace_back(std::make_unique<ChatTemplateProcessor>(
-                context.tokenizer, *context.templateProcessor));
+        context.tokenizer,
+        context.preparedRuntimeChatTemplate,
+        context.templateProcessor));
         } else {
             processors.emplace_back(std::make_unique<ChatTemplateProcessor>(context.tokenizer));
         }
 #else
+    if (!context.config.useMinja) {
+        processors.emplace_back(std::make_unique<ChatTemplateProcessor>(
+        context.tokenizer,
+        context.preparedRuntimeChatTemplate));
+    } else {
         processors.emplace_back(std::make_unique<ChatTemplateProcessor>(context.tokenizer));
+    }
 #endif
     } else {
         processors.emplace_back(std::make_unique<RawPromptExtractor>());

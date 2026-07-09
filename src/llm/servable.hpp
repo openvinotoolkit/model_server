@@ -40,6 +40,7 @@
 #include "io_processing/base_generation_config_builder.hpp"
 #include "io_processing/input_processor_context.hpp"
 #include "io_processing/input_request.hpp"
+#include "runtime_chat_template.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
 #endif
@@ -191,6 +192,7 @@ struct GenAiServableProperties {
     // Controls which steps InputProcessor builds for this servable type.
     // Aggregated per-deployment context for InputProcessor.
     InputProcessorContext inputProcessorContext;
+    PreparedRuntimeChatTemplate preparedRuntimeChatTemplate;
 
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;

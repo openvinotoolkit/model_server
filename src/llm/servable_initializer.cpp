@@ -86,10 +86,7 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
 #if (PYTHON_DISABLE == 0)
-    if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
-        ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
-        loadPyTemplateProcessor(properties, extraGenInfo);
-    } else  // NOLINT(readability/braces)
+    if (properties->chatTemplateMode != ChatTemplateMode::JINJA)
 #endif
     {
         if (properties->tokenizer.get_chat_template().empty()) {
@@ -160,12 +157,51 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         probeServableChatTemplateCaps(properties);
     }
 
+#if (PYTHON_DISABLE == 0)
+    if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
+        std::string runtimeOutput;
+        const auto prepareStatus = prepareRuntimeChatTemplate(
+            chatTemplateDirectory,
+            properties->tokenizer.get_chat_template(),
+            properties->tokenizer.get_bos_token(),
+            properties->tokenizer.get_eos_token(),
+            properties->preparedRuntimeChatTemplate,
+            runtimeOutput);
+
+        if (prepareStatus == RuntimeChatTemplatePrepareStatus::PREPARED) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Prepared runtime chat template via libovmspython");
+        } else {
+            if (prepareStatus == RuntimeChatTemplatePrepareStatus::UNAVAILABLE) {
+                SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                    "Runtime chat template API is unavailable. Falling back to in-process PyJinjaTemplateProcessor.");
+            } else {
+                SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                    "Runtime chat template preparation failed: {}. Falling back to in-process PyJinjaTemplateProcessor.",
+                    runtimeOutput.empty() ? std::string("unknown error") : runtimeOutput);
+            }
+            ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
+            loadPyTemplateProcessor(properties, extraGenInfo);
+        }
+    }
+#endif
+
     // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
-    properties->inputProcessorContext.config.useMinja = (properties->chatTemplateMode != ChatTemplateMode::JINJA);
-    properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
+    const bool runtimeTemplatePrepared = properties->preparedRuntimeChatTemplate.isPrepared();
 #if (PYTHON_DISABLE == 0)
-    properties->inputProcessorContext.templateProcessor = &properties->templateProcessor;
+    const bool pyTemplatePrepared = (properties->templateProcessor.chatTemplate != nullptr);
+#else
+    const bool pyTemplatePrepared = false;
+#endif
+    const bool canUseJinjaProcessor = runtimeTemplatePrepared || pyTemplatePrepared;
+    properties->inputProcessorContext.config.useMinja =
+        (properties->chatTemplateMode != ChatTemplateMode::JINJA) || !canUseJinjaProcessor;
+    properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
+    properties->inputProcessorContext.preparedRuntimeChatTemplate =
+        runtimeTemplatePrepared ? &properties->preparedRuntimeChatTemplate : nullptr;
+#if (PYTHON_DISABLE == 0)
+    properties->inputProcessorContext.templateProcessor =
+        pyTemplatePrepared ? &properties->templateProcessor : nullptr;
 #endif
 }
 

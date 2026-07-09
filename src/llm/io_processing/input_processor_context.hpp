@@ -21,6 +21,7 @@
 
 #include "chat_template/caps.hpp"
 #include "input_processing_config.hpp"
+#include "../runtime_chat_template.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "../py_jinja_template_processor.hpp"
 #endif
@@ -33,6 +34,7 @@ struct InputProcessorContext {
     InputProcessingConfig config;
     ChatTemplateCaps chatTemplateCaps;
     ov::genai::Tokenizer tokenizer;
+    PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate = nullptr;
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor* templateProcessor = nullptr;
 #endif
