@@ -2753,10 +2753,17 @@ cc_test(
         }) + select({
             "//:not_disable_mediapipe": [
                 "//src/audio/speech_to_text:s2t_streaming_handler",
+                "//src/audio/speech_to_text:s2t_calculator",
+                "//src/audio/text_to_speech:t2s_calculator",
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
                 "//src/llm:llmcalculator",
                 "//src/embeddings:embeddingscalculator_ov",
+                "//src/rerank:rerankcalculator_ov",
+                "//src/image_gen:image_gen_calculator",
+                "@mediapipe//mediapipe/framework/stream_handler:barrier_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:early_close_input_stream_handler",
                 "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",
+                "@mediapipe//mediapipe/framework/stream_handler:timestamp_align_input_stream_handler",
             ],
             "//:disable_mediapipe": [],
         }),
