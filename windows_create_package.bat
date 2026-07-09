@@ -58,11 +58,7 @@ md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-if not exist %cd%\bazel-out\x64_windows-opt\bin\src\mediapipe_framework_shared.dll (
-    echo Missing mediapipe_framework_shared.dll in bazel output. Ensure //src:mediapipe_framework_shared is built.
-    exit /b 1
-)
-copy %cd%\bazel-out\x64_windows-opt\bin\src\mediapipe_framework_shared.dll dist\windows\ovms
+copy %cd%\bazel-out\x64_windows-opt\bin\src\ovms_mediapipe_runtime_shared.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
