@@ -2755,6 +2755,7 @@ cc_test(
                 "//src/audio/speech_to_text:s2t_streaming_handler",
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
                 "//src/llm:llmcalculator",
+                "//src/embeddings:embeddingscalculator_ov",
                 "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",
             ],
             "//:disable_mediapipe": [],
