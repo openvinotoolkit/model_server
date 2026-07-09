@@ -20,6 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../kfs_python_tensor_bridge.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -33,6 +34,10 @@
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
 #include "test_utils.hpp"
+
+#ifdef __linux__
+extern "C" const ovms::KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
+#endif
 
 #if (PYTHON_DISABLE == 0)
 #include "../python/pythoninterpretermodule.hpp"
@@ -114,6 +119,15 @@ public:
         StreamingTest::SetUp();
         pythonModule = std::make_unique<PythonInterpreterModule>();
         pythonModule->start(ovms::Config::instance());
+        // Release GIL on the setup thread so graph worker threads can acquire it.
+        pythonModule->releaseGILFromThisThread();
+#ifdef __linux__
+        if (getKfsPyTensorBridgeVTable() == nullptr && OVMS_getKfsPyTensorBridgeVTable != nullptr) {
+            if (auto* vtable = OVMS_getKfsPyTensorBridgeVTable(); vtable != nullptr) {
+                setKfsPyTensorBridgeVTable(vtable);
+            }
+        }
+#endif
         pythonBackend = pythonModule->getPythonBackend();
         manager = std::make_unique<ConstructorEnabledModelManager>("", pythonBackend);
     }
