@@ -56,13 +56,14 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
-    // TODO: It does not work for LFM2, but only for LFM2.5? Both use the same parsers
     // LFM2 detection
-    if (contains(templateSource, "<|assistant_tool_call|>") || contains(templateSource, "<|tool_call_start|>")) {
+    if (contains(templateSource, "<|assistant_tool_call|>") || contains(templateSource, "<|tool_call_start|>") || contains(templateSource, "keep_past_thinking")) {
         result.detectedToolParser = "lfm2";
         result.caps.supportsToolCalls = true;
+        if (contains(templateSource, "message.thinking")) {
+            result.detectedReasoningParser = "lfm2.5";
+        }
         return result;
-        // TODO: Support reasoning after Pawel adds reasoning parser for it
     }
 
     // Phi-4 detection — uses "functools[" marker for tool calls
