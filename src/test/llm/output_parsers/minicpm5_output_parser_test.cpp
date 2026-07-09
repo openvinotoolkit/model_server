@@ -43,6 +43,7 @@ static std::map<std::string, std::string> minicpm5ToolSchemasInput = {
     {"calculate",     R"({"properties":{"a":{"type":"integer"},"b":{"type":"integer"}},"required":["a","b"]})"},
     {"search",        R"({"properties":{"query":{"type":"string"}},"required":["query"]})"},
     {"get_stock",     R"({"properties":{"ticker":{"type":"string"},"count":{"type":"integer"}},"required":["ticker"]})"},
+    {"dummy",         R"({"properties":{"config":{"type":"object"}},"required":["config"]})"},
 };
 
 static std::vector<std::unique_ptr<rapidjson::Document>> minicpm5SchemaDocsStorage;
@@ -92,15 +93,114 @@ protected:
     }
 
     void SetUp() override {
-        outputParser = std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "", minicpm5ToolsSchemas);
+        outputParser = std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
+    }
+
+    std::vector<int64_t> encodeInput(const std::string& input) {
+        if (input == "<think>") {
+            return {8};  // <think> token ID
+        }
+        if (input == "</think>") {
+            return {9};  // </think> token ID
+        }
+        auto generatedTensor = minicpm5Tokenizer->encode(input, ov::genai::add_special_tokens(true)).input_ids;
+        return std::vector<int64_t>(
+            generatedTensor.data<int64_t>(),
+            generatedTensor.data<int64_t>() + generatedTensor.get_size());
     }
 
     ParsedOutput generateParsedOutput(const std::string& input) {
-        auto generatedTensor = minicpm5Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-        std::vector<int64_t> generatedTokens(
-            generatedTensor.data<int64_t>(),
-            generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        auto generatedTokens = encodeInput(input);
         return outputParser->parse(generatedTokens, true);
+    }
+
+    void assertReasoningVec(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
+        for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+            std::vector<int64_t> tokens = {};
+            if (chunk == "<think>") {
+                tokens = {8};  // <think> token ID
+            } else if (chunk == "</think>") {
+                tokens = {9};  // </think> token ID
+            } else {
+                tokens = encodeInput(chunk);
+            }
+            std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, tokens, true, finishReason);
+            if (!expectedDelta.has_value() && !doc.has_value()) {
+                continue;  // Both are nullopt, OK
+            }
+            if (expectedDelta.has_value() && doc.has_value()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                doc->Accept(writer);
+                std::string docStr = buffer.GetString();
+                EXPECT_EQ(docStr, expectedDelta.value()) << "Mismatch for chunk: " << chunk;
+            } else {
+                std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
+                std::string docStr = doc.has_value() ? [&]() {
+                    rapidjson::StringBuffer buffer;
+                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                    doc->Accept(writer);
+                    return std::string(buffer.GetString());
+                }()
+                                                     : "std::nullopt";
+                FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
+                       << "\nexpectedDelta: " << expectedStr
+                       << "\ndoc: " << docStr;
+            }
+        }
+    }
+
+    void assertStreamingVec(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
+        for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+            auto tokens = encodeInput(chunk);
+            std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, tokens, true, finishReason);
+            if (!expectedDelta.has_value() && !doc.has_value()) {
+                continue;  // Both are nullopt, OK
+            }
+            if (expectedDelta.has_value() && doc.has_value()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                doc->Accept(writer);
+                std::string docStr = buffer.GetString();
+                // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
+                std::string expected = expectedDelta.value();
+                std::string idKey = "\"id\":\"";
+                auto docIdPos = docStr.find(idKey);
+                auto expectedIdPos = expected.find(idKey);
+                if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                    auto docIdStart = docIdPos + idKey.size();
+                    auto docIdEnd = docStr.find("\"", docIdStart);
+                    auto expectedIdStart = expectedIdPos + idKey.size();
+                    auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                    ASSERT_NE(docIdEnd, std::string::npos);
+                    ASSERT_NE(expectedIdEnd, std::string::npos);
+                    std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                    std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                    EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                    EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                    // Compare everything except the id value
+                    std::string docStrNoId = docStr;
+                    std::string expectedNoId = expected;
+                    docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                    expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                    EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+                } else {
+                    EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
+                }
+            } else {
+                std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
+                std::string docStr = doc.has_value() ? [&]() {
+                    rapidjson::StringBuffer buffer;
+                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                    doc->Accept(writer);
+                    return std::string(buffer.GetString());
+                }()
+                                                     : "std::nullopt";
+                FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
+                       << "\nexpectedDelta: " << expectedStr
+                       << "\ndoc: " << docStr;
+            }
+        }
     }
 };
 
@@ -198,23 +298,6 @@ TEST_F(Minicpm5OutputParserTest, RequiresStreamingWithSpecialTokens) {
     });
 }
 
-// Without a reasoning parser, the tool parser does NOT strip <think> — it remains in content,
-// but the tool call is still parsed correctly.
-TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockNotStrippedWhenNoReasoningParser) {
-    const std::string input =
-        "<think>This is my internal reasoning about what to call.</think>"
-        R"(<function name="search"><param name="query">Intel</param></function>)";
-    ParsedOutput parsedOutput = generateParsedOutput(input);
-
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "search");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"query":"Intel"})");
-    EXPECT_EQ(parsedOutput.content.find("<think>"), std::string::npos);
-    EXPECT_EQ(parsedOutput.content.find("</think>"), std::string::npos);
-    EXPECT_EQ(parsedOutput.content, "");
-}
-
-// Plain content with no tool calls must pass through unchanged
 TEST_F(Minicpm5OutputParserTest, ParseNoToolCalls) {
     const std::string input = "Sure, here is the answer to your question.";
     ParsedOutput parsedOutput = generateParsedOutput(input);
@@ -224,7 +307,6 @@ TEST_F(Minicpm5OutputParserTest, ParseNoToolCalls) {
     EXPECT_NE(parsedOutput.content.find("Sure"), std::string::npos);
 }
 
-// Content before and after a tool call — tool call removed from content
 TEST_F(Minicpm5OutputParserTest, ParseContentAroundToolCall) {
     const std::string input =
         "Let me check the weather. "
@@ -239,8 +321,6 @@ TEST_F(Minicpm5OutputParserTest, ParseContentAroundToolCall) {
     EXPECT_EQ(parsedOutput.content.find("<function"), std::string::npos);
     EXPECT_EQ(parsedOutput.content.find("</function>"), std::string::npos);
 }
-
-// ---- Tests on the impl directly (without tokenizer round-trip) ----
 
 TEST(Minicpm5ToolParserImplTest, SingleCallNoContent) {
     const std::string input =
@@ -273,8 +353,6 @@ TEST(Minicpm5ToolParserImplTest, TwoCalls) {
     EXPECT_EQ(calls[1].arguments, R"({"a":10,"b":20})");
 }
 
-// The impl does not handle <think> at all (that's the reasoning parser's job); any leading
-// text including a <think> block is treated as plain content and skipped until <function.
 TEST(Minicpm5ToolParserImplTest, ThinkBlockTreatedAsContent) {
     const std::string input =
         "<think>Reasoning here.</think>"
@@ -460,151 +538,159 @@ TEST(Minicpm5ToolParserImplTest, AngleBracketInPlainTextNoCall) {
     EXPECT_FALSE(callsOpt.has_value() && !callsOpt.value().empty());
 }
 
-// ---- Public parseChunk streaming deltas (comment #6) ----
-// Drive the public Minicpm5ToolParser::parseChunk across fragments and verify the actual
-// deltas emitted to the client: a first delta with the function name once the name is known,
-// and the full arguments delta once the function completes.
-
-static std::string docToStr(const rapidjson::Document& doc) {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-    return buffer.GetString();
-}
-
-class Minicpm5PublicStreamTest : public ::testing::Test {
-protected:
-    static void SetUpTestSuite() {
-        if (!minicpm5Tokenizer) {
-            minicpm5Tokenizer = std::make_unique<ov::genai::Tokenizer>(minicpm5TokenizerPath);
-        }
-    }
-    static void TearDownTestSuite() {
-        minicpm5Tokenizer.reset();
-    }
-};
-
-// Feed a single tool call in fragments; assert the name delta is emitted exactly once and the
-// full arguments delta is emitted after the function completes.
-TEST_F(Minicpm5PublicStreamTest, EmitsNameDeltaThenArgumentsDelta) {
-    Minicpm5ToolParser parser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
-    const std::vector<int64_t> noTokens;
-    const auto reason = ov::genai::GenerationFinishReason::NONE;
-
-    std::vector<std::string> chunks = {
-        R"(<function name="get_weather">)",
-        R"(<param name="city">Beijing</param>)",
-        R"(<param name="unit">celsius</param>)",
-        R"(</function>)",
+TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallAndResoning) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"This", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"This"}})"},
+        {" is", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" is"}})"},
+        {" my", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" my"}})"},
+        {" internal", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" internal"}})"},
+        {" reasoning", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" reasoning"}})"},
+        {" about", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" about"}})"},
+        {" what", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" what"}})"},
+        {" to", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" to"}})"},
+        {" call.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" call."}})"},
+        {"</think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<function", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"dummy\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"><param", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"}}]}})"},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"config\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"key\":\"value\"}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"key\":\"value\"}}"}}]}})"},
     };
 
-    std::optional<std::string> nameDelta;
-    std::optional<std::string> argsDelta;
-    int nameDeltaCount = 0;
-    for (const auto& chunk : chunks) {
-        auto delta = parser.parseChunk(chunk, noTokens, reason);
-        if (!delta.has_value()) {
-            continue;
-        }
-        std::string deltaStr = docToStr(delta.value());
-        if (deltaStr.find("\"name\"") != std::string::npos) {
-            nameDelta = deltaStr;
-            ++nameDeltaCount;
-        } else if (deltaStr.find("\"arguments\"") != std::string::npos) {
-            argsDelta = deltaStr;
-        }
-    }
-
-    // (a) first delta carries the function name, emitted exactly once
-    ASSERT_TRUE(nameDelta.has_value());
-    EXPECT_EQ(nameDeltaCount, 1);
-    EXPECT_NE(nameDelta.value().find("\"name\":\"get_weather\""), std::string::npos) << nameDelta.value();
-    EXPECT_NE(nameDelta.value().find("\"type\":\"function\""), std::string::npos) << nameDelta.value();
-
-    // (b) full arguments delta is emitted after the function completes
-    ASSERT_TRUE(argsDelta.has_value());
-    EXPECT_NE(argsDelta.value().find(R"({\"city\":\"Beijing\",\"unit\":\"celsius\"})"), std::string::npos) << argsDelta.value();
+    assertStreamingVec(chunkToDeltaVec);
 }
 
-// Same expectations but with the input fragmented character-by-character.
-TEST_F(Minicpm5PublicStreamTest, EmitsDeltasWhenFragmentedCharByChar) {
-    Minicpm5ToolParser parser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
-    const std::vector<int64_t> noTokens;
-    const auto reason = ov::genai::GenerationFinishReason::NONE;
-    const std::string input =
-        R"(<function name="search"><param name="query">Intel</param></function>)";
+TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallReasoningAndContent) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"This", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"This"}})"},
+        {" is", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" is"}})"},
+        {" my", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" my"}})"},
+        {" internal", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" internal"}})"},
+        {" reasoning", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" reasoning"}})"},
+        {" about", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" about"}})"},
+        {" what", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" what"}})"},
+        {" to", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" to"}})"},
+        {" call.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" call."}})"},
+        {"</think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<function", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"dummy\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"><param", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"}}]}})"},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"config\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"key\":\"value\"}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"key\":\"value\"}}"}}]}})"},
+        {"SOME CONTENT,", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"IT SHOULDN'T APPREAR", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    };
 
-    std::optional<std::string> nameDelta;
-    std::optional<std::string> argsDelta;
-    int nameDeltaCount = 0;
-    for (char c : input) {
-        auto delta = parser.parseChunk(std::string(1, c), noTokens, reason);
-        if (!delta.has_value()) {
-            continue;
-        }
-        std::string deltaStr = docToStr(delta.value());
-        if (deltaStr.find("\"name\"") != std::string::npos) {
-            nameDelta = deltaStr;
-            ++nameDeltaCount;
-        } else if (deltaStr.find("\"arguments\"") != std::string::npos) {
-            argsDelta = deltaStr;
-        }
-    }
-
-    ASSERT_TRUE(nameDelta.has_value());
-    EXPECT_EQ(nameDeltaCount, 1);
-    EXPECT_NE(nameDelta.value().find("\"name\":\"search\""), std::string::npos) << nameDelta.value();
-    ASSERT_TRUE(argsDelta.has_value());
-    EXPECT_NE(argsDelta.value().find(R"({\"query\":\"Intel\"})"), std::string::npos) << argsDelta.value();
+    assertStreamingVec(chunkToDeltaVec);
 }
 
-// Two sequential tool calls: verify each gets its own name delta (in order, correct index) and
-// its own arguments delta once IT completes -- not just that the aggregated end result is
-// correct, but that the user-visible deltas for the second call are not emitted early/mixed
-// with the first, and that both calls' index fields are distinct and increasing.
-TEST_F(Minicpm5PublicStreamTest, EmitsDeltasForTwoSequentialCalls) {
-    Minicpm5ToolParser parser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
-    const std::vector<int64_t> noTokens;
-    const auto reason = ov::genai::GenerationFinishReason::NONE;
-    const std::string input =
-        R"(<function name="get_weather"><param name="city">Rome</param></function>)"
-        R"(<function name="calculate"><param name="a">10</param><param name="b">20</param></function>)";
+TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallAndContent) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"SOME CONTENT", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"SOME CONTENT"}})"},
+        {"<function", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"dummy\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"><param", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"}}]}})"},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"config\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"key\":\"value\"}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"key\":\"value\"}}"}}]}})"},
+        {"CONTENT SOHULDN'T BE RETURNED AFTER TOOL CALL", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    };
 
-    std::vector<std::string> nameDeltas;
-    std::vector<std::string> argsDeltas;
-    for (char c : input) {
-        auto delta = parser.parseChunk(std::string(1, c), noTokens, reason);
-        if (!delta.has_value()) {
-            continue;
-        }
-        std::string deltaStr = docToStr(delta.value());
-        if (deltaStr.find("\"name\"") != std::string::npos) {
-            nameDeltas.push_back(deltaStr);
-        } else if (deltaStr.find("\"arguments\"") != std::string::npos) {
-            argsDeltas.push_back(deltaStr);
-        }
-    }
-
-    // Exactly one name delta per call, in call order, each carrying its own index.
-    ASSERT_EQ(nameDeltas.size(), 2u);
-    EXPECT_NE(nameDeltas[0].find("\"name\":\"get_weather\""), std::string::npos) << nameDeltas[0];
-    EXPECT_NE(nameDeltas[0].find("\"index\":0"), std::string::npos) << nameDeltas[0];
-    EXPECT_NE(nameDeltas[1].find("\"name\":\"calculate\""), std::string::npos) << nameDeltas[1];
-    EXPECT_NE(nameDeltas[1].find("\"index\":1"), std::string::npos) << nameDeltas[1];
-
-    // Exactly one arguments delta per call, each with the right content and index, and the
-    // first call's arguments are surfaced before the second call has even started.
-    ASSERT_EQ(argsDeltas.size(), 2u);
-    EXPECT_NE(argsDeltas[0].find(R"({\"city\":\"Rome\"})"), std::string::npos) << argsDeltas[0];
-    EXPECT_NE(argsDeltas[0].find("\"index\":0"), std::string::npos) << argsDeltas[0];
-    EXPECT_NE(argsDeltas[1].find(R"({\"a\":10,\"b\":20})"), std::string::npos) << argsDeltas[1];
-    EXPECT_NE(argsDeltas[1].find("\"index\":1"), std::string::npos) << argsDeltas[1];
+    assertStreamingVec(chunkToDeltaVec);
 }
 
-// ---- Complex parameter values: code, special chars, escaping (comment #7) ----
+TEST_F(Minicpm5OutputParserTest, StreamingWithReasoningAndContent) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"This", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"This"}})"},
+        {" is", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" is"}})"},
+        {" my", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" my"}})"},
+        {" internal", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" internal"}})"},
+        {" reasoning", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" reasoning"}})"},
+        {" about", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" about"}})"},
+        {" what", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" what"}})"},
+        {" to", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" to"}})"},
+        {" call.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" call."}})"},
+        {"</think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"Here", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"Here"}})"},
+        {" is", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" is"}})"},
+        {" some", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" some"}})"},
+        {" content.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" content."}})"},
+    };
 
-// A string parameter whose value contains embedded double quotes and backslashes must produce
-// valid, correctly-escaped JSON.
+    assertStreamingVec(chunkToDeltaVec);
+}
+
+TEST_F(Minicpm5OutputParserTest, StreamingWithContentOnly) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"Here", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"Here"}})"},
+        {" is", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" is"}})"},
+        {" some", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" some"}})"},
+        {" content.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" content."}})"},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
+TEST_F(Minicpm5OutputParserTest, StreamingWithMultipleToolCalls) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<function", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"dummy\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"><param", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"}}]}})"},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"config\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"key\":\"value\"}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"key\":\"value\"}}"}}]}})"},
+        {"<function", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"get_weather\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"><param", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"get_weather"}}]}})"},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"city\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"Tokyo", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<param", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"unit\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"celsius", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"city\":\"Tokyo\",\"unit\":\"celsius\"}"}}]}})"},
+        {"<function", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"search\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"><param", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":2,"function":{"name":"search"}}]}})"},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"query\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"What does it mean \"if __name__ == '__main__':\n\tdict = { \"key\": \"value\" }\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"{\"query\":\"What does it mean \\\"if __name__ == '__main__':\\n\\tdict = { \\\"key\\\": \\\"value\\\" }\\\"\"}"}}]}})"},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
 TEST(Minicpm5ToolParserImplTest, StringParamWithQuotesAndBackslashes) {
     const std::string input =
         R"(<function name="search"><param name="query">say "hi" and a backslash \ here</param></function>)";
