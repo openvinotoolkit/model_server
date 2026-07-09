@@ -29,9 +29,12 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "openvino/genai/whisper_pipeline.hpp"
-
 #include "src/http_payload.hpp"
+
+namespace ov::genai {
+class ASRGenerationConfig;
+}  // namespace ov::genai
+
 namespace ovms {
 class StreamingTextQueue;
 struct SttServable;
@@ -51,7 +54,7 @@ public:
     absl::Status start(std::shared_ptr<ovms::SttServable> pipe,
         const ovms::HttpPayload& payload,
         std::vector<float> rawSpeech,
-        const ov::genai::WhisperGenerationConfig& config);
+        const ov::genai::ASRGenerationConfig& config);
 
     absl::Status processIteration(std::string& ssePayload,
         bool& shouldContinueLoopback,

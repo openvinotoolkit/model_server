@@ -154,6 +154,24 @@ uint16_t getDockerCpuQuota() {
     return 0;  // No quota set
 }
 
+uint16_t getSocketsCount() {
+    std::set<std::string> uniqueSockets;
+    std::ifstream cpuInfo("/proc/cpuinfo");
+    if (!cpuInfo.is_open()) {
+        return 1;  // Default to 1 socket if unable to read
+    }
+    std::string line;
+    while (std::getline(cpuInfo, line)) {
+        if (line.find("physical id") != std::string::npos) {
+            uniqueSockets.insert(line);
+        }
+    }
+    if (uniqueSockets.empty()) {
+        return 1;  // Fallback when "physical id" is not present in /proc/cpuinfo
+    }
+    return static_cast<uint16_t>(uniqueSockets.size());
+}
+
 uint16_t getPhysicalCoresPerSocket() {
     std::set<std::string> uniqueCores;
     std::ifstream cpuInfo("/proc/cpuinfo");
@@ -161,9 +179,19 @@ uint16_t getPhysicalCoresPerSocket() {
         return std::max<uint16_t>(static_cast<uint16_t>(std::thread::hardware_concurrency()), 1);
     }
     std::string line;
+    std::string currentPhysicalId;
+    std::string firstPhysicalId;
     while (std::getline(cpuInfo, line)) {
+        if (line.find("physical id") != std::string::npos) {
+            currentPhysicalId = line;
+            if (firstPhysicalId.empty()) {
+                firstPhysicalId = line;
+            }
+        }
         if (line.find("core id") != std::string::npos) {
-            uniqueCores.insert(line);
+            if (currentPhysicalId == firstPhysicalId) {
+                uniqueCores.insert(line);
+            }
         }
     }
     if (uniqueCores.empty()) {
