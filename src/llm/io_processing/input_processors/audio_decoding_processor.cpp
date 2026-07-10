@@ -38,12 +38,14 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
     for (size_t i = 0; i < chatHistory.size(); i++) {
         const auto content = chatHistory[i]["content"];
         if (!content.is_array()) {
+            SPDLOG_INFO("Content is not an array, skipping");
             continue;
         }
 
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
             const auto type = part["type"].as_string().value_or("");
+            SPDLOG_INFO("TYPE: {}", type);
 
             if (type == "input_audio") {
                 const auto data = part["input_audio"]["data"].as_string().value_or("");
@@ -63,6 +65,7 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
                         std::string_view(decoded.data(), decoded.size()), format);
                     ov::Tensor audioTensor(ov::element::f32, ov::Shape{pcm.size()});
                     std::memcpy(audioTensor.data<float>(), pcm.data(), pcm.size() * sizeof(float));
+                    SPDLOG_INFO("ADDING AUDIO TENSOR TO REQUEST");
                     req.inputAudios.push_back(std::move(audioTensor));
                 } catch (const std::exception& e) {
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Audio decoding failed: {}", e.what());

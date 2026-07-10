@@ -45,7 +45,9 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
             settings.allowedMediaDomains));
     }
 
+    SPDLOG_INFO("isOmni: {}, isVLM: {}, isChatPath: {}", context.config.isOmni, context.config.isVLM, isChatPath);
     if (context.config.isOmni && isChatPath) {
+        SPDLOG_INFO("Adding AudioDecodingProcessor to the pipeline");
         processors.emplace_back(std::make_unique<AudioDecodingProcessor>());
     }
 
