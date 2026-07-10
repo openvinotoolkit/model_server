@@ -61,6 +61,7 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         result.detectedToolParser = "lfm2";
         result.caps.supportsToolCalls = true;
         if (contains(templateSource, "message.thinking")) {
+            result.caps.missnamedReasoningField = "thinking";
             result.detectedReasoningParser = "lfm2.5";
         }
         return result;
