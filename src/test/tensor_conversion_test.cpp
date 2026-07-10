@@ -733,3 +733,39 @@ TYPED_TEST(StringOutputsConversionTest, positive) {
 }
 
 }  // namespace
+
+TEST(StringInputsConversionKFSTest, amplification_probe_empty_strings) {
+    // Demonstrates memory amplification: N empty strings in proto occupy ~2 bytes each on the wire,
+    // but ov::Tensor(string, {N}) allocates N*sizeof(std::string) objects on the heap.
+    // Conversion itself has no element-count limit; the guard lives in request validation.
+    //
+    // Projected worst-case (1 GB proto of empty strings, ~500M entries):
+    //   proto size  ~1 GB
+    //   tensor obj  ~500M * 32 B = ~16 GB  <-- amplification
+    const int N = 1'000'000;
+    ::KFSRequest::InferInputTensor requestTensor;
+    requestTensor.set_datatype("BYTES");
+    // No shape - falls back to 1D {N}
+    for (int i = 0; i < N; i++) {
+        requestTensor.mutable_contents()->add_bytes_contents("");
+    }
+    size_t protoBytes = requestTensor.ByteSizeLong();
+    size_t stringObjBytes = static_cast<size_t>(N) * sizeof(std::string);
+
+    ov::Tensor tensor;
+    // Conversion has NO element-count limit - this succeeds even for large N.
+    // The limit is enforced upstream by validateAgainstMaxNativeStringElementCount.
+    auto status = convertStringRequestToOVTensor(requestTensor, tensor, nullptr);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(tensor.get_shape()[0], static_cast<size_t>(N));
+
+    size_t limitElements = (1ULL << 30) / sizeof(std::string);
+    std::cout << "\n[amplification_probe]\n"
+              << "  N entries        : " << N << "\n"
+              << "  Proto size       : " << protoBytes / 1024 << " KB\n"
+              << "  sizeof(string)   : " << sizeof(std::string) << " bytes\n"
+              << "  String obj alloc : " << stringObjBytes / (1024 * 1024) << " MB\n"
+              << "  Amplification    : " << stringObjBytes / (protoBytes + 1) << "x\n"
+              << "  Validation limit : " << limitElements << " elements (~"
+              << limitElements * sizeof(std::string) / (1024 * 1024) << " MB object alloc)\n";
+}
