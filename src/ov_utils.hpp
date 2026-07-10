@@ -115,6 +115,4 @@ static void logOVPluginConfig(PropertyExtractor&& propertyExtractor, const std::
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "{}; {}plugin configuration: {{ {} }}", loggingAuthor, loggingDetails, pluginConfigNameValuesString);
 }
 
-
-
 }  // namespace ovms
