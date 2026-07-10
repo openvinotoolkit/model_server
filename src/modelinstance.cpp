@@ -1076,6 +1076,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             return this->compiledModel->get_property(key); },
         std::string("compiled model: ") + getName(),
         std::string(" version: ") + std::to_string(getVersion()) + std::string("; target device: ") + targetDevice + ";");
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Recommended target device: {}", recommendTargetDevice(ieCore));
     return StatusCode::OK;
 }
 

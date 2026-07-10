@@ -52,6 +52,14 @@ std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap);
 
 Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const std::string& targetDevice, const ov::Core& ieCore);
 
+// Determines the recommended target device based on available devices and their properties.
+// Rules:
+// - If only CPU is available (no GPU) - returns "CPU"
+// - If a single discrete GPU is available - returns that device (e.g. "GPU.0")
+// - If only integrated GPU(s) are available - returns the first integrated GPU
+// - If multiple discrete GPUs are available - returns the one with the most free VRAM
+std::string recommendTargetDevice(ov::Core& core);
+
 // Applies resource-aware CPU defaults to an OpenVINO property map.
 // Sets inference_num_threads and (on Linux) enable_cpu_pinning only when not
 // already present in the map.  When PERFORMANCE_HINT=THROUGHPUT is set,
@@ -106,5 +114,7 @@ static void logOVPluginConfig(PropertyExtractor&& propertyExtractor, const std::
     std::string pluginConfigNameValuesString = joins(pluginConfigNameValues, ", ");
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "{}; {}plugin configuration: {{ {} }}", loggingAuthor, loggingDetails, pluginConfigNameValuesString);
 }
+
+
 
 }  // namespace ovms
