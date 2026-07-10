@@ -45,6 +45,19 @@ Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputW
     }
     return StatusCode::OK;
 }
+Status validateAgainstMaxNativeStringElementCount(int32_t elementCount) {
+    if (elementCount < 0) {
+        return StatusCode::INVALID_BATCH_SIZE;
+    }
+    if (static_cast<size_t>(elementCount) > MAX_NATIVE_STRING_ELEMENTS) {
+        std::stringstream ss;
+        ss << "; element count " << elementCount << " exceeds max " << MAX_NATIVE_STRING_ELEMENTS << " (1GB string-object limit)";
+        const std::string details = ss.str();
+        SPDLOG_DEBUG(details);
+        return Status(StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, details);
+    }
+    return StatusCode::OK;
+}
 Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name) {
     if (shapeInfo.size() == 0) {
         return Mode::FIXED;

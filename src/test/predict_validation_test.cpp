@@ -2188,6 +2188,53 @@ TYPED_TEST(PredictValidationStringNativeTest, string_not_allowed_with_demultiple
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS);
 }
 
+TEST(PredictValidationStringNativeKFSTest, negative_over_element_count_limit) {
+    const char* tensorName = DUMMY_MODEL_INPUT_NAME;
+    ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
+    mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(
+        tensorName, ovms::Precision::STRING, ovms::Shape{-1}, ovms::Layout{"N..."});
+
+    const size_t N = ovms::request_validation_utils::MAX_NATIVE_STRING_ELEMENTS + 1;
+    // Build raw buffer: N entries, each with 4-byte zero length (empty string).
+    // Buffer size = N * 4 bytes (~128 MB), much less than N * sizeof(std::string) (~1 GB).
+    std::string rawBuffer(N * sizeof(uint32_t), '\0');
+
+    ::KFSRequest request;
+    auto* input = request.add_inputs();
+    input->set_name(tensorName);
+    input->set_datatype("BYTES");
+    input->add_shape(static_cast<int64_t>(N));
+    *request.add_raw_input_contents() = std::move(rawBuffer);
+
+    auto status = ovms::request_validation_utils::validate(
+        request, mockedInputsInfo, mockedOutputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED) << status.string();
+}
+
+TEST(PredictValidationStringNativeKFSTest, negative_over_element_count_limit_contents) {
+    const char* tensorName = DUMMY_MODEL_INPUT_NAME;
+    ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
+    mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(
+        tensorName, ovms::Precision::STRING, ovms::Shape{-1}, ovms::Layout{"N..."});
+
+    const int32_t N = static_cast<int32_t>(ovms::request_validation_utils::MAX_NATIVE_STRING_ELEMENTS) + 1;
+
+    ::KFSRequest request;
+    auto* input = request.add_inputs();
+    input->set_name(tensorName);
+    input->set_datatype("BYTES");
+    input->add_shape(static_cast<int64_t>(N));
+    auto* contents = input->mutable_contents()->mutable_bytes_contents();
+    contents->Reserve(N);
+    for (int32_t i = 0; i < N; i++) {
+        contents->Add();
+    }
+
+    auto status = ovms::request_validation_utils::validate(
+        request, mockedInputsInfo, mockedOutputsInfo, "dummy", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED) << status.string();
+}
+
 #define VERIFY_COMPUTE_BUFFER_SIZE(SHAPE, ELEMENT_SIZE, WILL_NOT_OVERFLOW, EXPECTED_BYTES)                                                  \
     {                                                                                                                                       \
         size_t elementSize = ELEMENT_SIZE;                                                                                                  \
