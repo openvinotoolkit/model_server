@@ -176,10 +176,6 @@ class SdlException(OvmsTestException):
     pass
 
 
-class StatefulModelGeneralException(OvmsTestException):
-    pass
-
-
 class ModelCacheFailure(OvmsTestException):
     pass
 
@@ -191,19 +187,7 @@ class ModelCacheIncorrectNumberOfCacheFiles(ModelCacheFailure):
         super().__init__(msg)
 
 
-class PodNotReadyException(OvmsTestException):
-    pass
-
-
-class PodCreationException(OvmsTestException):
-    pass
-
-
 class LogMessageNotFoundException(OvmsTestException):
-    pass
-
-
-class KubeCtlApplyException(OvmsTestException):
     pass
 
 
@@ -382,6 +366,10 @@ class ReloadModelsUnstableException(OvmsTestException):
 
 
 class OVVPException(OvmsTestException):
+    pass
+
+
+class OVHfDownloadException(OvmsTestException):
     pass
 
 

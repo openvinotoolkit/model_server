@@ -1,6 +1,7 @@
 def image_build_needed = "false"
 def win_image_build_needed = "false"
 def client_test_needed = "false"
+def functional_tests_changed = "false"
 def export_models_changed = "false"
 def test_doc_files_linux = ""
 def test_doc_files_windows = ""
@@ -22,13 +23,15 @@ def validation_branch = "develop"
 // Override agent node:
 //   [test_agent_linux=<node>]          - Run Linux doc tests on <node> (default: ovms_ptl)
 //   [test_agent_windows=<node>]        - Run Windows doc tests on <node> (default: ovms_win_ptl)
+//   example: [test_agent_windows=ovms_win_ptl]
 //
 // Override file list (space-separated, converted to pytest -k filter joined with ' or '):
 //   [test_doc_files_linux=<files>]      - Use <files> instead of auto-detected list (Linux)
 //   [test_doc_files_windows=<files>]    - Use <files> instead of auto-detected list (Windows)
+//   example: [test_doc_files_linux=demos/continuous_batching/README.md demos/audio/README.md]
 //
 // Override validation branch:
- //   [validation_branch=<branch>]       - Use <branch> instead of default 'develop' for test repo checkout
+//   [validation_branch=<branch>]       - Use <branch> instead of default 'develop' for test repo checkout
 //
 
 pipeline {
@@ -67,6 +70,9 @@ pipeline {
               }
               if (git_diff =~ /(\n|^)client/) {
                   client_test_needed = "true"
+              }
+              if (git_diff =~ /(\n|^)tests\/functional/) {
+                  functional_tests_changed = "true"
               }
               if (git_diff =~ /(\n|^)(demos\/common\/export_models\/|prepare_llm_models\.sh$)/) {
                   export_models_changed = "true"
@@ -297,14 +303,24 @@ pipeline {
               agent {
                 label "${agent_name_linux}"
               }
-              when { expression { image_build_needed == "true" } }
+              when { expression { image_build_needed == "true" || functional_tests_changed == "true" } }
               steps {
                 script {
                   dir ('internal_tests'){
                     checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh "pwd"
                     def pwd = sh(returnStdout:true, script: "pwd").strip()
-                    sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional && TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                    def cmd_venv = "make create-venv"
+                    def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
+                    def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10"
+                    def cmd_run_tests = "make tests"
+                    def cmd = ""
+                    if (image_build_needed == "true") {
+                      cmd = "${cmd_venv} && ${cmd_links} && ${cmd_export} TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_run_tests}"
+                    } else {
+                      cmd = "${cmd_venv} && ${cmd_links} && ${cmd_export} ${cmd_run_tests}"
+                    }
+                    sh cmd
                   }
                 }
               }            
@@ -327,7 +343,7 @@ pipeline {
                       def test_doc_files_str = test_doc_files_linux.split('\n').join(' or ')
                       sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
                       def cmd_venv_activate = ". .venv/bin/activate"
-                      def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500"
+                      def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_LOGGING_LEVEL_OVMS=DEBUG && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500"
                       def cmd_pytest = "pytest tests/non_functional/documentation -k '${test_doc_files_str}' -n 0 --dist loadgroup"
                       def cmd = ""
                       if ( image_build_needed == "true" ) {
@@ -392,7 +408,7 @@ pipeline {
                       def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
                       def cmd_link_ovms = "(if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional) && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
                       def cmd_requirements = "(if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && pip install -r requirements.txt"
-                      def cmd_export = "set \"TT_OVMS_C_REPO_PATH=../\" && set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_DISABLE_DMESG_LOG_MONITOR=True\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\" && set \"PYTHONUTF8=1\" && set \"PYTHONIOENCODING=utf-8\""
+                      def cmd_export = "set \"TT_OVMS_C_REPO_PATH=../\" && set \"TT_LOGGING_LEVEL_OVMS=DEBUG\" && set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_DISABLE_DMESG_LOG_MONITOR=True\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\" && set \"PYTHONUTF8=1\" && set \"PYTHONIOENCODING=utf-8\""
                       def cmd_pytest = "pytest tests/non_functional/documentation -k \"${test_doc_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
                       def cmd = ""
                       if ( win_image_build_needed == "true" ) {

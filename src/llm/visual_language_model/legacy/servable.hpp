@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <future>
 #include <memory>
 #include <string>
 #include <vector>
@@ -30,20 +31,19 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     ov::genai::VLMDecodedResults results;
     std::promise<void> readySignal;
     std::future<void> finished = readySignal.get_future();
-    std::mutex mutex;
-    std::vector<ov::Tensor> inputImages;
-    std::condition_variable executionInProgress;
-    std::string inputText;
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
     bool success{true};
+    // Accumulated decoded text for the unary path — populated via OVMSTextStreamer
+    // callback so that the user's skip_special_tokens / decode params are respected.
+    std::string accumulatedUnaryText;
 
     // Disconnection handling
     std::atomic<bool> clientDisconnected{false};
 
     void signalDisconnection() {
         clientDisconnected = true;
-        executionInProgress.notify_all();
+        deltaChannel.signalComplete();
     }
 };
 
@@ -62,6 +62,7 @@ protected:
 public:
     VisualLanguageModelLegacyServable() {
         properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
+        properties->inputProcessorContext.config.isVLM = true;
     }
 
     // Interface methods
@@ -74,6 +75,5 @@ public:
     absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
-    absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
 };
 }  // namespace ovms

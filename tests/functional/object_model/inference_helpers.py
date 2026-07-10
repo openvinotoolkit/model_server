@@ -67,14 +67,14 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import FrameworkMessages, skip_if_runtime
 from tests.functional.utils.generative_ai.validation_utils import GenerativeAIValidationUtils
 from tests.functional.config import binary_io_images_path, wait_for_messages_timeout
-from ovms.constants.model_dataset import (
+from tests.functional.models.models import ModelInfo
+from tests.functional.models.models_datasets import (
     BinaryDummyModelDataset,
     DefaultBinaryDataset,
     ExactShapeBinaryDataset,
     LanguageModelDataset,
     ModelDataset,
 )
-from ovms.constants.models import ModelInfo
 from tests.functional.constants.ovms import CurrentTarget as ct
 from tests.functional.constants.ovms import MediaPipeConstants, Ovms
 from tests.functional.constants.pipelines import SimpleMediaPipe
@@ -665,10 +665,7 @@ class InferenceInfo(object):
 
     @classmethod
     def create(cls, client, model, timeout=wait_for_messages_timeout, input_data=None, inference_request=None):
-        if model.is_stateful:
-            return StatefulInferenceInfo(client, model, timeout, input_data, inference_request)
-        else:
-            return InferenceInfo(client, model, timeout, input_data, inference_request)
+        return InferenceInfo(client, model, timeout, input_data, inference_request)
 
     def __init__(
         self, client, model, timeout=wait_for_messages_timeout, input_data=None, inference_request=None
@@ -688,10 +685,6 @@ class InferenceInfo(object):
         request = self.inference_request.prepare_request_to_send(self.client, self.input_data)
         result = self.client.predict(request, self.timeout)
         return result
-
-    def predict_sequence_step(self, tensor_data, sequence_ctrl, sequence_id):
-        request = self.client.prepare_stateful_request(tensor_data, sequence_ctrl, sequence_id)
-        return self.client.predict_stateful_request(request, self.timeout)
 
     def get_metadata(self):
         meta = self.client.get_model_meta()
@@ -713,73 +706,6 @@ class InferenceInfo(object):
                     assert expected_dim_value == dim_value
                 else:
                     assert expected_dim_value == int(dim_value)
-
-
-class StatefulInferenceInfo(InferenceInfo):
-    SEQUENCE_START = 1
-    SEQUENCE_END = 2
-
-    def __init__(self, client, model, timeout=30, input_data=None, inference_request=None):
-        super().__init__(client, model, timeout, input_data, inference_request)
-
-    def _get_sequence_control_data(self, data_length, iteration_index):
-        result = None
-        if iteration_index == 0:
-            result = sequence_ctrl = StatefulInferenceInfo.SEQUENCE_START
-        elif iteration_index == data_length + self.model.context_window_left + self.model.context_window_right - 1:
-            result = sequence_ctrl = StatefulInferenceInfo.SEQUENCE_END
-        return result
-
-    def get_utterance_name_list(self):
-        input_param_name = self.model.input_names[0]
-        return list(self.input_data[input_param_name].keys())
-
-    def predict(self, sequence_id=None):
-        result = {}
-        for utterance in self.get_utterance_name_list():
-            result[utterance] = self.predict_utterance(utterance, sequence_id)
-        return result
-
-    def predict_utterance(self, utterance_name, sequence_id=None):
-        logger.info(f"Model ({self.model.name}) predict [{utterance_name}]")
-        result = []
-        utterance_length = self.get_utterance_length(utterance_name)
-        offset = self.model.context_window_left + self.model.context_window_right
-
-        for idx in range(utterance_length):
-            sequence_ctrl = self._get_sequence_control_data(utterance_length, idx)
-            tensor_data = self.get_utterance_data(utterance_name, idx)
-            sequence_id, output = self.predict_sequence_step(tensor_data, sequence_ctrl, sequence_id)
-            if idx >= offset:
-                result.append(output)  # collect data for idx: <offset; utterance_length)
-        return result
-
-    def get_utterance_length(self, utterance_name):
-        input_param_name = self.model.input_names[0]
-        offset = self.model.context_window_left + self.model.context_window_right
-        return offset + len(self.input_data[input_param_name][utterance_name])
-
-    def get_utterance_data(self, utterance_name, idx):
-        input_param_name = self.model.input_names[0]
-        data_length = len(self.input_data[input_param_name][utterance_name])
-        data_idx = idx - self.model.context_window_left
-        if data_idx < 0:
-            data_idx = 0  # fill first data with tensor[0]
-        elif data_idx >= data_length:
-            data_idx = data_length - 1  # fill last data with tensor[-1]
-        result = {}
-        for name in self.model.input_names:
-            result[name] = self.input_data[name][utterance_name][data_idx]
-        return result
-
-    def clear_input_data(self):
-        step = 10
-        for name in self.model.input_names:
-            for utterance in self.input_data[name]:
-                for idx, data in enumerate(self.input_data[name][utterance]):
-                    if idx % step == 0:
-                        data = self.input_data[name][utterance][idx]
-                        self.input_data[name][utterance][idx] = np.zeros(data.shape, dtype=data.dtype)
 
 
 def prepare_requests(
@@ -818,7 +744,7 @@ def predict_and_assert(inference_infos: List[InferenceInfo], validate_results=Tr
                 MediaPipeInferenceResponse.create(inference_info, outputs).validate(
                     inference_info.input_data, output_key=output_key
                 )
-            elif inference_info.model.is_llm:
+            elif inference_info.model.is_generative:
                 LLMInferenceResponse.create(inference_info, outputs).validate()
             else:
                 InferenceResponse.create(inference_info, outputs).validate(inference_info.input_data)
@@ -893,21 +819,6 @@ def prepare_and_run_set_of_predict_requests(ovms: OvmsInstance, models, api_type
         )
 
     return predict_request(inference_request_list)
-
-
-def validate_accuracy_for_stateful_models(models, results, accuracy_level=0.1):
-    for model in models:
-        error_report_dict_list = model.calculate_error(results[model.name])
-        for error_report_dict in error_report_dict_list:
-            for utterance_name, error_result in error_report_dict.items():
-                for output_name in model.output_names:
-                    error_msg = (
-                        f"Detect unexpected error level for model: {model.name} (utternace: "
-                        f"{utterance_name} output: {output_name})! Expected error level < "
-                        f"{accuracy_level} (detected: {error_result[output_name]})"
-                    )
-                    assert error_result[output_name] < accuracy_level, error_msg
-    logger.info(f"Validate accuracy for stateful models - PASSED")
 
 
 def get_model_status(client, accepted_model_states=None, model_version=None, port=None):

@@ -32,14 +32,19 @@ class Requirements:
     dag = "CVS-31796_CVS-36434_CVS-41115 DAG"
     model_cache = "CVS-62829 model_cache"
     cloud = "CVS-31243 cloud"
-    stateful = "CVS-33882 stateful"
     reshape = "CVS-35266 reshape"
     dynamic_shape = "CVS-56655 dynamic shapes"
     auto_plugin = "CVS-73689 Auto plugin support"
     kfservin_api = "CVS-81053 KFServing api"
     metrics = "CVS-43549 metrics"
     custom_nodes = "CVS-44359 custom nodes"
+    llm = "CVS-129298 LLM execution in ovms based on c++ code only"
+    embeddings_endpoint = "CVS-147460 embeddings endpoint"
+    rerank_endpoint = "CVS-147460 rerank endpoint"
+    images_endpoint = "CVS-169110 images endpoint"
     audio_endpoint = "CVS-174282 audio endpoint"
+    hf_imports = "CVS-162541 Direct models import from HF Hub in OVMS"
+    tools = "CVS-166514 Structured response with tools support in chat/completions"
 
     # test types
     sdl = "CVS-59335 SDL"
@@ -48,8 +53,6 @@ class Requirements:
     documentation = "CVS-35266 documentation"
     binary_input = "CVS-30320 binary input format"
     cpu_extension = "CVS-68750 cpu extension"
-
-    operator = "CVS-56873 operator"
 
     models_enabling = "CVS-105320 models enabling"
     triton_async = "CVS-114801 triton async"
@@ -62,7 +65,4 @@ class Requirements:
     streaming_api = "CVS-118064 streaming API extension"
     mediapipe = "CVS-103194 mediapipe"
     python_custom_node = "CVS-117210 python support"
-    llm = "CVS-129298 LLM execution in ovms based on c++ code only"
     openai_api = "CVS-138033 OpenAI API in OVMS"
-    hf_imports = "CVS-162541 Direct models import from HF Hub in OVMS"
-    tools = "CVS-166514 Structured response with tools support in chat/completions"

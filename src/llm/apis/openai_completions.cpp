@@ -163,7 +163,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         return absl::InvalidArgumentError("Messages are not an array");
     if (it->value.GetArray().Size() == 0)
         return absl::InvalidArgumentError("Messages array cannot be empty");
-    bool jsonChanged = false;
     for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
         auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
@@ -196,57 +195,37 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                 continue;
             }
             if (memberName == "content" && member->value.IsArray()) {
-                // Adjust content field format when it is passed as an array of objects (typically with images)
-                if (member->value.GetArray().Size() == 0) {
-                    return absl::InvalidArgumentError("Invalid message structure - content array is empty");
-                }
-                jsonChanged = true;
-                std::string combinedText;
-                for (auto& v : member->value.GetArray()) {
+                // Empty content arrays are accepted and preserved as-is. The
+                // EmptyContentArrayNormalizationProcessor converts them to null before
+                // downstream processing.
+                for (const auto& v : member->value.GetArray()) {
                     if (!v.IsObject()) {
                         return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
                     }
-                    auto entry = v.GetObject();
+                    const auto entry = v.GetObject();
                     if (!entry.HasMember("type") || !entry["type"].IsString()) {
                         return absl::InvalidArgumentError("Invalid message structure - content object type missing");
                     }
-                    auto entryType = entry["type"].GetString();
-                    if (entryType == std::string("text")) {
+                    const std::string entryType = entry["type"].GetString();
+                    if (entryType == "text") {
                         if (!entry.HasMember("text") || !entry["text"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - content text missing");
                         }
-                        if (!combinedText.empty()) {
-                            combinedText += "\n";
-                        }
-                        combinedText.append(entry["text"].GetString(), entry["text"].GetStringLength());
-                        continue;
-                    } else if (entryType == std::string("image_url")) {
+                    } else if (entryType == "image_url") {
                         if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
                             return absl::InvalidArgumentError("Invalid message structure - content image_url missing");
                         }
-                        auto imageUrl = entry["image_url"].GetObject();
+                        const auto imageUrl = entry["image_url"].GetObject();
                         if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
                         }
-                        std::string url = imageUrl["url"].GetString();
-                        auto tensorResult = loadImage(url, allowedLocalMediaPath, allowedMediaDomains);
-                        if (!tensorResult.ok()) {
-                            return tensorResult.status();
-                        }
-                        request.imageHistory.push_back({i, tensorResult.value()});
                     } else {
                         return absl::InvalidArgumentError("Unsupported content type");
                     }
                 }
-                // Flatten all text parts (joined with newlines) into the "content" field.
-                // Images are stored separately in request.imageHistory.
-                Value contentText(rapidjson::kStringType);
-                contentText.SetString(combinedText.c_str(), combinedText.length(), doc.GetAllocator());
-                member->value = contentText;
-                // Add new field to the last message in history if content is text
-                if (member->value.IsString()) {
-                    request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
-                }
+                // Preserve content array for downstream processors
+                // (ImageDecodingProcessor for VLM, TextContentNormalizationProcessor for LM).
+                request.chatHistory.last()[memberName] = rapidJsonValueToJsonContainer(member->value);
             }
         }
         auto lastMessage = request.chatHistory.last();
@@ -256,20 +235,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         if (!lastMessage.contains("content")) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Message does not have content field which might be an issue for some chat templates. Adding empty content.");
             lastMessage["content"] = "";
-            obj.AddMember("content", Value().SetString("", doc.GetAllocator()), doc.GetAllocator());
-            jsonChanged = true;
         }
         // If message has tool calls, make sure each tool call has "arguments" field
-        auto status = ensureArgumentsInToolCalls(obj, jsonChanged);
+        auto status = ensureArgumentsInToolCalls(obj);
         if (status != absl::OkStatus()) {
             return status;
         }
-    }
-    if (jsonChanged) {
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        request.processedJson = buffer.GetString();
     }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed messages successfully");
     return absl::OkStatus();
@@ -565,7 +536,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMD
 
 // --- Streaming serialization ---
 
-std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
+std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(rapidjson::Document parsedDelta, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
 
     Document doc;
@@ -591,33 +562,25 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // TODO: logprobs: object/null; Log probability information for the choice.
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        if (outputParser != nullptr) {
-            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
-            if (!delta.has_value()) {
-                // If the generation is still ongoing, there is nothing to emit yet
-                if (finishReason == ov::genai::GenerationFinishReason::NONE) {
-                    return "";
-                }
-                // Generation finished but parser returned no delta (e.g. empty chunk after tool call).
-                // We still need to emit a chunk with the appropriate finish_reason.
+        // parsedDelta is a pre-parsed Document produced by OVMSTextStreamer::flush_chunk.
+        // Shape: {"delta":{...}} for content/reasoning/tool_calls, or an empty Document{}
+        // for finish-only chunks (generation ended on a swallowed token).
+        if (parsedDelta.HasMember("delta")) {
+            choice.AddMember("delta", Value(parsedDelta["delta"], allocator), allocator);
+            hasToolCalls = hasToolCallsInStreamingDelta(parsedDelta);
+            if (hasToolCalls) {
+                toolCallsDetectedInStream = true;
             }
-            if (delta.has_value() && delta->HasMember("delta")) {
-                // Deep copy the "delta" member value into the choice object
-                choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
-                hasToolCalls = hasToolCallsInStreamingDelta(*delta);
-                if (hasToolCalls) {
-                    toolCallsDetectedInStream = true;
-                }
-            }
-
-        } else {
-            Value delta(kObjectType);
-            delta.SetObject();
-            delta.AddMember("content", Value(chunkResponse.c_str(), allocator), allocator);
-            choice.AddMember("delta", delta, allocator);
         }
+        // If no "delta" member, choice has no delta — valid for the final finish_reason chunk.
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        choice.AddMember("text", Value(chunkResponse.c_str(), allocator), allocator);
+        // For /v1/completions, extract the plain text from the content delta.
+        if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject() &&
+            parsedDelta["delta"].HasMember("content") && parsedDelta["delta"]["content"].IsString()) {
+            choice.AddMember("text", Value(parsedDelta["delta"]["content"].GetString(), allocator), allocator);
+        } else {
+            choice.AddMember("text", Value("", allocator), allocator);
+        }
     }
 
     auto serializedFinishReason = mapFinishReason(finishReason, hasToolCalls || toolCallsDetectedInStream);
@@ -717,6 +680,9 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
 
 std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
     OVMS_PROFILE_FUNCTION();
+    // The handshake chunk signals that prefill is complete and generation has started.
+    // Emitted on every endpoint so clients can distinguish prefill latency from
+    // time-to-first-token.
     Document doc;
     doc.SetObject();
     Document::AllocatorType& allocator = doc.GetAllocator();
@@ -736,7 +702,8 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
         delta.AddMember("content", Value(rapidjson::kNullType), allocator);
         choice.AddMember("delta", delta, allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        choice.AddMember("text", Value(rapidjson::kNullType), allocator);
+        // Empty string (not null) so the field is present and typed as string.
+        choice.AddMember("text", Value("", allocator), allocator);
     }
 
     choice.AddMember("finish_reason", Value(rapidjson::kNullType), allocator);
@@ -750,7 +717,6 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
     // model: string; copied from the request
     doc.AddMember("model", Value(request.model.c_str(), allocator), allocator);
 
-    // object: string; defined that the type streamed chunk rather than complete response
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         doc.AddMember("object", Value("chat.completion.chunk", allocator), allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {
