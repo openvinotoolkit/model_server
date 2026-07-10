@@ -146,6 +146,9 @@ cc_shared_library(
     ],
 )
 
+# DO NOT REMOVE: runtime-loaded MediaPipe shared library used by plugin loading path.
+# This target is intentionally not linked into `ovms` directly; it exists to keep
+# symbol/type registration separation and avoid duplicate registration crashes.
 # Build MediaPipe as a proper shared library (.so) that both main binary and plugin will link to
 # This target collects all MediaPipe dependencies and exports them in a single .so file
 # Ensures type-id consistency - both main binary and plugin use the SAME MediaPipe copy
@@ -188,6 +191,7 @@ cc_binary(
     visibility = ["//visibility:public"],
 )
 
+# DO NOT REMOVE: runtime loaders and packaging refer to this canonical soname alias.
 # Alias for backward compatibility
 alias(
     name = "libmediapipe_framework.so",
@@ -195,13 +199,16 @@ alias(
     visibility = ["//visibility:public"],
 )
 
-# cc_import wrapper to force proper DT_NEEDED linking in binaries that depend on it
+# NOTE: currently unused in this branch. Keep only if a future target needs
+# explicit DT_NEEDED-style linking to `mediapipe_framework_shared` via cc_import.
 cc_import(
     name = "mediapipe_framework_shared_import",
     shared_library = ":mediapipe_framework_shared",
     visibility = ["//visibility:public"],
 )
 
+# DO NOT REMOVE: loaded at runtime by mediapipe_runtime_api and plugin loader.
+# This is the runtime boundary for MediaPipe factory symbols and registration.
 # Build OVMS MediaPipe integration as a shared runtime component to avoid
 # embedding calculator/extension registration directly into ovms executable.
 cc_binary(
@@ -213,12 +220,6 @@ cc_binary(
         ":libovms_version_impl",
     ],
     linkshared = 1,
-    visibility = ["//visibility:public"],
-)
-
-cc_import(
-    name = "ovms_mediapipe_runtime_shared_import",
-    shared_library = ":ovms_mediapipe_runtime_shared",
     visibility = ["//visibility:public"],
 )
 

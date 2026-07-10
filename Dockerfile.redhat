@@ -425,7 +425,7 @@ ENV PATH="$PATH:/ovms/bin"
 ENTRYPOINT ["/bin/bash", "-c", "if [ -d /ovms/share/espeak-ng-data ]; then export ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data; fi; exec /ovms/bin/ovms \"$@\"", "--"]
 
 COPY --from=pkg /ovms_release /ovms
-COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy /ovms/python_deps/numpy
+COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy /ovms/python_deps/
 COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy-*.dist-info /ovms/python_deps/
 COPY --from=pkg /usr/local/lib/python3.12/site-packages/jinja2 /ovms/python_deps/jinja2
 COPY --from=pkg /usr/local/lib/python3.12/site-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
