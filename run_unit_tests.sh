@@ -94,7 +94,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     if [ "$CHECK_COVERAGE" == "1" ] ; then
         if bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \
-            ${UNIT_TEST_TARGETS} ${SHARED_OPTIONS} > ${TEST_LOG} 2>&1 ; then
+            ${UNIT_TEST_TARGETS} > ${TEST_LOG} 2>&1 ; then
             if ! generate_coverage_report ; then
                 compress_logs
                 exit 1
