@@ -24,7 +24,7 @@
 #include <utility>
 #include <vector>
 
-#include "openvino/genai/whisper_pipeline.hpp"
+#include "openvino/genai/automatic_speech_recognition/pipeline.hpp"
 #include "src/executor_base.hpp"
 #include "src/logging.hpp"
 
@@ -32,15 +32,15 @@ namespace ovms {
 
 struct SttServableExecutionContext {
     std::vector<float> rawSpeech;
-    ov::genai::WhisperGenerationConfig config;
+    ov::genai::ASRGenerationConfig config;
     std::function<ov::genai::StreamingStatus(std::string)> streamerCallback;
     std::function<void()> onFinished;
-    std::promise<ov::genai::WhisperDecodedResults> finishedPromise;
-    std::future<ov::genai::WhisperDecodedResults> finished;
+    std::promise<ov::genai::ASRDecodedResults> finishedPromise;
+    std::future<ov::genai::ASRDecodedResults> finished;
 
     SttServableExecutionContext(
         std::vector<float> rawSpeech,
-        ov::genai::WhisperGenerationConfig config,
+        ov::genai::ASRGenerationConfig config,
         std::function<ov::genai::StreamingStatus(std::string)> streamerCallback,
         std::function<void()> onFinished) :
         rawSpeech(std::move(rawSpeech)),
@@ -51,10 +51,10 @@ struct SttServableExecutionContext {
 };
 
 struct SttExecutor : public Executor<std::shared_ptr<SttServableExecutionContext>> {
-    std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
+    std::shared_ptr<ov::genai::ASRPipeline> sttPipeline;
     std::mutex& sttPipelineMutex;
 
-    SttExecutor(std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline, std::mutex& sttPipelineMutex) :
+    SttExecutor(std::shared_ptr<ov::genai::ASRPipeline> sttPipeline, std::mutex& sttPipelineMutex) :
         sttPipeline(std::move(sttPipeline)),
         sttPipelineMutex(sttPipelineMutex) {}
 
@@ -85,7 +85,7 @@ struct SttExecutor : public Executor<std::shared_ptr<SttServableExecutionContext
 
 class SttExecutorWrapper : public ExecutorWrapper<SttExecutor> {
 public:
-    SttExecutorWrapper(std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline, std::mutex& sttPipelineMutex) :
+    SttExecutorWrapper(std::shared_ptr<ov::genai::ASRPipeline> sttPipeline, std::mutex& sttPipelineMutex) :
         ExecutorWrapper(s2t_calculator_logger, std::make_shared<SttExecutor>(std::move(sttPipeline), sttPipelineMutex)) {}
 };
 

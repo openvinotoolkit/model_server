@@ -91,19 +91,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     modelCacheDirectory(modelCacheDirectory),
     metricRegistry(registry),
     pythonBackend(pythonBackend) {
-    try {
-        this->ieCore = std::make_unique<ov::Core>();
-        ov::AnyMap cpuProperties;
-        Status status = applyDefaultCpuProperties(cpuProperties);
-        if (!status.ok()) {
-            SPDLOG_CRITICAL("Failed to apply default CPU properties. Reason: {}", status.string());
-            throw std::runtime_error("Failed to apply default CPU properties");
-        }
-        this->ieCore->set_property("CPU", cpuProperties);
-    } catch (const std::exception& ex) {
-        SPDLOG_CRITICAL("Failed to initialize OpenVINO Core with CPU properties. Reason: {}", ex.what());
-        throw;
-    }
+    this->ieCore = std::make_unique<ov::Core>();
 
     OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
     // Take --cache_dir from CLI
@@ -196,7 +184,6 @@ ModelManager::~ModelManager() {
 
 Status ModelManager::start(const Config& config) {
     this->watcherIntervalMillisec = config.filesystemPollWaitMilliseconds();
-    sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     resourcesCleanupIntervalMillisec = config.resourcesCleanerPollWaitSeconds() * 1000;
     Status status;
     this->startedWithConfigFile = (config.configPath() != "");
@@ -210,7 +197,7 @@ Status ModelManager::start(const Config& config) {
         return status;
     }
     startWatcher(isStartedWithConfigFile());
-    if (sequenceCleaupIntervalMinutes > 0 || resourcesCleanupIntervalMillisec > 0)
+    if (resourcesCleanupIntervalMillisec > 0)
         startCleaner();
 
     return status;
@@ -228,7 +215,7 @@ void ModelManager::startWatcher(bool watchConfigFile) {
 void ModelManager::startCleaner() {
     if ((!cleanerStarted)) {
         std::future<void> exitSignal = cleanerExitTrigger.get_future();
-        std::thread t(std::thread(&ModelManager::cleanerRoutine, this, resourcesCleanupIntervalMillisec, sequenceCleaupIntervalMinutes, std::move(exitSignal)));
+        std::thread t(std::thread(&ModelManager::cleanerRoutine, this, resourcesCleanupIntervalMillisec, std::move(exitSignal)));
         cleanerStarted = true;
         cleanerThread = std::move(t);
     }
@@ -286,10 +273,6 @@ Status ModelManager::startFromConfig() {
             config.targetDevice(),
             config.batchSize(),
             config.nireq(),
-            config.stateful(),
-            config.idleSequenceCleanup(),
-            config.lowLatencyTransformation(),
-            config.maxSequenceNumber(),
             this->modelCacheDirectory});
 
     if (!success) {
@@ -771,7 +754,7 @@ Status ModelManager::ConfigLoader::loadModels(ModelManager& modelManager, const 
         if (!status.ok()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
         }
-        if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL || status == StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL) {
+        if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after pipelines are revalidated", modelName);
             auto it = modelManager.servedModelConfigs.find(modelName);
             if (it == modelManager.servedModelConfigs.end()) {
@@ -1076,40 +1059,20 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
 
-void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalMiliseconds, uint32_t sequenceCleanerIntervalMinutes, std::future<void> cleanerExitSignal) {
+void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalMiliseconds, std::future<void> cleanerExitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started cleaner thread");
 
-    uint32_t sequenceCleanerIntervalMiliseconds = sequenceCleanerIntervalMinutes * 60 * 1000;
-
     FunctorResourcesCleaner functorResourcesCleaner{*this};
-    FunctorSequenceCleaner functorSequenceCleaner{globalSequencesViewer};
 
-    ovms::cleanerRoutine(resourcesCleanupIntervalMiliseconds, functorResourcesCleaner, sequenceCleanerIntervalMiliseconds, functorSequenceCleaner, cleanerExitSignal);
+    ovms::cleanerRoutine(resourcesCleanupIntervalMiliseconds, functorResourcesCleaner, cleanerExitSignal);
 
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped cleaner thread");
 }
 
-void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal) {
-    uint32_t currentResourcesWaitTime = resourcesCleanupInterval;
-    uint32_t currentSequenceWaitTime = sequenceCleanerInterval;
-    bool shouldCheckForResourceCleanup = resourcesCleanupInterval != 0;
-    bool shouldCheckForSequenceCleanup = sequenceCleanerInterval != 0;
-    uint32_t currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
-
-    while (cleanerExitSignal.wait_for(std::chrono::milliseconds(currentWaitTime)) == std::future_status::timeout) {
+void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, std::future<void>& cleanerExitSignal) {
+    while (cleanerExitSignal.wait_for(std::chrono::milliseconds(resourcesCleanupInterval)) == std::future_status::timeout) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Cleanup check cycle begin");
-
-        if (shouldCheckForResourceCleanup)
-            currentResourcesWaitTime = (currentResourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupInterval : currentResourcesWaitTime - currentWaitTime;
-        if (shouldCheckForSequenceCleanup)
-            currentSequenceWaitTime = (currentSequenceWaitTime - currentWaitTime) == 0 ? sequenceCleanerInterval : currentSequenceWaitTime - currentWaitTime;
-        currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
-
-        if (currentResourcesWaitTime == resourcesCleanupInterval && shouldCheckForResourceCleanup)
-            functorResourcesCleaner.cleanup();
-        if (currentSequenceWaitTime == sequenceCleanerInterval && shouldCheckForSequenceCleanup)
-            functorSequenceCleaner.cleanup();
-
+        functorResourcesCleaner.cleanup();
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Cleanup check cycle end");
     }
 }
@@ -1246,27 +1209,15 @@ void ModelManager::getVersionsToChange(
     versionsToRetireIn = std::move(versionsToRetire);
 }
 
-Status ModelManager::checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag) {
-    std::unique_lock modelsLock(modelsMtx);
-    auto modelIt = models.find(modelName);
-    if (models.end() == modelIt)
-        return StatusCode::OK;  // Model has not been loaded yet, so there are no restrictions regarding stateful flag setup
-
-    auto model = models[modelName];
-    if (model->isStateful() != configStatefulFlag)
-        return StatusCode::REQUESTED_MODEL_TYPE_CHANGE;
-    return StatusCode::OK;
+std::shared_ptr<Model> ModelManager::modelFactory(const std::string& name) {
+    return std::make_shared<Model>(name);
 }
 
-std::shared_ptr<Model> ModelManager::modelFactory(const std::string& name, const bool isStateful) {
-    return std::make_shared<Model>(name, isStateful, &this->globalSequencesViewer);
-}
-
-std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName, const bool isStateful) {
+std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName) {
     std::unique_lock modelsLock(modelsMtx);
     auto modelIt = models.find(modelName);
     if (models.end() == modelIt) {
-        models.insert({modelName, modelFactory(modelName, isStateful)});
+        models.insert({modelName, modelFactory(modelName)});
     }
     return models[modelName];
 }
@@ -1396,32 +1347,11 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     SPDLOG_LOGGER_TRACE(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
 
-    if (config.isStateful() && config.isDynamicParameterEnabled()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for stateful model {}. Dynamic shape and dynamic batch size not supported for stateful models.", config.getName());
-        return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL;
-    }
-    if (!config.isStateful()) {
-        if (config.isLowLatencyTransformationUsed()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested low latency transformation parameter for non stateful model {}.", config.getName());
-            return StatusCode::INVALID_NON_STATEFUL_MODEL_PARAMETER;
-        }
-    }
-
-    auto status = checkStatefulFlagChange(config.getName(), config.isStateful());
-    if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested model type change on model: {}. Stateful flag cannot be changed after model is loaded", config.getName());
-        return StatusCode::REQUESTED_MODEL_TYPE_CHANGE;
-    }
-
-    auto model = getModelIfExistCreateElse(config.getName(), config.isStateful());
+    auto model = getModelIfExistCreateElse(config.getName());
     if (model->isAnyVersionSubscribed()) {
         if (config.isDynamicParameterEnabled()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
             return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
-        }
-        if (config.isStateful()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested using stateful model {} but it is used in pipeline. Stateful model cannot be subscribed to pipeline.", config.getName());
-            return StatusCode::REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL;
         }
     }
 
@@ -1498,6 +1428,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     std::shared_ptr<model_versions_t> versionsToCleanup = std::make_shared<model_versions_t>();
     std::copy_if(versionsToRetire->begin(), versionsToRetire->end(), std::back_inserter(*versionsToCleanup), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); });
     versionsToRetire->erase(std::remove_if(versionsToRetire->begin(), versionsToRetire->end(), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); }), versionsToRetire->end());
+    Status status;
     if (versionsToRetire->size() > 0) {
         status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {

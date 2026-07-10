@@ -23,6 +23,8 @@
 #endif
 #include <vector>
 
+#include "src/utils/env_guard.hpp"
+
 namespace ovms {
 
 std::shared_ptr<spdlog::logger> gcs_logger = std::make_shared<spdlog::logger>("gcs");
@@ -30,7 +32,6 @@ std::shared_ptr<spdlog::logger> azurestorage_logger = std::make_shared<spdlog::l
 std::shared_ptr<spdlog::logger> s3_logger = std::make_shared<spdlog::logger>("s3");
 std::shared_ptr<spdlog::logger> modelmanager_logger = std::make_shared<spdlog::logger>("modelmanager");
 std::shared_ptr<spdlog::logger> dag_executor_logger = std::make_shared<spdlog::logger>("dag_executor");
-std::shared_ptr<spdlog::logger> sequence_manager_logger = std::make_shared<spdlog::logger>("sequence_manager");
 std::shared_ptr<spdlog::logger> capi_logger = std::make_shared<spdlog::logger>("C-API");
 #if (MEDIAPIPE_DISABLE == 0)
 std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logger>("mediapipe");
@@ -73,7 +74,6 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     s3_logger->set_pattern(default_pattern);
     modelmanager_logger->set_pattern(default_pattern);
     dag_executor_logger->set_pattern(default_pattern);
-    sequence_manager_logger->set_pattern(default_pattern);
     capi_logger->set_pattern(default_pattern);
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipe_logger->set_pattern(default_pattern);
@@ -93,7 +93,6 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
         s3_logger->sinks().push_back(sink);
         modelmanager_logger->sinks().push_back(sink);
         dag_executor_logger->sinks().push_back(sink);
-        sequence_manager_logger->sinks().push_back(sink);
         capi_logger->sinks().push_back(sink);
 #if (MEDIAPIPE_DISABLE == 0)
         mediapipe_logger->sinks().push_back(sink);
@@ -114,7 +113,6 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     set_log_level(log_level, s3_logger);
     set_log_level(log_level, modelmanager_logger);
     set_log_level(log_level, dag_executor_logger);
-    set_log_level(log_level, sequence_manager_logger);
     set_log_level(log_level, capi_logger);
 #if (MEDIAPIPE_DISABLE == 0)
     set_log_level(log_level, mediapipe_logger);
@@ -163,6 +161,9 @@ void configure_logger(const std::string& log_level, const std::string& log_path)
         FLAGS_minloglevel = google::GLOG_ERROR;
 #endif
 #endif
+    if (log_level == "DEBUG" || log_level == "TRACE") {
+        SetEnvironmentVar("OPENVINO_LOG_LEVEL", "4");
+    }
 }
 
 }  // namespace ovms

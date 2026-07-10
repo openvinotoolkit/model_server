@@ -18,10 +18,6 @@
 | `"plugin_config"` | `json/string`  |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvino.ai/2026/documentation/compatibility-and-support/supported-devices.html) and [performance tuning guide](./performance_tuning.md). Example: <br> `{"PERFORMANCE_HINT": "LATENCY"}`  |
 | `"nireq"` | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.|
 | `"target_device"` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"` |
-| `"stateful"` | `bool` | If set to true, model is loaded as stateful. |
-| `"idle_sequence_cleanup"` | `bool` | If set to true, model will be subject to periodic sequence cleaner scans.  See [idle sequence cleanup](stateful_models.md). |
-| `"max_sequence_number"` | `uint32` | Determines how many sequences can be handled concurrently by a model instance. |
-| `"low_latency_transformation"` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvino.ai/2026/openvino-workflow/running-inference/inference-request/stateful-models/obtaining-stateful-openvino-model.html#lowlatency2-transformation) on model load. |
 | `"metrics_enable"` | `bool` | Flag enabling [metrics](metrics.md) endpoint on rest_port. |
 | `"metrics_list"` | `string` | Comma separated list of [metrics](metrics.md). If unset, only default metrics will be enabled.|
 
@@ -44,7 +40,6 @@ Configuration options for the server are defined only via command-line options a
 | `grpc_workers` | `integer` | Number of the gRPC server instances (must be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. |
 | `rest_workers` | `integer` | Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. |
 | `file_system_poll_wait_seconds` | `integer` | Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. |
-| `sequence_cleaner_poll_wait_minutes` | `integer` | Time interval (in minutes) between next sequence cleaner scans. Sequences of the models that are subjects to idle sequence cleanup that have been inactive since the last scan are removed. Zero value disables sequence cleaner. See [idle sequence cleanup](stateful_models.md). It also sets the schedule for releasing free memory from the heap. |
 | `custom_node_resources_cleaner_interval_seconds` | `integer` | Time interval (in seconds) between two consecutive resources cleanup scans. Default is 1. Must be greater than 0. See [custom node development](custom_node_development.md). |
 | `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvino.ai/2026/documentation/openvino-extensibility.html). |
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level |
@@ -122,6 +117,7 @@ There are also additional environment variables that may change the behavior of 
 | `GIT_OPT_SET_SERVER_CONNECT_TIMEOUT`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
 | `GIT_OPT_SET_SERVER_TIMEOUT`        | `int`   | Timeout for reading from and writing to a remote server. Default value 4000 ms.                            |
 | `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |
+| `GIT_OPT_SET_ENABLE_SEARCH_PATHS`| `int`   | When set to 1, the pull functionality reads host-level git configuration locations like ~/.gitconfig. Default value 0.            |
 
 Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
 
@@ -138,8 +134,8 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
 | `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).            |
 | `--model_distribution_policy`         | `string`     | TENSOR_PARALLEL distributes tensor to multiple sockets/devices and processes it in parallel. PIPELINE_PARALLEL distributes different tensors to process by each device. Accepted values: `TENSOR_PARALLEL`, `PIPELINE_PARALLEL` or empty (default). |
-| `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Currently supported: [qwen3, gptoss, gemma4]                     |
-| `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Currently supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
+| `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [qwen3, gptoss, gemma4]                     |
+| `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
 
 ### Image generation

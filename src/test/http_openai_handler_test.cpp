@@ -28,6 +28,9 @@
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/apis/openai_responses.hpp"
+#include "../llm/language_model/legacy/servable.hpp"
+#include "../llm/visual_language_model/legacy/servable.hpp"
+#include "../client_connection.hpp"
 #include <openvino/genai/visual_language/pipeline.hpp>
 #include "../module_names.hpp"
 #include "../servablemanagermodule.hpp"
@@ -386,10 +389,11 @@ protected:
     }
 
     void assertRequestWithTools(std::string providedTools, std::string toolsChoice, absl::StatusCode status = absl::StatusCode::kOk) {
-        assertRequestWithTools(providedTools, toolsChoice, "", status);
+        assertRequestWithTools(providedTools, toolsChoice, std::vector<std::string>{}, status);
     }
 
-    void assertRequestWithTools(std::string providedTools, std::string toolsChoice, std::string expectedJson, absl::StatusCode status = absl::StatusCode::kOk) {
+    void assertRequestWithTools(std::string providedTools, std::string toolsChoice,
+        std::vector<std::string> expectedToolNames, absl::StatusCode status = absl::StatusCode::kOk) {
         std::string json = R"({
     "messages": [
       {"role": "user", "content": "What is the weather like in Paris today?"},
@@ -413,8 +417,13 @@ protected:
         std::optional<uint32_t> maxModelLength;
         std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
         ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength).code(), status) << json;
-        json = apiHandler->getProcessedJson();
-        EXPECT_EQ(json, expectedJson);
+        if (status == absl::StatusCode::kOk) {
+            const auto& toolMap = apiHandler->getRequest().toolNameSchemaMap;
+            EXPECT_EQ(toolMap.size(), expectedToolNames.size());
+            for (const auto& name : expectedToolNames) {
+                EXPECT_TRUE(toolMap.count(name) > 0) << "Expected tool '" << name << "' not found in toolNameSchemaMap";
+            }
+        }
     }
 };
 
@@ -760,116 +769,6 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUser
     ASSERT_TRUE(chatHistory[0].contains("content"));
     EXPECT_EQ(chatHistory[0]["role"], "user");
     EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
-    if (endpoint() == ovms::Endpoint::CHAT_COMPLETIONS) {
-        // Chat completions with simple text does not mutate the JSON, so processedJson is empty
-        EXPECT_TRUE(apiHandler->getProcessedJson().empty());
-    }
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonContainsEquivalentMessages) {
-    std::string json = createTextRequest("What is OpenVINO?");
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-
-    // For Responses, processedJson is always built from chatHistory.
-    // For chat/completions with simple text, processedJson is empty (original body is used instead).
-    // In both cases, the chatHistory should be equivalent.
-    auto& chatHistory = apiHandler->getChatHistory();
-    ASSERT_EQ(chatHistory.size(), 1);
-    EXPECT_EQ(chatHistory[0]["role"], "user");
-    EXPECT_EQ(chatHistory[0]["content"], "What is OpenVINO?");
-
-#if (PYTHON_DISABLE == 0)
-    if (endpoint() == ovms::Endpoint::RESPONSES) {
-        // Responses path builds processedJson with messages array
-        const std::string& processedJson = apiHandler->getProcessedJson();
-        ASSERT_FALSE(processedJson.empty()) << "Responses should build processedJson";
-        // Verify it contains a messages array with the correct content
-        rapidjson::Document processedDoc;
-        processedDoc.Parse(processedJson.c_str());
-        ASSERT_FALSE(processedDoc.HasParseError());
-        ASSERT_TRUE(processedDoc.HasMember("messages"));
-        ASSERT_TRUE(processedDoc["messages"].IsArray());
-        ASSERT_EQ(processedDoc["messages"].Size(), 1u);
-        EXPECT_STREQ(processedDoc["messages"][0]["role"].GetString(), "user");
-        EXPECT_STREQ(processedDoc["messages"][0]["content"].GetString(), "What is OpenVINO?");
-    }
-#else
-    if (endpoint() == ovms::Endpoint::RESPONSES) {
-        EXPECT_TRUE(apiHandler->getProcessedJson().empty()) << "processedJson should be empty when Python is disabled";
-    }
-#endif
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonEquivalentMultiMessage) {
-    // Test with array input containing multiple messages
-    std::string json;
-    if (endpoint() == ovms::Endpoint::RESPONSES) {
-        json = R"({"model":"llama","input":[
-            {"role":"system","content":"You are helpful."},
-            {"role":"user","content":"Hello"}
-        ]})";
-    } else {
-        json = R"({"model":"llama","messages":[
-            {"role":"system","content":"You are helpful."},
-            {"role":"user","content":"Hello"}
-        ]})";
-    }
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-
-    auto& chatHistory = apiHandler->getChatHistory();
-    ASSERT_EQ(chatHistory.size(), 2);
-    EXPECT_EQ(chatHistory[0]["role"], "system");
-    EXPECT_EQ(chatHistory[0]["content"], "You are helpful.");
-    EXPECT_EQ(chatHistory[1]["role"], "user");
-    EXPECT_EQ(chatHistory[1]["content"], "Hello");
-
-#if (PYTHON_DISABLE == 0)
-    if (endpoint() == ovms::Endpoint::RESPONSES) {
-        const std::string& processedJson = apiHandler->getProcessedJson();
-        ASSERT_FALSE(processedJson.empty());
-        rapidjson::Document processedDoc;
-        processedDoc.Parse(processedJson.c_str());
-        ASSERT_FALSE(processedDoc.HasParseError());
-        ASSERT_TRUE(processedDoc.HasMember("messages"));
-        ASSERT_EQ(processedDoc["messages"].Size(), 2u);
-        EXPECT_STREQ(processedDoc["messages"][0]["role"].GetString(), "system");
-        EXPECT_STREQ(processedDoc["messages"][0]["content"].GetString(), "You are helpful.");
-        EXPECT_STREQ(processedDoc["messages"][1]["role"].GetString(), "user");
-        EXPECT_STREQ(processedDoc["messages"][1]["content"].GetString(), "Hello");
-    }
-#else
-    if (endpoint() == ovms::Endpoint::RESPONSES) {
-        EXPECT_TRUE(apiHandler->getProcessedJson().empty()) << "processedJson should be empty when Python is disabled";
-    }
-#endif
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ProcessedJsonIncludesToolsWhenPresent) {
-    std::string json = createToolRequest("\"auto\"");
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-
-    EXPECT_TRUE(apiHandler->areToolsAvailable());
-
-#if (PYTHON_DISABLE == 0)
-    if (endpoint() == ovms::Endpoint::RESPONSES) {
-        const std::string& processedJson = apiHandler->getProcessedJson();
-        ASSERT_FALSE(processedJson.empty());
-        rapidjson::Document processedDoc;
-        processedDoc.Parse(processedJson.c_str());
-        ASSERT_FALSE(processedDoc.HasParseError());
-        ASSERT_TRUE(processedDoc.HasMember("messages"));
-        ASSERT_TRUE(processedDoc.HasMember("tools"));
-        ASSERT_TRUE(processedDoc["tools"].IsArray());
-        ASSERT_GT(processedDoc["tools"].Size(), 0u);
-    }
-#else
-    if (endpoint() == ovms::Endpoint::RESPONSES) {
-        EXPECT_TRUE(apiHandler->getProcessedJson().empty()) << "processedJson should be empty when Python is disabled";
-    }
-#endif
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTokenLimitSetsMaxTokens) {
@@ -915,15 +814,13 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultimodalInputImage
     auto apiHandler = parseCurrentRequest(json);
     ASSERT_NE(apiHandler, nullptr);
 
-    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageJpegBase64Succeeds) {
-    const std::string base64Image = "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg==";
-    std::string json = createMultimodalRequestWithImageUrl(base64Image);
-    auto apiHandler = parseCurrentRequest(json);
-    ASSERT_NE(apiHandler, nullptr);
-    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+    // Image decoding is deferred to ImageDecodingProcessor; imageHistory is no longer populated.
+    // The content array with image_url is preserved in chatHistory.
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1u);
+    auto content = chatHistory[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "image_url");
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageOnlyNoTextSucceeds) {
@@ -931,7 +828,9 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageOnlyNoTextSucce
     std::string json = createImageOnlyRequest(base64Image);
     auto apiHandler = parseCurrentRequest(json);
     ASSERT_NE(apiHandler, nullptr);
-    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+    auto content = apiHandler->getChatHistory()[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultipleImagesInOneTurnSucceeds) {
@@ -940,147 +839,73 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultipleImagesInOneT
     auto apiHandler = parseCurrentRequest(json);
     ASSERT_NE(apiHandler, nullptr);
 
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 3);
-    // All images belong to the same user turn (chat history index 0).
-    for (const auto& entry : imageHistory) {
-        EXPECT_EQ(entry.first, 0u);
-    }
+    // Image decoding is deferred; imageHistory is no longer populated.
+    // The content array (1 text + 3 images) is preserved in chatHistory.
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1u);
+    auto content = chatHistory[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content.size(), 4u);  // 1 text + 3 image_url entries
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "image_url");
+    EXPECT_EQ(content[2]["type"].as_string().value_or(""), "image_url");
+    EXPECT_EQ(content[3]["type"].as_string().value_or(""), "image_url");
 }
 
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageEmptyUrlFails) {
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageEmptyUrlPreservedInChatHistory) {
+    // Image loading is deferred to ImageDecodingProcessor; the handler only validates structure.
+    // An empty URL passes structural validation and is preserved in chatHistory.
     std::string json = createImageOnlyRequest("");
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json);
-    // Empty URL is treated as a (non-existent) local filesystem path; with no allowed_local_media_path
-    // configured, the loader rejects it as "Loading images from local filesystem is disabled."
-    EXPECT_EQ(status, absl::InvalidArgumentError("Loading images from local filesystem is disabled."));
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageMalformedBase64Fails) {
-    std::string json = createImageOnlyRequest("data:image/png;base64,NOT_BASE64!@#");
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json);
-    EXPECT_EQ(status, absl::InvalidArgumentError("Invalid base64 string in request"));
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageStringWithNoMimePrefixFails) {
-    // Without a "data:..." prefix the URL falls through to the local-filesystem loader,
-    // which is disabled by default.
-    std::string json = createImageOnlyRequest("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==");
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json);
-    EXPECT_EQ(status, absl::InvalidArgumentError("Loading images from local filesystem is disabled."));
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemSucceeds) {
-    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
-    std::string json = createImageOnlyRequest(imageUrl);
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json,
-        getGenericFullPathForSrcTest("/ovms/src/test/binaryutils"));
-    ASSERT_EQ(status, absl::OkStatus());
+    auto apiHandler = parseCurrentRequest(json);
     ASSERT_NE(apiHandler, nullptr);
-    ASSERT_EQ(apiHandler->getImageHistory().size(), 1);
-    auto [index, image] = apiHandler->getImageHistory()[0];
-    EXPECT_EQ(index, 0u);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    auto content = apiHandler->getChatHistory()[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
+    EXPECT_EQ(content[0]["image_url"]["url"].as_string().value_or("MISSING"), "");
 }
 
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemNotWithinAllowedPathFails) {
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageMalformedBase64PreservedInChatHistory) {
+    // Malformed base64 is not validated at parse time; decoding happens in ImageDecodingProcessor.
+    std::string json = createImageOnlyRequest("data:image/png;base64,NOT_BASE64!@#");
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
+    auto content = apiHandler->getChatHistory()[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageStringWithNoMimePrefixPreservedInChatHistory) {
+    // Without a "data:..." prefix the URL is treated as a local filesystem path
+    // at decode time. The handler no longer rejects at parse; ImageDecodingProcessor handles it.
+    std::string json = createImageOnlyRequest("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==");
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
+    auto content = apiHandler->getChatHistory()[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemPreservesUrlInChatHistory) {
+    // Image loading from local filesystem is deferred to ImageDecodingProcessor.
+    // The handler now just preserves the URL in chatHistory.
     const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
     std::string json = createImageOnlyRequest(imageUrl);
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json,
-        getGenericFullPathForSrcTest("/ovms/src/test/llm"));
-    EXPECT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
+    auto content = apiHandler->getChatHistory()[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
+    EXPECT_FALSE(content[0]["image_url"]["url"].as_string().value_or("").empty());
 }
 
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemPathTraversalRejected) {
-    std::string imageUrlWithEscape = getGenericFullPathForSrcTest("/ovms/src/test/../test/binaryutils/rgb.jpg");
-    std::string json = createImageOnlyRequest(imageUrlWithEscape);
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::string("/ovms/"));
-    std::string expectedMessage = "Path " + imageUrlWithEscape + " escape with .. is forbidden.";
-    EXPECT_EQ(status, absl::InvalidArgumentError(expectedMessage.c_str()));
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemPrefixPathBypassPrevented) {
-    const std::string allowedLocalMediaPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
-    const std::string siblingPrefixPath = allowedLocalMediaPath + "_private/rgb.jpg";
-    std::string json = createImageOnlyRequest(siblingPrefixPath);
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, allowedLocalMediaPath);
-    EXPECT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemNonexistentPath) {
-    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/");
-    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/not_existing.jpeg");
-    std::string json = createImageOnlyRequest(imageUrl);
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, allowedPath);
-    EXPECT_EQ(status, absl::InvalidArgumentError("Image file parsing failed"));
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystemSymlinkEscapeIsRejected) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Creating filesystem symlinks on Windows requires elevated privileges and is unreliable in CI.";
-#else
-    // The allowed directory contains a symlink pointing to a sibling directory where the real
-    // image lives. Accessing the image through the symlink appears to be inside the allowlist,
-    // but its canonical location is outside it - the authorization check must resolve the
-    // symlink before the allowlist comparison.
-    const std::filesystem::path realImageDir = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
-    const std::filesystem::path allowedRoot = std::filesystem::temp_directory_path() / "ovms_symlink_allowlist_test_param";
-    std::error_code ec;
-    std::filesystem::remove_all(allowedRoot, ec);
-    ASSERT_TRUE(std::filesystem::create_directories(allowedRoot, ec)) << ec.message();
-    const std::filesystem::path symlinkInsideAllowed = allowedRoot / "linked";
-    std::filesystem::create_directory_symlink(realImageDir, symlinkInsideAllowed, ec);
-    if (ec) {
-        std::filesystem::remove_all(allowedRoot);
-        GTEST_SKIP() << "Cannot create symlink for test: " << ec.message();
-    }
-    const std::string imageUrl = (symlinkInsideAllowed / "rgb.jpg").string();
-    std::string json = createImageOnlyRequest(imageUrl);
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, allowedRoot.string());
-    std::filesystem::remove_all(allowedRoot, ec);
-    EXPECT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
-#endif
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlNotInAllowedDomainsFails) {
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlNotInAllowedDomainsPreservesUrlInChatHistory) {
+    // Domain validation is deferred to ImageDecodingProcessor; handler just preserves URL.
     std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
-        std::vector<std::string>{"wikipedia.com"});
-    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlPartialDomainMatchFails) {
-    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
-        std::vector<std::string>{"githubusercontent.com"});
-    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlSuffixMatchAllowedDomainFails) {
-    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
-        std::vector<std::string>{"host.raw.githubusercontent.com"});
-    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
-}
-
-TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlWildcardPatternNotSupported) {
-    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
-    std::shared_ptr<ovms::OpenAIApiHandler> apiHandler;
-    auto status = parseCurrentRequestWithMediaAuth(apiHandler, json, std::nullopt,
-        std::vector<std::string>{"*githubusercontent.com"});
-    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
+    auto apiHandler = parseCurrentRequest(json);
+    ASSERT_NE(apiHandler, nullptr);
+    auto content = apiHandler->getChatHistory()[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "image_url");
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1103,6 +928,32 @@ static std::vector<int64_t> createHermes3ToolCallTokens(ov::genai::Tokenizer& to
     auto generatedTensor = tokenizer.encode(toolCall, ov::genai::add_special_tokens(true)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     return generatedTokens;
+}
+
+// Test helper: wraps the old serializeStreamingChunk(string, reason) behaviour for migration period.
+// Calls outputParser->parseChunk when a parser is present; otherwise builds a trivial content delta.
+static std::string serializeStreamingChunkFromText(ovms::OpenAIApiHandler& handler,
+    const std::string& text,
+    ov::genai::GenerationFinishReason finishReason) {
+    const auto& outputParser = handler.getOutputParser();
+    rapidjson::Document delta;
+    if (outputParser != nullptr) {
+        auto parsed = outputParser->parseChunk(text, {}, handler.areToolsAvailable(), finishReason);
+        if (!parsed.has_value()) {
+            if (finishReason == ov::genai::GenerationFinishReason::NONE)
+                return "";
+            delta = rapidjson::Document{};
+        } else {
+            delta = std::move(*parsed);
+        }
+    } else {
+        delta.SetObject();
+        rapidjson::Document::AllocatorType& alloc = delta.GetAllocator();
+        rapidjson::Value deltaObj(rapidjson::kObjectType);
+        deltaObj.AddMember("content", rapidjson::Value(text.c_str(), alloc), alloc);
+        delta.AddMember("delta", deltaObj, alloc);
+    }
+    return handler.serializeStreamingChunk(std::move(delta), finishReason);
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsIntermediateNullAndFinallyToolCallsFinishReason) {
@@ -1145,7 +996,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsIntermediateN
 
     std::vector<std::string> serializedChunks;
     for (const auto& [chunk, finishReason] : stream) {
-        std::string serialized = apiHandler->serializeStreamingChunk(chunk, finishReason);
+        std::string serialized = serializeStreamingChunkFromText(*apiHandler, chunk, finishReason);
         if (!serialized.empty()) {
             serializedChunks.push_back(serialized);
         }
@@ -1204,7 +1055,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsToolCallsFini
 
     std::vector<std::string> serializedChunks;
     for (const auto& [chunk, finishReason] : stream) {
-        std::string serialized = apiHandler->serializeStreamingChunk(chunk, finishReason);
+        std::string serialized = serializeStreamingChunkFromText(*apiHandler, chunk, finishReason);
         if (!serialized.empty()) {
             serializedChunks.push_back(serialized);
         }
@@ -1303,6 +1154,39 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseVLMSupportsToolCallsF
     std::string serialized = apiHandler->serializeUnaryResponse(results, toolCall);
 
     ASSERT_NE(serialized.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesMultipleInputTextPartsPreservedAsContentArray) {
+    // When a single Responses input item has multiple input_text content entries,
+    // ChatHistorySink builds a content array with one {"type":"text"} entry per part.
+    // TextContentNormalizationProcessor then joins them with '\n'.
+    std::string json = R"({
+    "model": "llama",
+    "input": [{
+      "role": "user",
+      "content": [
+        {"type": "input_text", "text": "First part."},
+        {"type": "input_text", "text": "Second part."}
+      ]
+    }]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // After parsing, chatHistory content is a two-element array — both text parts are preserved.
+    auto content = apiHandler->getChatHistory()[0]["content"];
+    ASSERT_TRUE(content.is_array());
+    ASSERT_EQ(content.size(), 2u);
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[0]["text"].as_string().value_or(""), "First part.");
+    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[1]["text"].as_string().value_or(""), "Second part.");
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsOutputText) {
@@ -1570,11 +1454,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContains
     ASSERT_EQ(inProgressChunk.find("\"type\":\"response.created\""), std::string::npos) << "Only in_progress event: " << inProgressChunk;
 
     // Phase 3: Empty chunk should produce no output
-    std::string secondChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
+    std::string secondChunk = serializeStreamingChunkFromText(*apiHandler, "", ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(secondChunk.empty()) << "Empty text should produce no output: " << secondChunk;
 
     // Phase 4: First text delta - should include output_item.added + content_part.added + delta
-    std::string deltaChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    std::string deltaChunk = serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(deltaChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << deltaChunk;
     ASSERT_NE(deltaChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << deltaChunk;
     ASSERT_NE(deltaChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << deltaChunk;
@@ -1589,7 +1473,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesContains
     ASSERT_LT(contentPartAddedPos, firstDeltaPos) << "content_part.added must come before delta";
 
     // Phase 5: Final chunk with finish reason
-    std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
+    std::string finalChunk = serializeStreamingChunkFromText(*apiHandler, " world", ov::genai::GenerationFinishReason::STOP);
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.done\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.content_part.done\""), std::string::npos) << finalChunk;
@@ -1635,12 +1519,12 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReas
     ASSERT_EQ(inProgressChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "output_item.added should be deferred: " << inProgressChunk;
 
     // Phase 2: Reasoning chunk with <think> tag - should emit reasoning init + delta
-    std::string reasoningChunk = apiHandler->serializeStreamingChunk("<think>", ov::genai::GenerationFinishReason::NONE);
+    std::string reasoningChunk = serializeStreamingChunkFromText(*apiHandler, "<think>", ov::genai::GenerationFinishReason::NONE);
     // <think> tag itself should be consumed by parser, no events
     // (parser returns nullopt for tag tokens)
 
     // Phase 3: Reasoning content
-    std::string reasoningContent = apiHandler->serializeStreamingChunk("Let me think", ov::genai::GenerationFinishReason::NONE);
+    std::string reasoningContent = serializeStreamingChunkFromText(*apiHandler, "Let me think", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(reasoningContent.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should have reasoning output_item.added: " << reasoningContent;
     ASSERT_NE(reasoningContent.find("\"type\":\"reasoning\""), std::string::npos) << "Output item should be reasoning type: " << reasoningContent;
     ASSERT_NE(reasoningContent.find("\"type\":\"response.reasoning_summary_part.added\""), std::string::npos) << reasoningContent;
@@ -1648,18 +1532,18 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReas
     ASSERT_NE(reasoningContent.find("\"delta\":\"Let me think\""), std::string::npos) << reasoningContent;
 
     // Phase 4: More reasoning
-    std::string moreReasoning = apiHandler->serializeStreamingChunk(" harder", ov::genai::GenerationFinishReason::NONE);
+    std::string moreReasoning = serializeStreamingChunkFromText(*apiHandler, " harder", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(moreReasoning.find("\"type\":\"response.reasoning_summary_text.delta\""), std::string::npos) << moreReasoning;
     ASSERT_NE(moreReasoning.find("\"delta\":\" harder\""), std::string::npos) << moreReasoning;
     // Should NOT have another output_item.added
     ASSERT_EQ(moreReasoning.find("\"type\":\"response.output_item.added\""), std::string::npos) << "No repeated init: " << moreReasoning;
 
     // Phase 5: End of reasoning with </think>
-    std::string endThink = apiHandler->serializeStreamingChunk("</think>", ov::genai::GenerationFinishReason::NONE);
+    std::string endThink = serializeStreamingChunkFromText(*apiHandler, "</think>", ov::genai::GenerationFinishReason::NONE);
     // </think> tag consumed by parser
 
     // Phase 6: Content chunk - should close reasoning and open message
-    std::string contentChunk = apiHandler->serializeStreamingChunk("The answer", ov::genai::GenerationFinishReason::NONE);
+    std::string contentChunk = serializeStreamingChunkFromText(*apiHandler, "The answer", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(contentChunk.find("\"type\":\"response.reasoning_summary_text.done\""), std::string::npos) << "Should close reasoning: " << contentChunk;
     ASSERT_NE(contentChunk.find("\"type\":\"response.reasoning_summary_part.done\""), std::string::npos) << contentChunk;
     // Message item should be at output_index 1
@@ -1668,7 +1552,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReas
     ASSERT_NE(contentChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << contentChunk;
 
     // Phase 7: Final chunk
-    std::string finalChunk = apiHandler->serializeStreamingChunk(" is 42", ov::genai::GenerationFinishReason::STOP);
+    std::string finalChunk = serializeStreamingChunkFromText(*apiHandler, " is 42", ov::genai::GenerationFinishReason::STOP);
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.output_text.done\""), std::string::npos) << finalChunk;
     ASSERT_NE(finalChunk.find("\"type\":\"response.content_part.done\""), std::string::npos) << finalChunk;
@@ -1701,7 +1585,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkEmptyPrimingDoesNotP
 
     // Empty priming call: should emit only lifecycle events, never output_text.delta,
     // and must not move the parser past the reasoning start tag.
-    std::string primingChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::NONE);
+    std::string primingChunk = apiHandler->serializeStreamingChunk(rapidjson::Document{}, ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(primingChunk.find("\"type\":\"response.created\""), std::string::npos) << primingChunk;
     ASSERT_NE(primingChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << primingChunk;
     ASSERT_EQ(primingChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
@@ -1711,8 +1595,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkEmptyPrimingDoesNotP
 
     // Now the parser must still recognise the reasoning start tag and route the
     // following text to reasoning, not content.
-    apiHandler->serializeStreamingChunk("<think>", ov::genai::GenerationFinishReason::NONE);
-    std::string reasoningChunk = apiHandler->serializeStreamingChunk("hello", ov::genai::GenerationFinishReason::NONE);
+    serializeStreamingChunkFromText(*apiHandler, "<think>", ov::genai::GenerationFinishReason::NONE);
+    std::string reasoningChunk = serializeStreamingChunkFromText(*apiHandler, "hello", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(reasoningChunk.find("\"type\":\"response.reasoning_summary_text.delta\""), std::string::npos)
         << "Reasoning text must be routed to reasoning_summary_text.delta: " << reasoningChunk;
     ASSERT_EQ(reasoningChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
@@ -1743,7 +1627,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithoutR
     ASSERT_EQ(inProgressChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should be deferred: " << inProgressChunk;
 
     // Content without reasoning - should emit message init events on first content
-    std::string contentChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    std::string contentChunk = serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(contentChunk.find("\"type\":\"response.output_item.added\""), std::string::npos) << "Should init message: " << contentChunk;
     ASSERT_NE(contentChunk.find("\"type\":\"response.content_part.added\""), std::string::npos) << contentChunk;
     ASSERT_NE(contentChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos) << contentChunk;
@@ -1752,7 +1636,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithoutR
     ASSERT_EQ(contentChunk.find("\"type\":\"response.reasoning_summary"), std::string::npos) << "No reasoning: " << contentChunk;
 
     // Final chunk
-    std::string finalChunk = apiHandler->serializeStreamingChunk(" world", ov::genai::GenerationFinishReason::STOP);
+    std::string finalChunk = serializeStreamingChunkFromText(*apiHandler, " world", ov::genai::GenerationFinishReason::STOP);
     ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
 }
 
@@ -1793,10 +1677,10 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesEmitsInc
     apiHandler->serializeStreamingCreatedEvent();
     apiHandler->serializeStreamingInProgressEvent();
     // Delta
-    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE);
 
     // Final chunk with LENGTH finish reason
-    std::string finalChunk = apiHandler->serializeStreamingChunk("", ov::genai::GenerationFinishReason::LENGTH);
+    std::string finalChunk = serializeStreamingChunkFromText(*apiHandler, "", ov::genai::GenerationFinishReason::LENGTH);
 
     // Should emit response.incomplete instead of response.completed
     ASSERT_NE(finalChunk.find("\"type\":\"response.incomplete\""), std::string::npos) << finalChunk;
@@ -1846,7 +1730,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesEmitsCom
     apiHandler->serializeStreamingCreatedEvent();
     apiHandler->serializeStreamingInProgressEvent();
     // Delta + finish with STOP
-    std::string finalChunk = apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::STOP);
+    std::string finalChunk = serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::STOP);
 
     // Should emit response.completed, NOT response.incomplete
     ASSERT_NE(finalChunk.find("\"type\":\"response.completed\""), std::string::npos) << finalChunk;
@@ -1945,7 +1829,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventAfterPartialStreaming) 
     // Emit init events and some deltas first
     apiHandler->serializeStreamingCreatedEvent();
     apiHandler->serializeStreamingInProgressEvent();
-    apiHandler->serializeStreamingChunk("Hello", ov::genai::GenerationFinishReason::NONE);
+    serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE);
 
     // Then fail
     std::string failedEvent = apiHandler->serializeFailedEvent("Generation aborted");
@@ -2213,809 +2097,131 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseChatCompletionsVLMDec
     ASSERT_NE(serialized.find("\"finish_reason\":\"length\""), std::string::npos) << serialized;
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseCompletionsIncludesVerbosePayloadWhenEnabled) {
     std::string json = R"({
     "model": "llama",
-    "messages": [
-      {
-        "role": "user",
-        "content": [
-          {
-            "type": "text",
-            "text": "What is in this image?"
-          },
-          {
-            "type": "image_url",
-            "image_url": {
-              "url":  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="
-            }
-          }
-        ]
-      }
-    ]
-  })";
+    "stream": false,
+    "prompt": "What is OpenVINO?"
+    })";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 3);
-    std::vector<uint8_t> expectedBytes = {110, 181, 160};
-    for (size_t i = 0; i < image.get_size(); i++) {
-        EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
-    }
-    json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    apiHandler->enableVerboseResponse("templated prompt");
+
+    ov::genai::EncodedResults results;
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+
+    rapidjson::Document parsed;
+    parsed.Parse(apiHandler->serializeUnaryResponse(results).c_str());
+    ASSERT_FALSE(parsed.HasParseError());
+    ASSERT_TRUE(parsed.HasMember("__verbose"));
+    ASSERT_TRUE(parsed["__verbose"].IsObject());
+    ASSERT_STREQ(parsed["__verbose"]["prompt"].GetString(), "templated prompt");
+    ASSERT_STREQ(parsed["__verbose"]["content"].GetString(), "OVMS");
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttp) {
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
-    std::string json = R"({
-  "model": "llama",
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "text",
-          "text": "What is in this image?"
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url":  "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
-          }
-        }
-      ]
-    }
-  ]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    std::vector<std::string> allowedDomains = {"raw.githubusercontent.com"};
-    ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 225792);
-    json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpMultipleAllowedDomains) {
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
-    std::string json = R"({
-  "model": "llama",
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "text",
-          "text": "What is in this image?"
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url":  "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
-          }
-        }
-      ]
-    }
-  ]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    std::vector<std::string> allowedDomains = {"raw.githubusercontent.com", "githubusercontent.com", "google.com"};
-    ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 225792);
-    json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttps) {
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  "https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    std::vector<std::string> allowedDomains = {"raw.githubusercontent.com"};
-    ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 225792);
-    json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttpsAllowedDomainAll) {
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();  // CVS-180127
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  "https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    std::vector<std::string> allowedDomains = {"all"};
-    ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 225792);
-    json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseCompletionsGenerationOutputIncludesVerbosePayloadWhenEnabled) {
     std::string json = R"({
     "model": "llama",
-    "messages": [
-      {
-        "role": "user",
-        "content": [
-          {
-            "type": "image_url",
-            "image_url": {
-              "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg=="
-            }
-          }
-        ]
-      }
-    ]
-  })";
+    "stream": false,
+    "prompt": "What is OpenVINO?"
+    })";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 3);
-    std::vector<uint8_t> expectedBytes = {54, 245, 241};
-    for (size_t i = 0; i < image.get_size(); i++) {
-        EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
-    }
-    json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"\"}]}"));
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    apiHandler->enableVerboseResponse("templated prompt");
+
+    ov::Tensor outputIds = tokenizer->encode("OVMS", ov::genai::add_special_tokens(false)).input_ids;
+    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+    ov::genai::GenerationOutput generationOutput;
+    generationOutput.generated_ids = std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1]);
+    generationOutput.finish_reason = ov::genai::GenerationFinishReason::STOP;
+
+    rapidjson::Document parsed;
+    parsed.Parse(apiHandler->serializeUnaryResponse(std::vector<ov::genai::GenerationOutput>{generationOutput}).c_str());
+    ASSERT_FALSE(parsed.HasParseError());
+    ASSERT_TRUE(parsed.HasMember("__verbose"));
+    ASSERT_TRUE(parsed["__verbose"].IsObject());
+    ASSERT_STREQ(parsed["__verbose"]["prompt"].GetString(), "templated prompt");
+    ASSERT_STREQ(parsed["__verbose"]["content"].GetString(), "OVMS");
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefixFails) {
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseCompletionsVLMDecodedResultsIncludesVerbosePayloadWhenEnabled) {
     std::string json = R"({
     "model": "llama",
-    "messages": [
-      {
-        "role": "user",
-        "content": [
-          {
-            "type": "text",
-            "text": "What is in this image?"
-          },
-          {
-            "type": "image_url",
-            "image_url": {
-              "url":  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="
-            }
-          }
-        ]
-      }
-    ]
-  })";
+    "stream": false,
+    "prompt": "What is OpenVINO?"
+    })";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Loading images from local filesystem is disabled."));
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    apiHandler->enableVerboseResponse("templated prompt");
+
+    ov::genai::VLMDecodedResults results;
+    std::string text = "OVMS";
+    results.texts = {text};
+    results.finish_reasons = {ov::genai::GenerationFinishReason::STOP};
+
+    rapidjson::Document parsed;
+    parsed.Parse(apiHandler->serializeUnaryResponse(results, text).c_str());
+    ASSERT_FALSE(parsed.HasParseError());
+    ASSERT_TRUE(parsed.HasMember("__verbose"));
+    ASSERT_TRUE(parsed["__verbose"].IsObject());
+    ASSERT_STREQ(parsed["__verbose"]["prompt"].GetString(), "templated prompt");
+    ASSERT_STREQ(parsed["__verbose"]["content"].GetString(), "OVMS");
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesFailsUrlHttpNotAllowedDomain) {
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkCompletionsIncludesVerbosePayloadOnlyOnFinalChunk) {
     std::string json = R"({
-  "model": "llama",
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "text",
-          "text": "What is in this image?"
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url":  "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
-          }
-        }
-      ]
-    }
-  ]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    std::vector<std::string> allowedDomains = {"wikipedia.com"};
-    ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesFailsUrlMatchAllowedDomainPartially1) {
-    std::string json = R"({
-  "model": "llama",
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "text",
-          "text": "What is in this image?"
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url":  "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
-          }
-        }
-      ]
-    }
-  ]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    std::vector<std::string> allowedDomains = {"githubusercontent.com"};
-    ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesFailsUrlMatchAllowedDomainPartially2) {
-    std::string json = R"({
-  "model": "llama",
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "text",
-          "text": "What is in this image?"
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url":  "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
-          }
-        }
-      ]
-    }
-  ]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    std::vector<std::string> allowedDomains = {"host.raw.githubusercontent.com"};
-    ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesFailsRegexNotSupported) {
-    std::string json = R"({
-  "model": "llama",
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "text",
-          "text": "What is in this image?"
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url":  "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
-          }
-        }
-      ]
-    }
-  ]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    std::vector<std::string> allowedDomains = {"*githubusercontent.com"};
-    ASSERT_EQ(apiHandler->parseMessages(std::nullopt, allowedDomains), absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystem) {
-    std::string json = R"({
-  "model": "llama",
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "text",
-          "text": "What is in this image?"
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url":  ")" +
-                       getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg") + R"("
-          }
-        }
-      ]
-    }
-  ]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages(getGenericFullPathForSrcTest("/ovms/src/test")), absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 3);
-    json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAllowedPath) {
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  ")" + getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg") +
-                       R"("
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils")), absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 3);
-    json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAllowedPathMixedSeparators) {
-#ifndef _WIN32
-    GTEST_SKIP() << "Backslash is a valid filename character on POSIX and is not treated as a path separator.";
-#else
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  ")" + getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg") +
-                       R"("
-        }
-      }
-    ]
-  }
-]
-})";
+    "model": "llama",
+    "stream": true,
+    "prompt": "What is OpenVINO?"
+    })";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
 
-    std::string mixedSeparatorAllowedPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
-    std::replace(mixedSeparatorAllowedPath.begin(), mixedSeparatorAllowedPath.end(), '/', '\\');
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages(mixedSeparatorAllowedPath), absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 3);
-#endif
-}
+    apiHandler->enableVerboseResponse("templated prompt");
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithinAllowedPath) {
-    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
-    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/llm");
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  ")" + imageUrl +
-                       R"("
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
-}
+    rapidjson::Document intermediate;
+    intermediate.Parse(serializeStreamingChunkFromText(*apiHandler, "Hello", ov::genai::GenerationFinishReason::NONE).c_str());
+    ASSERT_FALSE(intermediate.HasParseError());
+    ASSERT_FALSE(intermediate.HasMember("__verbose"));
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemPrefixPathBypassPrevented) {
-    const std::string allowedLocalMediaPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
-    const std::string siblingPrefixPath = allowedLocalMediaPath + "_private/rgb.jpg";
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  ")" + siblingPrefixPath +
-                       R"("
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages(allowedLocalMediaPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
-}
+    apiHandler->setVerboseRawText("Hello world");
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeImagePathInsideAllowedPath) {
-    // Verify that a relative image path is resolved against the current working directory
-    // and accepted when the resolved location is inside allowed_local_media_path.
-    // Copy the fixture into cwd so the relative path is a single component (no "..",
-    // which FileSystem::isPathEscaped would reject before normalization).
-    const std::filesystem::path absoluteImage = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
-    const std::string relativeImageName = "ovms_relative_image_test_inside.jpg";
-    const std::filesystem::path relativeImageInCwd = std::filesystem::current_path() / relativeImageName;
-    std::error_code ec;
-    std::filesystem::copy_file(absoluteImage, relativeImageInCwd, std::filesystem::copy_options::overwrite_existing, ec);
-    ASSERT_FALSE(ec) << "Cannot copy fixture into cwd: " << ec.message();
-    const std::string allowedPath = std::filesystem::current_path().generic_string();
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  ")" + relativeImageName +
-                       R"("
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    const auto status = apiHandler->parseMessages(allowedPath);
-    std::filesystem::remove(relativeImageInCwd, ec);
-    ASSERT_EQ(status, absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 3);
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeImagePathOutsideAllowedPath) {
-    // A relative image path resolves against the current working directory; if the resolved
-    // location is outside allowed_local_media_path the request must be rejected.
-    const std::string imageUrl = "rgb.jpg";
-    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  ")" + imageUrl +
-                       R"("
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeAllowedPathInside) {
-    // A relative allowed_local_media_path is resolved against the current working directory.
-    // Use "." so allowlist resolves to cwd; copy the fixture into cwd so the (absolute) image
-    // path falls inside the resolved allowlist.
-    const std::filesystem::path absoluteImage = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
-    const std::string relativeImageName = "ovms_relative_allowed_test_inside.jpg";
-    const std::filesystem::path imageInCwd = std::filesystem::current_path() / relativeImageName;
-    std::error_code ec;
-    std::filesystem::copy_file(absoluteImage, imageInCwd, std::filesystem::copy_options::overwrite_existing, ec);
-    ASSERT_FALSE(ec) << "Cannot copy fixture into cwd: " << ec.message();
-    const std::string imageUrl = imageInCwd.generic_string();
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  ")" + imageUrl +
-                       R"("
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    const auto status = apiHandler->parseMessages(".");
-    std::filesystem::remove(imageInCwd, ec);
-    ASSERT_EQ(status, absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1);
-    auto [index, image] = imageHistory[0];
-    EXPECT_EQ(index, 0);
-    EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 3);
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemRelativeAllowedPathOutside) {
-    // A relative allowed_local_media_path resolves against the current working directory; an
-    // absolute image path located outside of that resolved directory must still be rejected.
-    const std::string allowedPath = ".";
-    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg");
-    if (std::filesystem::path(imageUrl).lexically_normal().string().rfind(
-            std::filesystem::current_path().lexically_normal().string(), 0) == 0) {
-        GTEST_SKIP() << "Image path is inside the current working directory; cannot exercise the outside-of-allowlist case.";
-    }
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  ")" + imageUrl +
-                       R"("
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemSymlinkEscapeIsRejected) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Creating filesystem symlinks on Windows requires elevated privileges and is unreliable in CI.";
-#else
-    // Build an allowed directory that contains a symlink pointing to a sibling directory holding the
-    // real image. The image, when accessed through the symlink, appears to live inside the allowlist,
-    // but its canonical location is outside it. This regression test ensures the authorization check
-    // resolves the symlink (via weakly_canonical) before the allowlist comparison.
-    const std::filesystem::path realImageDir = getGenericFullPathForSrcTest("/ovms/src/test/binaryutils");
-    const std::filesystem::path allowedRoot = std::filesystem::temp_directory_path() / "ovms_symlink_allowlist_test";
-    std::error_code ec;
-    std::filesystem::remove_all(allowedRoot, ec);
-    ASSERT_TRUE(std::filesystem::create_directories(allowedRoot, ec)) << ec.message();
-    const std::filesystem::path symlinkInsideAllowed = allowedRoot / "linked";
-    std::filesystem::create_directory_symlink(realImageDir, symlinkInsideAllowed, ec);
-    if (ec) {
-        std::filesystem::remove_all(allowedRoot);
-        GTEST_SKIP() << "Cannot create symlink for test: " << ec.message();
-    }
-    const std::string imageUrl = (symlinkInsideAllowed / "rgb.jpg").string();
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  ")" + imageUrl +
-                       R"("
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    const auto status = apiHandler->parseMessages(allowedRoot.string());
-    std::filesystem::remove_all(allowedRoot, ec);
-    ASSERT_EQ(status, absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
-#endif
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidPath) {
-    const std::string allowedPath = getGenericFullPathForSrcTest("/ovms/src/test/");
-    const std::string imageUrl = getGenericFullPathForSrcTest("/ovms/src/test/not_existing.jpeg");
-    std::string json = R"({
-  "model": "llama",
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "text",
-          "text": "What is in this image?"
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url":  ")" +
-                       imageUrl + R"("
-          }
-        }
-      ]
-    }
-  ]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(allowedPath), absl::InvalidArgumentError("Image file parsing failed"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidEscaped) {
-    std::string json = R"({
-"model": "llama",
-"messages": [
-  {
-    "role": "user",
-    "content": [
-      {
-        "type": "text",
-        "text": "What is in this image?"
-      },
-      {
-        "type": "image_url",
-        "image_url": {
-          "url":  ")" + getGenericFullPathForSrcTest("/ovms/src/test/../test/binaryutils/rgb.jpg") +
-                       R"("
-        }
-      }
-    ]
-  }
-]
-})";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    std::string expectedMessage = "Path " + getGenericFullPathForSrcTest("/ovms/src/test/../test/binaryutils/rgb.jpg") + " escape with .. is forbidden.";
-    EXPECT_EQ(apiHandler->parseMessages("/ovms/"), absl::InvalidArgumentError(expectedMessage.c_str()));
+    rapidjson::Document finalChunk;
+    finalChunk.Parse(serializeStreamingChunkFromText(*apiHandler, " world", ov::genai::GenerationFinishReason::STOP).c_str());
+    ASSERT_FALSE(finalChunk.HasParseError());
+    ASSERT_TRUE(finalChunk.HasMember("__verbose"));
+    ASSERT_TRUE(finalChunk["__verbose"].IsObject());
+    ASSERT_STREQ(finalChunk["__verbose"]["prompt"].GetString(), "templated prompt");
+    ASSERT_STREQ(finalChunk["__verbose"]["content"].GetString(), "Hello world");
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
@@ -3080,25 +2286,19 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 2);
-    std::vector<uint8_t> expectedBytes = {110, 181, 160};
-    std::vector<size_t> expectedImageIndexes = {0, 2};
-    size_t i = 0;
-    for (auto [index, image] : imageHistory) {
-        EXPECT_EQ(index, expectedImageIndexes[i++]);
-        EXPECT_EQ(image.get_element_type(), ov::element::u8);
-        EXPECT_EQ(image.get_size(), 3);
-        for (size_t i = 0; i < image.get_size(); i++) {
-            EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
-        }
-    }
-    json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"},"
-                                "{\"role\":\"assistant\",\"content\":\"No idea my friend.\"},"
-                                "{\"role\":\"user\",\"content\":\"What about this one?\"},"
-                                "{\"role\":\"assistant\",\"content\":\"Same thing. I'm not very good with images.\"},"
-                                "{\"role\":\"user\",\"content\":\"You were not trained with images, were you?\"}]}"));
+    // After Phase 6: images are preserved as JsonContainer arrays; imageHistory no longer populated.
+    // Messages 0 and 2 (user + image) have array content preserved.
+    EXPECT_TRUE(apiHandler->getChatHistory()[0]["content"].is_array());
+    EXPECT_EQ(apiHandler->getChatHistory()[0]["content"][1]["type"].as_string().value_or(""), "image_url");
+    EXPECT_TRUE(apiHandler->getChatHistory()[2]["content"].is_array());
+    EXPECT_EQ(apiHandler->getChatHistory()[2]["content"][1]["type"].as_string().value_or(""), "image_url");
+    // Messages 1 and 3 (assistant, text-only array) are preserved as arrays;
+    // TextContentNormalizationProcessor flattens them downstream.
+    EXPECT_TRUE(apiHandler->getChatHistory()[1]["content"].is_array());
+    EXPECT_EQ(apiHandler->getChatHistory()[1]["content"][0]["text"].as_string().value_or(""), "No idea my friend.");
+    EXPECT_TRUE(apiHandler->getChatHistory()[3]["content"].is_array());
+    EXPECT_EQ(apiHandler->getChatHistory()[3]["content"][0]["text"].as_string().value_or(""), "Same thing. I'm not very good with images.");
+    // processedJson is no longer consumed by production code; omit brittle format assertions.
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesWithInvalidContentTypeFails) {
@@ -3125,53 +2325,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesWithInvalidContentTypeFails)
     EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Unsupported content type"));
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyImageUrlFails) {
-    std::string json = R"({
-    "model": "llama",
-    "messages": [
-      {
-        "role": "user",
-        "content": [
-          {
-            "type": "image_url",
-            "image_url": {
-              "url":  ""
-            }
-          }
-        ]
-      }
-    ]
-  })";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Loading images from local filesystem is disabled."));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageUrlNotBase64Fails) {
-    std::string json = R"({
-    "model": "llama",
-    "messages": [
-      {
-        "role": "user",
-        "content": [
-          {
-            "type": "image_url",
-            "image_url": {
-              "url":  "base64,NOTBASE64"
-            }
-          }
-        ]
-      }
-    ]
-  })";
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid base64 string in request"));
-}
-
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayPreservesArray) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -3184,10 +2338,45 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid message structure - content array is empty"));
+    // Empty content arrays are accepted and preserved as-is. The
+    // EmptyContentArrayNormalizationProcessor converts them to null downstream.
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1u);
+    auto content = chatHistory[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content.size(), 0u);
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesMultipleTextItemsConcatenatesWithNewline) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesWithNoContentFieldAddsEmptyStringToChatHistory) {
+    // Assistant turns that carry only tool_calls legitimately omit the "content" field.
+    // parseMessages injects an empty-string content entry so chat templates always see
+    // the field.  Verifies the JsonContainer proxy write-through: lastMessage["content"] = ""
+    // on the value returned by chatHistory.last() DOES persist in chatHistory.
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "assistant",
+        "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "f", "arguments": "{}"}}]
+      },
+      {"role": "tool", "tool_call_id": "c1", "content": "result"}
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler =
+        std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 2u);
+    // The assistant turn had no "content" key — parseMessages must have injected "".
+    EXPECT_TRUE(chatHistory[0].contains("content"));
+    EXPECT_EQ(chatHistory[0]["content"].as_string().value_or("MISSING"), "");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesMultipleTextItemsPreservesContentArray) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -3210,15 +2399,18 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesMultipleTextItemsConcatenate
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-    // Non-Python path: chatHistory content is the concatenated string
+    // Content arrays are preserved; flattening is done by TextContentNormalizationProcessor downstream.
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 1);
-    EXPECT_EQ(chatHistory[0]["content"], "First part.\nSecond part.");
-    // Python Jinja path: processedJson carries the same flattened content for applyChatTemplate
-    EXPECT_EQ(apiHandler->getProcessedJson(), R"({"model":"llama","messages":[{"role":"user","content":"First part.\nSecond part."}]})");
+    auto content = chatHistory[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[0]["text"].as_string().value_or(""), "First part.");
+    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[1]["text"].as_string().value_or(""), "Second part.");
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesTextBeforeAndAfterImageConcatenatesAllText) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesTextAndImageMixedContentPreservesArray) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -3247,13 +2439,17 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesTextBeforeAndAfterImageConca
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-    // Non-Python path: chatHistory content is the concatenated string
+    // Content array with images is preserved as JsonContainer for ImageDecodingProcessor.
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 1);
-    EXPECT_EQ(chatHistory[0]["content"], "Before image.\nAfter image.");
-    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
-    // Python Jinja path: processedJson carries the same flattened content for applyChatTemplate
-    EXPECT_EQ(apiHandler->getProcessedJson(), R"({"model":"llama","messages":[{"role":"user","content":"Before image.\nAfter image."}]})");
+    auto content = chatHistory[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[0]["text"].as_string().value_or(""), "Before image.");
+    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "image_url");
+    EXPECT_EQ(content[2]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[2]["text"].as_string().value_or(""), "After image.");
+    // imageHistory is no longer populated at parse time; decoding deferred.
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefaultToMaxTokensLimit) {
@@ -3662,7 +2858,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageUrlObjectSucceeds
     std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
         std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    EXPECT_EQ(apiHandler->getImageHistory().size(), 1);
+    // Image URL is preserved as JsonContainer in chatHistory for ImageDecodingProcessor.
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    EXPECT_TRUE(chatHistory[0]["content"].is_array());
+    EXPECT_EQ(chatHistory[0]["content"][1]["type"].as_string().value_or(""), "image_url");
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesInputImageWithoutImageUrlFails) {
@@ -3823,10 +3023,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided1_ChoiceNone)
        {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
 )";
     std::string toolsChoice = R"("none")";
-    std::string expectedJson = std::string("{\"messages\":[{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
-                                           "\"tool_choice\":\"none\"}");
-
-    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+    assertRequestWithTools(providedTools, toolsChoice, std::vector<std::string>{});
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_ParsesToolsJsonContainerOnDemand) {
@@ -3866,9 +3063,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_ParsesToolsJsonContai
         std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
 
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    auto toolsStatus = apiHandler->parseToolsToJsonContainer();
-    ASSERT_TRUE(toolsStatus.ok());
-    const auto& tools = toolsStatus.value();
+    auto toolParsingResult = apiHandler->parseToolsToJsonContainer();
+    ASSERT_TRUE(toolParsingResult.ok());
+    const auto& tools = toolParsingResult.value();
     ASSERT_TRUE(tools.has_value());
     EXPECT_TRUE(tools->is_array());
     ASSERT_EQ(tools->size(), 1);
@@ -4025,14 +3222,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceFirst
        {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
 )";
     std::string toolsChoice = R"({"type": "function", "function": {"name": "get_weather1"}})";
-    std::string expectedJson = std::string("{\"messages\":["
-                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
-                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
-                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
-                                           "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather1\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
-                                           "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather1\"}}}");
-
-    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+    assertRequestWithTools(providedTools, toolsChoice, std::vector<std::string>{"get_weather1"});
 }
 
 // Provide get_weather1, get_weather2, get_weather3 but take only second one - get_weather2
@@ -4043,14 +3233,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceMiddl
        {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
 )";
     std::string toolsChoice = R"({"type": "function", "function": {"name": "get_weather2"}})";
-    std::string expectedJson = std::string("{\"messages\":["
-                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
-                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
-                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
-                                           "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
-                                           "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather2\"}}}");
-
-    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+    assertRequestWithTools(providedTools, toolsChoice, std::vector<std::string>{"get_weather2"});
 }
 
 // Provide get_weather1, get_weather2, get_weather3 but take only second one - get_weather2
@@ -4061,14 +3244,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceLast)
        {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
 )";
     std::string toolsChoice = R"({"type": "function", "function": {"name": "get_weather3"}})";
-    std::string expectedJson = std::string("{\"messages\":["
-                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
-                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
-                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
-                                           "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather3\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
-                                           "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather3\"}}}");
-
-    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+    assertRequestWithTools(providedTools, toolsChoice, std::vector<std::string>{"get_weather3"});
 }
 
 // Provide get_weather1, get_weather2, get_weather3 but take one - get_weather4 which does not exist
@@ -4080,14 +3256,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceNotIn
        {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
 )";
     std::string toolsChoice = R"({"type": "function", "function": {"name": "get_weather4"}})";
-    std::string expectedJson = std::string("{\"messages\":["
-                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
-                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
-                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
-                                           "\"tools\":[],"
-                                           "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather4\"}}}");
-
-    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+    assertRequestWithTools(providedTools, toolsChoice, std::vector<std::string>{});
 }
 
 // Provide get_weather1, get_weather2, get_weather3 but tool_choice is not of type function
@@ -4099,14 +3268,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceIsNot
        {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
 )";
     std::string toolsChoice = R"({"type": "INVALID_TYPE", "function": {"name": "get_weather3"}})";
-    std::string expectedJson = std::string("{\"messages\":["
-                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
-                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
-                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
-                                           "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather3\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
-                                           "\"tool_choice\":{\"type\":\"INVALID_TYPE\",\"function\":{\"name\":\"get_weather3\"}}}");
-
-    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+    assertRequestWithTools(providedTools, toolsChoice, std::vector<std::string>{"get_weather3"});
 }
 
 // Provide get_weather1, get_weather2, get_weather3 but tool_choice is not an object, string but a number
@@ -4129,12 +3291,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceIsASt
        {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
 )";
     std::string toolsChoice = "\"get_weather1\"";
-    std::string expectedJson = std::string("{\"messages\":["
-                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
-                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
-                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
-                                           "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather1\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
-                                           "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather1\"}}}");
     assertRequestWithTools(providedTools, toolsChoice, absl::StatusCode::kInvalidArgument);
 }
 
@@ -4832,8 +3988,7 @@ absl::Status tryParseResponses(rapidjson::Document& doc, ov::genai::Tokenizer& t
 }
 
 // Assert that parsing the given Responses API request produces a chat history
-// (and processedJson, when Python is enabled) equivalent to the expected
-// chat/completions request.
+// equivalent to the expected chat/completions request.
 //
 // The expected JSON is a chat/completions REQUEST body — an object with a
 // "messages" array and optionally a "tools" array. This makes each test read as
@@ -4844,9 +3999,7 @@ absl::Status tryParseResponses(rapidjson::Document& doc, ov::genai::Tokenizer& t
 // Comparison is structural via rapidjson Value::operator== (member order inside
 // objects is irrelevant).
 //
-// Both the chat-history path (used in the C++/non-Python build) and the
-// processedJson path (used by the Python Jinja template) are checked, so a
-// single test pins both downstream consumers.
+// The chat-history path (used by the C++ ChatTemplateProcessor) is checked.
 void expectResponsesEquivalentToChatCompletions(rapidjson::Document& doc, ov::genai::Tokenizer& tokenizer,
     const std::string& responsesRequest, const std::string& expectedChatCompletions) {
     auto handler = parseResponses(doc, tokenizer, responsesRequest);
@@ -4882,24 +4035,6 @@ void expectResponsesEquivalentToChatCompletions(rapidjson::Document& doc, ov::ge
             << "parseToolsToJsonContainer mismatch.\n  actual:   " << actualToolsJson
             << "\n  expected: " << expectedChatCompletions;
     }
-
-#if (PYTHON_DISABLE == 0)
-    // --- processedJson path (Python Jinja chat template) ---
-    const std::string actualProcessedJson = handler->getProcessedJson();
-    rapidjson::Document actualProcessedDoc;
-    actualProcessedDoc.Parse(actualProcessedJson.c_str());
-    ASSERT_FALSE(actualProcessedDoc.HasParseError()) << actualProcessedJson;
-    ASSERT_TRUE(actualProcessedDoc.HasMember("messages")) << actualProcessedJson;
-    EXPECT_TRUE(actualProcessedDoc["messages"] == expectedDoc["messages"])
-        << "processedJson messages mismatch.\n  actual:   " << actualProcessedJson
-        << "\n  expected: " << expectedChatCompletions;
-    if (expectedDoc.HasMember("tools")) {
-        ASSERT_TRUE(actualProcessedDoc.HasMember("tools")) << actualProcessedJson;
-        EXPECT_TRUE(actualProcessedDoc["tools"] == expectedDoc["tools"])
-            << "processedJson tools mismatch.\n  actual:   " << actualProcessedJson
-            << "\n  expected: " << expectedChatCompletions;
-    }
-#endif
 }
 }  // namespace
 
@@ -4907,7 +4042,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolsNormaliseToChatCompletion
     // Responses-flat tools shape ({type, name, parameters}) must be rewritten
     // to chat/completions nested shape ({type, function:{...}}) before the
     // request is forwarded to the chat template. Input is given as an array so
-    // both ChatHistory and processedJson sinks populate the messages array.
+    // ChatHistorySink populates the messages array.
     expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
         R"({
             "model": "llama",
@@ -4920,7 +4055,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolsNormaliseToChatCompletion
             }]
         })",
         R"({
-            "messages": [{"role":"user","content":"hello"}],
+            "messages": [{"role":"user","content":[{"type":"text","text":"hello"}]}],
             "tools": [{
                 "type":"function",
                 "function":{
@@ -4971,8 +4106,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningBufferedOntoNextAssistant
         })",
         R"({
             "messages": [
-                {"role":"user","content":"hi"},
-                {"role":"assistant","content":"hello","reasoning_content":"think first"}
+                {"role":"user","content":[{"type":"text","text":"hi"}]},
+                {"role":"assistant","content":[{"type":"text","text":"hello"}],"reasoning_content":"think first"}
             ]
         })");
 }
@@ -4993,9 +4128,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesStandaloneReasoningWithoutAssistan
         })",
         R"({
             "messages": [
-                {"role":"user","content":"hi"},
+                {"role":"user","content":[{"type":"text","text":"hi"}]},
                 {"role":"assistant","content":"","reasoning_content":"orphan"},
-                {"role":"user","content":"again"}
+                {"role":"user","content":[{"type":"text","text":"again"}]}
             ]
         })");
 }
@@ -5013,7 +4148,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesTrailingStandaloneReasoningIsEmitt
         })",
         R"({
             "messages": [
-                {"role":"user","content":"hi"},
+                {"role":"user","content":[{"type":"text","text":"hi"}]},
                 {"role":"assistant","content":"","reasoning_content":"trailing"}
             ]
         })");
@@ -5038,7 +4173,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMergedIntoAssistantToo
         })",
         R"({
             "messages": [
-                {"role":"user","content":"weather?"},
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
                 {"role":"assistant","content":"","tool_calls":[
                     {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
                 ]},
@@ -5063,7 +4198,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningPlusFunctionCallRidesOnAs
         })",
         R"({
             "messages": [
-                {"role":"user","content":"weather?"},
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
                 {"role":"assistant","content":"","reasoning_content":"need to call get_weather","tool_calls":[
                     {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
                 ]},
@@ -5089,7 +4224,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesMultipleFunctionCallsMergedInOneAs
         })",
         R"({
             "messages": [
-                {"role":"user","content":"weather?"},
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
                 {"role":"assistant","content":"","tool_calls":[
                     {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}},
                     {"id":"call_2","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"London\"}"}}
@@ -5114,7 +4249,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesTrailingFunctionCallFlushedAsAssis
         })",
         R"({
             "messages": [
-                {"role":"user","content":"weather?"},
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
                 {"role":"assistant","content":"","tool_calls":[
                     {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
                 ]}
@@ -5138,7 +4273,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesAssistantMessageAbsorbsBufferedFun
         })",
         R"({
             "messages": [
-                {"role":"user","content":"weather?"},
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
                 {"role":"assistant","content":"calling tool","tool_calls":[
                     {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
                 ]}
@@ -5160,7 +4295,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningContentArrayShapeAccepted
         })",
         R"({
             "messages": [
-                {"role":"user","content":"hi"},
+                {"role":"user","content":[{"type":"text","text":"hi"}]},
                 {"role":"assistant","content":"ok","reasoning_content":"new shape"}
             ]
         })");
@@ -5181,7 +4316,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputWithoutCallIdAcc
         })",
         R"({
             "messages": [
-                {"role":"user","content":"weather?"},
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
                 {"role":"assistant","content":"","tool_calls":[
                     {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{}"}}
                 ]},
@@ -5209,7 +4344,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallPrefersCallIdOverId) {
         })",
         R"({
             "messages": [
-                {"role":"user","content":"weather?"},
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
                 {"role":"assistant","content":"","tool_calls":[
                     {"id":"call_xyz","type":"function","function":{"name":"get_weather","arguments":"{}"}}
                 ]},
@@ -5232,7 +4367,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOnlyCallIdSupplied) {
         })",
         R"({
             "messages": [
-                {"role":"user","content":"weather?"},
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
                 {"role":"assistant","content":"","tool_calls":[
                     {"id":"call_xyz","type":"function","function":{"name":"get_weather","arguments":"{}"}}
                 ]},
@@ -5277,14 +4412,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMissingArgumentsReject
     EXPECT_EQ(status, absl::InvalidArgumentError("function_call item is missing required arguments field"));
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageHistoryIndexMatchesChatHistoryTurn) {
-    // Regression test for the image-index drift bug: when an input item is
-    // merged (function_call buffered, then absorbed into the next assistant
-    // message), the Responses input-array index no longer matches the
-    // resulting chatHistory index. ChatHistorySink::appendInputImage must
-    // record the actual chatHistory turn index so the VLM servable can
-    // prepend the <ov_genai_image_*> tag to the correct message (and not
-    // index out-of-bounds).
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageChatHistoryIndexMatchesAfterFunctionCallMerge) {
+    // Regression test: when a function_call item is buffered and merged into the next
+    // assistant message, the image-bearing user item must land at chatHistory[2] (not
+    // the input-array index 3, which would be out-of-bounds). After Phase 6, verify
+    // the image URL is preserved in the correct chatHistory slot.
     const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
     std::string json = R"({
         "model": "llama",
@@ -5310,13 +4442,12 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageHistoryIndexMatchesChatHistor
     auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 3u);
 
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 1u);
-    auto [turnIndex, image] = imageHistory[0];
-    // Must point at the second user (chatHistory[2]) — NOT the input-array
-    // index 3, which would be out-of-bounds for chatHistory[3].
-    EXPECT_EQ(turnIndex, 2u);
-    EXPECT_LT(turnIndex, chatHistory.size());
+    // After Phase 6: imageHistory is empty; image URL is preserved in chatHistory[2]["content"].
+    // Verify the image landed at the correct chatHistory slot (not out-of-bounds).
+    auto content = chatHistory[2]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "image_url");
 }
 
 // --- Tools normalisation edge cases ---
@@ -5325,7 +4456,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolWithoutParametersIsNormali
     // Flat Responses tools may omit `parameters` for zero-arg functions. The
     // nested form should still be produced (with no `parameters` key under
     // function), not fail or fabricate one. Input is given as an array so
-    // both ChatHistory and processedJson sinks populate the messages array.
+    // ChatHistorySink populates the messages array.
     expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
         R"({
             "model": "llama",
@@ -5333,7 +4464,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolWithoutParametersIsNormali
             "tools": [{"type": "function", "name": "ping", "description": "no args"}]
         })",
         R"({
-            "messages": [{"role":"user","content":"hello"}],
+            "messages": [{"role":"user","content":[{"type":"text","text":"hello"}]}],
             "tools": [{"type":"function","function":{"name":"ping","description":"no args"}}]
         })");
 }
@@ -5423,12 +4554,12 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesMultiTurnReasoningFunctionCallAndF
         })",
         R"({
             "messages": [
-                {"role":"user","content":"weather in Paris?"},
+                {"role":"user","content":[{"type":"text","text":"weather in Paris?"}]},
                 {"role":"assistant","content":"","reasoning_content":"need to call get_weather","tool_calls":[
                     {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
                 ]},
                 {"role":"tool","tool_call_id":"call_1","content":"sunny, 22C"},
-                {"role":"assistant","content":"It is sunny and 22C in Paris.","reasoning_content":"format the answer"}
+                {"role":"assistant","content":[{"type":"text","text":"It is sunny and 22C in Paris."}],"reasoning_content":"format the answer"}
             ]
         })");
 }
@@ -5441,7 +4572,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesMultiTurnReasoningFunctionCallAndF
 // The 4th request OVMS sees while running BFCL multi_turn_base_0 reports 128
 // MORE input_tokens on /responses than the equivalent /chat/completions call,
 // even though the message lists are structurally equivalent. This test
-// reproduces the exact shape so processedJson can be compared head-to-head.
+// reproduces the exact shape so chatHistory can be compared head-to-head.
 TEST_F(HttpOpenAIHandlerParsingTest, ResponsesBfclReplayShapeWithEchoedAssistantMessages) {
     expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
         R"({
@@ -5467,11 +4598,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesBfclReplayShapeWithEchoedAssistant
         R"({
             "messages": [
                 {"role":"user","content":"do work"},
-                {"role":"assistant","content":"","tool_calls":[
+                {"role":"assistant","content":[{"type":"text","text":""}],"tool_calls":[
                     {"id":"fc1","type":"function","function":{"name":"mkdir","arguments":"{\"dir_name\":\"temp\"}"}}
                 ]},
                 {"role":"tool","tool_call_id":"fc1","content":"None"},
-                {"role":"assistant","content":"","tool_calls":[
+                {"role":"assistant","content":[{"type":"text","text":""}],"tool_calls":[
                     {"id":"fc2","type":"function","function":{"name":"mv","arguments":"{\"source\":\"a\",\"destination\":\"temp\"}"}}
                 ]},
                 {"role":"tool","tool_call_id":"fc2","content":"{\"error\":\"no\"}"}
@@ -5533,16 +4664,23 @@ protected:
 };
 
 TEST_P(HttpOpenAIHandlerResponsesImageUrlShapeTest, ValidBase64ImageSucceeds) {
+    // Image decoding is deferred to ImageDecodingProcessor; imageHistory is no longer populated.
     const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
     std::string content = "[" + formatInputImageItem(base64Image) + "]";
     std::string json = createResponsesRequest({content});
     auto apiHandler = parseResponses(json);
     ASSERT_NE(apiHandler, nullptr);
-    ASSERT_EQ(apiHandler->getImageHistory().size(), 1);
-    EXPECT_EQ(apiHandler->getImageHistory()[0].first, 0u);
+    // The image_url is preserved in chatHistory for ImageDecodingProcessor.
+    const auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1u);
+    auto msgContent = chatHistory[0]["content"];
+    EXPECT_TRUE(msgContent.is_array());
+    EXPECT_EQ(msgContent[0]["type"].as_string().value_or(""), "image_url");
 }
 
-TEST_P(HttpOpenAIHandlerResponsesImageUrlShapeTest, MultipleImagesAcrossTurnsHaveCorrectIndices) {
+TEST_P(HttpOpenAIHandlerResponsesImageUrlShapeTest, MultipleImagesAcrossTurnsHaveCorrectChatHistoryContent) {
+    // Image decoding is deferred; imageHistory is no longer populated.
+    // Verify instead that both image-bearing turns have array content with image_url entries.
     const std::string base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
     // Turn 0 (user): image + text
     // Turn 1 (assistant) - skipped by the helper; we'll inline-build
@@ -5554,10 +4692,14 @@ TEST_P(HttpOpenAIHandlerResponsesImageUrlShapeTest, MultipleImagesAcrossTurnsHav
                        R"(]})";
     auto apiHandler = parseResponses(json);
     ASSERT_NE(apiHandler, nullptr);
-    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-    ASSERT_EQ(imageHistory.size(), 2);
-    EXPECT_EQ(imageHistory[0].first, 0u);
-    EXPECT_EQ(imageHistory[1].first, 2u);
+    const auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 3u);  // user, assistant, user
+    auto content0 = chatHistory[0]["content"];
+    EXPECT_TRUE(content0.is_array());
+    EXPECT_EQ(content0[0]["type"].as_string().value_or(""), "image_url");
+    auto content2 = chatHistory[2]["content"];
+    EXPECT_TRUE(content2.is_array());
+    EXPECT_EQ(content2[0]["type"].as_string().value_or(""), "image_url");
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -5651,4 +4793,171 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesStreamOptionsRejected) {
     auto status = apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
     EXPECT_EQ(status,
         absl::InvalidArgumentError("stream_options is not supported in Responses API."));
+}
+
+// Stub client that is never disconnected, used by the LM legacy servable tests below.
+namespace {
+struct NeverDisconnectedClient : public ovms::ClientConnection {
+    bool isDisconnected() const override { return false; }
+    void registerDisconnectionCallback(std::function<void()>) override {}
+};
+}  // namespace
+
+static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponsesContext(
+    const std::shared_ptr<ov::genai::Tokenizer>& tok,
+    size_t numInputTokens, size_t numGeneratedTokens,
+    ov::genai::GenerationFinishReason finishReason = ov::genai::GenerationFinishReason::STOP) {
+    auto ctx = std::make_shared<ovms::LegacyServableExecutionContext>();
+
+    ctx->payload.client = std::make_shared<NeverDisconnectedClient>();
+    ctx->payload.parsedJson = std::make_shared<rapidjson::Document>();
+    ctx->payload.parsedJson->Parse(R"({"model":"llama","input":"test","stream":true})");
+    ctx->endpoint = ovms::Endpoint::RESPONSES;
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        *ctx->payload.parsedJson, ovms::Endpoint::RESPONSES,
+        std::chrono::system_clock::now(), *tok);
+    std::optional<uint32_t> maxTokensLimit;
+    const absl::Status parseStatus = apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt);
+    EXPECT_TRUE(parseStatus.ok()) << parseStatus;
+    if (!parseStatus.ok()) {
+        return nullptr;
+    }
+    ctx->apiHandler = apiHandler;
+
+    ctx->results.finish_reasons.push_back(finishReason);
+    ctx->results.perf_metrics.num_input_tokens = numInputTokens;
+    ctx->results.perf_metrics.num_generated_tokens = numGeneratedTokens;
+    ctx->success = true;
+    // Signal that generation is done so preparePartialResponse goes straight to
+    // the "finish generation" branch without waiting.
+    ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
+
+    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
+        *tok, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+
+    return ctx;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseResponsesEndpointHasCorrectUsageInCompletedEvent) {
+    auto ctx = makeLegacyResponsesContext(tokenizer, /*numInputTokens=*/10, /*numGeneratedTokens=*/5);
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+
+    ovms::LegacyServable servable;
+    ASSERT_EQ(servable.preparePartialResponse(ctxBase), absl::OkStatus());
+
+    const std::string& response = ctxBase->response;
+    ASSERT_NE(response.find("\"type\":\"response.completed\""), std::string::npos)
+        << "response.completed event must be present: " << response;
+    ASSERT_NE(response.find("\"output_tokens\":5"), std::string::npos)
+        << "output_tokens must equal num_generated_tokens from perf_metrics: " << response;
+    ASSERT_NE(response.find("\"input_tokens\":10"), std::string::npos)
+        << "input_tokens must equal num_input_tokens from perf_metrics: " << response;
+    ASSERT_NE(response.find("\"total_tokens\":15"), std::string::npos)
+        << "total_tokens must be input+output: " << response;
+    ASSERT_FALSE(ctxBase->sendLoopbackSignal);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseResponsesEndpointHasCorrectUsageOnLength) {
+    auto ctx = makeLegacyResponsesContext(tokenizer, /*numInputTokens=*/8, /*numGeneratedTokens=*/3,
+        ov::genai::GenerationFinishReason::LENGTH);
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+
+    ovms::LegacyServable servable;
+    ASSERT_EQ(servable.preparePartialResponse(ctxBase), absl::OkStatus());
+
+    const std::string& response = ctxBase->response;
+    ASSERT_NE(response.find("\"type\":\"response.incomplete\""), std::string::npos)
+        << "response.incomplete event must be present for LENGTH finish reason: " << response;
+    ASSERT_NE(response.find("\"output_tokens\":3"), std::string::npos)
+        << "output_tokens must equal num_generated_tokens from perf_metrics: " << response;
+    ASSERT_NE(response.find("\"input_tokens\":8"), std::string::npos)
+        << "input_tokens must equal num_input_tokens from perf_metrics: " << response;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, vlmLegacyServablePreparePartialResponseResponsesEndpointHasCorrectUsageInCompletedEvent) {
+    auto ctx = std::make_shared<ovms::VisualLanguageModelLegacyServableExecutionContext>();
+
+    ctx->payload.client = std::make_shared<NeverDisconnectedClient>();
+    ctx->payload.parsedJson = std::make_shared<rapidjson::Document>();
+    ctx->payload.parsedJson->Parse(R"({"model":"llama","input":"test","stream":true})");
+    ctx->endpoint = ovms::Endpoint::RESPONSES;
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(
+        *ctx->payload.parsedJson, ovms::Endpoint::RESPONSES,
+        std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    const absl::Status parseStatus = apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt);
+    ASSERT_TRUE(parseStatus.ok()) << parseStatus;
+    ctx->apiHandler = apiHandler;
+
+    ctx->results.finish_reasons.push_back(ov::genai::GenerationFinishReason::STOP);
+    ctx->results.perf_metrics.num_input_tokens = 12;
+    ctx->results.perf_metrics.num_generated_tokens = 6;
+    ctx->success = true;
+    ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
+    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
+        *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+
+    ovms::VisualLanguageModelLegacyServable servable;
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+    ASSERT_EQ(servable.preparePartialResponse(ctxBase), absl::OkStatus());
+
+    const std::string& response = ctxBase->response;
+    ASSERT_NE(response.find("\"type\":\"response.completed\""), std::string::npos)
+        << "response.completed event must be present: " << response;
+    ASSERT_NE(response.find("\"output_tokens\":6"), std::string::npos)
+        << "output_tokens must equal num_generated_tokens from perf_metrics: " << response;
+    ASSERT_NE(response.find("\"input_tokens\":12"), std::string::npos)
+        << "input_tokens must equal num_input_tokens from perf_metrics: " << response;
+    ASSERT_NE(response.find("\"total_tokens\":18"), std::string::npos)
+        << "total_tokens must be input+output: " << response;
+    ASSERT_FALSE(ctxBase->sendLoopbackSignal);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCompletionsStreamingHasCorrectUsageChunk) {
+    auto ctx = std::make_shared<ovms::LegacyServableExecutionContext>();
+
+    ctx->payload.client = std::make_shared<NeverDisconnectedClient>();
+    ctx->payload.parsedJson = std::make_shared<rapidjson::Document>();
+    ctx->payload.parsedJson->Parse(
+        R"({"model":"llama","stream":true,"stream_options":{"include_usage":true},"messages":[{"role":"user","content":"hi"}]})");
+    ctx->endpoint = ovms::Endpoint::CHAT_COMPLETIONS;
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+        *ctx->payload.parsedJson, ovms::Endpoint::CHAT_COMPLETIONS,
+        std::chrono::system_clock::now(), *tokenizer);
+    uint32_t maxTokensLimit = 100;
+    const absl::Status parseStatus = apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt);
+    ASSERT_TRUE(parseStatus.ok()) << parseStatus;
+    ctx->apiHandler = apiHandler;
+
+    ctx->results.finish_reasons.push_back(ov::genai::GenerationFinishReason::STOP);
+    ctx->results.perf_metrics.num_input_tokens = 10;
+    ctx->results.perf_metrics.num_generated_tokens = 5;
+    ctx->success = true;
+    ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
+    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
+        *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+
+    ovms::LegacyServable servable;
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+    ASSERT_EQ(servable.preparePartialResponse(ctxBase), absl::OkStatus());
+
+    // For chat_completions, usage is in the separate SSE usage chunk (not in the
+    // final delta chunk), so it should be present even though set*Usage was called
+    // before serializeStreamingChunk in the fixed code.
+    const std::string& response = ctxBase->response;
+    ASSERT_NE(response.find("\"completion_tokens\":5"), std::string::npos)
+        << "completion_tokens must be in usage chunk: " << response;
+    ASSERT_NE(response.find("\"prompt_tokens\":10"), std::string::npos)
+        << "prompt_tokens must be in usage chunk: " << response;
+    ASSERT_NE(response.find("\"total_tokens\":15"), std::string::npos)
+        << "total_tokens must be in usage chunk: " << response;
+    ASSERT_NE(response.find("[DONE]"), std::string::npos)
+        << "[DONE] must be present: " << response;
+    ASSERT_FALSE(ctxBase->sendLoopbackSignal);
 }

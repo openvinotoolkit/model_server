@@ -125,6 +125,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             vim && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
+# Note: espeak-ng is no longer installed from apt here; it is built from
+# source by Bazel (see third_party/espeak_ng) and bundled in the release.
 # on ubuntu 24.04 python3.12 is used as default python for ovms build and release
 # TF build needs python3.10 with numpy as it does not support python3.12
 RUN python3.10 -m pip install "numpy<2.0.0" --no-cache-dir
@@ -161,9 +163,9 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone ht
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then \
     if [[ $debug_bazel_flags == *"py_off"* ]]; then \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF .. ; \
+        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. ; \
     else \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF .. ; \
+        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. ; \
     fi && \
     make --jobs=$JOBS && \
     make install ; \
@@ -414,6 +416,9 @@ COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
     apt-get install -y --no-install-recommends curl ca-certificates libxml2 || exit 1; \
+    # espeak-ng shared library + data are shipped inside /ovms by the Bazel
+    # build (controlled via --//:espeak=on/off in debug_bazel_flags);
+    # no system package is required at runtime.
     if [ "$GPU" == "1" ] ; then \
 	/tmp/install_gpu_drivers.sh ; \
     fi ; \
@@ -425,10 +430,10 @@ RUN apt-get update ; \
             tar -xf linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb     ; \
         else \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.30.0/linux-npu-driver-v1.30.0.20260311-22963593310-ubuntu2404.tar.gz && \
-            tar -xf linux-npu-driver-v1.30.0.20260311-22963593310-ubuntu2404.tar.gz && \
-            curl -L -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260205T100000Z/pool/main/l/level-zero-loader/libze1_1.26.2-1~24.04~ppa1_amd64.deb ; \
-        fi ; \      
+            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.33.0/linux-npu-driver-v1.33.0.20260529-26625960453-ubuntu2404.tar.gz && \
+            tar -xf linux-npu-driver-v1.33.0.20260529-26625960453-ubuntu2404.tar.gz && \
+            curl -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260324T100000Z/pool/main/l/level-zero-loader/libze1_1.27.0-1~24.04~ppa2_amd64.deb ; \
+        fi ; \
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
     fi ; \
     apt-get clean ; \
@@ -452,7 +457,10 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
 
 ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PATH="$PATH:/ovms/bin"
+# When espeak-ng data is present in the package, point runtime to it.
+# Keep this conditional to avoid exporting a non-existent path when
+# espeak support is disabled.
+ENTRYPOINT ["/bin/bash", "-c", "if [ -d /ovms/share/espeak-ng-data ]; then export ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data; fi; exec /ovms/bin/ovms \"$@\"", "--"]
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
-ENTRYPOINT ["/ovms/bin/ovms"]

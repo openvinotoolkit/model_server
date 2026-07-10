@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -216,7 +216,13 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     return output;
 }
 
-void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, const float* waveformPtr) {
+void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, uint16_t bitsPerSample, size_t speechSize, const float* waveformPtr) {
+    if (ppData == nullptr) {
+        throw std::runtime_error("Audio output pointer is null");
+    }
+    if (waveformPtr == nullptr && speechSize > 0) {
+        throw std::runtime_error("Audio waveform pointer is null");
+    }
     enum : unsigned int {
         OUTPUT_PREPARATION,
         TIMER_END
@@ -227,7 +233,7 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     format.container = drwav_container_riff;
     format.format = DR_WAVE_FORMAT_IEEE_FLOAT;
     format.channels = 1;
-    format.sampleRate = 16000;  // assume it is always 16 KHz
+    format.sampleRate = sampleRate;
     format.bitsPerSample = bitsPerSample;
     drwav wav;
     size_t totalSamples = speechSize * format.channels;
@@ -245,6 +251,7 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
 }
+
 static void validateAudioFileSizeAgainstMaxValue(size_t fileSize) {
     constexpr size_t DEFAULT_MAX_FILE_SIZE = 1024ull * 1024 * 1024;  // 1GB
     size_t maxFileSize = DEFAULT_MAX_FILE_SIZE;

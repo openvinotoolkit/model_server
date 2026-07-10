@@ -237,7 +237,6 @@ ovms_cc_library(
     hdrs = ["inference_executor.hpp"],
     deps = ["libovms_outputkeeper",
             "modelinstance_h",
-            "statefulrequestprocessor",
             "modelinstanceunloadguard",
             "prediction_service_utils",
     ],
@@ -354,7 +353,6 @@ ovms_cc_library(
         "libovms_cliparser",
         "libovms_systeminfo",
         "ovms_exit_codes",
-        "//src/utils:env_guard",
     ],
     visibility = ["//visibility:public",],
     additional_copts = COPTS_DROGON,
@@ -385,17 +383,6 @@ ovms_cc_library(
     deps = [
         "libovms_tensorinfo",
         "libovmsmodelversion",
-    ],
-    visibility = ["//visibility:public",],
-)
-ovms_cc_library(
-    name = "libovms_sequence",
-    hdrs = ["sequence.hpp"],
-    srcs = ["sequence.cpp"],
-    deps = [
-        "libovmsstatus",
-        "libovms_ov_utils",
-        "//third_party:openvino",
     ],
     visibility = ["//visibility:public",],
 )
@@ -463,6 +450,7 @@ ovms_cc_library(
     deps = [
         "modelinstance_h",
         "anonymous_input_name",
+        "cleaner_utils",
         "customloaders",
         "executingstreamidguard",
         "//src/filesystem:libovmsfilesystem",
@@ -479,25 +467,7 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public",],
 )
-ovms_cc_library(
-    name = "libovms_sequence_manager",
-    hdrs = ["sequence_manager.hpp"],
-    srcs = ["sequence_manager.cpp"],
-    deps = [
-        "libovms_sequence",
-        "libovmsmodelversion",
-        "libovmsstatus",
-        "libovmslogging",
-        "libovms_sequence_processing_spec",
-    ],
-    visibility = ["//visibility:public",],
-)
-ovms_cc_library(
-    name = "libovms_sequence_processing_spec",
-    hdrs = ["sequence_processing_spec.hpp"],
-    deps = [],
-    visibility = ["//visibility:public",],
-)
+
 ovms_cc_library(
     name = "libovms_kfs_utils",
     hdrs = ["kfs_frontend/kfs_utils.hpp"],
@@ -584,18 +554,7 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
     alwayslink = 1,
 )
-ovms_cc_library(
-    name = "global_sequences_viewer",
-    hdrs = ["global_sequences_viewer.hpp"],
-    srcs = ["global_sequences_viewer.cpp"],
-    deps = [
-        "libovmslogging",
-        "libovmsmodelversion",
-        "libovms_sequence_manager",
-        "libovmsstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
+
 ovms_cc_library(
     name = "resources_cleaner",
     hdrs = ["resources_cleaner.hpp"],
@@ -608,7 +567,6 @@ ovms_cc_library(
     srcs = ["cleaner_utils.cpp"],
     deps = [
         "resources_cleaner",
-        "global_sequences_viewer",
         "libovmslogging",
         "libovmsstatus",
     ],
@@ -626,7 +584,6 @@ ovms_cc_library(
     }) + [
         "cleaner_utils",
         "customloaders",
-        "global_sequences_viewer",
         "libovms_config",
         "libovms_model_instance_provider",
         "libovms_ov_utils",
@@ -705,35 +662,13 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-ovms_cc_library(
-    name = "statefulmodelinstance",
-    hdrs = ["statefulmodelinstance.hpp"],
-    srcs = ["statefulmodelinstance.cpp"],
-    deps = [
-        "modelinstance",
-        "modelinstance_h",
-        "global_sequences_viewer",
-        "libovms_sequence_manager",
-        "libovms_sequence_processing_spec",
-        "model_metric_reporter",
-        "modelconfig",
-        "predict_request_validation_utils",
-        "executingstreamidguard",
-        "libovmslogging",
-        "libovmsprofiler",
-        "libovmstimer",
-        "libovmsstatus",
-        "//third_party:openvino",
-    ],
-    visibility = ["//visibility:public"],
-)
+
 ovms_cc_library(
     name = "model",
     hdrs = ["model.hpp"],
     srcs = ["model.cpp"],
     deps = [
         "modelinstance",
-        "statefulmodelinstance",
         "customloaders",
         "modelchangesubscription",
         "modelconfig",
@@ -838,7 +773,6 @@ ovms_cc_library(
             "libmodelconfigjsonparser",
             "modelconfig",
             "model",
-            "statefulmodelinstance",
             "modelinstance",
             "libovmscapibuffer",
             "libovmscapi_utils",
@@ -848,7 +782,6 @@ ovms_cc_library(
             "inferencetensor",
             "capi_dag_utils",
             "customloaders",
-            "global_sequences_viewer",
             "cleaner_utils",
             "prediction_service_utils",
             "rest_parser_utils",
@@ -917,9 +850,6 @@ ovms_cc_library(
             "serialization_common",
             "libovmsprofiler",
             "libovmsstatus",
-            "libovms_sequence",
-            "libovms_sequence_manager",
-            "libovms_sequence_processing_spec",
             "libovms_queue",
             "libovms_ovinferrequestsqueue",
             "libovmstensor_utils",
@@ -1003,6 +933,7 @@ ovms_cc_library(
     hdrs = ["logging.hpp"],
     srcs = ["logging.cpp"],
     deps = [
+        "//src/utils:env_guard",
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
     ],
@@ -1534,6 +1465,7 @@ ovms_cc_library(
             "modelinstance_h",
             "inferencerequest",
             "inferenceresponse",
+            "requestprocessor",
             "capi_validation",
             "libovmstimer",
             "capi_serialization",
@@ -1570,7 +1502,6 @@ ovms_cc_library(
             "libovmsshape",
             "extractchoice",
             "requesttensorextractor",
-            "statefulrequestprocessor",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
@@ -1586,6 +1517,7 @@ ovms_cc_library(
             "libovms_kfs_utils",
             "kfs_validation",
             "kfs_request_utils",
+            "requestprocessor",
             "libovmstimer",
             "inference_executor",
             "kfs_deserialization",
@@ -1609,6 +1541,7 @@ ovms_cc_library(
             "modelinstance_h",
             "tfs_utils",
             "tfs_request_utils",
+            "requestprocessor",
             "libovmstimer",
             "tfs_serialization",
             "inference_executor",
@@ -2057,19 +1990,7 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-ovms_cc_library(
-    name = "statefulrequestprocessor",
-    hdrs = ["statefulrequestprocessor.hpp",],
-    deps = [
-            "//third_party:openvino",
-            "libovmsstatus",
-            "requestprocessor",
-            "libovms_sequence",
-            "libovms_sequence_manager",
-            "libovms_sequence_processing_spec",
-    ],
-    visibility = ["//visibility:public"],
-)
+
 ovms_cc_library(
     name = "libovms_ov_utils",
     hdrs = ["ov_utils.hpp",],
@@ -2283,6 +2204,12 @@ cc_binary(
             "//src/python/binding:pyovms.so",
         ],
         "//:disable_python": []
+    }) + select({
+        "//:espeak_on": [
+            "//third_party:espeak_ng",
+            "//third_party:espeak_ng_data",
+        ],
+        "//:espeak_off": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
@@ -2337,14 +2264,9 @@ cc_test(
         "test/prediction_service_test.cpp",
         "test/rest_utils_test.cpp",
         "test/schema_test.cpp",
-        "test/sequence_manager_test.cpp",
-        "test/sequence_test.cpp",
         "test/serialization_tests.cpp",
         "test/server_test.cpp",
         "test/shape_test.cpp",
-        "test/stateful_config_test.cpp",
-        #"test/stateful_modelinstance_test.cpp", # TODO remove?
-        "test/stateful_test_utils.hpp",
         "test/status_test.cpp",
         "test/stringutils_test.cpp",
         "test/systeminfo_test.cpp",
@@ -2403,6 +2325,7 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
+                "test/llm/chat_template_end_to_end_jinja_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({
@@ -2588,6 +2511,9 @@ cc_test(
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
                 ":test_llm_output_parser_tests",
+                ":test_chat_template_workarounds",
+                ":test_llm_input_processing_tests",
+                ":test_llm_input_processing_integration_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -3108,6 +3034,63 @@ cc_library(
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
         "//src/llm:output_parsers",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "test_chat_template_workarounds",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = [
+        "test/llm/chat_template_analyzer_test.cpp",
+        "test/llm/chat_template_adapter_test.cpp",
+        "test/llm/chat_template_end_to_end_minja_test.cpp",
+    ],
+    deps = [
+        "@com_google_googletest//:gtest",
+        "//src/llm:chat_template_analyzer",
+        "//src/llm:chat_template_probe",
+        "//src/llm:io_processing_input_processors",
+        "//src/utils:env_guard",
+        "//third_party:genai",
+        ":test_platform_utils",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "test_llm_input_processing_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = glob(
+        ["test/llm/input_processing/*_test.cpp"],
+        exclude = ["test/llm/input_processing/input_processing_integration_test.cpp"],
+    ),
+    deps = [
+        "@com_google_googletest//:gtest",
+        ":test_platform_utils",
+        "//src/llm:io_processing_input_processors",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "test_llm_input_processing_integration_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/llm/input_processing/input_processing_integration_test.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest",
+        ":test_platform_utils",
+        "//src/llm:openai_completions_api_handler",
+        "//src/llm:openai_responses_handler",
+        "//src/llm:io_processing_input_processor",
+        "//src/llm:io_processing_input_processor_context",
+        "//src/llm:generation_config_builders",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

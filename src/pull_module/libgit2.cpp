@@ -41,6 +41,7 @@
 #include "cmd_exec.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/filesystem/localfilesystem.hpp"
+#include "src/utils/env_guard.hpp"
 #include "../logging.hpp"
 #include "../shutdown_state.hpp"
 #include "../stringutils.hpp"
@@ -112,6 +113,33 @@ void removeLfsWipMarker(const std::string& repositoryPath) {
     std::error_code ec;
     if (!fs::remove(markerPath, ec) && ec) {
         SPDLOG_WARN("Failed to remove .lfswip marker {}: {}", markerPath.string(), ec.message());
+    }
+}
+
+/**
+ * Attempts to remove stale lfs_error.txt file from a repository.
+ * If the file cannot be checked or deleted, logs a warning but does not fail the operation.
+ * This function clears error artifacts that would otherwise interfere with resume/clone detection.
+ * 
+ * @param repositoryPath Path to the git repository root directory.
+ * @note Logs warnings if file operations fail; operation continues on error.
+ */
+static void clearStaleErrorFile(const std::string& repositoryPath) {
+    std::error_code ec;
+    const fs::path errorFilePath = fs::path(repositoryPath) / "lfs_error.txt";
+
+    bool fileExists = fs::exists(errorFilePath, ec);
+    if (ec) {
+        SPDLOG_WARN("Failed to check if lfs_error.txt exists at {}: {}. May interfere with resume/clone detection.",
+            errorFilePath.string(), ec.message());
+        return;
+    }
+
+    if (fileExists) {
+        if (!fs::remove(errorFilePath, ec)) {
+            SPDLOG_WARN("Failed to remove stale lfs_error.txt at {}: {}. May interfere with resume/clone detection.",
+                errorFilePath.string(), ec.message());
+        }
     }
 }
 
@@ -252,6 +280,43 @@ int cred_acquire_cb(git_credential** out,
 Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     SPDLOG_DEBUG("Initializing libgit2");
     this->status = git_libgit2_init();
+    IF_ERROR_SET_MSG_AND_RETURN();
+    // Disable ownership check so repositories owned by a different OS user can be
+    // opened for reading (equivalent to git's `safe.directory = *`).  This is safe
+    // in a serving context where the operator intentionally mounts model directories
+    // that may have been downloaded by a different UID (e.g. root in the build
+    // container vs. a non-root serving user).
+    this->status = git_libgit2_opts(GIT_OPT_SET_OWNER_VALIDATION, 0);
+    IF_ERROR_SET_MSG_AND_RETURN();
+    const bool enableGitSearchPath = (GetEnvVar("GIT_OPT_SET_ENABLE_SEARCH_PATHS") == "1");
+    // By default, redirect all git config search paths to an empty string so libgit2
+    // never reads host-level git configuration (~/.gitconfig, /etc/gitconfig, etc.).
+    // Without this, a host gitconfig that sets credential.helper, http.proxy, lfs.*, or
+    // safe.directory can silently override OVMS's intended proxy/token settings and cause
+    // spurious failures or credential leaks in multi-tenant environments.
+    // To preserve historic behaviour or troubleshoot host gitconfig interactions, set
+    // GIT_OPT_SET_ENABLE_SEARCH_PATHS=1 and skip this isolation step.
+    if (!enableGitSearchPath) {
+        this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, "");
+        IF_ERROR_SET_MSG_AND_RETURN();
+        this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, "");
+        IF_ERROR_SET_MSG_AND_RETURN();
+        this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, "");
+        IF_ERROR_SET_MSG_AND_RETURN();
+#if defined(_WIN32)
+        // On Windows, GIT_CONFIG_LEVEL_PROGRAMDATA covers %PROGRAMDATA%\Git\config.
+        // Keep it isolated unless explicit opt-in via GIT_OPT_SET_ENABLE_SEARCH_PATHS=1.
+        this->status = git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, "");
+        IF_ERROR_SET_MSG_AND_RETURN();
+#endif
+    }
+    // Skip .keep file existence checks when reading packfiles.  libgit2 performs one
+    // stat() per pack per operation to honour .keep files (which prevent gc from
+    // collecting referenced packs).  In an OVMS deployment the model directory is
+    // never garbage-collected and may live on NFS or other high-latency remote
+    // filesystems, so removing this stat() per open noticeably reduces latency on
+    // resume/status operations against large repositories.
+    this->status = git_libgit2_opts(GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS, 1);
     IF_ERROR_SET_MSG_AND_RETURN();
     SPDLOG_TRACE("Setting libgit2 server connection timeout:{}", opts.serverConnectTimeoutMs);
     this->status = git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, opts.serverConnectTimeoutMs);
@@ -1096,6 +1161,7 @@ Status resumeLfsDownloadForFile(git_repository* repo, const char* filePathInRepo
 namespace {
 
 struct ResumeCandidates {
+    bool shouldResume = false;
     bool hasWipMarker = false;
     bool hasLfsErrorFile = false;
     bool interruptionLikely = false;
@@ -1104,18 +1170,16 @@ struct ResumeCandidates {
 };
 
 /**
- * Builds resume candidate lists based on interruption markers and repository scan.
+ * Populates resume candidate lists based on interruption markers and repository scan.
  * 
  * @param repo Pointer to the git repository object.
  * @param downloadPath Repository worktree root path.
- * @return ResumeCandidates containing LFS and non-LFS recovery targets.
+ * @param candidates [in/out] Resume candidates to populate; hasWipMarker and hasLfsErrorFile
+ *        must already be set by the caller. On return, lfsMatches, missingNonLfsMatches,
+ *        and interruptionLikely are filled in.
  * @note Works on local repository metadata and filesystem; no network operations.
  */
-ResumeCandidates buildResumeCandidates(git_repository* repo, const std::string& downloadPath) {
-    ResumeCandidates candidates;
-    candidates.hasWipMarker = libgit2::hasLfsWipMarker(downloadPath);
-    candidates.hasLfsErrorFile = libgit2::hasLfsErrorFile(downloadPath);
-
+void buildResumeCandidates(git_repository* repo, const std::string& downloadPath, ResumeCandidates& candidates) {
     // Checking if the download was partially finished for any files in repository,
     // including tracked LFS pointer blobs missing from the worktree after abrupt termination.
     candidates.lfsMatches = libgit2::findResumableLfsFiles(repo, downloadPath, candidates.hasWipMarker || candidates.hasLfsErrorFile);
@@ -1124,7 +1188,6 @@ ResumeCandidates buildResumeCandidates(git_repository* repo, const std::string& 
     }
 
     candidates.interruptionLikely = candidates.hasWipMarker || candidates.hasLfsErrorFile || !candidates.lfsMatches.empty();
-    return candidates;
 }
 
 void printResumeCandidates(const ResumeCandidates& candidates) {
@@ -1193,6 +1256,9 @@ Status resumeExistingRepository(git_repository* repo,
         SPDLOG_WARN("Failed to create .lfswip marker before pull resume at {}", libgit2::getLfsWipMarkerPath(downloadPath).string());
     }
 
+    // Clear any stale lfs_error.txt from previous failed attempts to avoid false error reports
+    libgit2::clearStaleErrorFile(downloadPath);
+
     printResumeCandidates(candidates);
 
     for (const auto& p : candidates.lfsMatches) {
@@ -1246,14 +1312,26 @@ Status resumeExistingRepository(git_repository* repo,
     return StatusCode::OK;
 }
 
-Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
-    const std::function<Status(bool)>& checkRepositoryStatusFn) {
-    // If the directory does not contain a .git entry, treat it as a user-provided model directory.
-    // The user has copied model files in by hand; skip the pull and let model loading proceed
-    // against whatever files are already on disk. Use --overwrite_models to replace it with a
-    // fresh download.
+bool hasResumableStateBasedOnFiles(const std::string& downloadPath, const ResumeCandidates& candidates) {
+    auto existingMatches = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+
+    // Use repository object only when interruption markers indicate a previous
+    // pull likely failed and resume logic may be required.
+    if (!candidates.hasWipMarker && !candidates.hasLfsErrorFile && existingMatches.empty()) {
+        SPDLOG_DEBUG("Model pull operation found no interruption markers for this path: {}", downloadPath);
+        SPDLOG_INFO("Path already exists on local filesystem. Skipping download to path: {}", downloadPath);
+        return false;
+    }
+
+    if (!existingMatches.empty()) {
+        SPDLOG_DEBUG("Found {} LFS-like file(s) under path: {}. Enabling resume check.", existingMatches.size(), downloadPath);
+    }
+    return true;
+}
+
+Status checkGitEntryExists(const std::string& downloadPath, bool& gitEntryExists) {
     std::error_code ec;
-    const bool gitEntryExists = fs::exists(fs::path(downloadPath) / ".git", ec);
+    gitEntryExists = fs::exists(fs::path(downloadPath) / ".git", ec);
     if (ec) {
         // Probe itself failed (permission denied, I/O error, ...). Do not silently fall through
         // to the "not a git repository" branch, that would mask real filesystem problems.
@@ -1264,6 +1342,42 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
         SPDLOG_INFO("Path \"{}\" exists but is not a git repository. "
                     "Skipping download and using existing files.",
             downloadPath);
+    }
+    return StatusCode::OK;
+}
+
+Status checkSufficientResumeConditions(const std::string& downloadPath, ResumeCandidates& candidates) {
+    candidates.shouldResume = false;
+
+    bool gitEntryExists = false;
+    auto firstConditionStatus = checkGitEntryExists(downloadPath, gitEntryExists);
+    if (!firstConditionStatus.ok()) {
+        return firstConditionStatus;
+    }
+    if (!gitEntryExists) {
+        return StatusCode::OK;
+    }
+
+    // Probe interruption markers once and reuse them later when building candidates.
+    candidates.hasWipMarker = libgit2::hasLfsWipMarker(downloadPath);
+    candidates.hasLfsErrorFile = libgit2::hasLfsErrorFile(downloadPath);
+
+    candidates.shouldResume = hasResumableStateBasedOnFiles(downloadPath, candidates);
+    return StatusCode::OK;
+}
+
+Status handleExistingRepository(const std::string& downloadPath,
+    const std::function<Status(bool)>& checkRepositoryStatusFn) {
+    // If the directory does not contain a .git entry, treat it as a user-provided model directory.
+    // The user has copied model files in by hand; skip the pull and let model loading proceed
+    // against whatever files are already on disk. Use --overwrite_models to replace it with a
+    // fresh download.
+    ResumeCandidates candidates;
+    auto sufficientConditionsStatus = checkSufficientResumeConditions(downloadPath, candidates);
+    if (!sufficientConditionsStatus.ok()) {
+        return sufficientConditionsStatus;
+    }
+    if (!candidates.shouldResume) {
         return StatusCode::OK;
     }
 
@@ -1276,9 +1390,9 @@ Status handleExistingRepositoryWithoutOverwrite(const std::string& downloadPath,
         return mapRepositoryOpenFailureToStatus(repoGuard);
     }
 
-    auto candidates = buildResumeCandidates(repoGuard.get(), downloadPath);
+    buildResumeCandidates(repoGuard.get(), downloadPath, candidates);
     if (!candidates.interruptionLikely) {
-        SPDLOG_DEBUG("Model pull operation found no interruption signals for this path: {}", downloadPath);
+        SPDLOG_WARN("Interruption marker(s) were found but no resumable candidates were detected for path: {}", downloadPath);
         SPDLOG_INFO("Path already exists on local filesystem. Skipping download to path: {}", downloadPath);
         return StatusCode::OK;
     }
@@ -1391,6 +1505,9 @@ Status handleFreshClone(const std::string& downloadPath,
     const std::function<Status(const std::string&)>& removeReadonlyFn) {
     SPDLOG_DEBUG("Downloading to path: {}", downloadPath);
 
+    // Clear any stale lfs_error.txt from previous failed attempts to avoid false error reports
+    libgit2::clearStaleErrorFile(downloadPath);
+
     git_clone_options cloneOptions = GIT_CLONE_OPTIONS_INIT;
     configureCloneOptions(cloneOptions, useProxy, proxyUrl);
 
@@ -1433,7 +1550,7 @@ Status HfDownloader::downloadModel() {
 
     // Repository exists and we do not want to overwrite
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
-        return handleExistingRepositoryWithoutOverwrite(this->downloadPath, checkRepositoryStatusFn);
+        return handleExistingRepository(this->downloadPath, checkRepositoryStatusFn);
     }
 
     auto status = IModelDownloader::checkIfOverwriteAndRemove();

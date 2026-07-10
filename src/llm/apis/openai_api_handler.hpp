@@ -36,6 +36,7 @@
 #include "absl/status/statusor.h"
 #pragma warning(pop)
 #include "../io_processing/output_parser.hpp"
+#include "../io_processing/input_request.hpp"
 #include "openai_request.hpp"
 
 // Forward declarations for types only used by reference in virtual method signatures
@@ -49,6 +50,8 @@ class VLMDecodedResults;
 using namespace rapidjson;
 
 namespace ovms {
+
+class GenerationConfigBuilder;
 
 ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value);
 
@@ -97,12 +100,23 @@ protected:
     ov::genai::Tokenizer tokenizer;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
-    std::unique_ptr<OutputParser> outputParser = nullptr;
+    std::shared_ptr<OutputParser> outputParser = nullptr;
+
+    // Verbose response support (enabled via --verbose_response). When set, the
+    // serialized response includes a "__verbose" object with the raw prompt
+    // (post chat template application) and raw decoded model output
+    // (before tool/reasoning parsing).
+    bool verboseResponse = false;
+
+    std::string verbosePrompt;
+    // Streaming accumulators for raw model output.
+    std::vector<int64_t> verboseRawTokens;
+    std::string verboseRawText;
 
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
     absl::Status parseResponseFormat();
-    absl::Status ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged);
+    absl::Status ensureArgumentsInToolCalls(Value& messageObj);
     ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
 
     // Shared VLM workaround: encode text to tokens using tokenizer, validates shape
@@ -118,7 +132,7 @@ public:
         // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
         // we pass it now, but it has to be populated first before first use
         if (!toolParserName.empty() || !reasoningParserName.empty()) {
-            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
+            outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
         }
     }
 
@@ -145,8 +159,6 @@ public:
     std::optional<std::string> getPrompt() const;
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
-    const std::string& getProcessedJson() const;
-    const ImageHistory& getImageHistory() const;
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
     std::optional<std::string> getResponseFormat() const;
@@ -154,7 +166,31 @@ public:
     Endpoint getEndpoint() const;
     std::string getModel() const;
     std::string getToolChoice() const;
-    const std::unique_ptr<OutputParser>& getOutputParser() const;
+    const std::shared_ptr<OutputParser>& getOutputParser() const;
+    // Builds a complete InputRequest: runs the full generation config pipeline
+    // (parse → adjust → validate) on the provided builder using this handler's
+    // request and tokenizer, then populates input from the parsed request.
+    absl::StatusOr<InputRequest> extractInputRequest(GenerationConfigBuilder& configBuilder);
+
+    // Verbose response configuration
+    void enableVerboseResponse(const std::string& promptAfterTemplate) {
+        verboseResponse = true;
+        verbosePrompt = promptAfterTemplate;
+    }
+    bool isVerboseResponse() const { return verboseResponse; }
+    const std::string& getVerbosePrompt() const { return verbosePrompt; }
+    // Accumulators used to assemble the "raw model output" for streaming responses.
+    void appendVerboseRawTokens(const std::vector<int64_t>& tokens) {
+        verboseRawTokens.insert(verboseRawTokens.end(), tokens.begin(), tokens.end());
+    }
+    void appendVerboseRawText(const std::string& chunk) {
+        verboseRawText.append(chunk);
+    }
+    void setVerboseRawText(std::string text) {
+        verboseRawText = std::move(text);
+    }
+    const std::vector<int64_t>& getVerboseRawTokens() const { return verboseRawTokens; }
+    const std::string& getVerboseRawText() const { return verboseRawText; }
 
     // Usage tracking
     void setPromptTokensUsage(size_t promptTokens);
@@ -165,7 +201,7 @@ public:
     virtual std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) = 0;
     virtual std::string serializeUnaryResponse(ov::genai::EncodedResults& results) = 0;
     virtual std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) = 0;
-    virtual std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) = 0;
+    virtual std::string serializeStreamingChunk(rapidjson::Document parsedDelta, ov::genai::GenerationFinishReason finishReason) = 0;
     virtual std::string serializeStreamingUsageChunk() = 0;
     virtual std::string serializeStreamingHandshakeChunk() = 0;
 
@@ -179,18 +215,5 @@ public:
 void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& generatedIds, bool echoPrompt);
 std::optional<std::string> mapFinishReason(ov::genai::GenerationFinishReason finishReason, bool hasToolCalls);
 std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjson::Value& openAIFormat);
-
-// Constants shared by parseMessages and parseInput
-constexpr std::string_view BASE64_PREFIX = "base64,";
-constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
-
-// Image download utilities shared by parseMessages and parseInput
-absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit);
-bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char* url);
-
-// Loads image from base64 string, URL, or local file path; returns the decoded tensor
-absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
-    const std::optional<std::string>& allowedLocalMediaPath,
-    const std::optional<std::vector<std::string>>& allowedMediaDomains);
 
 }  // namespace ovms

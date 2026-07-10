@@ -1,0 +1,188 @@
+#
+# Copyright (c) 2026 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+ARG BASE_IMAGE=registry.connect.redhat.com/intel/openvino-model-server:latest
+FROM $BASE_IMAGE as base_image
+
+ARG ROOT_PATH_CPU_EXTENSIONS=/cpu_extensions
+ARG OPENVINO_PATH=/opt/intel/openvino_2025
+ARG HEADER_FILE_PATH=customloaderinterface.hpp
+ARG OPENCV_HEADER_FILE_PATH=/deps/opencv.hpp
+
+ARG OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection  -Wformat -Wformat-security -Werror=format-security"
+ARG NODES="east_ocr model_zoo_intel_object_detection image_transformation node_add_sub node_choose_maximum node_perform_different_operations node_dynamic_demultiplex demultiply demultiply_gather elastic_in_1t_out_1t"
+ARG NODE_NAME=demultiply
+ARG NODE_TYPE=cpp
+ARG OPENCV_BRANCH=4.12.0
+ARG OV_PACKAGE=openvino_2025
+ARG DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.2.0.0.dev20260331/openvino_genai_rhel8_2026.2.0.0.dev20260331_x86_64.tar.gz
+
+ENV OpenVINO_DIR=$OPENVINO_PATH/runtime/cmake
+ENV TBB_DIR=/tmp/openvino_installer/oneapi-tbb-2021.13.0/lib/cmake/tbb
+
+USER root
+# Prepare OS environment
+RUN microdnf update -y && \
+    microdnf install -y bzip2 cmake gcc-c++ git libcurl-devel make sudo tar unzip wget \
+    && rm -rf /tmp/*
+
+# Install valgrind
+WORKDIR /
+RUN wget https://sourceware.org/pub/valgrind/valgrind-3.24.0.tar.bz2
+RUN tar xvf valgrind-3.24.0.tar.bz2
+WORKDIR /valgrind-3.24.0
+RUN ./configure
+RUN make
+RUN sudo make install
+
+# OV toolkit package
+WORKDIR /opt/intel
+RUN curl -L $DLDT_PACKAGE_URL --output $OV_PACKAGE.tgz
+RUN tar -xf $OV_PACKAGE.tgz
+RUN mv *openvino_genai* $OPENVINO_PATH
+WORKDIR $OPENVINO_PATH
+
+# OpenCV
+WORKDIR /opt
+COPY opencv_cmake_flags.txt /opt
+RUN rm -rf $OPENCV_BRANCH opencv_repo
+RUN rm -rf $OPENCV_BRANCH opencv_contrib_repo
+RUN git clone https://github.com/opencv/opencv.git --depth 1 -b $OPENCV_BRANCH opencv_repo
+RUN git clone https://github.com/opencv/opencv_contrib.git --depth 1 -b $OPENCV_BRANCH opencv_contrib_repo
+WORKDIR /opt/opencv_repo/build
+RUN cmake $(cat /opt/opencv_cmake_flags.txt) /opt/opencv_repo && \
+    make "-j$(nproc)" && \
+    make install
+
+RUN /ovms/bin/ovms --version
+
+# Run benchmark app
+WORKDIR $OPENVINO_PATH/samples/cpp
+RUN ./build_samples.sh
+
+# Copy OV artifacts to build custom nodes and extensions
+WORKDIR /ov
+COPY ov /ov
+WORKDIR /ov/ovms_basic/build
+RUN cmake ../ovms
+RUN cmake --build .
+
+WORKDIR /ov/ovms_reshape_model/build
+RUN cmake ../ovms
+RUN cmake --build .
+
+# Build cliloader
+WORKDIR /
+RUN git clone https://github.com/intel/opencl-intercept-layer/
+WORKDIR /opencl-intercept-layer/build
+RUN cmake ..
+RUN cmake --build . --config Debug --target cliloader
+RUN cmake --build . --config RelWithDebInfo --target install
+
+### SimpleReluCpuExtension ###
+WORKDIR $ROOT_PATH_CPU_EXTENSIONS/SampleCpuExtension
+COPY SampleCpuExtension ./
+RUN make
+
+### CorruptedLibCpuExtension ###
+WORKDIR $ROOT_PATH_CPU_EXTENSIONS/corrupted_lib
+COPY SampleCpuExtension/Makefile corrupted_lib/CorruptedLib.cpp ./
+RUN sed -i "s|CustomReluOp.cpp|CorruptedLib.cpp|" Makefile
+RUN sed -i "s|libcustom_relu_cpu_extension.so|libcorrupted_lib_cpu_extension.so|" Makefile
+RUN sed -i "s|ov_extension.cpp||" Makefile
+RUN make
+
+### ThrowExceptionCpuExtension ###
+WORKDIR $ROOT_PATH_CPU_EXTENSIONS/throw_exceptions
+COPY SampleCpuExtension/Makefile throw_exceptions/ThrowExceptions.cpp ./
+RUN sed -i "s|CustomReluOp.cpp|ThrowExceptions.cpp|" Makefile
+RUN sed -i "s|libcustom_relu_cpu_extension.so|libthrow_exception_cpu_extension.so|" Makefile
+RUN sed -i "s|ov_extension.cpp||" Makefile
+RUN make
+
+### Custom nodes ###
+WORKDIR /custom_nodes
+COPY /custom_nodes /custom_nodes
+COPY queue.hpp /
+COPY custom_node_interface.h /
+WORKDIR /deps
+RUN cp /opt/opencv_repo/include/opencv2/opencv.hpp /deps/opencv.hpp
+WORKDIR /custom_nodes/common
+RUN g++ -c -std=c++17 *.cpp ${OPS} -I/opt/opencv/include/opencv4
+
+# OvmsTestDevCustomNode - default cpp location: /custom_nodes/<node_name>/
+# 1. east_ocr
+WORKDIR /custom_nodes/east_ocr/
+RUN g++ -c -std=c++17 east_ocr.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -shared ${OPS} -o /custom_nodes/east_ocr/libcustom_node_east_ocr.so east_ocr.o /custom_nodes/common/*.o \
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+# 2. model_zoo_intel_object_detection
+WORKDIR /custom_nodes/model_zoo_intel_object_detection/
+RUN g++ -c -std=c++17 model_zoo_intel_object_detection.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -shared ${OPS} -o /custom_nodes/model_zoo_intel_object_detection/libcustom_node_model_zoo_intel_object_detection.so model_zoo_intel_object_detection.o /custom_nodes/common/*.o \
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+# 3. image_transformation
+WORKDIR /custom_nodes/image_transformation/
+RUN g++ -c -std=c++17 image_transformation.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -shared ${OPS} -o /custom_nodes/image_transformation/libcustom_node_image_transformation.so image_transformation.o /custom_nodes/common/*.o \
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+
+# OvmsTestDevCustomNode - default cpp location: /custom_nodes/<node_name>/
+# 1. demultiply
+WORKDIR /custom_nodes/demultiply/
+RUN g++ -c -std=c++17 demultiply.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -shared ${OPS} -o /custom_nodes/demultiply/libcustom_node_demultiply.so demultiply.o /custom_nodes/common/*.o \
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+# 2. demultiply_gather
+WORKDIR /custom_nodes/demultiply_gather/
+RUN g++ -c -std=c++17 demultiply_gather.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -shared ${OPS} -o /custom_nodes/demultiply_gather/libcustom_node_demultiply_gather.so demultiply_gather.o /custom_nodes/common/*.o \
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+# 3. elastic_in_1t_out_1t
+WORKDIR /custom_nodes/elastic_in_1t_out_1t/
+RUN g++ -c -std=c++17 elastic_in_1t_out_1t.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -shared ${OPS} -o /custom_nodes/elastic_in_1t_out_1t/libcustom_node_elastic_in_1t_out_1t.so elastic_in_1t_out_1t.o /custom_nodes/common/*.o \
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+
+# OvmsCUnitTestCustomNode - default cpp location: /custom_nodes/
+WORKDIR /custom_nodes
+# 1. node_add_sub - NODE_TYPE=c
+RUN g++ -c -std=c++17 node_add_sub.c ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -shared ${OPS} -o /custom_nodes/libcustom_node_node_add_sub.so node_add_sub.o /custom_nodes/common/*.o \
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+# 2. node_choose_maximum
+RUN g++ -c -std=c++17 node_choose_maximum.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -shared ${OPS} -o /custom_nodes/libcustom_node_node_choose_maximum.so node_choose_maximum.o /custom_nodes/common/*.o \
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+# 3. node_perform_different_operations
+RUN g++ -c -std=c++17 node_perform_different_operations.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -shared ${OPS} -o /custom_nodes/libcustom_node_node_perform_different_operations.so node_perform_different_operations.o /custom_nodes/common/*.o \
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+# 4. node_dynamic_demultiplex
+RUN g++ -c -std=c++17 node_dynamic_demultiplex.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -shared ${OPS} -o /custom_nodes/libcustom_node_node_dynamic_demultiplex.so node_dynamic_demultiplex.o /custom_nodes/common/*.o \
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+
+ENTRYPOINT ["/ovms/bin/ovms"]

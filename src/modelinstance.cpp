@@ -43,6 +43,7 @@
 #include <sys/types.h>
 
 #include "anonymous_input_name.hpp"
+#include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
@@ -66,12 +67,6 @@
 #ifdef __linux__
 #include "opencltensorfactory.hpp"
 #include "vaapitensorfactory.hpp"
-#endif
-
-#ifdef _WIN32
-namespace ovms {
-bool malloc_trim_win();
-}  // namespace ovms
 #endif
 
 namespace {
@@ -1028,6 +1023,14 @@ plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& con
 
 Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
+    if (config.getTargetDevice() == "CPU") {
+        Status status = applyDefaultCpuProperties(pluginConfig);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to apply default CPU properties for model: {}; version: {}; error: {}",
+                getName(), getVersion(), status.string());
+            return status;
+        }
+    }
     try {
         loadCompiledModelPtr(pluginConfig);
     } catch (ov::Exception& e) {

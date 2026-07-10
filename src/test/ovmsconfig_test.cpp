@@ -27,6 +27,7 @@
 #include "../utils/env_guard.hpp"
 #include "../config.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "../graph_export/graph_cli_parser.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
@@ -343,24 +344,6 @@ TEST_F(OvmsConfigDeathTest, nonExistingLogLevel) {
     char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--log_level", "WRONG", "--port", "9178"};
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "log_level should be one of");
-}
-
-TEST_F(OvmsConfigDeathTest, lowLatencyUsedForNonStateful) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--low_latency_transformation", "--port", "9178"};
-    int arg_count = 8;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "require setting stateful flag for the model");
-}
-
-TEST_F(OvmsConfigDeathTest, maxSequenceNumberUsedForNonStateful) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--max_sequence_number", "325", "--port", "9178"};
-    int arg_count = 9;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "require setting stateful flag for the model");
-}
-
-TEST_F(OvmsConfigDeathTest, idleSequenceCleanupUsedForNonStateful) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--idle_sequence_cleanup", "--port", "9178"};
-    int arg_count = 8;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "require setting stateful flag for the model");
 }
 
 TEST_F(OvmsConfigDeathTest, RestPortNegativeUint64Max) {
@@ -1124,9 +1107,9 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
         (char*)"--draft_source_model",
         (char*)"/draft/model/source",
         (char*)"--reasoning_parser",
-        (char*)"reasoningParserName",
+        (char*)"qwen3",
         (char*)"--tool_parser",
-        (char*)"toolParserName",
+        (char*)"hermes3",
         (char*)"--enable_tool_guided_generation",
         (char*)"true",
         (char*)"--model_distribution_policy",
@@ -1157,8 +1140,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.value(), 16);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.value(), "/draft/model/source");
-    ASSERT_EQ(graphSettings.reasoningParser.value(), "reasoningParserName");
-    ASSERT_EQ(graphSettings.toolParser.value(), "toolParserName");
+    ASSERT_EQ(graphSettings.reasoningParser.value(), "qwen3");
+    ASSERT_EQ(graphSettings.toolParser.value(), "hermes3");
     ASSERT_EQ(graphSettings.enableToolGuidedGeneration, "true");
     ASSERT_EQ(exportSettings.pluginConfig.modelDistributionPolicy.has_value(), true);
     ASSERT_EQ(exportSettings.pluginConfig.modelDistributionPolicy.value(), "TENSOR_PARALLEL");
@@ -2467,7 +2450,6 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--rest_bind_address", "2.2.2.2",
         "--grpc_channel_arguments", "grpc_channel_args",
         "--file_system_poll_wait_seconds", "2",
-        "--sequence_cleaner_poll_wait_minutes", "7",
         "--custom_node_resources_cleaner_interval_seconds", "8",
         "--allow_credentials",
         "--allowed_headers", "Content-Type",
@@ -2489,7 +2471,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--grpc_memory_quota", "1000000",
         "--config_path", "/config.json"};
 
-    int arg_count = 46;
+    int arg_count = 44;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2500,7 +2482,6 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
-    EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
@@ -2574,8 +2555,6 @@ TEST(OvmsConfigTest, positiveSingle) {
         "grpc_channel_args",
         "--file_system_poll_wait_seconds",
         "2",
-        "--sequence_cleaner_poll_wait_minutes",
-        "7",
         "--custom_node_resources_cleaner_interval_seconds",
         "8",
 #ifdef _WIN32
@@ -2621,16 +2600,11 @@ TEST(OvmsConfigTest, positiveSingle) {
         "GPU",
         "--plugin_config",
         "pluginsetting",
-        "--stateful",
         "--metrics_enable",
         "--metrics_list",
         "ovms_streams,ovms_other",
-        "--idle_sequence_cleanup=false",
-        "--low_latency_transformation",
-        "--max_sequence_number",
-        "52",
     };
-    int arg_count = 63;
+    int arg_count = 56;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2641,7 +2615,6 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
-    EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
@@ -2666,12 +2639,8 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.nireq(), 2);
     EXPECT_EQ(config.targetDevice(), "GPU");
     EXPECT_EQ(config.pluginConfig(), "pluginsetting");
-    EXPECT_EQ(config.stateful(), true);
     EXPECT_EQ(config.metricsEnabled(), true);
     EXPECT_EQ(config.metricsList(), "ovms_streams,ovms_other");
-    EXPECT_EQ(config.idleSequenceCleanup(), false);
-    EXPECT_EQ(config.lowLatencyTransformation(), true);
-    EXPECT_EQ(config.maxSequenceNumber(), 52);
     EXPECT_EQ(config.grpcMaxThreads(), ovms::getCoreCount() * 8.0);
     EXPECT_EQ(config.grpcMemoryQuota(), (size_t)2 * 1024 * 1024 * 1024);
 
@@ -2852,6 +2821,79 @@ TEST(OvmsConfigManipulationTest, positiveDisableModel) {
     auto& modelSettings = config.getModelSettings();
     ASSERT_EQ(modelSettings.modelName, modelName);
     ASSERT_EQ(modelSettings.configPath, configPath);
+}
+
+TEST(OvmsGraphCliParserTest, invalidToolParserNameThrowsInvalidArgument) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "nonexistent_parser"};
+    parser.parse(args);
+    EXPECT_THROW({
+        try {
+            parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+        } catch (const std::invalid_argument& e) {
+            EXPECT_NE(std::string(e.what()).find("Unsupported tool_parser"), std::string::npos);
+            EXPECT_NE(std::string(e.what()).find("nonexistent_parser"), std::string::npos);
+            throw;
+        }
+    },
+        std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, invalidReasoningParserNameThrowsInvalidArgument) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--reasoning_parser", "nonexistent_parser"};
+    parser.parse(args);
+    EXPECT_THROW({
+        try {
+            parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+        } catch (const std::invalid_argument& e) {
+            EXPECT_NE(std::string(e.what()).find("Unsupported reasoning_parser"), std::string::npos);
+            EXPECT_NE(std::string(e.what()).find("nonexistent_parser"), std::string::npos);
+            throw;
+        }
+    },
+        std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, validParserNamesAreAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "hermes3", "--reasoning_parser", "qwen3"};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.toolParser.has_value());
+    EXPECT_EQ(graphSettings.toolParser.value(), "hermes3");
+    ASSERT_TRUE(graphSettings.reasoningParser.has_value());
+    EXPECT_EQ(graphSettings.reasoningParser.value(), "qwen3");
+}
+
+TEST(OvmsGraphCliParserTest, emptyParserNamesAreAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "", "--reasoning_parser", ""};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.toolParser.has_value());
+    EXPECT_EQ(graphSettings.toolParser.value(), "");
+    ASSERT_TRUE(graphSettings.reasoningParser.has_value());
+    EXPECT_EQ(graphSettings.reasoningParser.value(), "");
+}
+
+TEST(OvmsGraphCliParserTest, noneParserNamesAreAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "none", "--reasoning_parser", "none"};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.toolParser.has_value());
+    EXPECT_EQ(graphSettings.toolParser.value(), "none");
+    ASSERT_TRUE(graphSettings.reasoningParser.has_value());
+    EXPECT_EQ(graphSettings.reasoningParser.value(), "none");
 }
 
 #pragma GCC diagnostic pop

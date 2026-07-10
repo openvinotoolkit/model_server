@@ -53,7 +53,6 @@
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelversion.hpp"
 #include "../regularovtensorfactory.hpp"
-#include "../sequence_processing_spec.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "test_models_configs.hpp"
 #include "test_utils.hpp"

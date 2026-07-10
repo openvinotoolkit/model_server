@@ -16,6 +16,7 @@
 #include <array>
 #include <chrono>
 #include <cstdlib>
+#include <fstream>
 #include <iomanip>
 #include <memory>
 #include <openssl/sha.h>
@@ -61,38 +62,582 @@
 
 #include "environment.hpp"
 
+namespace {
+
+constexpr std::uintmax_t OPENVINO_MODEL_BIN_FULL_SIZE_BYTES = 52417240;
+constexpr std::uintmax_t OPENVINO_MODEL_BIN_HALF_SIZE_BYTES = 26208620;
+constexpr std::uintmax_t OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES = 339125;
+constexpr std::uintmax_t OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES = 500292;
+constexpr std::uintmax_t TOKENIZER_MODEL_FULL_SIZE_BYTES = 499723;
+constexpr std::uintmax_t DRAFT_OPENVINO_TOKENIZER_BIN_SIZE_BYTES = 2022483;
+
+struct ProbeErrorTracker {
+    std::size_t consecutiveErrors = 0;
+    std::error_code lastError;
+    std::string lastOperation;
+    std::string lastPath;
+    std::string persistentFailureReason;
+};
+
+bool trackProbeError(ProbeErrorTracker& tracker, const std::error_code& probeError, std::string_view operation, const std::string& path,
+    std::string_view context, std::size_t maxConsecutiveErrors) {
+    if (!probeError || probeError == std::errc::no_such_file_or_directory) {
+        tracker.consecutiveErrors = 0;
+        tracker.lastError.clear();
+        tracker.lastOperation.clear();
+        tracker.lastPath.clear();
+        return false;
+    }
+
+    if ((probeError == tracker.lastError) && (tracker.lastOperation == operation) && (tracker.lastPath == path)) {
+        ++tracker.consecutiveErrors;
+    } else {
+        tracker.consecutiveErrors = 1;
+        tracker.lastError = probeError;
+        tracker.lastOperation = operation;
+        tracker.lastPath = path;
+    }
+
+    if ((tracker.consecutiveErrors == 1) || (tracker.consecutiveErrors % 5 == 0)) {
+        SPDLOG_WARN("{}: non-benign filesystem probe error repeated {} time(s): op={} path={} ec={} ({})",
+            context, tracker.consecutiveErrors, operation, path, probeError.value(), probeError.message());
+    }
+    if (tracker.consecutiveErrors >= maxConsecutiveErrors) {
+        tracker.persistentFailureReason = "Persistent non-benign filesystem probe error while waiting for in-progress pull: op=" + std::string(operation) +
+                                          " path=" + path +
+                                          " ec=" + std::to_string(probeError.value()) +
+                                          " (" + probeError.message() + ") repeated " +
+                                          std::to_string(tracker.consecutiveErrors) + " time(s)";
+        return true;
+    }
+    return false;
+}
+
+::testing::AssertionResult waitForResumableInProgressPull(
+    const std::string& modelBasePath,
+    const std::string& modelPath,
+    const std::string& downloadPath,
+    std::uintmax_t expectedFullModelSize,
+    std::string_view context,
+    int timeoutSeconds,
+    int pollIntervalMs,
+    int postObservationDelayMs,
+    std::size_t maxConsecutiveProbeErrors) {
+    ProbeErrorTracker probeErrorTracker;
+    const std::string mainRefPath = ovms::FileSystem::appendSlash(modelBasePath) + ".git/refs/heads/main";
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeoutSeconds);
+    while (std::chrono::steady_clock::now() < deadline) {
+        std::error_code ec;
+        const bool hasMainRef = std::filesystem::exists(mainRefPath, ec);
+        if (trackProbeError(probeErrorTracker, ec, "exists", mainRefPath, context, maxConsecutiveProbeErrors)) {
+            return ::testing::AssertionFailure() << probeErrorTracker.persistentFailureReason;
+        }
+
+        ec.clear();
+        const bool modelExists = std::filesystem::exists(modelPath, ec);
+        if (trackProbeError(probeErrorTracker, ec, "exists", modelPath, context, maxConsecutiveProbeErrors)) {
+            return ::testing::AssertionFailure() << probeErrorTracker.persistentFailureReason;
+        }
+
+        std::uintmax_t modelSize = 0;
+        if (modelExists) {
+            ec.clear();
+            modelSize = std::filesystem::file_size(modelPath, ec);
+            if (ec) {
+                if (trackProbeError(probeErrorTracker, ec, "file_size", modelPath, context, maxConsecutiveProbeErrors)) {
+                    return ::testing::AssertionFailure() << probeErrorTracker.persistentFailureReason;
+                }
+                modelSize = 0;
+            }
+        }
+
+        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+        const bool hasLfsArtifacts = !lfsCandidates.empty();
+        const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < expectedFullModelSize);
+        if (hasMainRef && (hasLfsArtifacts || modelInFlight)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(postObservationDelayMs));
+            return ::testing::AssertionSuccess();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(pollIntervalMs));
+    }
+
+    return ::testing::AssertionFailure() << context << ": did not observe in-progress pull within timeout.";
+}
+
+#ifdef _WIN32
+struct WindowsResumeWorkerConfig {
+    const char* workerFlagEnv;
+    const char* modelEnv;
+    const char* downloadPathEnv;
+    const char* taskEnv;
+    const char* gtestFilter;
+    DWORD processCreationFlags;
+};
+
+const WindowsResumeWorkerConfig RESUME_TERMINATE_WORKER_CONFIG = {
+    "OVMS_RESUME_TERMINATE_WORKER",
+    "OVMS_RESUME_TERMINATE_MODEL",
+    "OVMS_RESUME_TERMINATE_DOWNLOAD_PATH",
+    "OVMS_RESUME_TERMINATE_TASK",
+    "HfPullWindowsWorker.ResumeTerminateChildProcess",
+    0};
+
+const WindowsResumeWorkerConfig RESUME_CTRLC_WORKER_CONFIG = {
+    "OVMS_RESUME_CTRLC_WORKER",
+    "OVMS_RESUME_CTRLC_MODEL",
+    "OVMS_RESUME_CTRLC_DOWNLOAD_PATH",
+    "OVMS_RESUME_CTRLC_TASK",
+    "HfPullWindowsWorker.ResumeCtrlCChildProcess",
+    CREATE_NEW_PROCESS_GROUP};
+
+::testing::AssertionResult setWindowsResumeWorkerEnvironment(
+    const WindowsResumeWorkerConfig& config,
+    const std::string& modelName,
+    const std::string& downloadPath,
+    const std::string& task) {
+    if (!SetEnvironmentVariableA(config.workerFlagEnv, "1")) {
+        return ::testing::AssertionFailure() << "Failed to set env var: " << config.workerFlagEnv;
+    }
+    if (!SetEnvironmentVariableA(config.modelEnv, modelName.c_str())) {
+        return ::testing::AssertionFailure() << "Failed to set env var: " << config.modelEnv;
+    }
+    if (!SetEnvironmentVariableA(config.downloadPathEnv, downloadPath.c_str())) {
+        return ::testing::AssertionFailure() << "Failed to set env var: " << config.downloadPathEnv;
+    }
+    if (!SetEnvironmentVariableA(config.taskEnv, task.c_str())) {
+        return ::testing::AssertionFailure() << "Failed to set env var: " << config.taskEnv;
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult clearWindowsResumeWorkerEnvironment(const WindowsResumeWorkerConfig& config) {
+    if (!SetEnvironmentVariableA(config.workerFlagEnv, nullptr)) {
+        return ::testing::AssertionFailure() << "Failed to clear env var: " << config.workerFlagEnv;
+    }
+    if (!SetEnvironmentVariableA(config.modelEnv, nullptr)) {
+        return ::testing::AssertionFailure() << "Failed to clear env var: " << config.modelEnv;
+    }
+    if (!SetEnvironmentVariableA(config.downloadPathEnv, nullptr)) {
+        return ::testing::AssertionFailure() << "Failed to clear env var: " << config.downloadPathEnv;
+    }
+    if (!SetEnvironmentVariableA(config.taskEnv, nullptr)) {
+        return ::testing::AssertionFailure() << "Failed to clear env var: " << config.taskEnv;
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult launchWindowsResumeWorkerProcess(const WindowsResumeWorkerConfig& config, PROCESS_INFORMATION& pi) {
+    char testExePath[MAX_PATH] = {0};
+    const DWORD exePathLen = GetModuleFileNameA(nullptr, testExePath, MAX_PATH);
+    if ((exePathLen == 0u) || (exePathLen >= static_cast<DWORD>(MAX_PATH))) {
+        return ::testing::AssertionFailure() << "Failed to resolve current test executable path";
+    }
+
+    std::string commandLine = std::string("\"") + testExePath + "\" --gtest_filter=" + config.gtestFilter;
+    STARTUPINFOA si;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    if (!CreateProcessA(
+            nullptr,
+            commandLine.data(),
+            nullptr,
+            nullptr,
+            TRUE,
+            config.processCreationFlags,
+            nullptr,
+            nullptr,
+            &si,
+            &pi)) {
+        return ::testing::AssertionFailure() << "CreateProcessA failed for filter: " << config.gtestFilter;
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult startWindowsResumeWorker(
+    const WindowsResumeWorkerConfig& config,
+    const std::string& modelName,
+    const std::string& downloadPath,
+    const std::string& task,
+    PROCESS_INFORMATION& pi) {
+    auto envStatus = setWindowsResumeWorkerEnvironment(config, modelName, downloadPath, task);
+    if (!envStatus) {
+        return envStatus;
+    }
+
+    auto launchStatus = launchWindowsResumeWorkerProcess(config, pi);
+    if (!launchStatus) {
+        (void)clearWindowsResumeWorkerEnvironment(config);
+        return launchStatus;
+    }
+    return ::testing::AssertionSuccess();
+}
+
+void closeWindowsWorkerHandles(PROCESS_INFORMATION& pi) {
+    if (pi.hThread != nullptr) {
+        CloseHandle(pi.hThread);
+        pi.hThread = nullptr;
+    }
+    if (pi.hProcess != nullptr) {
+        CloseHandle(pi.hProcess);
+        pi.hProcess = nullptr;
+    }
+}
+
+::testing::AssertionResult terminateWindowsWorker(PROCESS_INFORMATION& pi, int timeoutSeconds) {
+    if (!TerminateProcess(pi.hProcess, 1)) {
+        return ::testing::AssertionFailure() << "TerminateProcess failed";
+    }
+    if (WaitForSingleObject(pi.hProcess, timeoutSeconds * 1000) != WAIT_OBJECT_0) {
+        return ::testing::AssertionFailure() << "Timed out waiting for terminated child process";
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult sendCtrlBreakToWindowsWorker(PROCESS_INFORMATION& pi, int timeoutSeconds) {
+    if (!GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pi.dwProcessId)) {
+        return ::testing::AssertionFailure() << "GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT) failed";
+    }
+    if (WaitForSingleObject(pi.hProcess, timeoutSeconds * 1000) != WAIT_OBJECT_0) {
+        return ::testing::AssertionFailure() << "Timed out waiting for CTRL_BREAK child process shutdown";
+    }
+    DWORD childExitCode = 0;
+    if (!GetExitCodeProcess(pi.hProcess, &childExitCode)) {
+        return ::testing::AssertionFailure() << "GetExitCodeProcess failed";
+    }
+    if (childExitCode == static_cast<DWORD>(EXIT_SUCCESS)) {
+        return ::testing::AssertionFailure()
+               << "Child process exited with EXIT_SUCCESS after CTRL_BREAK, expected interrupted failure";
+    }
+    return ::testing::AssertionSuccess();
+}
+#else
+::testing::AssertionResult launchPosixResumeWorker(
+    const std::string& modelName,
+    const std::string& downloadPath,
+    const std::string& task,
+    pid_t& childPid) {
+    childPid = fork();
+    if (childPid == -1) {
+        return ::testing::AssertionFailure() << "fork() failed";
+    }
+    if (childPid == 0) {
+        ovms::Server& childServer = ovms::Server::instance();
+        childServer.setShutdownRequest(0);
+        char* argv[] = {(char*)"ovms",
+            (char*)"--pull",
+            (char*)"--source_model",
+            (char*)modelName.c_str(),
+            (char*)"--model_repository_path",
+            (char*)downloadPath.c_str(),
+            (char*)"--task",
+            (char*)task.c_str()};
+        int argc = 8;
+        int rc = childServer.start(argc, argv);
+        _exit(rc == EXIT_SUCCESS ? 0 : 1);
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult killPosixWorkerAndExpectSigKill(pid_t childPid) {
+    if (kill(childPid, SIGKILL) != 0) {
+        return ::testing::AssertionFailure() << "Failed to send SIGKILL to child process";
+    }
+
+    int childStatus = 0;
+    if (waitpid(childPid, &childStatus, 0) != childPid) {
+        return ::testing::AssertionFailure() << "waitpid failed for SIGKILL child process";
+    }
+    if (!WIFSIGNALED(childStatus) || (WTERMSIG(childStatus) != SIGKILL)) {
+        return ::testing::AssertionFailure() << "Child did not terminate due to SIGKILL";
+    }
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult interruptPosixWorkerAndExpectGracefulExit(pid_t childPid) {
+    if (kill(childPid, SIGINT) != 0) {
+        return ::testing::AssertionFailure() << "Failed to send SIGINT to child process";
+    }
+
+    int childStatus = 0;
+    if (waitpid(childPid, &childStatus, 0) != childPid) {
+        return ::testing::AssertionFailure() << "waitpid failed for SIGINT child process";
+    }
+    if (!WIFEXITED(childStatus)) {
+        return ::testing::AssertionFailure()
+               << "Child was terminated by signal " << (WIFSIGNALED(childStatus) ? WTERMSIG(childStatus) : 0)
+               << " instead of graceful exit after SIGINT";
+    }
+    if (WEXITSTATUS(childStatus) == EXIT_SUCCESS) {
+        return ::testing::AssertionFailure() << "Child exited with EXIT_SUCCESS after SIGINT, expected interrupted failure";
+    }
+    return ::testing::AssertionSuccess();
+}
+#endif
+
+}  // namespace
+
+// RAII helper class for managing log file lifecycle.
+// Creates a log file path and automatically removes it on destruction.
+class LogFileGuard {
+private:
+    std::string logFilePath;
+
+public:
+    explicit LogFileGuard(const std::string& path) :
+        logFilePath(path) {}
+
+    ~LogFileGuard() {
+        if (std::filesystem::exists(logFilePath)) {
+            std::error_code ec;
+            std::filesystem::remove(logFilePath, ec);
+        }
+    }
+
+    bool create() {
+        std::error_code ec;
+        std::filesystem::remove(logFilePath, ec);
+        std::ofstream file(logFilePath);
+        return file.is_open();
+    }
+
+    std::string getContent() const {
+        std::ifstream file(logFilePath);
+        if (!file.is_open()) {
+            return "";
+        }
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        return buffer.str();
+    }
+
+    bool contains(const std::string& text) const {
+        return getContent().find(text) != std::string::npos;
+    }
+
+    const std::string& getPath() const {
+        return logFilePath;
+    }
+
+    bool exists() const {
+        return std::filesystem::exists(logFilePath);
+    }
+};
+
 class HfPull : public TestWithTempDir {
 protected:
+    static constexpr const char* MODEL_NAMESPACE = "OpenVINO";
+    static constexpr const char* MODEL_ID = "Phi-3-mini-FastDraft-50M-int8-ov";
+    static constexpr const char* TASK_NAME = "text_generation";
+
+    // Timeout (seconds) for detecting in-progress pull in interrupt tests
+    static constexpr int HF_PULL_DETECT_TIMEOUT_SECONDS = 180;
+    // Timeout (seconds) for waiting on shutdown request acknowledgement
+    static constexpr int HF_PULL_SHUTDOWN_TIMEOUT_SECONDS = 120;
+    // Timeout (seconds) for regular server operations
+    static constexpr int HF_PULL_SERVER_TIMEOUT_SECONDS = 60;
+    // Delay (milliseconds) before sending interrupt signal
+    static constexpr int HF_PULL_INTERRUPT_DELAY_MS = 200;
+    // Poll interval (milliseconds) when checking for in-progress download
+    static constexpr int HF_PULL_POLL_INTERVAL_MS = 100;
+    // Max consecutive non-benign filesystem probe errors before failing diagnostics.
+    static constexpr int HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS = 15;
+    // Retry pull on recoverable network/LFS interruption signatures.
+    static constexpr int HF_PULL_MAX_ATTEMPTS = 3;
+    static constexpr int HF_PULL_RETRY_DELAY_MS = 10000;
+
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
     std::string modelName;
     std::string downloadPath;
     std::string task;
+    std::string modelBasePath;
+    std::string modelPath;
+    std::string modelPartPath;
+    std::string openvinoDetokenizerBinPath;
+    std::string openvinoTokenizerBinPath;
+    std::string tokenizerModelPath;
+    std::string tokenizerJsonPath;
+    std::string graphPath;
+    std::string gitDirPath;
+
+    std::string getModelBasePathForSource(const std::string& sourceModel, const std::string& repositoryRoot) const {
+        return ovms::IModelDownloader::getGraphDirectory(repositoryRoot, sourceModel);
+    }
+
+    bool looksLikeRecoverableNetworkFailure(const std::string& sourceModel, const std::string& repositoryRoot) const {
+        const std::string modelBase = getModelBasePathForSource(sourceModel, repositoryRoot);
+        std::error_code ec;
+        const bool modelBaseExists = std::filesystem::exists(modelBase, ec);
+        if (ec || !modelBaseExists)
+            return false;
+
+        // Interrupted network/LFS transfers usually leave partial files or marker traces.
+        const bool hasRepoMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(repositoryRoot), ec);
+        if (ec)
+            return false;
+        const bool hasModelMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(modelBase), ec);
+        if (ec)
+            return false;
+        if (hasRepoMarker || hasModelMarker)
+            return true;
+
+        const std::string lfsErrorPath = ovms::FileSystem::appendSlash(modelBase) + "lfs_error.txt";
+        const bool hasLfsErrorMarker = std::filesystem::exists(lfsErrorPath, ec);
+        if (ec)
+            return false;
+        if (hasLfsErrorMarker)
+            return true;
+
+        const std::string modelPartPath = ovms::FileSystem::appendSlash(modelBase) + "openvino_model.binlfs_part";
+        const bool hasPartFile = std::filesystem::exists(modelPartPath, ec);
+        if (ec)
+            return false;
+        if (hasPartFile)
+            return true;
+
+        const std::string modelBin = ovms::FileSystem::appendSlash(modelBase) + "openvino_model.bin";
+        const bool modelExists = std::filesystem::exists(modelBin, ec);
+        if (ec)
+            return false;
+        if (!modelExists)
+            return true;
+
+        const std::uintmax_t modelSize = std::filesystem::file_size(modelBin, ec);
+        if (ec)
+            return false;
+        if (modelSize == 0)
+            return true;
+
+        if (sourceModel == this->modelName) {
+            return modelSize < OPENVINO_MODEL_BIN_FULL_SIZE_BYTES;
+        }
+        return false;
+    }
+
+    int RunPullHfModelAndGetCode(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask, const std::string* logPath) {
+        server.setShutdownRequest(0);
+        std::vector<std::string> args = {
+            "ovms",
+            "--pull",
+            "--source_model",
+            sourceModel,
+            "--model_repository_path",
+            modelRepositoryPath,
+            "--task",
+            pullTask,
+        };
+        if (logPath != nullptr) {
+            args.push_back("--log_path");
+            args.push_back(*logPath);
+        }
+        std::vector<char*> argv;
+        argv.reserve(args.size());
+        for (auto& a : args) {
+            argv.push_back(a.data());
+        }
+        const int exitCode = server.start(static_cast<int>(argv.size()), argv.data());
+        server.setShutdownRequest(1);
+        server.setShutdownRequest(0);
+        return exitCode;
+    }
+
+    int runPullWithRetries(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask, const std::string* logPath, int expected_code) {
+        int lastExitCode = EXIT_FAILURE;
+        for (int attempt = 1; attempt <= HF_PULL_MAX_ATTEMPTS; ++attempt) {
+            lastExitCode = RunPullHfModelAndGetCode(sourceModel, modelRepositoryPath, pullTask, logPath);
+            if (lastExitCode == expected_code) {
+                return lastExitCode;
+            }
+
+            const bool recoverable = looksLikeRecoverableNetworkFailure(sourceModel, modelRepositoryPath);
+            if (!recoverable || (attempt == HF_PULL_MAX_ATTEMPTS)) {
+                return lastExitCode;
+            }
+            SPDLOG_WARN("HF pull attempt {} failed with exit code {} and recoverable network/LFS signatures detected. Retrying.", attempt, lastExitCode);
+            std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_RETRY_DELAY_MS));
+        }
+        return lastExitCode;
+    }
 
     void SetUp() override {
         TestWithTempDir::SetUp();
-        modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+        modelName = std::string(MODEL_NAMESPACE) + "/" + MODEL_ID;
         downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-        task = "text_generation";
+        task = TASK_NAME;
+        modelBasePath = ovms::FileSystem::joinPath({downloadPath, MODEL_NAMESPACE, MODEL_ID});
+        modelPath = ovms::FileSystem::appendSlash(modelBasePath) + "openvino_model.bin";
+        modelPartPath = ovms::FileSystem::appendSlash(modelBasePath) + "openvino_model.binlfs_part";
+        openvinoDetokenizerBinPath = ovms::FileSystem::appendSlash(modelBasePath) + "openvino_detokenizer.bin";
+        openvinoTokenizerBinPath = ovms::FileSystem::appendSlash(modelBasePath) + "openvino_tokenizer.bin";
+        tokenizerModelPath = ovms::FileSystem::appendSlash(modelBasePath) + "tokenizer.model";
+        tokenizerJsonPath = ovms::FileSystem::appendSlash(modelBasePath) + "tokenizer.json";
+        graphPath = ovms::FileSystem::appendSlash(modelBasePath) + "graph.pbtxt";
+        gitDirPath = ovms::FileSystem::appendSlash(modelBasePath) + ".git";
     }
 
     void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, nullptr, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
+    // Variant that captures output to a log file for assertions
+    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, LogFileGuard& logFile, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
+            const std::string& logPath = logFile.getPath();
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, &logPath, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
+        ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
+        ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, logFile.getPath(), expected_code, timeoutSeconds);
+    }
+
     void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            (void)draftModel;
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, nullptr, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
         ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
+    }
+
+    // Variant with draft model that captures output to a log file for assertions
+    void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, LogFileGuard& logFile, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            (void)draftModel;
+            ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
+            const std::string& logPath = logFile.getPath();
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, &logPath, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
+        ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
+        ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, logFile.getPath(), expected_code, timeoutSeconds);
     }
 
     void SetUpServerForDownloadAndStart(std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 60) {
         ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
     }
 
-    void TearDown() {
+    int RunPullHfModelAndGetCode(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask) {
+        return RunPullHfModelAndGetCode(sourceModel, modelRepositoryPath, pullTask, nullptr);
+    }
+
+    void TearDown() override {
         server.setShutdownRequest(1);
-        if (t)
+        if (t && t->joinable()) {
             t->join();
+        }
         server.setShutdownRequest(0);
+        t.reset();
         // Clone sets readonly - need to remove it before we can delete on windows
         RemoveReadonlyFileAttributeFromDir(this->directoryPath);
         TestWithTempDir::TearDown();
@@ -101,15 +646,17 @@ protected:
 
 class HfPullCache : public HfPull {
 protected:
+    static constexpr int CACHE_PULL_MAX_ATTEMPTS = 3;
+    static constexpr int CACHE_PULL_RETRY_DELAY_MS = 10000;
+
     static std::once_flag cacheInitFlag;
     static std::unique_ptr<TempDir> cacheDir;
     static std::string cachedRepositoryPath;
-
-    static constexpr const char* MODEL_NAME = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    static constexpr const char* TASK_NAME = "text_generation";
+    std::string testRepositoryPath;
 
     void SetUp() override {
         HfPull::SetUp();
+        testRepositoryPath = downloadPath;
         initializeSharedCache();
         seedCurrentTestRepository();
     }
@@ -117,23 +664,84 @@ protected:
     void initializeSharedCache() {
         std::call_once(cacheInitFlag, [this]() {
             cacheDir = std::make_unique<TempDir>();
-            std::string modelName = MODEL_NAME;
-            std::string downloadPath = ovms::FileSystem::joinPath({cacheDir->dir.string(), "repository"});
-            std::string task = TASK_NAME;
+            std::string sourceModelName = this->modelName;
+            std::string cacheDownloadPath = ovms::FileSystem::joinPath({cacheDir->dir.string(), "repository"});
+            std::string pullTask = this->task;
 
-            this->ServerPullHfModel(modelName, downloadPath, task);
-            server.setShutdownRequest(1);
-            if (t)
-                t->join();
-            server.setShutdownRequest(0);
+            auto buildModelBasePath = [&](const std::string& repositoryRoot) {
+                return ovms::FileSystem::joinPath({repositoryRoot, MODEL_NAMESPACE, MODEL_ID});
+            };
+            auto hasCompleteCache = [&](const std::string& repositoryRoot) {
+                const std::string modelBase = buildModelBasePath(repositoryRoot);
+                std::error_code ec;
+                const bool hasModel = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "openvino_model.bin", ec);
+                if (ec)
+                    return false;
+                const bool hasDetok = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "openvino_detokenizer.bin", ec);
+                if (ec)
+                    return false;
+                const bool hasTok = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "openvino_tokenizer.bin", ec);
+                if (ec)
+                    return false;
+                const bool hasTokModel = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "tokenizer.model", ec);
+                if (ec)
+                    return false;
+                const bool hasGraph = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "graph.pbtxt", ec);
+                if (ec)
+                    return false;
 
-            cachedRepositoryPath = downloadPath;
-            ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath));
+                // Validate expected known sizes for deterministic cache integrity checks.
+                const bool modelSizeOk = hasModel && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "openvino_model.bin", ec) == OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+                const bool detokSizeOk = hasDetok && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "openvino_detokenizer.bin", ec) == OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+                const bool tokSizeOk = hasTok && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "openvino_tokenizer.bin", ec) == OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+                const bool tokModelSizeOk = hasTokModel && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "tokenizer.model", ec) == TOKENIZER_MODEL_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+
+                const bool hasRepoMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(repositoryRoot), ec);
+                if (ec)
+                    return false;
+                const bool hasModelMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(modelBase), ec);
+                if (ec)
+                    return false;
+
+                return hasGraph && modelSizeOk && detokSizeOk && tokSizeOk && tokModelSizeOk && !hasRepoMarker && !hasModelMarker;
+            };
+            int lastExitCode = EXIT_FAILURE;
+            for (int attempt = 1; attempt <= CACHE_PULL_MAX_ATTEMPTS; ++attempt) {
+                lastExitCode = this->RunPullHfModelAndGetCode(sourceModelName, cacheDownloadPath, pullTask);
+                const bool cacheComplete = hasCompleteCache(cacheDownloadPath);
+                if ((lastExitCode == EXIT_SUCCESS) && cacheComplete) {
+                    cachedRepositoryPath = cacheDownloadPath;
+                    ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath));
+                    return;
+                }
+
+                const bool recoverable = this->looksLikeRecoverableNetworkFailure(sourceModelName, cacheDownloadPath) || !cacheComplete;
+                if (!recoverable || (attempt == CACHE_PULL_MAX_ATTEMPTS)) {
+                    FAIL() << "Failed to initialize shared HF cache after " << attempt
+                           << " attempt(s). Last exit code: " << lastExitCode
+                           << ". Cache path: " << cacheDownloadPath;
+                }
+                SPDLOG_WARN("Shared HF cache initialization attempt {} failed with exit code {}. Retrying pull.", attempt, lastExitCode);
+                std::this_thread::sleep_for(std::chrono::milliseconds(CACHE_PULL_RETRY_DELAY_MS));
+            }
         });
     }
 
     void seedCurrentTestRepository() {
-        const std::string testRepositoryPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+        ASSERT_FALSE(cachedRepositoryPath.empty())
+            << "Shared HF cache was never successfully initialized (call_once completed with a failure). "
+               "All HfPullCache tests in this process will be unable to seed their working directory.";
+        ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath))
+            << "Shared HF cache path does not exist on disk: " << cachedRepositoryPath
+            << ". Cache initialization completed but left no usable directory.";
         std::error_code ec;
         std::filesystem::copy(cachedRepositoryPath,
             testRepositoryPath,
@@ -237,13 +845,13 @@ TEST_F(HfPull, Download) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
-// Truncate the file to half its size, keeping the first half.
+// Truncate the file to half its size (OPENVINO_MODEL_BIN_FULL_SIZE_BYTES / 2), keeping the first half.
 bool removeSecondHalf(const std::string& fileStr) {
     const std::filesystem::path& file(fileStr);
     std::error_code ec;
@@ -272,7 +880,8 @@ bool createGitLfsPointerFile(const std::string& path) {
 
     file << "version https://git-lfs.github.com/spec/v1\n"
             "oid sha256:cecf0224201415144c00cf3a6cf3350306f9c78888d631eb590939a63722fefa\n"
-            "size 52417240\n";
+            "size "
+         << OPENVINO_MODEL_BIN_FULL_SIZE_BYTES << "\n";
 
     return true;
 }
@@ -343,10 +952,6 @@ public:
 };
 
 TEST_F(HfPullCache, RePull) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "text_generation";
-
     testing::internal::CaptureStdout();
     this->ServerPullHfModel(modelName, downloadPath, task);
     std::string out = testing::internal::GetCapturedStdout();
@@ -361,18 +966,9 @@ TEST_F(HfPullCache, RePull) {
 }
 
 TEST_F(HfPullCache, Resume) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "text_generation";
-
-    std::string ovModelName = "openvino_model.bin";
-    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
-    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + ovModelName;
-    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
-
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -393,22 +989,20 @@ TEST_F(HfPullCache, Resume) {
     ASSERT_EQ(ec, std::errc());
     // Prepare a git repository with a lfs_part file and lfs pointer file to simulate partial download error of a big model
     ASSERT_EQ(removeSecondHalf(modelPath), true);
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 26208620);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_HALF_SIZE_BYTES);
 
-    std::string ovModelPartLfsName = "openvino_model.binlfs_part";
-    std::string ovModelPartLfsPath = ovms::FileSystem::appendSlash(basePath) + ovModelPartLfsName;
-    std::filesystem::rename(modelPath, ovModelPartLfsPath, ec);
+    std::filesystem::rename(modelPath, modelPartPath, ec);
     ASSERT_EQ(ec, std::errc());
-    ASSERT_EQ(std::filesystem::file_size(ovModelPartLfsPath), 26208620);
+    ASSERT_EQ(std::filesystem::file_size(modelPartPath), OPENVINO_MODEL_BIN_HALF_SIZE_BYTES);
     ASSERT_EQ(createGitLfsPointerFile(modelPath), true);
 
     // Call ovms pull to resume the file
     this->ServerPullHfModel(modelName, downloadPath, task);
 
-    ASSERT_EQ(std::filesystem::exists(ovModelPartLfsPath), false) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(modelPartPath), false) << modelPath;
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -420,16 +1014,6 @@ TEST_F(HfPullCache, Resume) {
 
 // ResumeAfterShutdownRequestAndRerun
 TEST_F(HfPull, ResumeShutdown) {
-#ifdef _WIN32
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
-#endif
-    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
-    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
-    std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
-    std::string model3Path = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
-    std::string model4Path = ovms::FileSystem::appendSlash(basePath) + "tokenizer.model";
-    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
-
     server.setShutdownRequest(0);
     int firstRunCode = EXIT_SUCCESS;
     char* argv[] = {(char*)"ovms",
@@ -445,21 +1029,38 @@ TEST_F(HfPull, ResumeShutdown) {
         firstRunCode = this->server.start(argc, argv);
     }));
 
-    // Wait until the large LFS file (openvino_model.bin) starts downloading before
-    // sending the shutdown request. A fixed sleep is unreliable: on a fast CPU/network
-    // machine the download may finish before the sleep expires, leaving no partial files
-    // and causing the EXPECT_FALSE(remainingPointers.empty()) assertion to fail.
-    // We poll until the model file exists as an LFS pointer or a partial download
-    // is in progress (lfs_part file present), then interrupt immediately.
+    // Wait until pull is clearly in-progress before sending shutdown request.
+    // A fixed sleep is unreliable: on fast CPU/network setups download may finish
+    // before sleep expires, leaving no resumable artifacts.
+    bool observedPartialDownload = false;
+    ProbeErrorTracker probeErrorTracker;
     {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(HF_PULL_SERVER_TIMEOUT_SECONDS);
         while (std::chrono::steady_clock::now() < deadline) {
-            auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-            const bool hasModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
-                                             [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
-            const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
-            const bool hasPartFile = std::filesystem::exists(partPath);
-            if (hasModelPointer || hasPartFile) {
+            std::error_code ec;
+            const bool hasPartFile = std::filesystem::exists(modelPartPath, ec);
+            if (trackProbeError(probeErrorTracker, ec, "exists", modelPartPath, "ResumeShutdown", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+                break;
+            }
+            ec.clear();
+            const bool modelExists = std::filesystem::exists(modelPath, ec);
+            if (trackProbeError(probeErrorTracker, ec, "exists", modelPath, "ResumeShutdown", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+                break;
+            }
+            std::uintmax_t modelSize = 0;
+            if (modelExists) {
+                ec.clear();
+                modelSize = std::filesystem::file_size(modelPath, ec);
+                if (ec) {
+                    if (trackProbeError(probeErrorTracker, ec, "file_size", modelPath, "ResumeShutdown", HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS)) {
+                        break;
+                    }
+                    modelSize = 0;
+                }
+            }
+            const bool modelInFlight = modelExists && (modelSize > 0) && (modelSize < OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
+            if (hasPartFile || modelInFlight) {
+                observedPartialDownload = true;
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
                 break;
             }
@@ -467,10 +1068,18 @@ TEST_F(HfPull, ResumeShutdown) {
         }
     }
     server.setShutdownRequest(1);
-    EnsureServerModelDownloadFinishedWithTimeout(server, 120);
+    EnsureServerModelDownloadFinishedWithTimeout(server, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS);
     if (t)
         t->join();
     server.setShutdownRequest(0);
+
+    if (!probeErrorTracker.persistentFailureReason.empty()) {
+        FAIL() << probeErrorTracker.persistentFailureReason;
+    }
+
+    if (!observedPartialDownload) {
+        FAIL() << "Did not observe in-progress pull before timeout; cannot validate resume-after-shutdown path.";
+    }
 
     EXPECT_NE(firstRunCode, EXIT_SUCCESS);
     auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
@@ -480,22 +1089,17 @@ TEST_F(HfPull, ResumeShutdown) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
-    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
-    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
-    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoDetokenizerBinPath), OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoTokenizerBinPath), OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(tokenizerModelPath), TOKENIZER_MODEL_FULL_SIZE_BYTES);
 }
 
 // PullAfterUserRemovedTrackedFileDoesNotRestoreIt
 TEST_F(HfPullCache, UserRemoved) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "text_generation";
-
-    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
-    std::string preservedFilePath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
-    std::string removedFilePath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
-    std::string removedFilePath2 = ovms::FileSystem::appendSlash(basePath) + "tokenizer.json";
+    std::string preservedFilePath = modelPath;
+    std::string removedFilePath = openvinoTokenizerBinPath;
+    std::string removedFilePath2 = tokenizerJsonPath;
 
     ASSERT_TRUE(std::filesystem::exists(preservedFilePath));
     ASSERT_TRUE(std::filesystem::exists(removedFilePath));
@@ -529,7 +1133,7 @@ TEST_F(HfPullCache, UserRemoved) {
         secondRunCode = this->server.start(argc, argv);
     }));
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, 120);
+    EnsureServerModelDownloadFinishedWithTimeout(server, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS);
 
     EXPECT_EQ(secondRunCode, EXIT_SUCCESS);
     EXPECT_FALSE(std::filesystem::exists(removedFilePath));
@@ -542,13 +1146,8 @@ TEST_F(HfPullCache, UserRemoved) {
 
 // PullAfterUserEditedTrackedFileDoesNotOverwriteIt
 TEST_F(HfPullCache, UserEdited) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "text_generation";
-
-    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
-    std::string editedFilePath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
-    std::string editedFilePath2 = ovms::FileSystem::appendSlash(basePath) + "tokenizer.json";
+    std::string editedFilePath = openvinoTokenizerBinPath;
+    std::string editedFilePath2 = tokenizerJsonPath;
 
     ASSERT_TRUE(std::filesystem::exists(editedFilePath));
     ASSERT_TRUE(std::filesystem::exists(editedFilePath2));
@@ -590,7 +1189,7 @@ TEST_F(HfPullCache, UserEdited) {
         secondRunCode = this->server.start(argc, argv);
     }));
 
-    EnsureServerModelDownloadFinishedWithTimeout(server, 120);
+    EnsureServerModelDownloadFinishedWithTimeout(server, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS);
 
     EXPECT_EQ(secondRunCode, EXIT_SUCCESS);
     EXPECT_EQ(std::filesystem::file_size(editedFilePath), editedSize);
@@ -621,14 +1220,9 @@ TEST_F(HfPullCache, UserEdited) {
 // HfPullCache repository. The model artifacts (openvino_model.bin, tokenizer*,
 // graph.pbtxt, etc.) remain in place exactly as a user-supplied directory would.
 TEST_F(HfPullCache, PullNonGit) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "text_generation";
-
-    std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
-    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
-    std::string tokenizerPath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
-    std::string gitDir = ovms::FileSystem::appendSlash(basePath) + ".git";
+    std::string basePath = modelBasePath;
+    std::string tokenizerPath = openvinoTokenizerBinPath;
+    std::string gitDir = gitDirPath;
 
     ASSERT_TRUE(std::filesystem::exists(modelPath));
     ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
@@ -654,6 +1248,11 @@ TEST_F(HfPullCache, PullNonGit) {
     ASSERT_EQ(ec, std::errc()) << "Failed to remove .git from cached repository: " << ec.message();
     ASSERT_FALSE(std::filesystem::exists(gitDir));
 
+#ifdef _WIN32
+    // Logger configuration is process-global and initialized earlier in the test
+    // binary, so a per-test --log_path does not reliably capture this warning.
+    this->ServerPullHfModel(modelName, downloadPath, task);
+#else
     testing::internal::CaptureStdout();
     this->ServerPullHfModel(modelName, downloadPath, task);
     std::string out = testing::internal::GetCapturedStdout();
@@ -663,6 +1262,7 @@ TEST_F(HfPullCache, PullNonGit) {
         << out;
     EXPECT_EQ(out.find("LFS file(s) to resume"), std::string::npos);
     EXPECT_EQ(out.find(" Resuming "), std::string::npos);
+#endif
 
     // No work-in-progress marker should be created next to the model directory.
     const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
@@ -685,14 +1285,79 @@ TEST_F(HfPullCache, PullNonGit) {
     EXPECT_FALSE(std::filesystem::exists(gitDir));
 }
 
-// PullAgainstDirectoryWithEmptyDotGitFailsWithRepositoryError
+// PullAgainstDirectoryWithEmptyDotGitSucceedsWithoutMarkers
 //
 // Companion to HfPullCache.PullNonGit. Verifies that when .git IS present but is
-// empty (a corrupt / partially-initialized repository) handleExistingRepositoryWithoutOverwrite()
-// does NOT silently succeed: the .git probe passes, GitRepositoryGuard then fails to open
-// the repository and the real error is propagated via mapRepositoryOpenFailureToStatus()
-// so the operator can act (re-clone, fix permissions, --overwrite_models, ...).
+// empty (a corrupt / partially-initialized repository) and no interruption markers
+// exist, handleExistingRepositoryWithoutOverwrite() skips the git repository check
+// and returns success, leaving existing files untouched.
 TEST_F(HfPullCache, PullEmptyGitDir) {
+    std::string basePath = modelBasePath;
+    std::string tokenizerPath = openvinoTokenizerBinPath;
+    std::string gitDir = gitDirPath;
+
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+
+    // Capture pre-pull file fingerprints so we can confirm pull did not modify them.
+    std::error_code ec;
+    const std::uintmax_t modelSizeBefore = std::filesystem::file_size(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    const std::uintmax_t tokenizerSizeBefore = std::filesystem::file_size(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string modelDigestBefore = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestBefore = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+
+    // Replace the cached .git with an empty directory to simulate corruption / partial init.
+    // Drop readonly attributes first so std::filesystem::remove_all succeeds on Windows.
+    RemoveReadonlyFileAttributeFromDir(gitDir);
+    ec.clear();
+    std::filesystem::remove_all(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to remove .git from cached repository: " << ec.message();
+    ec.clear();
+    std::filesystem::create_directory(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to recreate empty .git directory: " << ec.message();
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+    ASSERT_TRUE(std::filesystem::is_empty(gitDir));
+
+    // Pull will silently succeed: handleExistingRepositoryWithoutOverwrite will
+    // not surface the libgit2 open failure because there are no interruption file markers present
+    this->ServerPullHfModel(modelName, downloadPath, task, EXIT_SUCCESS);
+
+    // No work-in-progress marker should be created next to the model directory.
+    const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
+    EXPECT_FALSE(std::filesystem::exists(lfsWipPath));
+
+    // Files must be left exactly as they were on disk.
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    EXPECT_EQ(std::filesystem::file_size(modelPath), modelSizeBefore);
+    EXPECT_EQ(std::filesystem::file_size(tokenizerPath), tokenizerSizeBefore);
+
+    std::string modelDigestAfter = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestAfter = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    EXPECT_EQ(modelDigestBefore, modelDigestAfter);
+    EXPECT_EQ(tokenizerDigestBefore, tokenizerDigestAfter);
+
+    // .git is still present (we left an empty directory there); no fresh clone happened.
+    EXPECT_TRUE(std::filesystem::is_directory(gitDir));
+    EXPECT_TRUE(std::filesystem::is_empty(gitDir));
+}
+
+// PullAgainstDirectoryWithEmptyDotGitFailsWithLfsWipMarker
+//
+// Companion to HfPullCache.PullNonGit. Verifies that when .git IS present but is
+// empty (a corrupt / partially-initialized repository) and an LFS WIP marker exists,
+// handleExistingRepositoryWithoutOverwrite() does NOT silently succeed: the .git probe
+// passes, GitRepositoryGuard then fails to open the repository and the real error is
+// propagated via mapRepositoryOpenFailureToStatus() so the operator can act
+// (re-clone, fix permissions, --overwrite_models, ...).
+TEST_F(HfPullCache, EmptyGitDirLfsMarker) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -729,9 +1394,96 @@ TEST_F(HfPullCache, PullEmptyGitDir) {
     ASSERT_TRUE(std::filesystem::is_directory(gitDir));
     ASSERT_TRUE(std::filesystem::is_empty(gitDir));
 
-    // Pull must NOT silently succeed: handleExistingRepositoryWithoutOverwrite should
-    // surface the libgit2 open failure (mapRepositoryOpenFailureToStatus -> non-OK).
+    // Add interruption marker so resume path is taken and repository open is validated.
+    ASSERT_TRUE(ovms::libgit2::createLfsWipMarker(basePath));
+    const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
+    ASSERT_TRUE(std::filesystem::exists(lfsWipPath));
+
+    // Pull will not silently succeed: handleExistingRepositoryWithoutOverwrite will
+    // surface the libgit2 open failure because there are interruption file markers present
     this->ServerPullHfModel(modelName, downloadPath, task, EXIT_FAILURE);
+
+    // Marker was pre-created and remains because resume did not complete successfully.
+    EXPECT_TRUE(std::filesystem::exists(lfsWipPath));
+
+    // Files must be left exactly as they were on disk.
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    EXPECT_EQ(std::filesystem::file_size(modelPath), modelSizeBefore);
+    EXPECT_EQ(std::filesystem::file_size(tokenizerPath), tokenizerSizeBefore);
+
+    std::string modelDigestAfter = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestAfter = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    EXPECT_EQ(modelDigestBefore, modelDigestAfter);
+    EXPECT_EQ(tokenizerDigestBefore, tokenizerDigestAfter);
+
+    // .git is still present (we left an empty directory there); no fresh clone happened.
+    EXPECT_TRUE(std::filesystem::is_directory(gitDir));
+    EXPECT_TRUE(std::filesystem::is_empty(gitDir));
+}
+
+// PullAgainstDirectoryWithEmptyDotGitFailsWithErrorMarker
+//
+// Companion to HfPullCache.PullNonGit. Verifies that when .git IS present but is
+// empty (a corrupt / partially-initialized repository) and an lfs_error.txt marker
+// exists, handleExistingRepositoryWithoutOverwrite() does NOT silently succeed: the
+// .git probe passes, GitRepositoryGuard then fails to open the repository and the
+// real error is propagated via mapRepositoryOpenFailureToStatus() so the operator
+// can act (re-clone, fix permissions, --overwrite_models, ...).
+TEST_F(HfPullCache, EmptyGitDirErrorMarker) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+
+    std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string tokenizerPath = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
+    std::string gitDir = ovms::FileSystem::appendSlash(basePath) + ".git";
+
+    ASSERT_TRUE(std::filesystem::exists(modelPath));
+    ASSERT_TRUE(std::filesystem::exists(tokenizerPath));
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+
+    // Capture pre-pull file fingerprints so we can confirm pull did not modify them.
+    std::error_code ec;
+    const std::uintmax_t modelSizeBefore = std::filesystem::file_size(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    const std::uintmax_t tokenizerSizeBefore = std::filesystem::file_size(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string modelDigestBefore = sha256File(modelPath, ec);
+    ASSERT_EQ(ec, std::errc());
+    std::string tokenizerDigestBefore = sha256File(tokenizerPath, ec);
+    ASSERT_EQ(ec, std::errc());
+
+    // Replace the cached .git with an empty directory to simulate corruption / partial init.
+    // Drop readonly attributes first so std::filesystem::remove_all succeeds on Windows.
+    RemoveReadonlyFileAttributeFromDir(gitDir);
+    ec.clear();
+    std::filesystem::remove_all(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to remove .git from cached repository: " << ec.message();
+    ec.clear();
+    std::filesystem::create_directory(gitDir, ec);
+    ASSERT_EQ(ec, std::errc()) << "Failed to recreate empty .git directory: " << ec.message();
+    ASSERT_TRUE(std::filesystem::is_directory(gitDir));
+    ASSERT_TRUE(std::filesystem::is_empty(gitDir));
+
+    // Add interruption error marker so resume path is taken and repository open is validated.
+    const std::string lfsErrorPath = ovms::FileSystem::appendSlash(basePath) + "lfs_error.txt";
+    {
+        std::ofstream errorFile(lfsErrorPath);
+        ASSERT_TRUE(errorFile.is_open()) << "Failed to create interruption marker: " << lfsErrorPath;
+        errorFile << "simulated lfs error";
+    }
+    ASSERT_TRUE(std::filesystem::exists(lfsErrorPath));
+
+    // Pull will not silently succeed: handleExistingRepositoryWithoutOverwrite will
+    // surface the libgit2 open failure because there are interruption file markers present
+    this->ServerPullHfModel(modelName, downloadPath, task, EXIT_FAILURE);
+
+    // Marker was pre-created and remains because repository open failed before resume cleanup.
+    EXPECT_TRUE(std::filesystem::exists(lfsErrorPath));
 
     // No work-in-progress marker should be created next to the model directory.
     const std::string lfsWipPath = ovms::libgit2::getLfsWipMarkerPath(basePath).string();
@@ -758,13 +1510,17 @@ TEST_F(HfPullCache, PullEmptyGitDir) {
 #ifdef _WIN32
 // Helper test used only as a child process launched by HfPull.ResumeTerminate.
 TEST(HfPullWindowsWorker, ResumeTerminateChildProcess) {
+    // Enables this helper body only for the parent-launched worker process.
     const char* runWorker = std::getenv("OVMS_RESUME_TERMINATE_WORKER");
     if ((runWorker == nullptr) || (std::string(runWorker) != "1")) {
         GTEST_SKIP() << "Helper test - runs only when launched by HfPull.ResumeTerminate.";
     }
 
+    // Model identifier passed from parent to child worker.
     const char* modelNameEnv = std::getenv("OVMS_RESUME_TERMINATE_MODEL");
+    // Target repository path passed from parent to child worker.
     const char* downloadPathEnv = std::getenv("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH");
+    // Pull task passed from parent to child worker.
     const char* taskEnv = std::getenv("OVMS_RESUME_TERMINATE_TASK");
     ASSERT_NE(modelNameEnv, nullptr);
     ASSERT_NE(downloadPathEnv, nullptr);
@@ -793,130 +1549,55 @@ TEST(HfPullWindowsWorker, ResumeTerminateChildProcess) {
 // ResumeAfterForcedTerminationAndRerun
 TEST_F(HfPull, ResumeTerminate) {
 #ifdef _WIN32
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
-#endif
-    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
-    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
-    std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
-    std::string model3Path = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
-    std::string model4Path = ovms::FileSystem::appendSlash(basePath) + "tokenizer.model";
-    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
-
-#ifdef _WIN32
-    char testExePath[MAX_PATH] = {0};
-    DWORD exePathLen = GetModuleFileNameA(nullptr, testExePath, MAX_PATH);
-    ASSERT_GT(exePathLen, 0u);
-    ASSERT_LT(exePathLen, static_cast<DWORD>(MAX_PATH));
-
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_WORKER", "1"));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_MODEL", modelName.c_str()));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH", downloadPath.c_str()));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_TASK", task.c_str()));
-
-    std::string commandLine = std::string("\"") + testExePath +
-                              "\" --gtest_filter=HfPullWindowsWorker.ResumeTerminateChildProcess";
-    STARTUPINFOA si;
     PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-
-    ASSERT_TRUE(CreateProcessA(
-        nullptr,
-        commandLine.data(),
-        nullptr,
-        nullptr,
-        TRUE,
-        0,
-        nullptr,
-        nullptr,
-        &si,
-        &pi));
+    ASSERT_TRUE(startWindowsResumeWorker(RESUME_TERMINATE_WORKER_CONFIG, modelName, downloadPath, task, pi));
 #else
-    pid_t childPid = fork();
-    ASSERT_NE(childPid, -1);
-
-    if (childPid == 0) {
-        ovms::Server& childServer = ovms::Server::instance();
-        childServer.setShutdownRequest(0);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--pull",
-            (char*)"--source_model",
-            (char*)modelName.c_str(),
-            (char*)"--model_repository_path",
-            (char*)downloadPath.c_str(),
-            (char*)"--task",
-            (char*)task.c_str()};
-        int argc = 8;
-
-        std::thread childThread([&argc, &argv, &childServer]() {
-            (void)childServer.start(argc, argv);
-        });
-        childThread.detach();
-
-        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
-        while (std::chrono::steady_clock::now() < deadline) {
-            auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-            auto hasOpenvinoModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
-                                               [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
-            if (std::filesystem::exists(modelPath) || hasOpenvinoModelPointer) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(200));
-                break;
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-
-        kill(getpid(), SIGKILL);
-        _exit(1);
-    }
+    pid_t childPid = -1;
+    ASSERT_TRUE(launchPosixResumeWorker(modelName, downloadPath, task, childPid));
 
 #endif
 
-    bool observedPartialDownload = false;
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
-    while (std::chrono::steady_clock::now() < deadline) {
-        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-        auto hasOpenvinoModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
-                                           [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
-        const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
-        const bool hasPartFile = std::filesystem::exists(partPath);
-        if (hasOpenvinoModelPointer || hasPartFile) {
-            observedPartialDownload = true;
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    ASSERT_TRUE(waitForResumableInProgressPull(
+        modelBasePath,
+        modelPath,
+        downloadPath,
+        OPENVINO_MODEL_BIN_FULL_SIZE_BYTES,
+        "ResumeTerminate",
+        HF_PULL_DETECT_TIMEOUT_SECONDS,
+        HF_PULL_POLL_INTERVAL_MS,
+        HF_PULL_INTERRUPT_DELAY_MS,
+        HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS));
+
+    const bool observedPartialDownload = true;
+    bool interruptionSent = false;
 
 #ifdef _WIN32
-    ASSERT_TRUE(TerminateProcess(pi.hProcess, 1));
-    ASSERT_EQ(WaitForSingleObject(pi.hProcess, 10000), WAIT_OBJECT_0);
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
-
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_WORKER", nullptr));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_MODEL", nullptr));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_DOWNLOAD_PATH", nullptr));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_TERMINATE_TASK", nullptr));
+    ASSERT_TRUE(terminateWindowsWorker(pi, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS));
+    interruptionSent = true;
+    closeWindowsWorkerHandles(pi);
+    ASSERT_TRUE(clearWindowsResumeWorkerEnvironment(RESUME_TERMINATE_WORKER_CONFIG));
 #else
-    int childStatus = 0;
-    ASSERT_EQ(waitpid(childPid, &childStatus, 0), childPid);
-    ASSERT_TRUE(WIFSIGNALED(childStatus));
-    ASSERT_EQ(WTERMSIG(childStatus), SIGKILL);
+    ASSERT_TRUE(killPosixWorkerAndExpectSigKill(childPid));
+    interruptionSent = true;
 #endif
 
-    EXPECT_TRUE(observedPartialDownload);
     auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
+    SPDLOG_INFO("ResumeTerminate test state: observedPartialDownload={}, interruptionSent={}, remainingPointers count={}",
+        observedPartialDownload, interruptionSent, remainingPointers.size());
+    for (const auto& p : remainingPointers) {
+        SPDLOG_INFO("  - {}", p.string());
+    }
+
     EXPECT_FALSE(remainingPointers.empty());
 
     this->ServerPullHfModel(modelName, downloadPath, task);
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
-    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
-    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
-    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoDetokenizerBinPath), OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoTokenizerBinPath), OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(tokenizerModelPath), TOKENIZER_MODEL_FULL_SIZE_BYTES);
 }
 
 #ifdef _WIN32
@@ -924,13 +1605,17 @@ TEST_F(HfPull, ResumeTerminate) {
 // Mirrors HfPullWindowsWorker.ResumeTerminateChildProcess but is invoked separately
 // so the parent test can target this child specifically with GenerateConsoleCtrlEvent.
 TEST(HfPullWindowsWorker, ResumeCtrlCChildProcess) {
+    // Enables this helper body only for the parent-launched worker process.
     const char* runWorker = std::getenv("OVMS_RESUME_CTRLC_WORKER");
     if ((runWorker == nullptr) || (std::string(runWorker) != "1")) {
         GTEST_SKIP() << "Helper test - runs only when launched by HfPull.ResumeCtrlC.";
     }
 
+    // Model identifier passed from parent to child worker.
     const char* modelNameEnv = std::getenv("OVMS_RESUME_CTRLC_MODEL");
+    // Target repository path passed from parent to child worker.
     const char* downloadPathEnv = std::getenv("OVMS_RESUME_CTRLC_DOWNLOAD_PATH");
+    // Pull task passed from parent to child worker.
     const char* taskEnv = std::getenv("OVMS_RESUME_CTRLC_TASK");
     ASSERT_NE(modelNameEnv, nullptr);
     ASSERT_NE(downloadPathEnv, nullptr);
@@ -966,120 +1651,39 @@ TEST(HfPullWindowsWorker, ResumeCtrlCChildProcess) {
 // download to completion.
 TEST_F(HfPull, ResumeCtrlC) {
 #ifdef _WIN32
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
-#endif
-    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
-    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
-    std::string model2Path = ovms::FileSystem::appendSlash(basePath) + "openvino_detokenizer.bin";
-    std::string model3Path = ovms::FileSystem::appendSlash(basePath) + "openvino_tokenizer.bin";
-    std::string model4Path = ovms::FileSystem::appendSlash(basePath) + "tokenizer.model";
-    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
-
-#ifdef _WIN32
-    char testExePath[MAX_PATH] = {0};
-    DWORD exePathLen = GetModuleFileNameA(nullptr, testExePath, MAX_PATH);
-    ASSERT_GT(exePathLen, 0u);
-    ASSERT_LT(exePathLen, static_cast<DWORD>(MAX_PATH));
-
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_WORKER", "1"));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_MODEL", modelName.c_str()));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_DOWNLOAD_PATH", downloadPath.c_str()));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_TASK", task.c_str()));
-
-    std::string commandLine = std::string("\"") + testExePath +
-                              "\" --gtest_filter=HfPullWindowsWorker.ResumeCtrlCChildProcess";
-    STARTUPINFOA si;
     PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-
-    // CREATE_NEW_PROCESS_GROUP is required to send GenerateConsoleCtrlEvent only to
-    // the child process group; otherwise the signal would also reach this test runner.
-    ASSERT_TRUE(CreateProcessA(
-        nullptr,
-        commandLine.data(),
-        nullptr,
-        nullptr,
-        TRUE,
-        CREATE_NEW_PROCESS_GROUP,
-        nullptr,
-        nullptr,
-        &si,
-        &pi));
+    ASSERT_TRUE(startWindowsResumeWorker(RESUME_CTRLC_WORKER_CONFIG, modelName, downloadPath, task, pi));
 #else
-    pid_t childPid = fork();
-    ASSERT_NE(childPid, -1);
-
-    if (childPid == 0) {
-        ovms::Server& childServer = ovms::Server::instance();
-        childServer.setShutdownRequest(0);
-        char* argv[] = {(char*)"ovms",
-            (char*)"--pull",
-            (char*)"--source_model",
-            (char*)modelName.c_str(),
-            (char*)"--model_repository_path",
-            (char*)downloadPath.c_str(),
-            (char*)"--task",
-            (char*)task.c_str()};
-        int argc = 8;
-
-        // Run synchronously in this child process so installSignalHandlers() (called
-        // inside server.start) is in effect when SIGINT arrives from the parent.
-        int rc = childServer.start(argc, argv);
-        _exit(rc == EXIT_SUCCESS ? 0 : 1);
-    }
+    pid_t childPid = -1;
+    ASSERT_TRUE(launchPosixResumeWorker(modelName, downloadPath, task, childPid));
 #endif
 
-    // Wait until the LFS download is in flight before sending the interrupt, so the
-    // cancellation actually exercises the in-progress clone path. A fixed sleep is
-    // unreliable on fast machines.
-    bool observedPartialDownload = false;
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
-    while (std::chrono::steady_clock::now() < deadline) {
-        auto lfsCandidates = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
-        const bool hasOpenvinoModelPointer = std::find_if(lfsCandidates.begin(), lfsCandidates.end(),
-                                                 [](const std::filesystem::path& p) { return p.filename() == "openvino_model.bin"; }) != lfsCandidates.end();
-        const std::string partPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.binlfs_part";
-        const bool hasPartFile = std::filesystem::exists(partPath);
-        if (hasOpenvinoModelPointer || hasPartFile) {
-            observedPartialDownload = true;
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    ASSERT_TRUE(waitForResumableInProgressPull(
+        modelBasePath,
+        modelPath,
+        downloadPath,
+        OPENVINO_MODEL_BIN_FULL_SIZE_BYTES,
+        "ResumeCtrlC",
+        HF_PULL_DETECT_TIMEOUT_SECONDS,
+        HF_PULL_POLL_INTERVAL_MS,
+        HF_PULL_INTERRUPT_DELAY_MS,
+        HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS));
+
+    const bool observedPartialDownload = true;
+    bool interruptionSent = false;
 
 #ifdef _WIN32
-    // CTRL_C_EVENT cannot be targeted at a single child via GenerateConsoleCtrlEvent
-    // without also reaching the calling console group. CTRL_BREAK_EVENT can be
-    // delivered to the child's dedicated process group (created with
-    // CREATE_NEW_PROCESS_GROUP above) without disturbing the test runner.
-    ASSERT_TRUE(GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pi.dwProcessId));
-    // Allow up to 30 s for the child to drain the in-flight clone and exit.
-    ASSERT_EQ(WaitForSingleObject(pi.hProcess, 30000), WAIT_OBJECT_0);
-    DWORD childExitCode = 0;
-    ASSERT_TRUE(GetExitCodeProcess(pi.hProcess, &childExitCode));
-    EXPECT_NE(childExitCode, static_cast<DWORD>(EXIT_SUCCESS));
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
-
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_WORKER", nullptr));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_MODEL", nullptr));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_DOWNLOAD_PATH", nullptr));
-    ASSERT_TRUE(SetEnvironmentVariableA("OVMS_RESUME_CTRLC_TASK", nullptr));
+    ASSERT_TRUE(sendCtrlBreakToWindowsWorker(pi, HF_PULL_SHUTDOWN_TIMEOUT_SECONDS));
+    interruptionSent = true;
+    closeWindowsWorkerHandles(pi);
+    ASSERT_TRUE(clearWindowsResumeWorkerEnvironment(RESUME_CTRLC_WORKER_CONFIG));
 #else
-    ASSERT_EQ(kill(childPid, SIGINT), 0);
-    int childStatus = 0;
-    ASSERT_EQ(waitpid(childPid, &childStatus, 0), childPid);
-    // SIGINT must be handled gracefully by ovms (onInterrupt -> shutdownRequest),
-    // so the child should exit normally rather than be terminated by the signal.
-    ASSERT_TRUE(WIFEXITED(childStatus)) << "Child was terminated by signal " << (WIFSIGNALED(childStatus) ? WTERMSIG(childStatus) : 0)
-                                        << " instead of exiting normally - SIGINT handler may be missing";
-    EXPECT_NE(WEXITSTATUS(childStatus), EXIT_SUCCESS);
+    ASSERT_TRUE(interruptPosixWorkerAndExpectGracefulExit(childPid));
+    interruptionSent = true;
 #endif
 
-    EXPECT_TRUE(observedPartialDownload);
+    SPDLOG_DEBUG("ResumeCtrlC test state: observedPartialDownload={}, interruptionSent={}",
+        observedPartialDownload, interruptionSent);
     auto remainingPointers = ovms::libgit2::findLfsLikeFiles(downloadPath, true);
     EXPECT_FALSE(remainingPointers.empty());
 
@@ -1087,10 +1691,10 @@ TEST_F(HfPull, ResumeCtrlC) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
-    ASSERT_EQ(std::filesystem::file_size(model2Path), 339125);
-    ASSERT_EQ(std::filesystem::file_size(model3Path), 500292);
-    ASSERT_EQ(std::filesystem::file_size(model4Path), 499723);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoDetokenizerBinPath), OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(openvinoTokenizerBinPath), OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES);
+    ASSERT_EQ(std::filesystem::file_size(tokenizerModelPath), TOKENIZER_MODEL_FULL_SIZE_BYTES);
 }
 
 TEST_F(HfPull, Start) {
@@ -1102,13 +1706,9 @@ TEST_F(HfPull, Start) {
     this->filesToPrintInCaseOfFailure.emplace_back("config.json");
     this->SetUpServerForDownloadAndStart(modelName, downloadPath, task);
 
-    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
-    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
-    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
-
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -1134,7 +1734,7 @@ TEST_F(HfPull, OutOfOvOrg) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -1191,7 +1791,7 @@ TEST_F(HfPull, DraftModel) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContentsDraft, removeGeneratedGraphHeaders(graphContents)) << graphContents;
@@ -1200,7 +1800,7 @@ TEST_F(HfPull, DraftModel) {
     std::string modelPath2 = ovms::FileSystem::appendSlash(basePath2) + "openvino_tokenizer.bin";
 
     ASSERT_EQ(std::filesystem::exists(modelPath2), true) << modelPath2;
-    ASSERT_EQ(std::filesystem::file_size(modelPath2), 2022483);
+    ASSERT_EQ(std::filesystem::file_size(modelPath2), DRAFT_OPENVINO_TOKENIZER_BIN_SIZE_BYTES);
 }
 
 class TestOptimumDownloader : public ovms::OptimumDownloader {
@@ -1398,6 +1998,20 @@ TEST_F(TestOptimumDownloaderSetup, TextToSpeechExportCmd) {
     ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
 }
 
+TEST_F(TestOptimumDownloaderSetup, TextToSpeechKokoroExportCmd) {
+    inHfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    inHfSettings.exportSettings.modelType = "kokoro";
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --task text-to-audio --model model/name --trust-remote-code  --weight-format fp64 --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+    std::replace(expectedCmd2.begin(), expectedCmd2.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
+}
+
 TEST_F(TestOptimumDownloaderSetup, SpeechToTextExportCmd) {
     inHfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
@@ -1564,7 +2178,7 @@ public:
     EnvGuard guard;
 };
 
-TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
+TEST(Libgt2InitGuardTestResume, LfsFilterCaptureDefaultResumeOptions) {
     // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
     EXPECT_EXIT({
         // Act: capture stdout during object construction
@@ -1584,7 +2198,7 @@ TEST(Libgt2InitGuardTest, LfsFilterCaptureDefaultResumeOptions) {
         exit(0); }, ::testing::ExitedWithCode(0), "");
 }
 
-TEST(Libgt2InitGuardTest, LfsFilterCaptureNonDefaultResumeOptions) {
+TEST(Libgt2InitGuardTestResume, LfsFilterCaptureNonDefaultResumeOptions) {
     // Need new process beacase we use INIT_ONCE in libgit2 lfs filter for env variables and once they are set they are set for the whole process lifetime
     EXPECT_EXIT({
         EnvGuard guard;
@@ -1663,23 +2277,14 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
         // GIT_OPT_SET_SERVER_CONNECT_TIMEOUT option when https_proxy is empty,
         // so we always clear https_proxy here.
         //
-        // To make the timeout actually fire we need the destination to be
-        // unreachable. The behavior depends on the host's network setup:
-        //   * Host originally used a proxy (https_proxy was set in the
-        //     environment): the host is on a proxy-only network where a
-        //     direct connection to huggingface.co will hang and hit the
-        //     timeout. Keep the default HF_ENDPOINT.
-        //   * Host has no proxy configured (direct internet access): a direct
-        //     connection to huggingface.co would succeed within the 1 s
-        //     timeout and the assertion below would fail. Redirect the clone
-        //     to an unroutable RFC 5737 TEST-NET-1 address so the connect
-        //     must time out.
-        const char* hostHttpsProxy = std::getenv("https_proxy");
-        const bool hostHadProxy = (hostHttpsProxy != nullptr) && (std::string(hostHttpsProxy) != "");
+        // Force deterministic timeout behavior across CI/dev environments.
+        // Using the real HF endpoint makes this test network-topology dependent
+        // (proxy-only hosts, direct internet hosts, DNS/load-balancer behavior).
+        // RFC 5737 TEST-NET-1 (192.0.2.0/24) is non-routable on the public
+        // internet, so clone must fail quickly and independently of external
+        // service availability.
         eGuard.set("https_proxy", "");
-        if (!hostHadProxy) {
-            eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
-        }
+        eGuard.set("HF_ENDPOINT", "https://192.0.2.1/");
         const std::string timeoutConnectVal = "1000";
         eGuard.set(ovms::HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, timeoutConnectVal);
         config.parse(arg_count, const_cast<char**>(n_argv));
@@ -1692,7 +2297,7 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
         timer.stop(0);
         double timeSpentMs = timer.elapsed<std::chrono::microseconds>(0) / 1000;
         SPDLOG_DEBUG("Time spent:{} ms", timeSpentMs);
-        EXPECT_LE(timeSpentMs, 3 * ovms::stoi32(timeoutConnectVal).value()) << "We should timeout before 1ms has passed but clone worked for: " << timeSpentMs << "ms > " << timeoutConnectVal << "ms. Status: " << status.string();
+        EXPECT_LE(timeSpentMs, 3 * ovms::stoi32(timeoutConnectVal).value()) << "We should timeout before 1s has passed but clone worked for: " << timeSpentMs << "ms > " << timeoutConnectVal << "ms. Status: " << status.string();
     }
     SPDLOG_TRACE("After guard closure");
 }

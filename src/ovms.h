@@ -281,13 +281,12 @@ OVMS_Status* OVMS_ServerSettingsSetGrpcMemoryQuota(OVMS_ServerSettings* settings
 OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds);
 
-// Set sequence cleaner interval server setting.
-// Equivalent of starting server with
-// --sequence_cleaner_poll_wait_minutes.
+// Deprecated: Stateful models are no longer supported.
+// This function is kept for ABI compatibility and always returns an error status.
 //
 // \param settings The server settings object to be set
 // \param minutes The value to be set
-// \return OVMS_Status object in case of failure
+// \return OVMS_Status object indicating the feature is not supported
 OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSettings* settings,
     uint32_t minutes);
 

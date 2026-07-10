@@ -134,7 +134,7 @@ struct EmbeddingsGraphSettingsImpl {
 };
 
 struct TextToSpeechGraphSettingsImpl {
-    uint32_t unused = 1;  // will be added
+    uint32_t unused = 1;  // placeholder for future graph-level settings
 };
 
 struct SpeechToTextGraphSettingsImpl {
@@ -195,6 +195,7 @@ struct ExportSettings {
     std::optional<uint32_t> restWorkers;
     std::optional<std::string> extraQuantizationParams;
     std::optional<std::string> vocoder;
+    std::string modelType = "speecht5";  // text2speech only: "speecht5" or "kokoro"
     std::string precision = "int8";
     PluginConfigSettingsImpl pluginConfig;
 };
@@ -226,6 +227,7 @@ struct ServerSettingsImpl {
     std::optional<std::vector<std::string>> allowedMediaDomains;
     std::string logLevel = "INFO";
     std::string logPath;
+    bool verboseResponse = false;
     bool allowCredentials = false;
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};
@@ -237,7 +239,6 @@ struct ServerSettingsImpl {
     std::optional<size_t> grpcMemoryQuota;
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
-    uint32_t sequenceCleanerPollWaitMinutes = 5;
     uint32_t resourcesCleanerPollWaitSeconds = 300;
     std::string cacheDir;
     bool withPython = false;
@@ -261,10 +262,6 @@ struct ModelsSettingsImpl {
     uint32_t nireq = 0;
     std::string targetDevice;
     std::string pluginConfig;
-    std::optional<bool> stateful;
-    std::optional<bool> lowLatencyTransformation;
-    std::optional<uint32_t> maxSequenceNumber;
-    std::optional<bool> idleSequenceCleanup;
     std::vector<std::string> userSetSingleModelArguments;
 
     std::string configPath;
