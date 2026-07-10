@@ -37,10 +37,10 @@ IF "%~2"=="--with_python" (
 
 IF "%~3"=="--with_tests" (
     echo Building model server with tests
-    set "buildTargets=//src:ovms //src:ovms_test //src:mediapipe_framework_shared !pythonRuntimeTargets!"
+    set "buildTargets=//src:ovms //src:ovms_test //src:ovms_mediapipe_runtime_shared !pythonRuntimeTargets!"
 ) ELSE (
     echo Building model server without tests
-    set "buildTargets=//src:ovms //src:mediapipe_framework_shared !pythonRuntimeTargets!"
+    set "buildTargets=//src:ovms //src:ovms_mediapipe_runtime_shared !pythonRuntimeTargets!"
 )
 
 IF "%~4"=="--integrity" (
