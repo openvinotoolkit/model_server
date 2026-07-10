@@ -2325,7 +2325,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesWithInvalidContentTypeFails)
     EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Unsupported content type"));
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayPreservesArray) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -2338,7 +2338,14 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid message structure - content array is empty"));
+    // Empty content arrays are accepted and preserved as-is. The
+    // EmptyContentArrayNormalizationProcessor converts them to null downstream.
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1u);
+    auto content = chatHistory[0]["content"];
+    EXPECT_TRUE(content.is_array());
+    EXPECT_EQ(content.size(), 0u);
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesWithNoContentFieldAddsEmptyStringToChatHistory) {
