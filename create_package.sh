@@ -106,18 +106,12 @@ if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
 fi
 
 if ! [[ $debug_bazel_flags == *"mp_off"* ]]; then
-	# Keep explicit copy for the shared MediaPipe library used by python calculators.
-	OVMS_MP_SHARED_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libmediapipe_framework_shared.so' | head -n 1 || true)
+	# Keep explicit copy for the OVMS MediaPipe runtime library.
 	OVMS_MP_RUNTIME_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libovms_mediapipe_runtime_shared.so' | head -n 1 || true)
-	if [ -z "$OVMS_MP_SHARED_LIB" ]; then
-		echo "Missing shared MediaPipe library in bazel outputs. Ensure //src:mediapipe_framework_shared is built."
-		exit 1
-	fi
 	if [ -z "$OVMS_MP_RUNTIME_LIB" ]; then
 		echo "Missing OVMS MediaPipe runtime library in bazel outputs. Ensure //src:ovms_mediapipe_runtime_shared is built."
 		exit 1
 	fi
-	cp -v "$OVMS_MP_SHARED_LIB" /ovms_release/lib/
 	cp -v "$OVMS_MP_RUNTIME_LIB" /ovms_release/lib/
 fi
 
