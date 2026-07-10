@@ -2316,9 +2316,9 @@ cc_binary(
     deps = [
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",
-        # NOTE: mediapipe_framework_shared is NOT linked into the main binary.
-        # Only the plugin links to it. This avoids protobuf symbol conflicts.
-        # The plugin uses RTLD_GLOBAL to share MediaPipe with the main process.
+        # NOTE: the MediaPipe runtime shared object is NOT linked into the main binary.
+        # Runtime loading keeps registration ownership outside of ovms and avoids
+        # duplicate symbol/registration conflicts.
     ]
     + select({
             "//conditions:default": [

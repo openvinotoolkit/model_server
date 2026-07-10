@@ -207,7 +207,7 @@ std::string toAbsolutePath(const std::string& candidate) {
 void logLikelyMissingWindowsDependencies() {
     const std::vector<std::string> likelyDependencies = {
         "libpython_calculators.dll",          // The plugin itself
-        "libmediapipe_framework_shared.dll",  // Shared MediaPipe library (critical for type-id resolution)
+        "ovms_mediapipe_runtime_shared.dll",  // OVMS MediaPipe runtime integration library
         "libovmspython.dll",                  // Python runtime support
         "python312.dll",                      // Python interpreter
         "openvino.dll",                       // OpenVINO core
@@ -493,7 +493,7 @@ bool loadPythonCalculatorsPlugin() {
         }
         logLikelyMissingWindowsDependencies();
         SPDLOG_WARN("Python calculators plugin libpython_calculators.dll failed to load: {} ({}). "
-                    "Possible causes: missing dependency (libmediapipe_framework_shared.dll, libovmspython.dll), "
+                    "Possible causes: missing dependency (ovms_mediapipe_runtime_shared.dll, libovmspython.dll), "
                     "incompatible architecture (32-bit vs 64-bit), or export symbol conflict. "
                     "MediaPipe Python calculators will not be available.",
             error, formatWindowsErrorMessage(error));
