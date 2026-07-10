@@ -119,13 +119,12 @@ if !bazelExitCode! neq 0 (
     exit /b !bazelExitCode!
 )
 
-(
+:: Change tests configs to windows paths
+%changeConfigsCmd%
+if !errorlevel! neq 0 (
     echo [ERROR] windows_change_test_configs.py failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
 )
-:: Change tests configs to windows paths
-%changeConfigsCmd%
-if !errorlevel! neq 0 exit /b !errorlevel!
 (
     echo [ERROR] windows_prepare_llm_models.bat failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
