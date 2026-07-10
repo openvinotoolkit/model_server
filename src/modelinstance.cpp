@@ -1023,7 +1023,7 @@ plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& con
 
 Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
-    if (config.getTargetDevice() == "CPU") {
+    if (this->targetDevice == "CPU") {
         Status status = applyDefaultCpuProperties(pluginConfig);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to apply default CPU properties for model: {}; version: {}; error: {}",
@@ -1076,7 +1076,6 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             return this->compiledModel->get_property(key); },
         std::string("compiled model: ") + getName(),
         std::string(" version: ") + std::to_string(getVersion()) + std::string("; target device: ") + targetDevice + ";");
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Recommended target device: {}", recommendTargetDevice(ieCore));
     return StatusCode::OK;
 }
 
@@ -1239,6 +1238,11 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
     this->targetDevice = config.getTargetDevice();
+    if (this->targetDevice.empty()) {
+        this->targetDevice = recommendTargetDevice();
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "No target device specified for model: {}; version: {}; using recommended device: {}",
+            config.getName(), config.getVersion(), this->targetDevice);
+    }
     this->config = config;
     auto status = fetchModelFilepaths();
 

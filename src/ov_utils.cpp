@@ -150,7 +150,8 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
     return StatusCode::OK;
 }
 
-std::string recommendTargetDevice(ov::Core& core) {
+std::string recommendTargetDevice() {
+    static ov::Core core;
     auto availableDevices = core.get_available_devices();
 
     struct GpuDeviceInfo {

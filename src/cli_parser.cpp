@@ -289,8 +289,8 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<uint32_t>(),
                 "NIREQ")
             ("target_device",
-                "Target device to run the inference",
-                cxxopts::value<std::string>()->default_value("CPU"),
+                "Target device to run the inference. Default: auto-detected based on available devices.",
+                cxxopts::value<std::string>()->default_value(""),
                 "TARGET_DEVICE")
             ("plugin_config",
                 "A dictionary of plugin configuration keys and their values, eg \"{\\\"NUM_STREAMS\\\": \\\"1\\\"}\". Default number of streams is optimized to optimal latency with low concurrency.",
@@ -648,10 +648,12 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
 
     if (result->count("target_device")) {
         modelsSettings.targetDevice = result->operator[]("target_device").as<std::string>();
-        if (isHFPullOrPullAndStart(this->result)) {
-            hfSettings.exportSettings.targetDevice = modelsSettings.targetDevice;
-        } else {
-            modelsSettings.userSetSingleModelArguments.push_back("target_device");
+        if (!modelsSettings.targetDevice.empty()) {
+            if (isHFPullOrPullAndStart(this->result)) {
+                hfSettings.exportSettings.targetDevice = modelsSettings.targetDevice;
+            } else {
+                modelsSettings.userSetSingleModelArguments.push_back("target_device");
+            }
         }
     }
 

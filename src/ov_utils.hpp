@@ -58,7 +58,7 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
 // - If a single discrete GPU is available - returns that device (e.g. "GPU.0")
 // - If only integrated GPU(s) are available - returns the first integrated GPU
 // - If multiple discrete GPUs are available - returns the one with the most free VRAM
-std::string recommendTargetDevice(ov::Core& core);
+std::string recommendTargetDevice();
 
 // Applies resource-aware CPU defaults to an OpenVINO property map.
 // Sets inference_num_threads and (on Linux) enable_cpu_pinning only when not
