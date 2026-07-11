@@ -164,7 +164,7 @@ const std::string expectedDefaultGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
+            device: "",
             models_path: "./",
             enable_prefix_caching: true,
             cache_size: 10,
@@ -330,7 +330,7 @@ node {
         [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
             models_path: "./",
             max_allowed_chunks: 10000,
-            target_device: "CPU",
+            target_device: "",
             plugin_config: '{"NUM_STREAMS":"1"}',
         }
     }
@@ -374,7 +374,7 @@ node {
             normalize_embeddings: true,
             truncate: false,
             pooling: CLS,
-            target_device: "CPU",
+            target_device: "",
             plugin_config: '{"NUM_STREAMS":"1"}',
         }
     }
@@ -412,7 +412,7 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: "./"
-            target_device: "CPU"
+            target_device: ""
             }
     }
 }
@@ -430,7 +430,7 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: "./"
-            target_device: "CPU"
+            target_device: ""
             voices: [
                 { name: "af_alloy", path: "./voices/af_alloy.bin" },
                 { name: "am_adam", path: "./voices/am_adam.bin" }
@@ -493,7 +493,7 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: "./"
-            target_device: "CPU"
+            target_device: ""
             }
     }
     input_stream_handler {

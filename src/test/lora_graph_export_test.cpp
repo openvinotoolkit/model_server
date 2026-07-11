@@ -46,7 +46,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
-          device: "CPU"
+          device: ""
           lora_adapters { alias: "pokemon" path: "loras/juliensimon/sd-pokemon-lora/pytorch_lora_weights.safetensors" mode: DYNAMIC }
       }
   }
@@ -123,7 +123,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
-          device: "CPU"
+          device: ""
       }
   }
 }
@@ -374,7 +374,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
-          device: "CPU"
+          device: ""
           lora_adapters { alias: "pokemon" path: "loras/pokemon/pytorch_lora_weights.safetensors" mode: DYNAMIC }
       }
   }
@@ -410,7 +410,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
-          device: "CPU"
+          device: ""
           lora_adapters { alias: "pokemon" path: "/path/to/weights.safetensors" mode: DYNAMIC }
       }
   }
@@ -622,7 +622,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
-          device: "CPU"
+          device: ""
           lora_adapters { alias: "pokemon" path: "loras/org/pokemon-lora/weights.safetensors" mode: DYNAMIC }
           lora_adapters { alias: "anime" path: "loras/org/anime-lora/weights.safetensors" mode: DYNAMIC }
           composite_lora_adapters {
@@ -819,7 +819,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
-          device: "CPU"
+          device: ""
           lora_adapters { alias: "landscape" path: "loras/civitai/landscapes-lora/Fantastic_Landscape.safetensors" mode: DYNAMIC }
           lora_adapters { alias: "portrait" path: "loras/org/portrait-lora/weights.safetensors" mode: DYNAMIC }
           composite_lora_adapters {
