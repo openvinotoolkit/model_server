@@ -48,7 +48,7 @@ const std::string expectedOneSettingPluginGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
+            device: "",
             models_path: "./",
             plugin_config: '{"KV_CACHE_PRECISION":"u8"}',
             enable_prefix_caching: true,
@@ -86,7 +86,7 @@ const std::string expectedFullPluginGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
+            device: "",
             models_path: "./",
             plugin_config: '{"KV_CACHE_PRECISION":"u8","MAX_PROMPT_LEN":123,"MODEL_DISTRIBUTION_POLICY":"PIPELINE_PARALLEL"}',
             enable_prefix_caching: true,
@@ -124,7 +124,7 @@ const std::string expectedGraphContentsWithResponseParser = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
+            device: "",
             models_path: "./",
             enable_prefix_caching: true,
             cache_size: 10,
@@ -201,7 +201,7 @@ const std::string expectedDraftAndFuseGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
+            device: "",
             models_path: "./",
             enable_prefix_caching: true,
             cache_size: 10,
@@ -241,7 +241,7 @@ const std::string expectedGGUFGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
+            device: "",
             models_path: "./PRETTY_GOOD_GGUF_MODEL.gguf",
             enable_prefix_caching: true,
             cache_size: 10,
@@ -278,7 +278,7 @@ const std::string expectedGGUFGraphContents2 = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
+            device: "",
             models_path: "./PRETTY_GOOD_GGUF_MODEL_Q8-00001-of-20000.gguf",
             enable_prefix_caching: true,
             cache_size: 10,
@@ -548,7 +548,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
-          device: "CPU"
+          device: ""
       }
   }
 }
