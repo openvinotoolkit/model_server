@@ -129,6 +129,12 @@ private:
     void watcher(std::future<void> exitSignal, bool watchConfigFile);
 
     /**
+     * @brief Evaluates whether filesystem version polling is needed
+     * and starts the watcher thread if at least one model uses version directories
+     */
+    void evaluatePollingState();
+
+    /**
      * @brief Cleaner thread for resources cleanup
      */
     void cleanerRoutine(uint32_t resourcesCleanupIntervalMillisec, std::future<void> cleanerExitSignal);

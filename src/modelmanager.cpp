@@ -196,7 +196,7 @@ Status ModelManager::start(const Config& config) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
         return status;
     }
-    startWatcher(isStartedWithConfigFile());
+    evaluatePollingState();
     if (resourcesCleanupIntervalMillisec > 0)
         startCleaner();
 
@@ -209,6 +209,33 @@ void ModelManager::startWatcher(bool watchConfigFile) {
         std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal), watchConfigFile));
         watcherStarted = true;
         monitor = std::move(t);
+    }
+}
+
+void ModelManager::evaluatePollingState() {
+    if (watcherStarted) {
+        return;
+    }
+
+    static const std::set<std::string> singleFileExtensions = {
+        ".xml", ".onnx", ".pdmodel", ".pdiparams", ".pb", ".tflite"};
+
+    bool needed = false;
+    for (const auto& [name, config] : servedModelConfigs) {
+        const std::string& basePath = config.getBasePath();
+        auto ext = std::filesystem::path(basePath).extension().string();
+        if (singleFileExtensions.count(ext) == 0) {
+            SPDLOG_LOGGER_TRACE(modelmanager_logger, "Model {} with path {} requires version polling", name, basePath);
+            needed = true;
+            break;
+        }
+    }
+
+    if (needed && watcherIntervalMillisec > 0) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Filesystem version polling enabled - at least one model uses version directories");
+        startWatcher(isStartedWithConfigFile());
+    } else {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Filesystem version polling disabled - no model uses version directories");
     }
 }
 
