@@ -68,9 +68,28 @@ Configuration options for the config management mode, which is used to manage co
 | `list_models`           | `NA`         | List all models paths in the model repository.                                                                                                      |
 | `model_name`            | `string`     | Name of the model as visible in serving. If `--model_path` is not provided, path is deduced from name.                                              |
 | `model_path`            | `string`     | Optional. Path to the model repository. If path is relative then it is prefixed with `--model_repository_path`.                                     |
-| `add_to_config`         | `NA`         | Directive to add new model to the config file.                                                                                                      |
+| `add_to_config`         | `NA`         | Directive to add new model to the config file. Accepts optional model parameters: `--batch_size`, `--shape`, `--layout`, `--mean`, `--scale`, `--color_format`, `--precision`, `--model_version_policy`, `--nireq`, `--target_device`, `--plugin_config`. |
 | `remove_from_config`    | `NA`     | Directive to remove model from the config file.                                                                                                     |
 | `config_path`           | `string`     | Path to the configuration file.                                                                                                                     |
+
+## Configure mode options
+
+Configure mode creates or updates `graph.pbtxt` for a local model without starting the server. It requires `--model_path` and `--task` parameters along with task-specific options.
+
+| Option                  | Value format | Description                                                                                                                                         |
+|-------------------------|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--configure`           | `NA`         | Runs in configure mode to create or update `graph.pbtxt` for a local model. Does not start the server.                                              |
+| `--model_path`          | `string`     | Path to the local model directory where `graph.pbtxt` will be created.                                                                              |
+| `--model_name`          | `string`     | Optional. Name of the model as exposed by the server.                                                                                               |
+| `--task`                | `string`     | Task type for the model (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`).                               |
+| `--target_device`       | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"NPU"/"MULTI"/"HETERO"`.                  |
+
+Task-specific options (e.g., `--max_num_seqs`, `--cache_size`, `--num_streams`) are the same as documented in the [pull mode task options](#text-generation) below.
+
+**Example:**
+```bash
+ovms --configure --model_path /models/my_llm --task text_generation --target_device GPU --max_num_seqs 128 --cache_size 8
+```
 
 ## Pull mode configuration options
 
@@ -85,7 +104,7 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
 | `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
-| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`).              |
+| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
 | `--gguf_filename`           | `string`     | Filename of the wanted quantization type from Hugging Face GGUF repository.                                        |
 
