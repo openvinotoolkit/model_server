@@ -32,6 +32,41 @@
 
 namespace ovms {
 
+static void addJsonOrStringMember(rapidjson::Value& obj, const char* key, const std::string& value, rapidjson::Document::AllocatorType& alloc) {
+    rapidjson::Document parsed(&alloc);
+    if (!parsed.Parse(value.c_str()).HasParseError() && parsed.IsObject()) {
+        rapidjson::Value copy(parsed, alloc);
+        obj.AddMember(rapidjson::Value(key, alloc), copy, alloc);
+    } else {
+        obj.AddMember(rapidjson::Value(key, alloc), rapidjson::Value(value.c_str(), alloc), alloc);
+    }
+}
+
+static void addOptionalModelFields(rapidjson::Value& configObj, const ModelsSettingsImpl& modelSettings, rapidjson::Document::AllocatorType& alloc) {
+    if (!modelSettings.batchSize.empty())
+        configObj.AddMember("batch_size", rapidjson::Value(modelSettings.batchSize.c_str(), alloc), alloc);
+    if (!modelSettings.shape.empty())
+        addJsonOrStringMember(configObj, "shape", modelSettings.shape, alloc);
+    if (!modelSettings.layout.empty())
+        addJsonOrStringMember(configObj, "layout", modelSettings.layout, alloc);
+    if (modelSettings.mean.has_value())
+        configObj.AddMember("mean", rapidjson::Value(modelSettings.mean.value().c_str(), alloc), alloc);
+    if (modelSettings.scale.has_value())
+        configObj.AddMember("scale", rapidjson::Value(modelSettings.scale.value().c_str(), alloc), alloc);
+    if (modelSettings.colorFormat.has_value())
+        configObj.AddMember("color_format", rapidjson::Value(modelSettings.colorFormat.value().c_str(), alloc), alloc);
+    if (modelSettings.precision.has_value())
+        configObj.AddMember("precision", rapidjson::Value(modelSettings.precision.value().c_str(), alloc), alloc);
+    if (!modelSettings.modelVersionPolicy.empty())
+        addJsonOrStringMember(configObj, "model_version_policy", modelSettings.modelVersionPolicy, alloc);
+    if (modelSettings.nireq != 0)
+        configObj.AddMember("nireq", modelSettings.nireq, alloc);
+    if (!modelSettings.targetDevice.empty())
+        configObj.AddMember("target_device", rapidjson::Value(modelSettings.targetDevice.c_str(), alloc), alloc);
+    if (!modelSettings.pluginConfig.empty())
+        addJsonOrStringMember(configObj, "plugin_config", modelSettings.pluginConfig, alloc);
+}
+
 Status loadJsonConfig(const std::string& jsonFilename, rapidjson::Document& configJson) {
     std::string md5;
     Status status = parseConfig(jsonFilename, configJson, md5);
@@ -49,34 +84,27 @@ Status loadJsonConfig(const std::string& jsonFilename, rapidjson::Document& conf
 }
 
 Status createModelConfig(const std::string& fullPath, const ModelsSettingsImpl& modelSettings) {
-    std::ostringstream oss;
+    rapidjson::Document configJson;
+    configJson.SetObject();
+    auto& alloc = configJson.GetAllocator();
 
-    auto escapeBackslashes = [](const std::string& path) -> std::string {
-        std::string result;
-        result.reserve(path.size());
-        for (char c : path) {
-            if (c == '\\') {
-                result += "\\\\";
-            } else {
-                result += c;
-            }
-        }
-        return result;
-    };
+    rapidjson::Value modelConfigList(rapidjson::kArrayType);
+    rapidjson::Value configItem(rapidjson::kObjectType);
+    rapidjson::Value configObj(rapidjson::kObjectType);
 
-    // clang-format off
-    oss << R"({
-    "model_config_list": [
-        { 
-            "config": {
-                "name": ")" << modelSettings.modelName << R"(",
-                "base_path": ")" << escapeBackslashes(modelSettings.modelPath) << R"("
-            }
-        }
-    ]
-})";
-    // clang-format on
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
+    configObj.AddMember("name", rapidjson::Value(modelSettings.modelName.c_str(), alloc), alloc);
+    configObj.AddMember("base_path", rapidjson::Value(modelSettings.modelPath.c_str(), alloc), alloc);
+    addOptionalModelFields(configObj, modelSettings, alloc);
+
+    configItem.AddMember("config", configObj, alloc);
+    modelConfigList.PushBack(configItem, alloc);
+    configJson.AddMember("model_config_list", modelConfigList, alloc);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+    configJson.Accept(writer);
+
+    return FileSystem::createFileOverwrite(fullPath, buffer.GetString());
 }
 
 Status removeModelFromConfig(const std::string& fullPath, const ModelsSettingsImpl& modelSettings) {
@@ -157,6 +185,7 @@ Status updateConfigAddModel(const std::string& fullPath, const ModelsSettingsImp
     rapidjson::Value path;
     path.SetString(modelSettings.modelPath.c_str(), alloc);
     newConfig.AddMember("base_path", path, alloc);
+    addOptionalModelFields(newConfig, modelSettings, alloc);
 
     rapidjson::Value newConfigItem;
     newConfigItem.SetObject();

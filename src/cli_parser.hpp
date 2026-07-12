@@ -52,6 +52,7 @@ protected:
     void prepareConfigExport(ModelsSettingsImpl& modelsSettings);
     bool isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result);
     bool isInMemoryGraphMode(const std::unique_ptr<cxxopts::ParseResult>& result);
+    bool isConfigureMode(const std::unique_ptr<cxxopts::ParseResult>& result);
 };
 
 }  // namespace ovms

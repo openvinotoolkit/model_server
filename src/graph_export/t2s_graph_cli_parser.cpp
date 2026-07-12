@@ -35,7 +35,7 @@ TextToSpeechGraphSettingsImpl& TextToSpeechGraphCLIParser::defaultGraphSettings(
 }
 
 void TextToSpeechGraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task text2speech graph options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull --task text2speech [OPTIONS...]\n  ovms --configure --model_path <MODEL_PATH> --task text2speech [OPTIONS...]", "--task text2speech options");
     options->allow_unrecognised_options();
 
     // clang-format off
@@ -47,7 +47,11 @@ void TextToSpeechGraphCLIParser::createOptions() {
         ("model_type",
             "Type of the source TTS model: speecht5 (default) or kokoro.",
             cxxopts::value<std::string>()->default_value("speecht5"),
-            "MODEL_TYPE");
+            "MODEL_TYPE")
+        ("vocoder",
+            "The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan",
+            cxxopts::value<std::string>(),
+            "VOCODER");
     // clang-format on
 }
 
@@ -82,7 +86,7 @@ void TextToSpeechGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsIm
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE) {
+        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE && serverMode != CONFIGURE_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
@@ -92,6 +96,8 @@ void TextToSpeechGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsIm
             throw std::invalid_argument("--model_type must be one of: speecht5, kokoro");
         }
         hfSettings.exportSettings.modelType = modelType;
+        if (result->count("vocoder"))
+            hfSettings.exportSettings.vocoder = result->operator[]("vocoder").as<std::string>();
     }
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
 }

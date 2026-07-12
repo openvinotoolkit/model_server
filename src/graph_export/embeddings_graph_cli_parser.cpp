@@ -35,7 +35,7 @@ EmbeddingsGraphSettingsImpl& EmbeddingsGraphCLIParser::defaultGraphSettings() {
 }
 
 void EmbeddingsGraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task embeddings graph options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull --task embeddings [OPTIONS...]\n  ovms --configure --model_path <MODEL_PATH> --task embeddings [OPTIONS...]", "--task embeddings options");
     options->allow_unrecognised_options();
 
     // clang-format off
@@ -89,7 +89,7 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE) {
+        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE && serverMode != CONFIGURE_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
