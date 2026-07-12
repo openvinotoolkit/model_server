@@ -35,8 +35,8 @@ namespace ovms {
 static void addJsonOrStringMember(rapidjson::Value& obj, const char* key, const std::string& value, rapidjson::Document::AllocatorType& alloc) {
     rapidjson::Document parsed(&alloc);
     if (!parsed.Parse(value.c_str()).HasParseError() && parsed.IsObject()) {
-        rapidjson::Value copy(parsed, alloc);
-        obj.AddMember(rapidjson::Value(key, alloc), copy, alloc);
+        rapidjson::Value jsonValue(parsed, alloc);
+        obj.AddMember(rapidjson::Value(key, alloc), jsonValue, alloc);
     } else {
         obj.AddMember(rapidjson::Value(key, alloc), rapidjson::Value(value.c_str(), alloc), alloc);
     }
