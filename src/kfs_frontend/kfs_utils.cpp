@@ -293,26 +293,11 @@ int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tensor) {
     return tensor.contents().bytes_contents_size();
 }
 
-Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
-    std::vector<uint32_t> stringSizes;
-    uint32_t totalStringsLength = 0;
-    while (totalStringsLength + stringSizes.size() * sizeof(uint32_t) + sizeof(uint32_t) <= buffer->size()) {
-        uint32_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + totalStringsLength + stringSizes.size() * sizeof(uint32_t)));
-        stringSizes.push_back(inputSize);
-        totalStringsLength += inputSize;
-    }
-    size_t batchSize = stringSizes.size();
-    if ((totalStringsLength + batchSize * sizeof(uint32_t)) != buffer->size()) {
-        SPDLOG_DEBUG("Input string format conversion failed");
-        return StatusCode::INVALID_STRING_INPUT;
-    }
-    // Use shape from request if provided and its element count matches the parsed string count.
-    // This preserves multi-dimensional shapes (e.g. [1, 5] for batch=1, seq_len=5).
-    ov::Shape shape;
+Status buildShapeFromStringTensorRequest(const ::KFSRequest::InferInputTensor& src, size_t numElements, ov::Shape& shape) {
     if (src.shape_size() > 0) {
         size_t shapeElements = 1;
         bool validShape = true;
-        for (int i = 0; i < src.shape_size() && validShape; i++) {
+        for (int i = 0; i < src.shape_size(); i++) {
             int64_t dim = src.shape().at(i);
             if (dim < 0) {
                 validShape = false;
@@ -326,12 +311,33 @@ Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest
             shape.push_back(dimSize);
             shapeElements *= dimSize;
         }
-        if (!validShape || shapeElements != batchSize) {
-            SPDLOG_DEBUG("Input string shape mismatch: shape product {} != parsed string count {}; rejecting request", shapeElements, batchSize);
+        if (!validShape || shapeElements != numElements) {
+            SPDLOG_DEBUG("Input string shape mismatch: shape product {} != parsed string count {}; rejecting request", shapeElements, numElements);
             return StatusCode::INVALID_STRING_INPUT;
         }
     } else {
-        shape = ov::Shape{batchSize};
+        shape = ov::Shape{numElements};
+    }
+    return StatusCode::OK;
+}
+
+Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
+    std::vector<uint32_t> stringSizes;
+    uint32_t totalStringsLength = 0;
+    while (totalStringsLength + stringSizes.size() * sizeof(uint32_t) + sizeof(uint32_t) <= buffer->size()) {
+        uint32_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + totalStringsLength + stringSizes.size() * sizeof(uint32_t)));
+        stringSizes.push_back(inputSize);
+        totalStringsLength += inputSize;
+    }
+    size_t batchSize = stringSizes.size();
+    if ((totalStringsLength + batchSize * sizeof(uint32_t)) != buffer->size()) {
+        SPDLOG_DEBUG("Input string format conversion failed");
+        return StatusCode::INVALID_STRING_INPUT;
+    }
+    ov::Shape shape;
+    auto status = buildShapeFromStringTensorRequest(src, batchSize, shape);
+    if (!status.ok()) {
+        return status;
     }
     tensor = ov::Tensor(ov::element::Type_t::string, shape);
     std::string* data = tensor.data<std::string>();
