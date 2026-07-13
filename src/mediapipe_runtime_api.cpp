@@ -173,6 +173,14 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
 
     if (!loadedFromInProcessSymbols) {
 #ifdef __linux__
+        const int runtimeDlopenFlags = []() {
+            int flags = RTLD_NOW | RTLD_GLOBAL;
+#ifdef RTLD_DEEPBIND
+            flags |= RTLD_DEEPBIND;
+#endif
+            return flags;
+        }();
+
         std::vector<std::string> candidates{
             "libovms_mediapipe_runtime_shared.so",
             "/ovms/lib/libovms_mediapipe_runtime_shared.so",
@@ -201,7 +209,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         }
 
         for (const auto& candidate : candidates) {
-            api->handle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
+            api->handle = dlopen(candidate.c_str(), runtimeDlopenFlags);
             if (api->handle != nullptr) {
                 SPDLOG_INFO("MediaPipe runtime API loaded from: {}", candidate);
                 break;

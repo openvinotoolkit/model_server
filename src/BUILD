@@ -185,6 +185,10 @@ cc_binary(
         "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
         ":libovms_version_impl",
     ],
+    linkopts = select({
+        "//conditions:default": ["-Wl,--allow-shlib-undefined"],
+        "//src:windows": [],
+    }),
     linkshared = 1,
     visibility = ["//visibility:public"],
 )
@@ -773,6 +777,16 @@ ovms_cc_library(
         "tfs_utils",
     ],
     visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_runtime_tensorflow_owner",
+    deps = [
+        "@org_tensorflow//tensorflow/core:framework",
+        "@org_tensorflow//tensorflow/lite/c:c_api",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
 )
 ovms_cc_library(
     name = "customloaders",
@@ -2316,6 +2330,7 @@ cc_binary(
     deps = [
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",
+        "//src:libovms_mediapipe_runtime_tensorflow_owner",
         # NOTE: the MediaPipe runtime shared object is NOT linked into the main binary.
         # Runtime loading keeps registration ownership outside of ovms and avoids
         # duplicate symbol/registration conflicts.
@@ -2693,6 +2708,8 @@ cc_test(
                 ":test_llm_output_parser_tests",
                 "//src:libovms_mediapipe_http_executor",
                 "//src:libovms_mediapipe_kfs_executor",
+                # DO NOT REMOVE: tests require MediaPipe framework symbols/registrations
+                # via this linkage point to keep runtime-split behavior stable.
                 "//src:libmediapipe_framework_impl",
                 "//src:libovms_mediapipe_kfs_executor_h",
                 ":test_chat_template_workarounds",

@@ -461,10 +461,10 @@ ovms_cc_library(
 cc_binary(
     name = "libpython_calculators.so",
     linkshared = True,
-    srcs = [
-        "python_calculators_plugin.cpp",
+    srcs = [],
+    deps = [
+        ":python_calculators_runtime_objects",
     ],
-    deps = [],
     linkopts = LINKOPTS_SO + select({
         "//src:windows": [
             "/FORCE:MULTIPLE",  # Allow multiple symbol definitions for glog (linked in both this DLL and main binary)

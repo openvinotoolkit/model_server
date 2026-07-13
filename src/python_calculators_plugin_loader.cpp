@@ -59,6 +59,22 @@ static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
 static PluginHandle pythonCalculatorsRuntimeHandle = nullptr;
 
 #ifdef __linux__
+int runtimeSharedDlopenFlags() {
+    int flags = RTLD_NOW | RTLD_GLOBAL;
+#ifdef RTLD_DEEPBIND
+    flags |= RTLD_DEEPBIND;
+#endif
+    return flags;
+}
+
+int pythonPluginDlopenFlags() {
+    int flags = RTLD_LAZY | RTLD_GLOBAL;
+#ifdef RTLD_DEEPBIND
+    flags |= RTLD_DEEPBIND;
+#endif
+    return flags;
+}
+
 std::string safeDlerror() {
     if (const char* error = dlerror(); error != nullptr) {
         return std::string(error);
@@ -81,7 +97,7 @@ bool ensurePythonCalculatorsRuntimeLoaded() {
         "./bazel-bin/src/libovms_mediapipe_runtime_shared.so"};
 
     for (const auto& candidate : candidates) {
-        pythonCalculatorsRuntimeHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
+        pythonCalculatorsRuntimeHandle = dlopen(candidate.c_str(), runtimeSharedDlopenFlags());
         if (pythonCalculatorsRuntimeHandle != nullptr) {
             SPDLOG_INFO("Python calculators runtime loaded from: {}", candidate);
             return true;
@@ -134,7 +150,7 @@ bool probePluginLoadInChildProcess(const std::string& pluginPath) {
         // Both main binary and shared MediaPipe library have protobuf, but since
         // the main binary no longer links to the shared library directly, protobuf
         // conflicts are avoided.
-        void* probeHandle = dlopen(pluginPath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+        void* probeHandle = dlopen(pluginPath.c_str(), pythonPluginDlopenFlags());
         if (probeHandle != nullptr) {
             dlclose(probeHandle);
             _exit(0);
@@ -302,6 +318,23 @@ bool loadPythonCalculatorsPlugin() {
 
     ensurePythonCalculatorsRuntimeLoaded();
 
+    auto* runtimeRegisterFn = reinterpret_cast<RegisterPythonCalculatorsFn>(dlsym(RTLD_DEFAULT, "registerPythonCalculators"));
+    if (runtimeRegisterFn != nullptr) {
+        registerPythonCalculatorsFn = runtimeRegisterFn;
+
+        auto* runtimeBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(dlsym(RTLD_DEFAULT, "OVMS_getKfsPyTensorBridgeVTable"));
+        if (runtimeBridgeFn != nullptr) {
+            if (auto* vtable = runtimeBridgeFn(); vtable != nullptr) {
+                setKfsPyTensorBridgeVTable(vtable);
+                SPDLOG_INFO("Python calculators registration and KFS bridge activated from preloaded runtime-shared library");
+                return true;
+            }
+        }
+
+        SPDLOG_INFO("Python calculators registration is already present after runtime-shared preload; skipping plugin dlopen");
+        return true;
+    }
+
     std::vector<std::string> candidates{
         "libpython_calculators.so",
         "./libpython_calculators.so",
@@ -363,7 +396,7 @@ bool loadPythonCalculatorsPlugin() {
         // This allows the main binary to call plugin functions like registerPythonCalculators.
         SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", candidate);
 
-        pythonCalculatorsHandle = dlopen(candidate.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+        pythonCalculatorsHandle = dlopen(candidate.c_str(), pythonPluginDlopenFlags());
 
         if (pythonCalculatorsHandle != nullptr) {
             SPDLOG_INFO("Successfully loaded Python calculators plugin from: {}", candidate);
