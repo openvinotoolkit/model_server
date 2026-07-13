@@ -136,6 +136,17 @@ void activateKfsBridge(const KfsPyTensorBridgeVTable* vtable, const char* source
 
 #endif
 
+#ifdef _WIN32
+void activateKfsBridge(const KfsPyTensorBridgeVTable* vtable, const char* source) {
+    if (vtable == nullptr) {
+        return;
+    }
+
+    setKfsPyTensorBridgeVTable(vtable);
+    SPDLOG_INFO("KFS Python tensor bridge activated from {}", source);
+}
+#endif
+
 #ifdef __linux__
 // Weak reference allows using in-process bridge when linked into the binary
 // (e.g. ovms_test) without requiring -rdynamic for RTLD_DEFAULT lookups.
