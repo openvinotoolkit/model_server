@@ -1237,13 +1237,14 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
 
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
-    this->targetDevice = config.getTargetDevice();
+    this->config = config;
+    this->targetDevice = this->config.getTargetDevice();
     if (this->targetDevice.empty()) {
         this->targetDevice = recommendTargetDevice();
+        this->config.setTargetDevice(this->targetDevice);
         SPDLOG_LOGGER_INFO(modelmanager_logger, "No target device specified for model: {}; version: {}; using recommended device: {}",
             config.getName(), config.getVersion(), this->targetDevice);
     }
-    this->config = config;
     auto status = fetchModelFilepaths();
 
     if (!status.ok()) {
