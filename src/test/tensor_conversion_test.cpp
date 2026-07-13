@@ -20,10 +20,8 @@
 #include <gtest/gtest.h>
 
 #include "../capi_frontend/capi_utils.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../capi_frontend/deserialization.hpp"
-#include "../tfs_frontend/deserialization.hpp"
 #include "../kfs_frontend/deserialization.hpp"
 #include "../tensor_conversion.hpp"
 #include "opencv2/opencv.hpp"
@@ -40,27 +38,12 @@ public:
     void SetUp() override {
         prepareBinaryTensor(requestTensor);
     }
-
-    void prepareBinaryTensor(tensorflow::TensorProto& tensor, std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
-        for (size_t i = 0; i < batchSize; i++) {
-            tensor.add_string_val(image_bytes.get(), filesize);
-        }
-        tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
-        tensor.set_dtype(tensorflow::DataType::DT_STRING);
-    }
     void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, std::unique_ptr<char[]>& image_bytes, const size_t filesize, const size_t batchSize = 1) {
         for (size_t i = 0; i < batchSize; i++) {
             tensor.mutable_contents()->add_bytes_contents(image_bytes.get(), filesize);
         }
         tensor.mutable_shape()->Add(batchSize);
         tensor.set_datatype("BYTES");
-    }
-    void prepareBinaryTensor(tensorflow::TensorProto& tensor) {
-        size_t filesize;
-        std::unique_ptr<char[]> image_bytes;
-
-        readRgbJpg(filesize, image_bytes);
-        prepareBinaryTensor(tensor, image_bytes, filesize);
     }
     void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor) {
         size_t filesize;
@@ -70,17 +53,13 @@ public:
         prepareBinaryTensor(tensor, image_bytes, filesize);
     }
 
-    void prepareBinaryTensor(tensorflow::TensorProto& tensor, std::string input) {
-        tensor.set_dtype(tensorflow::DataType::DT_STRING);
-        tensor.add_string_val(input);
-    }
     void prepareBinaryTensor(::KFSRequest::InferInputTensor& tensor, std::string input) {
         tensor.mutable_contents()->add_bytes_contents(input);
         tensor.set_datatype("BYTES");
     }
 };
 
-using MyTypes = ::testing::Types<tensorflow::TensorProto, ::KFSRequest::InferInputTensor>;
+using MyTypes = ::testing::Types<::KFSRequest::InferInputTensor>;
 TYPED_TEST_SUITE(NativeFileInputConversionTest, MyTypes);
 
 TYPED_TEST(NativeFileInputConversionTest, tensorWithNonMatchingBatchsize) {
@@ -110,10 +89,7 @@ TYPED_TEST(NativeFileInputConversionTest, tensorWithEmptyTensor) {
     ov::Tensor tensor;
 
     auto tensorInfo = std::make_shared<const TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
-    if (std::is_same<TypeParam, tensorflow::TensorProto>::value)
-        EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(requestTensorEmptyInput, tensor, *tensorInfo, nullptr), ovms::StatusCode::STRING_VAL_EMPTY);
-    else
-        EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(requestTensorEmptyInput, tensor, *tensorInfo, nullptr), StatusCode::BYTES_CONTENTS_EMPTY);
+    EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(requestTensorEmptyInput, tensor, *tensorInfo, nullptr), StatusCode::BYTES_CONTENTS_EMPTY);
 }
 
 TYPED_TEST(NativeFileInputConversionTest, tensorWithNonSupportedLayout) {
@@ -451,101 +427,6 @@ TYPED_TEST(NativeFileInputConversionTest, positive_range_resolution_matching_in_
     }
 }
 
-class NativeFileInputConversionTFSPrecisionTest : public ::testing::TestWithParam<ovms::Precision> {
-protected:
-    void SetUp() override {
-        readRgbJpg(filesize, image_bytes);
-        stringVal.set_dtype(tensorflow::DataType::DT_STRING);
-        stringVal.add_string_val(image_bytes.get(), filesize);
-    }
-
-    size_t filesize;
-    std::unique_ptr<char[]> image_bytes;
-    tensorflow::TensorProto stringVal;
-};
-
-class NativeFileInputConversionTFSValidPrecisionTest : public NativeFileInputConversionTFSPrecisionTest {};
-class NativeFileInputConversionTFSInvalidPrecisionTest : public NativeFileInputConversionTFSPrecisionTest {};
-
-TEST_P(NativeFileInputConversionTFSValidPrecisionTest, Valid) {
-    ovms::Precision testedPrecision = GetParam();
-
-    auto tensorInfo = std::make_shared<const TensorInfo>("",
-        testedPrecision,
-        ovms::Shape{1, 1, 1, 3},
-        Layout{"NHWC"});
-
-    ov::Tensor tensor;
-    ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(stringVal, tensor, *tensorInfo, nullptr), ovms::StatusCode::OK);
-    ASSERT_EQ(tensor.get_shape(), (ov::Shape{1, 1, 1, 3}));
-    ASSERT_EQ(tensor.get_size(), 3);
-    ASSERT_EQ(tensor.get_element_type(), ovmsPrecisionToIE2Precision(testedPrecision));
-}
-
-TEST_P(NativeFileInputConversionTFSInvalidPrecisionTest, Invalid) {
-    ovms::Precision testedPrecision = GetParam();
-
-    auto tensorInfo = std::make_shared<const TensorInfo>("",
-        testedPrecision,
-        ovms::Shape{1, 1, 1, 3},
-        Layout{"NHWC"});
-
-    ov::Tensor tensor;
-    ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(stringVal, tensor, *tensorInfo, nullptr), ovms::StatusCode::INVALID_PRECISION);
-}
-
-const std::vector<ovms::Precision> BINARY_SUPPORTED_INPUT_PRECISIONS{
-    // ovms::Precision::UNSPECIFIED,
-    // ovms::Precision::MIXED,
-    ovms::Precision::FP64,
-    ovms::Precision::FP32,
-    ovms::Precision::FP16,
-    // InferenceEngine::Precision::Q78,
-    ovms::Precision::I16,
-    ovms::Precision::U8,
-    ovms::Precision::I8,
-    ovms::Precision::U16,
-    ovms::Precision::I32,
-    // ovms::Precision::I64,
-    // ovms::Precision::BIN,
-    // ovms::Precision::BOOL
-    // ovms::Precision::CUSTOM)
-};
-
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    NativeFileInputConversionTFSValidPrecisionTest,
-    ::testing::ValuesIn(BINARY_SUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<NativeFileInputConversionTFSValidPrecisionTest::ParamType>& info) {
-        return toString(info.param);
-    });
-
-static const std::vector<ovms::Precision> BINARY_UNSUPPORTED_INPUT_PRECISIONS{
-    ovms::Precision::UNDEFINED,
-    ovms::Precision::MIXED,
-    // ovms::Precision::FP64,
-    // ovms::Precision::FP32,
-    // ovms::Precision::FP16,
-    ovms::Precision::Q78,
-    // ovms::Precision::I16,
-    // ovms::Precision::U8,
-    // ovms::Precision::I8,
-    // ovms::Precision::U16,
-    // ovms::Precision::I32,
-    ovms::Precision::I64,
-    ovms::Precision::BIN,
-    ovms::Precision::BOOL
-    // ovms::Precision::CUSTOM)
-};
-
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    NativeFileInputConversionTFSInvalidPrecisionTest,
-    ::testing::ValuesIn(BINARY_UNSUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<NativeFileInputConversionTFSInvalidPrecisionTest::ParamType>& info) {
-        return toString(info.param);
-    });
-
 class NativeFileInputConversionKFSPrecisionTest : public ::testing::TestWithParam<ovms::Precision> {
 protected:
     void SetUp() override {
@@ -560,6 +441,26 @@ protected:
 
 class NativeFileInputConversionKFSValidPrecisionTest : public NativeFileInputConversionKFSPrecisionTest {};
 class NativeFileInputConversionKFSInvalidPrecisionTest : public NativeFileInputConversionKFSPrecisionTest {};
+
+const std::vector<ovms::Precision> BINARY_SUPPORTED_INPUT_PRECISIONS{
+    ovms::Precision::FP64,
+    ovms::Precision::FP32,
+    ovms::Precision::FP16,
+    ovms::Precision::I16,
+    ovms::Precision::U8,
+    ovms::Precision::I8,
+    ovms::Precision::U16,
+    ovms::Precision::I32,
+};
+
+static const std::vector<ovms::Precision> BINARY_UNSUPPORTED_INPUT_PRECISIONS{
+    ovms::Precision::UNDEFINED,
+    ovms::Precision::MIXED,
+    ovms::Precision::Q78,
+    ovms::Precision::I64,
+    ovms::Precision::BIN,
+    ovms::Precision::BOOL,
+};
 
 TEST_P(NativeFileInputConversionKFSValidPrecisionTest, Valid) {
     ovms::Precision testedPrecision = GetParam();
@@ -593,7 +494,7 @@ INSTANTIATE_TEST_SUITE_P(
     Test,
     NativeFileInputConversionKFSValidPrecisionTest,
     ::testing::ValuesIn(BINARY_SUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<NativeFileInputConversionTFSValidPrecisionTest::ParamType>& info) {
+    [](const ::testing::TestParamInfo<NativeFileInputConversionKFSValidPrecisionTest::ParamType>& info) {
         return toString(info.param);
     });
 
@@ -601,7 +502,7 @@ INSTANTIATE_TEST_SUITE_P(
     Test,
     NativeFileInputConversionKFSInvalidPrecisionTest,
     ::testing::ValuesIn(BINARY_UNSUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<NativeFileInputConversionTFSInvalidPrecisionTest::ParamType>& info) {
+    [](const ::testing::TestParamInfo<NativeFileInputConversionKFSInvalidPrecisionTest::ParamType>& info) {
         return toString(info.param);
     });
 
@@ -699,22 +600,16 @@ public:
     TensorType requestTensor;
     void SetUp() override {}
 
-    void prepareStringTensor(tensorflow::TensorProto& tensor, std::vector<std::string> inputStrings) {
-        prepareInferStringTensor(tensor, "UNUSED", inputStrings, true, nullptr);
-    }
     void prepareStringTensor(::KFSRequest::InferInputTensor& tensor, std::vector<std::string> inputStrings) {
         prepareInferStringTensor(tensor, "UNUSED", inputStrings, true, nullptr);
     }
 
-    void prepareStringTensorWithRawInputContents(tensorflow::TensorProto& tensor, std::vector<std::string> inputStrings, std::string& buffer) {
-        SPDLOG_ERROR("RawInputContents not supported for TFS API");
-    }
     void prepareStringTensorWithRawInputContents(::KFSRequest::InferInputTensor& tensor, std::vector<std::string> inputStrings, std::string& buffer) {
         prepareInferStringTensor(tensor, "UNUSED", inputStrings, false, &buffer);
     }
 };
 
-using MyTypes = ::testing::Types<tensorflow::TensorProto, ::KFSRequest::InferInputTensor>;
+using MyTypes = ::testing::Types<::KFSRequest::InferInputTensor>;
 TYPED_TEST_SUITE(StringInputsConversionTest, MyTypes);
 
 TYPED_TEST(StringInputsConversionTest, positive) {
@@ -726,8 +621,6 @@ TYPED_TEST(StringInputsConversionTest, positive) {
 }
 
 TYPED_TEST(StringInputsConversionTest, rawInputContents_positive) {
-    if (typeid(TypeParam) == typeid(TFSInputTensorType))
-        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {"String_123"};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
@@ -745,8 +638,6 @@ TYPED_TEST(StringInputsConversionTest, positive_batch_size_2) {
 }
 
 TYPED_TEST(StringInputsConversionTest, rawInputContents_positive_batch_size_2) {
-    if (typeid(TypeParam) == typeid(TFSInputTensorType))
-        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {"String_123", "zebra"};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
@@ -764,8 +655,6 @@ TYPED_TEST(StringInputsConversionTest, positive_batch_size_3_one_string_empty) {
 }
 
 TYPED_TEST(StringInputsConversionTest, rawInputContents_positive_batch_size_3_one_string_empty) {
-    if (typeid(TypeParam) == typeid(TFSInputTensorType))
-        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {"String_123", "zebra", ""};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
@@ -785,8 +674,6 @@ TYPED_TEST(StringInputsConversionTest, positive_empty_inputs) {
 
 TYPED_TEST(StringInputsConversionTest, rawInputContents_positive_empty_inputs) {
     // This case can't happen because request validation dont allow empty strings
-    if (typeid(TypeParam) == typeid(TFSInputTensorType))
-        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
@@ -810,8 +697,6 @@ TYPED_TEST(StringInputsConversionTest, native_ov_string) {
 }
 
 TYPED_TEST(StringInputsConversionTest, rawInputContents_native_ov_string) {
-    if (typeid(TypeParam) == typeid(TFSInputTensorType))
-        GTEST_SKIP() << "String inputs in buffer not supported for TFS api";
     std::vector<std::string> expectedStrings = {"ala", "", "ma", "kota"};
     std::string rawInputContents;
     this->prepareStringTensorWithRawInputContents(this->requestTensor, expectedStrings, rawInputContents);
@@ -929,7 +814,7 @@ public:
     void SetUp() override {}
 };
 
-using OutputTensorProtos = ::testing::Types<tensorflow::TensorProto, KFSTensorOutputProto>;
+using OutputTensorProtos = ::testing::Types<KFSTensorOutputProto>;
 TYPED_TEST_SUITE(StringOutputsConversionTest, OutputTensorProtos);
 
 TYPED_TEST(StringOutputsConversionTest, positive) {
@@ -944,3 +829,39 @@ TYPED_TEST(StringOutputsConversionTest, positive) {
 }
 
 }  // namespace
+
+TEST(StringInputsConversionKFSTest, amplification_probe_empty_strings) {
+    // Demonstrates memory amplification: N empty strings in proto occupy ~2 bytes each on the wire,
+    // but ov::Tensor(string, {N}) allocates N*sizeof(std::string) objects on the heap.
+    // Conversion itself has no element-count limit; the guard lives in request validation.
+    //
+    // Projected worst-case (1 GB proto of empty strings, ~500M entries):
+    //   proto size  ~1 GB
+    //   tensor obj  ~500M * 32 B = ~16 GB  <-- amplification
+    const int N = 1'000'000;
+    ::KFSRequest::InferInputTensor requestTensor;
+    requestTensor.set_datatype("BYTES");
+    // No shape - falls back to 1D {N}
+    for (int i = 0; i < N; i++) {
+        requestTensor.mutable_contents()->add_bytes_contents("");
+    }
+    size_t protoBytes = requestTensor.ByteSizeLong();
+    size_t stringObjBytes = static_cast<size_t>(N) * sizeof(std::string);
+
+    ov::Tensor tensor;
+    // Conversion has NO element-count limit - this succeeds even for large N.
+    // The limit is enforced upstream by validateAgainstMaxNativeStringElementCount.
+    auto status = convertStringRequestToOVTensor(requestTensor, tensor, nullptr);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(tensor.get_shape()[0], static_cast<size_t>(N));
+
+    size_t limitElements = (1ULL << 30) / sizeof(std::string);
+    std::cout << "\n[amplification_probe]\n"
+              << "  N entries        : " << N << "\n"
+              << "  Proto size       : " << protoBytes / 1024 << " KB\n"
+              << "  sizeof(string)   : " << sizeof(std::string) << " bytes\n"
+              << "  String obj alloc : " << stringObjBytes / (1024 * 1024) << " MB\n"
+              << "  Amplification    : " << stringObjBytes / (protoBytes + 1) << "x\n"
+              << "  Validation limit : " << limitElements << " elements (~"
+              << limitElements * sizeof(std::string) / (1024 * 1024) << " MB object alloc)\n";
+}

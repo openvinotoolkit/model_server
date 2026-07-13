@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,35 +15,29 @@
 //*****************************************************************************
 #pragma once
 
-#include <cstdint>
+#include <map>
+#include <string>
+#include <vector>
+
+#include "execution_context.hpp"
+#include "modelversion.hpp"
+#include "modelversionstatus.hpp"
 
 namespace ovms {
-struct ExecutionContext {
-    enum class Interface : uint8_t {
-        GRPC,
-        REST,
-    };
-    enum class Method : uint8_t {
-        // Model Control API
-        ConfigReload,
-        ConfigStatus,
+class ModelInstanceProvider;
+class ServableNameChecker;
+class Status;
 
-        // KServe
-        ModelInfer,
-        ModelInferStream,
-        ModelReady,
-        ModelMetadata,
-
-        // V3
-        V3Unary,
-        V3Stream,
-    };
-
-    Interface interface;
-    Method method;
-
-    ExecutionContext(Interface interface, Method method) :
-        interface(interface),
-        method(method) {}
+struct ModelVersionStatusDetails {
+    model_version_t version;
+    ModelVersionState state;
+    ModelVersionStatusErrorCode errorCode;
+    std::string errorMessage;
 };
+
+using ModelsStatuses = std::map<std::string, std::vector<ModelVersionStatusDetails>>;
+
+Status getAllModelsStatuses(ModelsStatuses& modelsStatuses, ModelInstanceProvider& modelProvider, ServableNameChecker& servableChecker, ExecutionContext context);
+Status serializeModelsStatuses2Json(const ModelsStatuses& modelsStatuses, std::string& output);
+
 }  // namespace ovms

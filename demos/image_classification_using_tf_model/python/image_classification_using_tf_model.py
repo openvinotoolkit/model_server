@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from ovmsclient import make_grpc_client
+import tritonclient.grpc as grpcclient
 import cv2
 import numpy as np
 import argparse
@@ -33,13 +33,15 @@ def load_img(path):
     scale = [127.5,127.5,127.5]
     img_f = (img_f - np.array(mean, dtype=np.float32))/np.array(scale, dtype=np.float32)
     img_f = img_f.reshape(1, img_f.shape[0], img_f.shape[1], 3)
-    return {"input:0": img_f}
+    return img_f
 
 def build_parser():
     parser = argparse.ArgumentParser(description='Client for OCR pipeline')
     parser.add_argument('--grpc_address', required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
     parser.add_argument('--grpc_port', required=False, default=9000, help='Specify port to grpc service. default: 9000')
     parser.add_argument('--image_input_path', required=True, help='Image input path')
+    parser.add_argument('--input_name', required=False, default='', help='Input tensor name. default: auto-detected from model metadata')
+    parser.add_argument('--output_name', required=False, default='', help='Output tensor name. default: auto-detected from model metadata')
     return parser
 
 if __name__ == "__main__":
@@ -47,9 +49,22 @@ if __name__ == "__main__":
 
     img_path = args['image_input_path']
     address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
-    input = load_img(img_path)
 
-    client = make_grpc_client(address)
-    classification_output = client.predict(input, "resnet")
+    client = grpcclient.InferenceServerClient(url=address)
+
+    input_name = args['input_name']
+    output_name = args['output_name']
+    if not input_name or not output_name:
+        metadata = client.get_model_metadata("resnet")
+        if not input_name:
+            input_name = metadata.inputs[0].name
+        if not output_name:
+            output_name = metadata.outputs[0].name
+
+    img = load_img(img_path)
+    infer_input = grpcclient.InferInput(input_name, img.shape, "FP32")
+    infer_input.set_data_from_numpy(img)
+    result = client.infer("resnet", [infer_input])
+    classification_output = result.as_numpy(output_name)
 
     print("Image classified as " + classes.imagenet_classes[classification_output.argmax() - 1])
