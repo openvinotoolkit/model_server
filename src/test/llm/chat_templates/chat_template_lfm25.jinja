@@ -78,6 +78,8 @@
         {%- if message.thinking is defined and (preserve_thinking or loop.index0 > ns.last_user_index) -%}
             {{- "<think>" + message.thinking + "</think>" -}}
         {%- endif -%}
+        {%- set _cfm_tag = "CONTINUE_FINAL_MESSAGE_TAG " -%}
+        {%- set _has_cfm = false -%}
         {%- if message.content is defined -%}
             {%- set content = parse_content(message.content) -%}
             {%- if not (preserve_thinking or loop.index0 > ns.last_user_index) -%}
@@ -85,7 +87,13 @@
                     {%- set content = content.split("</think>")[-1] | trim -%}
                 {%- endif -%}
             {%- endif -%}
-            {{- content -}}
+            {%- if message.tool_calls is defined and content.endswith(_cfm_tag) -%}
+                {%- set _has_cfm = true -%}
+                {%- set _trunc_len = (content | length) - (_cfm_tag | length) -%}
+                {{- content[:_trunc_len] -}}
+            {%- else -%}
+                {{- content -}}
+            {%- endif -%}
         {%- endif -%}
         {%- if message.tool_calls is defined -%}
             {{- render_tool_calls(message.tool_calls) -}}
