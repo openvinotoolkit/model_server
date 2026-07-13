@@ -180,7 +180,7 @@ Select deployment option depending on how you prepared models in the previous st
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name OpenVINO/whisper-large-v3-turbo-fp16-ov --model_repository_path /models --enable_word_timestamps
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name OpenVINO/whisper-large-v3-turbo-fp16-ov --model_repository_path /models
 ```
 **GPU**
 
@@ -189,7 +189,7 @@ to `docker run` command, use the image with GPU support.
 It can be applied using the commands below:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name OpenVINO/whisper-large-v3-turbo-fp16-ov --model_repository_path /models --target_device GPU --enable_word_timestamps
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name OpenVINO/whisper-large-v3-turbo-fp16-ov --model_repository_path /models --target_device GPU
 ```
 :::
 
@@ -198,11 +198,11 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-a
 If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-ovms --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name OpenVINO/whisper-large-v3-turbo-fp16-ov --model_repository_path models --target_device GPU --enable_word_timestamps
+ovms --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name OpenVINO/whisper-large-v3-turbo-fp16-ov --model_repository_path models --target_device GPU
 ```
 :::
 
-> **Note:** `--enable_word_timestamps` can be omitted if there is no need for word timestamps support. 
+> **Note:** Sentence timestamps are supported via `timestamp_granularities[]=segment` in transcription requests.
 
 The default configuration should work in most cases but the parameters can be tuned via OVMS arguments. See the [s2t calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
 
@@ -270,18 +270,18 @@ data: {"type":"transcript.text.done","text":"The quick brown fox jumped over the
 ```
 :::
 
-:::{dropdown} **Unary call with timestamps**
+:::{dropdown} **Unary call with sentence timestamps**
 
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="OpenVINO/whisper-large-v3-turbo-fp16-ov" -F language="en" -F timestamp_granularities[]="segment" -F timestamp_granularities[]="word" 
+curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="OpenVINO/whisper-large-v3-turbo-fp16-ov" -F language="en" -F timestamp_granularities[]="segment"
 ```
 ```json
-{"text":" A quick brown fox jumped over the lazy dog","words":[{"word":" A","start":0.0,"end":0.14000000059604645},{"word":" quick","start":0.14000000059604645,"end":0.3400000035762787},{"word":" brown","start":0.3400000035762787,"end":0.7799999713897705},{"word":" fox","start":0.7799999713897705,"end":1.3199999332427979},{"word":" jumped","start":1.3199999332427979,"end":1.7799999713897705},{"word":" over","start":1.7799999713897705,"end":2.0799999237060547},{"word":" the","start":2.0799999237060547,"end":2.259999990463257},{"word":" lazy","start":2.259999990463257,"end":2.5399999618530273},{"word":" dog","start":2.5399999618530273,"end":2.919999837875366}],"segments":[{"text":" A quick brown fox jumped over the lazy dog","start":0.0,"end":3.1399998664855957}]}
+{"text":" A quick brown fox jumped over the lazy dog","segments":[{"text":" A quick brown fox jumped over the lazy dog","start":0.0,"end":3.1399998664855957}]}
 ```
 :::
 
-:::{dropdown} **Unary call with python OpenAI library with timestamps**
+:::{dropdown} **Unary call with python OpenAI library with sentence timestamps**
 
 ```python
 from pathlib import Path
@@ -299,18 +299,84 @@ transcript = client.audio.transcriptions.create(
   model="OpenVINO/whisper-large-v3-turbo-fp16-ov",
   language="en",
   response_format="verbose_json",
-  timestamp_granularities=["segment", "word"],
+  timestamp_granularities=["segment"],
   file=audio_file
 )
 
 print(transcript.text)
 print(transcript.segments)
-print(transcript.words)
 ```
 ```
  A quick brown fox jumped over the lazy dog
 [TranscriptionSegment(id=None, avg_logprob=None, compression_ratio=None, end=3.1399998664855957, no_speech_prob=None, seek=None, start=0.0, temperature=None, text=' A quick brown fox jumped over the lazy dog', tokens=None)]
-[TranscriptionWord(end=0.14000000059604645, start=0.0, word=' A'), TranscriptionWord(end=0.3400000035762787, start=0.14000000059604645, word=' quick'), TranscriptionWord(end=0.7799999713897705, start=0.3400000035762787, word=' brown'), TranscriptionWord(end=1.3199999332427979, start=0.7799999713897705, word=' fox'), TranscriptionWord(end=1.7799999713897705, start=1.3199999332427979, word=' jumped'), TranscriptionWord(end=2.0799999237060547, start=1.7799999713897705, word=' over'), TranscriptionWord(end=2.259999990463257, start=2.0799999237060547, word=' the'), TranscriptionWord(end=2.5399999618530273, start=2.259999990463257, word=' lazy'), TranscriptionWord(end=2.919999837875366, start=2.5399999618530273, word=' dog')]
+```
+:::
+
+### Word timestamps
+If you need word-level timestamps support, export the model with `export_model.py` and enable this feature during export.
+
+Prepare export script and dependencies:
+```console
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+mkdir -p models
+```
+
+Export Speech-to-Text model with word timestamps enabled:
+```console
+python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name whisper-large-v3-turbo-word-ts --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps
+```
+
+:::{dropdown} **Deploying with Docker**
+
+```bash
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --model_path /models/whisper-large-v3-turbo-word-ts --model_name whisper-large-v3-turbo-word-ts
+```
+:::
+
+:::{dropdown} **Deploying on Bare Metal**
+
+```bat
+ovms --rest_port 8000 --model_path models/whisper-large-v3-turbo-word-ts --model_name whisper-large-v3-turbo-word-ts
+```
+:::
+
+:::{dropdown} **Unary call with cURL (word timestamps)**
+
+```bash
+curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-word-ts" -F language="en" -F timestamp_granularities[]="word"
+```
+
+Example response:
+```json
+{"text":" A quick brown fox jumped over the lazy dog","words":[{"word":" A","start":0.0,"end":0.14000000059604645},{"word":" quick","start":0.14000000059604645,"end":0.3400000035762787},{"word":" brown","start":0.3400000035762787,"end":0.7799999713897705},{"word":" fox","start":0.7799999713897705,"end":1.3199999332427979},{"word":" jumped","start":1.3199999332427979,"end":1.7799999713897705},{"word":" over","start":1.7799999713897705,"end":2.0799999237060547},{"word":" the","start":2.0799999237060547,"end":2.259999990463257},{"word":" lazy","start":2.259999990463257,"end":2.5399999618530273},{"word":" dog","start":2.5399999618530273,"end":2.919999837875366}]}
+```
+:::
+
+:::{dropdown} **Unary call with python OpenAI library (word timestamps)**
+
+```python
+from pathlib import Path
+from openai import OpenAI
+
+filename = "speech.wav"
+url="http://localhost:8000/v3"
+
+
+speech_file_path = Path(__file__).parent / filename
+client = OpenAI(base_url=url, api_key="not_used")
+
+audio_file = open(filename, "rb")
+transcript = client.audio.transcriptions.create(
+  model="whisper-large-v3-turbo-word-ts",
+  language="en",
+  response_format="verbose_json",
+  timestamp_granularities=["word"],
+  file=audio_file
+)
+
+print(transcript.text)
+print(transcript.words)
 ```
 :::
 
