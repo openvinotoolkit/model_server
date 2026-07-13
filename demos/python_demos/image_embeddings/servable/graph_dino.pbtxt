@@ -1,0 +1,80 @@
+input_stream: "OVMS_PY_TENSOR:image"
+output_stream: "OVMS_PY_TENSOR:embedding"
+
+node {
+  name: "DINOPreprocessor"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "OVMS_PY_TENSOR:image"
+  output_stream: "OVMS_PY_TENSOR:pixel_values"
+  node_options: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/workspace/pre.py"
+    }
+  }
+}
+
+node {
+  name: "PixelValuesConverter"
+  calculator: "PyTensorOvTensorConverterCalculator"
+  input_stream: "OVMS_PY_TENSOR:pixel_values"
+  output_stream: "OVTENSOR:dino_img"
+}
+
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:session_dino"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "dino"
+      servable_version: "1"
+    }
+  }
+}
+
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:session_dino"
+  input_stream: "OVTENSOR:dino_img"
+  output_stream: "OVTENSOR:dino_output_15"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
+      tag_to_input_tensor_names {
+        key: "OVTENSOR"
+        value: "48"
+      }
+      tag_to_output_tensor_names {
+        key: "OVTENSOR"
+        value: "15"
+      }
+    }
+  }
+}
+
+node {
+  name: "EmbeddingConverter"
+  calculator: "PyTensorOvTensorConverterCalculator"
+  input_stream: "OVTENSOR:dino_output_15"
+  output_stream: "OVMS_PY_TENSOR:normalized_dino_tensor"
+  node_options: {
+    [type.googleapis.com/mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+      tag_to_output_tensor_names {
+        key: "OVMS_PY_TENSOR"
+        value: "normalized_dino_tensor"
+      }
+    }
+  }
+}
+
+node {
+  name: "PostprocessorDINO"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "OVMS_PY_TENSOR:normalized_dino_tensor"
+  output_stream: "OVMS_PY_TENSOR:embedding"
+  node_options: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/workspace/post.py"
+    }
+  }
+}
