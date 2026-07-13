@@ -45,10 +45,12 @@ void OmniModelLegacyExecutor::processRequest() {
             ov::genai::OmniTalkerSpeechConfig speechConfig;
             speechConfig.return_audio = false;
 
+            std::vector<ov::genai::VideoMetadata> videosMetadata;
             requestExecutionContext->results = pipe->generate(
                 requestExecutionContext->inputRequest.promptText,
                 requestExecutionContext->inputRequest.inputImages,
                 requestExecutionContext->inputRequest.inputVideos,
+                videosMetadata,
                 requestExecutionContext->inputRequest.inputAudios,
                 requestExecutionContext->inputRequest.generationConfig,
                 speechConfig,
