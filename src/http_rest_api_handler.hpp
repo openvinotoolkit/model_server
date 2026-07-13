@@ -25,30 +25,20 @@
 #include <utility>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6001 4324 6326 4457 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
-
 #include "http_async_writer_interface.hpp"
 #include "multi_part_parser.hpp"
 #include "rest_parser.hpp"
 #include "status.hpp"
+#include "tensorinfo_fwd.hpp"
 
 namespace ovms {
 class ServableMetricReporter;
 class KFSInferenceServiceImpl;
-class GetModelMetadataImpl;
 class Server;
 class ModelManager;
 
-enum RequestType { Predict,
-    GetModelStatus,
-    GetModelMetadata,
-    ConfigReload,
+// note since removal of TFS, V3 endpoints (from OpenAI) are will be also accepted as V1
+enum RequestType { ConfigReload,
     ConfigStatus,
     KFS_GetModelReady,
     KFS_Infer,
@@ -97,8 +87,6 @@ std::string urlDecode(const std::string& encoded);
 
 class HttpRestApiHandler {
 public:
-    static const std::string predictionRegexExp;
-    static const std::string modelstatusRegexExp;
     static const std::string configReloadRegexExp;
     static const std::string configStatusRegexExp;
 
@@ -164,70 +152,6 @@ public:
         std::shared_ptr<HttpAsyncWriter> writer,
         std::shared_ptr<MultiPartParser> multiPartParser);
 
-    /**
-     * @brief Process predict request
-     *
-     * @param modelName
-     * @param modelVersion
-     * @param modelVersionLabel
-     * @param request
-     * @param response
-     *
-     * @return StatusCode
-     */
-    Status processPredictRequest(
-        const std::string& modelName,
-        const std::optional<int64_t>& modelVersion,
-        const std::optional<std::string_view>& modelVersionLabel,
-        const std::string& request,
-        std::string* response);
-
-    Status processSingleModelRequest(
-        const std::string& modelName,
-        const std::optional<int64_t>& modelVersion,
-        const std::string& request,
-        Order& requestOrder,
-        tensorflow::serving::PredictResponse& responseProto,
-        ServableMetricReporter*& reporterOut);
-
-    Status processPipelineRequest(
-        const std::string& modelName,
-        const std::string& request,
-        Order& requestOrder,
-        tensorflow::serving::PredictResponse& responseProto,
-        ServableMetricReporter*& reporterOut);
-
-    /**
-     * @brief Process Model Metadata request
-     *
-     * @param model_name
-     * @param model_version
-     * @param model_version_label
-     * @param response
-     *
-     * @return StatusCode
-     */
-    Status processModelMetadataRequest(
-        const std::string_view model_name,
-        const std::optional<int64_t>& model_version,
-        const std::optional<std::string_view>& model_version_label,
-        std::string* response);
-
-    /**
-     * @brief Process Model Status request
-     *
-     * @param model_name
-     * @param model_version
-     * @param model_version_label
-     * @param response
-     * @return StatusCode
-     */
-    Status processModelStatusRequest(
-        const std::string_view model_name,
-        const std::optional<int64_t>& model_version,
-        const std::optional<std::string_view>& model_version_label,
-        std::string* response);
-
     Status processConfigReloadRequest(std::string& response, ModelManager& manager);
 
     void convertShapeType(rapidjson::Value& scope, rapidjson::Document& doc);
@@ -251,8 +175,6 @@ public:
     const std::string apiKey;
 
 private:
-    const std::regex predictionRegex;
-    const std::regex modelstatusRegex;
     const std::regex configReloadRegex;
     const std::regex configStatusRegex;
 
@@ -275,7 +197,6 @@ private:
 
     ovms::Server& ovmsServer;
     ovms::KFSInferenceServiceImpl& kfsGrpcImpl;
-    const GetModelMetadataImpl& grpcGetModelMetadataImpl;
     ovms::ModelManager& modelManager;
 
     Status getReporter(const HttpRequestComponents& components, ovms::ServableMetricReporter*& reporter);

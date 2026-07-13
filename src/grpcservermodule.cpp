@@ -33,10 +33,8 @@
 #include "config.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
-#include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "network_utils.hpp"
-#include "prediction_service.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"
 #include "stringutils.hpp"
@@ -93,8 +91,6 @@ GRPCServerModule::~GRPCServerModule() {
 
 GRPCServerModule::GRPCServerModule(Server& server) :
     server(server),
-    tfsPredictService(this->server),
-    tfsModelService(this->server),
     kfsGrpcInferenceService(this->server) {}
 
 static std::string host_with_port(const std::string& host, int port) {
@@ -137,8 +133,6 @@ Status GRPCServerModule::start(const ovms::Config& config) {
         SPDLOG_INFO("Binding gRPC server to address: {}", hostWithPort);
         builder.AddListeningPort(hostWithPort, grpc::InsecureServerCredentials());
     }
-    builder.RegisterService(&tfsPredictService);
-    builder.RegisterService(&tfsModelService);
     builder.RegisterService(&kfsGrpcInferenceService);
     for (auto& [name, value] : channel_arguments) {
         // gRPC accept arguments of two types, int and string. We will attempt to
@@ -211,9 +205,6 @@ void GRPCServerModule::shutdown() {
     SPDLOG_INFO("{} shutdown", GRPC_SERVER_MODULE_NAME);
 }
 
-const GetModelMetadataImpl& GRPCServerModule::getTFSModelMetadataImpl() const {
-    return this->tfsPredictService.getTFSModelMetadataImpl();
-}
 KFSInferenceServiceImpl& GRPCServerModule::getKFSGrpcImpl() const {
     return this->kfsGrpcInferenceService;
 }

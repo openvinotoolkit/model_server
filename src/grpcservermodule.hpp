@@ -21,9 +21,7 @@
 #include <grpcpp/server.h>
 
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "model_service.hpp"
 #include "module.hpp"
-#include "prediction_service.hpp"
 
 namespace ovms {
 class Config;
@@ -31,8 +29,6 @@ class Server;
 
 class GRPCServerModule : public Module {
     Server& server;
-    PredictionServiceImpl tfsPredictService;
-    ModelServiceImpl tfsModelService;
     mutable KFSInferenceServiceImpl kfsGrpcInferenceService;
     std::vector<std::unique_ptr<grpc::Server>> servers;
 
@@ -42,7 +38,6 @@ public:
     Status start(const ovms::Config& config) override;
     void shutdown() override;
 
-    const GetModelMetadataImpl& getTFSModelMetadataImpl() const;
     KFSInferenceServiceImpl& getKFSGrpcImpl() const;
 };
 }  // namespace ovms

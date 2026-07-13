@@ -30,193 +30,28 @@
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386 6011 4457 6308 6387 6246)
 #include "absl/strings/escaping.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow_serving/util/json_tensor.h"
-#pragma GCC diagnostic pop
 #pragma warning(pop)
 #include "kfs_frontend/kfs_utils.hpp"
 #include "precision.hpp"
 #include "src/kfserving_api/grpc_predict_v2.grpc.pb.h"
 #include "status.hpp"
-#include "tfs_frontend/tfs_utils.hpp"
 #include "timer.hpp"
-
-using tensorflow::DataType;
-using tensorflow::DataTypeSize;
-using tensorflow::serving::JsonPredictRequestFormat;
-using tensorflow::serving::MakeJsonFromTensors;
-using tensorflow::serving::PredictResponse;
 
 namespace {
 enum : unsigned int {
     CONVERT,
-    MAKE_JSON_FROM_TENSORS,
     TIMER_END
 };
 }
 
 namespace ovms {
 
-static Status checkValField(const size_t& fieldSize, const size_t& expectedElementsNumber) {
-    if (fieldSize != expectedElementsNumber) {
+static Status checkValField(size_t valFieldSize, size_t expectedElementsNumber) {
+    if (valFieldSize != expectedElementsNumber) {
         std::stringstream ss;
-        ss << "Expected val field elements number: " << expectedElementsNumber << "; actual: " << fieldSize;
+        ss << "Expected val field elements number: " << expectedElementsNumber << "; actual: " << valFieldSize;
         return Status(StatusCode::REST_SERIALIZE_VAL_FIELD_INVALID_SIZE, ss.str());
     }
-    return StatusCode::OK;
-}
-
-Status makeJsonFromPredictResponse(
-    PredictResponse& response_proto,
-    std::string* response_json,
-    Order order) {
-    if (order == Order::UNKNOWN) {
-        return StatusCode::REST_PREDICT_UNKNOWN_ORDER;
-    }
-
-    Timer<TIMER_END> timer;
-    using std::chrono::microseconds;
-
-    timer.start(CONVERT);
-
-    for (auto& kv : *response_proto.mutable_outputs()) {
-        auto& tensor = kv.second;
-
-        size_t dataTypeSize = DataTypeSize(tensor.dtype());
-        size_t expectedContentSize = dataTypeSize;
-        for (int i = 0; i < tensor.tensor_shape().dim_size(); i++) {
-            expectedContentSize *= tensor.tensor_shape().dim(i).size();
-        }
-        size_t expectedElementsNumber = dataTypeSize > 0 ? expectedContentSize / dataTypeSize : 0;
-        bool seekDataInValField = false;
-
-        if (tensor.tensor_content().size() == 0)
-            seekDataInValField = true;
-        else if (tensor.tensor_content().size() != expectedContentSize)
-            return StatusCode::REST_SERIALIZE_TENSOR_CONTENT_INVALID_SIZE;
-
-        switch (tensor.dtype()) {
-        case DataType::DT_FLOAT:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.float_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(float))
-                    tensor.add_float_val(*reinterpret_cast<float*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
-        case DataType::DT_INT32:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.int_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(int32_t))
-                    tensor.add_int_val(*reinterpret_cast<int32_t*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
-        case DataType::DT_INT8:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.int_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(int8_t))
-                    tensor.add_int_val(*reinterpret_cast<int8_t*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
-        case DataType::DT_UINT8:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.int_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(uint8_t))
-                    tensor.add_int_val(*reinterpret_cast<uint8_t*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
-        case DataType::DT_DOUBLE:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.double_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(double))
-                    tensor.add_double_val(*reinterpret_cast<double*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
-        case DataType::DT_INT16:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.int_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(int16_t))
-                    tensor.add_int_val(*reinterpret_cast<int16_t*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
-        case DataType::DT_INT64:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.int64_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(int64_t))
-                    tensor.add_int64_val(*reinterpret_cast<int64_t*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
-        case DataType::DT_UINT32:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.uint32_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(uint32_t))
-                    tensor.add_uint32_val(*reinterpret_cast<uint32_t*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
-        case DataType::DT_UINT64:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.uint64_val_size(), expectedElementsNumber);
-                if (!status.ok())
-                    return status;
-            } else {
-                for (size_t i = 0; i < tensor.tensor_content().size(); i += sizeof(uint64_t))
-                    tensor.add_uint64_val(*reinterpret_cast<uint64_t*>(tensor.mutable_tensor_content()->data() + i));
-            }
-            break;
-        case DataType::DT_STRING:
-            if (seekDataInValField) {
-                auto status = checkValField(tensor.string_val_size(), tensor.tensor_shape().dim(0).size());
-                if (!status.ok())
-                    return status;
-            }
-            break;
-        default:
-            return StatusCode::REST_UNSUPPORTED_PRECISION;
-        }
-    }
-
-    timer.stop(CONVERT);
-    timer.start(MAKE_JSON_FROM_TENSORS);
-
-    const auto& tf_status = MakeJsonFromTensors(
-        response_proto.outputs(),
-        order == Order::ROW ? JsonPredictRequestFormat::kRow : JsonPredictRequestFormat::kColumnar,
-        response_json);
-
-    timer.stop(MAKE_JSON_FROM_TENSORS);
-    SPDLOG_DEBUG("tensor_content to *_val container conversion: {:.3f} ms", timer.elapsed<microseconds>(CONVERT) / 1000);
-    SPDLOG_DEBUG("MakeJsonFromTensors call: {:.3f} ms", timer.elapsed<microseconds>(MAKE_JSON_FROM_TENSORS) / 1000);
-
-    if (!tf_status.ok()) {
-        SPDLOG_ERROR("Creating json from tensors failed: {}", tf_status.message());
-        return StatusCode::REST_PROTO_TO_STRING_ERROR;
-    }
-
     return StatusCode::OK;
 }
 
