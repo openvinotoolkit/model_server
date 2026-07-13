@@ -187,7 +187,7 @@ cc_binary(
     ],
     linkopts = select({
         "//conditions:default": ["-Wl,--allow-shlib-undefined"],
-        "//src:windows": [],
+        "//src:windows": ["/FORCE:UNRESOLVED"],
     }),
     linkshared = 1,
     visibility = ["//visibility:public"],
