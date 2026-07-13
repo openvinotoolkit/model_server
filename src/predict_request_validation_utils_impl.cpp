@@ -47,11 +47,12 @@ Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputW
 }
 Status validateAgainstMaxNativeStringElementCount(int32_t elementCount) {
     if (elementCount < 0) {
-        return StatusCode::INVALID_BATCH_SIZE;
+        SPDLOG_DEBUG("Invalid(negative) element count: {}", elementCount);
+        return Status(StatusCode::INVALID_BATCH_SIZE, "Batch size is negative");
     }
     if (static_cast<size_t>(elementCount) > MAX_NATIVE_STRING_ELEMENTS) {
         std::stringstream ss;
-        ss << "; element count " << elementCount << " exceeds max " << MAX_NATIVE_STRING_ELEMENTS << " (1GB string-object limit)";
+        ss << "; element count " << elementCount << " exceeds max " << MAX_NATIVE_STRING_ELEMENTS;
         const std::string details = ss.str();
         SPDLOG_DEBUG(details);
         return Status(StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, details);

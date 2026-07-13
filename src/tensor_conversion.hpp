@@ -28,9 +28,6 @@
 #include "tensorinfo.hpp"
 #include "status.hpp"
 
-namespace tensorflow {
-class TensorProto;
-}
 namespace inference {
 class ModelInferRequest_InferInputTensor;
 }
@@ -158,21 +155,6 @@ class InferenceTensor;
 
 template <>
 Status convertNativeFileFormatRequestTensorToOVTensor(const InferenceTensor& src, ov::Tensor& tensor, const TensorInfo& tensorInfo, const std::string* buffer);
-
-template <typename TensorType>
-Status convertStringRequestToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::string* buffer) {
-    OVMS_PROFILE_FUNCTION();
-    if (buffer != nullptr) {
-        return convertBinaryExtensionStringFromBufferToNativeOVTensor(src, tensor, buffer);
-    }
-    int batchSize = getBinaryInputsSize(src);
-    tensor = ov::Tensor(ov::element::Type_t::string, ov::Shape{static_cast<size_t>(batchSize)});
-    std::string* data = tensor.data<std::string>();
-    for (int i = 0; i < batchSize; i++) {
-        data[i].assign(getBinaryInput(src, i));
-    }
-    return StatusCode::OK;
-}
 
 template <>
 Status convertStringRequestToOVTensor(const InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
