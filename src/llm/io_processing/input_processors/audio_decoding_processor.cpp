@@ -34,18 +34,20 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
             "AudioDecodingProcessor received input that is not a ChatHistory");
     }
     auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "AudioDecodingProcessor: processing {} messages", chatHistory.size());
 
     for (size_t i = 0; i < chatHistory.size(); i++) {
         const auto content = chatHistory[i]["content"];
         if (!content.is_array()) {
-            SPDLOG_INFO("Content is not an array, skipping");
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: message {} content is not an array, skipping", i);
             continue;
         }
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: message {} has {} content parts", i, content.size());
 
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
             const auto type = part["type"].as_string().value_or("");
-            SPDLOG_INFO("TYPE: {}", type);
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: message {} part {} type='{}'", i, j, type);
 
             if (type == "input_audio") {
                 const auto data = part["input_audio"]["data"].as_string().value_or("");
@@ -63,9 +65,10 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
                 try {
                     std::vector<float> pcm = ovms::audio_utils::readWithoutResample(
                         std::string_view(decoded.data(), decoded.size()), format);
+                    SPDLOG_LOGGER_INFO(llm_calculator_logger, "AudioDecodingProcessor: decoded audio {} samples, format='{}', base64 length={}",
+                        pcm.size(), format, data.size());
                     ov::Tensor audioTensor(ov::element::f32, ov::Shape{pcm.size()});
                     std::memcpy(audioTensor.data<float>(), pcm.data(), pcm.size() * sizeof(float));
-                    SPDLOG_INFO("ADDING AUDIO TENSOR TO REQUEST");
                     req.inputAudios.push_back(std::move(audioTensor));
                 } catch (const std::exception& e) {
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Audio decoding failed: {}", e.what());
@@ -75,6 +78,7 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
         }
     }
 
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "AudioDecodingProcessor: total audios collected: {}", req.inputAudios.size());
     return absl::OkStatus();
 }
 

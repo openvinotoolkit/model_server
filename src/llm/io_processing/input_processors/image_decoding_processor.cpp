@@ -66,9 +66,11 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
             continue;
         }
 
-        // Accumulate image tags and text parts from a single message's content array.
+        // Accumulate image tags, text parts, and preserve other content types
+        // (e.g. input_audio) that are handled by downstream processors.
         std::string imageTags;
         std::string textContent;
+        bool hasOtherParts = false;
 
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
@@ -87,10 +89,29 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
                     textContent += "\n";
                 }
                 textContent += part["text"].as_string().value_or("");
+            } else {
+                hasOtherParts = true;
             }
         }
 
-        if (!imageTags.empty() || !textContent.empty()) {
+        if (hasOtherParts) {
+            // Rebuild content array: replace image_url/text with a single merged text entry,
+            // keep all other parts (e.g. input_audio) for downstream processors.
+            auto newContent = ov::genai::JsonContainer::array();
+            std::string merged = imageTags + textContent;
+            if (!merged.empty()) {
+                ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", merged}});
+                newContent.push_back(textEntry);
+            }
+            for (size_t j = 0; j < content.size(); j++) {
+                const auto part = content[j];
+                const auto type = part["type"].as_string().value_or("");
+                if (type != "image_url" && type != "text") {
+                    newContent.push_back(part);
+                }
+            }
+            chatHistory[i]["content"] = newContent;
+        } else if (!imageTags.empty() || !textContent.empty()) {
             chatHistory[i]["content"] = imageTags + textContent;
         }
     }
