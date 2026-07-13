@@ -53,6 +53,7 @@ using PluginHandle = HMODULE;
 
 using RegisterPythonCalculatorsFn = void (*)();
 using GetKfsPyTensorBridgeVTableFn = const KfsPyTensorBridgeVTable* (*)();
+using SetKfsPyTensorBridgeVTableFn = void (*)(const KfsPyTensorBridgeVTable*);
 
 static PluginHandle pythonCalculatorsHandle = nullptr;
 static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
@@ -106,6 +107,31 @@ bool ensurePythonCalculatorsRuntimeLoaded() {
 
     SPDLOG_DEBUG("Python calculators runtime library not preloaded: {}", safeDlerror());
     return false;
+}
+
+void syncKfsBridgeToRuntimeShared(const KfsPyTensorBridgeVTable* vtable) {
+    if (vtable == nullptr || pythonCalculatorsRuntimeHandle == nullptr) {
+        return;
+    }
+
+    auto* setBridgeFn = reinterpret_cast<SetKfsPyTensorBridgeVTableFn>(
+        dlsym(pythonCalculatorsRuntimeHandle, "OVMS_setKfsPyTensorBridgeVTable"));
+    if (setBridgeFn == nullptr) {
+        SPDLOG_DEBUG("Runtime-shared KFS bridge setter symbol is unavailable: {}", safeDlerror());
+        return;
+    }
+
+    setBridgeFn(vtable);
+}
+
+void activateKfsBridge(const KfsPyTensorBridgeVTable* vtable, const char* source) {
+    if (vtable == nullptr) {
+        return;
+    }
+
+    setKfsPyTensorBridgeVTable(vtable);
+    syncKfsBridgeToRuntimeShared(vtable);
+    SPDLOG_INFO("KFS Python tensor bridge activated from {}", source);
 }
 
 #endif
@@ -262,8 +288,7 @@ bool loadPythonCalculatorsPlugin() {
         hasInProcessRegisterFn = true;
         if (getKfsPyTensorBridgeVTable() == nullptr && OVMS_getKfsPyTensorBridgeVTable != nullptr) {
             if (auto* vtable = OVMS_getKfsPyTensorBridgeVTable(); vtable != nullptr) {
-                setKfsPyTensorBridgeVTable(vtable);
-                SPDLOG_INFO("KFS Python tensor bridge activated from in-process weak symbol");
+                activateKfsBridge(vtable, "in-process weak symbol");
             }
         }
         if (getKfsPyTensorBridgeVTable() != nullptr) {
@@ -283,8 +308,7 @@ bool loadPythonCalculatorsPlugin() {
             auto* getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(dlsym(RTLD_DEFAULT, "OVMS_getKfsPyTensorBridgeVTable"));
             if (getKfsBridgeFn != nullptr) {
                 if (auto* vtable = getKfsBridgeFn(); vtable != nullptr) {
-                    setKfsPyTensorBridgeVTable(vtable);
-                    SPDLOG_INFO("KFS Python tensor bridge activated from in-process symbol (test mode)");
+                    activateKfsBridge(vtable, "in-process symbol (test mode)");
                 }
             }
 
@@ -304,8 +328,7 @@ bool loadPythonCalculatorsPlugin() {
         auto* getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(dlsym(RTLD_DEFAULT, "OVMS_getKfsPyTensorBridgeVTable"));
         if (getKfsBridgeFn != nullptr) {
             if (auto* vtable = getKfsBridgeFn(); vtable != nullptr) {
-                setKfsPyTensorBridgeVTable(vtable);
-                SPDLOG_INFO("KFS Python tensor bridge activated from already loaded python calculators plugin");
+                activateKfsBridge(vtable, "already loaded python calculators plugin");
             }
         }
 
@@ -325,8 +348,8 @@ bool loadPythonCalculatorsPlugin() {
         auto* runtimeBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(dlsym(RTLD_DEFAULT, "OVMS_getKfsPyTensorBridgeVTable"));
         if (runtimeBridgeFn != nullptr) {
             if (auto* vtable = runtimeBridgeFn(); vtable != nullptr) {
-                setKfsPyTensorBridgeVTable(vtable);
-                SPDLOG_INFO("Python calculators registration and KFS bridge activated from preloaded runtime-shared library");
+                activateKfsBridge(vtable, "preloaded runtime-shared library");
+                SPDLOG_INFO("Python calculators registration activated from preloaded runtime-shared library");
                 return true;
             }
         }
@@ -432,141 +455,140 @@ bool loadPythonCalculatorsPlugin() {
     }
 
 #elif _WIN32
-    // Windows equivalent of Linux RTLD_DEFAULT lookup:
-    // if OVMS_getKfsPyTensorBridgeVTable is already linked into the current
-    // process (e.g. ovms_test with python bridge runtime), use it directly
-    // and avoid loading libpython_calculators.dll.
-    if (getKfsPyTensorBridgeVTable() == nullptr) {
-        HMODULE currentProcessModule = GetModuleHandleA(nullptr);
-        if (currentProcessModule != nullptr) {
-            auto* inProcessBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
-                GetProcAddress(currentProcessModule, "OVMS_getKfsPyTensorBridgeVTable"));
-            if (inProcessBridgeFn != nullptr) {
-                if (auto* vtable = inProcessBridgeFn(); vtable != nullptr) {
-                    setKfsPyTensorBridgeVTable(vtable);
-                    SPDLOG_INFO("KFS Python tensor bridge activated from current process exports");
+    #elif _WIN32
+        // Windows equivalent of Linux RTLD_DEFAULT lookup:
+        // if OVMS_getKfsPyTensorBridgeVTable is already linked into the current
+        // process (e.g. ovms_test with python bridge runtime), use it directly
+        // and avoid loading libpython_calculators.dll.
+        if (getKfsPyTensorBridgeVTable() == nullptr) {
+            HMODULE currentProcessModule = GetModuleHandleA(nullptr);
+            if (currentProcessModule != nullptr) {
+                auto* inProcessBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
+                    GetProcAddress(currentProcessModule, "OVMS_getKfsPyTensorBridgeVTable"));
+                if (inProcessBridgeFn != nullptr) {
+                    if (auto* vtable = inProcessBridgeFn(); vtable != nullptr) {
+                        activateKfsBridge(vtable, "current process exports");
+                    }
                 }
             }
         }
-    }
 
-    std::vector<std::string> candidates{
-        "libpython_calculators.dll",
-        ".\\libpython_calculators.dll",
-        "src\\python\\libpython_calculators.dll",
-        ".\\src\\python\\libpython_calculators.dll",
-        "bazel-bin\\src\\python\\libpython_calculators.dll",
-        ".\\bazel-bin\\src\\python\\libpython_calculators.dll"};
+        std::vector<std::string> candidates{
+            "libpython_calculators.dll",
+            ".\\libpython_calculators.dll",
+            "src\\python\\libpython_calculators.dll",
+            ".\\src\\python\\libpython_calculators.dll",
+            "bazel-bin\\src\\python\\libpython_calculators.dll",
+            ".\\bazel-bin\\src\\python\\libpython_calculators.dll"};
 
-    char executablePath[MAX_PATH] = {0};
-    DWORD executablePathLength = GetModuleFileNameA(nullptr, executablePath, MAX_PATH);
-    if (executablePathLength > 0 && executablePathLength < MAX_PATH) {
-        std::string exePath(executablePath, executablePathLength);
-        std::string exeDir = ".";
-        size_t separatorPos = exePath.find_last_of("\\/");
-        if (separatorPos != std::string::npos) {
-            exeDir = exePath.substr(0, separatorPos);
+        char executablePath[MAX_PATH] = {0};
+        DWORD executablePathLength = GetModuleFileNameA(nullptr, executablePath, MAX_PATH);
+        if (executablePathLength > 0 && executablePathLength < MAX_PATH) {
+            std::string exePath(executablePath, executablePathLength);
+            std::string exeDir = ".";
+            size_t separatorPos = exePath.find_last_of("\\/");
+            if (separatorPos != std::string::npos) {
+                exeDir = exePath.substr(0, separatorPos);
+            }
+
+            std::vector<std::string> executableRelativeCandidates{
+                exeDir + "\\libpython_calculators.dll",
+                exeDir + "\\src\\python\\libpython_calculators.dll",
+                exeDir + "\\..\\src\\python\\libpython_calculators.dll",
+            };
+
+            std::string runfilesRoot = exePath + ".runfiles";
+            std::vector<std::string> runfilesCandidates{
+                runfilesRoot + "\\src\\python\\libpython_calculators.dll",
+                runfilesRoot + "\\_main\\src\\python\\libpython_calculators.dll",
+                runfilesRoot + "\\model_server\\src\\python\\libpython_calculators.dll",
+            };
+
+            candidates.insert(candidates.end(), executableRelativeCandidates.begin(), executableRelativeCandidates.end());
+            candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
         }
 
-        std::vector<std::string> executableRelativeCandidates{
-            exeDir + "\\libpython_calculators.dll",
-            exeDir + "\\src\\python\\libpython_calculators.dll",
-            exeDir + "\\..\\src\\python\\libpython_calculators.dll",
-        };
-
-        std::string runfilesRoot = exePath + ".runfiles";
-        std::vector<std::string> runfilesCandidates{
-            runfilesRoot + "\\src\\python\\libpython_calculators.dll",
-            runfilesRoot + "\\_main\\src\\python\\libpython_calculators.dll",
-            runfilesRoot + "\\model_server\\src\\python\\libpython_calculators.dll",
-        };
-
-        candidates.insert(candidates.end(), executableRelativeCandidates.begin(), executableRelativeCandidates.end());
-        candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
-    }
-
-    DWORD lastLoadError = ERROR_SUCCESS;
-    for (const auto& candidate : candidates) {
-        SetLastError(ERROR_SUCCESS);
-
-        // On Windows, unlike dlopen(NULL, RTLD_GLOBAL) on Linux, the operating system
-        // automatically makes all symbols from the current process available to any DLL
-        // that LoadLibraryA loads. The DLL's import table is resolved against:
-        // 1. The DLL itself
-        // 2. DLLs it explicitly links to
-        // 3. The main executable's exported symbols
-        // 4. System libraries
-        // This automatic symbol resolution means the plugin will find undefined OVMS
-        // symbols from the shared MediaPipe library without requiring an explicit call.
-        // No dlopen(NULL, RTLD_GLOBAL) equivalent is needed on Windows.
-
-        SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", toAbsolutePath(candidate));
-        pythonCalculatorsHandle = LoadLibraryA(candidate.c_str());
-        if (pythonCalculatorsHandle != nullptr) {
-            SPDLOG_INFO("Python calculators plugin loaded from candidate: {}", toAbsolutePath(candidate));
-            break;
-        }
-
-        lastLoadError = GetLastError();
-        const bool candidateExists = std::filesystem::exists(candidate);
-        SPDLOG_DEBUG(
-            "Failed to load python calculators candidate: {} (absolute: {}, exists: {}), error: {} ({})",
-            candidate,
-            toAbsolutePath(candidate),
-            candidateExists,
-            lastLoadError,
-            formatWindowsErrorMessage(lastLoadError));
-    }
-
-    if (pythonCalculatorsHandle == nullptr) {
-        DWORD error = lastLoadError != ERROR_SUCCESS ? lastLoadError : GetLastError();
-        SPDLOG_WARN("Python calculators plugin candidates attempted: {}", candidates.size());
+        DWORD lastLoadError = ERROR_SUCCESS;
         for (const auto& candidate : candidates) {
-            SPDLOG_WARN("  candidate: {}", toAbsolutePath(candidate));
+            SetLastError(ERROR_SUCCESS);
+
+            // On Windows, unlike dlopen(NULL, RTLD_GLOBAL) on Linux, the operating system
+            // automatically makes all symbols from the current process available to any DLL
+            // that LoadLibraryA loads. The DLL's import table is resolved against:
+            // 1. The DLL itself
+            // 2. DLLs it explicitly links to
+            // 3. The main executable's exported symbols
+            // 4. System libraries
+            // This automatic symbol resolution means the plugin will find undefined OVMS
+            // symbols from the shared MediaPipe library without requiring an explicit call.
+            // No dlopen(NULL, RTLD_GLOBAL) equivalent is needed on Windows.
+
+            SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", toAbsolutePath(candidate));
+            pythonCalculatorsHandle = LoadLibraryA(candidate.c_str());
+            if (pythonCalculatorsHandle != nullptr) {
+                SPDLOG_INFO("Python calculators plugin loaded from candidate: {}", toAbsolutePath(candidate));
+                break;
+            }
+
+            lastLoadError = GetLastError();
+            const bool candidateExists = std::filesystem::exists(candidate);
+            SPDLOG_DEBUG(
+                "Failed to load python calculators candidate: {} (absolute: {}, exists: {}), error: {} ({})",
+                candidate,
+                toAbsolutePath(candidate),
+                candidateExists,
+                lastLoadError,
+                formatWindowsErrorMessage(lastLoadError));
         }
-        logLikelyMissingWindowsDependencies();
-        SPDLOG_WARN("Python calculators plugin libpython_calculators.dll failed to load: {} ({}). "
-                    "Possible causes: missing dependency (ovms_mediapipe_runtime_shared.dll, libovmspython.dll), "
-                    "incompatible architecture (32-bit vs 64-bit), or export symbol conflict. "
-                    "MediaPipe Python calculators will not be available.",
-            error, formatWindowsErrorMessage(error));
-        return false;
-    }
 
-    registerPythonCalculatorsFn = reinterpret_cast<RegisterPythonCalculatorsFn>(
-        GetProcAddress(pythonCalculatorsHandle, "registerPythonCalculators"));
-    if (registerPythonCalculatorsFn == nullptr) {
-        DWORD error = GetLastError();
-        SPDLOG_WARN("Python calculators plugin libpython_calculators.dll missing symbol registerPythonCalculators: {} ({}). "
-                    "MediaPipe Python calculators will not be available.",
-            error, std::system_category().message(error));
-        FreeLibrary(pythonCalculatorsHandle);
-        pythonCalculatorsHandle = nullptr;
-        return false;
-    }
-#endif
-
-    registerPythonCalculatorsFn();
-
-    SPDLOG_INFO("Python calculators plugin loaded successfully");
-    // Also load the KFS Python tensor bridge vtable from the same plugin.
-    // This enables OVMS_PY_TENSOR deserialization/serialization in the KFS
-    // graph executor without linking pybind11 into the main binary.
-#ifdef __linux__
-    auto getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
-        dlsym(pythonCalculatorsHandle, "OVMS_getKfsPyTensorBridgeVTable"));
-#elif _WIN32
-    auto getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
-        GetProcAddress(pythonCalculatorsHandle, "OVMS_getKfsPyTensorBridgeVTable"));
-#endif
-    if (getKfsBridgeFn != nullptr) {
-        auto* vtable = getKfsBridgeFn();
-        if (vtable != nullptr) {
-            setKfsPyTensorBridgeVTable(vtable);
-            SPDLOG_INFO("KFS Python tensor bridge activated from python calculators plugin");
+        if (pythonCalculatorsHandle == nullptr) {
+            DWORD error = lastLoadError != ERROR_SUCCESS ? lastLoadError : GetLastError();
+            SPDLOG_WARN("Python calculators plugin candidates attempted: {}", candidates.size());
+            for (const auto& candidate : candidates) {
+                SPDLOG_WARN("  candidate: {}", toAbsolutePath(candidate));
+            }
+            logLikelyMissingWindowsDependencies();
+            SPDLOG_WARN("Python calculators plugin libpython_calculators.dll failed to load: {} ({}). "
+                        "Possible causes: missing dependency (ovms_mediapipe_runtime_shared.dll, libovmspython.dll), "
+                        "incompatible architecture (32-bit vs 64-bit), or export symbol conflict. "
+                        "MediaPipe Python calculators will not be available.",
+                error, formatWindowsErrorMessage(error));
+            return false;
         }
-    }
-    return true;
+
+        registerPythonCalculatorsFn = reinterpret_cast<RegisterPythonCalculatorsFn>(
+            GetProcAddress(pythonCalculatorsHandle, "registerPythonCalculators"));
+        if (registerPythonCalculatorsFn == nullptr) {
+            DWORD error = GetLastError();
+            SPDLOG_WARN("Python calculators plugin libpython_calculators.dll missing symbol registerPythonCalculators: {} ({}). "
+                        "MediaPipe Python calculators will not be available.",
+                error, std::system_category().message(error));
+            FreeLibrary(pythonCalculatorsHandle);
+            pythonCalculatorsHandle = nullptr;
+            return false;
+        }
+    #endif
+
+        registerPythonCalculatorsFn();
+
+        SPDLOG_INFO("Python calculators plugin loaded successfully");
+        // Also load the KFS Python tensor bridge vtable from the same plugin.
+        // This enables OVMS_PY_TENSOR deserialization/serialization in the KFS
+        // graph executor without linking pybind11 into the main binary.
+    #ifdef __linux__
+        auto getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
+            dlsym(pythonCalculatorsHandle, "OVMS_getKfsPyTensorBridgeVTable"));
+    #elif _WIN32
+        auto getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
+            GetProcAddress(pythonCalculatorsHandle, "OVMS_getKfsPyTensorBridgeVTable"));
+    #endif
+        if (getKfsBridgeFn != nullptr) {
+            auto* vtable = getKfsBridgeFn();
+            if (vtable != nullptr) {
+                activateKfsBridge(vtable, "python calculators plugin");
+            }
+        }
+        return true;
 }
 
 }  // namespace ovms

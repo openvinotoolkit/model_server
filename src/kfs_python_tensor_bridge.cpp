@@ -29,4 +29,8 @@ const KfsPyTensorBridgeVTable* getKfsPyTensorBridgeVTable() {
     return g_vtable;
 }
 
+extern "C" void OVMS_setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable) {
+    setKfsPyTensorBridgeVTable(vtable);
+}
+
 }  // namespace ovms
