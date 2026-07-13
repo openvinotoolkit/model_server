@@ -148,4 +148,29 @@ void normalizeBooleanString(std::string& value) {
     }
 }
 
+std::string replaceSingleWithDoubleQuotes(const std::string& input) {
+    std::string result;
+    result.reserve(input.size());
+    bool insideDoubleQuote = false;
+    bool insideSingleQuote = false;
+    for (size_t i = 0; i < input.size(); ++i) {
+        char c = input[i];
+        if (c == '\\' && i + 1 < input.size()) {
+            result += c;
+            result += input[++i];
+            continue;
+        }
+        if (c == '"' && !insideSingleQuote) {
+            insideDoubleQuote = !insideDoubleQuote;
+            result += c;
+        } else if (c == '\'' && !insideDoubleQuote) {
+            insideSingleQuote = !insideSingleQuote;
+            result += '"';
+        } else {
+            result += c;
+        }
+    }
+    return result;
+}
+
 }  // namespace ovms

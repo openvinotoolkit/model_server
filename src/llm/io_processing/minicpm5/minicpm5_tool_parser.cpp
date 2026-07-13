@@ -31,11 +31,11 @@ namespace ovms {
 
 // ---- Tag string constants ----
 const std::string Minicpm5ToolParser::FUNCTION_START_TAG = "<function";
-const std::string Minicpm5ToolParser::NAME_ATTR_PREFIX   = "name=";  // will handle both " and '
-const std::string Minicpm5ToolParser::XML_TAG_END        = ">";
-const std::string Minicpm5ToolParser::PARAM_START_TAG    = "<param";
-const std::string Minicpm5ToolParser::PARAM_END_TAG      = "</param>";
-const std::string Minicpm5ToolParser::FUNCTION_END_TAG   = "</function>";
+const std::string Minicpm5ToolParser::NAME_ATTR_PREFIX = "name=";  // will handle both " and '
+const std::string Minicpm5ToolParser::XML_TAG_END = ">";
+const std::string Minicpm5ToolParser::PARAM_START_TAG = "<param";
+const std::string Minicpm5ToolParser::PARAM_END_TAG = "</param>";
+const std::string Minicpm5ToolParser::FUNCTION_END_TAG = "</function>";
 
 // Schema helpers, JSON helpers and string helpers are shared with qwen3coder; see utils.{hpp,cpp}.
 
@@ -51,7 +51,7 @@ Minicpm5ToolParserImpl::Minicpm5ToolParserImpl(const ToolsParameterTypeMap_t& to
  * Returns the extracted value, or empty string on failure.
  */
 std::string Minicpm5ToolParserImpl::extractNameAttribute(
-        const std::string& content, size_t nameAttrValueStart, size_t tagEnd) {
+    const std::string& content, size_t nameAttrValueStart, size_t tagEnd) {
     if (nameAttrValueStart >= tagEnd || nameAttrValueStart >= content.size()) {
         return {};
     }
@@ -59,7 +59,8 @@ std::string Minicpm5ToolParserImpl::extractNameAttribute(
     if (quote != '"' && quote != '\'') {
         // No quote: read until next whitespace or '>'
         size_t end = content.find_first_of(" \t\n\r>/", nameAttrValueStart);
-        if (end == std::string::npos || end > tagEnd) end = tagEnd;
+        if (end == std::string::npos || end > tagEnd)
+            end = tagEnd;
         return content.substr(nameAttrValueStart, end - nameAttrValueStart);
     }
     size_t closeQuote = content.find(quote, nameAttrValueStart + 1);
@@ -78,6 +79,7 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
     auto& allocator = currentFunctionArgsDoc.GetAllocator();
     auto& key = this->currentParameterName;
     rapidjson::Value keyVal(key.c_str(), allocator);
+    rapidjson::Value valueCopy;
 
     rapidjson::Document temp;
     // Boolean normalisation (shared helper, same as qwen3coder)
@@ -89,20 +91,24 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
     }
 
     temp.Parse(parameterValueAsString.c_str());
-    if (temp.HasParseError()) {
+
+    if (temp.HasParseError() && !parameterValueAsString.empty() &&
+        (parameterValueAsString.front() == '{' || parameterValueAsString.front() == '[')) {
+        std::string converted = replaceSingleWithDoubleQuotes(parameterValueAsString);
+        rapidjson::Document retryDoc;
+        retryDoc.Parse(converted.c_str());
+        if (!retryDoc.HasParseError()) {
+            SPDLOG_TRACE("Minicpm5: successfully parsed after single-to-double quote conversion: {}", converted);
+            parameterValueAsString = std::move(converted);
+            valueCopy.CopyFrom(retryDoc, allocator);
+        }
+    } else if (temp.HasParseError()) {
         rapidjson::ParseErrorCode errorCode = temp.GetParseError();
         size_t errorOffset = temp.GetErrorOffset();
         SPDLOG_TRACE("Minicpm5: RapidJSON cannot parse param: {} value: {}; error offset: {}; code: {}; falling back to string",
             this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
-        rapidjson::Value v;
-        v.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);
-        if (!currentFunctionArgsDoc.HasMember(keyVal)) {
-            currentFunctionArgsDoc.AddMember(keyVal, v, allocator);
-        } else {
-            SPDLOG_DEBUG("Minicpm5: parameter {} already exists in document", key);
-        }
+        valueCopy.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);
     } else {
-        rapidjson::Value valueCopy;
         valueCopy.CopyFrom(temp, allocator);
         if (paramIt != this->toolsParametersTypeMap.end()) {
             auto paramJt = paramIt->second.find(currentParameterName);
@@ -110,12 +116,11 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
                 enforceStringValue(valueCopy, allocator);
             }
         }
-        if (!currentFunctionArgsDoc.HasMember(keyVal)) {
-            SPDLOG_TRACE("Minicpm5: add key:{} val:{} type:{}", key, parameterValueAsString, jsonTypeOf(valueCopy));
-            currentFunctionArgsDoc.AddMember(keyVal, valueCopy, allocator);
-        } else {
-            SPDLOG_DEBUG("Minicpm5: parameter {} already exists in document", key);
-        }
+    }
+    if (!currentFunctionArgsDoc.HasMember(keyVal)) {
+        currentFunctionArgsDoc.AddMember(keyVal, valueCopy, allocator);
+    } else {
+        SPDLOG_DEBUG("Minicpm5: parameter {} already exists in document", key);
     }
 }
 
@@ -127,7 +132,7 @@ Status Minicpm5ToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& o
     }
     while (!toolCallPositions.begin.empty() && !toolCallPositions.end.empty()) {
         auto posBegin = toolCallPositions.begin.top();
-        auto posEnd   = toolCallPositions.end.top();
+        auto posEnd = toolCallPositions.end.top();
         SPDLOG_TRACE("Minicpm5: removing tool call from outContent begin:{}, end:{}", posBegin, posEnd);
         outContent.erase(posBegin, posEnd - posBegin);
         toolCallPositions.begin.pop();
@@ -277,10 +282,12 @@ bool Minicpm5ToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
 }
 
 std::optional<ToolCalls_t> Minicpm5ToolParserImpl::parseChunk(const std::string& chunk) {
-    if (chunk.empty()) return std::nullopt;
+    if (chunk.empty())
+        return std::nullopt;
     ToolCalls_t toolCalls;
     this->streamContent += chunk;
-    while (parseUntilStateChange(toolCalls)) {}
+    while (parseUntilStateChange(toolCalls)) {
+    }
     if (!toolCalls.empty()) {
         return std::move(toolCalls);
     }
@@ -288,14 +295,16 @@ std::optional<ToolCalls_t> Minicpm5ToolParserImpl::parseChunk(const std::string&
 }
 
 std::optional<std::string> Minicpm5ToolParserImpl::getCurrentFunctionName() const {
-    if (this->currentFunction.name.empty()) return std::nullopt;
+    if (this->currentFunction.name.empty())
+        return std::nullopt;
     return this->currentFunction.name;
 }
 
 // ---- Minicpm5ToolParser ----
 
 void Minicpm5ToolParser::lazyFillInitToolParametersTypesMap() {
-    if (this->filledParametersTypesMap) return;
+    if (this->filledParametersTypesMap)
+        return;
     SPDLOG_DEBUG("Minicpm5ToolParser: filling tools parameters types map");
     this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
     this->filledParametersTypesMap = true;
@@ -376,12 +385,13 @@ std::optional<rapidjson::Document> Minicpm5ToolParser::sendFirstDeltaIfNeeded(co
 }
 
 std::optional<rapidjson::Document> Minicpm5ToolParser::parseChunk(
-        const std::string& newChunk,
-        const std::vector<int64_t>& /*tokens*/,
-        ov::genai::GenerationFinishReason /*finishReason*/) {
+    const std::string& newChunk,
+    const std::vector<int64_t>& /*tokens*/,
+    ov::genai::GenerationFinishReason /*finishReason*/) {
     SPDLOG_DEBUG("Minicpm5ToolParser: chunk: '{}'", newChunk);
     this->lazyFillInitToolParametersTypesMap();
-    if (newChunk.empty()) return std::nullopt;
+    if (newChunk.empty())
+        return std::nullopt;
     auto toolCallsOpt = this->streamParser.parseChunk(newChunk);
     if (toolCallsOpt.has_value()) {
         return this->sendFullDelta(toolCallsOpt.value());

@@ -39,11 +39,11 @@ static std::unique_ptr<ov::genai::Tokenizer> minicpm5Tokenizer;
 
 // Schemas used to drive type-aware parameter insertion
 static std::map<std::string, std::string> minicpm5ToolSchemasInput = {
-    {"get_weather",   R"({"properties":{"city":{"type":"string"},"unit":{"type":"string"}},"required":["city"]})"},
-    {"calculate",     R"({"properties":{"a":{"type":"integer"},"b":{"type":"integer"}},"required":["a","b"]})"},
-    {"search",        R"({"properties":{"query":{"type":"string"}},"required":["query"]})"},
-    {"get_stock",     R"({"properties":{"ticker":{"type":"string"},"count":{"type":"integer"}},"required":["ticker"]})"},
-    {"dummy",         R"({"properties":{"config":{"type":"object"}},"required":["config"]})"},
+    {"get_weather", R"({"properties":{"city":{"type":"string"},"unit":{"type":"string"}},"required":["city"]})"},
+    {"calculate", R"({"properties":{"a":{"type":"integer"},"b":{"type":"integer"}},"required":["a","b"]})"},
+    {"search", R"({"properties":{"query":{"type":"string"}},"required":["query"]})"},
+    {"get_stock", R"({"properties":{"ticker":{"type":"string"},"count":{"type":"integer"}},"required":["ticker"]})"},
+    {"dummy", R"({"properties":{"config":{"type":"object"}},"required":["config"]})"},
 };
 
 static std::vector<std::unique_ptr<rapidjson::Document>> minicpm5SchemaDocsStorage;
@@ -67,10 +67,18 @@ static ovms::ToolsSchemas_t minicpm5ToolsSchemas = convertToToolsSchemas(minicpm
 // Type map used when testing Minicpm5ToolParserImpl directly (without going through OutputParser)
 static ToolsParameterTypeMap_t minicpm5TypeMap = {
     {"get_weather", {{"city", ParameterType::STRING}, {"unit", ParameterType::STRING}}},
-    {"calculate",   {{"a", ParameterType::NUMBER},    {"b", ParameterType::NUMBER}}},
-    {"search",      {{"query", ParameterType::STRING}}},
-    {"get_stock",   {{"ticker", ParameterType::STRING}, {"count", ParameterType::NUMBER}}},
+    {"calculate", {{"a", ParameterType::NUMBER}, {"b", ParameterType::NUMBER}}},
+    {"search", {{"query", ParameterType::STRING}}},
+    {"get_stock", {{"ticker", ParameterType::STRING}, {"count", ParameterType::NUMBER}}},
+    {"dummy", {{"config", ParameterType::OBJECT}}},
 };
+
+static std::string jsonValueToString(const rapidjson::Value& val) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    val.Accept(writer);
+    return buffer.GetString();
+}
 
 // ---- Test fixture ----
 
@@ -590,7 +598,7 @@ TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallReasoningAndContent) {
         {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"key\":\"value\"}}"}}]}})"},
         {"SOME CONTENT,", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"IT SHOULDN'T APPREAR", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"IT SHOULDN'T APPEAR", ov::genai::GenerationFinishReason::NONE, std::nullopt},
     };
 
     assertStreamingVec(chunkToDeltaVec);
@@ -691,6 +699,39 @@ TEST_F(Minicpm5OutputParserTest, StreamingWithMultipleToolCalls) {
     assertStreamingVec(chunkToDeltaVec);
 }
 
+TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallWithArrayAndObjectParams) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<function", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"dummy\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"><param", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"}}]}})"},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"config\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\'key\':\'value\'}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"key\":\"value\"}}"}}]}})"},
+        {"<function", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"calculate\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"><param", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"calculate"}}]}})"},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"values\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[\'1\', \'2\', \'3\']", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<param", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"options\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"verbose\":true}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"values\":[\"1\",\"2\",\"3\"],\"options\":{\"verbose\":true}}"}}]}})"},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
 TEST(Minicpm5ToolParserImplTest, StringParamWithQuotesAndBackslashes) {
     const std::string input =
         R"(<function name="search"><param name="query">say "hi" and a backslash \ here</param></function>)";
@@ -732,11 +773,9 @@ TEST(Minicpm5ToolParserImplTest, StringParamWithCodeSnippet) {
     EXPECT_EQ(std::string(argsDoc["query"].GetString()), code);
 }
 
-// A param value that itself looks like JSON, for a STRING-typed param, must be kept as a string
-// (enforceStringValue), not parsed into a nested object.
-TEST(Minicpm5ToolParserImplTest, StringParamThatLooksLikeJson) {
+TEST(Minicpm5ToolParserImplTest, ObjectParamWithSingleQuotes) {
     const std::string input =
-        R"(<function name="search"><param name="query">{"nested":true,"n":42}</param></function>)";
+        R"(<function name="dummy"><param name="config">{'nested':true,'n':42}</param></function>)";
     auto content = input;
     Minicpm5ToolParserImpl parser(minicpm5TypeMap);
     auto callsOpt = parser.parseChunk(content);
@@ -746,14 +785,28 @@ TEST(Minicpm5ToolParserImplTest, StringParamThatLooksLikeJson) {
     rapidjson::Document argsDoc;
     argsDoc.Parse(calls[0].arguments.c_str());
     ASSERT_FALSE(argsDoc.HasParseError()) << "arguments not valid JSON: " << calls[0].arguments;
-    ASSERT_TRUE(argsDoc.HasMember("query"));
-    // STRING-typed param: kept as a string, not an object
-    ASSERT_TRUE(argsDoc["query"].IsString());
-    EXPECT_EQ(std::string(argsDoc["query"].GetString()), R"({"nested":true,"n":42})");
+    ASSERT_TRUE(argsDoc.HasMember("config"));
+    ASSERT_TRUE(argsDoc["config"].IsObject());
+    EXPECT_EQ(jsonValueToString(argsDoc["config"]), R"({"nested":true,"n":42})");
 }
 
-// Special characters (unicode, tabs, control-ish punctuation) in a string param round-trip
-// to valid JSON.
+TEST(Minicpm5ToolParserImplTest, ArrayParamWithSingleQuotes) {
+    const std::string input =
+        R"(<function name="dummy"><param name="config">[1, 2, 3, 'four']</param></function>)";
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    auto& calls = callsOpt.value();
+    ASSERT_EQ(calls.size(), 1u);
+    rapidjson::Document argsDoc;
+    argsDoc.Parse(calls[0].arguments.c_str());
+    ASSERT_FALSE(argsDoc.HasParseError()) << "arguments not valid JSON: " << calls[0].arguments;
+    ASSERT_TRUE(argsDoc.HasMember("config"));
+    ASSERT_TRUE(argsDoc["config"].IsArray());
+    EXPECT_EQ(jsonValueToString(argsDoc["config"]), R"([1,2,3,"four"])");
+}
+
 TEST(Minicpm5ToolParserImplTest, StringParamWithSpecialChars) {
     const std::string value = "tab\tand emoji \xF0\x9F\x98\x80 and slash / and quote \" end";
     const std::string input =

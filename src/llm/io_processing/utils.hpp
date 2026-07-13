@@ -24,8 +24,6 @@
 #pragma warning(pop)
 
 namespace ovms {
-size_t findInStringRespectingSpecialChars(const std::string& str, const std::string& target, size_t startPos);
-void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
 // Generates random alphanumeric string of length 9 for tool call ID
 std::string generateRandomId();
 
@@ -45,4 +43,8 @@ void enforceStringValue(rapidjson::Value& v, rapidjson::Document::AllocatorType&
 
 // Normalizes Python-style booleans ("True"/"TRUE" -> "true", "False"/"FALSE" -> "false") in place.
 void normalizeBooleanString(std::string& value);
+
+// Replaces single-quote string delimiters with double quotes for JSON compatibility.
+// Handles nested quoting: apostrophes inside double-quoted strings are preserved.
+std::string replaceSingleWithDoubleQuotes(const std::string& input);
 }  // namespace ovms
