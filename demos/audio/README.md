@@ -403,7 +403,7 @@ export OPENAI_API_KEY="unused"
 
 Install dependencies:
 ```console
-pip install -r requirements/requirements.txt -r requirements/requirements-api.txt torchcodec==0.12
+pip install -r requirements/requirements.txt -r requirements/requirements-api.txt openai>=1.0.0 torchcodec==0.12
 ```
 
 Run evaluation example:
