@@ -169,7 +169,7 @@ Average document length: 18.02 tokens
 ## Transcription
 ### Model preparation
 Many variances of Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translations and transcriptions endpoints.
-In this demo we will use OpenVINO/whisper-large-v3-turbo-fp16-ov which is finetuned version of Whisper large-v3. 
+In this demo we will use OpenVINO/whisper-large-v3-turbo-fp16-ov, which is a fine-tuned version of Whisper large-v3.
 
 :::{dropdown} **Deploying with Docker**
 
