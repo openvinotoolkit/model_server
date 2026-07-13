@@ -984,10 +984,6 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             requestComponents.headers = headers;
             return StatusCode::OK;
         }
-        if (std::regex_match(request_path, sm, configReloadRegex)) {
-            requestComponents.type = ConfigReload;
-            return StatusCode::OK;
-        }
         return (std::regex_match(request_path, sm, kfs_serverliveRegex) ||
                    std::regex_match(request_path, sm, configStatusRegex) ||
                    std::regex_match(request_path, sm, kfs_serverreadyRegex) ||
