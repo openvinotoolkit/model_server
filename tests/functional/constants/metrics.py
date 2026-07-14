@@ -184,7 +184,7 @@ class Metric:
                     "name": model.name,
                 }
 
-                if method == Metric.Method_modelready:
+                if method not in [Metric.Method_modelready]:
                     content["version"] = str(model.version)
 
                 result.append(Metric(metric_name=base_name, content=content))
@@ -382,7 +382,7 @@ class Metrics:
         metrics_to_remove = []
         model_unique_metrics = []
         for metric in metric_list:
-            if metric.content.get("method", None) == Metric.Method_modelready:
+            if metric.content.get("method", None) in [Metric.Method_modelready]:
                 if metric.to_str() in model_unique_metrics:
                     metrics_to_remove.append(metric)
                 else:
