@@ -36,6 +36,11 @@ struct OmniModelLegacyServableExecutionContext : public GenAiServableExecutionCo
     bool success{true};
     std::string accumulatedUnaryText;
 
+    // Audio output configuration (from request)
+    bool audioOutputRequested{false};
+    std::string audioVoice;
+    std::string audioFormat{"wav"};
+
     std::atomic<bool> clientDisconnected{false};
 
     void signalDisconnection() {

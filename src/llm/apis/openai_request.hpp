@@ -81,6 +81,11 @@ struct OpenAIRequest {
 
     bool skipSpecialTokens{true};
 
+    // Audio output (Omni pipeline)
+    bool audioOutputRequested{false};
+    std::string audioVoice;          // maps to OmniTalkerSpeechConfig::speaker
+    std::string audioFormat{"wav"};  // "wav" or "pcm16"
+
     OpenAIRequest() = default;
     ~OpenAIRequest() = default;
 };

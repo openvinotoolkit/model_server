@@ -762,6 +762,39 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
 
     request.maxModelLength = maxModelLength;
 
+    // modalities: array of strings; optional — controls output modalities
+    it = doc.FindMember("modalities");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsArray())
+            return absl::InvalidArgumentError("modalities is not an array");
+        for (const auto& mod : it->value.GetArray()) {
+            if (!mod.IsString())
+                return absl::InvalidArgumentError("modalities array must contain strings");
+            if (std::string(mod.GetString()) == "audio") {
+                request.audioOutputRequested = true;
+            }
+        }
+    }
+
+    // audio: object; optional — required when modalities includes "audio"
+    it = doc.FindMember("audio");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsObject())
+            return absl::InvalidArgumentError("audio is not an object");
+        auto audioObj = it->value.GetObject();
+        auto voiceIt = audioObj.FindMember("voice");
+        if (voiceIt != audioObj.MemberEnd() && voiceIt->value.IsString()) {
+            request.audioVoice = voiceIt->value.GetString();
+        }
+        auto formatIt = audioObj.FindMember("format");
+        if (formatIt != audioObj.MemberEnd() && formatIt->value.IsString()) {
+            request.audioFormat = formatIt->value.GetString();
+            if (request.audioFormat != "wav" && request.audioFormat != "pcm16") {
+                return absl::InvalidArgumentError("audio.format must be \"wav\" or \"pcm16\"");
+            }
+        }
+    }
+
     // TODO: logit_bias
     // TODO: top_logprobs
     // TODO: response_format

@@ -43,13 +43,17 @@ void OmniModelLegacyExecutor::processRequest() {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Omni generation started");
         try {
             ov::genai::OmniTalkerSpeechConfig speechConfig;
-            speechConfig.return_audio = false;
+            speechConfig.return_audio = requestExecutionContext->audioOutputRequested;
+            if (!requestExecutionContext->audioVoice.empty()) {
+                speechConfig.speaker = requestExecutionContext->audioVoice;
+            }
 
-            SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni generate: prompt length={}, images={}, videos={}, audios={}",
+            SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni generate: prompt length={}, images={}, videos={}, audios={}, return_audio={}",
                 requestExecutionContext->inputRequest.promptText.size(),
                 requestExecutionContext->inputRequest.inputImages.size(),
                 requestExecutionContext->inputRequest.inputVideos.size(),
-                requestExecutionContext->inputRequest.inputAudios.size());
+                requestExecutionContext->inputRequest.inputAudios.size(),
+                requestExecutionContext->audioOutputRequested);
             for (size_t i = 0; i < requestExecutionContext->inputRequest.inputAudios.size(); i++) {
                 const auto& t = requestExecutionContext->inputRequest.inputAudios[i];
                 SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni audio[{}]: shape={}, element_type={}",

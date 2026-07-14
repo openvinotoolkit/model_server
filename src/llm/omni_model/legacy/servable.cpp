@@ -15,11 +15,14 @@
 //*****************************************************************************
 
 #include <chrono>
+#include <cstring>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "absl/strings/escaping.h"
 
 #include "../../../logging.hpp"
 #include "../../../status.hpp"
@@ -48,6 +51,7 @@
 #include "../../py_jinja_template_processor.hpp"
 #endif
 #include "../../io_processing/generation_config_builder.hpp"
+#include "src/audio/audio_utils.hpp"
 #include "servable.hpp"
 
 namespace ovms {
@@ -167,6 +171,13 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
         return inputRequestResult.status();
     }
     omniExecutionContext->inputRequest = std::move(*inputRequestResult);
+
+    // Copy audio output config from parsed request to execution context
+    const auto& req = omniExecutionContext->apiHandler->getRequest();
+    omniExecutionContext->audioOutputRequested = req.audioOutputRequested;
+    omniExecutionContext->audioVoice = req.audioVoice;
+    omniExecutionContext->audioFormat = req.audioFormat;
+
     return absl::OkStatus();
 }
 
@@ -207,6 +218,52 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
     const std::string& completeText = omniExecutionContext->accumulatedUnaryText;
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
         omniExecutionContext->results, completeText);
+
+    // If audio output was requested and waveforms are available, inject audio field into response
+    if (omniExecutionContext->audioOutputRequested && !omniExecutionContext->results.speech_result.waveforms.empty()) {
+        const auto& waveform = omniExecutionContext->results.speech_result.waveforms[0];
+        const size_t sampleCount = waveform.get_size();
+        const float* pcmData = waveform.data<const float>();
+
+        std::string audioBase64;
+        if (omniExecutionContext->audioFormat == "wav") {
+            constexpr uint32_t OMNI_SAMPLE_RATE = 24000;
+            constexpr uint16_t BITS_PER_SAMPLE = 32;
+            void* wavData = nullptr;
+            size_t wavSize = 0;
+            ovms::audio_utils::prepareAudioOutput(&wavData, wavSize, OMNI_SAMPLE_RATE, BITS_PER_SAMPLE, sampleCount, pcmData);
+            audioBase64 = absl::Base64Escape(std::string_view(reinterpret_cast<const char*>(wavData), wavSize));
+            free(wavData);
+        } else {
+            // pcm16: convert float32 to int16
+            std::vector<int16_t> pcm16(sampleCount);
+            for (size_t i = 0; i < sampleCount; i++) {
+                float sample = pcmData[i];
+                if (sample > 1.0f) sample = 1.0f;
+                if (sample < -1.0f) sample = -1.0f;
+                pcm16[i] = static_cast<int16_t>(sample * 32767.0f);
+            }
+            audioBase64 = absl::Base64Escape(std::string_view(reinterpret_cast<const char*>(pcm16.data()), pcm16.size() * sizeof(int16_t)));
+        }
+
+        // Parse response JSON and inject audio field
+        rapidjson::Document responseDoc;
+        responseDoc.Parse(executionContext->response.c_str());
+        if (!responseDoc.HasParseError() && responseDoc.HasMember("choices") && responseDoc["choices"].IsArray() && responseDoc["choices"].Size() > 0) {
+            auto& message = responseDoc["choices"][0]["message"];
+            rapidjson::Value audioObj(rapidjson::kObjectType);
+            audioObj.AddMember("data", rapidjson::Value(audioBase64.c_str(), responseDoc.GetAllocator()), responseDoc.GetAllocator());
+            std::string transcript = message.HasMember("content") && message["content"].IsString() ? message["content"].GetString() : "";
+            audioObj.AddMember("transcript", rapidjson::Value(transcript.c_str(), responseDoc.GetAllocator()), responseDoc.GetAllocator());
+            message.AddMember("audio", audioObj, responseDoc.GetAllocator());
+
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            responseDoc.Accept(writer);
+            executionContext->response = buffer.GetString();
+        }
+    }
+
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
