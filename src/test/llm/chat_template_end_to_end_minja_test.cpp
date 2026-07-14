@@ -386,7 +386,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
 }
 
 // =============================================================================
-// // LFM2 does not render tool calls in current chat template, therefore the output is the same as if there were no tool calls.
+// // LFM2 does not render tool calls in current chat template, minja inserts them as stringified JSON, which is not correct.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm2.jinja");
@@ -403,20 +403,31 @@ run(true);
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_FALSE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
-<|im_end|>
+{
+  "tool_calls": [
+    {
+      "name": "get_weather",
+      "arguments": {
+        "location": "Paris",
+        "unit": "celsius"
+      },
+      "id": "call_abc123"
+    }
+  ],
+  "content": ""
+}<|im_end|>
 <|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
-// LFM2.5 minja currently doesn't support LFM2.5's chat template
 TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2.5 template";
@@ -435,16 +446,16 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2.5");
 
-    EXPECT_FALSE(caps.supportsToolCalls);   
-    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.supportsToolCalls);   
+    EXPECT_TRUE(caps.requiresObjectArguments);
 
-//     std::string expectedOutput = R"(</s><|im_start|>user
-// What's the weather in Paris?<|im_end|>
-// <|im_start|>assistant
-// <|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
-// <|im_start|>assistant
-// )";
-//     EXPECT_EQ(appliedOutput, expectedOutput);
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgsAndReasoning) {
@@ -465,16 +476,16 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgsAndReasoning) 
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2.5");
 
-    EXPECT_FALSE(caps.supportsToolCalls);
-    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
 
-//     std::string expectedOutput = R"(</s><|im_start|>user
-// What's the weather in Paris?<|im_end|>
-// <|im_start|>assistant
-// <think>Here is some reasoning content</think><|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
-// <|im_start|>assistant
-// )";
-//     EXPECT_EQ(appliedOutput, expectedOutput);
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<think>Here is some reasoning content</think><|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================
