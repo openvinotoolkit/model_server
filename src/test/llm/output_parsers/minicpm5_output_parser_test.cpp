@@ -577,7 +577,7 @@ TEST_F(Minicpm5OutputParserTest, StrimingWithToolCallAndSpecialTags) {
     assertStreamingVec(chunkToDeltaVec);
 }
 
-// It's possible that model starts to reason without the starting <think> tag, in that 
+// It's possible that model starts to reason without the starting <think> tag, in that
 TEST_F(Minicpm5OutputParserTest, StrimingWithReasoningWithoutStaringTag) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {"<s>", ov::genai::GenerationFinishReason::NONE, std::nullopt},

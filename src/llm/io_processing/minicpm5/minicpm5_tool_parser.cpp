@@ -143,16 +143,15 @@ Status Minicpm5ToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& o
 
     const std::vector<std::string> tokensToErase = {
         Minicpm5ToolParser::SOS_TOKEN_STR,
-        Minicpm5ToolParser::EOS_TOKEN_STR
-    };
-    
+        Minicpm5ToolParser::EOS_TOKEN_STR};
+
     for (const auto& token : tokensToErase) {
         size_t pos = 0;
         while ((pos = outContent.find(token, pos)) != std::string::npos) {
             outContent.erase(pos, token.length());
         }
     }
-    
+
     return StatusCode::OK;
 }
 
