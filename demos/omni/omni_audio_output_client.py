@@ -19,10 +19,15 @@ BASE_URL = "http://localhost:11338/v3"
 MODEL = "ovms-model"
 
 
+AVAILABLE_VOICES = ["br_f019", "f04", "f245", "f37", "m02", "m31", "m36"]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Test Omni audio output")
     parser.add_argument("--output", "-o", default="output.wav", help="Output WAV file path")
     parser.add_argument("--prompt", "-p", default="Hello, how are you today?", help="Text prompt")
+    parser.add_argument("--voice", "-v", default="f04", choices=AVAILABLE_VOICES,
+                        help=f"Speaker voice ({', '.join(AVAILABLE_VOICES)})")
     args = parser.parse_args()
 
     client = OpenAI(base_url=BASE_URL, api_key="unused")
@@ -30,7 +35,7 @@ def main():
     response = client.chat.completions.create(
         model=MODEL,
         modalities=["text", "audio"],
-        audio={"voice": "default", "format": "wav"},
+        audio={"voice": args.voice, "format": "wav"},
         messages=[
             {
                 "role": "user",
