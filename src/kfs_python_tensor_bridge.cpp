@@ -17,6 +17,12 @@
 
 namespace ovms {
 
+#if defined(_WIN32)
+#define KFS_BRIDGE_EXPORT __declspec(dllexport)
+#else
+#define KFS_BRIDGE_EXPORT __attribute__((visibility("default")))
+#endif
+
 namespace {
 const KfsPyTensorBridgeVTable* g_vtable = nullptr;
 }
@@ -29,7 +35,7 @@ const KfsPyTensorBridgeVTable* getKfsPyTensorBridgeVTable() {
     return g_vtable;
 }
 
-extern "C" void OVMS_setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable) {
+extern "C" KFS_BRIDGE_EXPORT void OVMS_setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable) {
     setKfsPyTensorBridgeVTable(vtable);
 }
 
