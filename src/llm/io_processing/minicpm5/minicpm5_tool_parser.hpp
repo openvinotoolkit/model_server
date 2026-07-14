@@ -154,7 +154,7 @@ public:
         return startTags;
     }
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags = {};4
+        static const std::vector<std::string> specialParsingStartTags = {};
         return specialParsingStartTags;
     }
     const std::string& getParsingEndTag() const override {

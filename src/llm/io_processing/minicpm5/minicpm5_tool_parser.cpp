@@ -336,13 +336,18 @@ const std::vector<int64_t> Minicpm5ToolParser::removeReasoningTokens(const std::
     tokensWithoutReasoning.reserve(generatedTokens.size());
     auto reasoningStartIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningStartTokenId);
     auto reasoningEndIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId);
-    if (reasoningStartIt == generatedTokens.end() || reasoningEndIt == generatedTokens.end() || reasoningStartIt >= reasoningEndIt) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Minicpm5ToolParser: Reasoning start or end token not found in the generated tokens, or in wrong order. Start token found: {}, End token found: {}, Start position: {}, End position: {}",
+    if (reasoningStartIt == generatedTokens.end() && reasoningEndIt == generatedTokens.end()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Minicpm5ToolParser: Reasoning start or end token not found in the generated tokens. Start token found: {}, End token found: {}, Start position: {}, End position: {}",
             reasoningStartIt != generatedTokens.end(), reasoningEndIt != generatedTokens.end(), std::distance(generatedTokens.begin(), reasoningStartIt), std::distance(generatedTokens.begin(), reasoningEndIt));
         tokensWithoutReasoning.insert(tokensWithoutReasoning.end(), generatedTokens.begin(), generatedTokens.end());
     } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Minicpm5ToolParser: Reasoning tokens found. Start position: {}, End position: {}",
             std::distance(generatedTokens.begin(), reasoningStartIt), std::distance(generatedTokens.begin(), reasoningEndIt));
+        if (reasoningStartIt == generatedTokens.end()) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Minicpm5ToolParser: Reasoning start wasn't found, but reasoning end was found. Start position: {}, End position: {}",
+                std::distance(generatedTokens.begin(), reasoningStartIt), std::distance(generatedTokens.begin(), reasoningEndIt));
+            reasoningStartIt = generatedTokens.begin();
+        }
         tokensWithoutReasoning.insert(tokensWithoutReasoning.end(), generatedTokens.begin(), reasoningStartIt);
         tokensWithoutReasoning.insert(tokensWithoutReasoning.end(), reasoningEndIt + 1, generatedTokens.end());
     }

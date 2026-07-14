@@ -36,13 +36,13 @@ void Minicpm5ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vecto
 
     auto startPos = 0;
     if (startReasoningIt != generatedTokens.end()) {
-        startPos = std::distance(generatedTokens.begin(), startReasoningIt);
+        startPos = std::distance(generatedTokens.begin(), startReasoningIt) + 1;
     } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Minicpm5ReasoningParser: Reasoning start token not found in the generated tokens. Start position: {}", startPos);
     }
     auto endPos = std::distance(generatedTokens.begin(), endReasoningIt);
 
-    std::string reasoningContent = tokenizer.decode(std::vector<int64_t>(startPos + generatedTokens.begin() + 1, endPos + generatedTokens.begin()), ov::genai::skip_special_tokens(true));
+    std::string reasoningContent = tokenizer.decode(std::vector<int64_t>(startPos + generatedTokens.begin(), endPos + generatedTokens.begin()), ov::genai::skip_special_tokens(true));
 
     parsedOutput.reasoning = reasoningContent;
 
