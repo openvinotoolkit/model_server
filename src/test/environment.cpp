@@ -20,7 +20,7 @@
 #include "src/logging.hpp"
 
 void Environment::SetUp() {
-    ovms::configure_logger("DEBUG", "");
+    ovms::configure_logger("INFO", "");
     const char* runUnstableTestsEnv = std::getenv("RUN_UNSTABLE");
     if (runUnstableTestsEnv) {
         std::string runUnstableTestsEnvContent(runUnstableTestsEnv);
