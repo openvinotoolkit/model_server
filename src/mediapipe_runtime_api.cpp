@@ -115,9 +115,7 @@ void tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(
     }
 
 #ifdef __linux__
-    auto* getBridgeFn = OVMS_getKfsPyTensorBridgeVTable != nullptr ?
-                            OVMS_getKfsPyTensorBridgeVTable :
-                            reinterpret_cast<GetKfsBridgeFn>(resolveSymbol(handle, "OVMS_getKfsPyTensorBridgeVTable"));
+    auto* getBridgeFn = OVMS_getKfsPyTensorBridgeVTable != nullptr ? OVMS_getKfsPyTensorBridgeVTable : reinterpret_cast<GetKfsBridgeFn>(resolveSymbol(handle, "OVMS_getKfsPyTensorBridgeVTable"));
     auto* setBridgeFn = reinterpret_cast<SetKfsBridgeFn>(resolveSymbol(handle, "OVMS_setKfsPyTensorBridgeVTable"));
 #elif _WIN32
     auto* getBridgeFn = reinterpret_cast<GetKfsBridgeFn>(resolveSymbol(handle, "OVMS_getKfsPyTensorBridgeVTable"));
