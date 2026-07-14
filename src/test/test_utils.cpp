@@ -23,20 +23,16 @@
 #include <fstream>
 #include <functional>
 #include <optional>
+#include <random>
 #include <unordered_set>
 
 #include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/inferenceparameter.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../network_utils.hpp"
-#include "../prediction_service_utils.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../tensorinfo.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
-
-using tensorflow::serving::PredictRequest;
-using tensorflow::serving::PredictResponse;
 
 using ovms::TensorInfo;
 
@@ -101,59 +97,6 @@ void printTensor(const ov::Tensor& tensor) {
     std::cout << "[ERROR] Unsupported data type: " << elementType << std::endl;
 }
 
-void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_info_t requestInputs, const std::vector<float>& data) {
-    request.mutable_inputs()->clear();
-    for (auto const& it : requestInputs) {
-        auto& name = it.first;
-        auto [shape, precision] = it.second;
-
-        auto& input = (*request.mutable_inputs())[name];
-        auto datatype = getPrecisionAsDataType(precision);
-        input.set_dtype(datatype);
-        size_t numberOfElements = 1;
-        for (auto const& dim : shape) {
-            input.mutable_tensor_shape()->add_dim()->set_size(dim);
-            numberOfElements *= dim;
-        }
-        switch (datatype) {
-        case tensorflow::DataType::DT_HALF: {
-            if (data.size() == 0) {
-                for (size_t i = 0; i < numberOfElements; i++) {
-                    input.add_half_val('1');
-                }
-            } else {
-                for (size_t i = 0; i < data.size(); i++) {
-                    input.add_half_val(data[i]);
-                }
-            }
-            break;
-        }
-        case tensorflow::DataType::DT_UINT16: {
-            if (data.size() == 0) {
-                for (size_t i = 0; i < numberOfElements; i++) {
-                    input.add_int_val('1');
-                }
-            } else {
-                for (size_t i = 0; i < data.size(); i++) {
-                    input.add_int_val(data[i]);
-                }
-            }
-            break;
-        }
-        default: {
-            if (data.size() == 0) {
-                *input.mutable_tensor_content() = std::string(numberOfElements * tensorflow::DataTypeSize(datatype), '1');
-            } else {
-                std::string content;
-                content.resize(data.size() * tensorflow::DataTypeSize(datatype));
-                std::memcpy(content.data(), data.data(), content.size());
-                *input.mutable_tensor_content() = content;
-            }
-        }
-        }
-    }
-}
-
 void waitForOVMSConfigReload(ovms::ModelManager& manager) {
     // This is effectively multiplying by 5 to have at least 1 config reload in between
     // two test steps, but we check if config files changed to exit earlier if changes are already applied
@@ -213,37 +156,6 @@ std::string readableSetError(std::unordered_set<std::string> actual, std::unorde
     return ss.str();
 }
 
-void checkDummyResponse(const std::string outputName,
-    const std::vector<float>& requestData,
-    PredictRequest& request, PredictResponse& response, int seriesLength, int batchSize, const std::string& servableName, size_t expectedOutputsCount) {
-    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
-    const auto& output_proto = response.outputs().at(outputName);
-
-    ASSERT_EQ(output_proto.tensor_content().size(), batchSize * DUMMY_MODEL_OUTPUT_SIZE * sizeof(float));
-    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 2);
-    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), batchSize);
-    ASSERT_EQ(output_proto.tensor_shape().dim(1).size(), DUMMY_MODEL_OUTPUT_SIZE);
-
-    std::vector<float> responseData = requestData;
-    std::for_each(responseData.begin(), responseData.end(), [seriesLength](float& v) { v += 1.0 * seriesLength; });
-
-    float* actual_output = (float*)output_proto.tensor_content().data();
-    float* expected_output = responseData.data();
-    const int dataLengthToCheck = DUMMY_MODEL_OUTPUT_SIZE * batchSize * sizeof(float);
-    checkBuffers(actual_output, expected_output, dataLengthToCheck);
-}
-
-void checkScalarResponse(const std::string outputName,
-    float inputScalar, PredictResponse& response, const std::string& servableName) {
-    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
-    const auto& output_proto = response.outputs().at(outputName);
-
-    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 0);
-
-    ASSERT_EQ(output_proto.tensor_content().size(), sizeof(float));
-    ASSERT_EQ(*((float*)output_proto.tensor_content().data()), inputScalar);
-}
-
 void checkScalarResponse(const std::string outputName,
     float inputScalar, ::KFSResponse& response, const std::string& servableName) {
     ASSERT_EQ(response.model_name(), servableName);
@@ -257,21 +169,6 @@ void checkScalarResponse(const std::string outputName,
     ASSERT_EQ(content->size(), sizeof(float));
 
     ASSERT_EQ(*((float*)content->data()), inputScalar);
-}
-
-void checkStringResponse(const std::string outputName,
-    const std::vector<std::string>& inputStrings, PredictResponse& response, const std::string& servableName) {
-    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
-    const auto& output_proto = response.outputs().at(outputName);
-
-    ASSERT_EQ(output_proto.tensor_shape().dim_size(), 1);
-    ASSERT_EQ(output_proto.tensor_shape().dim(0).size(), inputStrings.size());
-    ASSERT_EQ(output_proto.dtype(), tensorflow::DT_STRING);
-
-    ASSERT_EQ(output_proto.string_val_size(), inputStrings.size());
-    for (size_t i = 0; i < inputStrings.size(); i++) {
-        ASSERT_EQ(output_proto.string_val(i), inputStrings[i]);
-    }
 }
 
 void checkStringResponse(const std::string outputName,
@@ -326,18 +223,6 @@ void checkAddResponse(const std::string outputName,
     checkBuffers(actual_output, expected_output, dataLengthToCheck);
 }
 
-void checkIncrement4DimShape(const std::string outputName,
-    PredictResponse& response,
-    const std::vector<size_t>& expectedShape) {
-    ASSERT_EQ(response.outputs().count(outputName), 1) << "Did not find:" << outputName;
-    const auto& output_proto = response.outputs().at(outputName);
-
-    ASSERT_EQ(output_proto.tensor_shape().dim_size(), expectedShape.size());
-    for (size_t i = 0; i < expectedShape.size(); i++) {
-        ASSERT_EQ(output_proto.tensor_shape().dim(i).size(), expectedShape[i]);
-    }
-}
-
 void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath) {
     for (const std::filesystem::directory_entry& dir_entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
         std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec | std::filesystem::perms::group_read | std::filesystem::perms::group_write | std::filesystem::perms::others_read, std::filesystem::perm_options::add);
@@ -349,32 +234,6 @@ void SetReadonlyFileAttributeFromDir(std::string& directoryPath) {
         std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec | std::filesystem::perms::group_write, std::filesystem::perm_options::remove);
         std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_read | std::filesystem::perms::group_read | std::filesystem::perms::others_read, std::filesystem::perm_options::add);
     }
-}
-
-bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
-    bool same = true;
-    if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
-        SPDLOG_ERROR("Unexpected dim_size. Got: {}, Expect: {}", actual.dim_size(), expected.size());
-        return false;
-    }
-    for (int i = 0; i < actual.dim_size(); i++) {
-        if (actual.dim(i).size() != expected[i]) {
-            SPDLOG_ERROR("Unexpected dim[{}]. Got: {}, Expect: {}", i, actual.dim(i).size(), expected[i]);
-            same = false;
-        }
-    }
-    if (same == false) {
-        std::stringstream ss;
-        for (int i = 0; i < actual.dim_size(); i++) {
-            ss << "dim["
-               << i
-               << "] got:"
-               << actual.dim(i).size()
-               << " expect:" << expected[i];
-        }
-        SPDLOG_ERROR("Shape mismatch: {}", ss.str());
-    }
-    return same;
 }
 
 bool isShapeTheSame(const KFSShapeType& actual, const std::vector<int64_t>&& expected) {
@@ -479,20 +338,6 @@ void prepareInferStringRequest(::KFSRequest& request, const std::string& name, c
     prepareInferStringTensor(*tensor, name, data, putBufferInInputTensorContent, content);
 }
 
-void prepareInferStringTensor(tensorflow::TensorProto& tensor, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent, std::string* content) {
-    tensor.set_dtype(tensorflow::DataType::DT_STRING);
-    tensor.mutable_tensor_shape()->add_dim()->set_size(data.size());
-    for (auto inputData : data) {
-        tensor.add_string_val(inputData);
-    }
-}
-
-void prepareInferStringRequest(tensorflow::serving::PredictRequest& request, const std::string& name, const std::vector<std::string>& data, bool putBufferInInputTensorContent) {
-    request.mutable_inputs()->clear();
-    auto& input = (*request.mutable_inputs())[name];
-    prepareInferStringTensor(input, name, data, putBufferInInputTensorContent, nullptr);
-}
-
 void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<std::string> expectedStrings) {
     size_t maxStringLength = 0;
     for (const auto& input : expectedStrings) {
@@ -518,12 +363,6 @@ void assertOutputTensorMatchExpectations(const ov::Tensor& tensor, std::vector<s
     }
 }
 
-void assertStringOutputProto(const tensorflow::TensorProto& proto, const std::vector<std::string>& expectedStrings) {
-    ASSERT_EQ(proto.string_val_size(), expectedStrings.size());
-    for (size_t i = 0; i < expectedStrings.size(); i++) {
-        ASSERT_EQ(proto.string_val(i), expectedStrings[i]);
-    }
-}
 void assertStringOutputProto(const KFSTensorOutputProto& proto, const std::vector<std::string>& expectedStrings) {
     ASSERT_EQ(proto.contents().bytes_contents_size(), expectedStrings.size());
     for (size_t i = 0; i < expectedStrings.size(); i++) {
@@ -534,13 +373,6 @@ void assertStringOutputProto(const ovms::InferenceTensor& proto, const std::vect
     FAIL() << "not implemented";
 }
 
-void assertStringResponse(const tensorflow::serving::PredictResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName) {
-    ASSERT_EQ(proto.outputs().count(outputName), 1);
-    ASSERT_EQ(proto.outputs().at(outputName).dtype(), tensorflow::DataType::DT_STRING);
-    ASSERT_EQ(proto.outputs().at(outputName).tensor_shape().dim_size(), 1);
-    ASSERT_EQ(proto.outputs().at(outputName).tensor_shape().dim(0).size(), expectedStrings.size());
-    assertStringOutputProto(proto.outputs().at(outputName), expectedStrings);
-}
 void assertStringResponse(const ::KFSResponse& proto, const std::vector<std::string>& expectedStrings, const std::string& outputName) {
     ASSERT_EQ(proto.outputs_size(), 1);
     ASSERT_EQ(proto.outputs(0).name(), outputName);
@@ -561,19 +393,6 @@ void assertStringResponse(const ovms::InferenceResponse& proto, const std::vecto
     FAIL() << "not implemented";
 }
 
-void prepareBinaryPredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize) {
-    auto& tensor = (*request.mutable_inputs())[inputName];
-    size_t filesize = 0;
-    std::unique_ptr<char[]> image_bytes = nullptr;
-    readRgbJpg(filesize, image_bytes);
-
-    for (int i = 0; i < batchSize; i++) {
-        tensor.add_string_val(image_bytes.get(), filesize);
-    }
-    tensor.set_dtype(tensorflow::DataType::DT_STRING);
-    tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
-}
-
 void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize) {
     request.add_inputs();
     auto tensor = request.mutable_inputs()->Mutable(0);
@@ -589,18 +408,6 @@ void prepareBinaryPredictRequest(::KFSRequest& request, const std::string& input
     tensor->mutable_shape()->Add(batchSize);
 }
 
-void prepareBinaryPredictRequestNoShape(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize) {
-    auto& tensor = (*request.mutable_inputs())[inputName];
-    size_t filesize = 0;
-    std::unique_ptr<char[]> image_bytes = nullptr;
-    readRgbJpg(filesize, image_bytes);
-
-    for (int i = 0; i < batchSize; i++) {
-        tensor.add_string_val(image_bytes.get(), filesize);
-    }
-    tensor.set_dtype(tensorflow::DataType::DT_STRING);
-}
-
 void prepareBinaryPredictRequestNoShape(::KFSRequest& request, const std::string& inputName, const int batchSize) {
     request.add_inputs();
     auto tensor = request.mutable_inputs()->Mutable(0);
@@ -613,19 +420,6 @@ void prepareBinaryPredictRequestNoShape(::KFSRequest& request, const std::string
         tensor->mutable_contents()->add_bytes_contents(image_bytes.get(), filesize);
     }
     tensor->set_datatype("BYTES");
-}
-
-void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request, const std::string& inputName, const int batchSize) {
-    auto& tensor = (*request.mutable_inputs())[inputName];
-    size_t filesize = 0;
-    std::unique_ptr<char[]> image_bytes = nullptr;
-    read4x4RgbJpg(filesize, image_bytes);
-
-    for (int i = 0; i < batchSize; i++) {
-        tensor.add_string_val(image_bytes.get(), filesize);
-    }
-    tensor.set_dtype(tensorflow::DataType::DT_STRING);
-    tensor.mutable_tensor_shape()->add_dim()->set_size(batchSize);
 }
 
 void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize) {

@@ -70,7 +70,7 @@ Status validateCapiTensorContent(const InferenceTensor& tensor, ovms::Precision 
     }
     size_t elementSize = (expectedPrecision == Precision::STRING) ? sizeof(std::string) : ov::element::Type(ovmsPrecisionToIE2Precision(expectedPrecision)).size();
     size_t expectedContentSize;
-    if (computeExpectedBufferSizeReturnFalseIfOverflow<ovms::dimension_value_t>(tensor.getShape(), elementSize, expectedContentSize) == false) {
+    if (computeExpectedBufferSizeReturnFalseIfOverflow(tensor.getShape(), elementSize, expectedContentSize) == false) {
         SPDLOG_DEBUG("[servable name: {} version: {}] Expected content size overflow for tensor - {}", servableName, servableVersion, tensorName);
         return StatusCode::INVALID_SHAPE;
     }

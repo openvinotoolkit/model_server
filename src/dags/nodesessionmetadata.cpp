@@ -26,7 +26,7 @@
 namespace ovms {
 
 NodeSessionMetadata::NodeSessionMetadata() :
-    context({ExecutionContext::Interface::GRPC, ExecutionContext::Method::Predict}) {}
+    context({ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer}) {}
 
 NodeSessionMetadata::NodeSessionMetadata(ExecutionContext context) :
     context(context) {}

@@ -33,16 +33,12 @@
 #include "tool_schema_wrapper.hpp"
 
 namespace ovms {
-using ImageHistory = std::vector<std::pair<size_t, ov::Tensor>>;
-
 struct StreamOptions {
     bool includeUsage = false;
 };
 // Class that maps OpenAI request content.
 struct OpenAIRequest {
     ov::genai::ChatHistory chatHistory;
-    std::string processedJson;
-    ImageHistory imageHistory;
     std::optional<std::string> prompt{std::nullopt};
     bool stream{false};
     StreamOptions streamOptions;

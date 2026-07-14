@@ -363,7 +363,7 @@ rapidjson::Document Gemma4ToolParser::wrapDeltaArgs(const std::string& argsStr, 
     return BaseOutputParser::wrapDelta(doc, toolCallIndex);
 }
 
-std::optional<rapidjson::Document> Gemma4ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> Gemma4ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     if (!chunk.empty()) {
         this->streamingContent += chunk;
     }

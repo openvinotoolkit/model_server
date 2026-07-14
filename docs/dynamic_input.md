@@ -8,8 +8,6 @@ hidden:
 
 ovms_docs_dynamic_shape_dynamic_model
 ovms_docs_dynamic_shape_binary_inputs
-ovms_docs_dynamic_bs_auto_reload
-ovms_docs_dynamic_shape_auto_reload
 ovms_docs_dynamic_bs_demultiplexer
 ovms_docs_dynamic_shape_custom_node
 ```

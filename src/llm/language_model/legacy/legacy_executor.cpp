@@ -35,7 +35,7 @@ void LegacyExecutor::processRequest() {
     } else {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
         try {
-            requestExecutionContext->results = pipe->generate(requestExecutionContext->inputIds, requestExecutionContext->generationConfigBuilder->getConfig(), requestExecutionContext->textStreamer);
+            requestExecutionContext->results = pipe->generate(requestExecutionContext->inputRequest.inputIds, requestExecutionContext->inputRequest.generationConfig, requestExecutionContext->textStreamer);
         } catch (std::exception& e) {
             requestExecutionContext->success = false;
             SPDLOG_LOGGER_ERROR(llm_executor_logger, "LLM pipeline generation failed: {}.", e.what());
@@ -43,7 +43,7 @@ void LegacyExecutor::processRequest() {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation ended");
     }
     requestExecutionContext->readySignal.set_value();
-    requestExecutionContext->executionInProgress.notify_one();
+    requestExecutionContext->deltaChannel.signalComplete();
     std::unique_lock<std::mutex> lock(queueMutex);
     requests.pop();
 }

@@ -34,7 +34,6 @@ public:
     virtual ~StatusMetricReporter() = default;
     virtual std::unique_ptr<MetricCounter>& getModelReadyMetric(const ExecutionContext& context, bool success = true) = 0;
     virtual std::unique_ptr<MetricCounter>& getModelMetadataMetric(const ExecutionContext& context, bool success = true) = 0;
-    virtual std::unique_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) = 0;
 };
 
 class ServableMetricReporter : public StatusMetricReporter {
@@ -46,23 +45,6 @@ protected:
 public:
     ServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& modelName, model_version_t modelVersion);
     virtual ~ServableMetricReporter();
-
-    // TFS
-    std::unique_ptr<MetricCounter> requestSuccessGrpcPredict;
-    std::unique_ptr<MetricCounter> requestSuccessGrpcGetModelMetadata;
-    std::unique_ptr<MetricCounter> requestSuccessGrpcGetModelStatus;
-
-    std::unique_ptr<MetricCounter> requestSuccessRestPredict;
-    std::unique_ptr<MetricCounter> requestSuccessRestGetModelMetadata;
-    std::unique_ptr<MetricCounter> requestSuccessRestGetModelStatus;
-
-    std::unique_ptr<MetricCounter> requestFailGrpcPredict;
-    std::unique_ptr<MetricCounter> requestFailGrpcGetModelMetadata;
-    std::unique_ptr<MetricCounter> requestFailGrpcGetModelStatus;
-
-    std::unique_ptr<MetricCounter> requestFailRestPredict;
-    std::unique_ptr<MetricCounter> requestFailRestGetModelMetadata;
-    std::unique_ptr<MetricCounter> requestFailRestGetModelStatus;
 
     // KFS
     std::unique_ptr<MetricCounter> requestSuccessGrpcModelInfer;
@@ -81,54 +63,16 @@ public:
     std::unique_ptr<MetricCounter> requestFailRestModelMetadata;
     std::unique_ptr<MetricCounter> requestFailRestModelReady;
 
+    inline std::unique_ptr<MetricCounter>& getInferRequestMetric(const ExecutionContext& context, bool success = true) {
+        if (context.interface == ExecutionContext::Interface::GRPC) {
+            return success ? this->requestSuccessGrpcModelInfer : this->requestFailGrpcModelInfer;
+        } else {
+            return success ? this->requestSuccessRestModelInfer : this->requestFailRestModelInfer;
+        }
+    }
+
     std::unique_ptr<MetricHistogram> requestTimeGrpc;
     std::unique_ptr<MetricHistogram> requestTimeRest;
-
-    inline std::unique_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) override {
-        if (context.method != ExecutionContext::Method::GetModelStatus) {
-            static std::unique_ptr<MetricCounter> empty = nullptr;
-            return empty;  // In case something calls it from ConfigReload/ConfigStatus methods
-        }
-        if (context.interface == ExecutionContext::Interface::GRPC) {
-            return this->requestSuccessGrpcGetModelStatus;
-        } else {
-            return this->requestSuccessRestGetModelStatus;
-        }
-    }
-
-    inline std::unique_ptr<MetricCounter>& getGetModelMetadataRequestMetric(const ExecutionContext& context, bool success) {
-        if (success) {
-            if (context.interface == ExecutionContext::Interface::GRPC) {
-                return this->requestSuccessGrpcGetModelMetadata;
-            } else {
-                return this->requestSuccessRestGetModelMetadata;
-            }
-        } else {
-            if (context.interface == ExecutionContext::Interface::GRPC) {
-                return this->requestFailGrpcGetModelMetadata;
-            } else {
-                return this->requestFailRestGetModelMetadata;
-            }
-        }
-    }
-
-    inline std::unique_ptr<MetricCounter>& getInferRequestMetric(const ExecutionContext& context, bool success = true) {
-        if (context.method == ExecutionContext::Method::Predict) {
-            if (context.interface == ExecutionContext::Interface::GRPC) {
-                return success ? this->requestSuccessGrpcPredict : this->requestFailGrpcPredict;
-            } else {
-                return success ? this->requestSuccessRestPredict : this->requestFailRestPredict;
-            }
-        } else if (context.method == ExecutionContext::Method::ModelInfer) {
-            if (context.interface == ExecutionContext::Interface::GRPC) {
-                return success ? this->requestSuccessGrpcModelInfer : this->requestFailGrpcModelInfer;
-            } else {
-                return success ? this->requestSuccessRestModelInfer : this->requestFailRestModelInfer;
-            }
-        } else {
-            throw std::logic_error("wrong context method for inference");
-        }
-    }
 
     inline std::unique_ptr<MetricCounter>& getModelMetadataMetric(const ExecutionContext& context, bool success = true) override {
         if (context.interface == ExecutionContext::Interface::GRPC) {
@@ -321,11 +265,6 @@ public:
         } else {
             return success ? this->requestSuccessRestModelReady : this->requestFailRestModelReady;
         }
-    }
-
-    inline std::unique_ptr<MetricCounter>& getGetModelStatusRequestSuccessMetric(const ExecutionContext& context) override {
-        static std::unique_ptr<MetricCounter> empty{nullptr};
-        return empty;
     }
 
     MediapipeServableMetricReporter(const MetricConfig* metricConfig, MetricRegistry* registry, const std::string& graphName);

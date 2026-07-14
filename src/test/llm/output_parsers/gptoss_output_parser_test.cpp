@@ -465,7 +465,7 @@ protected:
         int64_t chunkIteration = -1;
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
             chunkIteration++;
-            std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, finishReason);
+            std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }

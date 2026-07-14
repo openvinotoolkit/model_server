@@ -81,11 +81,17 @@ std::variant<TokenizeRequest, std::string> TokenizeParser::validateTokenizeReque
 
     auto it = parsedJson.FindMember("max_length");
     if (it != parsedJson.MemberEnd()) {
-        if (it->value.IsInt()) {
-            size_t max_length = it->value.GetInt();
+        if (it->value.IsUint()) {
+            size_t max_length = it->value.GetUint();
+            if (max_length == 0) {
+                return "max_length should be greater than 0";
+            }
+
             request.parameters["max_length"] = max_length;
+            // Keep OVMS tokenize API contract: max_length implies truncation.
+            request.parameters["truncation"] = true;
         } else {
-            return "max_length should be integer";
+            return "max_length should be unsigned integer";
         }
     }
     it = parsedJson.FindMember("pad_to_max_length");

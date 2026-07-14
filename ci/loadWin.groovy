@@ -294,7 +294,7 @@ def unit_test(){
         def markerLine = bat(returnStatus: true, script: '@grep -n "Check tests summary in" win_test_summary.log | head -1')
         def summaryContent
         if (markerLine == 0) {
-            summaryContent = bat(returnStatus: false, returnStdout: true, script: '@grep -n "Check tests summary in" win_test_summary.log | head -1 | cut -d: -f1 | xargs -I{} head -{} win_test_summary.log').trim()
+            summaryContent = bat(returnStatus: false, returnStdout: true, script: '''@powershell -NoProfile -Command "$content = Get-Content ''win_test_summary.log''; $marker = ($content | Select-String -SimpleMatch ''Check tests summary in'' | Select-Object -First 1).LineNumber; if ($marker) { $content[0..([Math]::Max(0, [int]$marker - 1))] -join [Environment]::NewLine } else { $content | Select-Object -First 150 | Out-String }"''').trim()
         } else {
             summaryContent = bat(returnStatus: false, returnStdout: true, script: '@head -150 win_test_summary.log').trim()
         }

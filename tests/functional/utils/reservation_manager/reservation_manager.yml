@@ -1,0 +1,32 @@
+#
+# Copyright (c) 2026 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+---
+config:
+  pool_range:
+    start: 30000
+    stop: 60000
+  pool_part_size: 1000
+  locks_dir: /tmp
+  envs:
+    ports_prefix: PORTS_PREFIX
+    # As an alternative .slices can be a number and .ports_prefix will
+    # have a number of prefixes matching this number.
+    # slices: 2
+    slices:
+      - start: TT_STARTING_PORT
+        size: TT_PORTS_POOL_SIZE
+        end: TT_ENDING_PORT

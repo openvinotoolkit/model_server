@@ -33,6 +33,7 @@
 #include "src/image_gen/imagegenutils.hpp"
 #include "src/image_gen/imagegen_init.hpp"
 #include "src/image_conversion.hpp"
+#include "src/logging.hpp"
 #include "src/status.hpp"
 
 using ovms::prepareImageGenPipelineArgs;

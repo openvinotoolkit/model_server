@@ -56,7 +56,7 @@ public:
         toolSchemas(toolSchemas) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
     rapidjson::Document parseContentChunk();
     rapidjson::Document wrapCombinedDelta(ToolCall& toolCall);
     const std::vector<std::string>& getParsingStartTags() const override {

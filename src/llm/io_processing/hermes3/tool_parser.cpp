@@ -178,7 +178,7 @@ void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
     }
 }
 
-std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     We first collect data until we have full function name - that's when we return the first delta.
     Every next delta contains next parts of the arguments. Hermes3 generates arguments as JSON, but OpenAI API expects them in a string format.

@@ -186,7 +186,6 @@ public:
             return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
                 "Input side packets are not supported for graphs with queue enabled");
         }
-        ::mediapipe::CalculatorGraph& graph = this->guard->graph;
         auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->graphHelper->genAiExecutionContextMap);
         if (!llmContextStatus.ok()) {
             return llmContextStatus;
@@ -199,7 +198,10 @@ public:
             guard->graphHelper->outStreamObservers.at(name)->current = std::make_shared<MyFunctor<RequestType, ResponseType>>(name, this->outputTypes.at(name), *this, *request, *response);
         }
 
+        GraphReinitGuard reinitOnFailureGuard(*this->guard->graphHelper, this->config, this->sidePacketMaps);
+
         size_t numberOfPacketsCreated = 0;
+        ::mediapipe::CalculatorGraph& graph = this->guard->graph;
         auto ovms_status = createAndPushPacketsImpl(
             std::shared_ptr<const RequestType>(request, [](const RequestType*) {}),
             this->inputTypes,
@@ -227,6 +229,7 @@ public:
         }
         resetLlmExecutionContexts(this->guard->graphHelper->genAiExecutionContextMap);
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
+        reinitOnFailureGuard.dismiss();
         // Increment timestamp for next request reusing this graph from the queue
         this->guard->graphHelper->currentTimestamp = ::mediapipe::Timestamp(this->guard->graphHelper->currentTimestamp.Value() + 1);
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
@@ -363,7 +366,6 @@ public:
                     "Input side packets are not supported for graphs with queue enabled");
             }
             MetricGaugeGuard currentGraphs(this->mediapipeServableMetricReporter->currentGraphs.get());
-            ::mediapipe::CalculatorGraph& graph = this->guard->graph;
             auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->guard->graphHelper->genAiExecutionContextMap);
             if (!llmContextStatus.ok()) {
                 return llmContextStatus;
@@ -393,7 +395,10 @@ public:
                     executionContext, this->mediapipeServableMetricReporter);
             }
 
+            GraphReinitGuard reinitOnFailureGuard(*this->guard->graphHelper, this->config, this->sidePacketMaps);
+
             size_t numberOfPacketsCreated = 0;
+            ::mediapipe::CalculatorGraph& graph = this->guard->graph;
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph deserializing first request");
                 bool isSuccess = true;
@@ -450,6 +455,7 @@ public:
             }
             resetLlmExecutionContexts(this->guard->graphHelper->genAiExecutionContextMap);
             MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
+            reinitOnFailureGuard.dismiss();
             // Increment timestamp for next request reusing this graph from the queue
             this->guard->graphHelper->currentTimestamp = ::mediapipe::Timestamp(this->guard->graphHelper->currentTimestamp.Value() + 1);
             SPDLOG_DEBUG("Graph {}: Done streaming execution (queue path)", this->name);

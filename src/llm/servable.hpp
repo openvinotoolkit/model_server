@@ -15,15 +15,19 @@
 //*****************************************************************************
 #pragma once
 
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #pragma warning(push)
-#pragma warning(disable : 4251 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
+#pragma warning(disable : 4251 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246 6313)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include <rapidjson/document.h>
 #include "openvino/genai/text_streamer.hpp"
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
@@ -32,7 +36,10 @@
 #include "../http_payload.hpp"
 #include "../sse_utils.hpp"
 #include "apis/openai_api_handler.hpp"
-#include "io_processing/generation_config_builder.hpp"
+#include "io_processing/chat_template/caps.hpp"
+#include "io_processing/base_generation_config_builder.hpp"
+#include "io_processing/input_processor_context.hpp"
+#include "io_processing/input_request.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
 #endif
@@ -65,21 +72,83 @@ enum class GenerationPhase {
     OUTPUT_TOKEN_PROCESSING,
 };
 
+enum class ChatTemplateMode {
+    MINJA,  // Use GenAI's apply_chat_template (minja-based)
+    JINJA,  // Use Python Jinja2 module for chat template processing
+};
+
+// Thread-safe channel for parsed streaming deltas.
+// The producer (OVMSTextStreamer callback, possibly on a background executor thread)
+// calls push(); the consumer (preparePartialResponse, always on the calculator thread)
+// calls waitForData() then drain(). For CB/stateful paths both sides run on the same
+// thread, so the mutex is acquired but uncontested.
+struct DeltaChannel {
+    // Push a delta from any thread (streamer callback).
+    // When isLast is true, also marks the channel complete atomically so consumers
+    // always see the final document and the completion flag in the same observation.
+    void push(rapidjson::Document delta, bool isLast = false) {
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_deltas.push_back(std::move(delta));
+            if (isLast)
+                m_complete = true;
+        }
+        m_cv.notify_one();
+    }
+
+    // Signal that no more deltas will be pushed (generation complete or cancelled).
+    // May be called from any thread. Also acts as a safety-net for paths where
+    // push(delta, isLast=true) may not fire (e.g. client disconnection mid-stream).
+    void signalComplete() {
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_complete = true;
+        }
+        m_cv.notify_one();
+    }
+
+    // Block until at least one delta is available or signalComplete() has been called.
+    // For CB paths this returns immediately since data is already present.
+    void waitForData() {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_cv.wait(lock, [this] { return !m_deltas.empty() || m_complete; });
+    }
+
+    // Move all pending deltas out atomically. Returns an empty vector if none pending.
+    std::vector<rapidjson::Document> drain() {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        std::vector<rapidjson::Document> result;
+        result.swap(m_deltas);
+        return result;
+    }
+
+    // Returns true after signalComplete() has been called.
+    bool complete() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_complete;
+    }
+
+private:
+    mutable std::mutex m_mutex;
+    std::condition_variable m_cv;
+    std::vector<rapidjson::Document> m_deltas;
+    bool m_complete = false;
+};
+
 struct GenAiServableExecutionContext {
     // Common API related members
     HttpPayload payload;
     Endpoint endpoint;
     std::shared_ptr<OpenAIApiHandler> apiHandler;
-    std::shared_ptr<GenerationConfigBuilder> generationConfigBuilder;
-    // Single tensor with inputIds for the model. This is considered general for all pipelines,
-    // but depending on particular pipeline implementation it might be not required or on the other hand, insufficient.
-    ov::Tensor inputIds;
+    // Populated in parseRequest(); carries all GenAI inputs including the generation config.
+    InputRequest inputRequest;
     // Required for generating output and handle request on the calculator side
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::string response;
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
-    std::string lastStreamerCallbackOutput;
+    bool lifecyclePrimed = false;  // true once RESPONSES lifecycle events have been primed
+    DeltaChannel deltaChannel;     // thread-safe delta queue used by all streaming paths
     GenerationPhase generationPhase = GenerationPhase::INPUT_TOKEN_PROCESSING;
 };
 
@@ -103,6 +172,13 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
+#if (PYTHON_DISABLE == 0)
+    ChatTemplateMode chatTemplateMode = ChatTemplateMode::JINJA;
+#else
+    ChatTemplateMode chatTemplateMode = ChatTemplateMode::MINJA;
+#endif
+    // Chat template analysis
+    ChatTemplateCaps chatTemplateCaps;
     // Sampling
     DecodingMethod decodingMethod;
     std::optional<uint32_t> maxTokensLimit;
@@ -112,6 +188,9 @@ struct GenAiServableProperties {
     ov::genai::Tokenizer tokenizer;
     // Specific pipeline properties
     bool eagle3Mode = false;
+    // Controls which steps InputProcessor builds for this servable type.
+    // Aggregated per-deployment context for InputProcessor.
+    InputProcessorContext inputProcessorContext;
 
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
@@ -152,17 +231,25 @@ public:
 
     /*
     parseRequest method implementation MUST fill executionContext apiHandler field and parse request.
-    For streaming requests, it MUST initialize textStreamer and lastStreamerCallbackOutput fields of executionContext.
+    For streaming requests, it MUST initialize the textStreamer field of executionContext.
     Base implementation creates OpenAIChatCompletionsHandler and calls its parseRequest method.
-    Additionally it initializes textStreamer and lastStreamerCallbackOutput for streaming requests.
+    Additionally it initializes textStreamer for streaming requests.
     */
     virtual absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     /*
-    prepareInputs method implementation MUST fill executionContext inputIds field.
+    prepareInputs method implementation MUST fill executionContext inputRequest.inputIds field.
     Base implementation applies chat template to the payload body and encodes it with tokenizer.
     */
     virtual absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
+    /*
+    validateInputCompatibility checks whether the request input is compatible with this servable type.
+    Called from prepareInputs before the InputProcessor chain runs.
+    Base implementation rejects image_url content for non-VLM (text-only) servables.
+    Derived classes may override to add or relax constraints.
+    */
+    virtual absl::Status validateInputCompatibility(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     /*
     scheduleExecution method should implement any necessary queueing mechanism or start asynchronous execution.

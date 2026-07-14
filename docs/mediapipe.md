@@ -164,7 +164,7 @@ For running multiple graphs in one server instance you must use the `config.json
 
 MediaPipe servables configuration can also be placed in the same json file like the
 [models config file](starting_server.md).
-Graphs parameters can be defined in section `model_config_list` just like classic models (recommended) or in the section `mediapipe_config_list` which is deprecated now.
+Graphs parameters can be defined in the `model_config_list` section just like classic models (recommended), or the `mediapipe_config_list` section which is deprecated and should not be used in new configurations.
 
 Here is an example `config.json` file that defines two MediaPipe graphs. One with custom `graph_path` and one default:
 ```json
@@ -186,6 +186,8 @@ Here is an example `config.json` file that defines two MediaPipe graphs. One wit
 }
 ```
 In case the `mediapipe_graph_name_for_default_name` above, ovms will search for the default graph name `graph.pbtxt` in the `mediapipe_graph_name` directory relative to the `config.json` location.
+
+Task specific parameters are not part of the standard model configuration and should not be defined in `model_config_list`. Instead, they are configured inside the MediaPipe graph (`graph.pbtxt`) which is referenced using `graph_path`.
 
 Graphs can also be configured in the `mediapipe_config_list` section.
 ```json

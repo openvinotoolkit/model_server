@@ -20,12 +20,9 @@ sys.path.append("../../common/python")
 import argparse
 import cv2
 import datetime
-import grpc
 import numpy as np
 import os
-from tensorflow import make_tensor_proto, make_ndarray
-from tensorflow_serving.apis import predict_pb2
-from tensorflow_serving.apis import prediction_service_pb2_grpc
+import tritonclient.grpc as grpcclient
 from client_utils import print_statistics, prepare_certs
 
 
@@ -36,7 +33,7 @@ def load_image(file_path):
     # change shape to NCHW
     return img
 
-parser = argparse.ArgumentParser(description='Demo for face detection requests via TFS gRPC API analyses input images '
+parser = argparse.ArgumentParser(description='Demo for face detection requests via gRPC API analyses input images '
                                              'and saves images with bounding boxes drawn around detected faces. '
                                              'It relies on face_detection model...')
 
@@ -56,18 +53,16 @@ args = vars(parser.parse_args())
 
 address = "{}:{}".format(args['grpc_address'],args['grpc_port'])
 
-channel = None
 if args.get('tls'):
     server_ca_cert, client_key, client_cert = prepare_certs(server_cert=args['server_cert'],
                                                             client_key=args['client_key'],
                                                             client_ca=args['client_cert'])
-    creds = grpc.ssl_channel_credentials(root_certificates=server_ca_cert,
-                                         private_key=client_key, certificate_chain=client_cert)
-    channel = grpc.secure_channel(address, creds)
+    client = grpcclient.InferenceServerClient(url=address, ssl=True,
+                                              root_certificates=server_ca_cert,
+                                              private_key=client_key,
+                                              certificate_chain=client_cert)
 else:
-    channel = grpc.insecure_channel(address)
-
-stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    client = grpcclient.InferenceServerClient(url=address)
 
 files = os.listdir(args['input_images_dir'])
 batch_size = args['batch_size']
@@ -87,18 +82,17 @@ processing_times = np.zeros((0),int)
 
 for x in range(0, imgs.shape[0] - batch_size + 1, batch_size):
     iteration += 1
-    request = predict_pb2.PredictRequest()
-    request.model_spec.name = args['model_name']
     img = imgs[x:(x + batch_size)]
     print("\nRequest shape", img.shape)
-    request.inputs["data"].CopyFrom(make_tensor_proto(img, shape=(img.shape)))
+    infer_input = grpcclient.InferInput("data", img.shape, "FP32")
+    infer_input.set_data_from_numpy(img)
     start_time = datetime.datetime.now()
-    result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
+    result = client.infer(args['model_name'], [infer_input])
     end_time = datetime.datetime.now()
 
     duration = (end_time - start_time).total_seconds() * 1000
     processing_times = np.append(processing_times,np.array([int(duration)]))
-    output = make_ndarray(result.outputs["detection_out"])
+    output = result.as_numpy("detection_out")
     print("Response shape", output.shape)
     for y in range(0,img.shape[0]):  # iterate over responses from all images in the batch
         img_out = img[y,:,:,:]

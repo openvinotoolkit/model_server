@@ -23,6 +23,8 @@
 #endif
 #include <vector>
 
+#include "src/utils/env_guard.hpp"
+
 namespace ovms {
 
 std::shared_ptr<spdlog::logger> gcs_logger = std::make_shared<spdlog::logger>("gcs");
@@ -159,6 +161,9 @@ void configure_logger(const std::string& log_level, const std::string& log_path)
         FLAGS_minloglevel = google::GLOG_ERROR;
 #endif
 #endif
+    if (log_level == "DEBUG" || log_level == "TRACE") {
+        SetEnvironmentVar("OPENVINO_LOG_LEVEL", "4");
+    }
 }
 
 }  // namespace ovms

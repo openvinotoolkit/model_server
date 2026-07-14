@@ -1,0 +1,46 @@
+#
+# Copyright (c) 2026 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+ARG BASE_IMAGE=ubuntu:24.04
+ARG OVMS_TEST_IMAGE=openvino/model_server:latest-test
+ARG OVMS_IMAGE=openvino/model_server:latest
+
+FROM $OVMS_IMAGE as ovms_image
+FROM $OVMS_TEST_IMAGE as ovms_test_image
+FROM $BASE_IMAGE as base_image
+
+ARG OVMS_DEPENDENCIES="libcurl4-openssl-dev libpugixml1v5 libtbb12 libxml2"
+RUN apt-get update && apt-get install -y --no-install-recommends ${OVMS_DEPENDENCIES} && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /
+COPY ovms/ ovms/
+
+ENV LD_LIBRARY_PATH=/ovms/lib
+
+RUN /ovms/bin/ovms --version
+
+# Copy all dependent libraries for enabling GPU based images (be cautious)
+COPY --from=ovms_image /etc /etc
+COPY --from=ovms_image /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu
+COPY --from=ovms_image /usr/local/ /usr/local/
+
+ARG CPU_EXTENSIONS_PATH=/cpu_extensions
+ARG CUSTOM_NODES_PATH=/custom_nodes
+
+COPY --from=ovms_test_image ${CPU_EXTENSIONS_PATH} ${CPU_EXTENSIONS_PATH}
+COPY --from=ovms_test_image ${CUSTOM_NODES_PATH} ${CUSTOM_NODES_PATH}
+
+ENTRYPOINT ["/ovms/bin/ovms"]

@@ -1,2 +1,2 @@
-ovmsclient
 validators
+tritonclient[grpc]

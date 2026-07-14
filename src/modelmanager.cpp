@@ -91,19 +91,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     modelCacheDirectory(modelCacheDirectory),
     metricRegistry(registry),
     pythonBackend(pythonBackend) {
-    try {
-        this->ieCore = std::make_unique<ov::Core>();
-        ov::AnyMap cpuProperties;
-        Status status = applyDefaultCpuProperties(cpuProperties);
-        if (!status.ok()) {
-            SPDLOG_CRITICAL("Failed to apply default CPU properties. Reason: {}", status.string());
-            throw std::runtime_error("Failed to apply default CPU properties");
-        }
-        this->ieCore->set_property("CPU", cpuProperties);
-    } catch (const std::exception& ex) {
-        SPDLOG_CRITICAL("Failed to initialize OpenVINO Core with CPU properties. Reason: {}", ex.what());
-        throw;
-    }
+    this->ieCore = std::make_unique<ov::Core>();
 
     OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
     // Take --cache_dir from CLI

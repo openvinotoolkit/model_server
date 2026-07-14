@@ -24,6 +24,7 @@
 #include <gtest/gtest.h>
 
 #include "src/pull_module/libgit2.hpp"
+#include "src/utils/env_guard.hpp"
 
 #include "environment.hpp"
 #include "test_utils.hpp"
@@ -848,4 +849,112 @@ TEST(LibGit2LfsWipMarker, MarkersForDifferentRepositoriesAreIndependent) {
     ovms::libgit2::removeLfsWipMarker(repoAPath);
     EXPECT_FALSE(ovms::libgit2::hasLfsWipMarker(repoAPath));
     EXPECT_TRUE(ovms::libgit2::hasLfsWipMarker(repoBPath));
+}
+
+// ---------------------------------------------------------------------------
+// Libgt2InitGuard initialization behavior
+//
+// These tests exercise the process-global libgit2 options set in
+// Libgt2InitGuard's constructor: ownership-validation suppression and config
+// search-path isolation.  Each test creates its own guard so that the options
+// are set fresh; as git_libgit2_init() is ref-counted by libgit2 it is safe to
+// call it multiple times within the same process.
+// ---------------------------------------------------------------------------
+
+class Libgt2InitGuardTest : public ::testing::Test {
+protected:
+    ovms::Libgit2Options defaultOpts;
+
+    static std::vector<std::string> getCurrentSearchPaths() {
+        std::vector<std::string> paths;
+        paths.reserve(4);
+
+        git_buf systemBuf = GIT_BUF_INIT;
+        EXPECT_EQ(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, &systemBuf), 0);
+        paths.push_back((systemBuf.ptr != nullptr) ? systemBuf.ptr : "");
+        git_buf_dispose(&systemBuf);
+
+        git_buf xdgBuf = GIT_BUF_INIT;
+        EXPECT_EQ(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, &xdgBuf), 0);
+        paths.push_back((xdgBuf.ptr != nullptr) ? xdgBuf.ptr : "");
+        git_buf_dispose(&xdgBuf);
+
+        git_buf globalBuf = GIT_BUF_INIT;
+        EXPECT_EQ(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &globalBuf), 0);
+        paths.push_back((globalBuf.ptr != nullptr) ? globalBuf.ptr : "");
+        git_buf_dispose(&globalBuf);
+
+#if defined(_WIN32)
+        git_buf programdataBuf = GIT_BUF_INIT;
+        EXPECT_EQ(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, &programdataBuf), 0);
+        paths.push_back((programdataBuf.ptr != nullptr) ? programdataBuf.ptr : "");
+        git_buf_dispose(&programdataBuf);
+#endif
+
+        return paths;
+    }
+
+    void expectSearchPathBehavior(const std::optional<std::string>& envValue, bool shouldRemainEnabled) {
+        EnvGuard envGuard;
+        if (envValue.has_value()) {
+            envGuard.set("GIT_OPT_SET_ENABLE_SEARCH_PATHS", envValue.value());
+        } else {
+            envGuard.unset("GIT_OPT_SET_ENABLE_SEARCH_PATHS");
+        }
+
+        ASSERT_EQ(git_libgit2_init(), 1);
+        const auto baselinePaths = getCurrentSearchPaths();
+        git_libgit2_shutdown();
+
+        ovms::Libgt2InitGuard guard(defaultOpts);
+        ASSERT_GE(guard.status, 0);
+
+        const auto currentPaths = getCurrentSearchPaths();
+
+        if (shouldRemainEnabled) {
+            EXPECT_EQ(currentPaths, baselinePaths);
+        } else {
+            EXPECT_EQ(currentPaths.size(), baselinePaths.size());
+            EXPECT_EQ(currentPaths[0], "");
+            EXPECT_EQ(currentPaths[1], "");
+            EXPECT_EQ(currentPaths[2], "");
+#if defined(_WIN32)
+            ASSERT_EQ(currentPaths.size(), 4u);
+            EXPECT_EQ(currentPaths[3], "");
+#endif
+        }
+    }
+};
+
+TEST_F(Libgt2InitGuardTest, ConstructionSucceeds) {
+    ovms::Libgt2InitGuard guard(defaultOpts);
+    EXPECT_GE(guard.status, 0);
+    EXPECT_TRUE(guard.errMsg.empty());
+    EXPECT_TRUE(guard.countedAsInitialized);
+}
+
+// After the guard is constructed, libgit2 must have owner-validation disabled
+// so that repositories owned by a different OS user can be opened.
+TEST_F(Libgt2InitGuardTest, OwnerValidationIsDisabled) {
+    ovms::Libgt2InitGuard guard(defaultOpts);
+    ASSERT_GE(guard.status, 0);
+
+    int ownerValidation = 1;  // preset to non-zero; guard must set it to 0
+    int rc = git_libgit2_opts(GIT_OPT_GET_OWNER_VALIDATION, &ownerValidation);
+    EXPECT_EQ(rc, 0);
+    EXPECT_EQ(ownerValidation, 0);
+}
+
+// The guard must clear the config search paths for all host-level config
+// scopes so that no host gitconfig can interfere with OVMS's settings.
+TEST_F(Libgt2InitGuardTest, ConfigSearchPathsRemainWhenEnvIsOne) {
+    expectSearchPathBehavior("1", true);
+}
+
+TEST_F(Libgt2InitGuardTest, ConfigSearchPathsAreClearedWhenEnvIsZero) {
+    expectSearchPathBehavior("0", false);
+}
+
+TEST_F(Libgt2InitGuardTest, ConfigSearchPathsAreClearedWhenEnvIsUnset) {
+    expectSearchPathBehavior(std::nullopt, false);
 }

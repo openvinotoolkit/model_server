@@ -40,7 +40,7 @@ void GptOssReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Reasoning | [{}]", parsedOutput.reasoning);
 }
 
-std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Processing Chunk [{}]", newChunk);
 
     if (newChunk.empty()) {

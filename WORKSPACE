@@ -158,21 +158,6 @@ cc_library(
 )
 
 
-# Used for gRPC API protos only
-# Tensorflow serving
-git_repository(
-    name = "tensorflow_serving",
-    remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.18.0",
-    patch_args = ["-p1"],
-    patches = ["net_http.patch", "listen.patch", "partial_2.18.patch"]
-    #                             ^^^^^^^^^^^^
-    #                       make bind address configurable
-    #          ^^^^^^^^^^^^
-    #        allow all http methods                ^^^^^^^^^
-    #                                        implements partial responses
-)
-
 ########################################################### Mediapipe
 http_archive(
     name = "com_google_protobuf",
@@ -435,8 +420,6 @@ http_archive(
     repo_mapping = {"@curl" : "@curl"}
 )
 
-load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
-
 # Initialize TensorFlow's external dependencies.
 load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
 workspace()
@@ -474,7 +457,6 @@ workspace()
 load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
 workspace()
 
-tf_serving_workspace() #moved past TF
 # required after update to mp 0.10.18
 load(
     "@org_tensorflow//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
@@ -497,6 +479,10 @@ libgit2_engine()
 
 load("@ovms//third_party/drogon:drogon.bzl", "drogon_cpp")
 drogon_cpp()
+
+### espeak-ng (built from source via Bazel; gated by --//:espeak flag)
+load("@ovms//third_party/espeak_ng:espeak_ng.bzl", "espeak_ng")
+espeak_ng()
 
 # Azure Storage SDK
 new_local_repository(

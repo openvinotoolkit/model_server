@@ -162,7 +162,7 @@ void MistralToolParser::clearState() {
     openBracesCount = 1;  // Reset to 1 as we count the tool call opening brace
 }
 
-std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     Mistral with vLLM template produces tool calls in the format (beginning [TOOL_CALL] is skipped by the mode or just not visible during streaming):
     [{"name": [function name], "arguments": [function arguments as JSON]}, ...]
@@ -204,7 +204,7 @@ std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::stri
             // We found "[{", so we switch to the the state where we are waiting for the opening bracket of the array
             internalState = AWAITING_TOOL_CALLS_OPENING_BRACKET;
             // We have more content in the chunk after "[{", so we process the rest of the chunk in the next state
-            return parseChunk(modifiedChunk, finishReason);
+            return parseChunk(modifiedChunk, {}, finishReason);
         }
         return std::nullopt;
     } else if (internalState == AWAITING_TOOL_CALLS_OPENING_BRACKET) {
@@ -219,7 +219,7 @@ std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::stri
                 return std::nullopt;  // Nothing more to process in this chunk
             } else {
                 // Process the remaining chunk as part of tool call processing
-                return parseChunk(remainingChunk, finishReason);
+                return parseChunk(remainingChunk, {}, finishReason);
             }
         } else {
             // Still waiting for the opening bracket, ignore this chunk
@@ -237,7 +237,7 @@ std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::stri
             if (remainingChunk.empty()) {
                 return std::nullopt;  // Nothing more to process in this chunk
             } else {
-                return parseChunk(remainingChunk, finishReason);
+                return parseChunk(remainingChunk, {}, finishReason);
             }
         } else {
             // Still waiting for the opening brace, ignore this chunk

@@ -62,6 +62,7 @@ ovms_cc_library(
         "@stb//:image",
         ":openai_request",
         ":output_parsers",
+        ":generation_config_builders",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
 )
@@ -81,6 +82,7 @@ ovms_cc_library(
         ":openai_api_handler",
         ":openai_request",
         ":output_parsers",
+        ":io_processing_input_processor",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
 )
@@ -105,12 +107,101 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "io_processing_input_request",
+    hdrs = ["io_processing/input_request.hpp",
+            "io_processing/input_processing_config.hpp",
+            "io_processing/base_input_processor.hpp"],
+    srcs = [],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "image_utils",
+    hdrs = ["io_processing/image_utils.hpp"],
+    srcs = ["io_processing/image_utils.cpp"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",  # required for absl status
+        "//third_party:curl",
+        "//src:image_conversion",
+        "//src/filesystem:libovmsfilesystem",
+        "//third_party:genai",
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_input_processor_context",
+    hdrs = ["io_processing/input_processor_context.hpp",
+            "io_processing/chat_template/caps.hpp"],
+    srcs = [],
+    deps = [
+        ":io_processing_input_request",
+        "//third_party:genai",
+    ] + select({
+        "//:disable_python": [],
+        "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,
+    }),
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_input_processors",
+    hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
+            "io_processing/input_processors/chat_template_processor.hpp",
+            "io_processing/input_processors/chat_template_adapter.hpp",
+            "io_processing/chat_template/caps.hpp",
+            "io_processing/input_processors/empty_content_array_normalization_processor.hpp",
+            "io_processing/input_processors/raw_prompt_extractor.hpp",
+            "io_processing/input_processors/text_content_normalization_processor.hpp",
+            "io_processing/input_processors/tokenization_processor.hpp"],
+    srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
+            "io_processing/input_processors/chat_template_processor.cpp",
+            "io_processing/input_processors/chat_template_adapter.cpp",
+            "io_processing/input_processors/empty_content_array_normalization_processor.cpp",
+            "io_processing/input_processors/text_content_normalization_processor.cpp",
+            "io_processing/input_processors/tokenization_processor.cpp"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "//src:libovmsprofiler",
+        ":image_utils",
+        ":io_processing_input_request",
+        "//third_party:genai",
+        "//src:libovmslogging",
+    ] + select({
+        "//:disable_python": [],
+        "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,
+    }),
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_input_processor",
+    hdrs = ["io_processing/input_processor.hpp"],
+    srcs = ["io_processing/input_processor.cpp"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        ":io_processing_input_request",
+        ":io_processing_input_processors",
+        ":io_processing_input_processor_context",
+        "//src:libovms_config",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "openai_request",
     hdrs = ["apis/openai_request.hpp"],
     srcs = [],
-    deps = ["//third_party:genai",            
+    deps = ["//third_party:genai",
             "//src/port:rapidjson_document",
-            ":apis_tool_schema_wrapper",],
+            ":apis_tool_schema_wrapper",
+            ":io_processing_input_request",],
     visibility = ["//visibility:public"],
 )
 
@@ -122,6 +213,32 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "chat_template_analyzer",
+    hdrs = ["io_processing/chat_template/caps.hpp",
+            "io_processing/chat_template/analyzer.hpp"],
+    srcs = ["io_processing/chat_template/analyzer.cpp"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "chat_template_probe",
+    hdrs = ["io_processing/chat_template/probe.hpp",
+            "io_processing/chat_template/caps.hpp"],
+    srcs = ["io_processing/chat_template/probe.cpp"],
+    deps = [
+        "//third_party:genai",
+        "//src:libovmslogging",
+    ] + select({
+        "//:not_disable_python": [":py_jinja_template_processor"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+
 ovms_cc_library(
     name = "partial_json_builder",
     hdrs = ["io_processing/partial_json_builder.hpp"],
@@ -161,6 +278,16 @@ ovms_cc_library(
         "//third_party:genai",
     ],
 )
+ovms_cc_library(
+    name = "io_processing_parser_config_validation",
+    hdrs = ["io_processing/parser_config_validation.hpp"],
+    srcs = ["io_processing/parser_config_validation.cpp"],
+    deps = [
+        "//src:libovmsstring_utils",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library(
     name = "io_processing_qwen3coder_tool_parser",
     hdrs = ["io_processing/qwen3coder/qwen3coder_tool_parser.hpp"],
@@ -258,6 +385,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         "//third_party:genai",
         ":partial_json_builder",
         ":io_processing_base_output_parser",
+        ":io_processing_parser_config_validation",
         ":io_processing_qwen3coder_tool_parser",
         ":io_processing_lfm2_tool_parser",
         ":io_processing_gemma4_tool_parser",
@@ -290,7 +418,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "genai_servables",
-    hdrs = ["servable.hpp", 
+    hdrs = ["servable.hpp",
+            "ovms_text_streamer.hpp",
             "servable_initializer.hpp", 
             "language_model/continuous_batching/servable.hpp",
             "language_model/continuous_batching/llm_executor.hpp",
@@ -305,6 +434,7 @@ ovms_cc_library(
             "text_utils.hpp"],
     srcs = ["servable.cpp",
             "servable_initializer.cpp",
+            "ovms_text_streamer.cpp",
             "language_model/continuous_batching/servable.cpp",
             "language_model/continuous_batching/servable_initializer.cpp",
             "visual_language_model/continuous_batching/servable.cpp",
@@ -331,6 +461,9 @@ ovms_cc_library(
         ":openai_completions_api_handler",
         ":openai_responses_handler",
         ":generation_config_builders",
+        ":chat_template_analyzer",
+        ":chat_template_probe",
+        ":io_processing_input_processor_context",
         "//src:httppayload",
         "//src:libhttpclientconnection",
         "//src:sse_utils",

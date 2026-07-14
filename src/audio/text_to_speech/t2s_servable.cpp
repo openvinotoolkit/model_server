@@ -16,11 +16,10 @@
 
 #include <memory>
 #include <string>
-#include <unordered_map>
-#include <vector>
 #include <fstream>
+#include <sstream>
+#include <limits>
 
-#include "openvino/genai/whisper_pipeline.hpp"
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 #include "src/audio/text_to_speech/t2s_calculator.pb.h"
 #include "src/status.hpp"
@@ -31,41 +30,67 @@
 
 namespace ovms {
 
-static ov::Tensor read_speaker_embedding(const std::filesystem::path& file_path) {
-    std::ifstream input(file_path, std::ios::binary);
+static size_t getShapeElementsCount(const ov::Shape& shape) {
+    size_t elementsCount = 1;
+    for (const auto dim : shape) {
+        if (dim != 0 && elementsCount > std::numeric_limits<size_t>::max() / dim) {
+            throw std::runtime_error("Speaker embedding shape is too large.");
+        }
+        elementsCount *= dim;
+    }
+    return elementsCount;
+}
+
+static ov::Tensor readSpeakerEmbedding(const std::filesystem::path& filePath, const ov::Shape& expectedShape) {
+    std::ifstream input(filePath, std::ios::binary);
     if (input.fail()) {
         std::stringstream ss;
-        ss << "Failed to open file: " << file_path.string();
+        ss << "Failed to open file: " << filePath.string();
         throw std::runtime_error(ss.str());
     }
 
     // Get file size
     input.seekg(0, std::ios::end);
-    size_t buffer_size = static_cast<size_t>(input.tellg());
+    if (input.fail()) {
+        throw std::runtime_error("Failed to seek to the end of file.");
+    }
+    const std::streampos endPosition = input.tellg();
+    if (endPosition == std::streampos(-1)) {
+        throw std::runtime_error("Failed to determine file size.");
+    }
+    const size_t bufferSize = static_cast<size_t>(endPosition);
     input.seekg(0, std::ios::beg);
+    if (input.fail()) {
+        throw std::runtime_error("Failed to seek to the beginning of file.");
+    }
 
     // Check size is multiple of float
-    if (buffer_size % sizeof(float) != 0) {
+    if (bufferSize % sizeof(float) != 0) {
         throw std::runtime_error("File size is not a multiple of float size.");
     }
-    size_t num_floats = buffer_size / sizeof(float);
-    if (num_floats != 512) {
-        throw std::runtime_error("File must contain speaker embedding including 512 32-bit floats.");
+    const size_t numFloats = bufferSize / sizeof(float);
+    const size_t expectedElements = getShapeElementsCount(expectedShape);
+    if (numFloats != expectedElements) {
+        std::stringstream ss;
+        ss << "File must contain speaker embedding with " << expectedElements
+           << " 32-bit floats. Got: " << numFloats;
+        throw std::runtime_error(ss.str());
     }
 
-    ov::Tensor floats_tensor(ov::element::f32, ov::Shape{1, num_floats});
-    input.read(reinterpret_cast<char*>(floats_tensor.data()), buffer_size);
+    ov::Tensor floatsTensor(ov::element::f32, expectedShape);
+    input.read(reinterpret_cast<char*>(floatsTensor.data()), bufferSize);
     if (input.fail()) {
         throw std::runtime_error("Failed to read all data from file.");
     }
 
-    return floats_tensor;
+    return floatsTensor;
 }
 
 TtsServable::TtsServable(const std::string& modelDir, const std::string& targetDevice, const google::protobuf::RepeatedPtrField<mediapipe::T2sCalculatorOptions_SpeakerEmbeddings>& graphVoices, const std::string& pluginConfig, const std::string& graphPath) {
+    const std::filesystem::path graphDir = std::filesystem::path(graphPath).parent_path();
     auto fsModelsPath = std::filesystem::path(modelDir);
     if (fsModelsPath.is_relative()) {
-        parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
+        parsedModelsPath = graphDir / fsModelsPath;
     } else {
         parsedModelsPath = fsModelsPath;
     }
@@ -76,10 +101,15 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
         throw std::runtime_error("Error during plugin_config option parsing");
     }
     ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), targetDevice, config);
-    for (auto voice : graphVoices) {
-        if (!std::filesystem::exists(voice.path()))
-            throw std::runtime_error{"Requested voice speaker embeddings file does not exist: " + voice.path()};
-        voices[voice.name()] = read_speaker_embedding(voice.path());
+    const ov::Shape speakerEmbeddingShape = ttsPipeline->get_speaker_embedding_shape();
+    for (const auto& voice : graphVoices) {
+        std::filesystem::path voicePath(voice.path());
+        if (voicePath.is_relative()) {
+            voicePath = graphDir / voicePath;
+        }
+        if (!std::filesystem::exists(voicePath))
+            throw std::runtime_error{"Requested voice speaker embeddings file does not exist: " + voicePath.string()};
+        voices[voice.name()] = readSpeakerEmbedding(voicePath, speakerEmbeddingShape);
     }
 }
 }  // namespace ovms

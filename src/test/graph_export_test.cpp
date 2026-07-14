@@ -395,7 +395,7 @@ node {
             models_path: "/model1/path"
             target_device: "GPU"
             plugin_config: '{"NUM_STREAMS":"2"}'
-        }
+            }
     }
 }
 )";
@@ -413,6 +413,28 @@ node {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: "./"
             target_device: "CPU"
+            }
+    }
+}
+)";
+
+const std::string expectedTextToSpeechGraphContentsKokoro = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+    name: "myModel"
+    calculator: "T2sCalculator"
+    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
+            models_path: "./"
+            target_device: "CPU"
+            voices: [
+                { name: "af_alloy", path: "./voices/af_alloy.bin" },
+                { name: "am_adam", path: "./voices/am_adam.bin" }
+            ]
             }
     }
 }
@@ -797,6 +819,28 @@ TEST_F(GraphCreationTest, textToSpeechPositiveDefault) {
     ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
     assertCreatedGraphEquals(hfSettings, expectedTextToSpeechGraphContentsDefault);
+}
+
+TEST_F(GraphCreationTest, textToSpeechPositiveKokoro) {
+    // Pre-create the voices/ directory that optimum-cli would have populated for kokoro.
+    std::filesystem::path voicesDir = std::filesystem::path(this->directoryPath) / "voices";
+    std::filesystem::create_directories(voicesDir);
+    { std::ofstream f(voicesDir / "af_alloy.bin"); }
+    { std::ofstream f(voicesDir / "am_adam.bin"); }
+
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    hfSettings.exportSettings.modelName = "myModel";
+    hfSettings.exportSettings.modelType = "kokoro";
+    ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
+    hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedTextToSpeechGraphContentsKokoro, removeGeneratedGraphHeaders(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, textToSpeechCreatedPbtxtInvalid) {

@@ -13,38 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 import os
-from typing import Any
+import random
+
+from collections import defaultdict
+from time import strftime
 
 from tests.functional.constants.target_device import TargetDevice
-
-
-class SingletonMeta(type):
-    """
-    Metaclass for defining Singleton Classes
-
-    src:
-    https://www.datacamp.com/community/tutorials/python-metaclasses
-
-    Singleton Design using a Metaclass
-
-    This is a design pattern that restricts the instantiation of a class to only one object.
-    This could prove useful for example when designing a class to connect to the database.
-    One might want to have just one instance of the connection class.
-    """
-    _instances = {}
-
-    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
-        if cls not in cls._instances:
-            cls._instances[cls] = super().__call__(*args, **kwargs)
-        return cls._instances[cls]
 
 
 ALL_AVAILABLE_OPTIONS = "*"
 
 
-def get_int(key_name, fallback=None, environ=os.environ):
-    value = environ.get(key_name, fallback)
+def get_int(key_name, fallback=None):
+    value = os.environ.get(key_name, fallback)
     if value != fallback:
         try:
             value = int(value)
@@ -72,7 +55,7 @@ def get_bool(key_name, fallback=None):
         elif value == "false":
             value = False
         else:
-            raise ValueError("Value of {} env variable is '{}'. Should be 'True' or 'False'.".format(key_name, value))
+            raise ValueError(f"Value of {key_name} env variable is '{value}'. Should be 'True' or 'False'.")
     return value
 
 
@@ -113,9 +96,55 @@ def get_multi_target_devices(target_devices_list, separator):
     return result
 
 
+def _is_device_with_index(device_str):
+    """ Check if device string is a device with numeric index, e.g. GPU:0, GPU:1. """
+    if ":" in device_str:
+        _, suffix = device_str.split(":", 1)
+        return suffix.isdigit()
+    return False
+
+
+def get_base_device(device_str):
+    """
+    Return base device name stripping numeric index suffix.
+    E.g. 'GPU:0' -> 'GPU', 'GPU:1' -> 'GPU', 'CPU' -> 'CPU', None -> None.
+    For multi-target devices like 'AUTO:GPU,CPU' returns the string unchanged.
+    """
+    if device_str is None or not isinstance(device_str, str):
+        return device_str
+    if _is_device_with_index(device_str):
+        return device_str.split(":", 1)[0]
+    return device_str
+
+
+class DeviceAwareDefaultDict(defaultdict):
+    """
+    Transparently resolves indexed devices (e.g. GPU:0 -> GPU).
+    When a key like 'GPU:0' is not found, it falls back to the base device key 'GPU'.
+    """
+
+    def __missing__(self, key):
+        if isinstance(key, str) and _is_device_with_index(key):
+            base = key.split(":", 1)[0]
+            if base in self:
+                return self[base]
+        # Fall back to default_factory behavior
+        return super().__missing__(key)
+
+
 def validate_supported_values(detected_list, supported_list):
     supported_list += ALL_AVAILABLE_OPTIONS  # 'starred expression' will be evaluated during pytest_configure
-    check = all(_elem in supported_list for _elem in detected_list)
+
+    def _is_supported(device):
+        if device in supported_list:
+            return True
+        # Accept indexed devices like GPU:0, GPU:1 if base device (GPU) is supported
+        if _is_device_with_index(device):
+            base_device = device.split(":", 1)[0]
+            return base_device in supported_list
+        return False
+
+    check = all(_is_supported(_elem) for _elem in detected_list)
     assert check, f"Not supported target devices in {detected_list}"
     return detected_list
 
@@ -124,7 +153,12 @@ def get_target_devices():
     """ Convert comma separated string of devices into list """
     target_devices_list = get_list("TT_TARGET_DEVICE", fallback=[TargetDevice.CPU])
     separator_multi = ":"
-    if any(separator_multi in _target_device for _target_device in target_devices_list):
+    # Only treat as multi-target if ':' is followed by a device name, not a numeric index (GPU:0, GPU:1)
+    has_multi_target = any(
+        separator_multi in _td and not _is_device_with_index(_td)
+        for _td in target_devices_list
+    )
+    if has_multi_target:
         target_devices_list = get_multi_target_devices(target_devices_list, separator_multi)
     ov_target_devices = [value for key, value in vars(TargetDevice).items() if not key.startswith("__")]
     target_devices_list = validate_supported_values(detected_list=target_devices_list, supported_list=ov_target_devices)
@@ -142,3 +176,15 @@ def get_xdist_worker_nr():
     else:
         xdist_current_worker = int(xdist_current_worker.lstrip("gw"))
     return xdist_current_worker
+
+
+def get_short_date_string():
+    date_str = strftime("%Y%m%d%H%M%S")
+    return date_str
+
+
+def generate_test_object_name(separator="_", prefix=""):
+    date_str = get_short_date_string()
+    random_sha = hex(random.getrandbits(128))[2:8]
+    name = separator.join([item for item in (prefix, date_str, random_sha) if item])
+    return name

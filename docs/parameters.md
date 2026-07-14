@@ -117,6 +117,7 @@ There are also additional environment variables that may change the behavior of 
 | `GIT_OPT_SET_SERVER_CONNECT_TIMEOUT`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
 | `GIT_OPT_SET_SERVER_TIMEOUT`        | `int`   | Timeout for reading from and writing to a remote server. Default value 4000 ms.                            |
 | `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |
+| `GIT_OPT_SET_ENABLE_SEARCH_PATHS`| `int`   | When set to 1, the pull functionality reads host-level git configuration locations like ~/.gitconfig. Default value 0.            |
 
 Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
 
@@ -133,8 +134,8 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
 | `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).            |
 | `--model_distribution_policy`         | `string`     | TENSOR_PARALLEL distributes tensor to multiple sockets/devices and processes it in parallel. PIPELINE_PARALLEL distributes different tensors to process by each device. Accepted values: `TENSOR_PARALLEL`, `PIPELINE_PARALLEL` or empty (default). |
-| `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Currently supported: [qwen3, gptoss, gemma4]                     |
-| `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Currently supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
+| `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [qwen3, gptoss, gemma4]                     |
+| `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
 
 ### Image generation

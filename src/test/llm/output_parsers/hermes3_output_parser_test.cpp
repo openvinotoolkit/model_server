@@ -339,7 +339,7 @@ TEST_F(Hermes3OutputParserTest, HolisticStreaming) {
     };
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, true, finishReason);
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -419,7 +419,7 @@ TEST_F(Hermes3OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         // Second argument is false as we simulate the case where tools have not been provided in the request
-        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, false, ov::genai::GenerationFinishReason::NONE);
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, false, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }

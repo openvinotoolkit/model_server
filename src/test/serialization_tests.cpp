@@ -26,24 +26,12 @@
 
 #include <openvino/runtime/core.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
 #include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../capi_frontend/inferencetensor.hpp"
-#include "../tfs_frontend/serialization.hpp"
 #include "../kfs_frontend/serialization.hpp"
 #include "../capi_frontend/serialization.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
-
-using TFTensorProto = tensorflow::TensorProto;
-
-using TFPredictRequest = tensorflow::serving::PredictRequest;
-using TFPredictResponse = tensorflow::serving::PredictResponse;
 
 using namespace ovms;
 
@@ -53,7 +41,6 @@ using testing::NiceMock;
 using testing::Throw;
 
 KFSRequest* KFSRequestNULL{nullptr};
-TFSPredictRequest* TFSRequestNULL{nullptr};
 ovms::InferenceRequest* CAPIRequestNULL{nullptr};
 
 const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS{
@@ -176,146 +163,6 @@ namespace {
 const std::string UNUSED_NAME{"UNUSED_NAME"};
 const model_version_t UNUSED_VERSION{0};
 }  // namespace
-
-class TensorflowGRPCPredict : public ::testing::TestWithParam<ovms::Precision> {
-protected:
-    void SetUp() override {
-        ovms::Precision precision = ovms::Precision::FP32;
-
-        tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
-            tensorName,
-            precision,
-            shape_t{1, 3, 1, 1},
-            Layout{"NHWC"});
-        SetUpTensorProto(getPrecisionAsDataType(precision));
-    }
-
-    void SetUpTensorProto(tensorflow::DataType dataType) {
-        tensorProto.set_dtype(dataType);
-        auto tensorShape = tensorProto.mutable_tensor_shape();
-        tensorShape->Clear();
-        tensorShape->add_dim()->set_size(1);
-        tensorShape->add_dim()->set_size(3);
-        tensorShape->add_dim()->set_size(1);
-        tensorShape->add_dim()->set_size(1);
-        *(tensorProto.mutable_tensor_content()) = std::string(1 * 3 * 1 * 1, '1');
-    }
-    TFTensorProto tensorProto;
-    const char* tensorName = "Input_PRECISION_1_3_1_1_NHWC";
-    ovms::tensor_map_t tensorMap;
-};
-
-class SerializeTFTensorProto : public TensorflowGRPCPredict {
-public:
-    std::tuple<
-        std::shared_ptr<const ovms::TensorInfo>,
-        ov::Tensor>
-    getInputs(ovms::Precision precision) {
-        std::shared_ptr<const ovms::TensorInfo> servableOutput =
-            std::make_shared<ovms::TensorInfo>(
-                std::string("2_values_C_layout"),
-                precision,
-                ovms::Shape{2},
-                Layout{"C"});
-        ov::Tensor mockTensor = ov::Tensor(
-            ovmsPrecisionToIE2Precision(precision), ov::Shape{2});
-        return std::make_tuple(servableOutput, mockTensor);
-    }
-};
-
-TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
-    ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
-    shape_t tensorInfoShape{1, 3, 224, 224};
-    auto layout = Layout{"NCHW"};
-    const std::string name = "NOT_IMPORTANT";
-    auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    ov::Tensor tensor(ov::element::i32, tensorInfoShape);
-    TFTensorProto responseOutput;
-    auto status = serializeTensorToTensorProto(responseOutput,
-        tensorInfo,
-        tensor);
-    EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
-}
-
-TEST(SerializeTFTensorProtoSingle, NegativeMismatchBetweenTensorInfoAndTensorShape) {
-    ovms::Precision tensorInfoPrecision = ovms::Precision::FP32;
-    shape_t tensorInfoShape{1, 3, 224, 224};
-    shape_t tensorShape{1, 3, 225, 225};
-    auto layout = Layout{"NCHW"};
-    const std::string name = "NOT_IMPORTANT";
-    auto tensorInfo = std::make_shared<ovms::TensorInfo>(name, tensorInfoPrecision, tensorInfoShape, layout);
-    ov::Tensor tensor(tensorInfo->getOvPrecision(), tensorShape);
-    TFTensorProto responseOutput;
-    auto status = serializeTensorToTensorProto(responseOutput,
-        tensorInfo,
-        tensor);
-    EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
-}
-
-TEST_P(SerializeTFTensorProto, SerializeTensorProtoShouldSucceedForPrecision) {
-    ovms::Precision testedPrecision = GetParam();
-    auto inputs = getInputs(testedPrecision);
-    TFTensorProto responseOutput;
-    ov::Tensor mockTensor = std::get<1>(inputs);
-    auto status = serializeTensorToTensorProto(responseOutput,
-        std::get<0>(inputs),
-        mockTensor);
-    EXPECT_TRUE(status.ok())
-        << "Supported OV serialization precision"
-        << toString(testedPrecision)
-        << "should succeed";
-}
-
-class SerializeTFTensorProtoNegative : public SerializeTFTensorProto {};
-
-TEST_P(SerializeTFTensorProtoNegative, SerializeTensorProtoShouldFailForPrecision) {
-    ovms::Precision testedPrecision = GetParam();
-    auto inputs = getInputs(testedPrecision);
-    TFTensorProto responseOutput;
-    auto status = serializeTensorToTensorProto(responseOutput,
-        std::get<0>(inputs),
-        std::get<1>(inputs));
-    EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)
-        << "Unsupported OV serialization precision"
-        << toString(testedPrecision)
-        << "should fail";
-}
-
-TEST(SerializeTFGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
-    TFPredictResponse response;
-    ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
-    ov::InferRequest inferRequest = compiledModel.create_infer_request();
-    ovms::tensor_map_t tenMap;
-    std::shared_ptr<const ovms::TensorInfo> tensorInfo = std::make_shared<ovms::TensorInfo>(
-        DUMMY_MODEL_OUTPUT_NAME,
-        ovms::Precision::FP32,
-        ovms::Shape{1, 10},
-        Layout{"NC"});
-    tenMap[DUMMY_MODEL_OUTPUT_NAME] = tensorInfo;
-    ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
-    inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
-    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, &response, getTensorInfoName);
-    EXPECT_TRUE(status.ok());
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    SerializeTFTensorProto,
-    ::testing::ValuesIn(SUPPORTED_OUTPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<SerializeTFTensorProto::ParamType>& info) {
-        return toString(info.param);
-    });
-
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    SerializeTFTensorProtoNegative,
-    ::testing::ValuesIn(UNSUPPORTED_OUTPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<SerializeTFTensorProtoNegative::ParamType>& info) {
-        return toString(info.param);
-    });
 
 class KFServingGRPCPredict : public ::testing::TestWithParam<ovms::Precision> {
 protected:
@@ -673,18 +520,6 @@ Status OutputGetter<MockedTensorProvider&>::get(const std::string& name, ov::Ten
 
 namespace ovms {
 template <>
-Status serializePredictResponse<MockedTensorProvider&, TFSPredictRequest, TFSPredictResponse>(
-    OutputGetter<MockedTensorProvider&>& outputGetter,
-    const std::string& servableName,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response,
-    outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent) {
-    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
-}
-template <>
 Status serializePredictResponse<MockedTensorProvider&, KFSRequest, KFSResponse>(
     OutputGetter<MockedTensorProvider&>& outputGetter,
     const std::string& servableName,
@@ -697,17 +532,6 @@ Status serializePredictResponse<MockedTensorProvider&, KFSRequest, KFSResponse>(
     return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
 }
 }  // namespace ovms
-template ovms::Status ovms::serializePredictResponse<MockedTensorProvider&,
-    tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
-    ovms::OutputGetter<MockedTensorProvider&>&,
-    const std::string&,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
-    const TFSPredictRequest* request,
-    tensorflow::serving::PredictResponse*,
-    outputNameChooser_t outputNameChooser,
-    bool);
-
 template ovms::Status ovms::serializePredictResponse<MockedTensorProvider&,
     inference::ModelInferRequest, inference::ModelInferResponse>(
     ovms::OutputGetter<MockedTensorProvider&>&,
@@ -821,7 +645,7 @@ public:
     RequestType request;
 };
 
-using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
+using MyTypes = ::testing::Types<KFSInterface>;
 TYPED_TEST_SUITE(SerializeString, MyTypes);
 
 // Serialization to string due to suffix _string in mapping

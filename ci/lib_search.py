@@ -105,6 +105,7 @@ def check_dir(start_dir):
         'metrics_output.out',
         'missing_headers.txt',
         'net_http.patch',
+        'open_asr_leaderboard.patch',
         'partial.patch',
         'ovms_drogon_trantor.patch',
         'gorilla.patch',
@@ -157,7 +158,7 @@ def check_dir(start_dir):
         "dummy_facebook_template.jinja",
         ]
 
-    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples']
+    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates']
 
     for (d_path, _, file_set) in os.walk(start_dir):
         for f_name in file_set:
@@ -223,6 +224,7 @@ def check_func(start_dir):
         'missing_headers.txt',
         'missing_headers.txt',
         'net_http.patch',
+        'open_asr_leaderboard.patch',
         'partial.patch',
         'ovms_drogon_trantor.patch',
         'openvino.LICENSE.txt',

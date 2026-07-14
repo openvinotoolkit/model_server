@@ -20,7 +20,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-load("//:distro.bzl", "distro_flag")
+load("//:distro.bzl", "distro_flag", "espeak_flag")
 
 # cc_library rule wrapper that will accept the same arguments but if user will not provide
 # copts, linkopts, local_defines it will set them to the defaults
@@ -58,6 +58,7 @@ def ovms_cc_library(**kwargs):
 
 def create_config_settings():
     distro_flag()
+    espeak_flag()
     native.config_setting(
         name = "disable_mediapipe",
         define_values = {
@@ -68,17 +69,6 @@ def create_config_settings():
     more_selects.config_setting_negation(
         name = "not_disable_mediapipe",
         negate = ":disable_mediapipe",
-    )
-    native.config_setting(
-        name = "enable_drogon",
-        define_values = {
-            "USE_DROGON": "1",
-        },
-        visibility = ["//visibility:public"],
-    )
-    more_selects.config_setting_negation(
-        name = "enable_net_http",
-        negate = ":enable_drogon",
     )
     native.config_setting(
         name = "disable_cloud",
@@ -200,6 +190,7 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/wd6240", 
                         "/wd6326",
                         "/wd6385",
+                        "/wd6386",
                         "/wd6294",
                         "/guard:cf",
                         "/utf-8",
@@ -241,10 +232,6 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                     "/LTCG",
                 ],
                 })
-COPTS_DROGON = select({
-    "//conditions:default": ["-DUSE_DROGON=0"],
-    "//:enable_drogon" : ["-DUSE_DROGON=1"],
-})
 DEFINES_PYTHON = select({
     "//conditions:default": ["PYTHON_DISABLE=1"],
     "//:not_disable_python" : ["PYTHON_DISABLE=0"],

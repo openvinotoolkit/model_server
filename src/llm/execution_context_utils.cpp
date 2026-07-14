@@ -17,6 +17,7 @@
 
 #include <utility>
 
+#include "../logging.hpp"
 #include "servable.hpp"
 
 namespace ovms {

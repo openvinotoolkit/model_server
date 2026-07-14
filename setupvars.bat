@@ -17,4 +17,6 @@
 set "OVMS_DIR=%~dp0"
 set "PYTHONHOME=%OVMS_DIR%\python"
 set "PATH=%OVMS_DIR%;%PYTHONHOME%;%PYTHONHOME%\Scripts;%PATH%"
+:: Point bundled espeak-ng (when packaged) at its data tables.
+if exist "%OVMS_DIR%\espeak-ng-data" set "ESPEAK_DATA_PATH=%OVMS_DIR%\espeak-ng-data"
 echo "OpenVINO Model Server Environment Initialized"

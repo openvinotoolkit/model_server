@@ -238,7 +238,7 @@ TEST_F(Phi4OutputParserTest, HolisticStreaming) {
         int64_t chunkIteration = -1;
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
             chunkIteration++;
-            std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, true, finishReason);
+            std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }
@@ -357,7 +357,7 @@ TEST_F(Phi4OutputParserTest, StreamingToolWithComplexArguments) {
 
     auto outputParser = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA);
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -438,7 +438,7 @@ TEST_F(Phi4OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         // Second argument is false as we simulate the case where tools have not been provided in the request
-        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, false, ov::genai::GenerationFinishReason::NONE);
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, false, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }

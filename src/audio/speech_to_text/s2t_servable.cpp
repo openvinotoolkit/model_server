@@ -22,7 +22,7 @@
 #pragma warning(disable : 6386)
 #include "absl/status/status.h"
 #pragma warning(pop)
-#include "openvino/genai/whisper_pipeline.hpp"
+#include "openvino/genai/automatic_speech_recognition/pipeline.hpp"
 
 #include "src/audio/speech_to_text/s2t_calculator.pb.h"
 #include "src/http_payload.hpp"
@@ -35,7 +35,6 @@ namespace ovms {
 namespace {
 constexpr size_t ISO_LANG_CODE_MAX = 3;
 }
-
 SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) {
     auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
     if (fsModelsPath.is_relative()) {
@@ -54,7 +53,7 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
         config["STATIC_PIPELINE"] = true;
     }
     config["word_timestamps"] = enableWordTimestamps;
-    sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
+    sttPipeline = std::make_shared<ov::genai::ASRPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
 
     streamingExecutor = std::make_unique<SttExecutorWrapper>(sttPipeline, sttPipelineMutex);
 }
@@ -66,7 +65,7 @@ void SttServable::addRequest(std::shared_ptr<SttServableExecutionContext> execut
     streamingExecutor->addRequest(std::move(executionContext));
 }
 
-absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai::WhisperGenerationConfig& config) {
+absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai::ASRGenerationConfig& config) {
     std::string temperatureStr = payload.multipartParser->getFieldByName("temperature");
     if (temperatureStr.size() > 0) {
         SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received temperature: {}", temperatureStr);
@@ -84,7 +83,7 @@ absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai
     return absl::OkStatus();
 }
 
-absl::Status SttServable::updateTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
+absl::Status SttServable::updateTranscriptionConfig(ov::genai::ASRGenerationConfig& config,
     const std::shared_ptr<SttServable>& servable, const HttpPayload& payload) {
     std::string language = payload.multipartParser->getFieldByName("language");
     if (language.size() > 0) {

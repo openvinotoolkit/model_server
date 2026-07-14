@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 import argparse
 
-from ovmsclient import make_grpc_client
+import tritonclient.grpc as grpcclient
 
 
 def image_preprocess_mobilenetv3(img_path):
@@ -57,10 +57,14 @@ if __name__ == "__main__":
     modelname = 'mobilenet'
     test_image = image_preprocess_mobilenetv3(args.image_input_path) 
 
-    client = make_grpc_client(f"{args.grpc_address}:{args.grpc_port}")
-    input_key = next(iter(client.get_model_metadata(model_name=modelname)['inputs']))
+    client = grpcclient.InferenceServerClient(url=f"{args.grpc_address}:{args.grpc_port}")
+    metadata = client.get_model_metadata(modelname)
+    input_key = metadata.inputs[0].name
 
-    classification_output = client.predict({ input_key: test_image }, modelname)
+    infer_input = grpcclient.InferInput(input_key, test_image.shape, "FP32")
+    infer_input.set_data_from_numpy(test_image)
+    result = client.infer(modelname, [infer_input])
+    classification_output = result.as_numpy(metadata.outputs[0].name)
 
     #filter and print the top 5 results 
     top_k(classification_output)

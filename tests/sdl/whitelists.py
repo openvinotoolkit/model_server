@@ -97,6 +97,7 @@ libraries = {
     OvmsBaseType.COMMON: {
         'libazurestorage.so',
         'libcpprest.so',
+        'libespeak-ng.so',
         'libgit2.so',
         'libOpenCL.so',
         'libopencv_calib3d.so',
@@ -140,6 +141,7 @@ libraries = {
     OvmsBaseType.REDHAT: set(),
     OvmsBaseType.REDHAT_PYTHON: set(),
     OvmsBaseType.WINDOWS: {
+        'espeak-ng.dll',
         'git2.dll',
         'libcurl-x64.dll',
         'opencv_world4130.dll',

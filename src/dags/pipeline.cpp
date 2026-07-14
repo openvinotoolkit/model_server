@@ -89,7 +89,7 @@ Status Pipeline::execute(ExecutionContext context) {
     OVMS_PROFILE_FUNCTION();
     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Started execution of pipeline: {}", getName());
 
-    if (context.method != ExecutionContext::Method::Predict && context.method != ExecutionContext::Method::ModelInfer) {
+    if (context.method != ExecutionContext::Method::ModelInfer) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Executing pipeline: {} wrong context", getName());
         return StatusCode::INTERNAL_ERROR;
     }

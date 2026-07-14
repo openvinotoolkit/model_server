@@ -14,182 +14,167 @@
 # limitations under the License.
 #
 
-import logging
-import os
-from logging import FileHandler
+import random
+import sys
 
-import pytest
-from _pytest._code import ExceptionInfo, filter_traceback  # noqa
-from _pytest.outcomes import OutcomeException
+from tests.functional.config import enable_pytest_plugins, pytest_keyword_filter, machine_is_reserved_for_test_session
+from tests.functional.constants.ovms import (
+    CURRENT_TARGET_DEVICE_DICT_ARGUMENT,
+    TMP_REPOS_DIR_ARGUMENT,
+)
+from tests.functional.utils import hooks
+from tests.functional.utils.logger import OvmsFileHandler, get_logger
+from tests.functional.utils.marks import MarksRegistry
+from tests.functional.utils.test_framework import is_xdist_master
 
-from tests.functional.constants.constants import NOT_TO_BE_REPORTED_IF_SKIPPED
-from tests.functional.object_model.server import Server
-from tests.functional.utils.other import reorder_items_by_fixtures_used
-from tests.functional.utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
-    get_containers_with_tests_suffix
-from tests.functional.utils.logger import init_logger
-from tests.functional.utils.files_operation import get_path_friendly_test_name
-from tests.functional.utils.parametrization import get_tests_suffix
-from tests.functional.config import test_dir, test_dir_cleanup, artifacts_dir, target_device, enable_pytest_plugins
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 if enable_pytest_plugins:
-    pytest_plugins = [
-        'tests.functional.fixtures.model_download_fixtures',
-        'tests.functional.fixtures.model_conversion_fixtures',
-        'tests.functional.fixtures.server_detection_model_fixtures',
-        'tests.functional.fixtures.server_for_update_fixtures',
-        'tests.functional.fixtures.server_local_models_fixtures',
-        'tests.functional.fixtures.server_multi_model_fixtures',
-        'tests.functional.fixtures.server_remote_models_fixtures',
-        'tests.functional.fixtures.server_with_batching_fixtures',
-        'tests.functional.fixtures.server_with_version_policy_fixtures',
-        'tests.functional.fixtures.test_files_fixtures',
-        'tests.functional.fixtures.common_fixtures',
-        ]
+
+    raise NotImplementedError("OVMS tests not enabled")
+
+    pytest_plugins = [      # pylint: disable=unreachable
+        "tests.functional.fixtures.ovms",
+        "tests.functional.fixtures.server",
+        "tests.functional.fixtures.api_type",
+        "tests.functional.fixtures.params",
+    ]
 
 
-    def pytest_sessionstart():
-        for item in os.environ.items():
-            logger.debug(item)
+    def pytest_configure(config):
+        """
+        Allow plugins and conftest files to perform initial configuration.
+        This hook is called for every plugin and initial conftest file after command line options have been parsed.
+        After that, the hook is called for other conftest files as they are imported.
+
+        NOTE:
+            This hook is called multiple times:
+            1) for master process prior spawning workers
+                (PYTEST_XDIST_WORKER_COUNT and PYTEST_XDIST_WORKER env variable unset)
+            2) for each spawned worker process
+
+        LIMITATIONS:
+            Internal pytest logging mechanisms are initialized in `pytest_sessionstart` hook.
+            Please avoid usage of logger in all hooks used in this function.
+            Please simple print(...) call for printing messages.
+        """
+        hooks.mute_warnings()
+        MarksRegistry.register(config)
+
+        if is_xdist_master():
+            hooks.setup_tmp_repos_dir(config)
+            hooks.validate_port_pool(config)
+            # master thread pytest_configure call. No xdist worker process spawned yet.
+            hooks.init_environment(config)
+            hooks.clear_ovms_capi_artifacts()
+            hooks.setup_artifacts_dir()
+            hooks.prepare_ovms_package()
+            hooks.download_resources_master()
+            hooks.build_local_resources()
+            hooks.validate_lock_files()
+            hooks.list_host_zombie_processes()
+        else:  # Xdist worker thread
+            hooks.download_docker_images()
+            hooks.init_ovms_config_retrieved_from_master(config)
+
+        hooks.setup_nginx()
+
+        # Let know that pytest was successfully configured
+        config.configured = True
 
 
-    def pytest_configure():
-        # Perform initial configuration.
-        init_logger()
+    def pytest_unconfigure(config):
+        if getattr(config, "configured", None) is not True:
+            # Check if pytest_configure() was done successfully, if not: logger would be in invalid state so disable.
+            for _logger in logger.manager.loggerDict.values():
+                _logger.disabled = True
 
-        init_conf_logger = logging.getLogger("init_conf")
-
-        container_names = get_containers_with_tests_suffix()
-        if container_names:
-            init_conf_logger.info("Possible conflicting container names: {} "
-                                  "for given tests_suffix: {}".format(container_names, get_tests_suffix()))
-
-        if artifacts_dir:
-            os.makedirs(artifacts_dir, exist_ok=True)
-
-
-    def pytest_keyboard_interrupt (excinfo):
-        clean_hanging_docker_resources()
-        Server.stop_all_instances()
+        try:
+            if is_xdist_master():
+                hooks.remove_ports_reservation(config)
+                hooks.cleanup_tmp_repos_dir(config)
+                hooks.teardown_environment()
+                if machine_is_reserved_for_test_session:
+                    hooks.clear_lockfiles()
+        except Exception as e:      # pylint: disable=broad-exception-caught
+            error_msg = str(e)
+            print(error_msg)
+            sys.exit(error_msg)
 
 
-    def pytest_unconfigure():
-        # Perform cleanup.
-        cleanup_logger = logging.getLogger("cleanup")
+    def pytest_configure_node(node):
+        node.workerinput[TMP_REPOS_DIR_ARGUMENT] = node.config.tmp_repos_dir
+        node.workerinput[CURRENT_TARGET_DEVICE_DICT_ARGUMENT] = node.config.current_target_device_dict
 
-        cleanup_logger.info("Cleaning hanging docker resources with suffix: {}".format(get_tests_suffix()))
-        clean_hanging_docker_resources()
 
-        if test_dir_cleanup:
-            cleanup_logger.info("Deleting test directory: {}".format(test_dir))
-            delete_test_directory()
+    MarksRegistry.MARK_ENUMS.extend([OvmsComponents])
 
-        if len(Server.running_instances) > 0:
-            logger.warning("Test got unstopped docker instances")
-        Server.stop_all_instances()
+
+    def pytest_sessionstart(session):
+        hooks.get_session_start_info(session)
 
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_collection_modifyitems(session, config, items):
-        yield
-        items = reorder_items_by_fixtures_used(session)
+        """
+        Support for running tests with component tags.
+        Report all test component markers to mongo_reporter.
+        """
+        logger.info(f"Preparing tests for test session in the following folder: {session.startdir}")
 
+        if pytest_keyword_filter:
+            # Filter case insensitive
+            deselected = [_item for _item in items if pytest_keyword_filter.lower() not in _item.name.lower()]
+            if deselected:
+                hooks.deselect_items(items, config, deselected)
 
-    @pytest.hookimpl(tryfirst=True, hookwrapper=True)
-    def pytest_runtest_makereport(item, call):
-        outcome = yield
-        if call.when == "setup":
-            report = outcome.get_result()
-            report.test_metadata = {"start": call.start}
+        yield  # deselect items in default hook way via keyword ('-k')
 
+        if config.option.collectonly:
+            hooks.log_skip_statistic(items)
 
-    @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtest_call():
-        __tracebackhide__ = True
-        try:
-            outcome = yield
-        finally:
-            pass
-        exception_catcher("call", outcome)
+        deselected = hooks.preprocess_collected_items(items)
+        if deselected:
+            hooks.deselect_items(items, config, deselected)
 
+        hooks.set_divide_target_device_per_worker(items)
 
-    @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtest_setup():
-        __tracebackhide__ = True
-        try:
-            outcome = yield
-        finally:
-            pass
-        exception_catcher("setup", outcome)
-
-
-    @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtest_teardown():
-        __tracebackhide__ = True
-        try:
-            outcome = yield
-        finally:
-            pass
-        exception_catcher("teardown", outcome)
-
-
-    @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtest_teardown(item):
-        yield
-        # Test finished: remove test item for all fixtures that was used
-        for fixture in item._server_fixtures:
-            if item in item.session._server_fixtures_to_tests[fixture]:
-                item.session._server_fixtures_to_tests[fixture].remove(item)
-            if len(item.session._server_fixtures_to_tests[fixture]) == 0:
-                # No other tests will use this docker instance so we can close it.
-                Server.stop_by_fixture_name(fixture)
-
-
-    def exception_catcher(when: str, outcome):
-        if isinstance(outcome.excinfo, tuple):
-            if len(outcome.excinfo) > 1 and isinstance(outcome.excinfo[1], OutcomeException):
-                return
-            exception_logger = logging.getLogger("exception_logger")
-            exception_info = ExceptionInfo.from_exc_info(outcome.excinfo)
-            exception_info.traceback = exception_info.traceback.filter(filter_traceback)
-            exc_repr = exception_info.getrepr(style="short", chain=False)\
-                if exception_info.traceback\
-                else exception_info.exconly()
-            exception_logger.error('Unhandled Exception during {}: \n{}'
-                                   .format(when.capitalize(), str(exc_repr)))
+        random.Random(7).shuffle(items)
 
 
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
-    def pytest_runtest_logstart(nodeid, location):
-        if artifacts_dir:
-            test_name = get_path_friendly_test_name(location)
-            log_path = os.path.join(artifacts_dir, f"{test_name}.log")
-            _root_logger = logging.getLogger(None)
-            _root_logger._test_log_handler = FileHandler(log_path)
-            formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
-            _root_logger._test_log_handler.setFormatter(formatter)
-            _root_logger.addHandler(_root_logger._test_log_handler)
+    def pytest_runtest_protocol(item: "Item"):
+        """
+         Perform the runtest protocol for a single test item.
+         The default runtest protocol is this (see individual hooks for full details):
+             pytest_runtest_logstart(nodeid, location)
+             Setup phase:
+                     call = pytest_runtest_setup(item) (wrapped in CallInfo(when="setup"))
+                     report = pytest_runtest_makereport(item, call)
+                     pytest_runtest_logreport(report)
+                     pytest_exception_interact(call, report) if an interactive exception occurred
+             Call phase, if the setup passed and the setuponly pytest option is not set:
+                     call = pytest_runtest_call(item) (wrapped in CallInfo(when="call"))
+                     report = pytest_runtest_makereport(item, call)
+                     pytest_runtest_logreport(report)
+                     pytest_exception_interact(call, report) if an interactive exception occurred
+             Teardown phase:
+                     call = pytest_runtest_teardown(item, nextitem) (wrapped in CallInfo(when="teardown"))
+                     report = pytest_runtest_makereport(item, call)
+                     pytest_runtest_logreport(report)
+                     pytest_exception_interact(call, report) if an interactive exception occurred
+             pytest_runtest_logfinish(nodeid, location)
+         """
+        __root_logger = get_logger(None)
+        if not item.keywords.get("skip"):
+            fh = OvmsFileHandler(item)
+            __root_logger.addHandler(fh)
         yield
+        if not item.keywords.get("skip"):
+            fh.close()
+            __root_logger.removeHandler(fh)
 
 
-    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
-    def pytest_runtest_logfinish(nodeid, location):
-        if artifacts_dir:
-            _root_logger = logging.getLogger(None)
-            _root_logger.removeHandler(_root_logger._test_log_handler)
-        yield
-
-
-def devices_not_supported_for_test(not_supported_devices_list):
-    """
-    Comma separated list of devices not supported for test.
-    Use as a test decorator.
-    Example use:
-    @devices_not_supported_for_test(["CPU", "GPU"])
-    def test_example():
-        # test implementation
-    """
-    return pytest.mark.skipif(target_device in not_supported_devices_list, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
+    def pytest_generate_tests(metafunc):
+        hooks.parametrize_tests(metafunc)

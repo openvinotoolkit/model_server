@@ -106,6 +106,17 @@ if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
+:: Bundle espeak-ng DLL + data when it was built from source by Bazel
+:: (--//:espeak=on). Picked up from the rules_foreign_cc cmake output tree.
+for /f "delims=" %%D in ('dir /b /s /a:-d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng\espeak-ng.dll" 2^>nul') do (
+    copy /Y "%%D" dist\windows\ovms
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+for /f "delims=" %%D in ('dir /b /s /a:d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng" 2^>nul ^| findstr /e "espeak-ng-data"') do (
+    xcopy "%%D" dist\windows\ovms\espeak-ng-data /E /I /H /Y
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
 copy %cd%\setupvars.* dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy %cd%\install_ovms_service.bat dist\windows\ovms
@@ -131,6 +142,22 @@ copy %cd%\release_files\LICENSE %cd%\dist\windows\ovms\
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy %cd%\release_files\thirdparty-licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
+
+:: Bundle eSpeak-ng license text when eSpeak artifacts are included.
+set "espeak_license_src="
+for /f "delims=" %%F in ('dir /b /s /a:-d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng\COPYING*" 2^>nul') do (
+    set "espeak_license_src=%%F"
+    goto :copy_espeak_license
+)
+for /f "delims=" %%F in ('dir /b /s /a:-d "%cd%\bazel-out\x64_windows-opt\bin\external\espeak_ng\LICENSE*" 2^>nul') do (
+    set "espeak_license_src=%%F"
+    goto :copy_espeak_license
+)
+:copy_espeak_license
+if defined espeak_license_src (
+    copy /Y "!espeak_license_src!" "%license_dest%espeak-ng.LICENSE.txt"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 
 set "curl_dir=curl-!curl_version!-win64-mingw"
 echo Adding curl licenses from !curl_dir!...

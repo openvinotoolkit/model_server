@@ -134,7 +134,7 @@ struct EmbeddingsGraphSettingsImpl {
 };
 
 struct TextToSpeechGraphSettingsImpl {
-    uint32_t unused = 1;  // will be added
+    uint32_t unused = 1;  // placeholder for future graph-level settings
 };
 
 struct SpeechToTextGraphSettingsImpl {
@@ -195,6 +195,7 @@ struct ExportSettings {
     std::optional<uint32_t> restWorkers;
     std::optional<std::string> extraQuantizationParams;
     std::optional<std::string> vocoder;
+    std::string modelType = "speecht5";  // text2speech only: "speecht5" or "kokoro"
     std::string precision = "int8";
     PluginConfigSettingsImpl pluginConfig;
 };
@@ -226,6 +227,7 @@ struct ServerSettingsImpl {
     std::optional<std::vector<std::string>> allowedMediaDomains;
     std::string logLevel = "INFO";
     std::string logPath;
+    bool verboseResponse = false;
     bool allowCredentials = false;
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};

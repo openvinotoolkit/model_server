@@ -257,7 +257,7 @@ TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -380,7 +380,7 @@ TEST_F(Qwen3OutputParserTest, StreamingToolWithComplexArguments) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -465,7 +465,7 @@ TEST_F(Qwen3OutputParserTest, ToolCallsInsideReasoningStreaming) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -502,10 +502,10 @@ TEST_F(Qwen3OutputParserTest, ToolCallsBrokenJson) {
     };
     for (const auto& [chunk, shouldThrow] : chunkToErrorVec) {
         if (shouldThrow) {
-            EXPECT_THROW(outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE), std::runtime_error) << "Expected error for chunk: " << chunk;
+            EXPECT_THROW(outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE), std::runtime_error) << "Expected error for chunk: " << chunk;
         } else {
             EXPECT_NO_THROW({
-                auto doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+                auto doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
                 // No further checks, just ensure no exception
             }) << "Unexpected error for chunk: "
                << chunk;
@@ -532,10 +532,10 @@ TEST_F(Qwen3OutputParserTest, ToolCallsDataAfterToolCall) {
         {"Buffer is not cleared, JSON is still broken", true}};
     for (const auto& [chunk, shouldThrow] : chunkToErrorVec) {
         if (shouldThrow) {
-            EXPECT_THROW(outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE), std::runtime_error) << "Expected error for chunk: " << chunk;
+            EXPECT_THROW(outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE), std::runtime_error) << "Expected error for chunk: " << chunk;
         } else {
             EXPECT_NO_THROW({
-                auto doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+                auto doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
                 // No further checks, just ensure no exception
             }) << "Unexpected error for chunk: "
                << chunk;
@@ -682,7 +682,7 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingStartsInReasoningPhase) {
         {"answer", "{\"delta\":{\"content\":\"answer\"}}"},
     };
     for (const auto& [chunk, expected] : chunks) {
-        auto doc = outputParser->parseChunk(chunk, false, ov::genai::GenerationFinishReason::NONE);
+        auto doc = outputParser->parseChunk(chunk, {}, false, ov::genai::GenerationFinishReason::NONE);
         if (!expected.has_value()) {
             EXPECT_FALSE(doc.has_value()) << "Unexpected output for chunk: " << chunk;
         } else {
@@ -702,7 +702,7 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingNoEndTagAllReasoning) {
     };
     for (size_t i = 0; i < chunks.size(); ++i) {
         auto finishReason = (i + 1 == chunks.size()) ? ov::genai::GenerationFinishReason::LENGTH : ov::genai::GenerationFinishReason::NONE;
-        auto doc = outputParser->parseChunk(chunks[i].first, false, finishReason);
+        auto doc = outputParser->parseChunk(chunks[i].first, {}, false, finishReason);
         ASSERT_TRUE(doc.has_value()) << "Missing output for chunk: " << chunks[i].first;
         EXPECT_EQ(docToString(*doc), chunks[i].second) << "Mismatch for chunk: " << chunks[i].first;
     }
@@ -711,19 +711,19 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingNoEndTagAllReasoning) {
 TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingHandlesEndTagSplitAcrossChunks) {
     // Incomplete </think> at end of chunk must be buffered until the rest arrives.
     outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>\n");
-    auto doc = outputParser->parseChunk("thinking", false, ov::genai::GenerationFinishReason::NONE);
+    auto doc = outputParser->parseChunk("thinking", {}, false, ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(doc.has_value());
     EXPECT_EQ(docToString(*doc), "{\"delta\":{\"reasoning_content\":\"thinking\"}}");
 
     // Partial closing tag - must be held in the cache, no emission.
-    auto partial = outputParser->parseChunk("</thi", false, ov::genai::GenerationFinishReason::NONE);
+    auto partial = outputParser->parseChunk("</thi", {}, false, ov::genai::GenerationFinishReason::NONE);
     EXPECT_FALSE(partial.has_value());
 
     // Completion of closing tag - tag itself is dropped, no emission.
-    auto closed = outputParser->parseChunk("nk>", false, ov::genai::GenerationFinishReason::NONE);
+    auto closed = outputParser->parseChunk("nk>", {}, false, ov::genai::GenerationFinishReason::NONE);
     EXPECT_FALSE(closed.has_value());
 
-    auto after = outputParser->parseChunk("answer", false, ov::genai::GenerationFinishReason::NONE);
+    auto after = outputParser->parseChunk("answer", {}, false, ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(after.has_value());
     EXPECT_EQ(docToString(*after), "{\"delta\":{\"content\":\"answer\"}}");
 }
@@ -732,7 +732,7 @@ TEST_F(Qwen3OutputParserTest, NoImplicitStart_StreamingFirstChunkIsContent) {
     // Baseline: without implicit start, output that does not begin with <think> is treated
     // as plain content from the first chunk (preserves pre-existing behavior).
     outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n");
-    auto doc = outputParser->parseChunk("hello", false, ov::genai::GenerationFinishReason::NONE);
+    auto doc = outputParser->parseChunk("hello", {}, false, ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(doc.has_value());
     EXPECT_EQ(docToString(*doc), "{\"delta\":{\"content\":\"hello\"}}");
 }

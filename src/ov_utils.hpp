@@ -59,6 +59,9 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
 // Returns StatusCode::INTERNAL_ERROR on any OpenVINO exception.
 Status applyDefaultCpuProperties(ov::AnyMap& properties);
 
+// Testable overload accepting explicit system parameters instead of querying the OS.
+Status applyDefaultCpuProperties(ov::AnyMap& properties, uint16_t coreCount, uint16_t physicalCoresPerSocket, uint16_t socketsCount, uint16_t dockerCpuQuota);
+
 // Logging
 // #1 model/global plugin  CompiledMode:DUMMY / Global OpenVINO plugin:CPU
 // #2 version/_

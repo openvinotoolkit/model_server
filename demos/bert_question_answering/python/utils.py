@@ -17,11 +17,8 @@ import numpy as np
 
 from tokens_bert import text_to_tokens, load_vocab_file
 from html_reader import get_paragraphs
-import grpc
 import numpy as np
-from tensorflow import make_tensor_proto, make_ndarray
-from tensorflow_serving.apis import predict_pb2
-from tensorflow_serving.apis import prediction_service_pb2_grpc
+import tritonclient.grpc as grpcclient
 
 # return entire sentence as start-end positions for a given answer (within the sentence).
 def find_sentence_range(context, s, e):
@@ -40,8 +37,7 @@ def find_sentence_range(context, s, e):
 
 def predict_bert(question):
     # create grpc connection
-    channel = grpc.insecure_channel("{}:{}".format("localhost", 9000))
-    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
+    client = grpcclient.InferenceServerClient(url="{}:{}".format("localhost", 9000))
 
     # load vocabulary file for model
     vocab = load_vocab_file("vocab.txt")
@@ -103,18 +99,18 @@ def predict_bert(question):
 
         #print("inputs:",inputs)
 
-        # create grpc prediction request
-        request = predict_pb2.PredictRequest()
-        request.model_spec.name = "bert"
+        # create kserve grpc prediction request
+        infer_inputs = []
         for inp_name in inputs:
-            request.inputs[inp_name].CopyFrom(make_tensor_proto(inputs[inp_name], shape=(inputs[inp_name].shape)))
+            t = inputs[inp_name]
+            infer_input = grpcclient.InferInput(inp_name, t.shape, "INT32")
+            infer_input.set_data_from_numpy(t)
+            infer_inputs.append(infer_input)
 
-        result = stub.Predict(request, 10.0) # result includes a dictionary with all model outputs
-        #print("\nresult:", result)
+        result = client.infer("bert", infer_inputs)
         res = {}
         for out_name in output_names:
-            #   print("out_name:",out_name)
-            res[out_name] = make_ndarray(result.outputs[out_name])
+            res[out_name] = result.as_numpy(out_name)
 
         # get start-end scores for context
         def get_score(name):
