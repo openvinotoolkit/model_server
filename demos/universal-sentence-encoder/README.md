@@ -62,13 +62,15 @@ ovms --model_name usem --model_path universal-sentence-encoder-multilingual/ --p
 
 ## Send string data as inference request
 
-OpenVINO Model Server can accept the input in a form of strings. Below is a code snipped based on `tensorflow_serving_api` python library:
+OpenVINO Model Server can accept the input in a form of strings. Below is a code snippet based on `tritonclient` python library (KServe gRPC API):
 ```python
-data = np.array(["string1", "string1", "string_n"])
-predict_request = predict_pb2.PredictRequest()
-predict_request.model_spec.name = "my_model"
-predict_request.inputs["input_name"].CopyFrom(make_tensor_proto(data))
-predict_response = prediction_service_stub.Predict(predict_request, 10.0)
+import tritonclient.grpc as grpcclient
+
+client = grpcclient.InferenceServerClient(url="localhost:9000")
+input_data = np.array(["string1", "string2"], dtype=np.object_)
+infer_input = grpcclient.InferInput("inputs", [len(input_data)], "BYTES")
+infer_input.set_data_from_numpy(input_data)
+result = client.infer("my_model", [infer_input])
 ```
 
 Clone the repo:
@@ -90,35 +92,10 @@ Output subset [-0.00552395  0.00599533 -0.01480555  0.01098945 -0.09355522 -0.08
 
 ```
 
-The same can be achieved using REST API interface and even a simple `curl` command:
+The same can be achieved using REST API interface and even a simple `curl` command (KServe format):
 
 ```bash
-curl -X POST http://localhost:8000/v1/models/usem:predict \
+curl -X POST http://localhost:8000/v2/models/usem/infer \
 -H 'Content-Type: application/json' \
--d '{"instances": ["dog", "Puppies are nice.", "I enjoy taking long walks along the beach with my dog."]}'
+-d '{"inputs": [{"name": "inputs", "shape": [3], "datatype": "BYTES", "data": ["dog", "Puppies are nice.", "I enjoy taking long walks along the beach with my dog."]}]}'
 ```  
-
-
-## Compare results with TFS
-
-The same client code can be used to send the requests to TensorFlow Serving component. There is full compatibility in the API.
-
-Start TFS container:
-```bash
-docker run -it -p 8500:8500 -p 9500:9500 -v $(pwd)/universal-sentence-encoder-multilingual:/models/usem -e MODEL_NAME=usem tensorflow/serving --port=9500 --rest_api_port=8500
-```
-
-Run the client
-```bash
-python model_server/demos/universal-sentence-encoder/send_strings.py --grpc_port 9500 --input_name inputs --output_name outputs --string "I enjoy taking long walks along the beach with my dog."
-
-processing time 12.167000000000002 ms.
-Output shape (1, 512)
-Output subset [-0.00552387  0.00599531 -0.0148055   0.01098951 -0.09355522 -0.08445048
- -0.02802679 -0.05219323 -0.06759984  0.03127313 -0.03223493 -0.01282088
-  0.06131843  0.02626882 -0.00983502  0.00298053  0.00141208  0.03229369
-  0.06957125  0.01543701]
-
-```
-
-> NOTE: Do not use this model with `--cache_dir`, the model does not support caching.

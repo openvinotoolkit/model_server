@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,35 +15,17 @@
 //*****************************************************************************
 #pragma once
 
-#include <cstdint>
+#include "../base_input_processor.hpp"
 
 namespace ovms {
-struct ExecutionContext {
-    enum class Interface : uint8_t {
-        GRPC,
-        REST,
-    };
-    enum class Method : uint8_t {
-        // Model Control API
-        ConfigReload,
-        ConfigStatus,
 
-        // KServe
-        ModelInfer,
-        ModelInferStream,
-        ModelReady,
-        ModelMetadata,
-
-        // V3
-        V3Unary,
-        V3Stream,
-    };
-
-    Interface interface;
-    Method method;
-
-    ExecutionContext(Interface interface, Method method) :
-        interface(interface),
-        method(method) {}
+// Replaces empty content arrays ("content": []) in ChatHistory messages with null.
+// Runs for all chat paths (LM and VLM) and must execute before ImageDecodingProcessor
+// and TextContentNormalizationProcessor so downstream processors and chat templates
+// see a null content instead of an empty array.
+class EmptyContentArrayNormalizationProcessor : public BaseInputProcessor {
+public:
+    absl::Status process(InputRequest& req) override;
 };
+
 }  // namespace ovms
