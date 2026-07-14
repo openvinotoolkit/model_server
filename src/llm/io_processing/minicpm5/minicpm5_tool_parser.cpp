@@ -377,6 +377,15 @@ std::optional<rapidjson::Document> Minicpm5ToolParser::sendFullDelta(const ToolC
         throw std::runtime_error("Minicpm5ToolParser: for streaming expected one tool call");
     }
     auto& toolCall = toolCalls[0];
+    // If the first delta was not sent yet (complete tool call in a single chunk),
+    // return a combined delta with id, type, name AND arguments.
+    if (this->returnedFirstDeltas.find(this->toolCallIndex) == this->returnedFirstDeltas.end() ||
+        this->toolCallIndex == -1) {
+        int toolCallId = ++this->toolCallIndex;
+        this->returnedFirstDeltas.insert(toolCallId);
+        this->returnedCompleteDeltas.insert(toolCallId);
+        return wrapCombinedDelta(toolCall);
+    }
     this->returnedCompleteDeltas.insert(this->toolCallIndex);
     rapidjson::Document argumentsWrapper;
     argumentsWrapper.SetObject();
@@ -388,6 +397,35 @@ std::optional<rapidjson::Document> Minicpm5ToolParser::sendFullDelta(const ToolC
     auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
     SPDLOG_DEBUG("Minicpm5ToolParser: full delta: {}", documentToString(currentDelta));
     return currentDelta;
+}
+
+rapidjson::Document Minicpm5ToolParser::wrapCombinedDelta(const ToolCall& toolCall) {
+    rapidjson::Document wrappedDelta;
+    wrappedDelta.SetObject();
+    rapidjson::Document::AllocatorType& allocator = wrappedDelta.GetAllocator();
+
+    rapidjson::Value toolCalls(rapidjson::kArrayType);
+    rapidjson::Value toolCallObj(rapidjson::kObjectType);
+    rapidjson::Value idValue(generateRandomId().c_str(), allocator);
+    toolCallObj.AddMember("id", idValue, allocator);
+    toolCallObj.AddMember("type", "function", allocator);
+    toolCallObj.AddMember("index", this->toolCallIndex, allocator);
+
+    rapidjson::Value functionObj(rapidjson::kObjectType);
+    rapidjson::Value nameValue(toolCall.name.c_str(), allocator);
+    functionObj.AddMember("name", nameValue, allocator);
+    toolCallObj.AddMember("function", functionObj, allocator);
+
+    rapidjson::Value argumentsValue(rapidjson::kStringType);
+    argumentsValue.SetString(toolCall.arguments.c_str(), allocator);
+    toolCallObj.AddMember("arguments", argumentsValue, allocator);
+
+    toolCalls.PushBack(toolCallObj, allocator);
+    rapidjson::Value deltaWrapper(rapidjson::kObjectType);
+    deltaWrapper.AddMember("tool_calls", toolCalls, allocator);
+    wrappedDelta.AddMember("delta", deltaWrapper, allocator);
+    SPDLOG_DEBUG("Minicpm5ToolParser: combined delta: {}", documentToString(wrappedDelta));
+    return wrappedDelta;
 }
 
 std::optional<rapidjson::Document> Minicpm5ToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {

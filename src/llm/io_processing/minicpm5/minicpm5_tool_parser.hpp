@@ -175,6 +175,7 @@ private:
     const std::vector<int64_t> removeReasoningTokens(const std::vector<int64_t>& generatedTokens);
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
     std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
+    rapidjson::Document wrapCombinedDelta(const ToolCall& toolCall);
     void lazyFillInitToolParametersTypesMap();
 };
 

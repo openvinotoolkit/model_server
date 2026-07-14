@@ -779,6 +779,14 @@ TEST(Minicpm5ToolParserImplTest, StringParamWithQuotesAndBackslashes) {
     EXPECT_EQ(std::string(argsDoc["query"].GetString()), R"(say "hi" and a backslash \ here)");
 }
 
+TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallWithBiggerChunks) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<function name=\"dummy\"><param name=\"config\">{\'key\':\'value\'}</param></function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"},"arguments":"{\"config\":{\"key\":\"value\"}}"}]}})"},    
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
 TEST(Minicpm5ToolParserImplTest, StringParamWithCodeSnippet) {
     const std::string code =
         "def f(x):\n    return {\"a\": x, \"b\": [1, 2, 3]}  // comment";
