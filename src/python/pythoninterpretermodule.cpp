@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "pythoninterpretermodule.hpp"
 
+#include <cstdlib>
 #include <string>
 #include <utility>
 #pragma warning(push)
@@ -32,6 +33,13 @@
 namespace py = pybind11;
 
 namespace ovms {
+
+namespace {
+bool shouldFinalizeInterpreterOnShutdown() {
+    const char* skipGlobalPyEnv = std::getenv("OVMS_TEST_SKIP_GLOBAL_PY_ENV");
+    return !(skipGlobalPyEnv != nullptr && std::string(skipGlobalPyEnv) == "1");
+}
+}  // namespace
 
 Status PythonInterpreterModule::start(const ovms::Config&) {
     state = ModuleState::STARTED_INITIALIZE;
@@ -101,8 +109,17 @@ void PythonInterpreterModule::shutdown() {
     pythonBackend.reset();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
-    if (ownsInterpreter)
-        py::finalize_interpreter();
+    if (ownsInterpreter) {
+        if (shouldFinalizeInterpreterOnShutdown()) {
+            py::finalize_interpreter();
+        } else {
+            SPDLOG_INFO("Skipping Python interpreter finalization in OVMS_TEST_SKIP_GLOBAL_PY_ENV mode");
+            // We reacquire GIL above for backend cleanup. When reusing the
+            // interpreter across test suites, release it here so the next
+            // server startup thread can acquire GIL without blocking.
+            PyEval_SaveThread();
+        }
+    }
 }
 
 void PythonInterpreterModule::releaseGILFromThisThread() const {

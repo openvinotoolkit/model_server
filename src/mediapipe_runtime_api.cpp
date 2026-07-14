@@ -202,7 +202,9 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
                 missingSymbols.emplace_back("OVMS_MPFactoryFindServableDefinitionByName");
             if (api->createServableConfig == nullptr)
                 missingSymbols.emplace_back("OVMS_MPGraphExportCreateServableConfig");
-            SPDLOG_DEBUG("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS=1 but in-process runtime API symbols are incomplete. Missing: {}", joinWithNewlines(missingSymbols));
+            SPDLOG_ERROR("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS=1 but in-process runtime API symbols are incomplete. Missing: {}", joinWithNewlines(missingSymbols));
+            SPDLOG_ERROR("Refusing to fall back to libovms_mediapipe_runtime_shared.so in strict test in-process mode.");
+            return;
         }
     }
 #endif

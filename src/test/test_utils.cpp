@@ -763,10 +763,15 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
         std::this_thread::sleep_for(std::chrono::milliseconds(timestepMs));
     }
     if (startFailedEarly) {
+        server.setShutdownRequest(1);
         FAIL() << "OVMS startup thread exited early with non-zero status: " << server.getExitStatus();
         return;
     }
-    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
+    if (server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) {
+        server.setShutdownRequest(1);
+        FAIL() << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
+        return;
+    }
 }
 
 void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int completionTimeoutSeconds) {

@@ -261,7 +261,9 @@ bool loadPythonCalculatorsPlugin() {
     if (forceInProcessForTests) {
         auto* inProcessRegisterFn = reinterpret_cast<RegisterPythonCalculatorsFn>(dlsym(RTLD_DEFAULT, "registerPythonCalculators"));
         if (inProcessRegisterFn == nullptr) {
-            SPDLOG_TRACE("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 but registerPythonCalculators is not available in-process. Falling back to plugin dlopen.");
+            SPDLOG_ERROR("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 but registerPythonCalculators is not available in-process.");
+            SPDLOG_ERROR("Refusing to fall back to libpython_calculators.so dlopen in strict test in-process mode.");
+            return false;
         } else {
             registerPythonCalculatorsFn = inProcessRegisterFn;
             hasInProcessRegisterFn = true;
@@ -276,7 +278,9 @@ bool loadPythonCalculatorsPlugin() {
                 SPDLOG_TRACE("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 set; using in-process Python calculators symbols and skipping plugin dlopen");
                 return true;
             }
-            SPDLOG_TRACE("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 set and in-process register function was found, but KFS bridge is missing. Falling back to plugin dlopen.");
+            SPDLOG_ERROR("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 set and in-process register function was found, but KFS bridge is missing.");
+            SPDLOG_ERROR("Refusing to fall back to libpython_calculators.so dlopen in strict test in-process mode.");
+            return false;
         }
     }
 
