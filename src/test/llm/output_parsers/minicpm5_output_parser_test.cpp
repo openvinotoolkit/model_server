@@ -781,7 +781,7 @@ TEST(Minicpm5ToolParserImplTest, StringParamWithQuotesAndBackslashes) {
 
 TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallWithBiggerChunks) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
-        {"<function name=\"dummy\"><param name=\"config\">{\'key\':\'value\'}</param></function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"},"arguments":"{\"config\":{\"key\":\"value\"}}"}]}})"},    
+        {"<function name=\"dummy\"><param name=\"config\">{\'key\':\'value\'}</param></function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"},"arguments":"{\"config\":{\"key\":\"value\"}}"}]}})"},
     };
 
     assertStreamingVec(chunkToDeltaVec);
