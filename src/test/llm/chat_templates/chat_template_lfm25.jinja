@@ -1,3 +1,7 @@
+{#-
+  Modifications:
+    * Adding support for arguments as string so that minja does not detect the need to apply polyfills. This is dead path for OVMS as it always converts arguments to dict anyway. 
+#}
 {{- bos_token -}}
 {%- set preserve_thinking = preserve_thinking | default(false) -%}
 
@@ -34,11 +38,15 @@
     {%- for tool_call in tool_calls -%}
         {%- set func_name = tool_call["function"]["name"] -%}
         {%- set func_args = tool_call["function"]["arguments"] -%}
-        {%- set args_ns = namespace(arg_strings=[]) -%}
-        {%- for arg_name, arg_value in func_args.items() -%}
-            {%- set args_ns.arg_strings = args_ns.arg_strings + [arg_name + "=" + format_arg_value(arg_value)] -%}
-        {%- endfor -%}
-        {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + (args_ns.arg_strings | join(", ")) + ")"] -%}
+        {%- if func_args is string -%}
+            {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + func_args + ")"] -%}
+        {%- else -%}
+            {%- set args_ns = namespace(arg_strings=[]) -%}
+            {%- for arg_name, arg_value in func_args.items() -%}
+                {%- set args_ns.arg_strings = args_ns.arg_strings + [arg_name + "=" + format_arg_value(arg_value)] -%}
+            {%- endfor -%}
+            {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + (args_ns.arg_strings | join(", ")) + ")"] -%}
+        {%- endif -%}
     {%- endfor -%}
     {{- "<|tool_call_start|>[" + (tool_calls_ns.tool_calls | join(", ")) + "]<|tool_call_end|>" -}}
 {%- endmacro -%}
