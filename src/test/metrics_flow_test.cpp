@@ -620,7 +620,7 @@ TEST_F(MetricFlowTest, RestV3Unary) {
         HttpRequestComponents comps;
         comps.headers = {{"content-type", "application/json"}};
         auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
-        auto status = handler.processOpenAI("/v3/completions", comps, response, request, streamPtr, multiPartParser);
+        auto status = handler.processOpenAI("/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
         status = handler.processOpenAI("/v3/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
@@ -650,7 +650,7 @@ TEST_F(MetricFlowTest, RestV3UnaryError) {
         std::string response;
         HttpRequestComponents comps;
         comps.headers = {{"content-type", "application/json"}};
-        auto status = handler.processOpenAI("/v3/completions", comps, response, request, streamPtr, multiPartParser);
+        auto status = handler.processOpenAI("/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
         status = handler.processOpenAI("/v3/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
@@ -676,7 +676,7 @@ TEST_F(MetricFlowTest, RestV3Stream) {
         HttpRequestComponents comps;
         comps.headers = {{"content-type", "application/json"}};
         auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
-        auto status = handler.processOpenAI("/v3/completions", comps, response, request, streamPtr, multiPartParser);
+        auto status = handler.processOpenAI("/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
         status = handler.processOpenAI("/v3/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
@@ -711,7 +711,7 @@ TEST_F(MetricFlowTest, RestV3StreamError) {
         std::string response;
         HttpRequestComponents comps;
         comps.headers = {{"content-type", "application/json"}};
-        auto status = handler.processOpenAI("/v3/completions", comps, response, request, streamPtr, multiPartParser);
+        auto status = handler.processOpenAI("/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
         status = handler.processOpenAI("/v3/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();

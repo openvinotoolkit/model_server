@@ -51,7 +51,7 @@ protected:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    std::string endpoint = "/v3/chat/completions";
+    std::string endpoint = "/v1/chat/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -88,7 +88,7 @@ protected:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpoint = "/v3/chat/completions";
+    const std::string endpoint = "/v1/chat/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -131,7 +131,7 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, CorrectApiKey) {
             "messages": []
         }
     )";
-    const std::string URI = "/v3/chat/completions";
+    const std::string URI = "/v1/chat/completions";
     comp.headers["authorization"] = "Bearer 1234";
     std::cout << "URI" << URI << std::endl;
     std::cout << "BODY" << requestBody << std::endl;
@@ -140,7 +140,7 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, CorrectApiKey) {
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processOpenAI("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
 
@@ -151,7 +151,7 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, CorrectApiKeyMissingModel) {
             "messages": []
         }
     )";
-    const std::string URI = "/v3/chat/completions";
+    const std::string URI = "/v1/chat/completions";
     comp.headers["authorization"] = "Bearer 1234";
     std::cout << "URI" << URI << std::endl;
     std::cout << "BODY" << requestBody << std::endl;
@@ -160,7 +160,7 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, CorrectApiKeyMissingModel) {
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processOpenAI("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING) << status.string();
 }
 
@@ -171,13 +171,13 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, IncorrectApiKey) {
             "messages": []
         }
     )";
-    const std::string URI = "/v3/chat/completions";
+    const std::string URI = "/v1/chat/completions";
     comp.headers["authorization"] = "Bearer ABCD";
     std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processOpenAI("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::UNAUTHORIZED) << status.string();
 }
 
@@ -188,12 +188,12 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, MissingApiKey) {
             "messages": []
         }
     )";
-    const std::string URI = "/v3/chat/completions";
+    const std::string URI = "/v1/chat/completions";
     std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processOpenAI("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::UNAUTHORIZED) << status.string();
 }
 
@@ -206,12 +206,12 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
         }
     )";
 
-    const std::string URI = "/v3/something";
+    const std::string URI = "/v1/something";
     ASSERT_EQ(
         handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(URI: /v3/something
+    std::string expectedResponse = R"(URI: /v1/something
 Key: content-type; Value: application/json
 Body:
 
@@ -238,10 +238,10 @@ TEST_F(HttpOpenAIHandlerTest, UnaryWithHeaders) {
     comp.headers["test2"] = "header";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor("/v1/completions/", requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(URI: /v3/completions/
+    std::string expectedResponse = R"(URI: /v1/completions/
 Key: content-type; Value: application/json
 Key: test1; Value: header
 Key: test2; Value: header
@@ -273,7 +273,7 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
     EXPECT_CALL(*writer, IsDisconnected()).Times(9);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 
     ASSERT_EQ(response, "");
@@ -294,7 +294,7 @@ TEST_F(HttpOpenAIHandlerTest, ResponsesStream) {
     EXPECT_CALL(*writer, IsDisconnected()).Times(9);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/responses", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor("/v1/responses", requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 
     ASSERT_EQ(response, "");
@@ -307,7 +307,7 @@ TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - Cannot parse JSON body");
 }
@@ -319,7 +319,7 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body must be an object");
 }
@@ -340,7 +340,7 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedObjects) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
 }
@@ -353,7 +353,7 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedArrays) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
 }
@@ -371,7 +371,7 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
 }
 
@@ -3337,13 +3337,13 @@ TEST_F(HttpOpenAIHandlerTest, V3ApiWithNonLLMCalculator) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
 }
 
 TEST_F(HttpOpenAIHandlerTest, DefaultContentTypeJSON) {
     std::string requestBody = "";
-    endpoint = "/v3/chat/completions";
+    endpoint = "/v1/chat/completions";
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     ASSERT_NE(  // Not equal because we do not expect for the workload to be processed
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
@@ -3469,7 +3469,7 @@ protected:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    std::string endpoint = "/v3/chat/completions";
+    std::string endpoint = "/v1/chat/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -3506,12 +3506,12 @@ TEST_F(HttpOpenAIHandlerWithQueueTest, UnaryWithQueue) {
         }
     )";
 
-    const std::string URI = "/v3/something";
+    const std::string URI = "/v1/something";
     ASSERT_EQ(
         handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(URI: /v3/something
+    std::string expectedResponse = R"(URI: /v1/something
 Key: content-type; Value: application/json
 Body:
 
@@ -3543,7 +3543,7 @@ TEST_F(HttpOpenAIHandlerWithQueueTest, StreamWithQueue) {
     EXPECT_CALL(*writer, IsDisconnected()).Times(9);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 
     // For streaming, the response body stays empty (content goes through PartialReply callbacks)
