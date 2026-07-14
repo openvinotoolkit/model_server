@@ -110,9 +110,9 @@ const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
     R"(/v2)";
 
 const std::string HttpRestApiHandler::v3_ListModelsRegexExp =
-    R"((?:/v3/|/v1/)(v1/)?models)";
+    R"((?:/v3/(v1/)?|/v1/)models)";
 const std::string HttpRestApiHandler::v3_RetrieveModelRegexExp =
-    R"((?:/v3/|/v1/)(v1/)?models/(.+))";
+    R"((?:/v3/(v1/)?|/v1/)models/(.+))";
 const std::string HttpRestApiHandler::v3_RegexExp =
     R"((?:/v3/|/v1/).*?(/|$))";
 
