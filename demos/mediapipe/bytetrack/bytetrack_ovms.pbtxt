@@ -1,0 +1,128 @@
+input_stream: "IMAGE:input_video"
+# input_side_packet: "INPUT_FILE_PATH:input_file_path" #simple_run_graph_main.cc
+output_stream: "IMAGE:output"
+
+node: {
+  calculator: "ImageTransformationCalculator"
+  input_stream: "IMAGE:input_video"
+  output_stream: "IMAGE:transformed_input_video"
+  node_options: {
+    [type.googleapis.com/mediapipe.ImageTransformationCalculatorOptions] {
+      output_width: 416
+      output_height: 416
+    }
+  }
+}
+
+node {
+  calculator: "OpenVINOConverterCalculator"
+  input_stream: "IMAGE:transformed_input_video"
+  output_stream: "TENSORS:image_tensor"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOConverterCalculatorOptions] {
+      enable_normalization: true
+      use_custom_normalization: true
+      custom_div: 1.0
+      custom_sub: 0.0
+    }
+  }
+}
+# Runs a TensorFlow Lite model on CPU that takes an image tensor and outputs a
+# vector of tensors representing, for instance, detection boxes/keypoints and
+# scores.
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:session"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "yoloxt_float32"  # servable name inside OVMS
+      servable_version: "1"
+    }
+  }
+}
+
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "OVTENSORS:image_tensor"
+  output_stream: "OVTENSORS2:detection_tensors"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
+          input_order_list :["images"]
+          output_order_list :["output"]
+        }
+  }
+}
+
+### WRITE YOLO SPECIFIC CALCULATORS
+
+node{
+    calculator: "OpenVINOYoloXTensorsToDetectionsCalculator"
+    input_stream: "TENSORS:detection_tensors"
+    output_stream: "DETECTIONS:detections"
+    node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOYoloXTensorsToDetectionsCalculatorOptions] {
+      conf_thresh: 0.1
+    }
+  }
+}
+
+# Performs non-max suppression to remove excessive detections.
+node {
+  calculator: "NonMaxSuppressionCalculator"
+  input_stream: "detections"
+  output_stream: "filtered_detections"
+  node_options: {
+    [type.googleapis.com/mediapipe.NonMaxSuppressionCalculatorOptions] {
+      min_suppression_threshold: 0.45
+      max_num_detections: 100
+      overlap_type: INTERSECTION_OVER_UNION
+      return_empty_detections: true
+    }
+  }
+}
+
+
+# Maps detection label IDs to the corresponding label text. The label map is
+# provided in the label_map_path option.
+node {
+  calculator: "DetectionLabelIdToTextCalculator"
+  input_stream: "filtered_detections"
+  output_stream: "output_detections"
+  node_options: {
+    [type.googleapis.com/mediapipe.DetectionLabelIdToTextCalculatorOptions] {
+      label_map_path: "/demo/coco_80cl.txt"
+    }
+  }
+}
+
+node {
+  calculator: "ByteTrackCalculator"
+  input_stream: "DETECTIONS:output_detections"
+  output_stream: "DETECTIONS:tracked_detections"
+  options: {
+    [mediapipe.ByteTrackCalculatorOptions.ext] {
+      track_high_threshold:0.5
+      track_low_threshold:0.1
+      new_track_threshold:0.35
+      matching_threshold: 0.8
+      track_buffer: 30
+      fuse_score: false
+    }
+  }
+}
+
+# Converts the detections to drawing primitives for annotation overlay.
+node {
+  calculator: "DetectionColorByIdCalculator"
+  input_stream: "DETECTIONS:tracked_detections"
+  output_stream: "RENDER_DATA:detections_render_data"
+}
+
+# Draws annotations and overlays them on top of the input images.
+node {
+  calculator: "AnnotationOverlayCalculator"
+  input_stream: "IMAGE:transformed_input_video"
+  input_stream: "detections_render_data"
+  output_stream: "IMAGE:output"
+}

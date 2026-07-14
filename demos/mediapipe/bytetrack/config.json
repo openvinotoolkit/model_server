@@ -1,0 +1,16 @@
+{
+    "model_config_list": [
+        {"config": {
+            "name": "yoloxt_float32",
+            "base_path": "yolox_tiny_float32"
+    }
+    }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"ByteTrack",
+        "base_path":"./",
+        "graph_path":"bytetrack_ovms.pbtxt"
+    }
+    ]
+}
