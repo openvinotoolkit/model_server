@@ -135,7 +135,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             api->createServableConfig != nullptr;
 
         if (loadedFromInProcessSymbols) {
-            SPDLOG_INFO("MediaPipe runtime API resolved from in-process symbols");
+            SPDLOG_TRACE("MediaPipe runtime API resolved from in-process symbols");
         } else {
             std::vector<std::string> missingSymbols;
             if (api->create == nullptr)
@@ -162,7 +162,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
                 missingSymbols.emplace_back("OVMS_MPFactoryFindServableDefinitionByName");
             if (api->createServableConfig == nullptr)
                 missingSymbols.emplace_back("OVMS_MPGraphExportCreateServableConfig");
-            SPDLOG_WARN("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS=1 but in-process runtime API symbols are incomplete. Missing: {}", joinWithNewlines(missingSymbols));
+            SPDLOG_DEBUG("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS=1 but in-process runtime API symbols are incomplete. Missing: {}", joinWithNewlines(missingSymbols));
         }
     }
 #endif
@@ -211,7 +211,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         for (const auto& candidate : candidates) {
             api->handle = dlopen(candidate.c_str(), runtimeDlopenFlags);
             if (api->handle != nullptr) {
-                SPDLOG_INFO("MediaPipe runtime API loaded from: {}", candidate);
+                SPDLOG_TRACE("MediaPipe runtime API loaded from: {}", candidate);
                 break;
             }
         }
@@ -227,7 +227,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         for (const auto& candidate : candidates) {
             api->handle = LoadLibraryA(candidate.c_str());
             if (api->handle != nullptr) {
-                SPDLOG_INFO("MediaPipe runtime API loaded from: {}", candidate);
+                SPDLOG_TRACE("MediaPipe runtime API loaded from: {}", candidate);
                 break;
             }
         }

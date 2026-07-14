@@ -92,6 +92,7 @@ build:linux --host_cxxopt=-std=c++17
 # For Tensorflow building only
 build:linux --action_env PYTHON_BIN_PATH="/usr/bin/python3"
 build:linux --define PYTHON_BIN_PATH=/usr/bin/python3
+build:linux --repo_env=HERMETIC_PYTHON_VERSION=3.12
 
 # Security options ######################################################################################################
 # TODO: Add equivalent windows flag

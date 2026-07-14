@@ -100,7 +100,7 @@ bool ensurePythonCalculatorsRuntimeLoaded() {
     for (const auto& candidate : candidates) {
         pythonCalculatorsRuntimeHandle = dlopen(candidate.c_str(), runtimeSharedDlopenFlags());
         if (pythonCalculatorsRuntimeHandle != nullptr) {
-            SPDLOG_INFO("Python calculators runtime loaded from: {}", candidate);
+            SPDLOG_TRACE("Python calculators runtime loaded from: {}", candidate);
             return true;
         }
     }
@@ -131,7 +131,7 @@ void activateKfsBridge(const KfsPyTensorBridgeVTable* vtable, const char* source
 
     setKfsPyTensorBridgeVTable(vtable);
     syncKfsBridgeToRuntimeShared(vtable);
-    SPDLOG_INFO("KFS Python tensor bridge activated from {}", source);
+    SPDLOG_TRACE("KFS Python tensor bridge activated from {}", source);
 }
 
 #endif
@@ -143,7 +143,7 @@ void activateKfsBridge(const KfsPyTensorBridgeVTable* vtable, const char* source
     }
 
     setKfsPyTensorBridgeVTable(vtable);
-    SPDLOG_INFO("KFS Python tensor bridge activated from {}", source);
+    SPDLOG_TRACE("KFS Python tensor bridge activated from {}", source);
 }
 #endif
 
@@ -158,7 +158,7 @@ bool probePluginLoadInChildProcess(const std::string& pluginPath) {
     // terminating the whole server.
     pid_t probePid = fork();
     if (probePid < 0) {
-        SPDLOG_WARN("Could not start Python calculators plugin probe for {}. Will try loading directly.", pluginPath);
+        SPDLOG_DEBUG("Could not start Python calculators plugin probe for {}. Will try loading directly.", pluginPath);
         return true;
     }
 
@@ -206,7 +206,7 @@ bool probePluginLoadInChildProcess(const std::string& pluginPath) {
         if (errno == EINTR) {
             continue;
         }
-        SPDLOG_WARN("Could not wait for Python calculators plugin probe for {}. Will try loading directly.", pluginPath);
+        SPDLOG_DEBUG("Could not wait for Python calculators plugin probe for {}. Will try loading directly.", pluginPath);
         return true;
     }
 
@@ -215,7 +215,7 @@ bool probePluginLoadInChildProcess(const std::string& pluginPath) {
     }
 
     if (WIFSIGNALED(waitStatus)) {
-        SPDLOG_WARN("Skipping Python calculators plugin candidate {} because probe process terminated with signal {}.", pluginPath, WTERMSIG(waitStatus));
+        SPDLOG_DEBUG("Skipping Python calculators plugin candidate {} because probe process terminated with signal {}.", pluginPath, WTERMSIG(waitStatus));
     } else if (WIFEXITED(waitStatus)) {
         SPDLOG_DEBUG("Python calculators plugin probe failed for {} with exit code {}.", pluginPath, WEXITSTATUS(waitStatus));
     } else {
@@ -270,7 +270,7 @@ void logLikelyMissingWindowsDependencies() {
         char resolvedPath[MAX_PATH] = {0};
         DWORD pathLen = SearchPathA(nullptr, dependency.c_str(), nullptr, MAX_PATH, resolvedPath, nullptr);
         if (pathLen == 0 || pathLen >= MAX_PATH) {
-            SPDLOG_WARN("Python calculators plugin dependency not found in DLL search path: {}", dependency);
+            SPDLOG_DEBUG("Python calculators plugin dependency not found in DLL search path: {}", dependency);
         } else {
             SPDLOG_DEBUG("Python calculators plugin dependency resolved: {} -> {}", dependency, resolvedPath);
         }
@@ -303,16 +303,16 @@ bool loadPythonCalculatorsPlugin() {
             }
         }
         if (getKfsPyTensorBridgeVTable() != nullptr) {
-            SPDLOG_INFO("Python calculators plugin entry point already linked in-process, skipping plugin dlopen");
+            SPDLOG_TRACE("Python calculators plugin entry point already linked in-process, skipping plugin dlopen");
             return true;
         }
-        SPDLOG_WARN("In-process python calculators entry point is available but KFS Python tensor bridge is not initialized. Falling back to plugin dlopen.");
+        SPDLOG_TRACE("In-process python calculators entry point is available but KFS Python tensor bridge is not initialized. Falling back to plugin dlopen.");
     }
 
     if (forceInProcessForTests) {
         auto* inProcessRegisterFn = reinterpret_cast<RegisterPythonCalculatorsFn>(dlsym(RTLD_DEFAULT, "registerPythonCalculators"));
         if (inProcessRegisterFn == nullptr) {
-            SPDLOG_WARN("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 but registerPythonCalculators is not available in-process. Falling back to plugin dlopen.");
+            SPDLOG_TRACE("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 but registerPythonCalculators is not available in-process. Falling back to plugin dlopen.");
         } else {
             registerPythonCalculatorsFn = inProcessRegisterFn;
             hasInProcessRegisterFn = true;
@@ -324,10 +324,10 @@ bool loadPythonCalculatorsPlugin() {
             }
 
             if (getKfsPyTensorBridgeVTable() != nullptr) {
-                SPDLOG_INFO("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 set; using in-process Python calculators symbols and skipping plugin dlopen");
+                SPDLOG_TRACE("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 set; using in-process Python calculators symbols and skipping plugin dlopen");
                 return true;
             }
-            SPDLOG_WARN("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 set and in-process register function was found, but KFS bridge is missing. Falling back to plugin dlopen.");
+            SPDLOG_TRACE("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS=1 set and in-process register function was found, but KFS bridge is missing. Falling back to plugin dlopen.");
         }
     }
 
@@ -344,10 +344,10 @@ bool loadPythonCalculatorsPlugin() {
         }
 
         if (getKfsPyTensorBridgeVTable() != nullptr) {
-            SPDLOG_INFO("Python calculators plugin already present in the process, skipping dlopen");
+            SPDLOG_TRACE("Python calculators plugin already present in the process, skipping dlopen");
             return true;
         }
-        SPDLOG_WARN("Python calculators entry point is present in the process but KFS Python tensor bridge is not initialized. Falling back to plugin dlopen.");
+        SPDLOG_TRACE("Python calculators entry point is present in the process but KFS Python tensor bridge is not initialized. Falling back to plugin dlopen.");
     }
 
     ensurePythonCalculatorsRuntimeLoaded();
@@ -360,12 +360,12 @@ bool loadPythonCalculatorsPlugin() {
         if (runtimeBridgeFn != nullptr) {
             if (auto* vtable = runtimeBridgeFn(); vtable != nullptr) {
                 activateKfsBridge(vtable, "preloaded runtime-shared library");
-                SPDLOG_INFO("Python calculators registration activated from preloaded runtime-shared library");
+                SPDLOG_TRACE("Python calculators registration activated from preloaded runtime-shared library");
                 return true;
             }
         }
 
-        SPDLOG_INFO("Python calculators registration is already present after runtime-shared preload; skipping plugin dlopen");
+        SPDLOG_TRACE("Python calculators registration is already present after runtime-shared preload; skipping plugin dlopen");
         return true;
     }
 
@@ -433,7 +433,7 @@ bool loadPythonCalculatorsPlugin() {
         pythonCalculatorsHandle = dlopen(candidate.c_str(), pythonPluginDlopenFlags());
 
         if (pythonCalculatorsHandle != nullptr) {
-            SPDLOG_INFO("Successfully loaded Python calculators plugin from: {}", candidate);
+            SPDLOG_TRACE("Successfully loaded Python calculators plugin from: {}", candidate);
             break;
         } else {
             const std::string errorDetails = safeDlerror();
@@ -447,7 +447,7 @@ bool loadPythonCalculatorsPlugin() {
                     "MediaPipe Python calculators will not be available.",
             errorDetails);
         if (hasInProcessRegisterFn) {
-            SPDLOG_WARN("Proceeding with in-process python calculators registration without KFS Python tensor bridge.");
+            SPDLOG_TRACE("Proceeding with in-process python calculators registration without KFS Python tensor bridge.");
             return true;
         }
         return false;
@@ -536,7 +536,7 @@ bool loadPythonCalculatorsPlugin() {
         SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", toAbsolutePath(candidate));
         pythonCalculatorsHandle = LoadLibraryA(candidate.c_str());
         if (pythonCalculatorsHandle != nullptr) {
-            SPDLOG_INFO("Python calculators plugin loaded from candidate: {}", toAbsolutePath(candidate));
+            SPDLOG_TRACE("Python calculators plugin loaded from candidate: {}", toAbsolutePath(candidate));
             break;
         }
 
@@ -553,9 +553,9 @@ bool loadPythonCalculatorsPlugin() {
 
     if (pythonCalculatorsHandle == nullptr) {
         DWORD error = lastLoadError != ERROR_SUCCESS ? lastLoadError : GetLastError();
-        SPDLOG_WARN("Python calculators plugin candidates attempted: {}", candidates.size());
+        SPDLOG_TRACE("Python calculators plugin candidates attempted: {}", candidates.size());
         for (const auto& candidate : candidates) {
-            SPDLOG_WARN("  candidate: {}", toAbsolutePath(candidate));
+            SPDLOG_TRACE("Python calculators plugin candidate: {}", toAbsolutePath(candidate));
         }
         logLikelyMissingWindowsDependencies();
         SPDLOG_WARN("Python calculators plugin libpython_calculators.dll failed to load: {} ({}). "
@@ -581,7 +581,7 @@ bool loadPythonCalculatorsPlugin() {
 
     registerPythonCalculatorsFn();
 
-    SPDLOG_INFO("Python calculators plugin loaded successfully");
+    SPDLOG_TRACE("Python calculators plugin loaded successfully");
     // Also load the KFS Python tensor bridge vtable from the same plugin.
     // This enables OVMS_PY_TENSOR deserialization/serialization in the KFS
     // graph executor without linking pybind11 into the main binary.
