@@ -573,8 +573,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(rapidjson::Doc
             }
         } else {
             // No delta from the parser (e.g. generation ended on a swallowed token).
-            // The OpenAI API requires "delta" to always be present in each choice,
-            // so emit an empty object. Both llama.cpp and vllm do the same.
+            // The OpenAI API requires "delta" to always be present in each choice, so emit an empty object.
             Value emptyDelta(kObjectType);
             choice.AddMember("delta", emptyDelta, allocator);
         }
