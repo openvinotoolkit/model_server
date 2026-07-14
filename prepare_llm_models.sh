@@ -102,18 +102,6 @@ if [ ! -f "$1/$STT_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$STT_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
-
-if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
-else
-  hf download "$VLM_MODEL" --local-dir $1/$VLM_MODEL
-  convert_tokenizer OpenGVLab/InternVL2-1B --with_detokenizer -o $1/$VLM_MODEL  # WA to use newer tokenizer model format which supports padding.
-fi
-if [ ! -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Model file $1/$VLM_MODEL/$TOKENIZER_FILE does not exist."
-  exit 1
-fi
-
 if [ -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
   echo "Model file $1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE exists. Skipping downloading models."
 else
@@ -224,7 +212,8 @@ fi
 if [ -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then
   echo "Models file $1/$GEMMA4_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
-  hf download "$GEMMA4_MODEL" --local-dir $1/$GEMMA4_MODEL --include *tokenizer*
+  mkdir -p $1/$GEMMA4_MODEL
+  convert_tokenizer $GEMMA4_MODEL --with_detokenizer -o $1/$GEMMA4_MODEL
 fi
 if [ ! -f "$1/$GEMMA4_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$GEMMA4_MODEL/$TOKENIZER_FILE does not exist."
@@ -241,3 +230,16 @@ if [ ! -f "$1/$MINICPM5_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$MINICPM5_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
+
+if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  pip3 install --upgrade typer==0.25.1
+  hf download "$VLM_MODEL" --local-dir $1/$VLM_MODEL
+  convert_tokenizer OpenGVLab/InternVL2-1B --with_detokenizer -o $1/$VLM_MODEL  # WA to use newer tokenizer model format which supports padding.
+fi
+if [ ! -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$VLM_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+

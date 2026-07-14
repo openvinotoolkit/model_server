@@ -36,4 +36,4 @@ Such data in a tensor format can be passed to the custom node to perform the pre
 
 Similarly, a custom node can perform string detokenization and return a string to the model server client.
 
-The client API snippets with string data format are included in [KServe API](./clients_kfs.md) and [TFS API](./clients_tfs.md).
+The client API snippets with string data format are included in [KServe API](./clients_kfs.md).

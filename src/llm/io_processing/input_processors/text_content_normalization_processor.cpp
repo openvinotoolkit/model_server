@@ -32,16 +32,25 @@ absl::Status TextContentNormalizationProcessor::process(InputRequest& req) {
         if (!content.is_array()) {
             continue;
         }
+        // Only flatten arrays that contain exclusively text parts. Arrays with
+        // images (or other modalities) are left untouched for ImageDecodingProcessor.
+        // Single pass: build the combined string while scanning, and bail out on the
+        // first non-text part without touching the message.
         std::string combined;
+        bool allText = true;
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
             if (part["type"].as_string().value_or("") != "text") {
-                continue;
+                allText = false;
+                break;
             }
             if (!combined.empty()) {
                 combined += "\n";
             }
             combined += part["text"].as_string().value_or("");
+        }
+        if (!allText) {
+            continue;
         }
         chatHistory[i]["content"] = combined;
     }

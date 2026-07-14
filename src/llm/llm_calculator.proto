@@ -145,7 +145,6 @@ message LLMCalculatorOptions {
       MINJA = 0;
       // Use Python Jinja2 module for chat template processing.
       // For builds with Python, default for LLM pipelines, selectible for VLM pipelines.
-      // TODO(dkalinow): once we have server-side workaround, make it default for VLM as well
       JINJA = 1;
     }
 

@@ -19,9 +19,10 @@
 
 namespace ovms {
 
-// Normalizes text-only content arrays in ChatHistory messages to plain strings.
-// Parts are joined with "\n" for backward compatibility with LM chat templates.
-// Active when: !config.isVLM && input is ChatHistory variant.
+// Flattens text-only content arrays in ChatHistory messages to plain strings.
+// Parts are joined with "\n" for backward compatibility with chat templates.
+// Runs for both LM and VLM chat paths: arrays that contain images (or other
+// non-text modalities) are left untouched for ImageDecodingProcessor.
 // Must run before ChatTemplateProcessor.
 class TextContentNormalizationProcessor : public BaseInputProcessor {
 public:

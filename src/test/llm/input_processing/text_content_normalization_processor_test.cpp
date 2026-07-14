@@ -80,8 +80,9 @@ TEST(TextContentNormalizationProcessorTest, MultipleTextPartsJoinedWithNewline) 
     EXPECT_EQ(result[0]["content"].as_string().value_or(""), "first\nsecond");
 }
 
-TEST(TextContentNormalizationProcessorTest, NonTextPartsIgnored) {
-    // image_url entries alongside text: only text parts should contribute to combined string.
+TEST(TextContentNormalizationProcessorTest, MixedContentArrayLeftUntouched) {
+    // image_url entries alongside text: the array is NOT text-only, so it must be
+    // left untouched for ImageDecodingProcessor to handle downstream.
     ov::genai::ChatHistory history;
     ov::AnyMap msg = {{"role", std::string("user")}};
     ov::genai::JsonContainer parts = ov::genai::JsonContainer::from_json_string(
@@ -95,5 +96,6 @@ TEST(TextContentNormalizationProcessorTest, NonTextPartsIgnored) {
 
     EXPECT_TRUE(status.ok());
     const auto& result = std::get<ov::genai::ChatHistory>(req.input);
-    EXPECT_EQ(result[0]["content"].as_string().value_or(""), "describe this");
+    ASSERT_TRUE(result[0]["content"].is_array());
+    EXPECT_EQ(result[0]["content"].size(), 2u);
 }

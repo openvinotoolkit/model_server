@@ -56,6 +56,22 @@ ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
     tokenizer(tokenizer) {}
 #endif
 
+absl::Status ChatTemplateProcessor::extractAddGenerationPrompt(const ov::genai::ChatHistory& chatHistory,
+    ov::genai::JsonContainer& kwargs, bool& addGenerationPrompt) {
+    kwargs = chatHistory.get_extra_context();
+    addGenerationPrompt = true;
+    if (kwargs.contains("add_generation_prompt")) {
+        const auto asBool = kwargs["add_generation_prompt"].as_bool();
+        if (!asBool.has_value()) {
+            return absl::Status(absl::StatusCode::kInvalidArgument,
+                "add_generation_prompt accepts values true or false");
+        }
+        addGenerationPrompt = asBool.value();
+        kwargs.erase("add_generation_prompt");
+    }
+    return absl::OkStatus();
+}
+
 absl::Status ChatTemplateProcessor::process(InputRequest& req) {
     if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
         return absl::Status(absl::StatusCode::kInternal,
@@ -67,7 +83,6 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "chatHistory.get_extra_context(): {}", chatHistory.get_extra_context().to_json_string());
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "tools: {}", chatHistory.get_tools().empty() ? std::string("<none>") : chatHistory.get_tools().to_json_string());
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "chatTemplateKwargs: {}", chatHistory.get_extra_context().empty() ? std::string("<none>") : chatHistory.get_extra_context().to_json_string());
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "addGenerationPrompt: {}", true);
     }
 
 #if (PYTHON_DISABLE == 0)
@@ -82,9 +97,13 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         req.promptText = std::move(promptText);
     } else {
 #endif
-        constexpr bool addGenerationPrompt = true;
         const auto& tools = chatHistory.get_tools();
-        const auto& kwargs = chatHistory.get_extra_context();
+        ov::genai::JsonContainer kwargs;
+        bool addGenerationPrompt = true;
+        auto status = extractAddGenerationPrompt(chatHistory, kwargs, addGenerationPrompt);
+        if (!status.ok()) {
+            return status;
+        }
         const std::optional<ov::genai::JsonContainer> optTools =
             tools.empty() ? std::nullopt : std::make_optional(tools);
         const std::optional<ov::genai::JsonContainer> optKwargs =
