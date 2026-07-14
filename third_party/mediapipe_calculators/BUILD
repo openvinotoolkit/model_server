@@ -108,6 +108,8 @@ cc_library(
         "@mediapipe//mediapipe/calculators/video:box_detector_calculator",
         "@mediapipe//mediapipe/calculators/video:tracked_detection_manager_calculator",
         "@mediapipe//mediapipe/calculators/video:video_pre_stream_calculator",
+        #BYTETRACK CALCULATORS (GSoC'2026 - Vishwa2684)
+        "@mediapipe//mediapipe/graphs/bytetrack/calculators:bytetrack_calculators",
     ]  + select({
         "//conditions:default": [
             "@mediapipe//mediapipe/calculators/core:packet_cloner_calculator", # TODO windows: stdc++20 required

@@ -191,8 +191,9 @@ http_archive(
 #### Will be used on feature release
 git_repository(
     name = "mediapipe",
-    remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "12e8d511cfbc5f471c498278a65a02dd250963e8", # top of mediapipe main branch as of 26.11.2025
+    remote = "https://github.com/Vishwa2684/mediapipe_ovms",
+    # commit = "12e8d511cfbc5f471c498278a65a02dd250963e8", # top of mediapipe main branch as of 26.11.2025
+    branch = "custom_bytetrack_graph"
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
