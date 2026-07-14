@@ -53,21 +53,11 @@ using PluginHandle = HMODULE;
 
 using RegisterPythonCalculatorsFn = void (*)();
 using GetKfsPyTensorBridgeVTableFn = const KfsPyTensorBridgeVTable* (*)();
-using SetKfsPyTensorBridgeVTableFn = void (*)(const KfsPyTensorBridgeVTable*);
 
 static PluginHandle pythonCalculatorsHandle = nullptr;
 static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
-static PluginHandle pythonCalculatorsRuntimeHandle = nullptr;
 
 #ifdef __linux__
-int runtimeSharedDlopenFlags() {
-    int flags = RTLD_NOW | RTLD_GLOBAL;
-#ifdef RTLD_DEEPBIND
-    flags |= RTLD_DEEPBIND;
-#endif
-    return flags;
-}
-
 int pythonPluginDlopenFlags() {
     int flags = RTLD_LAZY | RTLD_GLOBAL;
 #ifdef RTLD_DEEPBIND
@@ -83,54 +73,12 @@ std::string safeDlerror() {
     return std::string("dlerror returned null");
 }
 
-bool ensurePythonCalculatorsRuntimeLoaded() {
-    if (pythonCalculatorsRuntimeHandle != nullptr) {
-        return true;
-    }
-
-    std::vector<std::string> candidates{
-        "libovms_mediapipe_runtime_shared.so",
-        "/ovms/lib/libovms_mediapipe_runtime_shared.so",
-        "./libovms_mediapipe_runtime_shared.so",
-        "src/libovms_mediapipe_runtime_shared.so",
-        "./src/libovms_mediapipe_runtime_shared.so",
-        "bazel-bin/src/libovms_mediapipe_runtime_shared.so",
-        "./bazel-bin/src/libovms_mediapipe_runtime_shared.so"};
-
-    for (const auto& candidate : candidates) {
-        pythonCalculatorsRuntimeHandle = dlopen(candidate.c_str(), runtimeSharedDlopenFlags());
-        if (pythonCalculatorsRuntimeHandle != nullptr) {
-            SPDLOG_TRACE("Python calculators runtime loaded from: {}", candidate);
-            return true;
-        }
-    }
-
-    SPDLOG_DEBUG("Python calculators runtime library not preloaded: {}", safeDlerror());
-    return false;
-}
-
-void syncKfsBridgeToRuntimeShared(const KfsPyTensorBridgeVTable* vtable) {
-    if (vtable == nullptr || pythonCalculatorsRuntimeHandle == nullptr) {
-        return;
-    }
-
-    auto* setBridgeFn = reinterpret_cast<SetKfsPyTensorBridgeVTableFn>(
-        dlsym(pythonCalculatorsRuntimeHandle, "OVMS_setKfsPyTensorBridgeVTable"));
-    if (setBridgeFn == nullptr) {
-        SPDLOG_DEBUG("Runtime-shared KFS bridge setter symbol is unavailable: {}", safeDlerror());
-        return;
-    }
-
-    setBridgeFn(vtable);
-}
-
 void activateKfsBridge(const KfsPyTensorBridgeVTable* vtable, const char* source) {
     if (vtable == nullptr) {
         return;
     }
 
     setKfsPyTensorBridgeVTable(vtable);
-    syncKfsBridgeToRuntimeShared(vtable);
     SPDLOG_TRACE("KFS Python tensor bridge activated from {}", source);
 }
 
@@ -306,7 +254,8 @@ bool loadPythonCalculatorsPlugin() {
             SPDLOG_TRACE("Python calculators plugin entry point already linked in-process, skipping plugin dlopen");
             return true;
         }
-        SPDLOG_TRACE("In-process python calculators entry point is available but KFS Python tensor bridge is not initialized. Falling back to plugin dlopen.");
+        SPDLOG_WARN("Python calculators registration is available in-process but KFS Python tensor bridge is not initialized. Continuing without plugin dlopen; OVMS_PY_TENSOR bridge paths may be unavailable.");
+        return true;
     }
 
     if (forceInProcessForTests) {
@@ -347,27 +296,30 @@ bool loadPythonCalculatorsPlugin() {
             SPDLOG_TRACE("Python calculators plugin already present in the process, skipping dlopen");
             return true;
         }
-        SPDLOG_TRACE("Python calculators entry point is present in the process but KFS Python tensor bridge is not initialized. Falling back to plugin dlopen.");
-    }
-
-    ensurePythonCalculatorsRuntimeLoaded();
-
-    auto* runtimeRegisterFn = reinterpret_cast<RegisterPythonCalculatorsFn>(dlsym(RTLD_DEFAULT, "registerPythonCalculators"));
-    if (runtimeRegisterFn != nullptr) {
-        registerPythonCalculatorsFn = runtimeRegisterFn;
-
-        auto* runtimeBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(dlsym(RTLD_DEFAULT, "OVMS_getKfsPyTensorBridgeVTable"));
-        if (runtimeBridgeFn != nullptr) {
-            if (auto* vtable = runtimeBridgeFn(); vtable != nullptr) {
-                activateKfsBridge(vtable, "preloaded runtime-shared library");
-                SPDLOG_TRACE("Python calculators registration activated from preloaded runtime-shared library");
-                return true;
-            }
-        }
-
-        SPDLOG_TRACE("Python calculators registration is already present after runtime-shared preload; skipping plugin dlopen");
+        SPDLOG_WARN("Python calculators entry point is present in the process but KFS Python tensor bridge is not initialized. Continuing without plugin dlopen; OVMS_PY_TENSOR bridge paths may be unavailable.");
         return true;
     }
+
+    const bool forcePluginDlopen = []() {
+        const char* value = std::getenv("OVMS_PYTHON_CALCULATORS_PLUGIN_DLOPEN");
+        return value != nullptr && std::string(value) == "1";
+    }();
+
+    // In runtime-separation mode, calculator registrations are expected to be
+    // owned by libovms_mediapipe_runtime_shared.so. Eagerly dlopen-ing
+    // libpython_calculators.so here can register MediaPipe framework handlers
+    // twice (plugin first, runtime-shared second).
+    if (!forceInProcessForTests && !forcePluginDlopen) {
+        SPDLOG_INFO("Skipping explicit libpython_calculators.so dlopen. "
+                    "Python calculators are expected from runtime-shared ownership; "
+                    "set OVMS_PYTHON_CALCULATORS_PLUGIN_DLOPEN=1 to force plugin loading.");
+        return true;
+    }
+
+    // Avoid eager preloading of runtime-shared calculators here.
+    // In split-runtime deployments, preloading can trigger duplicate MediaPipe
+    // registrations (for example OpenVINOInferenceCalculator) before plugin
+    // fallback logic has a chance to run.
 
     std::vector<std::string> candidates{
         "libpython_calculators.so",

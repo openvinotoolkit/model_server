@@ -465,7 +465,24 @@ Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, 
         return StatusCode::OK;
     }
     mediapipesInConfigFile.insert(config.getGraphName());
-    return mediapipeFactory->processConfig(config, *this, *this);
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+        "Processing mediapipe graph config: {} graph_path: {} runtime_loaded: {}",
+        config.getGraphName(),
+        config.getGraphPath(),
+        this->mediapipeFactory->isLoaded());
+    auto status = mediapipeFactory->processConfig(config, *this, *this);
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger,
+            "Failed to process mediapipe graph config: {} status: {}",
+            config.getGraphName(),
+            status.string());
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+            "Processed mediapipe graph config successfully: {} definition_exists: {}",
+            config.getGraphName(),
+            this->mediapipeFactory->definitionExists(config.getGraphName()));
+    }
+    return status;
 }
 #endif
 

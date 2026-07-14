@@ -698,6 +698,7 @@ ovms_cc_library(
     srcs = ["mediapipe_runtime_api.cpp"],
     deps = [
         "cpp_headers",
+        "kfs_python_tensor_bridge_hdrs",
         "mediapipe_executor_interface",
         "libovms_execution_context",
         "libovmsstatus",
