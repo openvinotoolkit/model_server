@@ -84,7 +84,7 @@ static const std::string PROBE_STR_ARGS_MSG =
 static const std::string PROBE_OBJ_ARGS_MSG =
     R"({"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":{")" + PROBE_NEEDLE + R"(":"val"}}}]})";
 
-static const std::string PROBE_REASONING_MSG = 
+static const std::string PROBE_REASONING_MSG =
     R"({"role":"assistant","reasoning_content":")" + PROBE_NEEDLE + R"("})";
 
 // Analyze dry-run probe outputs and update caps accordingly.
