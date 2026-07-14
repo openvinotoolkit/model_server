@@ -69,13 +69,9 @@ class Metric:
 
     Method_infer = "ModelInfer"
 
-    Method_getmodelstatus = "GetModelStatus"
-    Method_getmodelmetadata = "GetModelMetadata"
-    Method_predict = "Predict"
     Method_modelready = "ModelReady"
     Method_modelmetadata = "ModelMetadata"
 
-    TensorFlowServing = "TensorFlowServing"
     KServe = "KServe"
 
     Type_counter = "counter"
@@ -118,12 +114,9 @@ class Metric:
 
     DescType = {"requests_success", "counter", "request_fail", "counter"}
 
-    Protocol = [KServe, TensorFlowServing]
+    Protocol = [KServe]
 
     Methods = [
-        Method_getmodelstatus,
-        Method_getmodelmetadata,
-        Method_predict,
         Method_infer,
         Method_modelready,
         Method_modelmetadata,
@@ -133,9 +126,6 @@ class Metric:
         Method_modelready: KServe,
         Method_modelmetadata: KServe,
         Method_infer: KServe,
-        Method_getmodelstatus: TensorFlowServing,
-        Method_getmodelmetadata: TensorFlowServing,
-        Method_predict: TensorFlowServing,
     }
 
     Histogram_bucket_len_list = [
@@ -194,7 +184,7 @@ class Metric:
                     "name": model.name,
                 }
 
-                if method not in [Metric.Method_getmodelstatus, Metric.Method_modelready]:
+                if method == Metric.Method_modelready:
                     content["version"] = str(model.version)
 
                 result.append(Metric(metric_name=base_name, content=content))
@@ -384,19 +374,15 @@ class Metrics:
 
         """ 
         The following metrics are not multiplied for each model version (should occur once for single model name)
-        ovms_requests_success[{'api': 'TensorFlowServing', 'interface': 'gRPC', 'method': 'GetModelStatus', 'name': 'resnet-50-tf'}] 0
-        ovms_requests_success[{'api': 'TensorFlowServing', 'interface': 'REST', 'method': 'GetModelStatus', 'name': 'resnet-50-tf'}] 0
         ovms_requests_success[{'api': 'KServe', 'interface': 'gRPC', 'method': 'ModelReady', 'name': 'resnet-50-tf'}] 0
         ovms_requests_success[{'api': 'KServe', 'interface': 'REST', 'method': 'ModelReady', 'name': 'resnet-50-tf'}] 0
-        ovms_requests_fail[{'api': 'TensorFlowServing', 'interface': 'gRPC', 'method': 'GetModelStatus', 'name': 'resnet-50-tf'}] 0
-        ovms_requests_fail[{'api': 'TensorFlowServing', 'interface': 'REST', 'method': 'GetModelStatus', 'name': 'resnet-50-tf'}] 0
         ovms_requests_fail[{'api': 'KServe', 'interface': 'gRPC', 'method': 'ModelReady', 'name': 'resnet-50-tf'}] 0
         ovms_requests_fail[{'api': 'KServe', 'interface': 'REST', 'method': 'ModelReady', 'name': 'resnet-50-tf'}] 0
         """
         metrics_to_remove = []
         model_unique_metrics = []
         for metric in metric_list:
-            if metric.content.get("method", None) in [Metric.Method_getmodelstatus, Metric.Method_modelready]:
+            if metric.content.get("method", None) == Metric.Method_modelready:
                 if metric.to_str() in model_unique_metrics:
                     metrics_to_remove.append(metric)
                 else:
@@ -541,38 +527,10 @@ class AdditionalMetrics(Metrics):
 #    protocol="kserve",
 #    version="1"} 0
 # ovms_requests_success{
-#    interface="rest",
-#    method="getmodelstatus",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving"} 0
-# ovms_requests_success{
-#    interface="rest",
-#    method="getmodelmetadata",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving",
-#    version="1"} 0
-# ovms_requests_success{
-#    interface="rest",
-#    method="predict",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving",
-#    version="1"} 0
-# ovms_requests_success{
 #    interface="grpc",
 #    method="modelinfer",
 #    name="ssdlite_mobilenet_v2_ov",
 #    protocol="kserve",
-#    version="1"} 0
-# ovms_requests_success{
-#    interface="grpc",
-#    method="getmodelstatus",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving"} 0
-# ovms_requests_success{
-#    interface="grpc",
-#    method="getmodelmetadata",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving",
 #    version="1"} 0
 # ovms_requests_success{
 #    interface="rest",
@@ -584,12 +542,6 @@ class AdditionalMetrics(Metrics):
 #    method="modelmetadata",
 #    name="ssdlite_mobilenet_v2_ov",
 #    protocol="kserve",
-#    version="1"} 0
-# ovms_requests_success{
-#    interface="grpc",
-#    method="predict",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving",
 #    version="1"} 0
 # # HELP ovms_requests_fail Number of failed requests to a model or a DAG.
 # # TYPE ovms_requests_fail counter
@@ -618,52 +570,16 @@ class AdditionalMetrics(Metrics):
 #    protocol="kserve",
 #    version="1"} 0
 # ovms_requests_fail{
-#    interface="rest",
-#    method="getmodelstatus",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving",
-#    version="1"} 0
-# ovms_requests_fail{
-#    interface="rest",
-#    method="getmodelmetadata",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving",
-#    version="1"} 0
-# ovms_requests_fail{
-#    interface="rest",
-#    method="predict",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving",
-#    version="1"} 0
-# ovms_requests_fail{
 #    interface="grpc",
 #    method="modelmetadata",
 #    name="ssdlite_mobilenet_v2_ov",
 #    protocol="kserve",
 #    version="1"} 0
 # ovms_requests_fail{
-#    interface="grpc",
-#    method="getmodelstatus",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving",
-#    version="1"} 0
-# ovms_requests_fail{
-#    interface="grpc",
-#    method="getmodelmetadata",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving",
-#    version="1"} 0
-# ovms_requests_fail{
 #    interface="rest",
 #    method="modelmetadata",
 #    name="ssdlite_mobilenet_v2_ov",
 #    protocol="kserve",
-#    version="1"} 0
-# ovms_requests_fail{
-#    interface="grpc",
-#    method="predict",
-#    name="ssdlite_mobilenet_v2_ov",
-#    protocol="tensorflowserving",
 #    version="1"} 0
 # # HELP ovms_streams Number of OpenVINO execution streams.
 # # TYPE ovms_streams gauge

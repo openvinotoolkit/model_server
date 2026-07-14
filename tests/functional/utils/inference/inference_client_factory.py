@@ -22,7 +22,6 @@ from tests.functional.utils.inference.communication.rest import REST, RestCommun
 from tests.functional.utils.inference.serving.cohere import COHERE, CohereWrapper
 from tests.functional.utils.inference.serving.kf import KFS, KserveWrapper
 from tests.functional.utils.inference.serving.openai import OPENAI, OpenAIWrapper
-from tests.functional.utils.inference.serving.tf import TFS, TensorFlowServingWrapper
 from tests.functional.utils.inference.serving.triton import TRITON, TritonServingWrapper
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.object_model.ovsa import OvsaCerts
@@ -35,9 +34,7 @@ class InferenceClientFactory:
         if ovms_type == OvmsType.CAPI:
             communication_class = CapiServingWrapper
         else:
-            if serving == TFS:
-                serving_class = TensorFlowServingWrapper
-            elif serving == KFS:
+            if serving == KFS:
                 serving_class = KserveWrapper
             elif serving == TRITON:
                 serving_class = TritonServingWrapper
@@ -48,7 +45,7 @@ class InferenceClientFactory:
             else:
                 raise Exception
 
-            if serving in [TFS, KFS, TRITON, OPENAI, COHERE]:
+            if serving in [KFS, TRITON, OPENAI, COHERE]:
                 if communication == REST:
                     communication_class = RestCommunicationInterface
                 elif communication == GRPC:

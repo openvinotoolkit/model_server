@@ -30,7 +30,6 @@ from tests.functional.utils.http.base import HttpMethod
 from tests.functional.utils.inference.communication.grpc import GRPC_TIMEOUT
 from tests.functional.utils.inference.serving.base import AbstractServingWrapper
 from tests.functional.utils.logger import get_logger
-from tests.functional.constants.metrics import Metric
 from tests.functional.constants.ovms import Ovms
 
 logger = get_logger(__name__)
@@ -41,8 +40,6 @@ TFS = "TFS"
 class TensorFlowServingWrapper(AbstractServingWrapper):
     REST_VERSION = "v1"
     PREDICT = ":predict"
-
-    METRICS_PROTOCOL = Metric.TensorFlowServing
 
 
     def set_grpc_stubs(self):

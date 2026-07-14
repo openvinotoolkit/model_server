@@ -62,7 +62,6 @@ from tests.functional.utils.inference.serving.openai import (
     AudioApi,
     ResponsesApi,
 )
-from tests.functional.utils.inference.serving.tf import TensorFlowServingWrapper
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import FrameworkMessages, skip_if_runtime
 from tests.functional.utils.generative_ai.validation_utils import GenerativeAIValidationUtils
@@ -223,14 +222,6 @@ class BinaryInferenceRequest(InferenceRequest):
             request = {"request": request}
         elif isinstance(client, KserveWrapper) and isinstance(client, RestCommunicationInterface):
             request = self._create_kfs_post_request(input_data)
-        elif isinstance(client, TensorFlowServingWrapper) and isinstance(client, RestCommunicationInterface):
-            request = self._create_post_request(self.model.input_names, input_data, request_format=self.layout)
-        elif isinstance(client, TensorFlowServingWrapper) and isinstance(client, GrpcCommunicationInterface):
-            request = PredictRequest()
-            request.model_spec.name = self.model.name
-            for input_name, input_object in input_data.items():
-                request.inputs[input_name].CopyFrom(make_tensor_proto(input_object, shape=[len(input_object)]))
-            request = {"request": request}
         else:
             raise NotImplementedError
         return request
