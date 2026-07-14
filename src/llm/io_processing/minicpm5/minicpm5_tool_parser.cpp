@@ -36,6 +36,8 @@ const std::string Minicpm5ToolParser::XML_TAG_END = ">";
 const std::string Minicpm5ToolParser::PARAM_START_TAG = "<param";
 const std::string Minicpm5ToolParser::PARAM_END_TAG = "</param>";
 const std::string Minicpm5ToolParser::FUNCTION_END_TAG = "</function>";
+const std::string Minicpm5ToolParser::EOS_TOKEN_STR = "<|im_end|>";
+const std::string Minicpm5ToolParser::SOS_TOKEN_STR = "<s>";
 
 // Schema helpers, JSON helpers and string helpers are shared with qwen3coder; see utils.{hpp,cpp}.
 
@@ -138,6 +140,19 @@ Status Minicpm5ToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& o
         toolCallPositions.begin.pop();
         toolCallPositions.end.pop();
     }
+
+    const std::vector<std::string> tokensToErase = {
+        Minicpm5ToolParser::SOS_TOKEN_STR,
+        Minicpm5ToolParser::EOS_TOKEN_STR
+    };
+    
+    for (const auto& token : tokensToErase) {
+        size_t pos = 0;
+        while ((pos = outContent.find(token, pos)) != std::string::npos) {
+            outContent.erase(pos, token.length());
+        }
+    }
+    
     return StatusCode::OK;
 }
 

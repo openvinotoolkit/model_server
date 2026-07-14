@@ -170,7 +170,6 @@ protected:
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                 doc->Accept(writer);
                 std::string docStr = buffer.GetString();
-                // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
                 std::string expected = expectedDelta.value();
                 std::string idKey = "\"id\":\"";
                 auto docIdPos = docStr.find(idKey);
@@ -214,7 +213,6 @@ protected:
 
 // ---- Unary parse tests ----
 
-// Single function call, two params, basic string types
 TEST_F(Minicpm5OutputParserTest, ParseSingleFunctionCallTwoParams) {
     const std::string input =
         R"(<function name="get_weather"><param name="city">Beijing</param><param name="unit">celsius</param></function>)";
@@ -224,9 +222,10 @@ TEST_F(Minicpm5OutputParserTest, ParseSingleFunctionCallTwoParams) {
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"city":"Beijing","unit":"celsius"})");
     EXPECT_FALSE(parsedOutput.toolCalls[0].id.empty());
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "");
 }
 
-// Multiple function calls concatenated
 TEST_F(Minicpm5OutputParserTest, ParseMultipleFunctionCalls) {
     const std::string input =
         R"(<function name="get_weather"><param name="city">Tokyo</param></function>)"
@@ -238,9 +237,10 @@ TEST_F(Minicpm5OutputParserTest, ParseMultipleFunctionCalls) {
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"city":"Tokyo"})");
     EXPECT_EQ(parsedOutput.toolCalls[1].name, "search");
     EXPECT_EQ(parsedOutput.toolCalls[1].arguments, R"({"query":"OpenVINO"})");
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "");
 }
 
-// Param typed as integer in schema → should appear as number in JSON, not string
 TEST_F(Minicpm5OutputParserTest, ParseIntegerTypedParam) {
     const std::string input =
         R"(<function name="calculate"><param name="a">7</param><param name="b">3</param></function>)";
@@ -249,9 +249,10 @@ TEST_F(Minicpm5OutputParserTest, ParseIntegerTypedParam) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "calculate");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"a":7,"b":3})");
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "");
 }
 
-// Mixed string + integer schema types in one call
 TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
     const std::string input =
         R"(<function name="get_stock"><param name="ticker">INTC</param><param name="count">42</param></function>)";
@@ -260,6 +261,18 @@ TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_stock");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"ticker":"INTC","count":42})");
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+}
+
+// This scenario will be handled only in unary, in streaming it's not possible to parse reasoning without the stating tag
+TEST_F(Minicpm5OutputParserTest, ParseReasoningWithoutStartingTag) {
+    const std::string input = "This is my internal reasoning about what to call.</think>";
+    ParsedOutput parsedOutput = generateParsedOutput(input);
+
+    EXPECT_EQ(parsedOutput.toolCalls.size(), 0u);
+    EXPECT_NE(parsedOutput.reasoning.find("internal reasoning"), std::string::npos);
+    EXPECT_EQ(parsedOutput.content, "");
 }
 
 TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
@@ -292,14 +305,11 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
     EXPECT_EQ(parsedOutput.content, "");
 }
 
-// MiniCPM5's tool tags (<function>, <param>, ...) are special tokens, so the tool parser must
-// request that special tokens are preserved in the stream; the paired reasoning parser agrees.
 TEST_F(Minicpm5OutputParserTest, RequiresStreamingWithSpecialTokens) {
     Minicpm5ToolParser toolParser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
     EXPECT_TRUE(toolParser.requiresStreamingWithSpecialTokens());
     Minicpm5ReasoningParser reasoningParser(*minicpm5Tokenizer);
     EXPECT_TRUE(reasoningParser.requiresStreamingWithSpecialTokens());
-    // Pairing the two must not throw the consistency check in OutputParser.
     EXPECT_NO_THROW({
         OutputParser parser(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
         (void)parser;
@@ -311,7 +321,6 @@ TEST_F(Minicpm5OutputParserTest, ParseNoToolCalls) {
     ParsedOutput parsedOutput = generateParsedOutput(input);
 
     EXPECT_EQ(parsedOutput.toolCalls.size(), 0u);
-    // Content should be preserved
     EXPECT_NE(parsedOutput.content.find("Sure"), std::string::npos);
 }
 
@@ -325,9 +334,9 @@ TEST_F(Minicpm5OutputParserTest, ParseContentAroundToolCall) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"city":"Paris"})");
-    // Tool call XML should have been removed from content
     EXPECT_EQ(parsedOutput.content.find("<function"), std::string::npos);
     EXPECT_EQ(parsedOutput.content.find("</function>"), std::string::npos);
+    EXPECT_NE(parsedOutput.content, "Let me check the weather. Done.");
 }
 
 TEST(Minicpm5ToolParserImplTest, SingleCallNoContent) {
@@ -398,7 +407,6 @@ TEST(Minicpm5ToolParserImplTest, NoToolCalls) {
 }
 
 TEST(Minicpm5ToolParserImplTest, NewlinesAroundParamValue) {
-    // Model may emit values with surrounding newlines; they should be trimmed
     const std::string input =
         "<function name=\"get_weather\"><param name=\"city\">\nBejing\n</param></function>";
     auto content = input;
@@ -424,7 +432,6 @@ TEST(Minicpm5ToolParserImplTest, RemoveToolCallsFromContent) {
 }
 
 TEST(Minicpm5ToolParserImplTest, SingleQuoteAttribute) {
-    // Defensive: accept name='...' as well as name="..."
     const std::string input =
         "<function name='get_weather'><param name='city'>Sydney</param></function>";
     auto content = input;
@@ -437,18 +444,6 @@ TEST(Minicpm5ToolParserImplTest, SingleQuoteAttribute) {
     EXPECT_EQ(calls[0].arguments, R"({"city":"Sydney"})");
 }
 
-// ---- Streaming robustness: fragment-boundary invariance of the underlying state machine ----
-// These tests operate on the low-level Minicpm5ToolParserImpl and only assert that the
-// AGGREGATED final result (completed call name + arguments) is the same no matter how the
-// input is chopped into chunks -- i.e. that the state machine correctly reassembles calls
-// regardless of where chunk boundaries fall. They do NOT test what a client actually receives
-// mid-stream (when a name/arguments delta is surfaced, or whether it is surfaced exactly
-// once at the right moment). That user-visible delta contract is covered separately by
-// Minicpm5PublicStreamTest below, which drives the public Minicpm5ToolParser::parseChunk API
-// and asserts on the actual emitted deltas.
-
-// Helper: stream `input` in fixed-size fragments through one impl instance,
-// collecting every tool call returned across all chunks (in order).
 static ToolCalls_t streamInFragments(const std::string& input, size_t fragmentSize,
     const ToolsParameterTypeMap_t& typeMap) {
     Minicpm5ToolParserImpl parser(typeMap);
@@ -465,7 +460,6 @@ static ToolCalls_t streamInFragments(const std::string& input, size_t fragmentSi
     return collected;
 }
 
-// The streaming result (any fragmentation) MUST equal the single-chunk result.
 TEST(Minicpm5ToolParserImplStreamTest, CharByCharSingleCall) {
     const std::string input =
         R"(<function name="get_weather"><param name="city">Beijing</param><param name="unit">celsius</param></function>)";
@@ -475,7 +469,6 @@ TEST(Minicpm5ToolParserImplStreamTest, CharByCharSingleCall) {
     EXPECT_EQ(calls[0].arguments, R"({"city":"Beijing","unit":"celsius"})");
 }
 
-// Tags, attributes and values are split across chunk boundaries at every offset.
 TEST(Minicpm5ToolParserImplStreamTest, VariousFragmentSizesSingleCall) {
     const std::string input =
         R"(<function name="get_weather"><param name="city">Beijing</param></function>)";
@@ -487,7 +480,6 @@ TEST(Minicpm5ToolParserImplStreamTest, VariousFragmentSizesSingleCall) {
     }
 }
 
-// Two calls with the chunk boundary falling between/inside them.
 TEST(Minicpm5ToolParserImplStreamTest, TwoCallsCharByChar) {
     const std::string input =
         R"(<function name="get_weather"><param name="city">Rome</param></function>)"
@@ -500,9 +492,6 @@ TEST(Minicpm5ToolParserImplStreamTest, TwoCallsCharByChar) {
     EXPECT_EQ(calls[1].arguments, R"({"a":10,"b":20})");
 }
 
-// Leading content + <think> block streamed char-by-char before the call. The <think> text
-// is just plain content to the tool parser (reasoning stripping happens upstream); the tool
-// call must still be parsed correctly.
 TEST(Minicpm5ToolParserImplStreamTest, ThinkBlockAndContentCharByChar) {
     const std::string input =
         R"(Let me check.<think>I should call the tool</think><function name="search"><param name="query">Intel</param></function>)";
@@ -512,9 +501,6 @@ TEST(Minicpm5ToolParserImplStreamTest, ThinkBlockAndContentCharByChar) {
     EXPECT_EQ(calls[0].arguments, R"({"query":"Intel"})");
 }
 
-// ---- Edge / malformed input: must not crash and must not emit spurious calls ----
-
-// An unterminated function (no </function>) yields no completed tool call.
 TEST(Minicpm5ToolParserImplTest, UnterminatedFunctionNoCall) {
     const std::string input =
         R"(<function name="get_weather"><param name="city">Berlin)";  // truncated mid-value
@@ -524,7 +510,6 @@ TEST(Minicpm5ToolParserImplTest, UnterminatedFunctionNoCall) {
     EXPECT_FALSE(callsOpt.has_value() && !callsOpt.value().empty());
 }
 
-// An empty parameter value produces an empty string argument (for a STRING-typed param).
 TEST(Minicpm5ToolParserImplTest, EmptyParamValue) {
     const std::string input =
         R"(<function name="get_weather"><param name="city"></param></function>)";
@@ -537,7 +522,6 @@ TEST(Minicpm5ToolParserImplTest, EmptyParamValue) {
     EXPECT_EQ(callsOpt.value()[0].arguments, R"({"city":""})");
 }
 
-// Plain text containing an angle bracket but no real function tag yields no calls and no crash.
 TEST(Minicpm5ToolParserImplTest, AngleBracketInPlainTextNoCall) {
     const std::string input = "The value of a < b is true, and 3 < 4 as well.";
     auto content = input;
@@ -569,6 +553,50 @@ TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallAndResoning) {
         {"{\"key\":\"value\"}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"key\":\"value\"}}"}}]}})"},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
+TEST_F(Minicpm5OutputParserTest, StrimingWithToolCallAndSpecialTags) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<s>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<function", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"dummy\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"><param", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"}}]}})"},
+        {" name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=\"config\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"key\":\"value\"}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"key\":\"value\"}}"}}]}})"},
+        {"<|im_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
+// It's possible that model starts to reason without the starting <think> tag, in that 
+TEST_F(Minicpm5OutputParserTest, StrimingWithReasoningWithoutStaringTag) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<s>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"This", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"This"}})"},
+        {" is", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" is"}})"},
+        {" my", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" my"}})"},
+        {" internal", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" internal"}})"},
+        {" reasoning", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" reasoning"}})"},
+        {" about", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" about"}})"},
+        {" what", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" what"}})"},
+        {" to", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" to"}})"},
+        {" call.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" call."}})"},
+        {"</think>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"</think>"}})"},
+        {"Some", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"Some"}})"},
+        {" content", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" content"}})"},
+        {" after", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" after"}})"},
+        {" the", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" the"}})"},
+        {" reasoning.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" reasoning."}})"},
+        {"<|im_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
     };
 
     assertStreamingVec(chunkToDeltaVec);
@@ -751,8 +779,6 @@ TEST(Minicpm5ToolParserImplTest, StringParamWithQuotesAndBackslashes) {
     EXPECT_EQ(std::string(argsDoc["query"].GetString()), R"(say "hi" and a backslash \ here)");
 }
 
-// A code snippet with braces, quotes and newlines as a STRING-typed param value stays a string
-// and round-trips to valid JSON.
 TEST(Minicpm5ToolParserImplTest, StringParamWithCodeSnippet) {
     const std::string code =
         "def f(x):\n    return {\"a\": x, \"b\": [1, 2, 3]}  // comment";
@@ -769,7 +795,6 @@ TEST(Minicpm5ToolParserImplTest, StringParamWithCodeSnippet) {
     ASSERT_FALSE(argsDoc.HasParseError()) << "arguments not valid JSON: " << calls[0].arguments;
     ASSERT_TRUE(argsDoc.HasMember("query"));
     ASSERT_TRUE(argsDoc["query"].IsString());
-    // value preserved (newlines are interior, so not trimmed by trimNewline)
     EXPECT_EQ(std::string(argsDoc["query"].GetString()), code);
 }
 

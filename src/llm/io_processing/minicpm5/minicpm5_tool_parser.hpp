@@ -125,6 +125,9 @@ public:
     static const std::string PARAM_END_TAG;       // </param>
     static const std::string FUNCTION_END_TAG;    // </function>
 
+    static const std::string EOS_TOKEN_STR;  // <|im_end|>
+    static const std::string SOS_TOKEN_STR;  // <s>
+
     static const int64_t reasoningStartTokenId = 8;  // <think>
     static const int64_t reasoningEndTokenId = 9;    // </think>
 
@@ -151,7 +154,7 @@ public:
         return startTags;
     }
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags = {};
+        static const std::vector<std::string> specialParsingStartTags = {};4
         return specialParsingStartTags;
     }
     const std::string& getParsingEndTag() const override {
@@ -161,6 +164,11 @@ public:
 
     bool requiresStreamingWithSpecialTokens() const override {
         return true;
+    }
+
+    const std::vector<std::string>& getSpecialTagsToErase() const override {
+        static const std::vector<std::string> tagsToErase = {SOS_TOKEN_STR, EOS_TOKEN_STR};
+        return tagsToErase;
     }
 
 private:
