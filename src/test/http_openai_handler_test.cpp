@@ -140,7 +140,7 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, CorrectApiKey) {
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processV3("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    auto status = handler->processOpenAI("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
 
@@ -160,7 +160,7 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, CorrectApiKeyMissingModel) {
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processV3("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    auto status = handler->processOpenAI("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING) << status.string();
 }
 
@@ -177,7 +177,7 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, IncorrectApiKey) {
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processV3("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    auto status = handler->processOpenAI("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::UNAUTHORIZED) << status.string();
 }
 
@@ -193,7 +193,7 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, MissingApiKey) {
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processV3("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    auto status = handler->processOpenAI("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::UNAUTHORIZED) << status.string();
 }
 

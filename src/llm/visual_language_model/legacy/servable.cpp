@@ -68,7 +68,7 @@ absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenA
     } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
         executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
-        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions, /v3/responses endpoint or /v3/tokenize");
+        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v[13]/chat/completions, /v[13]/responses, /v[13]/tokenize");
     }
     executionContext->payload = payload;
     return absl::OkStatus();
