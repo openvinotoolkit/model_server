@@ -251,6 +251,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     // FIXME: Why is </s> here? because of facebook-opt125?
     std::string expectedOutput = R"(</s><|turn>user
@@ -287,6 +288,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
 
     EXPECT_FALSE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 }
 
 // =============================================================================
@@ -312,6 +314,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Phi4Mini_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|system|>
 You are a helpful assistant.<|end|><|user|>What's the weather in Paris?<|end|><|assistant|>{"name": "get_weather", "arguments": {"location":"Paris","unit":"celsius"}}<|end|><|assistant|>)";
@@ -341,6 +344,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -380,6 +384,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]</s>)";
     EXPECT_EQ(appliedOutput, expectedOutput);
@@ -448,6 +453,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
     std::string expectedOutput = R"(</s><|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -478,6 +484,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgsAndReasoning) 
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
     std::string expectedOutput = R"(</s><|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -510,6 +517,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3VL_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -544,6 +552,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -574,4 +583,5 @@ TEST_F(ChatTemplateEndToEndMinjaTest, BrokenTemplate_BasicRenderFails) {
     // Minja silently fails (without exception), but our basic render check should catch it by parsing results.
     ASSERT_FALSE(exceptionThrownDuringApplication);
     EXPECT_FALSE(basicRenderOk);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 }
