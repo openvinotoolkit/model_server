@@ -408,12 +408,12 @@ TEST(Minicpm5ToolParserImplTest, NoToolCalls) {
 
 TEST(Minicpm5ToolParserImplTest, NewlinesAroundParamValue) {
     const std::string input =
-        "<function name=\"get_weather\"><param name=\"city\">\nBejing\n</param></function>";
+        "<function name=\"get_weather\"><param name=\"city\">\nBeijing\n</param></function>";
     auto content = input;
     Minicpm5ToolParserImpl parser(minicpm5TypeMap);
     auto callsOpt = parser.parseChunk(content);
     ASSERT_TRUE(callsOpt.has_value());
-    EXPECT_EQ(callsOpt.value()[0].arguments, R"({"city":"Bejing"})");
+    EXPECT_EQ(callsOpt.value()[0].arguments, R"({"city":"Beijing"})");
 }
 
 TEST(Minicpm5ToolParserImplTest, RemoveToolCallsFromContent) {
@@ -530,7 +530,7 @@ TEST(Minicpm5ToolParserImplTest, AngleBracketInPlainTextNoCall) {
     EXPECT_FALSE(callsOpt.has_value() && !callsOpt.value().empty());
 }
 
-TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallAndResoning) {
+TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallAndReasoning) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {"<think>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"This", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"This"}})"},
@@ -645,7 +645,7 @@ TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallAndContent) {
         {"{\"key\":\"value\"}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</param>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"config\":{\"key\":\"value\"}}"}}]}})"},
-        {"CONTENT SOHULDN'T BE RETURNED AFTER TOOL CALL", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"CONTENT SHOULDN'T BE RETURNED AFTER TOOL CALL", ov::genai::GenerationFinishReason::NONE, std::nullopt},
     };
 
     assertStreamingVec(chunkToDeltaVec);
