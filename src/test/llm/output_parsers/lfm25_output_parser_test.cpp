@@ -58,7 +58,7 @@ protected:
 
     void SetUp() override {
         // For LFM2 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*lfm25Tokenizer, "lfm2", "lfm2.5", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*lfm25Tokenizer, "lfm2", "lfm2", EMPTY_TOOLS_SCHEMA);
     }
 
     void assertChunkEqual(const std::optional<rapidjson::Document>& doc, const std::optional<std::string>& expectedDelta, const std::string& chunk) {

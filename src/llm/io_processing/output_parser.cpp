@@ -218,7 +218,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Gemma4ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "gptoss") {
         reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
-    } else if (reasoningParserName == "lfm2.5") {
+    } else if (reasoningParserName == "lfm2") {
         reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +

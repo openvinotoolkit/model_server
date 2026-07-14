@@ -444,7 +444,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
-    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2.5");
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2");
 
     EXPECT_TRUE(caps.supportsToolCalls);   
     EXPECT_TRUE(caps.requiresObjectArguments);
@@ -474,7 +474,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgsAndReasoning) 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
-    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2.5");
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2");
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);

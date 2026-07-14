@@ -95,7 +95,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsLfm25) {
     ASSERT_TRUE(result.detectedToolParser.has_value());
     EXPECT_EQ(result.detectedToolParser.value(), "lfm2");
     ASSERT_TRUE(result.detectedReasoningParser.has_value());
-    EXPECT_EQ(result.detectedReasoningParser.value(), "lfm2.5");
+    EXPECT_EQ(result.detectedReasoningParser.value(), "lfm2");
     EXPECT_TRUE(result.caps.supportsToolCalls);
     EXPECT_EQ(result.caps.missnamedReasoningField, "thinking");
 }

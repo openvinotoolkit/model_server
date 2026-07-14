@@ -290,7 +290,7 @@ __Tool parsers:__
 __Reasoning parsers:__
 - `qwen3`
 - `gptoss`
-- `lfm2.5`
+- `lfm2`
 - `gemma4`
 
 #### Automatic parser detection
