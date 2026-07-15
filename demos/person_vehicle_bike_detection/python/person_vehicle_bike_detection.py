@@ -27,17 +27,15 @@
 
 from __future__ import print_function
 from argparse import ArgumentParser, SUPPRESS
-from tensorflow_serving.apis import predict_pb2
-from tensorflow_serving.apis import prediction_service_pb2_grpc
 from time import time, sleep
 
 import sys
 import os
 import cv2
-import grpc
 import threading
 import logging as log
-from tensorflow import make_tensor_proto, make_ndarray
+import numpy as np
+import tritonclient.grpc as grpcclient
 
 # global data (shared between threads & main)
 CLASSES = ["None", "Pedestrian", "Vehicle", "Bike", "Other"]
@@ -140,12 +138,7 @@ def thread_function(thr_id, network_name, input_layer, output_layer, input_dimen
   cam_start_time = time()
 
   # ovms connection
-  channel = grpc.insecure_channel("{}:{}".format(ip, port))
-  stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
-
-  request = predict_pb2.PredictRequest()
-  # Note: Pls maintain the same name while launching ovms docker container
-  request.model_spec.name = network_name
+  client = grpcclient.InferenceServerClient(url="{}:{}".format(ip, port))
 
   global exit_ok
   while exit_ok == False:
@@ -179,20 +172,18 @@ def thread_function(thr_id, network_name, input_layer, output_layer, input_dimen
     image = image.astype('float32')
 
     inf_time = time()
-    # send the input as protobuf
-    request.inputs[input_layer].CopyFrom(
-        make_tensor_proto(image, shape=None))
+    infer_input = grpcclient.InferInput(input_layer, image.shape, "FP32")
+    infer_input.set_data_from_numpy(image)
 
     try:
-      result = stub.Predict(request, 10.0)
+      result = client.infer(network_name, [infer_input])
     except Exception as e:
       log.error('Caught exception {}'.format(e))
       cam.release()
       return
     duration = time() - inf_time
 
-    # decode the received output as protobuf
-    res = make_ndarray(result.outputs[output_layer])
+    res = result.as_numpy(output_layer)
 
     if not res.any():
       log.error('Thr{}: Predictions came back with wrong output layer name'.format(thr_id))

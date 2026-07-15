@@ -1023,6 +1023,14 @@ plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& con
 
 Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
+    if (config.getTargetDevice() == "CPU") {
+        Status status = applyDefaultCpuProperties(pluginConfig);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to apply default CPU properties for model: {}; version: {}; error: {}",
+                getName(), getVersion(), status.string());
+            return status;
+        }
+    }
     try {
         loadCompiledModelPtr(pluginConfig);
     } catch (ov::Exception& e) {

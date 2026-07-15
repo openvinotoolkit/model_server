@@ -63,10 +63,6 @@ public:
     VisualLanguageModelLegacyServable() {
         properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
         properties->inputProcessorContext.config.isVLM = true;
-#if (PYTHON_DISABLE == 0)
-        // TODO(dkalinow): once we have server-side workaround, set default back to JINJA
-        properties->chatTemplateMode = ChatTemplateMode::MINJA;
-#endif
     }
 
     // Interface methods

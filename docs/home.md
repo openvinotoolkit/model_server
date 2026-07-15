@@ -30,7 +30,7 @@ Model Server hosts models and makes them accessible to software components over 
 
 ## Serving with OpenVINO Model Server
 
-OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures. It uses the same API as [OpenAI](./genai.md), [Cohere](./model_server_rest_api_rerank.md), [KServe](./model_server_grpc_api_kfs.md) and [TensorFlow Serving](./model_server_rest_api_tfs.md) and while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
+OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures. It uses the same API as [OpenAI](./genai.md), [Cohere](./model_server_rest_api_rerank.md) and [KServe](./model_server_grpc_api_kfs.md) while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
 
 Check how to write the client applications using [generative endpoints](./clients_genai.md).
 

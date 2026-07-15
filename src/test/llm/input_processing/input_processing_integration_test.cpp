@@ -342,20 +342,23 @@ TEST_P(InputProcessingIntegrationTest, GenerationConfigFields_SurviveFullPipelin
 }
 
 TEST_P(InputProcessingIntegrationTest, TextArrayContent_FlattenedByNormalizationProcessor) {
-    // Non-VLM path: content array with two text parts must be flattened by
-    // TextContentNormalizationProcessor so both strings appear in the final prompt.
-    auto result = runPipeline(textArrayJson(), /*isVLM=*/false);
-
-    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
-    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
-
+    // A text-only content array must be flattened by TextContentNormalizationProcessor
+    // so both strings appear in the final prompt. This holds on both the LM path and the
+    // VLM path used without images (VLM is a superset of LM).
     // TextContentNormalizationProcessor joins the two parts with \n before the template runs.
     const std::string expected =
         std::string(SMOL_DEFAULT_SYSTEM) +
         "<|im_start|>user\nFirst part.\nSecond part.<|im_end|>\n"
         "<|im_start|>assistant\n";
-    EXPECT_EQ(result.req.promptText, expected);
-    EXPECT_TRUE(result.req.inputImages.empty());
+
+    for (bool isVLM : {false, true}) {
+        auto result = runPipeline(textArrayJson(), isVLM);
+
+        ASSERT_TRUE(result.parseStatus.ok()) << "isVLM=" << isVLM << ": " << result.parseStatus.message();
+        ASSERT_TRUE(result.processStatus.ok()) << "isVLM=" << isVLM << ": " << result.processStatus.message();
+        EXPECT_EQ(result.req.promptText, expected) << "isVLM=" << isVLM;
+        EXPECT_TRUE(result.req.inputImages.empty()) << "isVLM=" << isVLM;
+    }
 }
 
 // ---------------------------------------------------------------------------

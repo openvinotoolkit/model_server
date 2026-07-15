@@ -150,47 +150,48 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
     return StatusCode::OK;
 }
 
+Status applyDefaultCpuProperties(ov::AnyMap& properties, uint16_t coreCount, uint16_t physicalCoresPerSocket, uint16_t socketsCount, uint16_t dockerCpuQuota) {
+    if (properties.find(ov::hint::enable_cpu_pinning.name()) == properties.end()) {
+        const bool cpuPinning = dockerCpuQuota <= 0;
+        properties[ov::hint::enable_cpu_pinning.name()] = cpuPinning;
+        SPDLOG_DEBUG("applyDefaultCpuProperties, DockerCPUQuota: {} - setting enable_cpu_pinning to {}", dockerCpuQuota, cpuPinning);
+    }
+
+    bool isThroughput = false;
+    const auto perfIt = properties.find(ov::hint::performance_mode.name());
+    if (perfIt != properties.end()) {
+        try {
+            isThroughput = (perfIt->second.as<ov::hint::PerformanceMode>() == ov::hint::PerformanceMode::THROUGHPUT);
+        } catch (...) {
+            try {
+                isThroughput = (perfIt->second.as<std::string>() == "THROUGHPUT");
+            } catch (...) {
+            }
+        }
+        if (isThroughput && properties.find(ov::num_streams.name()) == properties.end()) {
+            int numStreams = std::min(static_cast<int>(coreCount), static_cast<int>(physicalCoresPerSocket * socketsCount));
+            properties[ov::num_streams.name()] = numStreams;
+            SPDLOG_DEBUG("applyDefaultCpuProperties, CoreCount: {}, PhysicalCoresPerSocket: {}, SocketsCount: {} - setting num_streams to {} (THROUGHPUT hint active)", coreCount, physicalCoresPerSocket, socketsCount, numStreams);
+        }
+    }
+
+    if (properties.find(ov::inference_num_threads.name()) == properties.end()) {
+        if (coreCount <= physicalCoresPerSocket * socketsCount) {
+            int numThreads = static_cast<int>(coreCount);
+            properties[ov::inference_num_threads.name()] = numThreads;
+            SPDLOG_DEBUG("applyDefaultCpuProperties: CoreCount: {}, PhysicalCoresPerSocket: {}, SocketsCount: {}, setting inference_num_threads to {}", coreCount, physicalCoresPerSocket, socketsCount, numThreads);
+        }
+    }
+    return StatusCode::OK;
+}
+
 Status applyDefaultCpuProperties(ov::AnyMap& properties) {
 #ifdef __linux__
     try {
         if (!isRunningInDocker()) {
             return StatusCode::OK;
         }
-        const uint16_t coreCount = getCoreCount();
-
-        if (properties.find(ov::hint::enable_cpu_pinning.name()) == properties.end()) {
-            const bool cpuPinning = getDockerCpuQuota() <= 0;
-            properties[ov::hint::enable_cpu_pinning.name()] = cpuPinning;
-            SPDLOG_DEBUG("applyDefaultCpuProperties: setting enable_cpu_pinning to {}", cpuPinning);
-        }
-
-        bool isThroughput = false;
-        const auto perfIt = properties.find(ov::hint::performance_mode.name());
-        if (perfIt != properties.end()) {
-            try {
-                isThroughput = (perfIt->second.as<ov::hint::PerformanceMode>() == ov::hint::PerformanceMode::THROUGHPUT);
-            } catch (...) {
-                try {
-                    isThroughput = (perfIt->second.as<std::string>() == "THROUGHPUT");
-                } catch (...) {
-                }
-            }
-            if (isThroughput && properties.find(ov::num_streams.name()) == properties.end()) {
-                properties[ov::num_streams.name()] = static_cast<int>(coreCount);
-                SPDLOG_DEBUG("applyDefaultCpuProperties: setting num_streams to {} (THROUGHPUT hint active)", coreCount);
-            }
-        }
-
-        if (properties.find(ov::inference_num_threads.name()) == properties.end()) {
-            int numThreads;
-            if (isThroughput) {
-                numThreads = static_cast<int>(coreCount);
-            } else {
-                numThreads = std::min(static_cast<int>(coreCount), static_cast<int>(getPhysicalCoresPerSocket()));
-            }
-            properties[ov::inference_num_threads.name()] = numThreads;
-            SPDLOG_DEBUG("applyDefaultCpuProperties: setting inference_num_threads to {}", numThreads);
-        }
+        return applyDefaultCpuProperties(properties, getCoreCount(), getPhysicalCoresPerSocket(), getSocketsCount(), getDockerCpuQuota());
     } catch (const std::exception& ex) {
         SPDLOG_WARN("Exception while applying default CPU properties: {}", ex.what());
     } catch (...) {
