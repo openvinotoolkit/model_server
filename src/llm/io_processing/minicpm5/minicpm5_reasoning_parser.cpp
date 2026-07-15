@@ -46,7 +46,11 @@ void Minicpm5ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vecto
 
     parsedOutput.reasoning = reasoningContent;
 
-    std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(endPos + generatedTokens.begin() + 1, generatedTokens.end()), ov::genai::skip_special_tokens(true));
+    if (endReasoningIt != generatedTokens.end()) {
+        endPos += 1; 
+    }
+    
+    std::string contentWithoutReasoning = tokenizer.decode(std::vector<int64_t>(endPos + generatedTokens.begin(), generatedTokens.end()), ov::genai::skip_special_tokens(true));
     parsedOutput.content = contentWithoutReasoning;
 }
 

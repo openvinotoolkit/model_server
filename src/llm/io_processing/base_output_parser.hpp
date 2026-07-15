@@ -62,7 +62,7 @@ using ToolsParameterTypeMap_t = std::unordered_map<std::string, ParametersTypeMa
 
 // Tool-schema helpers shared between tag/attribute-style parsers (e.g. qwen3coder, minicpm5).
 // Builds a parameter name -> ParameterType map from a single tool's JSON schema.
-ParametersTypeMap_t parseToolSchema(const std::string& functionName, const rapidjson::Value& schema);
+ParametersTypeMap_t parseToolSchema(const rapidjson::Value& schema);
 // Builds a tool name -> (parameter name -> ParameterType) map from all tools' schemas.
 ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas);
 

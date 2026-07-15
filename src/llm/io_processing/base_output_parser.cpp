@@ -28,7 +28,7 @@
 
 namespace ovms {
 
-ParametersTypeMap_t parseToolSchema(const std::string& functionName, const rapidjson::Value& schema) {
+ParametersTypeMap_t parseToolSchema(const rapidjson::Value& schema) {
     // Map each declared parameter name to its ParameterType from the tool's JSON schema.
     ParametersTypeMap_t result;
     if (!schema.IsObject()) {
@@ -67,7 +67,7 @@ ParametersTypeMap_t parseToolSchema(const std::string& functionName, const rapid
 ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas) {
     ToolsParameterTypeMap_t toolsParametersTypes;
     for (const auto& [toolName, toolSchemaWrapper] : toolsSchemas) {
-        toolsParametersTypes.emplace(toolName, parseToolSchema(toolName, *toolSchemaWrapper.rapidjsonRepr));
+        toolsParametersTypes.emplace(toolName, parseToolSchema(*toolSchemaWrapper.rapidjsonRepr));
     }
     return toolsParametersTypes;
 }

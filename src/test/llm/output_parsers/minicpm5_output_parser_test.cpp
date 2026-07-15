@@ -558,7 +558,7 @@ TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallAndReasoning) {
     assertStreamingVec(chunkToDeltaVec);
 }
 
-TEST_F(Minicpm5OutputParserTest, StrimingWithToolCallAndSpecialTags) {
+TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallAndSpecialTags) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {"<s>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"<function", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -578,7 +578,7 @@ TEST_F(Minicpm5OutputParserTest, StrimingWithToolCallAndSpecialTags) {
 }
 
 // It's possible that model starts to reason without the starting <think> tag, in that
-TEST_F(Minicpm5OutputParserTest, StrimingWithReasoningWithoutStaringTag) {
+TEST_F(Minicpm5OutputParserTest, StreamingWithReasoningWithoutStartingTag) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {"<s>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"This", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"This"}})"},
@@ -781,7 +781,7 @@ TEST(Minicpm5ToolParserImplTest, StringParamWithQuotesAndBackslashes) {
 
 TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallWithBiggerChunks) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
-        {"<function name=\"dummy\"><param name=\"config\">{\'key\':\'value\'}</param></function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"},"arguments":"{\"config\":{\"key\":\"value\"}}"}]}})"},
+        {"<function name=\"dummy\"><param name=\"config\">{\'key\':\'value\'}</param></function>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy","arguments":"{\"config\":{\"key\":\"value\"}}"}}]}})"},
     };
 
     assertStreamingVec(chunkToDeltaVec);

@@ -93,23 +93,28 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
     }
 
     temp.Parse(parameterValueAsString.c_str());
+    rapidjson::Document retryDoc;
+    bool parsingSucceeded = !temp.HasParseError();
 
-    if (temp.HasParseError() && !parameterValueAsString.empty() &&
-        (parameterValueAsString.front() == '{' || parameterValueAsString.front() == '[')) {
-        std::string converted = replaceSingleWithDoubleQuotes(parameterValueAsString);
-        rapidjson::Document retryDoc;
-        retryDoc.Parse(converted.c_str());
-        if (!retryDoc.HasParseError()) {
-            SPDLOG_TRACE("Minicpm5: successfully parsed after single-to-double quote conversion: {}", converted);
-            parameterValueAsString = std::move(converted);
-            valueCopy.CopyFrom(retryDoc, allocator);
+    if (!parsingSucceeded) {
+        if (!parameterValueAsString.empty() &&
+            (parameterValueAsString.front() == '{' || parameterValueAsString.front() == '[')) {
+            std::string converted = replaceSingleWithDoubleQuotes(parameterValueAsString);
+            retryDoc.Parse(converted.c_str());
+            if (!retryDoc.HasParseError()) {
+                SPDLOG_TRACE("Minicpm5: successfully parsed after single-to-double quote conversion: {}", converted);
+                parameterValueAsString = std::move(converted);
+                valueCopy.CopyFrom(retryDoc, allocator);
+                parsingSucceeded = true;
+            }
         }
-    } else if (temp.HasParseError()) {
-        rapidjson::ParseErrorCode errorCode = temp.GetParseError();
-        size_t errorOffset = temp.GetErrorOffset();
-        SPDLOG_TRACE("Minicpm5: RapidJSON cannot parse param: {} value: {}; error offset: {}; code: {}; falling back to string",
-            this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
-        valueCopy.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);
+        if (!parsingSucceeded) {
+            rapidjson::ParseErrorCode errorCode = temp.GetParseError();
+            size_t errorOffset = temp.GetErrorOffset();
+            SPDLOG_TRACE("Minicpm5: RapidJSON cannot parse param: {} value: {}; error offset: {}; code: {}; falling back to string",
+                this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
+            valueCopy.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);
+        }
     } else {
         valueCopy.CopyFrom(temp, allocator);
         if (paramIt != this->toolsParametersTypeMap.end()) {
@@ -414,11 +419,11 @@ rapidjson::Document Minicpm5ToolParser::wrapCombinedDelta(const ToolCall& toolCa
     rapidjson::Value functionObj(rapidjson::kObjectType);
     rapidjson::Value nameValue(toolCall.name.c_str(), allocator);
     functionObj.AddMember("name", nameValue, allocator);
-    toolCallObj.AddMember("function", functionObj, allocator);
 
     rapidjson::Value argumentsValue(rapidjson::kStringType);
     argumentsValue.SetString(toolCall.arguments.c_str(), allocator);
-    toolCallObj.AddMember("arguments", argumentsValue, allocator);
+    functionObj.AddMember("arguments", argumentsValue, allocator);
+    toolCallObj.AddMember("function", functionObj, allocator);
 
     toolCalls.PushBack(toolCallObj, allocator);
     rapidjson::Value deltaWrapper(rapidjson::kObjectType);
