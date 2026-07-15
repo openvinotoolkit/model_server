@@ -192,7 +192,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     properties->device = nodeOptions.device();
     if (properties->device.empty()) {
         properties->device = recommendTargetDevice();
-        SPDLOG_INFO("No device specified for LLM CB model, using recommended device: {}", properties->device);
+        SPDLOG_INFO("No device specified, using recommended device: {}", properties->device);
     }
     properties->bestOfLimit = nodeOptions.best_of_limit();
     properties->enableToolGuidedGeneration = nodeOptions.enable_tool_guided_generation();

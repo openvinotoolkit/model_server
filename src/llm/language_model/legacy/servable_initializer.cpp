@@ -88,7 +88,7 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     properties->device = nodeOptions.device();
     if (properties->device.empty()) {
         properties->device = recommendTargetDevice();
-        SPDLOG_INFO("No device specified for LLM legacy model, using recommended device: {}", properties->device);
+        SPDLOG_INFO("No device specified, using recommended device: {}", properties->device);
     }
 
     if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {

@@ -168,9 +168,12 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:)"
-        << graphSettings.maxNumSeqs << R"(,
-            device: ")"
-        << exportSettings.targetDevice << R"(",
+        << graphSettings.maxNumSeqs << R"(,)";
+    if (!exportSettings.targetDevice.empty()) {
+        oss << R"(
+            device: ")" << exportSettings.targetDevice << R"(",)";
+    }
+    oss << R"(
             models_path: ")"
         << modelsPath << R"(",
             )";
@@ -265,8 +268,12 @@ node {
             models_path: ")"
             << modelsPath << R"(",
             max_allowed_chunks: )"
-            << graphSettings.maxAllowedChunks << R"(,
-            target_device: ")" << exportSettings.targetDevice << R"(",
+            << graphSettings.maxAllowedChunks << R"(,)";
+    if (!exportSettings.targetDevice.empty()) {
+        oss << R"(
+            target_device: ")" << exportSettings.targetDevice << R"(",)";
+    }
+    oss << R"(
             )";
     if (pluginConfigOpt.has_value()) {
         oss << R"(plugin_config: ')" << pluginConfigOpt.value()  << R"(',)";
@@ -312,8 +319,12 @@ node {
             truncate: )"
             << graphSettings.truncate << R"(,
             pooling: )"
-            << graphSettings.pooling << R"(,
-            target_device: ")" << exportSettings.targetDevice << R"(",
+            << graphSettings.pooling << R"(,)";
+    if (!exportSettings.targetDevice.empty()) {
+        oss << R"(
+            target_device: ")" << exportSettings.targetDevice << R"(",)";
+    }
+    oss << R"(
             )";
     if (pluginConfigOpt.has_value()) {
         oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"(',
@@ -371,8 +382,11 @@ node {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: ")"
             << modelsPath << R"("
-            target_device: ")" << exportSettings.targetDevice << R"("
             )";
+    if (!exportSettings.targetDevice.empty()) {
+        oss << R"(target_device: ")" << exportSettings.targetDevice << R"("
+            )";
+    }
     if (pluginConfigOpt.has_value()) {
         oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"('
             )";
@@ -445,8 +459,11 @@ node {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: ")"
             << modelsPath << R"("
-            target_device: ")" << exportSettings.targetDevice << R"("
             )";
+    if (!exportSettings.targetDevice.empty()) {
+        oss << R"(target_device: ")" << exportSettings.targetDevice << R"("
+            )";
+    }
     if (pluginConfigOpt.has_value()) {
         oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"('
         )";
@@ -508,8 +525,11 @@ node: {
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-          models_path: ")" << modelsPath << R"("
+          models_path: ")" << modelsPath << R"(")";
+    if (!exportSettings.targetDevice.empty()) {
+        oss << R"(
           device: ")" << exportSettings.targetDevice << R"(")";
+    }
     if (pluginConfigOpt.has_value()) {
         oss << R"(
           plugin_config: ')" << pluginConfigOpt.value() << R"(')";
