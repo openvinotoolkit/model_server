@@ -63,13 +63,11 @@ void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory) {
 void injectReasoningIntoMissnamedSection(ov::genai::ChatHistory& chatHistory, const std::string& templateReasoningFieldName) {
     for (size_t msgIdx = 0; msgIdx < chatHistory.size(); ++msgIdx) {
         auto message = chatHistory[msgIdx];
-        if (!message.contains("reasoning_content")) {
+        if (!message.contains("reasoning_content") || !message["reasoning_content"].is_string()) {
             continue;
         }
-        auto reasoning = message["reasoning_content"];
-        std::string contentStr = reasoning.get_string();
 
-        message[templateReasoningFieldName.c_str()] = contentStr;
+        message[templateReasoningFieldName.c_str()] = message["reasoning_content"].get_string();
     }
 }
 

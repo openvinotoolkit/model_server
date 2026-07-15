@@ -179,7 +179,7 @@ bool probeChatTemplateReasoning(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
     }
 
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Reasoning probe: no reasoning field supported by template");
-    return true;
+    return false;
 }
 
 static std::pair<bool, std::string> renderProbeMessage(ov::genai::Tokenizer& tokenizer, const std::string& assistantMsg) {

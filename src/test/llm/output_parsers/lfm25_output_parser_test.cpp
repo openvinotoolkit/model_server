@@ -947,7 +947,6 @@ TEST_F(LFM25OutputParserTest, ParseToolCallWithReasoning) {
     auto generatedTensor = lfm25Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
 
-    std::cout << std::endl;
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
