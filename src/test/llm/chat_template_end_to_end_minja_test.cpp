@@ -495,6 +495,37 @@ What's the weather in Paris?<|im_end|>
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
+TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ReasoningAndEmptyToolCalls) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2.5 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant", "reasoning_content":"Here is some reasoning content","content":"","tool_calls":[]})"));
+
+    run(true);
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2");
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
+
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<think>Here is some reasoning content</think><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
 // =============================================================================
 // Same story as Qwen3-8B, but with image tags.
 // =============================================================================
