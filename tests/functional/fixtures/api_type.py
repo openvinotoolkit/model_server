@@ -40,6 +40,7 @@ def api_type(request):
     else:
         return api_type_non_fixture(*request.param, ovms_type=None)
 
+
 @pytest.fixture(scope="session", params=itertools.product([KFS], [REST]), ids=lambda x: f":".join(x).upper())
 def rest_api_type(request):
     return api_type_non_fixture(*request.param)
