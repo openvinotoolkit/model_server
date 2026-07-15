@@ -1022,8 +1022,9 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
                 const bool isBytesType = precision == Precision::STRING;
                 const bool isFixedSizeType = dtypeSize > 0 && !isBytesType;
                 const bool hasBytesContents = requestInputItr->has_contents() && requestInputItr->contents().bytes_contents_size() > 0;
+                size_t expectedBytes = 0;
                 if (isFixedSizeType) {
-                    size_t expectedBytes = 1;
+                    expectedBytes = 1;
                     const bool sizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(
                         shapeVec, dtypeSize, expectedBytes);
                     if (!sizeValid) {
@@ -1031,7 +1032,6 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
                             "Provided shape and datatype declare too large buffer for OVMS_PY_TENSOR stream: " + inputName);
                     }
                 } else if (isBytesType && hasBytesContents) {
-                    size_t expectedBytes = 0;
                     status = calculateSerializedBytesContentSize(*requestInputItr, expectedBytes);
                 }
                 if (status.ok()) {
@@ -1041,14 +1041,6 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
                     if (request->raw_input_contents_size() > static_cast<int>(inputIndex)) {
                         rawBufPtr = &request->raw_input_contents().at(inputIndex);
                     } else if (isFixedSizeType || (isBytesType && hasBytesContents)) {
-                        size_t expectedBytes = 0;
-                        if (isFixedSizeType) {
-                            expectedBytes = 1;
-                            // sizeValid is always true here (overflow was checked above already)
-                            computeExpectedBufferSizeReturnFalseIfOverflow(shapeVec, dtypeSize, expectedBytes);
-                        } else {
-                            status = calculateSerializedBytesContentSize(*requestInputItr, expectedBytes);
-                        }
                         if (status.ok()) {
                             status = serializeKfsTypedContentToRawBuffer(
                                 *requestInputItr,
@@ -1077,14 +1069,6 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
                         // Custom datatypes (unrecognised by KFSDataTypeSize → 0) skip the byte
                         // size check but are passed through; the Python handler owns that validation.
                         if (isFixedSizeType || (isBytesType && hasBytesContents)) {
-                            size_t expectedBytes = 0;
-                            if (isFixedSizeType) {
-                                expectedBytes = 1;
-                                // sizeValid is always true here (overflow was checked above already)
-                                computeExpectedBufferSizeReturnFalseIfOverflow(shapeVec, dtypeSize, expectedBytes);
-                            } else {
-                                status = calculateSerializedBytesContentSize(*requestInputItr, expectedBytes);
-                            }
                             if (status.ok() && dataSize != expectedBytes) {
                                 std::stringstream ss;
                                 ss << "Expected: " << expectedBytes << " bytes; Actual: "

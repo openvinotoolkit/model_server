@@ -22,7 +22,9 @@
 #include "../status.hpp"
 
 namespace {
+#if (PYTHON_DISABLE == 0)
 PythonEnvironment* g_pythonEnvironment = nullptr;
+#endif
 }
 
 void PythonEnvironment::SetUp() {
