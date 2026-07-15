@@ -150,15 +150,48 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
     return StatusCode::OK;
 }
 
+std::string recommendTargetDevice(const std::vector<GpuDeviceInfo>& gpuDevices) {
+    if (gpuDevices.empty()) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "No GPU devices found, recommending CPU");
+        return "CPU";
+    }
+
+    std::vector<GpuDeviceInfo> discreteGpus;
+    std::vector<GpuDeviceInfo> integratedGpus;
+    for (const auto& gpu : gpuDevices) {
+        if (gpu.isDiscrete) {
+            discreteGpus.push_back(gpu);
+        } else {
+            integratedGpus.push_back(gpu);
+        }
+    }
+
+    if (discreteGpus.size() == 1) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Single discrete GPU found, recommending: {}", discreteGpus[0].name);
+        return discreteGpus[0].name;
+    }
+
+    if (discreteGpus.size() > 1) {
+        auto best = std::max_element(discreteGpus.begin(), discreteGpus.end(),
+            [](const GpuDeviceInfo& a, const GpuDeviceInfo& b) {
+                return a.freeMemBytes < b.freeMemBytes;
+            });
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Multiple discrete GPUs found, recommending {} with {} bytes free VRAM", best->name, best->freeMemBytes);
+        return best->name;
+    }
+
+    if (!integratedGpus.empty()) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Integrated GPU found, recommending: {}", integratedGpus[0].name);
+        return integratedGpus[0].name;
+    }
+
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Falling back to CPU");
+    return "CPU";
+}
+
 std::string recommendTargetDevice() {
     static ov::Core core;
     auto availableDevices = core.get_available_devices();
-
-    struct GpuDeviceInfo {
-        std::string name;
-        bool isDiscrete = false;
-        int64_t freeMemBytes = 0;
-    };
 
     std::vector<GpuDeviceInfo> gpuDevices;
 
@@ -199,42 +232,7 @@ std::string recommendTargetDevice() {
         gpuDevices.push_back(info);
     }
 
-    if (gpuDevices.empty()) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "No GPU devices found, recommending CPU");
-        return "CPU";
-    }
-
-    std::vector<GpuDeviceInfo> discreteGpus;
-    std::vector<GpuDeviceInfo> integratedGpus;
-    for (const auto& gpu : gpuDevices) {
-        if (gpu.isDiscrete) {
-            discreteGpus.push_back(gpu);
-        } else {
-            integratedGpus.push_back(gpu);
-        }
-    }
-
-    if (discreteGpus.size() == 1) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Single discrete GPU found, recommending: {}", discreteGpus[0].name);
-        return discreteGpus[0].name;
-    }
-
-    if (discreteGpus.size() > 1) {
-        auto best = std::max_element(discreteGpus.begin(), discreteGpus.end(),
-            [](const GpuDeviceInfo& a, const GpuDeviceInfo& b) {
-                return a.freeMemBytes < b.freeMemBytes;
-            });
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Multiple discrete GPUs found, recommending {} with {} bytes free VRAM", best->name, best->freeMemBytes);
-        return best->name;
-    }
-
-    if (!integratedGpus.empty()) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Integrated GPU found, recommending: {}", integratedGpus[0].name);
-        return integratedGpus[0].name;
-    }
-
-    SPDLOG_LOGGER_INFO(modelmanager_logger, "Falling back to CPU");
-    return "CPU";
+    return recommendTargetDevice(gpuDevices);
 }
 
 Status applyDefaultCpuProperties(ov::AnyMap& properties, uint16_t coreCount, uint16_t physicalCoresPerSocket, uint16_t socketsCount, uint16_t dockerCpuQuota) {
