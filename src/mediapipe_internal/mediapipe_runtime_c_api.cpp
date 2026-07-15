@@ -29,6 +29,7 @@
 #include "../status.hpp"
 #include "mediapipegraphconfig.hpp"
 #include "mediapipegraphdefinition.hpp"
+#include "../logging.hpp"
 
 #if defined(_WIN32)
 #define MEDIAPIPE_RUNTIME_EXPORT __declspec(dllexport)
@@ -90,6 +91,7 @@ ovms::Status processConfigInternal(ovms::MediapipeFactory* factory,
 }  // namespace
 
 extern "C" MEDIAPIPE_RUNTIME_EXPORT void* OVMS_MPFactoryCreate(void* pythonBackend) {
+    ovms::initialize_named_loggers_from_default();
     auto* factory = new ovms::MediapipeFactory(static_cast<ovms::PythonBackend*>(pythonBackend));
     return static_cast<void*>(factory);
 }

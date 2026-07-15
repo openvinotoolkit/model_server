@@ -125,6 +125,52 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     spdlog::set_default_logger(serving_logger);
 }
 
+static void adopt_default_logger_settings(std::shared_ptr<spdlog::logger> logger,
+    const std::shared_ptr<spdlog::logger>& defaultLogger) {
+    if (logger == nullptr || defaultLogger == nullptr) {
+        return;
+    }
+
+    if (logger->sinks().empty()) {
+        logger->sinks() = defaultLogger->sinks();
+    }
+    logger->set_pattern(default_pattern);
+    logger->set_level(defaultLogger->level());
+}
+
+void initialize_named_loggers_from_default() {
+    static bool wasRun = false;
+    if (wasRun) {
+        return;
+    }
+
+    auto defaultLogger = spdlog::default_logger();
+    if (defaultLogger == nullptr || defaultLogger->sinks().empty()) {
+        return;
+    }
+
+    adopt_default_logger_settings(gcs_logger, defaultLogger);
+    adopt_default_logger_settings(azurestorage_logger, defaultLogger);
+    adopt_default_logger_settings(s3_logger, defaultLogger);
+    adopt_default_logger_settings(modelmanager_logger, defaultLogger);
+    adopt_default_logger_settings(dag_executor_logger, defaultLogger);
+    adopt_default_logger_settings(capi_logger, defaultLogger);
+#if (MEDIAPIPE_DISABLE == 0)
+    adopt_default_logger_settings(mediapipe_logger, defaultLogger);
+    adopt_default_logger_settings(llm_executor_logger, defaultLogger);
+    adopt_default_logger_settings(llm_calculator_logger, defaultLogger);
+    adopt_default_logger_settings(s2t_calculator_logger, defaultLogger);
+    adopt_default_logger_settings(t2s_calculator_logger, defaultLogger);
+    adopt_default_logger_settings(embeddings_calculator_logger, defaultLogger);
+    adopt_default_logger_settings(rerank_calculator_logger, defaultLogger);
+#endif
+#if (OV_TRACE == 1)
+    adopt_default_logger_settings(ov_logger, defaultLogger);
+#endif
+
+    wasRun = true;
+}
+
 void configure_logger(const std::string& log_level, const std::string& log_path) {
     static bool wasRun = false;
     if (wasRun) {

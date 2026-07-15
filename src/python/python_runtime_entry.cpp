@@ -24,6 +24,8 @@
 #include <utility>
 #include <vector>
 
+#include "../logging.hpp"
+
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
@@ -153,10 +155,12 @@ bool validateEnvPaths(std::string& details) {
 }  // namespace
 
 extern "C" PYTHON_RUNTIME_EXPORT ovms::Module* OVMS_createPythonInterpreterModule() {
+    ovms::initialize_named_loggers_from_default();
     return new ovms::PythonInterpreterModule();
 }
 
 extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char** errorMessage) {
+    ovms::initialize_named_loggers_from_default();
     static thread_local std::string lastError;
     if (errorMessage != nullptr) {
         *errorMessage = nullptr;
