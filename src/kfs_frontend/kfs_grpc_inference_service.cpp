@@ -61,7 +61,7 @@ enum : unsigned int {
 bool containsEmbeddedNull(const std::string& value) {
     return value.find('\0') != std::string::npos;
 }
-}
+}  // namespace
 
 namespace ovms {
 
