@@ -56,8 +56,13 @@ public:
                 type, name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, le.what());
             throw;
         }
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "{}: {} state changed to: {} after handling: {}: {}",
-            type, name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
+        if (modelmanager_logger && !modelmanager_logger->sinks().empty()) {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "{}: {} state changed to: {} after handling: {}: {}",
+                type, name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
+        } else {
+            SPDLOG_INFO("{}: {} state changed to: {} after handling: {}: {}",
+                type, name, pipelineDefinitionStateCodeToString(getStateCode()), event.name, event.getDetails());
+        }
     }
 
     template <typename State>

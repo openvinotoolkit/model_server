@@ -577,9 +577,10 @@ Status MediapipeGraphDefinition::initializeNodes() {
 
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
+        const auto& node = config.node(i);
         for (const auto& initializer : registry.all()) {
-            if (initializer->matches(config.node(i).calculator())) {
-                Status status = initializer->initialize(config.node(i), getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend);
+            if (initializer->matches(node.calculator())) {
+                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend);
                 if (!status.ok()) {
                     return status;
                 }
