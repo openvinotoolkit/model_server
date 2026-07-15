@@ -213,7 +213,7 @@ class GenerativeAIValidationUtils:
                     if choice.delta.tool_calls is not None:
                         stream_content.append(choice.delta.tool_calls)
                 else:
-                    if choice.delta is not None and choice.delta.content is not None:
+                    if choice.delta.content is not None:
                         stream_content.append(choice.delta.content)
             else:
                 if not allow_empty_response:
@@ -288,7 +288,7 @@ class GenerativeAIValidationUtils:
                 if output.type == "response.created":
                     assert output.response.model == model_name,\
                         f"Invalid model name: {output.response.model}; Expected: {model_name}"
-                elif output.type == "response.output_text.delta" and output.delta is not None:
+                elif output.type == "response.output_text.delta":
                     stream_content.append(output.delta)
                 elif output.type in ("response.completed", "response.incomplete"):
                     if not allow_empty_response:
