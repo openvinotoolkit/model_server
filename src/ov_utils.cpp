@@ -174,8 +174,8 @@ std::string recommendTargetDevice() {
             auto deviceType = core.get_property(device, ov::device::type);
             info.isDiscrete = (deviceType == ov::device::Type::DISCRETE);
         } catch (const std::exception& e) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Failed to get DEVICE_TYPE for {}: {}", device, e.what());
-            continue;
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Failed to get DEVICE_TYPE for {}: {}; treating as integrated/unknown GPU", device, e.what());
+            info.isDiscrete = false;
         }
 
         try {
