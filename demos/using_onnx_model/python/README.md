@@ -46,15 +46,4 @@ Running inference with image: ../../common/static/images/bee.jpeg
 Class with highest score: 309
 Detected class name: bee
 ```
-
-The client can be also run with flag `--send_tensor` which reads encoded input image and sends it with uint8 precision.
-```bash
-python onnx_model_demo.py --service_url localhost:9001 --send_tensor
-```
-Output:
-```
-Running inference with image: ../../common/static/images/bee.jpeg
-Class with highest score: 309
-Detected class name: bee
-```
 > **Note:** While adding preprocessing to the model input, shape needs to be set as static.

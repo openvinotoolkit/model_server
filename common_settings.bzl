@@ -71,17 +71,6 @@ def create_config_settings():
         negate = ":disable_mediapipe",
     )
     native.config_setting(
-        name = "enable_drogon",
-        define_values = {
-            "USE_DROGON": "1",
-        },
-        visibility = ["//visibility:public"],
-    )
-    more_selects.config_setting_negation(
-        name = "enable_net_http",
-        negate = ":enable_drogon",
-    )
-    native.config_setting(
         name = "disable_cloud",
         define_values = {
             "CLOUD_DISABLE": "1",
@@ -243,10 +232,6 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                     "/LTCG",
                 ],
                 })
-COPTS_DROGON = select({
-    "//conditions:default": ["-DUSE_DROGON=0"],
-    "//:enable_drogon" : ["-DUSE_DROGON=1"],
-})
 DEFINES_PYTHON = select({
     "//conditions:default": ["PYTHON_DISABLE=1"],
     "//:not_disable_python" : ["PYTHON_DISABLE=0"],

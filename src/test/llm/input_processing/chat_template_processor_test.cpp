@@ -141,6 +141,43 @@ TEST_F(ChatTemplateProcessorTest, MultiTurnConversation_AllTurnsRendered) {
     EXPECT_EQ(req.promptText, expected);
 }
 
+// add_generation_prompt=false (read out of chat_template_kwargs) must omit the
+// trailing generation-prompt suffix while otherwise rendering normally.
+TEST_F(ChatTemplateProcessorTest, AddGenerationPromptFalse_OmitsGenerationPromptSuffix) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", "What is OpenVINO?"}});
+    history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"add_generation_prompt": false})"));
+
+    InputRequest req = makeChatRequest(std::move(history));
+    ChatTemplateProcessor processor(*sharedTokenizer);
+    const auto status = processor.process(req);
+
+    ASSERT_TRUE(status.ok()) << status.message();
+
+    const std::string expected =
+        std::string(SMOL_DEFAULT_SYSTEM) +
+        "<|im_start|>user\nWhat is OpenVINO?<|im_end|>\n";
+    EXPECT_EQ(req.promptText, expected);
+    EXPECT_EQ(req.promptText.find("<|im_start|>assistant"), std::string::npos)
+        << "add_generation_prompt=false must omit the trailing generation prompt";
+}
+
+// A non-boolean add_generation_prompt must be rejected with a clear error
+// instead of throwing an unhandled JsonContainer type-mismatch exception.
+TEST_F(ChatTemplateProcessorTest, AddGenerationPromptNonBoolean_ReturnsInvalidArgument) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", "Hi."}});
+    history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"add_generation_prompt": "yes"})"));
+
+    InputRequest req = makeChatRequest(std::move(history));
+    ChatTemplateProcessor processor(*sharedTokenizer);
+    const auto status = processor.process(req);
+
+    ASSERT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_NE(status.message().find("add_generation_prompt"), std::string::npos) << status.message();
+}
+
 // The processor must populate req.promptText and leave the ChatHistory
 // variant in req.input intact (it does not replace the input variant).
 TEST_F(ChatTemplateProcessorTest, PromptTextPopulated_ChatHistoryVariantPreserved) {

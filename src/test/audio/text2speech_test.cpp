@@ -32,7 +32,7 @@ using namespace ovms;
 class Text2SpeechHttpTest : public V3HttpTest {
 protected:
     std::string modelName = "text2speech";
-    std::string endpoint = "/v3/audio/speech";
+    std::string endpoint = "/v1/audio/speech";
     static std::unique_ptr<std::thread> t;
 
 public:

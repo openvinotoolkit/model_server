@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,35 +15,22 @@
 //*****************************************************************************
 #pragma once
 
-#include <cstdint>
+#pragma warning(push)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#pragma GCC diagnostic ignored "-Wall"
+#include "tensorflow/core/framework/tensor.h"
+#pragma GCC diagnostic pop
+#pragma warning(pop)
+
+#include "precision.hpp"
+
+using TFSDataType = tensorflow::DataType;  // TODO @atobiszei since we dont have TFS now we can rename to TFDataType?
 
 namespace ovms {
-struct ExecutionContext {
-    enum class Interface : uint8_t {
-        GRPC,
-        REST,
-    };
-    enum class Method : uint8_t {
-        // Model Control API
-        ConfigReload,
-        ConfigStatus,
 
-        // KServe
-        ModelInfer,
-        ModelInferStream,
-        ModelReady,
-        ModelMetadata,
+Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype);
+TFSDataType getPrecisionAsDataType(Precision precision);
 
-        // V3
-        V3Unary,
-        V3Stream,
-    };
-
-    Interface interface;
-    Method method;
-
-    ExecutionContext(Interface interface, Method method) :
-        interface(interface),
-        method(method) {}
-};
 }  // namespace ovms

@@ -35,6 +35,7 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #endif
 #include "../kfs_python_tensor_bridge.hpp"
+#include "../tensorflow_type_utils.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6385 6386 6326 6011 6294 6201 4309 4005 4456 6246)
