@@ -43,7 +43,7 @@ class InferenceClientFactory:
             elif serving == COHERE:
                 serving_class = CohereWrapper
             else:
-                raise Exception
+                raise NotImplementedError(f"Serving not supported: {serving}")
 
             if serving in [KFS, TRITON, OPENAI, COHERE]:
                 if communication == REST:
@@ -51,7 +51,7 @@ class InferenceClientFactory:
                 elif communication == GRPC:
                     communication_class = GrpcCommunicationInterface
                 else:
-                    raise Exception
+                    raise NotImplementedError(f"Communication interface not supported: {communication}")
 
         # pylint: disable=too-many-arguments
         def common_inference_client_init(self,
