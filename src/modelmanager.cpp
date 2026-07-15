@@ -237,7 +237,7 @@ Status ModelManager::startFromConfig() {
 
     std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
     std::ifstream ifs(mpConfig.getGraphPath());
-    bool graphAvailable = ifs.is_open() || (InMemoryGraphStore::hasContent() && config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE);
+    bool graphAvailable = ifs.is_open() || (config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE && InMemoryGraphStore::getContentSnapshot().has_value());
     if (graphAvailable) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
         status = ModelManager::validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
@@ -412,7 +412,7 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} exists", mpConfig.getGraphName(), mpConfig.getGraphPath());
         return true;
     }
-    if (InMemoryGraphStore::hasContent() && Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
+    if (Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE && InMemoryGraphStore::getContentSnapshot().has_value()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} using in-memory graph content", mpConfig.getGraphName());
         return true;
     }

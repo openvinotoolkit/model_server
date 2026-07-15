@@ -33,7 +33,7 @@ public:
     static std::string getDraftModelDirectoryPath(const std::string& directoryPath, const std::string& draftModel);
 
     static bool hasInMemoryGraphContent();
-    static const std::string& getInMemoryGraphContent();
+    static std::string getInMemoryGraphContent();
     static void clearInMemoryGraphContent();
 };
 }  // namespace ovms

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <optional>
 #include <string>
 
 namespace ovms {
@@ -22,7 +23,8 @@ namespace ovms {
 class InMemoryGraphStore {
 public:
     static bool hasContent();
-    static const std::string& getContent();
+    static std::string getContent();
+    static std::optional<std::string> getContentSnapshot();
     static void setContent(const std::string& content);
     static void clearContent();
 };

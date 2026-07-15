@@ -70,12 +70,14 @@ const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
-    if (InMemoryGraphStore::hasContent() && ovms::Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
-        const std::string& content = InMemoryGraphStore::getContent();
-        this->chosenConfig = content;
-        this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(content));
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using in-memory graph content for mediapipe graph definition: {}", this->getName());
-        return StatusCode::OK;
+    if (ovms::Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
+        auto inMemoryContent = InMemoryGraphStore::getContentSnapshot();
+        if (inMemoryContent.has_value()) {
+            this->chosenConfig = inMemoryContent.value();
+            this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(this->chosenConfig));
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using in-memory graph content for mediapipe graph definition: {}", this->getName());
+            return StatusCode::OK;
+        }
     }
     std::ifstream ifs(this->mgconfig.getGraphPath());
     if (!ifs.is_open()) {

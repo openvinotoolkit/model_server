@@ -60,7 +60,7 @@ bool GraphExport::hasInMemoryGraphContent() {
     return InMemoryGraphStore::hasContent();
 }
 
-const std::string& GraphExport::getInMemoryGraphContent() {
+std::string GraphExport::getInMemoryGraphContent() {
     return InMemoryGraphStore::getContent();
 }
 

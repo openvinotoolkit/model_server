@@ -16,26 +16,41 @@
 
 #include "in_memory_graph_store.hpp"
 
+#include <mutex>
+#include <shared_mutex>
 #include <string>
 
 namespace ovms {
 namespace {
 std::string inMemoryGraphContent;
+std::shared_mutex inMemoryGraphMtx;
 }  // namespace
 
 bool InMemoryGraphStore::hasContent() {
+    std::shared_lock lock(inMemoryGraphMtx);
     return !inMemoryGraphContent.empty();
 }
 
-const std::string& InMemoryGraphStore::getContent() {
+std::string InMemoryGraphStore::getContent() {
+    std::shared_lock lock(inMemoryGraphMtx);
+    return inMemoryGraphContent;
+}
+
+std::optional<std::string> InMemoryGraphStore::getContentSnapshot() {
+    std::shared_lock lock(inMemoryGraphMtx);
+    if (inMemoryGraphContent.empty()) {
+        return std::nullopt;
+    }
     return inMemoryGraphContent;
 }
 
 void InMemoryGraphStore::setContent(const std::string& content) {
+    std::unique_lock lock(inMemoryGraphMtx);
     inMemoryGraphContent = content;
 }
 
 void InMemoryGraphStore::clearContent() {
+    std::unique_lock lock(inMemoryGraphMtx);
     inMemoryGraphContent.clear();
 }
 

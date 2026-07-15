@@ -130,8 +130,9 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
 }
 
 void MediapipeGraphConfig::logGraphConfigContent() const {
-    if (InMemoryGraphStore::hasContent()) {
-        SPDLOG_DEBUG("Content of in-memory graph config:\n{}", InMemoryGraphStore::getContent());
+    auto inMemoryContent = InMemoryGraphStore::getContentSnapshot();
+    if (inMemoryContent.has_value()) {
+        SPDLOG_DEBUG("Content of in-memory graph config:\n{}", inMemoryContent.value());
         return;
     }
     std::ifstream fileStream(this->graphPath);
