@@ -25,7 +25,7 @@ namespace {
 #if (PYTHON_DISABLE == 0)
 PythonEnvironment* g_pythonEnvironment = nullptr;
 #endif
-}
+}  // namespace
 
 void PythonEnvironment::SetUp() {
 #if (PYTHON_DISABLE == 0)
