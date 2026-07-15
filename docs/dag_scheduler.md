@@ -195,12 +195,12 @@ Pipelines can use the same API as the models. There are exactly the same calls f
 the predictions. The request format must match the pipeline definition inputs.
 
 
-The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api_tfs.md) calls and
-[REST Metadata](model_server_rest_api_tfs.md).
+The pipeline configuration can be queried using [gRPC ModelMetadata](model_server_grpc_api_kfs.md) calls and
+[REST Metadata](model_server_rest_api_kfs.md).
 It returns the definition of the pipelines inputs and outputs.
 
-Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_tfs.md)
-and [REST Model Status](model_server_rest_api_tfs.md)
+Similarly, pipelines can be queried for their state using [KServe Model Ready](model_server_grpc_api_kfs.md)
+and [REST Model Ready](model_server_rest_api_kfs.md)
 
 The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines,
 the version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.

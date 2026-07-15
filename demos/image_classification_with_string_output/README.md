@@ -41,8 +41,7 @@ Use example client to send requests containing images via KServ REST API:
 ```console
 python image_classification_with_string_output.py --http_port 8000
 ```
-Request may be sent also using other APIs (KServ GRPC, TFS). In this sections you can find short code samples how to do this:
-- [TensorFlow Serving API](../../docs/clients_tfs.md)
+Request may be sent also using other APIs (KServe GRPC). In this section you can find short code samples how to do this:
 - [KServe API](../../docs/clients_kfs.md)
 
 

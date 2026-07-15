@@ -1,7 +1,6 @@
 {#-
   Modifications to original chat template:
     * Ignoring "response" field from tool definition (it was broken, but also it is inline now with other servings)
-    * Whenever template renders tool_call arguments, those are converted from string to dictlike format using from_json
 #}
 {%- macro format_parameters(properties, required, filter_keys=false) -%}
     {%- set standard_keys = ['description', 'type', 'properties', 'required', 'nullable'] -%}
@@ -237,13 +236,11 @@
 
             {%- if message['tool_calls'] -%}
                 {%- for tool_call in message['tool_calls'] -%}
-                    {#- Patch: Usage of from_json to convert tool_call arguments from string to dictlike #}
                     {%- set function = tool_call['function'] -%}
-                    {%- set args = function['arguments'] | from_json -%}
                     {{- '<|tool_call>call:' + function['name'] + '{' -}}
-                    {%- if args is mapping -%}
+                    {%- if function['arguments'] is mapping -%}
                         {%- set ns_args = namespace(found_first=false) -%}
-                        {%- for key, value in args | dictsort -%}
+                        {%- for key, value in function['arguments'] | dictsort -%}
                             {%- if ns_args.found_first %},{% endif -%}
                             {%- set ns_args.found_first = true -%}
                             {{- key -}}:{{- format_argument(value, escape_keys=False) -}}
