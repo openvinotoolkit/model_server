@@ -323,6 +323,9 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
                     inputWidth = getStringInputWidth(*proto);
                 }
                 if (processingHint == TensorInfo::ProcessingHint::STRING_NATIVE) {
+                    // Guard against ov::Tensor memory amplification: N small strings in proto
+                    // allocate N*sizeof(std::string) objects even for empty content.
+                    RETURN_IF_ERR(validateAgainstMaxNativeStringElementCount(inputBatchSize));
                     // Pass through to normal validation
                 } else if (processingHint == TensorInfo::ProcessingHint::STRING_2D_U8) {
                     SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 2D string input: name: {}",
