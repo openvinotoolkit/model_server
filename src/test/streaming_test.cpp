@@ -119,8 +119,10 @@ public:
         StreamingTest::SetUp();
         pythonModule = std::make_unique<PythonInterpreterModule>();
         pythonModule->start(ovms::Config::instance());
-        // Release GIL on the setup thread so graph worker threads can acquire it.
-        pythonModule->releaseGILFromThisThread();
+        if (pythonModule->ownsPythonInterpreter()) {
+            // Release GIL on the setup thread so graph worker threads can acquire it.
+            pythonModule->releaseGILFromThisThread();
+        }
 #ifdef __linux__
         if (getKfsPyTensorBridgeVTable() == nullptr && OVMS_getKfsPyTensorBridgeVTable != nullptr) {
             if (auto* vtable = OVMS_getKfsPyTensorBridgeVTable(); vtable != nullptr) {
@@ -134,7 +136,9 @@ public:
 
     void TearDown() {
         manager.reset();
-        pythonModule->reacquireGILForThisThread();
+        if (pythonModule->ownsPythonInterpreter()) {
+            pythonModule->reacquireGILForThisThread();
+        }
         pythonModule->shutdown();
         pythonModule.reset();
     }
