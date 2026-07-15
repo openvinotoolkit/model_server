@@ -14,60 +14,41 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <string>
+#include "../base_output_parser.hpp"
 #include <vector>
-#include "src/llm/io_processing/base_output_parser.hpp"
-#include "../../../logging.hpp"
-#include "./lfm2_utils.hpp"
+#include <string>
 
 namespace ovms {
-class Lfm2ToolParser : public BaseOutputParser {
+class Lfm25ReasoningParser : public BaseOutputParser {
 protected:
-    static const std::string TOOL_CALL_START_TAG;
-    static const std::string TOOL_CALL_END_TAG;
+    const std::string parsingStartTag = "<think>";
+    const std::string parsingEndTag = "</think>";
 
-    static const int64_t toolCallStartTokenId;
-    static const int64_t toolCallEndTokenId;
+    const int64_t reasoningStartTokenId = 124901;  // <think>
+    const int64_t reasoningEndTokenId = 124902;    // </think>
 
 public:
-    Lfm2ToolParser() = delete;
-    explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) :
+    Lfm25ReasoningParser() = delete;
+    explicit Lfm25ReasoningParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags = {TOOL_CALL_START_TAG};
+        static const std::vector<std::string> parsingStartTags{this->parsingStartTag};
         return parsingStartTags;
     }
-
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> beginningOnlyTags = {};
-        return beginningOnlyTags;
+        static const std::vector<std::string> specialParsingStartTags{};
+        return specialParsingStartTags;
     }
-
-    const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> tagsToErase = {EOS_TOKEN_STR};
-        return tagsToErase;
-    }
-
     const std::string& getParsingEndTag() const override {
-        return TOOL_CALL_END_TAG;
+        return parsingEndTag;
     }
 
+    // It may be removed after changing logic in Lfm2ToolParser to use tokens in streaming instead of chunk content, both tool parser and reasoning parser need to have the same value for this function
     bool requiresStreamingWithSpecialTokens() const override {
         return true;
     }
-
-private:
-    std::string streamingContent;
-    size_t streamingPosition{0};
-    State currentState{State::Content};
-    ToolCall toolCall;
-    TagIds tagIds{TOOL_CALL_START_TAG, TOOL_CALL_END_TAG, toolCallStartTokenId, toolCallEndTokenId};
-
-    int toolCallIndex{TOOL_CALL_INDEX_START};
-
-    bool parseNewContent();
 };
 }  // namespace ovms
