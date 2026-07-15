@@ -57,6 +57,10 @@ enum : unsigned int {
     TOTAL,
     TIMER_END
 };
+
+bool containsEmbeddedNull(const std::string& value) {
+    return value.find('\0') != std::string::npos;
+}
 }
 
 namespace ovms {
@@ -112,6 +116,10 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
     // if no version requested give response for default version
     const auto& name = request->name();
     const auto& versionString = request->version();
+    if (containsEmbeddedNull(name)) {
+        SPDLOG_DEBUG("ModelReady requested model name contains embedded null byte");
+        return StatusCode::MODEL_NAME_MISSING;
+    }
     auto model = manager.findModelByName(name);
     SPDLOG_DEBUG("ModelReady requested name: {}, version: {}", name, versionString);
     if (model == nullptr) {
@@ -187,6 +195,11 @@ Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* contex
 Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext, KFSModelExtraMetadata& extraMetadata) {
     const auto& name = request->name();
     const auto& versionString = request->version();
+
+    if (containsEmbeddedNull(name)) {
+        SPDLOG_DEBUG("GetModelMetadata requested model name contains embedded null byte");
+        return StatusCode::MODEL_NAME_MISSING;
+    }
 
     auto model = this->modelManager.findModelByName(name);
     SPDLOG_DEBUG("ModelMetadata requested name: {}, version: {}", name, versionString);
