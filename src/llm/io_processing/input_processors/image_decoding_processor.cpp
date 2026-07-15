@@ -66,8 +66,9 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
             continue;
         }
 
-        // Accumulate image tags, text parts, and preserve other content types
-        // (e.g. input_audio) that are handled by downstream processors.
+        // First pass: decode images and detect non-image/non-text parts.
+        // Track image tag per content part index for the rebuild.
+        std::vector<std::string> imageTagByPart(content.size());
         std::string imageTags;
         std::string textContent;
         bool hasOtherParts = false;
@@ -83,7 +84,9 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
                     return imageResult.status();
                 }
                 req.inputImages.push_back(std::move(imageResult).value());
-                imageTags += "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
+                imageTagByPart[j] = "<ov_genai_image_" + std::to_string(imageIndex) + ">\n";
+                imageTags += imageTagByPart[j];
+                imageIndex++;
             } else if (type == "text") {
                 if (!textContent.empty()) {
                     textContent += "\n";
@@ -95,18 +98,16 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
         }
 
         if (hasOtherParts) {
-            // Rebuild content array: replace image_url/text with a single merged text entry,
-            // keep all other parts (e.g. input_audio) for downstream processors.
+            // Rebuild content array preserving original order: replace image_url entries
+            // with image tag text parts, keep text and other parts (e.g. input_audio) in place.
             auto newContent = ov::genai::JsonContainer::array();
-            std::string merged = imageTags + textContent;
-            if (!merged.empty()) {
-                ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", merged}});
-                newContent.push_back(textEntry);
-            }
             for (size_t j = 0; j < content.size(); j++) {
                 const auto part = content[j];
                 const auto type = part["type"].as_string().value_or("");
-                if (type != "image_url" && type != "text") {
+                if (type == "image_url") {
+                    ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", imageTagByPart[j]}});
+                    newContent.push_back(textEntry);
+                } else {
                     newContent.push_back(part);
                 }
             }

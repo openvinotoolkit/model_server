@@ -34,22 +34,21 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
             "AudioDecodingProcessor received input that is not a ChatHistory");
     }
     auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
-    SPDLOG_LOGGER_INFO(llm_calculator_logger, "AudioDecodingProcessor: processing {} messages", chatHistory.size());
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: processing {} messages", chatHistory.size());
 
     for (size_t i = 0; i < chatHistory.size(); i++) {
         const auto content = chatHistory[i]["content"];
         if (!content.is_array()) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: message {} content is not an array, skipping", i);
             continue;
         }
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: message {} has {} content parts", i, content.size());
 
+        bool hasAudio = false;
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
             const auto type = part["type"].as_string().value_or("");
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: message {} part {} type='{}'", i, j, type);
 
             if (type == "input_audio") {
+                hasAudio = true;
                 const auto data = part["input_audio"]["data"].as_string().value_or("");
                 const auto format = part["input_audio"]["format"].as_string().value_or("wav");
 
@@ -65,8 +64,8 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
                 try {
                     std::vector<float> pcm = ovms::audio_utils::readWithoutResample(
                         std::string_view(decoded.data(), decoded.size()), format);
-                    SPDLOG_LOGGER_INFO(llm_calculator_logger, "AudioDecodingProcessor: decoded audio {} samples, format='{}', base64 length={}",
-                        pcm.size(), format, data.size());
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: decoded audio {} samples, format='{}'",
+                        pcm.size(), format);
                     ov::Tensor audioTensor(ov::element::f32, ov::Shape{pcm.size()});
                     std::memcpy(audioTensor.data<float>(), pcm.data(), pcm.size() * sizeof(float));
                     req.inputAudios.push_back(std::move(audioTensor));
@@ -76,9 +75,25 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
                 }
             }
         }
+
+        // Remove input_audio parts from the content array after extracting tensor data.
+        // GenAI's normalize_prompt will detect the absence of <|audio_start|> in the
+        // templated prompt and prepend the audio tags with the correct number of
+        // <|audio_pad|> tokens (determined by the audio encoder output size).
+        if (hasAudio) {
+            auto newContent = ov::genai::JsonContainer::array();
+            for (size_t j = 0; j < content.size(); j++) {
+                const auto part = content[j];
+                const auto type = part["type"].as_string().value_or("");
+                if (type != "input_audio") {
+                    newContent.push_back(part);
+                }
+            }
+            chatHistory[i]["content"] = newContent;
+        }
     }
 
-    SPDLOG_LOGGER_INFO(llm_calculator_logger, "AudioDecodingProcessor: total audios collected: {}", req.inputAudios.size());
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: total audios collected: {}", req.inputAudios.size());
     return absl::OkStatus();
 }
 
