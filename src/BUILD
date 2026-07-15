@@ -883,6 +883,7 @@ ovms_cc_library(
             "//:not_disable_mediapipe" : [
                 "//src/audio:audio_utils",
             ],
+            "//conditions:default": [],
         }) + [
             "libdrogon_http_server",
             "libmultipart_parser_drogon_impl",

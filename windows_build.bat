@@ -59,7 +59,7 @@ IF "%ESPEAK%"=="0" (
     set "espeakArg=--//:espeak=on"
 )
 
-set "bazelStartupCmd=--output_user_root=c:\baz2_tmp"
+set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 
 set "buildCommand=bazel %bazelStartupCmd% build  %buildWithIntegrity% %bazelBuildArgs% %espeakArg% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
