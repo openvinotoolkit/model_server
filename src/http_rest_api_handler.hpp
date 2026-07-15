@@ -168,7 +168,7 @@ public:
     Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
-    Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
+    Status processOpenAI(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
     Status processListModelsRequest(std::string& response);
     Status processRetrieveModelRequest(const std::string& name, std::string& response);
     bool isAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey);

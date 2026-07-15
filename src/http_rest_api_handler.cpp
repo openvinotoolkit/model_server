@@ -110,11 +110,11 @@ const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
     R"(/v2)";
 
 const std::string HttpRestApiHandler::v3_ListModelsRegexExp =
-    R"(/v3/(v1/)?models)";
+    R"((?:/v3/(v1/)?|/v1/)models)";
 const std::string HttpRestApiHandler::v3_RetrieveModelRegexExp =
-    R"(/v3/(v1/)?models/(.+))";
+    R"((?:/v3/(v1/)?|/v1/)models/(.+))";
 const std::string HttpRestApiHandler::v3_RegexExp =
-    R"(/v3/.*?(/|$))";
+    R"((?:/v3/|/v1/).*?(/|$))";
 
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics(\?(.*))?)";
 
@@ -196,7 +196,7 @@ void HttpRestApiHandler::registerAll() {
     });
     registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         OVMS_PROFILE_FUNCTION();
-        return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser));
+        return processOpenAI(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser));
     });
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processMetrics(request_components, response_components, response, request_body);
@@ -718,7 +718,7 @@ struct V3StreamCallbackResourceGuard {
 };
 #endif
 
-Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
+Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
 
@@ -972,16 +972,16 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
                 return status;
             return StatusCode::OK;
         }
+        if (std::regex_match(request_path, sm, configReloadRegex)) {
+            requestComponents.type = ConfigReload;
+            return StatusCode::OK;
+        }
         if (std::regex_match(request_path, sm, v3_Regex)) {
             requestComponents.type = V3;
             auto status = parseInferenceHeaderContentLength(requestComponents, headers);
             if (!status.ok())
                 return status;
             requestComponents.headers = headers;
-            return StatusCode::OK;
-        }
-        if (std::regex_match(request_path, sm, configReloadRegex)) {
-            requestComponents.type = ConfigReload;
             return StatusCode::OK;
         }
         return (std::regex_match(request_path, sm, kfs_serverliveRegex) ||
