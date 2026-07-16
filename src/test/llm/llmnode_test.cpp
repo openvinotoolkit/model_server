@@ -4507,12 +4507,17 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
 // singleton; without this guard a failed ASSERT_* mid-test (which returns early) would leak
 // the modified --cache_dir into subsequent tests in this suite.
 struct GlobalCacheDirGuard {
+    ovms::ServerSettingsImpl savedServerSettings;
+    ovms::ModelsSettingsImpl savedModelsSettings;
     std::string cacheDirToRemove;
+
     explicit GlobalCacheDirGuard(std::string cacheDirToRemove = "") :
+        savedServerSettings(ovms::Config::instance().getServerSettings()),
+        savedModelsSettings(ovms::Config::instance().getModelSettings()),
         cacheDirToRemove(std::move(cacheDirToRemove)) {}
+
     ~GlobalCacheDirGuard() {
-        char* reset_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080"};
-        ovms::Config::instance().parse(7, reset_argv);
+        ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
         if (!cacheDirToRemove.empty()) {
             std::error_code ec;
             std::filesystem::remove_all(cacheDirToRemove, ec);
