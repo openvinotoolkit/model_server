@@ -96,6 +96,7 @@ protected:
 private:
     bool watcherStarted = false;
     bool cleanerStarted = false;
+    bool versionPollingNeeded = false;
 
     ModelManager(const ModelManager&) = delete;
 

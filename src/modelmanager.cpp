@@ -213,29 +213,34 @@ void ModelManager::startWatcher(bool watchConfigFile) {
 }
 
 void ModelManager::evaluatePollingState() {
-    if (watcherStarted) {
-        return;
-    }
-
     static const std::set<std::string> singleFileExtensions = {
         ".xml", ".onnx", ".pdmodel", ".pdiparams", ".pb", ".tflite"};
 
-    bool needed = false;
+    versionPollingNeeded = false;
     for (const auto& [name, config] : servedModelConfigs) {
         const std::string& basePath = config.getBasePath();
         auto ext = std::filesystem::path(basePath).extension().string();
         if (singleFileExtensions.count(ext) == 0) {
             SPDLOG_LOGGER_TRACE(modelmanager_logger, "Model {} with path {} requires version polling", name, basePath);
-            needed = true;
+            versionPollingNeeded = true;
             break;
         }
     }
 
-    if (needed && watcherIntervalMillisec > 0) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Filesystem version polling enabled - at least one model uses version directories");
+    if (watcherStarted) {
+        return;
+    }
+
+    bool needWatcher = versionPollingNeeded || isStartedWithConfigFile();
+    if (needWatcher && watcherIntervalMillisec > 0) {
+        if (versionPollingNeeded) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Filesystem version polling enabled - at least one model uses version directories");
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Filesystem version polling disabled - no model uses version directories");
+        }
         startWatcher(isStartedWithConfigFile());
     } else {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Filesystem version polling disabled - no model uses version directories");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Filesystem version polling disabled - no model uses version directories");
     }
 }
 
@@ -1074,18 +1079,23 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
 void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
     while (exitSignal.wait_for(std::chrono::milliseconds(this->watcherIntervalMillisec)) == std::future_status::timeout) {
-        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle begin");
         std::unique_lock<std::recursive_mutex> loadingLock(configMtx);
         if (watchConfigFile) {
+            SPDLOG_LOGGER_TRACE(modelmanager_logger, "Checking if config file changed");
             bool isNeeded;
             configFileReloadNeeded(isNeeded);
             if (isNeeded) {
                 loadConfig();
+                evaluatePollingState();
             }
         }
-        updateConfigurationWithoutConfigFile();
+        if (versionPollingNeeded) {
+            SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle begin");
+            updateConfigurationWithoutConfigFile();
+            SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
+        }
         loadingLock.unlock();
-        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
+        
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
