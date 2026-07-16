@@ -32,6 +32,7 @@ IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
 echo [ERROR] Required MSVC compiler not installed
+set "SETUP_EXIT_CODE=1"
 goto :exit_build_error
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
@@ -53,9 +54,15 @@ set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%
-if !errorlevel! neq 0 goto :exit_build_error
+if !errorlevel! neq 0 (
+    set "SETUP_EXIT_CODE=!errorlevel!"
+    goto :exit_build_error
+)
 %opencvBatch%
-if !errorlevel! neq 0 goto :exit_build_error
+if !errorlevel! neq 0 (
+    set "SETUP_EXIT_CODE=!errorlevel!"
+    goto :exit_build_error
+)
 
 :exit_build
 echo [INFO] Setup finished
@@ -63,23 +70,13 @@ goto :propagate_env
 
 :exit_build_error
 echo [ERROR] Setup finished with error
-set "SETUP_EXIT_CODE=1"
+if "!SETUP_EXIT_CODE!"=="0" set "SETUP_EXIT_CODE=!errorlevel!"
 
 :propagate_env
-if "%SETUP_EXIT_CODE%"=="0" (
-    endlocal & (
-        set "PATH=%PATH%"
-        set "PYTHONPATH=%PYTHONPATH%"
-        set "PYTHONHOME=%PYTHONHOME%"
-        set "BAZEL_SH=%BAZEL_SH%"
-    )
-    exit /b 0
-) else (
-    endlocal & (
-        set "PATH=%PATH%"
-        set "PYTHONPATH=%PYTHONPATH%"
-        set "PYTHONHOME=%PYTHONHOME%"
-        set "BAZEL_SH=%BAZEL_SH%"
-    )
-    exit /b 1
+endlocal & (
+    set "PATH=%PATH%"
+    set "PYTHONPATH=%PYTHONPATH%"
+    set "PYTHONHOME=%PYTHONHOME%"
+    set "BAZEL_SH=%BAZEL_SH%"
+    exit /b %SETUP_EXIT_CODE%
 )
