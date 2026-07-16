@@ -57,6 +57,7 @@ Configuration options for the server are defined only via command-line options a
 | `api_key_file` | `string` | Path to the text file with the API key for generative endpoints `/v3/`. The value of first line is used. If not specified, server is using environment variable API_KEY. If not set, requests will not require authorization.| 
 | `allowed_local_media_path` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
 | `allowed_media_domains` | `string` | Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restrictions. If unset, URLs in requests are not supported."
+| `verbose_response` | `NA` | When enabled, responses include an extra `__verbose` object with additional debug information. Applies for text generation models |
 
 ## Config management mode options
 
@@ -87,7 +88,7 @@ Configure mode creates or updates `graph.pbtxt` for a local model without starti
 Task-specific options (e.g., `--max_num_seqs`, `--cache_size`, `--num_streams`) are the same as documented in the [pull mode task options](#text-generation) below.
 
 **Example:**
-```bash
+```text
 ovms --configure --model_path /models/my_llm --task text_generation --target_device GPU --max_num_seqs 128 --cache_size 8
 ```
 
@@ -135,10 +136,9 @@ There are also additional environment variables that may change the behavior of 
 |-------------------------------------|---------|------------------------------------------------------------------------------------------------------------|
 | `GIT_OPT_SET_SERVER_CONNECT_TIMEOUT`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
 | `GIT_OPT_SET_SERVER_TIMEOUT`        | `int`   | Timeout for reading from and writing to a remote server. Default value 4000 ms.                            |
-| `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |
-| `GIT_OPT_SET_ENABLE_SEARCH_PATHS`| `int`   | When set to 1, the pull functionality reads host-level git configuration locations like ~/.gitconfig. Default value 0.            |
+| `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |  
 
-Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
+Task specific parameters for different tasks (text generation/image generation/embeddings/rerank/text2speech/speech2text) are listed below:
 
 ### Text generation
 | option                                | Value format | Description                                                                                                                |
@@ -156,6 +156,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [qwen3, gptoss, lfm2, gemma4]                     |
 | `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
+| `--cache_interval_multiplier`         | `integer`    | Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: adaptive for the model.                  |
 
 ### Image generation
 | option                            | Value format | Description                                                                                                         |
@@ -184,3 +185,18 @@ Task specific parameters for different tasks (text generation/image generation/e
 |---------------------------|--------------|--------------------------------------------------------------------------------|
 | `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
 | `--max_allowed_chunks`    | `integer`    | Maximum allowed chunks. Default: 10000.                                        |
+
+### Text to speech
+| option                    | Value format | Description                                                                    |
+|---------------------------|--------------|--------------------------------------------------------------------------------|
+| `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
+| `--model_type`            | `string`     | Type of the source TTS model: `speecht5` (default) or `kokoro`.                |
+| `--vocoder`               | `string`     | The vocoder model to use for text2speech. For example `microsoft/speecht5_hifigan`. |
+
+### Speech to text
+| option                    | Value format | Description                                                                    |
+|---------------------------|--------------|--------------------------------------------------------------------------------|
+| `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
+
+
+
