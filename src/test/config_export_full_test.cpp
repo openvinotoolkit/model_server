@@ -34,7 +34,7 @@
 namespace {
 const std::string expectedConfigContents = R"({
     "model_config_list": [
-        { 
+        {
             "config": {
                 "name": "model1",
                 "base_path": "/model1/Path"
