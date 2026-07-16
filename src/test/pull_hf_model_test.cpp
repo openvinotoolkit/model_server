@@ -777,7 +777,6 @@ const std::string expectedGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "",
             models_path: "./",
             enable_prefix_caching: true,
             cache_size: 0,
@@ -814,7 +813,6 @@ const std::string expectedGraphContentsDraft = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "",
             models_path: "./",
             enable_prefix_caching: true,
             cache_size: 0,
