@@ -257,7 +257,7 @@ mkdir -p models
 
 Export Speech-to-Text model with word timestamps enabled:
 ```console
-python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name whisper-large-v3-turbo-word-ts --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps
+python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name whisper-large-v3-turbo-word-ts --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps --task speech2text
 ```
 
 :::{dropdown} **Deploying with Docker**
