@@ -2940,9 +2940,9 @@ TEST_F(OvmsInferredTaskTest, positiveModelPathNoGraphPbtxtInferTask) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::IN_MEMORY_GRAPH_MODE);
 }
 
-// Scenario 3: Questionable architecture requires additional model naming rules.
-// source_model with "embed" should infer embeddings for Qwen3ForCausalLM.
-TEST_F(OvmsInferredTaskTest, positiveSourceModelInferEmbeddingsForQuestionableArchitecture) {
+// Scenario 3: Ambiguous architecture (Qwen3ForCausalLM) — modules.json present with Pooling type,
+// or model name contains "embed" keyword, infers embeddings.
+TEST_F(OvmsInferredTaskTest, positiveSourceModelInferEmbeddingsForAmbiguousArchitecture) {
     const std::string repoPath = resolveTestModelsRepoPath();
     const std::string sourceModel = "Qwen3-Embedding-0.6B";
     const std::filesystem::path configJson = std::filesystem::path(repoPath) / sourceModel / "config.json";
@@ -2965,8 +2965,9 @@ TEST_F(OvmsInferredTaskTest, positiveSourceModelInferEmbeddingsForQuestionableAr
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
 }
 
-// Scenario 4: model_path with "rerank" in path should infer rerank for Qwen3ForCausalLM.
-TEST_F(OvmsInferredTaskTest, positiveModelPathInferRerankForQuestionableArchitecture) {
+// Scenario 4: Ambiguous architecture (Qwen3ForCausalLM) — modules.json present with LogitScore type,
+// or model name contains "rerank" keyword, infers rerank.
+TEST_F(OvmsInferredTaskTest, positiveModelPathInferRerankForAmbiguousArchitecture) {
     const std::string modelPath = resolveTestModelPath("Qwen3-Reranker-0.6B");
     const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";
     if (!std::filesystem::exists(configJson)) {
@@ -2990,20 +2991,29 @@ TEST_F(OvmsInferredTaskTest, positiveModelPathInferRerankForQuestionableArchitec
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::IN_MEMORY_GRAPH_MODE);
 }
 
-// Scenario 5: Questionable architecture without identifying keywords must not infer task.
-TEST_F(OvmsConfigDeathTest, negativeSourceModelQuestionableArchitectureWithoutPattern) {
-    auto currentPath = std::filesystem::current_path();
-    auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
+// Scenario 5: Qwen3ForCausalLM without modules.json and without an embedding/rerank
+// keyword in the model name defaults to text_generation.
+TEST_F(OvmsInferredTaskTest, positiveSourceModelQwen3WithoutKeywordInfersTextGeneration) {
+    const std::string repoPath = resolveTestModelsRepoPath();
     const std::string sourceModel = "Qwen3-8B";
+    const std::filesystem::path configJson = std::filesystem::path(repoPath) / sourceModel / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        FAIL() << "Test prerequisite missing: " << configJson.string();
+    }
     char* n_argv[] = {
-        "ovms",
-        "--source_model",
+        (char*)"ovms",
+        (char*)"--source_model",
         (char*)sourceModel.c_str(),
-        "--model_repository_path",
+        (char*)"--model_repository_path",
         (char*)repoPath.c_str(),
+        (char*)"--rest_port",
+        (char*)"8080",
     };
-    int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
 }
 
 // Scenario 6: Null architectures with n_mels field should infer text2speech task.

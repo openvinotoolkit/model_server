@@ -356,12 +356,23 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "libovms_servable_type_detector",
+    hdrs = ["servable_type_detector.hpp"],
+    srcs = ["servable_type_detector.cpp"],
+    deps = [
+        "//src/port:rapidjson_document",
+        "//src/port:rapidjson_error",
+        "//src/port:rapidjson_istreamwrapper",
+        "libovmsstring_utils",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "libovms_default_task",
     hdrs = ["default_task.hpp"],
     srcs = ["default_task.cpp"],
     deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "libovmsstring_utils",
+        "libovms_servable_type_detector",
         "libovmsstatus",
         "//src/pull_module:curl_downloader",
         "//src/pull_module:hf_env_vars",
@@ -2347,6 +2358,7 @@ cc_test(
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
+            "//src:libovms_servable_type_detector",
             "//src/filesystem:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
             ":test_utils",

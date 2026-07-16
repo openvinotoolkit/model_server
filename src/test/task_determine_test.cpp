@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 
 #include "../default_task.hpp"
+#include "../servable_type_detector.hpp"
 
 class CLIParserDetermineTaskTest : public ::testing::TestWithParam<std::pair<std::string, std::string>> {
 public:
@@ -62,14 +63,14 @@ const std::vector<std::pair<std::string, std::string>> CLIParserDetermineTaskTes
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    DetermineTaskFromConfigStream,
+    DetermineTaskFromModelCatalog,
     CLIParserDetermineTaskTest,
     ::testing::ValuesIn(CLIParserDetermineTaskTest::modelTaskMapping),
     [](const ::testing::TestParamInfo<std::pair<std::string, std::string>>& info) {
         return info.param.first;
     });
 
-TEST_P(CLIParserDetermineTaskTest, DetermineTaskFromConfigStream) {
+TEST_P(CLIParserDetermineTaskTest, DetermineTaskFromModelCatalog) {
     auto [modelName, expectedTask] = GetParam();
     std::string modelDirName = getModelPath(modelName);
 
@@ -113,4 +114,148 @@ TEST_P(CLIParserDetermineTaskTest, DetermineTaskFromConfigStream) {
 
     EXPECT_EQ(result, expectedTask)
         << "Model: " << modelName << ", Expected: " << expectedTask << ", Got: " << result;
+}
+
+// ─── Per-detector unit tests (in-memory, no filesystem) ───────────────────────
+
+static ovms::ModelCatalogContext makeCtx(const std::string& identifier,
+    const std::string& configJson = "",
+    const std::string& modulesJson = "") {
+    ovms::ModelCatalogContext ctx(std::filesystem::path{}, identifier);
+    if (!configJson.empty())
+        ctx.addContent("config.json", configJson);
+    if (!modulesJson.empty())
+        ctx.addContent("modules.json", modulesJson);
+    return ctx;
+}
+
+// ── Speech2Text ────────────────────────────────────────────────────────────────
+TEST(ServableTypeDetectorTest, Speech2TextDetectsWhisper) {
+    auto ctx = makeCtx("whisper", R"({"architectures":["WhisperForConditionalGeneration"]})");
+    EXPECT_TRUE(ovms::Speech2TextDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, Speech2TextDetectsSeamlessM4TPrefix) {
+    auto ctx = makeCtx("seamless", R"({"architectures":["SeamlessM4Tv2Model"]})");
+    EXPECT_TRUE(ovms::Speech2TextDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, Speech2TextDetectsQwen3ASR) {
+    auto ctx = makeCtx("qwen3-asr", R"({"architectures":["Qwen3ASRForConditionalGeneration"]})");
+    EXPECT_TRUE(ovms::Speech2TextDetector{}.scan(ctx));
+}
+
+// ── Text2Speech ────────────────────────────────────────────────────────────────
+TEST(ServableTypeDetectorTest, Text2SpeechDetectsParlerTTS) {
+    auto ctx = makeCtx("parlertts", R"({"architectures":["ParlerTTSForConditionalGeneration"]})");
+    EXPECT_TRUE(ovms::Text2SpeechDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, Text2SpeechDetectsNullArchWithNMels) {
+    auto ctx = makeCtx("kokoro", R"({"architectures":null,"n_mels":80})");
+    EXPECT_TRUE(ovms::Text2SpeechDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, Text2SpeechDoesNotMatchNullArchWithoutNMels) {
+    auto ctx = makeCtx("unknown", R"({"architectures":null})");
+    EXPECT_FALSE(ovms::Text2SpeechDetector{}.scan(ctx));
+}
+
+// ── Rerank ─────────────────────────────────────────────────────────────────────
+TEST(ServableTypeDetectorTest, RerankDetectsViaModulesJson) {
+    auto ctx = makeCtx("reranker",
+        R"({"architectures":["Qwen3ForCausalLM"]})",
+        R"([{"type":"sentence_transformers.cross_encoder.LogitScore"}])");
+    EXPECT_TRUE(ovms::RerankDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, RerankDetectsForSequenceClassificationSuffix) {
+    auto ctx = makeCtx("bge-reranker", R"({"architectures":["BertForSequenceClassification"]})");
+    EXPECT_TRUE(ovms::RerankDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, RerankDetectsQwen3ByNameKeyword) {
+    auto ctx = makeCtx("Qwen3-Reranker-0.6B", R"({"architectures":["Qwen3ForCausalLM"]})");
+    EXPECT_TRUE(ovms::RerankDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, RerankDoesNotMatchQwen3WithEmbedKeyword) {
+    auto ctx = makeCtx("Qwen3-Embedding-0.6B", R"({"architectures":["Qwen3ForCausalLM"]})");
+    EXPECT_FALSE(ovms::RerankDetector{}.scan(ctx));
+}
+
+// ── ImageGeneration ────────────────────────────────────────────────────────────
+TEST(ServableTypeDetectorTest, ImageGenDetectsTransformer2DModelSuffix) {
+    auto ctx = makeCtx("flux", R"({"architectures":["FluxTransformer2DModel"]})");
+    EXPECT_TRUE(ovms::ImageGenerationDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, ImageGenDetectsCLIPTextModel) {
+    auto ctx = makeCtx("clip", R"({"architectures":["CLIPTextModel"]})");
+    EXPECT_TRUE(ovms::ImageGenerationDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, ImageGenDetectsModelIndexStableDiffusion) {
+    ovms::ModelCatalogContext ctx(std::filesystem::path{}, "sdxl");
+    ctx.addContent("model_index.json", R"({"_class_name":"StableDiffusionXLPipeline"})");
+    EXPECT_TRUE(ovms::ImageGenerationDetector{}.scan(ctx));
+}
+
+// ── Embeddings ─────────────────────────────────────────────────────────────────
+TEST(ServableTypeDetectorTest, EmbeddingsDetectsViaModulesJson) {
+    auto ctx = makeCtx("Qwen3-Embedding-0.6B",
+        R"({"architectures":["Qwen3ForCausalLM"]})",
+        R"([{"type":"sentence_transformers.models.Pooling"}])");
+    EXPECT_TRUE(ovms::EmbeddingsDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, EmbeddingsDetectsBertModel) {
+    auto ctx = makeCtx("bge", R"({"architectures":["BertModel"]})");
+    EXPECT_TRUE(ovms::EmbeddingsDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, EmbeddingsDetectsQwen3ByNameKeyword) {
+    auto ctx = makeCtx("Qwen3-Embedding-0.6B", R"({"architectures":["Qwen3ForCausalLM"]})");
+    EXPECT_TRUE(ovms::EmbeddingsDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, EmbeddingsDoesNotMatchInternVLChatModel) {
+    auto ctx = makeCtx("internvl", R"({"architectures":["InternVLChatModel"]})");
+    EXPECT_FALSE(ovms::EmbeddingsDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, EmbeddingsDoesNotMatchCLIPTextModel) {
+    auto ctx = makeCtx("clip", R"({"architectures":["CLIPTextModel"]})");
+    EXPECT_FALSE(ovms::EmbeddingsDetector{}.scan(ctx));
+}
+
+// ── TextGeneration ─────────────────────────────────────────────────────────────
+TEST(ServableTypeDetectorTest, TextGenDetectsForCausalLMSuffix) {
+    auto ctx = makeCtx("llama", R"({"architectures":["LlamaForCausalLM"]})");
+    EXPECT_TRUE(ovms::TextGenerationDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, TextGenDetectsInternVLChatModel) {
+    auto ctx = makeCtx("internvl", R"({"architectures":["InternVLChatModel"]})");
+    EXPECT_TRUE(ovms::TextGenerationDetector{}.scan(ctx));
+}
+TEST(ServableTypeDetectorTest, TextGenDetectsQwen3WithoutKeyword) {
+    auto ctx = makeCtx("Qwen3-8B", R"({"architectures":["Qwen3ForCausalLM"]})");
+    EXPECT_TRUE(ovms::TextGenerationDetector{}.scan(ctx));
+}
+
+// ── DefaultTaskDetector ordering ──────────────────────────────────────────────
+TEST(ServableTypeDetectorTest, DefaultDetectorReturnsTextGenForQwen3NoKeyword) {
+    auto ctx = makeCtx("Qwen3-8B", R"({"architectures":["Qwen3ForCausalLM"]})");
+    ovms::DefaultTaskDetector det;
+    EXPECT_EQ(det.detect(ctx), "text_generation");
+}
+TEST(ServableTypeDetectorTest, DefaultDetectorReturnsEmbeddingsForQwen3EmbedKeyword) {
+    auto ctx = makeCtx("Qwen3-Embedding-0.6B", R"({"architectures":["Qwen3ForCausalLM"]})");
+    ovms::DefaultTaskDetector det;
+    EXPECT_EQ(det.detect(ctx), "embeddings");
+}
+TEST(ServableTypeDetectorTest, DefaultDetectorReturnsRerankForQwen3RerankKeyword) {
+    auto ctx = makeCtx("Qwen3-Reranker-0.6B", R"({"architectures":["Qwen3ForCausalLM"]})");
+    ovms::DefaultTaskDetector det;
+    EXPECT_EQ(det.detect(ctx), "rerank");
+}
+TEST(ServableTypeDetectorTest, DefaultDetectorModulesJsonTakesPrecedenceOverNameKeyword) {
+    // modules.json says embeddings → overrides any name-based guess
+    auto ctx = makeCtx("some-reranker-model",
+        R"({"architectures":["Qwen3ForCausalLM"]})",
+        R"([{"type":"sentence_transformers.models.Pooling"}])");
+    ovms::DefaultTaskDetector det;
+    EXPECT_EQ(det.detect(ctx), "embeddings");
+}
+TEST(ServableTypeDetectorTest, DefaultDetectorReturnsEmptyForUnrecognizedArchitecture) {
+    auto ctx = makeCtx("unknown-model", R"({"architectures":["SomeBrandNewUnknownArchitecture"]})");
+    ovms::DefaultTaskDetector det;
+    EXPECT_EQ(det.detect(ctx), "");
 }

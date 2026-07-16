@@ -15,19 +15,11 @@
 //*****************************************************************************
 #pragma once
 
-#include <istream>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace ovms {
-
-std::string getTaskForArchitecture(const std::string& architecture);
-std::string getTaskForQuestionableArchitecture(const std::string& architecture, const std::string& normalizedModelIdentifier);
-
-std::string determineTaskFromConfigStream(std::istream& configStream, const std::string& configSourceDescription, const std::string& modelIdentifier);
-std::string determineTaskFromConfigContents(const std::string& configContents, const std::string& configSourceDescription, const std::string& modelIdentifier);
-std::string determineTaskFromModelIndex(std::istream& indexStream, const std::string& indexSourceDescription);
 
 bool graphPbtxtExists(const std::string& modelPath);
 bool hasTaskSpecificParameters(const std::vector<std::string>& unmatchedOptions);
