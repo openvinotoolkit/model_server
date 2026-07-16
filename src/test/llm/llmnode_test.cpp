@@ -4651,8 +4651,8 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCacheDirPropagation) {
 // that compiled-model cache artifacts actually land under it.
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCacheDirWritesCacheArtifacts) {
     std::string cacheDir = std::filesystem::temp_directory_path().string() +
-                            "/LLMNodeOptionsCacheDirWritesCacheArtifacts_" +
-                            ::testing::UnitTest::GetInstance()->current_test_info()->name();
+                           "/LLMNodeOptionsCacheDirWritesCacheArtifacts_" +
+                           ::testing::UnitTest::GetInstance()->current_test_info()->name();
     std::filesystem::remove_all(cacheDir);
     std::filesystem::create_directories(cacheDir);
     // Restore the global cache_dir and remove the temp cache dir on scope exit, even if an
@@ -4684,7 +4684,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCacheDirWritesCacheArtifacts) {
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
                 models_path: ")" +
-                             modelsPath + R"("
+                            modelsPath + R"("
             }
         }
         input_stream_handler {
