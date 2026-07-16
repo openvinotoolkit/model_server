@@ -25,7 +25,7 @@
 
 #include <fstream>
 
-#include <openvino/openvino.hpp>
+#include <openvino/runtime/properties.hpp>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 

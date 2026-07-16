@@ -23,7 +23,7 @@ Alternatively the location of the cache storage can be set using the parameter `
 
 The model server security context must have read-write access to the cache storage path.
 
-`--cache_dir` also applies to LLM text-generation servables using the continuous batching pipeline (GPU). With it set, the compiled-model/blob cache is persisted across restarts, so a model that has already been compiled (or idle-unloaded) reloads from the cache instead of recompiling. An explicit `CACHE_DIR` in a node's `plugin_config` takes precedence over the global `--cache_dir`.
+`--cache_dir` also applies to GenAI LLM/VLM servables (legacy and continuous batching). With it set, compiled-model cache artifacts are persisted across restarts, so a model that has already been compiled (or idle-unloaded) reloads from the cache instead of recompiling. An explicit `CACHE_DIR` in a node's `plugin_config` takes precedence over the global `--cache_dir`.
 
 When using Model Server with configuration file, it is possible to serve more than one model. In such case, model cache is applied to all the models, with an exception to:
 - Models with custom loader (for security reasons explained earlier)

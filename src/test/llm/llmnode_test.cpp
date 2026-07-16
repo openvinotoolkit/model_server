@@ -4533,10 +4533,11 @@ void LLMNodeOptionsCacheDirPropagation(std::string& modelsPath) {
     // Restore the global cache_dir on scope exit even if an ASSERT below fails early.
     GlobalCacheDirGuard cacheDirGuard;
     // Seed the global cache_dir via the CLI parser (same path used in production).
-    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)"/tmp/ovms_global_cache"};
+    const std::string globalCacheDir = (std::filesystem::temp_directory_path() / "ovms_global_cache").string();
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
     int arg_count = 9;
     ovms::Config::instance().parse(arg_count, n_argv);
-    ASSERT_EQ(ovms::Config::instance().cacheDir(), "/tmp/ovms_global_cache");
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
 
     // Case 1: no CACHE_DIR in node plugin_config -> global value is applied.
     {
@@ -4581,7 +4582,7 @@ void LLMNodeOptionsCacheDirPropagation(std::string& modelsPath) {
         ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
         auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
         ASSERT_EQ(properties->pluginConfig.count("CACHE_DIR"), 1);
-        ASSERT_EQ(properties->pluginConfig["CACHE_DIR"].as<std::string>(), "/tmp/ovms_global_cache");
+        ASSERT_EQ(properties->pluginConfig["CACHE_DIR"].as<std::string>(), globalCacheDir);
     }
 
     // Case 2: explicit CACHE_DIR in node plugin_config wins over the global value.
