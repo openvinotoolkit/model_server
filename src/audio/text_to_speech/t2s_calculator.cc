@@ -97,7 +97,7 @@ public:
             auto pipe = it->second;
             const auto& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
 
-            if (absl::StartsWith(payload.uri, "/v3/audio/speech")) {
+            if (absl::StartsWith(payload.uri, "/v3/audio/speech") || absl::StartsWith(payload.uri, "/v1/audio/speech")) {
                 if (payload.parsedJson->HasParseError())
                     return absl::InvalidArgumentError("Failed to parse JSON");
 

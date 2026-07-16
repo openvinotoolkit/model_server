@@ -95,7 +95,7 @@ message LLMCalculatorOptions {
 
     optional bool dynamic_split_fuse = 5 [default = true];
 
-    optional string device = 6 [default = "CPU"];
+    optional string device = 6;
 
     optional string plugin_config = 7 [default = ""];
 

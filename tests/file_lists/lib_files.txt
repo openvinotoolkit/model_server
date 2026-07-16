@@ -62,6 +62,7 @@ libopenvino_intel_gpu_plugin.so
 libopenvino_intel_npu_compiler.so
 libopenvino_intel_npu_compiler_loader.so
 libopenvino_intel_npu_plugin.so
+libopenvino_intel_npu_vm_runtime.so
 libopenvino_ir_frontend.so.2026.3.0
 libopenvino_ir_frontend.so.2630->libopenvino_ir_frontend.so.2026.3.0
 libopenvino_onnx_frontend.so->libopenvino_onnx_frontend.so.2630

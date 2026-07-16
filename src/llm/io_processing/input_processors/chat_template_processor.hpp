@@ -52,6 +52,12 @@ public:
 
 private:
     ov::genai::Tokenizer& tokenizer;  // non-owning; lifetime tied to InputProcessorContext
+
+    // add_generation_prompt lives inside chat_template_kwargs; MINJA's apply_chat_template
+    // takes it as a dedicated argument, so this extracts it out and drops it from the returned
+    // kwargs so it isn't supplied twice.
+    static absl::Status extractAddGenerationPrompt(const ov::genai::ChatHistory& chatHistory,
+        ov::genai::JsonContainer& kwargs, bool& addGenerationPrompt);
 #if (PYTHON_DISABLE == 0)
     // Present only on the PyJinja path; nullopt → use tokenizer.apply_chat_template().
     std::optional<std::reference_wrapper<PyJinjaTemplateProcessor>> templateProcessor;

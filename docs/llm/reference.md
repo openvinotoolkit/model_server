@@ -289,8 +289,9 @@ __Tool parsers:__
 
 __Reasoning parsers:__
 - `qwen3`
-- `gemma4`
 - `gptoss`
+- `lfm2`
+- `gemma4`
 
 #### Automatic parser detection
 

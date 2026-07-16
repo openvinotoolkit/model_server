@@ -53,10 +53,10 @@ enum Endpoint {
 };
 
 static Endpoint getEndpoint(const std::string& url) {
-    if (absl::StartsWith(url, "/v3/audio/transcriptions")) {
+    if (absl::StartsWith(url, "/v3/audio/transcriptions") || absl::StartsWith(url, "/v1/audio/transcriptions")) {
         return Endpoint::TRANSCRIPTIONS;
     }
-    if (absl::StartsWith(url, "/v3/audio/translations")) {
+    if (absl::StartsWith(url, "/v3/audio/translations") || absl::StartsWith(url, "/v1/audio/translations")) {
         return Endpoint::TRANSLATIONS;
     }
     return Endpoint::UNSUPPORTED;
