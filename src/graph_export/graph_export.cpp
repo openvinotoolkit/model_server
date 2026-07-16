@@ -98,6 +98,16 @@ static std::string constructModelsPath(const std::string& modelPath, const std::
     return modelsPath;
 }
 
+static std::string normalizeWindowsPathSeparators(const std::string& path) {
+#ifdef _WIN32
+    std::string normalized = path;
+    std::replace(normalized.begin(), normalized.end(), '\\', '/');
+    return normalized;
+#else
+    return path;
+#endif
+}
+
 std::string GraphExport::getDraftModelDirectoryName(std::string draftModel) {
     std::replace(draftModel.begin(), draftModel.end(), '/', '-');
     return draftModel;
@@ -662,6 +672,13 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
         if (d.Parse(stringPluginConfig.value().c_str()).HasParseError()) {
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
+        // plugin_config is injected into pbtxt and later parsed as JSON again.
+        // Normalize Windows path separators to avoid backslash escape ambiguity.
+        auto cacheDirIt = d.FindMember("CACHE_DIR");
+        if (cacheDirIt != d.MemberEnd() && cacheDirIt->value.IsString()) {
+            auto normalizedCacheDir = normalizeWindowsPathSeparators(cacheDirIt->value.GetString());
+            cacheDirIt->value.SetString(normalizedCacheDir.c_str(), static_cast<rapidjson::SizeType>(normalizedCacheDir.size()), d.GetAllocator());
+        }
     }
     if (pluginConfig.kvCachePrecision.has_value()) {
         rapidjson::Value name;
@@ -713,8 +730,9 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
         }
     }
     if (exportSettings.pluginConfig.cacheDir.has_value()) {
+        auto normalizedCacheDir = normalizeWindowsPathSeparators(exportSettings.pluginConfig.cacheDir.value());
         rapidjson::Value value;
-        value.SetString(exportSettings.pluginConfig.cacheDir.value().c_str(), d.GetAllocator());
+        value.SetString(normalizedCacheDir.c_str(), static_cast<rapidjson::SizeType>(normalizedCacheDir.size()), d.GetAllocator());
         auto itr = d.FindMember("CACHE_DIR");
         if (itr != d.MemberEnd()) {
             return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled CACHE_DIR parameter in plugin config.");

@@ -15,6 +15,7 @@
 ::
 @echo on
 setlocal EnableExtensions EnableDelayedExpansion
+set "SETUP_EXIT_CODE=0"
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
     if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
@@ -52,17 +53,33 @@ set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%
-setlocal EnableExtensions EnableDelayedExpansion
-if !errorlevel! neq 0 exit /b !errorlevel!
-endlocal
+if !errorlevel! neq 0 goto :exit_build_error
 %opencvBatch%
-setlocal EnableExtensions EnableDelayedExpansion
-if !errorlevel! neq 0 exit /b !errorlevel!
-endlocal
+if !errorlevel! neq 0 goto :exit_build_error
 
 :exit_build
 echo [INFO] Setup finished
-exit /b 0
+goto :propagate_env
+
 :exit_build_error
 echo [ERROR] Setup finished with error
-exit /b 1
+set "SETUP_EXIT_CODE=1"
+
+:propagate_env
+if "%SETUP_EXIT_CODE%"=="0" (
+    endlocal & (
+        set "PATH=%PATH%"
+        set "PYTHONPATH=%PYTHONPATH%"
+        set "PYTHONHOME=%PYTHONHOME%"
+        set "BAZEL_SH=%BAZEL_SH%"
+    )
+    exit /b 0
+) else (
+    endlocal & (
+        set "PATH=%PATH%"
+        set "PYTHONPATH=%PYTHONPATH%"
+        set "PYTHONHOME=%PYTHONHOME%"
+        set "BAZEL_SH=%BAZEL_SH%"
+    )
+    exit /b 1
+)
