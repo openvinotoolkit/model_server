@@ -366,13 +366,6 @@ node {
             models_path: ")"
             << modelsPath << R"("
             )";
-    if (!exportSettings.targetDevice.empty()) {
-        oss << R"(target_device: ")" << exportSettings.targetDevice << R"("
-            )";
-    }
-    if (pluginConfigOpt.has_value()) {
-        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"('
-            )";
     }
     oss << R"(}
     }

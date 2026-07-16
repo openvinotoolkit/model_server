@@ -420,10 +420,6 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: "./"
-            voices: [
-                { name: "af_alloy", path: "./voices/af_alloy.bin" },
-                { name: "am_adam", path: "./voices/am_adam.bin" }
-            ]
             }
     }
 }
