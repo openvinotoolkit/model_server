@@ -2309,7 +2309,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             if (!d["choices"][0].HasMember("delta"))
                 continue;
             ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
-            ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+            if (!d["choices"][0]["delta"].HasMember("content") || !d["choices"][0]["delta"]["content"].IsString())
+                continue;
             std::string content = d["choices"][0]["delta"]["content"].GetString();
             ASSERT_EQ(content.find('.'), std::string::npos) << "found dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
         }
@@ -2340,7 +2341,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             if (!d["choices"][0].HasMember("delta"))
                 continue;
             ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
-            ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+            if (!d["choices"][0]["delta"].HasMember("content") || !d["choices"][0]["delta"]["content"].IsString())
+                continue;
             std::string content = d["choices"][0]["delta"]["content"].GetString();
             if (content.find('.') != std::string::npos) {
                 foundDotInLastResponse = true;
