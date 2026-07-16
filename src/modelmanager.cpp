@@ -323,7 +323,9 @@ Status ModelManager::startFromConfig() {
         return status;
     }
 
-    status = validatePluginConfiguration(modelConfig.getPluginConfig(), modelConfig.getTargetDevice(), *ieCore.get());
+    status = validatePluginConfiguration(modelConfig.getPluginConfig(),
+        modelConfig.getTargetDevice().empty() ? recommendTargetDevice() : modelConfig.getTargetDevice(),
+        *ieCore.get());
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
         return status;
@@ -755,7 +757,9 @@ Status ModelManager::ConfigLoader::loadModels(ModelManager& modelManager, const 
             continue;
         }
 
-        status = validatePluginConfiguration(modelConfig.getPluginConfig(), modelConfig.getTargetDevice(), *modelManager.ieCore.get());
+        status = validatePluginConfiguration(modelConfig.getPluginConfig(),
+            modelConfig.getTargetDevice().empty() ? recommendTargetDevice() : modelConfig.getTargetDevice(),
+            *modelManager.ieCore.get());
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
             return status;

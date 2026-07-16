@@ -33,6 +33,7 @@
 #include "../../../json_parser.hpp"
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
+#include "../../../ov_utils.hpp"
 #include "../../../status.hpp"
 #include "../../io_processing/parser_config_validation.hpp"
 #include "servable.hpp"
@@ -84,6 +85,10 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     properties->schedulerConfig.enable_prefix_caching = nodeOptions.enable_prefix_caching();
 
     properties->device = nodeOptions.device();
+    if (properties->device.empty()) {
+        properties->device = recommendTargetDevice();
+        SPDLOG_INFO("No device specified for VLM model, using recommended device: {}", properties->device);
+    }
 
     if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
         // Consider moving draft parameters to separate structure in node options, so it's validated on the proto level

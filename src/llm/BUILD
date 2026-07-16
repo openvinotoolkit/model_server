@@ -306,9 +306,9 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "io_processing_lfm2_tool_parser",
-    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
-    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
+    name = "io_processing_lfm2_utils",
+    hdrs = ["io_processing/lfm2/lfm2_utils.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_utils.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_document",
@@ -320,6 +320,29 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "io_processing_lfm2_tool_parser",
+    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
+    deps = [
+        ":io_processing_lfm2_utils",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+
+ovms_cc_library(
+    name = "io_processing_lfm25_tool_parser",
+    hdrs = ["io_processing/lfm2/lfm25_tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm25_tool_parser.cpp"],
+    deps = [
+        ":io_processing_lfm2_utils",
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library(
     name = "io_processing_gemma4_tool_parser",
     hdrs = ["io_processing/gemma4/gemma4_tool_parser.hpp", "io_processing/gemma4/gemma4_reasoning_parser.hpp"],
@@ -341,6 +364,22 @@ ovms_cc_library(
     name = "io_processing_qwen3_reasoning_parser",
     hdrs = ["io_processing/qwen3/reasoning_parser.hpp"],
     srcs = ["io_processing/qwen3/reasoning_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_lfm25_reasoning_parser",
+    hdrs = ["io_processing/lfm2/lfm25_reasoning_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm25_reasoning_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_document",
@@ -388,8 +427,10 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":io_processing_parser_config_validation",
         ":io_processing_qwen3coder_tool_parser",
         ":io_processing_lfm2_tool_parser",
+        ":io_processing_lfm25_tool_parser",
         ":io_processing_gemma4_tool_parser",
         ":io_processing_qwen3_reasoning_parser",
+        ":io_processing_lfm25_reasoning_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
     ],

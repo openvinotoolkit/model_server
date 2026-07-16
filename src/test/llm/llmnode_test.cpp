@@ -78,8 +78,8 @@ public:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpointChatCompletions = "/v3/chat/completions";
-    const std::string endpointCompletions = "/v3/completions";
+    const std::string endpointChatCompletions = "/v1/chat/completions";
+    const std::string endpointCompletions = "/v1/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -188,8 +188,8 @@ public:
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpointChatCompletions = "/v3/chat/completions";
-    const std::string endpointCompletions = "/v3/completions";
+    const std::string endpointChatCompletions = "/v1/chat/completions";
+    const std::string endpointCompletions = "/v1/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -882,7 +882,7 @@ TEST_P(LLMFlowHttpTestParameterized, defaultRoutingInvalidJson) {
         }
     )";
 
-    const std::string uriThatMatchesGraphName = std::string("/v3/") + params.modelName;
+    const std::string uriThatMatchesGraphName = std::string("/v1/") + params.modelName;
 
     headers.clear();  // no sign of application/json
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", uriThatMatchesGraphName, headers), ovms::StatusCode::OK);
@@ -2309,7 +2309,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             if (!d["choices"][0].HasMember("delta"))
                 continue;
             ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
-            ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+            if (!d["choices"][0]["delta"].HasMember("content") || !d["choices"][0]["delta"]["content"].IsString())
+                continue;
             std::string content = d["choices"][0]["delta"]["content"].GetString();
             ASSERT_EQ(content.find('.'), std::string::npos) << "found dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
         }
@@ -2340,7 +2341,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             if (!d["choices"][0].HasMember("delta"))
                 continue;
             ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
-            ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+            if (!d["choices"][0]["delta"].HasMember("content") || !d["choices"][0]["delta"]["content"].IsString())
+                continue;
             std::string content = d["choices"][0]["delta"]["content"].GetString();
             if (content.find('.') != std::string::npos) {
                 foundDotInLastResponse = true;

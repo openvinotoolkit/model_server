@@ -54,8 +54,8 @@ parser_text.add_argument('--draft_eagle3_mode', action='store_true', help='Set t
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
-parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
-parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral", "lfm2"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
+parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss", "lfm2", "gemma4"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
+parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral", "lfm2", "gemma4"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
 
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')

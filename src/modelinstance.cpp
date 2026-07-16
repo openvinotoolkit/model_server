@@ -1023,7 +1023,7 @@ plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& con
 
 Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
-    if (config.getTargetDevice() == "CPU") {
+    if (this->targetDevice == "CPU") {
         Status status = applyDefaultCpuProperties(pluginConfig);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to apply default CPU properties for model: {}; version: {}; error: {}",
@@ -1040,7 +1040,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             e.what(),
             getName(),
             getVersion(),
-            config.getTargetDevice());
+            this->targetDevice);
         return status;
     } catch (std::exception& e) {
         Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
@@ -1049,7 +1049,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             e.what(),
             getName(),
             getVersion(),
-            config.getTargetDevice());
+            this->targetDevice);
         return status;
     } catch (...) {
         Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
@@ -1058,7 +1058,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             "Unknown error",
             getName(),
             getVersion(),
-            config.getTargetDevice());
+            this->targetDevice);
         return status;
     }
 
@@ -1237,8 +1237,13 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
 
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
-    this->targetDevice = config.getTargetDevice();
     this->config = config;
+    this->targetDevice = this->config.getTargetDevice();
+    if (this->targetDevice.empty()) {
+        this->targetDevice = recommendTargetDevice();
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "No target device specified for model: {}; version: {}; using recommended device: {}",
+            config.getName(), config.getVersion(), this->targetDevice);
+    }
     auto status = fetchModelFilepaths();
 
     if (!status.ok()) {
@@ -1296,7 +1301,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         bool isModelLoadedFromCache = compiledModel->get_property(ov::loaded_from_cache);
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Is model loaded from cache: {}", isModelLoadedFromCache);
     } catch (...) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get information if model was loaded from cache; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get information if model was loaded from cache; model: {}; version: {}; device: {}", getName(), getVersion(), this->targetDevice);
     }
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
