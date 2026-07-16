@@ -24,11 +24,6 @@ struct ExecutionContext {
         REST,
     };
     enum class Method : uint8_t {
-        // TensorflowServing
-        Predict,
-        GetModelMetadata,
-        GetModelStatus,
-
         // Model Control API
         ConfigReload,
         ConfigStatus,
