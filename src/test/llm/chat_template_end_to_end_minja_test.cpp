@@ -597,6 +597,33 @@ What's the weather in Paris?<|im_end|>
 }
 
 // =============================================================================
+// MiniCPM5 chat template is not compatible with minja, therefore the test is expected to fail.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndMinjaTest, MiniCPM5_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_minicpm5.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load minicpm5 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(true);
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+    ASSERT_TRUE(basicRenderOk);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "minicpm5");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "minicpm5");
+
+    EXPECT_FALSE(caps.supportsToolCalls);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
+}
+
+// =============================================================================
 // Synthetic test: template that throws on basic rendering (e.g. uses undefined
 // filter). The basic render probe should catch this and return false.
 // =============================================================================
