@@ -379,14 +379,14 @@ node {
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
 #endif
-    // clang-format on
-    if (!writeToFile) {
-        inMemoryGraphContent = oss.str();
-        return StatusCode::OK;
-    }
-    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
+// clang-format on
+if (!writeToFile) {
+    inMemoryGraphContent = oss.str();
+    return StatusCode::OK;
 }
+std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+return FileSystem::createFileOverwrite(fullPath, oss.str());
+}  // namespace ovms
 
 static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
     if (!std::holds_alternative<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings)) {
