@@ -366,6 +366,13 @@ node {
             models_path: ")"
             << modelsPath << R"("
             )";
+    if (!exportSettings.targetDevice.empty()) {
+        oss << R"(target_device: ")" << exportSettings.targetDevice << R"("
+            )";
+    }
+    if (pluginConfigOpt.has_value()) {
+        oss << R"(plugin_config: ')" << pluginConfigOpt.value() << R"('
+            )";
     }
     oss << R"(}
     }
@@ -379,14 +386,14 @@ node {
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
 #endif
-// clang-format on
-if (!writeToFile) {
-    inMemoryGraphContent = oss.str();
-    return StatusCode::OK;
+    // clang-format on
+    if (!writeToFile) {
+        inMemoryGraphContent = oss.str();
+        return StatusCode::OK;
+    }
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
-std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-return FileSystem::createFileOverwrite(fullPath, oss.str());
-}  // namespace ovms
 
 static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
     if (!std::holds_alternative<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings)) {
