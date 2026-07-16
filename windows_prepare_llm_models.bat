@@ -47,6 +47,7 @@ set "DEVSTRAL_MODEL=unsloth/Devstral-Small-2507"
 set "LFM2_MODEL=LiquidAI/LFM2-2.6B"
 set "LFM25_MODEL=LiquidAI/LFM2.5-8B-A1B"
 set "GEMMA4_MODEL=OpenVINO/gemma-4-E4B-it-int4-ov"
+set "MINICPM5_MODEL=openbmb/MiniCPM5-1B"
 
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
@@ -88,6 +89,7 @@ call :download_tokenizer "%GPTOSS_MODEL%" "%~1\%GPTOSS_MODEL%"
 call :download_tokenizer "%DEVSTRAL_MODEL%" "%~1\%DEVSTRAL_MODEL%"
 call :download_tokenizer "%LFM2_MODEL%" "%~1\%LFM2_MODEL%"
 call :download_tokenizer "%LFM25_MODEL%" "%~1\%LFM25_MODEL%"
+call :download_tokenizer "%MINICPM5_MODEL%" "%~1\%MINICPM5_MODEL%"
 call :download_openvino_tokenizer "%GEMMA4_MODEL%" "%~1"
 
 exit /b 0
