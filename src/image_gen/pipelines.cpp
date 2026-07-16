@@ -23,6 +23,7 @@
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
 
 #include "src/logging.hpp"
+#include "src/ov_utils.hpp"
 #include "src/stringutils.hpp"
 
 namespace ovms {
@@ -61,7 +62,8 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     args(args) {
     std::vector<std::string> device;
     if (!args.device.size()) {
-        device.push_back("CPU");
+        device.push_back(recommendTargetDevice());
+        SPDLOG_INFO("No device specified for image generation model, using recommended device: {}", device[0]);
     } else {
         device = args.device;
     }

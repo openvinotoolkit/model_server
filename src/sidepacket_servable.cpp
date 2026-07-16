@@ -62,6 +62,10 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
 
 void SidepacketServable::initialize(const std::string& modelDir, const std::string& inputTargetDevice, const std::string& pluginConfig, const std::string& graphPath) {
     this->targetDevice = inputTargetDevice;
+    if (this->targetDevice.empty()) {
+        this->targetDevice = recommendTargetDevice();
+        SPDLOG_INFO("No target device specified for sidepacket servable, using recommended device: {}", this->targetDevice);
+    }
     auto fsModelsPath = std::filesystem::path(modelDir);
     if (fsModelsPath.is_relative()) {
         parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
