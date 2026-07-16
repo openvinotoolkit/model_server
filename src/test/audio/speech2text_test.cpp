@@ -36,7 +36,7 @@ using namespace ovms;
 class Speech2TextHttpTest : public V3HttpTest {
 protected:
     std::string modelName = "speech2text";
-    std::string endpoint = "/v3/audio/transcriptions";
+    std::string endpoint = "/v1/audio/transcriptions";
     static std::unique_ptr<std::thread> t;
     std::unordered_map<std::string, std::string> multipartHeader{{"content-type", "multipart/form-data"}};
     static std::string modelNameForm;
@@ -334,7 +334,7 @@ TEST_F(Speech2TextStreamingTest, streamingTranscriptionInvalidFileReturnsError) 
 }
 
 TEST_F(Speech2TextStreamingTest, streamingTranslationIsNotSupported) {
-    const std::string translationEndpoint = "/v3/audio/translations";
+    const std::string translationEndpoint = "/v1/audio/translations";
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", translationEndpoint, multipartHeader), ovms::StatusCode::OK);
 
     auto req = drogon::HttpRequest::newHttpRequest();

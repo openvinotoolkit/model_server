@@ -18,7 +18,6 @@ import os
 import re
 
 from enum import Enum
-from tensorflow_serving.apis.get_model_status_pb2 import ModelVersionStatus
 
 from tests.functional.constants.os_type import OsType
 
@@ -137,12 +136,12 @@ class Ovms:
 
     class ModelStatus(Enum):
         UNDEFINED = None
-        UNKNOWN = ModelVersionStatus.UNKNOWN
-        START = ModelVersionStatus.START
-        LOADING = ModelVersionStatus.LOADING
-        AVAILABLE = ModelVersionStatus.AVAILABLE
-        UNLOADING = ModelVersionStatus.UNLOADING
-        END = ModelVersionStatus.END
+        UNKNOWN = 0
+        START = 10
+        LOADING = 20
+        AVAILABLE = 30
+        UNLOADING = 40
+        END = 50
 
     LAYOUT_NHWC = "NHWC:NCHW"
     LAYOUT_NCHW = "NCHW:NCHW"

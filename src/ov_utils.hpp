@@ -52,6 +52,23 @@ std::optional<ov::Layout> getLayoutFromRTMap(const ov::RTMap& rtMap);
 
 Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const std::string& targetDevice, const ov::Core& ieCore);
 
+struct GpuDeviceInfo {
+    std::string name;
+    bool isDiscrete = false;
+    int64_t freeMemBytes = 0;
+};
+
+// Determines the recommended target device based on available devices and their properties.
+// Rules:
+// - If only CPU is available (no GPU) - returns "CPU"
+// - If a single discrete GPU is available - returns that device (e.g. "GPU.0")
+// - If only integrated GPU(s) are available - returns the first integrated GPU
+// - If multiple discrete GPUs are available - returns the one with the most free VRAM
+std::string recommendTargetDevice();
+
+// Testable overload accepting pre-collected GPU device info instead of querying ov::Core.
+std::string recommendTargetDevice(const std::vector<GpuDeviceInfo>& gpuDevices);
+
 // Applies resource-aware CPU defaults to an OpenVINO property map.
 // Sets inference_num_threads and (on Linux) enable_cpu_pinning only when not
 // already present in the map.  When PERFORMANCE_HINT=THROUGHPUT is set,

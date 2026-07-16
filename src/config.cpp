@@ -206,7 +206,10 @@ bool Config::validate() {
 
             std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
             bool validDeviceSelected = false;
-            if (exportSettings.targetDevice.rfind("GPU.", 0) == 0) {
+            if (exportSettings.targetDevice.empty()) {
+                // Empty means auto-detect via recommendTargetDevice
+                validDeviceSelected = true;
+            } else if (exportSettings.targetDevice.rfind("GPU.", 0) == 0) {
                 // Accept GPU.x where x is a number to select specific GPU card
                 std::string indexPart = exportSettings.targetDevice.substr(4);
                 validDeviceSelected = !indexPart.empty() && std::all_of(indexPart.begin(), indexPart.end(), ::isdigit);
@@ -416,8 +419,7 @@ const std::string Config::precision() const { return this->modelsSettings.precis
 const std::string& Config::modelVersionPolicy() const { return this->modelsSettings.modelVersionPolicy; }
 uint32_t Config::nireq() const { return this->modelsSettings.nireq; }
 const std::string& Config::targetDevice() const {
-    static const std::string defaultTargetDevice = "CPU";
-    return this->modelsSettings.targetDevice.empty() ? defaultTargetDevice : this->modelsSettings.targetDevice;
+    return this->modelsSettings.targetDevice;
 }
 const std::string& Config::Config::pluginConfig() const { return this->modelsSettings.pluginConfig; }
 bool Config::metricsEnabled() const { return this->serverSettings.metricsEnabled; }
