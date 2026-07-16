@@ -125,12 +125,15 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
             !omniExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
-        auto ovmsCallback = [& ctx = *omniExecutionContext](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
+        const bool audioRequested = omniExecutionContext->apiHandler->getRequest().audioOutputRequested;
+        auto ovmsCallback = [& ctx = *omniExecutionContext, audioRequested](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 ctx.deltaChannel.signalComplete();
                 return ov::genai::StreamingStatus::CANCEL;
             }
-            ctx.deltaChannel.push(std::move(delta), isLast);
+            // When audio output is requested, don't signal channel complete on text end.
+            // Audio chunks will follow via speech_streamer, channel is completed by executor.
+            ctx.deltaChannel.push(std::move(delta), isLast && !audioRequested);
             return ov::genai::StreamingStatus::RUNNING;
         };
         omniExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
@@ -249,13 +252,31 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
         // Parse response JSON and inject audio field
         rapidjson::Document responseDoc;
         responseDoc.Parse(executionContext->response.c_str());
-        if (!responseDoc.HasParseError() && responseDoc.HasMember("choices") && responseDoc["choices"].IsArray() && responseDoc["choices"].Size() > 0) {
-            auto& message = responseDoc["choices"][0]["message"];
-            rapidjson::Value audioObj(rapidjson::kObjectType);
-            audioObj.AddMember("data", rapidjson::Value(audioBase64.c_str(), responseDoc.GetAllocator()), responseDoc.GetAllocator());
-            std::string transcript = message.HasMember("content") && message["content"].IsString() ? message["content"].GetString() : "";
-            audioObj.AddMember("transcript", rapidjson::Value(transcript.c_str(), responseDoc.GetAllocator()), responseDoc.GetAllocator());
-            message.AddMember("audio", audioObj, responseDoc.GetAllocator());
+        if (!responseDoc.HasParseError()) {
+            auto& alloc = responseDoc.GetAllocator();
+            if (responseDoc.HasMember("choices") && responseDoc["choices"].IsArray() && responseDoc["choices"].Size() > 0) {
+                // Chat Completions format: inject into choices[0].message.audio
+                auto& message = responseDoc["choices"][0]["message"];
+                rapidjson::Value audioObj(rapidjson::kObjectType);
+                audioObj.AddMember("data", rapidjson::Value(audioBase64.c_str(), alloc), alloc);
+                std::string transcript = message.HasMember("content") && message["content"].IsString() ? message["content"].GetString() : "";
+                audioObj.AddMember("transcript", rapidjson::Value(transcript.c_str(), alloc), alloc);
+                message.AddMember("audio", audioObj, alloc);
+            } else if (responseDoc.HasMember("output") && responseDoc["output"].IsArray()) {
+                // Responses API format: append output_audio content part to the message output item
+                auto& output = responseDoc["output"];
+                for (rapidjson::SizeType i = 0; i < output.Size(); i++) {
+                    if (output[i].HasMember("type") && output[i]["type"].IsString() &&
+                        std::string(output[i]["type"].GetString()) == "message" &&
+                        output[i].HasMember("content") && output[i]["content"].IsArray()) {
+                        rapidjson::Value audioPart(rapidjson::kObjectType);
+                        audioPart.AddMember("type", rapidjson::Value("output_audio", alloc), alloc);
+                        audioPart.AddMember("data", rapidjson::Value(audioBase64.c_str(), alloc), alloc);
+                        output[i]["content"].PushBack(audioPart, alloc);
+                        break;
+                    }
+                }
+            }
 
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -346,6 +367,21 @@ absl::Status OmniModelLegacyServable::preparePartialResponse(std::shared_ptr<Gen
         }
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
+
+        // Emit response.audio.done if audio was streamed (Responses API only)
+        if (omniExecutionContext->audioOutputRequested &&
+            executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
+            rapidjson::StringBuffer audioDoneBuf;
+            rapidjson::Writer<rapidjson::StringBuffer> audioDoneWriter(audioDoneBuf);
+            audioDoneWriter.StartObject();
+            audioDoneWriter.Key("type");
+            audioDoneWriter.String("response.audio.done");
+            audioDoneWriter.Key("sequence_number");
+            audioDoneWriter.Uint64(0);
+            audioDoneWriter.EndObject();
+            executionContext->response += wrapTextInServerSideEventMessage(audioDoneBuf.GetString());
+        }
+
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;

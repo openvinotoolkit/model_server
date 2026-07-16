@@ -320,3 +320,124 @@ src/llm/
 2. **Phase 2** — Audio input parsing (both APIs)
 3. **Phase 3** — Audio output via Chat Completions (unary first, then streaming)
 4. **Phase 4** — Advanced features
+
+---
+
+## OpenVINO GenAI OmniPipeline Usage Reference
+
+### Construction
+
+```cpp
+// Simple: single model directory, one device
+ov::genai::OmniPipeline pipe(models_path, "CPU");
+
+// DI: separate devices for VLM and Talker
+auto vlm = std::make_shared<ov::genai::VLMPipeline>(models_path, "GPU");
+auto talker = std::make_shared<ov::genai::Talker>(models_path, "CPU");
+ov::genai::OmniPipeline pipe(vlm, talker);
+```
+
+### Generate (text only, no speech)
+
+```cpp
+ov::genai::GenerationConfig text_config;
+text_config.max_new_tokens = 256;
+
+ov::genai::OmniTalkerSpeechConfig speech_config;
+speech_config.return_audio = false;
+
+std::vector<ov::genai::VideoMetadata> videos_metadata;
+auto results = pipe.generate(prompt, images, videos, videos_metadata, audios,
+                             text_config, speech_config, text_streamer);
+// results.texts[0] contains the generated text
+```
+
+### Generate (text + speech)
+
+```cpp
+ov::genai::OmniTalkerSpeechConfig speech_config;
+speech_config.return_audio = true;
+speech_config.speaker = "f04";  // or leave empty for default
+
+auto results = pipe.generate(prompt, images, videos, videos_metadata, audios,
+                             text_config, speech_config, text_streamer);
+// results.texts[0] = generated text
+// results.speech_result.waveforms[0] = float32 PCM @ 24kHz, shape {N_samples}
+```
+
+### Audio Input Format
+
+Audio tensors passed to `generate()` must be:
+- `ov::element::f32`
+- Shape: `{N_samples}` (1-D, mono)
+- No resampling required — GenAI handles resampling internally
+- Decoded from WAV/MP3 to raw float PCM
+
+### Audio Output Format
+
+`speech_result.waveforms[0]` is:
+- `ov::element::f32`, shape `{N_samples}`
+- Mono, 24 kHz sample rate (fixed by Qwen3-Omni architecture)
+
+### Audio Streaming
+
+Speech generation runs **after** text generation completes (talker needs full hidden states).
+
+```cpp
+// Text streamer: receives tokens during VLM generation
+auto text_streamer = [](std::string&& token) -> StreamingStatus {
+    std::cout << token << std::flush;
+    return StreamingStatus::RUNNING;
+};
+
+// Speech streamer: receives audio chunks after text is done
+auto speech_streamer = [](const ov::Tensor& chunk) -> StreamingStatus {
+    // chunk is float32 PCM @ 24kHz, shape {N_samples}
+    // Each chunk = audio_chunk_frames * 1920 samples (80ms per frame)
+    play_audio(chunk);
+    return StreamingStatus::RUNNING;
+};
+
+speech_config.audio_chunk_frames = 1;  // minimum latency: ~80ms chunks
+
+auto results = pipe.generate(prompt, images, videos, videos_metadata, audios,
+                             text_config, speech_config,
+                             text_streamer, speech_streamer);
+```
+
+**Timeline:**
+```
+t=0   → Text generation starts (text_streamer receives tokens)
+t=T1  → Text generation completes
+t=T1  → Speech generation starts (speech_streamer receives audio chunks)
+t=T2  → Speech generation completes → OmniDecodedResults returned
+```
+
+### Available Speakers (model-dependent)
+
+Speakers are defined in `config.json` → `talker_config.speaker_id`:
+
+**Qwen3-Omni Dense (int4):** `br_f019`, `f04`, `f245`, `f37`, `m02`, `m31`, `m36`
+
+**Qwen3-Omni MoE:** `Ethan`, `Chelsie`, `Aiden`, `Cherry` (named voices)
+
+```cpp
+// List speakers at runtime
+auto speakers = pipe.get_talker()->list_speakers();
+
+// Voice blending
+auto emb1 = pipe.get_talker()->get_speaker_embedding("f04");
+auto emb2 = pipe.get_talker()->get_speaker_embedding("m02");
+// Blend: 70% f04, 30% m02
+ov::Tensor blended(emb1.get_element_type(), emb1.get_shape());
+for (size_t i = 0; i < emb1.get_size(); i++)
+    blended.data<float>()[i] = 0.7f * emb1.data<float>()[i] + 0.3f * emb2.data<float>()[i];
+speech_config.speaker = blended;
+```
+
+### Key Constraints
+
+- Audio placeholder tokens: GenAI's `normalize_prompt` expands `<|audio_pad|>` tokens automatically when `<|audio_start|>` is not in the prompt. If you pre-template the prompt, do NOT insert audio tags manually.
+- Speech requires PagedAttention backend (`attention_backend=PA`). NPU is not supported for speech output.
+- `return_audio = true` requires `num_beams = 1` (beam search incompatible with speech).
+- The talker generates speech unconditionally for the full response — partial/interrupted text still produces speech for the generated portion.

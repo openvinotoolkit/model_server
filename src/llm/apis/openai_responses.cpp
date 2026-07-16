@@ -1480,8 +1480,23 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(rapidjson::Document 
 
     // parsedDelta is a pre-parsed Document produced by OVMSTextStreamer::flushChunk.
     // Shape: {"delta":{...}} for content/reasoning/tool_calls, or an empty Document{}
-    // for finish-only chunks. Inspect the delta directly — no parsing needed here.
-    if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject()) {
+    // for finish-only chunks, or {"_audio_delta":"<base64>"} for audio chunks.
+    if (parsedDelta.HasMember("_audio_delta") && parsedDelta["_audio_delta"].IsString()) {
+        // Audio streaming chunk from speech_streamer
+        const std::string audioB64 = parsedDelta["_audio_delta"].GetString();
+        responsesState.sequenceNumber++;
+        rapidjson::StringBuffer buf;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+        writer.StartObject();
+        writer.Key("type");
+        writer.String("response.audio.delta");
+        writer.Key("delta");
+        writer.String(audioB64.c_str());
+        writer.Key("sequence_number");
+        writer.Uint64(responsesState.sequenceNumber);
+        writer.EndObject();
+        events.emplace_back(buf.GetString());
+    } else if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject()) {
         const auto& deltaObj = parsedDelta["delta"];
         if (deltaObj.HasMember("reasoning_content") && deltaObj["reasoning_content"].IsString()) {
             // Reasoning chunk

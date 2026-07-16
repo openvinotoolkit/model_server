@@ -16,8 +16,13 @@
 
 #include "legacy_executor.hpp"
 
+#include <chrono>
+#include <cstring>
 #include <vector>
 
+#include "absl/strings/escaping.h"
+
+#include "src/port/rapidjson_document.hpp"
 #include "servable.hpp"
 
 namespace ovms {
@@ -61,6 +66,50 @@ void OmniModelLegacyExecutor::processRequest() {
             }
 
             std::vector<ov::genai::VideoMetadata> videosMetadata;
+
+            // Create speech streamer for streaming audio output via SSE
+            ov::genai::OmniSpeechStreamerVariant speechStreamer = std::monostate{};
+            size_t audioChunkCount = 0;
+            auto speechStreamStart = std::chrono::steady_clock::now();
+            if (requestExecutionContext->audioOutputRequested && requestExecutionContext->textStreamer) {
+                speechStreamer = [&ctx = *requestExecutionContext, &audioChunkCount, &speechStreamStart](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
+                    if (ctx.clientDisconnected.load()) {
+                        return ov::genai::StreamingStatus::CANCEL;
+                    }
+                    auto chunkStart = std::chrono::steady_clock::now();
+                    if (audioChunkCount == 0) {
+                        speechStreamStart = chunkStart;
+                        SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni speech: first audio chunk received");
+                    }
+                    // Convert float32 PCM to int16 and base64 encode
+                    const float* pcm = audio_chunk.data<const float>();
+                    const size_t count = audio_chunk.get_size();
+                    std::vector<int16_t> pcm16(count);
+                    for (size_t i = 0; i < count; i++) {
+                        float s = pcm[i];
+                        if (s > 1.0f) s = 1.0f;
+                        if (s < -1.0f) s = -1.0f;
+                        pcm16[i] = static_cast<int16_t>(s * 32767.0f);
+                    }
+                    std::string b64 = absl::Base64Escape(
+                        std::string_view(reinterpret_cast<const char*>(pcm16.data()), pcm16.size() * sizeof(int16_t)));
+
+                    rapidjson::Document audioDoc;
+                    audioDoc.SetObject();
+                    audioDoc.AddMember("_audio_delta",
+                        rapidjson::Value(b64.c_str(), audioDoc.GetAllocator()),
+                        audioDoc.GetAllocator());
+                    ctx.deltaChannel.push(std::move(audioDoc));
+                    audioChunkCount++;
+                    auto chunkEnd = std::chrono::steady_clock::now();
+                    auto chunkMs = std::chrono::duration_cast<std::chrono::microseconds>(chunkEnd - chunkStart).count();
+                    SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni speech chunk[{}]: {} samples, encode+push {} us, duration {:.1f} ms",
+                        audioChunkCount, count, chunkMs, count * 1000.0f / 24000.0f);
+                    return ov::genai::StreamingStatus::RUNNING;
+                };
+            }
+
+            auto generateStart = std::chrono::steady_clock::now();
             requestExecutionContext->results = pipe->generate(
                 requestExecutionContext->inputRequest.promptText,
                 requestExecutionContext->inputRequest.inputImages,
@@ -69,7 +118,17 @@ void OmniModelLegacyExecutor::processRequest() {
                 requestExecutionContext->inputRequest.inputAudios,
                 requestExecutionContext->inputRequest.generationConfig,
                 speechConfig,
-                requestExecutionContext->textStreamer);
+                requestExecutionContext->textStreamer,
+                speechStreamer);
+            auto generateEnd = std::chrono::steady_clock::now();
+            auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(generateEnd - generateStart).count();
+            SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni generate complete: total={} ms, audio_chunks={}",
+                totalMs, audioChunkCount);
+            if (audioChunkCount > 0) {
+                auto speechMs = std::chrono::duration_cast<std::chrono::milliseconds>(generateEnd - speechStreamStart).count();
+                SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni speech phase: {} ms for {} chunks ({:.1f} ms/chunk)",
+                    speechMs, audioChunkCount, static_cast<float>(speechMs) / audioChunkCount);
+            }
         } catch (std::exception& e) {
             requestExecutionContext->success = false;
             SPDLOG_LOGGER_ERROR(llm_executor_logger, "Omni pipeline generation failed: {}.", e.what());

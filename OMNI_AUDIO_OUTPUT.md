@@ -145,3 +145,230 @@ runs on hidden states from the full text decode). Options:
 
 The Qwen3-Omni talker generates audio at **24 kHz**. This is fixed by the model architecture.
 The sample rate is not exposed in `TalkerResults` — it's a known constant.
+
+---
+
+## GenAI Audio Streaming Deep Dive
+
+### Two-Stage Architecture
+
+```
+┌─────────────────────────┐     ┌─────────────────────────┐
+│  VLM Thinker            │     │  Talker + Code2Wav      │
+│  (text generation)      │ ──► │  (speech generation)    │
+│                         │     │                         │
+│  StreamerVariant ───────┼──►  │  OmniSpeechStreamer ────┼──► audio chunks
+│  (token-by-token text)  │     │  (chunk-by-chunk audio) │
+└─────────────────────────┘     └─────────────────────────┘
+```
+
+Speech generation is **sequential after text** — the talker consumes hidden states accumulated during the full text decode. There is no interleaved text+audio streaming.
+
+### C++ Speech Streaming Example
+
+```cpp
+#include "openvino/genai/omni/pipeline.hpp"
+#include "openvino/genai/omni/speech_streamer_base.hpp"
+
+// Option 1: Lambda callback
+auto speech_callback = [](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
+    // audio_chunk: float32, shape {N_samples}, 24kHz mono
+    // N_samples = audio_chunk_frames * 1920 (each frame = 80ms)
+    write_to_audio_device(audio_chunk.data<float>(), audio_chunk.get_size());
+    return ov::genai::StreamingStatus::RUNNING;
+};
+
+// Option 2: Subclass OmniSpeechStreamerBase
+class MyAudioStreamer : public ov::genai::OmniSpeechStreamerBase {
+public:
+    StreamingStatus write(const ov::Tensor& audio_chunk) override {
+        buffer.insert(buffer.end(),
+            audio_chunk.data<float>(),
+            audio_chunk.data<float>() + audio_chunk.get_size());
+        return StreamingStatus::RUNNING;
+    }
+    void end() override { flush_buffer(); }
+private:
+    std::vector<float> buffer;
+};
+
+auto streamer = std::make_shared<MyAudioStreamer>();
+
+ov::genai::OmniTalkerSpeechConfig speech_config;
+speech_config.return_audio = true;
+speech_config.audio_chunk_frames = 3;  // ~240ms chunks
+
+auto results = pipe.generate(prompt, images, videos, metadata, audios,
+                             text_config, speech_config,
+                             text_streamer,    // StreamerVariant for text
+                             streamer);        // OmniSpeechStreamerVariant for audio
+```
+
+### Python Speech Streaming Example
+
+```python
+import openvino_genai
+from openvino import Tensor
+
+def text_streamer(token: str) -> openvino_genai.StreamingStatus:
+    print(token, end="", flush=True)
+    return openvino_genai.StreamingStatus.RUNNING
+
+audio_chunks = []
+
+def speech_streamer(audio_chunk: Tensor) -> openvino_genai.StreamingStatus:
+    # audio_chunk.data is float32 numpy array @ 24kHz
+    audio_chunks.append(audio_chunk.data.copy())
+    return openvino_genai.StreamingStatus.RUNNING
+
+pipe = openvino_genai.OmniPipeline(model_dir, "CPU")
+
+text_config = openvino_genai.GenerationConfig()
+text_config.max_new_tokens = 256
+
+speech_config = openvino_genai.OmniTalkerSpeechConfig(model_dir)
+speech_config.return_audio = True
+speech_config.audio_chunk_frames = 1  # minimum latency
+
+results = pipe.generate(
+    history,
+    images=images,
+    audios=audios,
+    text_config=text_config,
+    talker_speech_config=speech_config,
+    streamer=text_streamer,
+    speech_streamer=speech_streamer,
+)
+
+# audio_chunks contains list of numpy arrays, each ~80ms of audio
+import numpy as np
+full_audio = np.concatenate(audio_chunks)  # float32 @ 24kHz
+```
+
+### Streaming Control Parameters
+
+| Parameter | Default | Effect |
+|-----------|---------|--------|
+| `audio_chunk_frames` | 1 | Frames per streaming callback. Each frame = 80ms (1920 samples @ 24kHz). Higher = fewer callbacks, more latency |
+| `max_new_tokens` | unlimited | Cap on talker AR steps (independent of text max_new_tokens) |
+| `rng_seed` | 0 | Seed for talker + CodePredictor sampling randomness |
+
+### Streaming Return Values
+
+The speech streamer callback returns `StreamingStatus`:
+- `RUNNING` — continue generating audio
+- `STOP` — stop gracefully, keep generated audio
+- `CANCEL` — cancel, generated audio may be discarded
+
+`end()` is always called on `OmniSpeechStreamerBase` subclasses, even on STOP/CANCEL.
+
+### OVMS Streaming Audio Strategy
+
+**Current implementation:** Responses API streaming with `response.audio.delta` events (Option 3 below).
+
+---
+
+## Audio Streaming Options Comparison
+
+### Option 1: Realtime API via WebRTC
+
+**Reference:** https://developers.openai.com/api/docs/guides/realtime-webrtc
+
+- **Transport:** WebRTC peer connection (UDP media + data channels)
+- **Latency:** Lowest (~100ms round-trip)
+- **Use case:** Browser-based voice agents, live conversations
+- **Audio flow:** Bidirectional — client streams mic audio in, server streams model audio out simultaneously
+- **Events:** `response.audio.delta`, `input_audio_buffer.speech_started`, etc.
+- **Complexity:** High — requires STUN/TURN, ICE negotiation, media track handling
+- **Client:** Browser with `getUserMedia()` or native WebRTC library
+
+**Not suitable for OVMS:** Requires full WebRTC stack, NAT traversal infrastructure, and a fundamentally different server architecture (persistent session per client). Overkill for request-based inference serving.
+
+### Option 2: Realtime API via WebSocket
+
+**Reference:** https://developers.openai.com/api/docs/guides/realtime-websocket
+
+- **Transport:** Persistent WebSocket connection
+- **Latency:** Low (~200-500ms)
+- **Use case:** Server-side voice agents, telephony integration (SIP), real-time translation
+- **Audio flow:** Bidirectional JSON events over WebSocket
+- **Events:** `response.audio.delta`, `response.audio.done`, `conversation.item.created`, etc.
+- **Complexity:** Medium-high — persistent connections, session state management, VAD
+- **Client:** Any WebSocket client
+
+**Possible for OVMS in future:** Would require a new WebSocket endpoint, session management, and connection lifecycle handling. Significant new infrastructure.
+
+### Option 3: Responses API Streaming via SSE (Implemented)
+
+**Reference:** https://developers.openai.com/api/reference/resources/responses/streaming-events
+
+- **Transport:** Server-Sent Events (SSE) over HTTP — same as text streaming
+- **Latency:** Medium (~500ms for first audio chunk after text completes)
+- **Use case:** Extending existing text streaming with audio output
+- **Audio flow:** Unidirectional — server streams audio chunks after text generation
+- **Events:** `response.audio.delta`, `response.audio.done`
+- **Complexity:** Low — extends existing SSE streaming infrastructure
+- **Client:** Any HTTP client with SSE support
+
+**Chosen for OVMS:** Natural fit because:
+1. GenAI's `speech_streamer` delivers chunks sequentially after text
+2. Existing Responses API handler already emits SSE events
+3. No new transport or connection infrastructure needed
+4. Standard OpenAI SDK support: `client.responses.stream()`
+
+#### SSE Event Sequence
+
+```
+event: response.created
+event: response.in_progress
+event: response.output_item.added
+event: response.content_part.added
+event: response.output_text.delta      ← text tokens (during VLM generation)
+event: response.output_text.delta
+...
+event: response.output_text.done
+event: response.content_part.done
+event: response.output_item.done
+event: response.audio.delta            ← audio chunks (during talker generation)
+event: response.audio.delta
+...
+event: response.audio.done
+event: response.completed
+```
+
+#### Audio Delta Event Format
+
+```json
+{
+  "type": "response.audio.delta",
+  "delta": "<base64-encoded-pcm16-chunk>",
+  "sequence_number": 42
+}
+```
+
+#### Client Usage
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:11338/v3", api_key="unused")
+
+with client.responses.stream(
+    model="ovms-model",
+    input="Tell me a short story",
+    modalities=["text", "audio"],
+    audio={"voice": "f04", "format": "pcm16"},
+) as stream:
+    for event in stream:
+        if event.type == "response.audio.delta":
+            # event.delta is base64 pcm16 audio chunk
+            play_audio_chunk(base64.b64decode(event.delta))
+        elif event.type == "response.audio.done":
+            break
+```
+
+#### Streaming Format
+
+- Only `pcm16` format is supported for streaming (raw s16le @ 24kHz)
+- `wav` format is available only for unary responses (Chat Completions `message.audio.data`)
+- Each `response.audio.delta` contains ~80ms of audio (1920 samples × 2 bytes = 3840 bytes before base64)
