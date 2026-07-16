@@ -758,5 +758,4 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
         return std::nullopt;
     }
 }
-
 }  // namespace ovms
