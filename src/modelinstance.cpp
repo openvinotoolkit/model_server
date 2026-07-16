@@ -1040,7 +1040,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             e.what(),
             getName(),
             getVersion(),
-            config.getTargetDevice());
+            this->targetDevice);
         return status;
     } catch (std::exception& e) {
         Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
@@ -1049,7 +1049,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             e.what(),
             getName(),
             getVersion(),
-            config.getTargetDevice());
+            this->targetDevice);
         return status;
     } catch (...) {
         Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
@@ -1058,7 +1058,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             "Unknown error",
             getName(),
             getVersion(),
-            config.getTargetDevice());
+            this->targetDevice);
         return status;
     }
 
@@ -1241,7 +1241,6 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
     this->targetDevice = this->config.getTargetDevice();
     if (this->targetDevice.empty()) {
         this->targetDevice = recommendTargetDevice();
-        this->config.setTargetDevice(this->targetDevice);
         SPDLOG_LOGGER_INFO(modelmanager_logger, "No target device specified for model: {}; version: {}; using recommended device: {}",
             config.getName(), config.getVersion(), this->targetDevice);
     }
@@ -1302,7 +1301,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         bool isModelLoadedFromCache = compiledModel->get_property(ov::loaded_from_cache);
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Is model loaded from cache: {}", isModelLoadedFromCache);
     } catch (...) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get information if model was loaded from cache; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get information if model was loaded from cache; model: {}; version: {}; device: {}", getName(), getVersion(), this->targetDevice);
     }
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
