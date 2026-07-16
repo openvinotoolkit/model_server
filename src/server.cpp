@@ -412,8 +412,9 @@ Status Server::startModules(ovms::Config& config) {
     }
     if (config.getServerSettings().serverMode == CONFIGURE_MODE) {
         GraphExport graphExporter;
-        const auto& hfSettings = config.getServerSettings().hfSettings;
+        HFSettingsImpl hfSettings = config.getServerSettings().hfSettings;
         std::string modelPath = config.modelPath();
+        hfSettings.exportSettings.modelPath = ".";
         status = graphExporter.createServableConfig(modelPath, hfSettings, true);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to create graph config: {}", status.string());
