@@ -134,6 +134,9 @@ const char* jsonTypeOf(const rapidjson::Value& val) {
 }
 
 void enforceStringValue(rapidjson::Value& v, rapidjson::Document::AllocatorType& alloc) {
+    if (v.IsString()) {
+        return;
+    }
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     v.Accept(writer);

@@ -265,7 +265,7 @@ TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
     EXPECT_EQ(parsedOutput.reasoning, "");
 }
 
-// This scenario will be handled only in unary, in streaming it's not possible to parse reasoning without the stating tag
+// This scenario will be handled only in unary, in streaming it's not possible to parse reasoning without the starting tag
 TEST_F(Minicpm5OutputParserTest, ParseReasoningWithoutStartingTag) {
     const std::string input = "This is my internal reasoning about what to call.</think>";
     ParsedOutput parsedOutput = generateParsedOutput(input);
@@ -577,7 +577,7 @@ TEST_F(Minicpm5OutputParserTest, StreamingWithToolCallAndSpecialTags) {
     assertStreamingVec(chunkToDeltaVec);
 }
 
-// It's possible that model starts to reason without the starting <think> tag, in that
+// It's possible that the model starts reasoning without the starting <think> tag; in that case treat it as regular content.
 TEST_F(Minicpm5OutputParserTest, StreamingWithReasoningWithoutStartingTag) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {"<s>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
