@@ -56,6 +56,15 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
+    // MiniCPM5 detection — uses <param name="..."> XML style (distinct from qwen3coder's <parameter=...>)
+    if (contains(templateSource, "<param name=\"")) {
+        result.detectedToolParser = "minicpm5";
+        result.caps.supportsToolCalls = true;
+        result.detectedReasoningParser = "minicpm5";
+
+        return result;
+    }
+
     // LFM2 detection
     if (contains(templateSource, "<|assistant_tool_call|>") || contains(templateSource, "<|tool_call_start|>") || contains(templateSource, "keep_past_thinking")) {
         result.detectedToolParser = "lfm2";

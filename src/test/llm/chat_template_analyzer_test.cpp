@@ -191,6 +191,19 @@ TEST_F(ChatTemplateAnalyzerTest, unknownTemplateReturnsEmpty) {
     EXPECT_FALSE(result.caps.supportsToolCalls);
 }
 
+// --- MiniCPM5 ---
+
+TEST_F(ChatTemplateAnalyzerTest, detectsMinicpm5) {
+    std::string tmpl = loadTemplate("chat_template_minicpm5.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "minicpm5");
+    ASSERT_TRUE(result.detectedReasoningParser.has_value());
+    EXPECT_EQ(result.detectedReasoningParser.value(), "minicpm5");
+    EXPECT_TRUE(result.caps.supportsToolCalls);
+}
+
 // --- Priority: Devstral over Mistral (inline — tests specific precedence logic) ---
 
 TEST_F(ChatTemplateAnalyzerTest, devstralTakesPriorityOverMistral) {
