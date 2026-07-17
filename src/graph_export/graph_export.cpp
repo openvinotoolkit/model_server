@@ -91,21 +91,11 @@ static std::string constructModelsPath(const std::string& modelPath, const std::
     // If Windows-style backslashes are present, the parser may fail to locate files or misinterpret the path. To ensure compatibility, we replace all backslashes with forward slashes.
     // This is safe because Windows APIs accept forward slashes in file paths.
     if (FileSystem::getOsSeparator() != "/") {
-        std::replace(modelsPath.begin(), modelsPath.end(), '\\', '/');
+        modelsPath = std::filesystem::path(modelsPath).generic_string();
     }
 #endif
     SPDLOG_TRACE("Models path: {}, modelPath:{}, ggufFilenameOpt:{}", modelsPath, modelPath, ggufFilenameOpt.value_or("std::nullopt"));
     return modelsPath;
-}
-
-static std::string normalizeWindowsPathSeparators(const std::string& path) {
-#ifdef _WIN32
-    std::string normalized = path;
-    std::replace(normalized.begin(), normalized.end(), '\\', '/');
-    return normalized;
-#else
-    return path;
-#endif
 }
 
 std::string GraphExport::getDraftModelDirectoryName(std::string draftModel) {
@@ -696,7 +686,10 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
         // Normalize Windows path separators to avoid backslash escape ambiguity.
         auto cacheDirIt = d.FindMember("CACHE_DIR");
         if (cacheDirIt != d.MemberEnd() && cacheDirIt->value.IsString()) {
-            auto normalizedCacheDir = normalizeWindowsPathSeparators(cacheDirIt->value.GetString());
+            auto normalizedCacheDir = std::string(cacheDirIt->value.GetString());
+#ifdef _WIN32
+            normalizedCacheDir = std::filesystem::path(normalizedCacheDir).generic_string();
+#endif
             cacheDirIt->value.SetString(normalizedCacheDir.c_str(), static_cast<rapidjson::SizeType>(normalizedCacheDir.size()), d.GetAllocator());
         }
     }
@@ -750,7 +743,10 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
         }
     }
     if (exportSettings.pluginConfig.cacheDir.has_value()) {
-        auto normalizedCacheDir = normalizeWindowsPathSeparators(exportSettings.pluginConfig.cacheDir.value());
+        auto normalizedCacheDir = exportSettings.pluginConfig.cacheDir.value();
+    #ifdef _WIN32
+        normalizedCacheDir = std::filesystem::path(normalizedCacheDir).generic_string();
+    #endif
         rapidjson::Value value;
         value.SetString(normalizedCacheDir.c_str(), static_cast<rapidjson::SizeType>(normalizedCacheDir.size()), d.GetAllocator());
         auto itr = d.FindMember("CACHE_DIR");
