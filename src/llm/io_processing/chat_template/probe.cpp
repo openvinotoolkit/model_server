@@ -96,6 +96,7 @@ static bool analyzeProbeToolArgumentResults(bool strOk, const std::string& strOu
         return output.find("\"" + PROBE_NEEDLE + "\": \"") != std::string::npos ||
                output.find("\"" + PROBE_NEEDLE + "\":\"") != std::string::npos ||
                output.find("<parameter=" + PROBE_NEEDLE + ">") != std::string::npos ||
+               output.find("<param name=\"" + PROBE_NEEDLE + "\">") != std::string::npos ||
                output.find(PROBE_NEEDLE + ":<|") != std::string::npos ||
                output.find(PROBE_NEEDLE + "=") != std::string::npos;
     };

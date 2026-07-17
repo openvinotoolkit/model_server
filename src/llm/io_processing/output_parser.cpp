@@ -35,6 +35,8 @@
 #include "lfm2/lfm25_tool_parser.hpp"
 #include "lfm2/lfm25_reasoning_parser.hpp"
 #include "gemma4/gemma4_tool_parser.hpp"
+#include "minicpm5/minicpm5_tool_parser.hpp"
+#include "minicpm5/minicpm5_reasoning_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -207,6 +209,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         }
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
+    } else if (toolParserName == "minicpm5") {
+        toolParser = std::make_unique<Minicpm5ToolParser>(tokenizer, toolNameSchemaMap);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: \"" + toolParserName +
                                  "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
@@ -218,6 +222,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Gemma4ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "gptoss") {
         reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "minicpm5") {
+        reasoningParser = std::make_unique<Minicpm5ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "lfm2") {
         reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {

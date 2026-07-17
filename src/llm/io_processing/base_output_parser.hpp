@@ -29,6 +29,8 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 
+#include "src/llm/apis/tool_schema_wrapper.hpp"
+
 namespace ovms {
 struct ToolCall {
     std::string id;
@@ -57,6 +59,12 @@ enum class ParameterType {
 };
 using ParametersTypeMap_t = std::unordered_map<std::string, ParameterType>;            // param name -> param type
 using ToolsParameterTypeMap_t = std::unordered_map<std::string, ParametersTypeMap_t>;  // tool name -> (param name -> param type)
+
+// Tool-schema helpers shared between tag/attribute-style parsers (e.g. qwen3coder, minicpm5).
+// Builds a parameter name -> ParameterType map from a single tool's JSON schema.
+ParametersTypeMap_t parseToolSchema(const rapidjson::Value& schema);
+// Builds a tool name -> (parameter name -> ParameterType) map from all tools' schemas.
+ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas);
 
 class BaseOutputParser {
 protected:
