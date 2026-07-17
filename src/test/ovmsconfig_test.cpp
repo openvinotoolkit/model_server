@@ -3183,7 +3183,7 @@ TEST_F(OvmsConfigDeathTest, negativeConfigureModeRequiresTaskWhenCannotInfer) {
     int arg_count = 4;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv),
         ::testing::ExitedWithCode(OVMS_EX_USAGE),
-        "--configure requires --task");
+        "Could not infer model task");
 }
 
 #pragma GCC diagnostic pop
