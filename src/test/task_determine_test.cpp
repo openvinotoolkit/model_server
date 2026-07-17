@@ -98,22 +98,24 @@ TEST_P(CLIParserDetermineTaskTest, DetermineTaskFromModelCatalog) {
         << "Neither config.json nor model_index.json found in: " << modelPath.string();
 
     if (expectedTask.empty()) {
-        EXPECT_THROW(
-            ovms::determineDefaultTaskParameter(
-                std::make_optional(modelPath.string()),
-                std::nullopt,
-                std::nullopt),
-            std::logic_error);
+        const auto result = ovms::determineDefaultTaskParameter(
+            std::make_optional(modelPath.string()),
+            std::nullopt,
+            std::nullopt);
+        EXPECT_FALSE(result.has_value())
+            << "Model: " << modelName << " — expected no task to be detected but got: " << result.value_or("");
         return;
     }
 
-    std::string result = ovms::determineDefaultTaskParameter(
+    const auto result = ovms::determineDefaultTaskParameter(
         std::make_optional(modelPath.string()),
         std::nullopt,
         std::nullopt);
 
-    EXPECT_EQ(result, expectedTask)
-        << "Model: " << modelName << ", Expected: " << expectedTask << ", Got: " << result;
+    ASSERT_TRUE(result.has_value())
+        << "Model: " << modelName << ", Expected: " << expectedTask << " but got no result";
+    EXPECT_EQ(result.value(), expectedTask)
+        << "Model: " << modelName << ", Expected: " << expectedTask << ", Got: " << result.value();
 }
 
 // ─── Per-detector unit tests (in-memory, no filesystem) ───────────────────────

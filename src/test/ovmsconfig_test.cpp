@@ -403,7 +403,7 @@ TEST_F(OvmsConfigDeathTest, hfNoTaskParameter) {
         "/some/path",
     };
     int arg_count = 6;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
@@ -881,7 +881,7 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTask) {
         "/some/path",
     };
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
 }
 
 TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskInvalidArchitectureLocal) {
@@ -895,7 +895,7 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskInvalidArchitectureLocal) {
         (char*)repoPath.c_str(),
     };
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
 }
 
 TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskNoArchitecturesLocal) {
@@ -909,7 +909,7 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskNoArchitecturesLocal) {
         (char*)repoPath.c_str(),
     };
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
 }
 
 TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
@@ -3053,7 +3053,7 @@ TEST_F(OvmsConfigDeathTest, negativeSourceModelNullArchitecturesWithoutSpecialFi
         (char*)repoPath.c_str(),
     };
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--task parameter wasn't passed");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
 }
 
 // Scenario 7: --model_path (LLM/text_generation model) with no explicit --task but with

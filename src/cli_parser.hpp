@@ -53,7 +53,7 @@ protected:
     void prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName);
     void prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl& modelsSettings);
     void prepareConfigExport(ModelsSettingsImpl& modelsSettings);
-    bool isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result);
+    bool isHFFlow(const std::unique_ptr<cxxopts::ParseResult>& result);
     bool isInMemoryGraphMode(const std::unique_ptr<cxxopts::ParseResult>& result);
 };
 
