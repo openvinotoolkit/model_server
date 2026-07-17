@@ -23,8 +23,8 @@ from stream_client import StreamClient
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--grpc_address', required=False, default='localhost:9022', help='Specify url to grpc service')
-parser.add_argument('--ffmpeg_output_width', required=False, default=None, type=int, help='Width of the output video')
-parser.add_argument('--ffmpeg_output_height', required=False, default=None, type=int, help='Height of the output video')
+parser.add_argument('--ffmpeg_output_width', required=False, default=None, type=int, help='Width of the rtsp output channel window')
+parser.add_argument('--ffmpeg_output_height', required=False, default=None, type=int, help='Height of the rtsp output channel window')
 parser.add_argument('--input_stream', required=False, default="rtsp://localhost:8080/channel1", type=str, help='Url of input rtsp stream')
 parser.add_argument('--output_stream', required=False, default="rtsp://localhost:8080/channel2", type=str, help='Url of output rtsp stream')
 parser.add_argument('--model_name', required=False, default="holisticTracking", type=str, help='Name of the model')
