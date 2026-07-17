@@ -21,8 +21,8 @@
 namespace ovms {
 class Minicpm5ReasoningParser : public BaseOutputParser {
 public:
-    static inline const std::string reasoningStartTag  = "<think>";
-    static inline const std::string reasoningEndTag  = "</think>";
+    static inline const std::string reasoningStartTag = "<think>";
+    static inline const std::string reasoningEndTag = "</think>";
 
     static constexpr int64_t reasoningStartTokenId = 8;
     static constexpr int64_t reasoningEndTokenId = 9;

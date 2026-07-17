@@ -381,7 +381,6 @@ TEST(Minicpm5ToolParserImplTest, SingleCallWithNoArgs) {
     EXPECT_EQ(calls[0].arguments, R"({})");
 }
 
-
 TEST(Minicpm5ToolParserImplTest, TwoCalls) {
     const std::string input =
         R"(<function name="get_weather"><param name="city">Rome</param></function>)"
