@@ -1934,6 +1934,7 @@ ovms_cc_library(
     deps = ["cpp_headers",
             "@com_github_tencent_rapidjson//:rapidjson",
             "//third_party:openvino",
+            "//src/filesystem:libovmsfilesystem",
             "libovmslogging"],
     visibility = ["//visibility:public"],
 )

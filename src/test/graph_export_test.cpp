@@ -1040,6 +1040,18 @@ TEST_F(GraphCreationTest, windowsBackslashesInGGUFModelPathAreNormalized) {
     EXPECT_NE(std::string::npos, graphContents.find("models_path: \"c:/models/Qwen3-35B/model.gguf\"")) << graphContents;
     EXPECT_EQ(std::string::npos, graphContents.find("models_path: \"c:\\models")) << "Backslashes must not appear in models_path";
 }
+
+TEST_F(GraphCreationTest, windowsBackslashesInCacheDirAreNormalizedInPluginConfig) {
+    ovms::ExportSettings exportSettings;
+    exportSettings.pluginConfig.cacheDir = "c:\\models\\cache";
+
+    auto res = ovms::GraphExport::createPluginString(exportSettings);
+    ASSERT_TRUE(std::holds_alternative<std::optional<std::string>>(res));
+    auto pluginConfig = std::get<std::optional<std::string>>(res);
+    ASSERT_TRUE(pluginConfig.has_value());
+    EXPECT_NE(std::string::npos, pluginConfig.value().find("\"CACHE_DIR\":\"c:/models/cache\""));
+    EXPECT_EQ(std::string::npos, pluginConfig.value().find("\\\\")) << pluginConfig.value();
+}
 #endif  // _WIN32
 TEST_F(GraphCreationTest, pluginConfigAsString) {
     ovms::ExportSettings exportSettings;
