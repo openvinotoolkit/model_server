@@ -58,7 +58,7 @@ static std::string getEnvReturnOrDefaultIfNotSet(const std::string& envName, con
 
 HfPullModelModule::HfPullModelModule() {}
 
-#define RETURN_IF_ERROR(StatusOr)                        \
+#define RETURN_IF_ERROR(StatusOr)                       \
     do {                                                \
         if (std::holds_alternative<Status>(StatusOr)) { \
             return std::get<Status>(StatusOr);          \
