@@ -79,6 +79,15 @@ static std::string buildGraphHeader() {
     return oss.str();
 }
 
+static std::string toGenericPath(const std::string& path) {
+    return std::filesystem::path(path).generic_string();
+}
+
+static void setJsonStringFromPath(rapidjson::Value& jsonValue, const std::string& path, rapidjson::Document& document) {
+    const std::string genericPath = toGenericPath(path);
+    jsonValue.SetString(genericPath.c_str(), static_cast<rapidjson::SizeType>(genericPath.size()), document.GetAllocator());
+}
+
 static std::string constructModelsPath(const std::string& modelPath, const std::optional<std::string>& ggufFilenameOpt) {
     std::string modelsPath;
     if (ggufFilenameOpt.has_value()) {
@@ -86,14 +95,7 @@ static std::string constructModelsPath(const std::string& modelPath, const std::
     } else {
         modelsPath = modelPath;
     }
-#if _WIN32
-    // On Windows, file paths use backslashes ('\') as separators. However, the graph parser used in this project expects Unix-style paths with forward slashes ('/').
-    // If Windows-style backslashes are present, the parser may fail to locate files or misinterpret the path. To ensure compatibility, we replace all backslashes with forward slashes.
-    // This is safe because Windows APIs accept forward slashes in file paths.
-    if (FileSystem::getOsSeparator() != "/") {
-        modelsPath = std::filesystem::path(modelsPath).generic_string();
-    }
-#endif
+    modelsPath = toGenericPath(modelsPath);
     SPDLOG_TRACE("Models path: {}, modelPath:{}, ggufFilenameOpt:{}", modelsPath, modelPath, ggufFilenameOpt.value_or("std::nullopt"));
     return modelsPath;
 }
@@ -653,14 +655,10 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
             return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
         }
         // plugin_config is injected into pbtxt and later parsed as JSON again.
-        // Normalize Windows path separators to avoid backslash escape ambiguity.
+        // Normalize path separators to avoid backslash escape ambiguity in JSON-in-pbtxt.
         auto cacheDirIt = d.FindMember("CACHE_DIR");
         if (cacheDirIt != d.MemberEnd() && cacheDirIt->value.IsString()) {
-            auto normalizedCacheDir = std::string(cacheDirIt->value.GetString());
-#ifdef _WIN32
-            normalizedCacheDir = std::filesystem::path(normalizedCacheDir).generic_string();
-#endif
-            cacheDirIt->value.SetString(normalizedCacheDir.c_str(), static_cast<rapidjson::SizeType>(normalizedCacheDir.size()), d.GetAllocator());
+            setJsonStringFromPath(cacheDirIt->value, cacheDirIt->value.GetString(), d);
         }
     }
     if (pluginConfig.kvCachePrecision.has_value()) {
@@ -713,12 +711,8 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
         }
     }
     if (exportSettings.pluginConfig.cacheDir.has_value()) {
-        auto normalizedCacheDir = exportSettings.pluginConfig.cacheDir.value();
-#ifdef _WIN32
-        normalizedCacheDir = std::filesystem::path(normalizedCacheDir).generic_string();
-#endif
         rapidjson::Value value;
-        value.SetString(normalizedCacheDir.c_str(), static_cast<rapidjson::SizeType>(normalizedCacheDir.size()), d.GetAllocator());
+        setJsonStringFromPath(value, exportSettings.pluginConfig.cacheDir.value(), d);
         auto itr = d.FindMember("CACHE_DIR");
         if (itr != d.MemberEnd()) {
             return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled CACHE_DIR parameter in plugin config.");

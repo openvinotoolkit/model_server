@@ -58,8 +58,11 @@ std::string numericValueToString(const rapidjson::Value& v) {
     return "";
 }
 
-bool isPathLikePluginKey(const std::string& key) {
-    return key == "CACHE_DIR";
+void normalizeCacheDirPropertyIfNeeded(plugin_config_t& config, const std::string& key, const rapidjson::Value& value) {
+    if (key != "CACHE_DIR" || !value.IsString()) {
+        return;
+    }
+    config[key] = std::filesystem::path(value.GetString()).generic_string();
 }
 
 /**
@@ -93,13 +96,8 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                             continue;
                         }
                         if (propertyIt->value.IsString()) {
-                            if (isPathLikePluginKey(propertyKey)) {
-                                auto normalizedValue = std::string(propertyIt->value.GetString());
-#ifdef _WIN32
-                                normalizedValue = std::filesystem::path(normalizedValue).generic_string();
-#endif
-                                properties[propertyKey] = normalizedValue;
-                            } else {
+                            normalizeCacheDirPropertyIfNeeded(properties, propertyKey, propertyIt->value);
+                            if (propertyKey != "CACHE_DIR") {
                                 properties[propertyKey] = propertyIt->value.GetString();
                             }
                         }
@@ -141,13 +139,8 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                     pluginConfig["INFERENCE_NUM_THREADS"] = it->value.GetString();
                     SPDLOG_WARN("{} plugin config key is deprecated. Use INFERENCE_NUM_THREADS instead", it->name.GetString());
                 } else {
-                    if (isPathLikePluginKey(topKey)) {
-                        auto normalizedValue = std::string(it->value.GetString());
-#ifdef _WIN32
-                        normalizedValue = std::filesystem::path(normalizedValue).generic_string();
-#endif
-                        pluginConfig[topKey] = normalizedValue;
-                    } else {
+                    normalizeCacheDirPropertyIfNeeded(pluginConfig, topKey, it->value);
+                    if (topKey != "CACHE_DIR") {
                         pluginConfig[topKey] = it->value.GetString();
                     }
                 }
