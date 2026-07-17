@@ -93,8 +93,10 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
     }
 
     // Download config files from HuggingFace.
-    // Try both config.json and model_index.json: Diffusers pipeline repos
-    // (e.g. StableDiffusion, Flux) only provide model_index.json.
+    // config.json is tried first (covers transformer-style models).
+    // model_index.json is only attempted when config.json is absent — it is
+    // specific to Diffusers pipeline repos (e.g. StableDiffusion, Flux) that
+    // do not have a standard config.json architectures array.
     const std::string hfEndpoint = ensureTrailingSlash(getEnvOrDefault(HF_ENDPOINT_ENV_VAR, DEFAULT_HF_ENDPOINT));
     const std::string token = getEnvOrDefault(HF_TOKEN_ENV_VAR);
 
@@ -105,18 +107,17 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
     const auto configStatus = fetchUrlToString(configUrl, token, configBody);
     if (configStatus.ok()) {
         ctx.addContent("config.json", std::move(configBody));
-    }
-
-    std::string indexBody;
-    const std::string indexUrl = hfEndpoint + *sourceModel + "/resolve/main/model_index.json";
-    const auto indexStatus = fetchUrlToString(indexUrl, token, indexBody);
-    if (indexStatus.ok()) {
-        ctx.addContent("model_index.json", std::move(indexBody));
-    }
-
-    if (!configStatus.ok() && !indexStatus.ok()) {
-        std::cout << "Could not download model config from '" << configUrl << "' or '" << indexUrl << "'" << std::endl;
-        return std::nullopt;
+    } else {
+        // config.json not available — try model_index.json (Diffusers repos)
+        std::string indexBody;
+        const std::string indexUrl = hfEndpoint + *sourceModel + "/resolve/main/model_index.json";
+        const auto indexStatus = fetchUrlToString(indexUrl, token, indexBody);
+        if (indexStatus.ok()) {
+            ctx.addContent("model_index.json", std::move(indexBody));
+        } else {
+            std::cout << "Could not download model config from '" << configUrl << "' or '" << indexUrl << "'" << std::endl;
+            return std::nullopt;
+        }
     }
     const std::string task = detector.detect(ctx);
     if (task.empty()) {
