@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
@@ -38,6 +39,7 @@ class CLIParser {
     std::unique_ptr<cxxopts::Options> options;
     std::unique_ptr<cxxopts::ParseResult> result;
     std::variant<GraphCLIParser, RerankGraphCLIParser, EmbeddingsGraphCLIParser, ImageGenerationGraphCLIParser, TextToSpeechGraphCLIParser, SpeechToTextGraphCLIParser> graphOptionsParser;
+    std::optional<std::string> inferredTaskParameter;
 
 public:
     CLIParser() = default;
@@ -45,12 +47,13 @@ public:
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
 
 protected:
+    std::string getEffectiveTaskParameter() const;
     void prepareServer(ServerSettingsImpl& serverSettings);
     void prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl& hfSettings);
     void prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName);
     void prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl& modelsSettings);
     void prepareConfigExport(ModelsSettingsImpl& modelsSettings);
-    bool isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result);
+    bool isHFFlow(const std::unique_ptr<cxxopts::ParseResult>& result);
     bool isInMemoryGraphMode(const std::unique_ptr<cxxopts::ParseResult>& result);
     bool isConfigureMode(const std::unique_ptr<cxxopts::ParseResult>& result);
 };

@@ -1,0 +1,5 @@
+{
+  "architectures": ["WhisperForConditionalGeneration"],
+  "model_type": "whisper",
+  "hidden_size": 512
+}
