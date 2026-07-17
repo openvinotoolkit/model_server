@@ -3161,8 +3161,10 @@ TEST_F(OvmsInferredTaskTest, positiveConfigureModeInfersTaskFromModel) {
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--configure",
-        (char*)"--model_path", (char*)modelPath.c_str(),
-        (char*)"--cache_size", (char*)"3",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--cache_size",
+        (char*)"3",
     };
     int arg_count = 6;
     ConstructorEnabledConfig config;
@@ -3175,7 +3177,8 @@ TEST_F(OvmsConfigDeathTest, negativeConfigureModeRequiresTaskWhenCannotInfer) {
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--configure",
-        (char*)"--model_path", (char*)"/non/existing/model/path",
+        (char*)"--model_path",
+        (char*)"/non/existing/model/path",
     };
     int arg_count = 4;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv),
