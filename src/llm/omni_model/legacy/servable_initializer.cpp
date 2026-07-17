@@ -34,6 +34,7 @@
 #include "../../../json_parser.hpp"
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
+#include "../../../ov_utils.hpp"
 #include "../../../status.hpp"
 #include "../../io_processing/parser_config_validation.hpp"
 #include "servable.hpp"
@@ -80,6 +81,10 @@ Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServa
     }
 
     properties->device = nodeOptions.device();
+    if (properties->device.empty()) {
+        properties->device = recommendTargetDevice();
+        SPDLOG_INFO("No device specified for Omni model, using recommended device: {}", properties->device);
+    }
 
     status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);
     if (!status.ok()) {

@@ -5,7 +5,7 @@ OpenVINO Model Server supports **Qwen3-Omni** models — multimodal models that 
 ## Supported Models
 
 - Qwen3-Omni Dense (INT4/INT8/FP16)
-- Qwen3-Omni MoE (INT4/INT8/FP16)
+- Qwen3-Omni MoE (INT4/INT8/FP16) - **doesnt work yet**
 
 ## Quick Start
 
@@ -26,6 +26,7 @@ models/qwen3-omni/
 ```
 
 ### Graph Configuration
+It should be inside model folder, or simply run OVMS with `--task text_generation` param so it will automatically create one in memory.
 
 ```protobuf
 node {
@@ -33,7 +34,7 @@ node {
   calculator: "HttpLLMCalculator"
   node_options: {
     [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-      models_path: "/models/qwen3-omni"
+      models_path: "./"
       # pipeline_type: OMNI  # optional — auto-detected from openvino_talker_model.xml
     }
   }
@@ -128,6 +129,10 @@ Request speech generation by including `"audio"` in `modalities`.
 
 ### Responses API Streaming
 
+> Current OpenVINO GenAI limitation is that audio streaming generation starts after text generation completes. The model does not interleave text and audio tokens.
+
+> Chat Completions API does not support streaming audio output — use Responses API for that.
+
 Audio is streamed via SSE after text generation completes:
 
 ```
@@ -163,6 +168,8 @@ with client.responses.stream(
             # Play or save audio_bytes (pcm16 @ 24kHz mono)
 ```
 
+More clients are available in `demos/omni/` (see [README](demos/omni/README.md)).
+
 ## Available Voices
 
 Voices are model-dependent. Check `config.json` → `talker_config.speaker_id`.
@@ -183,40 +190,12 @@ Voices are model-dependent. Check `config.json` → `talker_config.speaker_id`.
 
 When `voice` is omitted, the model's default speaker is used.
 
-## Limitations
+## Current Limitations
 
-- **No streaming for Chat Completions audio output** — use Responses API for streaming audio
-- **Speech generation is sequential** — audio starts after text generation completes (not interleaved)
-- **Real-time factor** — speech generation speed depends on hardware; typically 1.8-2x slower than real-time on SPR-36 CPU
-- **No input transcription** — the model processes audio internally but doesn't return a transcript of user speech
-- **No voice cloning** — available voices are fixed per model checkpoint
-- **Audio input size limit** — decoded audio cannot exceed 1 GB (configurable via `OVMS_AUDIO_MAX_FILE_SIZE_BYTES` environment variable). Crafted files with spoofed headers are rejected.
-- **Audio input formats** — only WAV and MP3 are supported; mono or stereo only (stereo is downmixed to mono)
-- **Audio input channels** — files with more than 2 channels are rejected
-
-## Issues
-- **Audio has slowly decaying volume**
-- **Audio is always positioned at the beginning** — known issue (sgonorov)
+- **Speech generation starts after text generation** — not interleaved
+- **Performance** — it is still under ongoing development and may be slower than expected
+- **Audio is always placed at the beginning of the prompt** — the user-specified position of input_audio relative to text is not preserved, multi-turn applications are affected
 
 ## Demo Clients
 
-Example clients are in `demos/omni/`:
-
-```bash
-# Chat Completions: text → text
-python3 demos/omni/chat_completions.py --prompt "What is OpenVINO?"
-
-# Chat Completions: text → text + audio
-python3 demos/omni/chat_completions.py --prompt "Say hello" --audio-output --voice f04 --save output.wav
-
-# Chat Completions: audio + image → text + audio
-python3 demos/omni/chat_completions.py --audio recording.wav --image photo.jpg --audio-output
-
-# Responses: text → text + audio (streaming with playback)
-python3 demos/omni/responses.py --prompt "Tell me a story" --audio-output --stream --voice f04
-
-# Responses: audio → text (unary)
-python3 demos/omni/responses.py --audio recording.wav
-```
-
-Requirements: `pip install openai numpy sounddevice`
+Example clients are in `demos/omni/` (see [README](demos/omni/README.md)).
