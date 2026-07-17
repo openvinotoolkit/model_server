@@ -27,6 +27,10 @@ absl::Status EmptyToolCallsArrayRemovingProcessor::process(InputRequest& req) {
     }
     ov::genai::ChatHistory& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
     for (size_t i = 0; i < chatHistory.size(); i++) {
+        if(!chatHistory[i].contains("tool_calls")) {
+            continue;
+        }
+
         const auto content = chatHistory[i]["tool_calls"];
         if (content.is_array() && content.size() == 0) {
             chatHistory[i].erase("tool_calls");
