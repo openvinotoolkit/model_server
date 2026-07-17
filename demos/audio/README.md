@@ -248,6 +248,8 @@ print(transcript.segments)
 ### Word timestamps
 If you need word-level timestamps support, export the model with `export_model.py` and enable this feature during export.
 
+> **Model preparation:** Python 3.10 or higher with pip is required to run `export_model.py`.
+
 Prepare export script and dependencies:
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
