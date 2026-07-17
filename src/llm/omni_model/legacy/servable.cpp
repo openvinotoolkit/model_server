@@ -62,14 +62,19 @@ absl::Status OmniModelLegacyServable::loadRequest(std::shared_ptr<GenAiServableE
     if (payload.parsedJson->HasParseError()) {
         return absl::InvalidArgumentError("Non-json request received in text generation calculator");
     }
-    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
+    if (payload.uri.find("/v3/v1/") != std::string::npos) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Endpoint {} is deprecated. Use /v1/ prefix instead.", payload.uri);
+    }
+    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions" ||
+        payload.uri == "/v1/chat/completions") {
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
-    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses") {
+    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses" ||
+               payload.uri == "/v1/responses") {
         executionContext->endpoint = Endpoint::RESPONSES;
     } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
         executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
-        return absl::InvalidArgumentError("Wrong endpoint. Omni Servable allowed only on /v3/chat/completions, /v3/responses endpoint or /v3/tokenize");
+        return absl::InvalidArgumentError("Wrong endpoint. Omni Servable allowed only on /v[13]/chat/completions, /v[13]/responses, /v[13]/tokenize");
     }
     executionContext->payload = payload;
     return absl::OkStatus();

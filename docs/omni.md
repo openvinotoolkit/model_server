@@ -203,23 +203,20 @@ When `voice` is omitted, the model's default speaker is used.
 Example clients are in `demos/omni/`:
 
 ```bash
-# Chat Completions: audio+text → text
-python3 demos/omni/chat_completions_unary_at_t.py audio.wav
+# Chat Completions: text → text
+python3 demos/omni/chat_completions.py --prompt "What is OpenVINO?"
 
-# Chat Completions: text → audio+text
-python3 demos/omni/chat_completions_unary_t_at.py --prompt "Hello" --voice m02
+# Chat Completions: text → text + audio
+python3 demos/omni/chat_completions.py --prompt "Say hello" --audio-output --voice f04 --save output.wav
 
-# Chat Completions: audio+text+image → audio+text
-python3 demos/omni/chat_completions_unary_ati_at.py --audio audio.wav --image photo.jpg
+# Chat Completions: audio + image → text + audio
+python3 demos/omni/chat_completions.py --audio recording.wav --image photo.jpg --audio-output
 
-# Responses: audio+text → text
-python3 demos/omni/responses_unary_at_t.py audio.wav
+# Responses: text → text + audio (streaming with playback)
+python3 demos/omni/responses.py --prompt "Tell me a story" --audio-output --stream --voice f04
 
-# Responses: text → audio+text (streaming with playback)
-python3 demos/omni/responses_stream_t_at.py --prompt "Tell me a story" --voice f04
-
-# Responses: multi-turn voice chat (mic recording + streaming playback)
-python3 demos/omni/responses_multiturn_voice_chat.py --voice f04
+# Responses: audio → text (unary)
+python3 demos/omni/responses.py --audio recording.wav
 ```
 
 Requirements: `pip install openai numpy sounddevice`

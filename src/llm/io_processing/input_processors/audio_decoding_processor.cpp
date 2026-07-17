@@ -79,9 +79,9 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
         }
 
         // Remove input_audio parts from the content array after extracting tensor data.
-        // GenAI's normalize_prompt will detect the absence of <|audio_start|> in the
-        // templated prompt and prepend the audio tags with the correct number of
-        // <|audio_pad|> tokens (determined by the audio encoder output size).
+        // NOTE: Current GenAI limitation — audio is always placed at the beginning
+        // of the prompt regardless of where it appeared in the original message.
+        // The user-specified position of input_audio relative to text is not preserved.
         if (hasAudio) {
             auto newContent = ov::genai::JsonContainer::array();
             for (size_t j = 0; j < content.size(); j++) {
