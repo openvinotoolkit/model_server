@@ -27,7 +27,7 @@ LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
 VLM_MODEL="OpenVINO/InternVL2-1B-int4-ov"
-TTS_MODEL="microsoft/speecht5_tts"
+TTS_MODEL="hexgrad/Kokoro-82M"
 STT_MODEL="openai/whisper-tiny"
 
 # Models for tools testing. Only tokenizers are downloaded.
@@ -48,7 +48,7 @@ echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
     export PATH=$PATH:/opt/intel/openvino/python/bin
-    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0
+    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro
 else
     python3 -m venv .venv
     . .venv/bin/activate
@@ -83,13 +83,13 @@ if [ ! -f "$1/$FACEBOOK_MODEL/chat_template.jinja" ]; then
     cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK_MODEL/chat_template.jinja"
 fi
 
-if [ -f "$1/$TTS_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$TTS_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+if [ -f "$1/$TTS_MODEL/openvino_model.xml" ]; then
+  echo "Model file $1/$TTS_MODEL/openvino_model.xml exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py text2speech --source_model "$TTS_MODEL" --weight-format int4 --model_repository_path $1 --vocoder microsoft/speecht5_hifigan
+  python3 demos/common/export_models/export_model.py text2speech --source_model "$TTS_MODEL" --model_type kokoro --weight-format int8 --model_repository_path $1
 fi
-if [ ! -f "$1/$TTS_MODEL/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Model file $1/$TTS_MODEL/$TOKENIZER_FILE does not exist."
+if [ ! -f "$1/$TTS_MODEL/openvino_model.xml" ]; then
+  echo "[ERROR] Model file $1/$TTS_MODEL/openvino_model.xml does not exist."
   exit 1
 fi
 
