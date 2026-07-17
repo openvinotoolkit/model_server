@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "json_parser.hpp"
 
+#include <filesystem>
 #include <map>
 #include <string>
 
@@ -24,7 +25,6 @@
 #include <rapidjson/document.h>
 #pragma warning(pop)
 
-#include "filesystem/filesystem.hpp"
 #include "logging.hpp"
 #include "status.hpp"
 
@@ -94,7 +94,11 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                         }
                         if (propertyIt->value.IsString()) {
                             if (isPathLikePluginKey(propertyKey)) {
-                                properties[propertyKey] = FileSystem::normalizeConfiguredPath(propertyIt->value.GetString());
+                                auto normalizedValue = std::string(propertyIt->value.GetString());
+#ifdef _WIN32
+                                normalizedValue = std::filesystem::path(normalizedValue).generic_string();
+#endif
+                                properties[propertyKey] = normalizedValue;
                             } else {
                                 properties[propertyKey] = propertyIt->value.GetString();
                             }
@@ -138,7 +142,11 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                     SPDLOG_WARN("{} plugin config key is deprecated. Use INFERENCE_NUM_THREADS instead", it->name.GetString());
                 } else {
                     if (isPathLikePluginKey(topKey)) {
-                        pluginConfig[topKey] = FileSystem::normalizeConfiguredPath(it->value.GetString());
+                        auto normalizedValue = std::string(it->value.GetString());
+#ifdef _WIN32
+                        normalizedValue = std::filesystem::path(normalizedValue).generic_string();
+#endif
+                        pluginConfig[topKey] = normalizedValue;
                     } else {
                         pluginConfig[topKey] = it->value.GetString();
                     }
