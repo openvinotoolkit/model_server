@@ -15,6 +15,7 @@
 ::
 @echo on
 setlocal EnableExtensions EnableDelayedExpansion
+set "SETUP_EXIT_CODE=0"
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
     if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
@@ -31,6 +32,7 @@ IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
 echo [ERROR] Required MSVC compiler not installed
+set "SETUP_EXIT_CODE=1"
 goto :exit_build_error
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
@@ -52,17 +54,29 @@ set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%
-setlocal EnableExtensions EnableDelayedExpansion
-if !errorlevel! neq 0 exit /b !errorlevel!
-endlocal
+if !errorlevel! neq 0 (
+    set "SETUP_EXIT_CODE=!errorlevel!"
+    goto :exit_build_error
+)
 %opencvBatch%
-setlocal EnableExtensions EnableDelayedExpansion
-if !errorlevel! neq 0 exit /b !errorlevel!
-endlocal
+if !errorlevel! neq 0 (
+    set "SETUP_EXIT_CODE=!errorlevel!"
+    goto :exit_build_error
+)
 
 :exit_build
 echo [INFO] Setup finished
-exit /b 0
+goto :propagate_env
+
 :exit_build_error
 echo [ERROR] Setup finished with error
-exit /b 1
+if "!SETUP_EXIT_CODE!"=="0" set "SETUP_EXIT_CODE=!errorlevel!"
+
+:propagate_env
+endlocal & (
+    set "PATH=%PATH%"
+    set "PYTHONPATH=%PYTHONPATH%"
+    set "PYTHONHOME=%PYTHONHOME%"
+    set "BAZEL_SH=%BAZEL_SH%"
+    exit /b %SETUP_EXIT_CODE%
+)
