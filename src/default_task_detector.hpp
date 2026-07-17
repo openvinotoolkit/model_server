@@ -27,14 +27,14 @@ namespace ovms {
 
 // Provides lazy-loaded, cached access to JSON files in a model catalog directory.
 // Each file is read from disk (or pre-loaded memory) and parsed at most once.
-// Pass by const& to all ServableTypeDetector::scan() implementations.
+// Pass by const& to all BaseTaskDetector::scan() implementations.
 class ModelCatalogContext {
-    std::filesystem::path modelBasePath_;
-    std::string modelIdentifier_;
+    std::filesystem::path basePath;
+    std::string identifier;
     // In-memory file content (e.g. HF-downloaded config). Queried before filesystem.
-    mutable std::unordered_map<std::string, std::string> preloadedContent_;
+    mutable std::unordered_map<std::string, std::string> preloadedContent;
     // JSON parse cache. nullptr value = file tried but not available / parse error.
-    mutable std::unordered_map<std::string, std::unique_ptr<rapidjson::Document>> jsonCache_;
+    mutable std::unordered_map<std::string, std::unique_ptr<rapidjson::Document>> jsonCache;
 
 public:
     // For local model paths. modelIdentifier is typically the full path string,
@@ -53,45 +53,45 @@ public:
     const rapidjson::Document* json(const std::string& filename) const;
 };
 
-// Abstract interface for a per-servable-type detector.
-class ServableTypeDetector {
+// Abstract interface for a per-task detector.
+class BaseTaskDetector {
 public:
     virtual bool scan(const ModelCatalogContext& ctx) const = 0;
     virtual std::string getName() const = 0;
-    virtual ~ServableTypeDetector() = default;
+    virtual ~BaseTaskDetector() = default;
 };
 
-class Speech2TextDetector final : public ServableTypeDetector {
+class Speech2TextDetector final : public BaseTaskDetector {
 public:
     bool scan(const ModelCatalogContext& ctx) const override;
     std::string getName() const override;
 };
 
-class Text2SpeechDetector final : public ServableTypeDetector {
+class Text2SpeechDetector final : public BaseTaskDetector {
 public:
     bool scan(const ModelCatalogContext& ctx) const override;
     std::string getName() const override;
 };
 
-class RerankDetector final : public ServableTypeDetector {
+class RerankDetector final : public BaseTaskDetector {
 public:
     bool scan(const ModelCatalogContext& ctx) const override;
     std::string getName() const override;
 };
 
-class ImageGenerationDetector final : public ServableTypeDetector {
+class ImageGenerationDetector final : public BaseTaskDetector {
 public:
     bool scan(const ModelCatalogContext& ctx) const override;
     std::string getName() const override;
 };
 
-class EmbeddingsDetector final : public ServableTypeDetector {
+class EmbeddingsDetector final : public BaseTaskDetector {
 public:
     bool scan(const ModelCatalogContext& ctx) const override;
     std::string getName() const override;
 };
 
-class TextGenerationDetector final : public ServableTypeDetector {
+class TextGenerationDetector final : public BaseTaskDetector {
 public:
     bool scan(const ModelCatalogContext& ctx) const override;
     std::string getName() const override;
@@ -102,7 +102,7 @@ public:
 // catch-all detectors (e.g. TextGeneration), making scan() implementations
 // mutually exclusive by design without cross-detector coordination.
 class DefaultTaskDetector {
-    std::vector<std::unique_ptr<ServableTypeDetector>> detectors_;
+    std::vector<std::unique_ptr<BaseTaskDetector>> detectors;
 
 public:
     DefaultTaskDetector();

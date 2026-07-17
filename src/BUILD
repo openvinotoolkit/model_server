@@ -356,9 +356,9 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
-    name = "libovms_servable_type_detector",
-    hdrs = ["servable_type_detector.hpp"],
-    srcs = ["servable_type_detector.cpp"],
+    name = "libovms_default_task_detector",
+    hdrs = ["default_task_detector.hpp"],
+    srcs = ["default_task_detector.cpp"],
     deps = [
         "//src/port:rapidjson_document",
         "//src/port:rapidjson_error",
@@ -372,7 +372,7 @@ ovms_cc_library(
     hdrs = ["default_task.hpp"],
     srcs = ["default_task.cpp"],
     deps = [
-        "libovms_servable_type_detector",
+        "libovms_default_task_detector",
         "libovmsstatus",
         "//src/pull_module:curl_downloader",
         "//src/pull_module:hf_env_vars",
@@ -2358,7 +2358,7 @@ cc_test(
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
-            "//src:libovms_servable_type_detector",
+            "//src:libovms_default_task_detector",
             "//src/filesystem:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
             ":test_utils",

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "servable_type_detector.hpp"
+#include "default_task_detector.hpp"
 
 #include <fstream>
 #include <string>
@@ -84,37 +84,37 @@ static bool anyModuleType(const rapidjson::Document& doc, Pred&& pred) {
 // ─── ModelCatalogContext ──────────────────────────────────────────────────────
 
 ModelCatalogContext::ModelCatalogContext(std::filesystem::path modelBasePath, std::string modelIdentifier) :
-    modelBasePath_(std::move(modelBasePath)),
-    modelIdentifier_(std::move(modelIdentifier)) {}
+    basePath(std::move(modelBasePath)),
+    identifier(std::move(modelIdentifier)) {}
 
 void ModelCatalogContext::addContent(std::string filename, std::string content) {
-    preloadedContent_.emplace(std::move(filename), std::move(content));
+    preloadedContent.emplace(std::move(filename), std::move(content));
 }
 
 const std::string& ModelCatalogContext::modelIdentifier() const {
-    return modelIdentifier_;
+    return identifier;
 }
 
 const rapidjson::Document* ModelCatalogContext::json(const std::string& filename) const {
     // Return cached result if this filename was already attempted
-    auto cacheIt = jsonCache_.find(filename);
-    if (cacheIt != jsonCache_.end()) {
+    auto cacheIt = jsonCache.find(filename);
+    if (cacheIt != jsonCache.end()) {
         return cacheIt->second.get();
     }
 
     std::unique_ptr<rapidjson::Document> doc;
 
     // Check in-memory preloaded content first (e.g. HF-downloaded files)
-    auto contentIt = preloadedContent_.find(filename);
-    if (contentIt != preloadedContent_.end()) {
+    auto contentIt = preloadedContent.find(filename);
+    if (contentIt != preloadedContent.end()) {
         doc = std::make_unique<rapidjson::Document>();
         doc->Parse(contentIt->second.c_str());
         if (doc->HasParseError()) {
             doc = nullptr;
         }
-    } else if (!modelBasePath_.empty()) {
+    } else if (!basePath.empty()) {
         // Try reading from the model directory on disk
-        const auto filePath = modelBasePath_ / filename;
+        const auto filePath = basePath / filename;
         std::ifstream file(filePath);
         if (file.is_open()) {
             doc = std::make_unique<rapidjson::Document>();
@@ -127,7 +127,7 @@ const rapidjson::Document* ModelCatalogContext::json(const std::string& filename
     }
 
     // Cache result — nullptr means "tried and not available"
-    auto inserted = jsonCache_.emplace(filename, std::move(doc));
+    auto inserted = jsonCache.emplace(filename, std::move(doc));
     return inserted.first->second.get();
 }
 
@@ -325,16 +325,16 @@ DefaultTaskDetector::DefaultTaskDetector() {
     // - ImageGen before Embeddings (CLIPTextModel / UNet2DConditionModel end with "Model")
     // - Embeddings before TextGen (general "Model" suffix check)
     // - TextGen last (catch-all for ForCausalLM / ForConditionalGeneration)
-    detectors_.push_back(std::make_unique<Speech2TextDetector>());
-    detectors_.push_back(std::make_unique<Text2SpeechDetector>());
-    detectors_.push_back(std::make_unique<RerankDetector>());
-    detectors_.push_back(std::make_unique<ImageGenerationDetector>());
-    detectors_.push_back(std::make_unique<EmbeddingsDetector>());
-    detectors_.push_back(std::make_unique<TextGenerationDetector>());
+    detectors.push_back(std::make_unique<Speech2TextDetector>());
+    detectors.push_back(std::make_unique<Text2SpeechDetector>());
+    detectors.push_back(std::make_unique<RerankDetector>());
+    detectors.push_back(std::make_unique<ImageGenerationDetector>());
+    detectors.push_back(std::make_unique<EmbeddingsDetector>());
+    detectors.push_back(std::make_unique<TextGenerationDetector>());
 }
 
 std::string DefaultTaskDetector::detect(const ModelCatalogContext& ctx) const {
-    for (const auto& detector : detectors_) {
+    for (const auto& detector : detectors) {
         if (detector->scan(ctx))
             return detector->getName();
     }

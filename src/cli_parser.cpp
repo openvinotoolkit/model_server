@@ -60,12 +60,9 @@ std::string getConfigPath(const std::string& configPath) {
 
 std::string CLIParser::getEffectiveTaskParameter() const {
     if (result->count("task")) {
-        const auto task = result->operator[]("task").as<std::string>();
-        SPDLOG_DEBUG("Effective task parameter specified by user: {}", task);
-        return task;
+        return result->operator[]("task").as<std::string>();
     }
     if (inferredTaskParameter.has_value()) {
-        SPDLOG_DEBUG("Effective task parameter using inferred default: {}", inferredTaskParameter.value());
         return inferredTaskParameter.value();
     }
     throw std::logic_error("error parsing options - --task parameter wasn't passed");
@@ -378,7 +375,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                     try {
                         inferredTaskParameter = determineDefaultTaskParameter(modelPath, std::nullopt, std::nullopt);
                     } catch (const std::exception& e) {
-                        SPDLOG_DEBUG("Default task inference skipped for model_path '{}': {}", modelPath.value_or(""), e.what());
+                        SPDLOG_INFO("Default task inference skipped for model_path '{}': {}", modelPath.value_or(""), e.what());
                     }
                 }
             }
@@ -818,8 +815,10 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             SPDLOG_DEBUG("Using local absolute model path for graph export: {}", hfSettings.exportSettings.modelPath);
         }
         const std::string taskValue = getEffectiveTaskParameter();
-        if (inferredTaskParameter.has_value()) {
-            SPDLOG_INFO("Identified default task '{}' from model config", inferredTaskParameter.value());
+        if (result->count("task")) {
+            SPDLOG_INFO("Task '{}' provided by user", taskValue);
+        } else {
+            SPDLOG_INFO("Task '{}' inferred from model config", taskValue);
         }
         if (!taskValue.empty()) {
             hfSettings.task = stringToEnum(taskValue);

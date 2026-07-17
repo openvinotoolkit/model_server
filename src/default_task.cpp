@@ -24,7 +24,7 @@
 
 #include "pull_module/curl_downloader.hpp"
 #include "pull_module/hf_env_vars.hpp"
-#include "servable_type_detector.hpp"
+#include "default_task_detector.hpp"
 #include "status.hpp"
 
 namespace ovms {
