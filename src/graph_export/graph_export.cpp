@@ -744,9 +744,9 @@ std::variant<std::optional<std::string>, Status> GraphExport::createPluginString
     }
     if (exportSettings.pluginConfig.cacheDir.has_value()) {
         auto normalizedCacheDir = exportSettings.pluginConfig.cacheDir.value();
-    #ifdef _WIN32
+#ifdef _WIN32
         normalizedCacheDir = std::filesystem::path(normalizedCacheDir).generic_string();
-    #endif
+#endif
         rapidjson::Value value;
         value.SetString(normalizedCacheDir.c_str(), static_cast<rapidjson::SizeType>(normalizedCacheDir.size()), d.GetAllocator());
         auto itr = d.FindMember("CACHE_DIR");
