@@ -47,6 +47,8 @@
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "../../llm/text_utils.hpp"
+#include "../../mediapipe_internal/mediapipefactory.hpp"
+#include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
 #include "src/graph_export/graph_export.hpp"
@@ -4848,12 +4850,20 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsMultipleNodesCacheDirPrecedence) 
 // precedence, otherwise the global --cache_dir is applied. Tests real-world scenario where
 // users have separate LLM models defined in different directories in a single config.json.
 // Regression test for openvinotoolkit/model_server#4230.
-void LLMModelsFromConfigJsonMultipleCacheDirPrecedence() {
+void LLMModelsFromConfigJsonMultipleCacheDirPrecedence(std::string& modelsPath) {
+    const std::string resolvedModelsPath = getGenericFullPathForSrcTest(modelsPath);
+    ASSERT_TRUE(std::filesystem::exists(resolvedModelsPath))
+        << "LLM test models path does not exist: " << resolvedModelsPath;
+
     // Create temporary directories and graph.pbtxt files
-    std::string tmpDir = std::filesystem::temp_directory_path().string() +
-                         "/LLMModelsFromConfigJson_" +
-                         std::to_string(std::time(nullptr)) + "_" +
-                         std::to_string(std::rand());
+    const std::string tmpDirLinux = "/tmp/LLMModelsFromConfigJson_" +
+                                    std::to_string(std::time(nullptr)) + "_" +
+                                    std::to_string(std::rand());
+    const std::string tmpDir = getGenericFullPathForTmp(tmpDirLinux);
+
+    // Restore global cache_dir and remove all temporary files/dirs on scope exit.
+    GlobalCacheDirGuard cacheDirGuard(tmpDir);
+
     std::filesystem::create_directories(tmpDir);
 
     std::string model1Dir = tmpDir + "/model1";
@@ -4884,7 +4894,8 @@ void LLMModelsFromConfigJsonMultipleCacheDirPrecedence() {
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
                     models_path: ")" +
-                              std::string(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct")) + R"("
+                              resolvedModelsPath + R"("
+                    pipeline_type: LM
                     plugin_config: '{"CACHE_DIR": ")" +
                               nodeCacheDir + R"("}'
                 }
@@ -4926,7 +4937,8 @@ void LLMModelsFromConfigJsonMultipleCacheDirPrecedence() {
             node_options: {
                 [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
                     models_path: ")" +
-                              std::string(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct")) + R"("
+                              resolvedModelsPath + R"("
+                    pipeline_type: LM
                 }
             }
             input_stream_handler {
@@ -4946,68 +4958,61 @@ void LLMModelsFromConfigJsonMultipleCacheDirPrecedence() {
     graph2File << graph2Pbtxt;
     graph2File.close();
 
-    // Create config.json with two models
-    rapidjson::Document configDoc;
-    configDoc.SetObject();
-
-    rapidjson::Document::AllocatorType& allocator = configDoc.GetAllocator();
-    rapidjson::Value models(rapidjson::kObjectType);
-
-    rapidjson::Value model1(rapidjson::kObjectType);
-    model1.AddMember("base_path", rapidjson::Value(model1Dir, allocator), allocator);
-    model1.AddMember("model_type", "mediapipe_graph", allocator);
-    models.AddMember("model1_with_cache_dir", model1, allocator);
-
-    rapidjson::Value model2(rapidjson::kObjectType);
-    model2.AddMember("base_path", rapidjson::Value(model2Dir, allocator), allocator);
-    model2.AddMember("model_type", "mediapipe_graph", allocator);
-    models.AddMember("model2_without_cache_dir", model2, allocator);
-
-    configDoc.AddMember("model_config_list", models, allocator);
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    configDoc.Accept(writer);
+    // Create config.json with two graph definitions in separate directories.
+    std::string configContent = R"JSON({
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "model1_with_cache_dir",
+                    "base_path": ")JSON" +
+                                model1Dir + R"JSON(",
+                    "graph_path": "graph.pbtxt"
+                }
+            },
+            {
+                "config": {
+                    "name": "model2_without_cache_dir",
+                    "base_path": ")JSON" +
+                                model2Dir + R"JSON(",
+                    "graph_path": "graph.pbtxt"
+                }
+            }
+        ]
+    })JSON";
 
     std::string configPath = tmpDir + "/config.json";
     std::ofstream configFile(configPath);
-    configFile << buffer.GetString();
+    configFile << configContent;
     configFile.close();
 
-    // Restore global cache_dir on scope exit
-    GlobalCacheDirGuard cacheDirGuard(tmpDir);
-
     // Set global cache_dir via CLI
-    char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)configPath.c_str(), (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
-    int arg_count = 5;
+    char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)configPath.c_str(), (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
+    int arg_count = 7;
     ovms::Config::instance().parse(arg_count, n_argv);
     ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
 
-    // Load models
     ConstructorEnabledModelManager manager;
+    auto configStatus = manager.loadConfig(configPath);
+    ASSERT_TRUE(configStatus.ok()) << "Failed to load config.json: " << configStatus.string();
 
-    // Load config.json
-    auto configStatus = manager.loadModelsConfiguration(configPath);
-    if (!configStatus.ok()) {
-        SPDLOG_WARN("Config load status: {}", configStatus.string());
-    }
-
-    // Get model1 with explicit CACHE_DIR
-    std::shared_ptr<MediapipeGraphDefinition> model1Def;
-    auto getStatus1 = manager.getMediapipeGraphDefinition("model1_with_cache_dir", model1Def);
-    ASSERT_TRUE(getStatus1.ok()) << "Failed to get model1: " << getStatus1.string();
+    // Get graph definitions created by ModelManager from config.json.
+    auto* model1Def = manager.getMediapipeFactory().findDefinitionByName("model1_with_cache_dir");
     ASSERT_NE(model1Def, nullptr);
-
-    // Get model2 without explicit CACHE_DIR
-    std::shared_ptr<MediapipeGraphDefinition> model2Def;
-    auto getStatus2 = manager.getMediapipeGraphDefinition("model2_without_cache_dir", model2Def);
-    ASSERT_TRUE(getStatus2.ok()) << "Failed to get model2: " << getStatus2.string();
+    auto* model2Def = manager.getMediapipeFactory().findDefinitionByName("model2_without_cache_dir");
     ASSERT_NE(model2Def, nullptr);
+
+    auto readFileToString = [](const std::string& path) {
+        std::ifstream input(path);
+        std::stringstream ss;
+        ss << input.rdbuf();
+        return ss.str();
+    };
 
     // Parse and validate model1 graph (with explicit CACHE_DIR in plugin_config)
     {
         ::mediapipe::CalculatorGraphConfig config1;
-        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(model1Def->inputConfig, &config1))
+        std::string graphConfig1 = readFileToString(model1Def->getMediapipeGraphConfig().getGraphPath());
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(graphConfig1, &config1))
             << "Failed to parse model1 graph config";
         ASSERT_GT(config1.node_size(), 0) << "Model1 should have at least one node";
 
@@ -5029,7 +5034,8 @@ void LLMModelsFromConfigJsonMultipleCacheDirPrecedence() {
     // Parse and validate model2 graph (without explicit CACHE_DIR, should use global)
     {
         ::mediapipe::CalculatorGraphConfig config2;
-        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(model2Def->inputConfig, &config2))
+        std::string graphConfig2 = readFileToString(model2Def->getMediapipeGraphConfig().getGraphPath());
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(graphConfig2, &config2))
             << "Failed to parse model2 graph config";
         ASSERT_GT(config2.node_size(), 0) << "Model2 should have at least one node";
 
@@ -5049,8 +5055,8 @@ void LLMModelsFromConfigJsonMultipleCacheDirPrecedence() {
     // GlobalCacheDirGuard restores global cache_dir and removes tmpDir on scope exit
 }
 
-TEST_F(LLMConfigHttpTest, LLMModelsFromConfigJsonMultipleCacheDirPrecedence) {
-    LLMModelsFromConfigJsonMultipleCacheDirPrecedence();
+TEST_F(LLMOptionsHttpTest, LLMModelsFromConfigJsonMultipleCacheDirPrecedence) {
+    LLMModelsFromConfigJsonMultipleCacheDirPrecedence(modelsPath);
 }
 
 void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {

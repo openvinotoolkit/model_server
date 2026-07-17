@@ -2201,14 +2201,16 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInR
 // Tests for cache_dir behavior with config.json (Regression test for #4230)
 class ModelManagerCacheDirTest : public ::testing::Test {
 protected:
-    std::unique_ptr<ovms::Config> originalConfig;
+    ovms::ServerSettingsImpl originalServerSettings;
+    ovms::ModelsSettingsImpl originalModelsSettings;
     std::string tempDir;
     std::string configFilePath;
     std::string globalCacheDir;
 
     void SetUp() override {
         // Save current Config state
-        originalConfig = std::make_unique<ovms::Config>(ovms::Config::instance());
+        originalServerSettings = ovms::Config::instance().getServerSettings();
+        originalModelsSettings = ovms::Config::instance().getModelSettings();
 
         // Create temporary directory
         tempDir = std::filesystem::temp_directory_path().string() + "/ovms_cache_test_" +
@@ -2220,7 +2222,7 @@ protected:
 
     void TearDown() override {
         // Restore original Config state
-        ovms::Config::instance().parse(&originalConfig->getServerSettings(), &originalConfig->getModelSettings());
+        ovms::Config::instance().parse(&originalServerSettings, &originalModelsSettings);
 
         // Clean up temporary directory
         std::error_code ec;
@@ -2235,18 +2237,18 @@ protected:
 
 TEST_F(ModelManagerCacheDirTest, MultipleModelsFromConfigJsonGetGlobalCacheDir) {
     // Create config.json with two models
-    std::string configContent = R"({
+    std::string configContent = R"JSON({
         "model_config_list": [
             {
                 "config": {
                     "name": "model1",
                     "base_path": "/ovms/src/test/dummy",
                     "shape": "(1, 10)",
-                "target_device" : "CPU",
-                "nireq" : 1,
-                "plugin_config" : { "PERF_COUNT" : "ON" }
-}
-},
+                    "target_device": "CPU",
+                    "nireq": 1,
+                    "plugin_config": { "PERF_COUNT": "ON" }
+                }
+            },
             {
                 "config": {
                     "name": "model2",
@@ -2257,63 +2259,49 @@ TEST_F(ModelManagerCacheDirTest, MultipleModelsFromConfigJsonGetGlobalCacheDir) 
                 }
             }
         ]
-})";
-    
+})JSON";
+
     createConfigJson(configContent);
 
-// Set CLI --cache_dir
-char* argv[] = {(char*)"ovms", (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
-int argc = 3;
-ovms::Config::instance().parse(argc, argv);
-ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
+    // Apply global cache_dir for this test run without requiring CLI-only argument validation.
+    ovms::ServerSettingsImpl serverSettings;
+    ovms::ModelsSettingsImpl modelsSettings;
+    serverSettings.cacheDir = globalCacheDir;
+    modelsSettings.configPath = configFilePath;
+    ASSERT_TRUE(ovms::Config::instance().parse(&serverSettings, &modelsSettings));
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
 
-// Parse config.json
-ovms::ModelsSettingsImpl modelsSettings;
-ASSERT_TRUE(ovms::loadModelsSettings(modelsSettings, configFilePath.c_str(), true).ok())
-    << "Failed to load models settings from config.json";
+    ConstructorEnabledModelManager modelManager(globalCacheDir);
+    auto status = modelManager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok())
+        << "Failed to load models from config.json: " << status.string();
 
-// Create ModelManager with global cache_dir
-auto modelManager = std::make_unique<ovms::ConstructorEnabledModelManager>(globalCacheDir);
+    // Verify both model1 and model2 have cache_dir set correctly
+    auto modelInstance1 = modelManager.findModelInstance("model1", 1);
+    ASSERT_NE(modelInstance1, nullptr) << "Model1 instance should exist";
+    ASSERT_EQ(modelInstance1->getModelConfig().getCacheDir(), globalCacheDir)
+        << "Model1 should have cache_dir set from CLI";
 
-// Verify ModelManager has the cache_dir set
-ASSERT_EQ(modelManager->modelCacheDirectory, globalCacheDir)
-    << "ModelManager should have global cache_dir";
-
-// Load models from config
-auto status = modelManager -> loadModelsConfig(modelsSettings, true);
-ASSERT_TRUE(status.ok())
-    << "Failed to load models: " << status.string();
-
-// Verify both model1 and model2 have cache_dir set correctly
-auto model1 = modelManager -> getModel("model1");
-ASSERT_NE(model1, nullptr) << "Model1 should be loaded";
-auto modelInstance1 = model1 -> getModelInstance(1);
-ASSERT_NE(modelInstance1, nullptr) << "Model1 instance should exist";
-ASSERT_EQ(modelInstance1->config.getCacheDir(), globalCacheDir)
-    << "Model1 should have cache_dir set from CLI";
-
-auto model2 = modelManager -> getModel("model2");
-ASSERT_NE(model2, nullptr) << "Model2 should be loaded";
-auto modelInstance2 = model2 -> getModelInstance(1);
-ASSERT_NE(modelInstance2, nullptr) << "Model2 instance should exist";
-ASSERT_EQ(modelInstance2->config.getCacheDir(), globalCacheDir)
-    << "Model2 should have cache_dir set from CLI";
+    auto modelInstance2 = modelManager.findModelInstance("model2", 1);
+    ASSERT_NE(modelInstance2, nullptr) << "Model2 instance should exist";
+    ASSERT_EQ(modelInstance2->getModelConfig().getCacheDir(), globalCacheDir)
+        << "Model2 should have cache_dir set from CLI";
 }
 
 TEST_F(ModelManagerCacheDirTest, ConfigJsonWithMultipleModelsOneWithPluginConfig) {
     // Create config.json with two models where one has additional plugin_config settings
-    std::string configContent = R"({
+    std::string configContent = R"JSON({
         "model_config_list": [
             {
                 "config": {
                     "name": "model_with_config",
                     "base_path": "/ovms/src/test/dummy",
                     "shape": "(1, 10)",
-                "target_device" : "CPU",
-                "nireq" : 2,
-                "plugin_config" : { "PERF_COUNT" : "ON", "LOG_LEVEL" : "DEBUG" }
-}
-},
+                    "target_device": "CPU",
+                    "nireq": 2,
+                    "plugin_config": { "PERF_COUNT": "ON", "LOG_LEVEL": "LOG_NONE" }
+                }
+            },
             {
                 "config": {
                     "name": "model_no_config",
@@ -2324,42 +2312,35 @@ TEST_F(ModelManagerCacheDirTest, ConfigJsonWithMultipleModelsOneWithPluginConfig
                 }
             }
         ]
-})";
-    
+})JSON";
+
     createConfigJson(configContent);
 
-// Set CLI --cache_dir
-char* argv[] = {(char*)"ovms", (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
-int argc = 3;
-ovms::Config::instance().parse(argc, argv);
-ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
+    // Apply global cache_dir for this test run without requiring CLI-only argument validation.
+    ovms::ServerSettingsImpl serverSettings;
+    ovms::ModelsSettingsImpl modelsSettings;
+    serverSettings.cacheDir = globalCacheDir;
+    modelsSettings.configPath = configFilePath;
+    ASSERT_TRUE(ovms::Config::instance().parse(&serverSettings, &modelsSettings));
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
 
-// Parse config.json
-ovms::ModelsSettingsImpl modelsSettings;
-ASSERT_TRUE(ovms::loadModelsSettings(modelsSettings, configFilePath.c_str(), true).ok());
+    ConstructorEnabledModelManager modelManager(globalCacheDir);
+    auto status = modelManager.loadConfig(configFilePath);
+    ASSERT_TRUE(status.ok()) << "Failed to load models: " << status.string();
 
-// Create ModelManager and load models
-auto modelManager = std::make_unique<ovms::ConstructorEnabledModelManager>(globalCacheDir);
-auto status = modelManager -> loadModelsConfig(modelsSettings, true);
-ASSERT_TRUE(status.ok()) << "Failed to load models: " << status.string();
+    // Verify both models exist and have cache_dir set
+    auto instance1 = modelManager.findModelInstance("model_with_config", 1);
+    ASSERT_NE(instance1, nullptr) << "model_with_config instance should exist";
+    ASSERT_EQ(instance1->getModelConfig().getCacheDir(), globalCacheDir)
+        << "model_with_config should have CLI cache_dir even with other plugin_config settings";
 
-// Verify both models exist and have cache_dir set
-auto modelWithConfig = modelManager -> getModel("model_with_config");
-ASSERT_NE(modelWithConfig, nullptr) << "model_with_config should be loaded";
-auto instance1 = modelWithConfig -> getModelInstance(1);
-ASSERT_NE(instance1, nullptr);
-ASSERT_EQ(instance1->config.getCacheDir(), globalCacheDir)
-    << "model_with_config should have CLI cache_dir even with other plugin_config settings";
+    // Verify plugin_config is preserved
+    auto pluginConfig = instance1->getModelConfig().getPluginConfig();
+    ASSERT_NE(pluginConfig.find("PERF_COUNT"), pluginConfig.end())
+        << "plugin_config settings should be preserved";
 
-// Verify plugin_config is preserved
-auto pluginConfig = instance1 -> config.getPluginConfig();
-ASSERT_NE(pluginConfig.find("PERF_COUNT"), pluginConfig.end())
-    << "plugin_config settings should be preserved";
-
-auto modelNoConfig = modelManager -> getModel("model_no_config");
-ASSERT_NE(modelNoConfig, nullptr) << "model_no_config should be loaded";
-auto instance2 = modelNoConfig -> getModelInstance(1);
-ASSERT_NE(instance2, nullptr);
-ASSERT_EQ(instance2->config.getCacheDir(), globalCacheDir)
-    << "model_no_config should also have CLI cache_dir";
+    auto instance2 = modelManager.findModelInstance("model_no_config", 1);
+    ASSERT_NE(instance2, nullptr) << "model_no_config instance should exist";
+    ASSERT_EQ(instance2->getModelConfig().getCacheDir(), globalCacheDir)
+        << "model_no_config should also have CLI cache_dir";
 }
