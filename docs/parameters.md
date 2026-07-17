@@ -137,6 +137,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [qwen3, gptoss, lfm2, gemma4]                     |
 | `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
+| `--cache_interval_multiplier`         | `integer`    | Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Applicable only for models with linear attention. Default: 64. |
 
 ### Image generation
 | option                            | Value format | Description                                                                                                         |

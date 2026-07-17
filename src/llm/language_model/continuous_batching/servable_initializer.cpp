@@ -171,9 +171,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
     properties->schedulerConfig.max_num_seqs = nodeOptions.max_num_seqs();
     properties->schedulerConfig.enable_prefix_caching = nodeOptions.enable_prefix_caching();
-    if (nodeOptions.has_cache_interval_multiplier()) {
-        properties->schedulerConfig.cache_interval_multiplier = nodeOptions.cache_interval_multiplier();
-    }
+    properties->schedulerConfig.cache_interval_multiplier = nodeOptions.cache_interval_multiplier();
 
     if (nodeOptions.has_cache_eviction_config()) {
         properties->schedulerConfig.cache_eviction_config = prepareCacheEvictionConfig(nodeOptions);
