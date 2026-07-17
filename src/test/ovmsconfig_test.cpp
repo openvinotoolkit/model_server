@@ -1251,7 +1251,7 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 0);
@@ -1286,7 +1286,7 @@ TEST(OvmsExportHfSettingsTest, positiveDefault) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, true);
     ASSERT_EQ(hfSettings.exportSettings.precision, "int8");
-    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "");
     ASSERT_EQ(hfSettings.downloadType, ovms::GIT_CLONE_DOWNLOAD);
     ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.has_value(), false);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
@@ -1431,7 +1431,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 0);
@@ -1471,7 +1471,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 0);
@@ -1726,7 +1726,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 10000);
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.modelName, modelName);
     ASSERT_EQ(exportSettings.modelPath, "./");
 }
@@ -1895,7 +1895,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::IMAGE_GENERATION_GRAPH);
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_TRUE(imageGenerationGraphSettings.maxResolution.empty());
     ASSERT_TRUE(imageGenerationGraphSettings.defaultResolution.empty());
     ASSERT_FALSE(imageGenerationGraphSettings.maxNumberImagesPerPrompt.has_value());
@@ -2033,7 +2033,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.modelName, modelName);
 }
 
@@ -2176,7 +2176,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultTextToSpeech) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
     ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
-    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "");
     ASSERT_EQ(hfSettings.exportSettings.modelName, modelName);
 }
 
@@ -2311,7 +2311,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultSpeechToText) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::SPEECH_TO_TEXT_GRAPH);
     ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
-    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "");
     ASSERT_EQ(hfSettings.exportSettings.modelName, modelName);
 }
 
