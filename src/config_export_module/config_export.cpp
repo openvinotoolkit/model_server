@@ -29,18 +29,9 @@
 #include "src/logging.hpp"
 #include "src/schema.hpp"
 #include "src/status.hpp"
+#include "src/utils/rapidjson_utils.hpp"
 
 namespace ovms {
-
-static void addJsonOrStringMember(rapidjson::Value& obj, const char* key, const std::string& value, rapidjson::Document::AllocatorType& alloc) {
-    rapidjson::Document parsed(&alloc);
-    if (!parsed.Parse(value.c_str()).HasParseError() && parsed.IsObject()) {
-        rapidjson::Value jsonValue(parsed, alloc);
-        obj.AddMember(rapidjson::Value(key, alloc), jsonValue, alloc);
-    } else {
-        obj.AddMember(rapidjson::Value(key, alloc), rapidjson::Value(value.c_str(), alloc), alloc);
-    }
-}
 
 static void addOptionalModelFields(rapidjson::Value& configObj, const ModelsSettingsImpl& modelSettings, rapidjson::Document::AllocatorType& alloc) {
     if (!modelSettings.batchSize.empty())

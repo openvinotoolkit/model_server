@@ -336,7 +336,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         // HF pull mode or pull and start mode or starting from local folder with graph created in memory
-        if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
+        if (isHFPullOrPullAndStart(this->result)) {
             std::vector<std::string> unmatchedOptions;
             GraphExportType task;
             if (result->count("task")) {
@@ -709,7 +709,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
     }
     // Ovms Pull models mode || pull and start models mode || configure mode
-    if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
+    if (isHFPullOrPullAndStart(this->result)) {
         if (isConfigureMode(this->result)) {
             serverSettings.serverMode = CONFIGURE_MODE;
         } else if (isInMemoryGraphMode(this->result)) {
