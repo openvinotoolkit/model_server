@@ -1144,8 +1144,8 @@ TEST(ImageGenCalculatorOptionsTest, GlobalCacheDirAppliedWhenPluginConfigMissing
         << dummyLocation;
         oss << R"(")";
     oss << R"pb(
-                  }
-            }
+        }
+        }
 )pb";
 
     auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(oss.str());
@@ -1187,7 +1187,7 @@ TEST(ImageGenCalculatorOptionsTest, ExplicitPluginCacheDirWinsOverGlobal) {
     oss << R"pb(
                     plugin_config: "{\"CACHE_DIR\": \"/tmp/imagegen_node_cache\"}"
                   }
-            }
+                            }
 )pb";
 
     auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(oss.str());
