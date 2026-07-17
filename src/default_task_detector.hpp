@@ -32,7 +32,7 @@ class ModelCatalogContext {
     std::filesystem::path basePath;
     std::string identifier;
     // In-memory file content (e.g. HF-downloaded config). Queried before filesystem.
-    mutable std::unordered_map<std::string, std::string> preloadedContent;
+    std::unordered_map<std::string, std::string> preloadedContent;
     // JSON parse cache. nullptr value = file tried but not available / parse error.
     mutable std::unordered_map<std::string, std::unique_ptr<rapidjson::Document>> jsonCache;
 
