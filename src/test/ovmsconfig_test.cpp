@@ -792,6 +792,24 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableButMissingModelPath) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name either with model_path or model_repository_path with add_to_config");
 }
 
+TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableWithBadAdditionalParameters) {
+    char* n_argv[] = {
+        "ovms",
+        "--model_name",
+        "name",
+        "--add_to_config",
+        "--config_path",
+        "/config/path",
+        "--target_device",
+        "GPU",
+        "--invalid_param",
+        "value",
+        "--model_path",
+        "/model/path"};
+    int arg_count = 12;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - unmatched arguments: --invalid_param, value,");
+}
+
 TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {
     char* n_argv[] = {
         "ovms",

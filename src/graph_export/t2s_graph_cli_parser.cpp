@@ -49,7 +49,7 @@ void TextToSpeechGraphCLIParser::createOptions() {
             cxxopts::value<std::string>()->default_value("speecht5"),
             "MODEL_TYPE")
         ("vocoder",
-            "The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan",
+            "The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan, used only with export via optimum-cli.",
             cxxopts::value<std::string>(),
             "VOCODER");
     // clang-format on
