@@ -16,7 +16,9 @@
 #include "cli_parser.hpp"
 
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -24,6 +26,8 @@
 #include <variant>
 
 #include "capi_frontend/server_settings.hpp"
+#include "default_task.hpp"
+#include "logging.hpp"
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
@@ -33,13 +37,14 @@
 #include "ovms_exit_codes.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/localfilesystem.hpp"
-#include "stringutils.hpp"
 #include "version.hpp"
 
 namespace ovms {
 
 constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
 constexpr const char* API_KEY_ENV_VAR{"API_KEY"};
+constexpr const char* MODEL_CONFIG_FILENAME{"config.json"};
+constexpr const char* MODEL_INDEX_FILENAME{"model_index.json"};
 
 std::string getConfigPath(const std::string& configPath) {
     bool isDir = false;
@@ -51,6 +56,16 @@ std::string getConfigPath(const std::string& configPath) {
         return FileSystem::joinPath({configPath, "config.json"});
     }
     return configPath;
+}
+
+std::string CLIParser::getEffectiveTaskParameter() const {
+    if (result->count("task")) {
+        return result->operator[]("task").as<std::string>();
+    }
+    if (inferredTaskParameter.has_value()) {
+        return inferredTaskParameter.value();
+    }
+    throw std::logic_error("Could not infer model task - specify --task value explicitly");
 }
 
 std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char** argv) {
@@ -299,7 +314,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
 
         options->add_options("generative task (applies to: pull hf model, single model)")
             ("task",
-                "Specifies the generative task for the local model. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on the provided task-specific options.",
+                "Specifies the generative task for the local model. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on the provided task-specific options. If not provided, default task value is inferred from model config.",
                 cxxopts::value<std::string>(),
                 "TASK");
         configOptions->custom_help("");
@@ -335,57 +350,78 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
-        // HF pull mode or pull and start mode or starting from local folder with graph created in memory
-        if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
+        // HF pull mode, in-memory graph from local model path, or pull-and-start
+        if (isHFFlow(this->result) || isInMemoryGraphMode(this->result)) {
             std::vector<std::string> unmatchedOptions;
             GraphExportType task;
-            if (result->count("task")) {
-                task = stringToEnum(result->operator[]("task").as<std::string>());
-                switch (task) {
-                    case TEXT_GENERATION_GRAPH: {
-                        GraphCLIParser cliParser;
-                        unmatchedOptions = cliParser.parse(result->unmatched());
-                        this->graphOptionsParser = std::move(cliParser);
-                        break;
-                    }
-                    case EMBEDDINGS_GRAPH: {
-                        EmbeddingsGraphCLIParser cliParser;
-                        unmatchedOptions = cliParser.parse(result->unmatched());
-                        this->graphOptionsParser = std::move(cliParser);
-                        break;
-                    }
-                    case RERANK_GRAPH: {
-                        RerankGraphCLIParser cliParser;
-                        unmatchedOptions = cliParser.parse(result->unmatched());
-                        this->graphOptionsParser = std::move(cliParser);
-                        break;
-                    }
-                    case IMAGE_GENERATION_GRAPH: {
-                        ImageGenerationGraphCLIParser cliParser;
-                        unmatchedOptions = cliParser.parse(result->unmatched());
-                        this->graphOptionsParser = std::move(cliParser);
-                        break;
-                    }
-                    case TEXT_TO_SPEECH_GRAPH: {
-                        TextToSpeechGraphCLIParser cliParser;
-                        unmatchedOptions = cliParser.parse(result->unmatched());
-                        this->graphOptionsParser = std::move(cliParser);
-                        break;
-                    }
-                    case SPEECH_TO_TEXT_GRAPH: {
-                        SpeechToTextGraphCLIParser cliParser;
-                        unmatchedOptions = cliParser.parse(result->unmatched());
-                        this->graphOptionsParser = std::move(cliParser);
-                        break;
-                    }
-                    case UNKNOWN_GRAPH: {
-                        ss << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
-                        return std::make_pair(OVMS_EX_USAGE, ss.str());
-                    }
+            std::string taskValue;
+            if (!result->count("task") && !result->count("help") && !result->count("version")) {
+                const std::optional<std::string> modelPath = result->count("model_path") ? std::make_optional(result->operator[]("model_path").as<std::string>()) : std::nullopt;
+                const std::optional<std::string> sourceModel = result->count("source_model") ? std::make_optional(result->operator[]("source_model").as<std::string>()) : std::nullopt;
+                const std::optional<std::string> modelRepositoryPath = result->count("model_repository_path") ? std::make_optional(result->operator[]("model_repository_path").as<std::string>()) : std::nullopt;
+
+                // For source_model (HF pull mode), always infer the task
+                // For model_path in in-memory graph mode, check if task should be inferred based on parameters and graph.pbtxt
+                bool shouldInferTask = false;
+                if (sourceModel.has_value() && !sourceModel->empty()) {
+                    // Always infer task when pulling from HuggingFace
+                    shouldInferTask = true;
+                } else if (modelPath.has_value() && !modelPath->empty()) {
+                    // For local model_path, infer task if:
+                    // 1. Unmatched options (task-specific parameters) are present, OR
+                    // 2. graph.pbtxt doesn't exist (need to create in-memory graph)
+                    bool hasUnmatchedOptions = ::ovms::hasTaskSpecificParameters(result->unmatched());
+                    bool graphExists = ::ovms::graphPbtxtExists(*modelPath);
+                    shouldInferTask = hasUnmatchedOptions || !graphExists;
                 }
-            } else {
-                ss << "error parsing options - --task parameter wasn't passed";
-                return std::make_pair(OVMS_EX_USAGE, ss.str());
+
+                if (shouldInferTask) {
+                    inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath);
+                }
+            }
+            taskValue = getEffectiveTaskParameter();
+            task = stringToEnum(taskValue);
+            switch (task) {
+                case TEXT_GENERATION_GRAPH: {
+                    GraphCLIParser cliParser;
+                    unmatchedOptions = cliParser.parse(result->unmatched());
+                    this->graphOptionsParser = std::move(cliParser);
+                    break;
+                }
+                case EMBEDDINGS_GRAPH: {
+                    EmbeddingsGraphCLIParser cliParser;
+                    unmatchedOptions = cliParser.parse(result->unmatched());
+                    this->graphOptionsParser = std::move(cliParser);
+                    break;
+                }
+                case RERANK_GRAPH: {
+                    RerankGraphCLIParser cliParser;
+                    unmatchedOptions = cliParser.parse(result->unmatched());
+                    this->graphOptionsParser = std::move(cliParser);
+                    break;
+                }
+                case IMAGE_GENERATION_GRAPH: {
+                    ImageGenerationGraphCLIParser cliParser;
+                    unmatchedOptions = cliParser.parse(result->unmatched());
+                    this->graphOptionsParser = std::move(cliParser);
+                    break;
+                }
+                case TEXT_TO_SPEECH_GRAPH: {
+                    TextToSpeechGraphCLIParser cliParser;
+                    unmatchedOptions = cliParser.parse(result->unmatched());
+                    this->graphOptionsParser = std::move(cliParser);
+                    break;
+                }
+                case SPEECH_TO_TEXT_GRAPH: {
+                    SpeechToTextGraphCLIParser cliParser;
+                    unmatchedOptions = cliParser.parse(result->unmatched());
+                    this->graphOptionsParser = std::move(cliParser);
+                    break;
+                }
+                default: {
+                    ss << "error parsing options - --task parameter unsupported value: " + taskValue;
+                    return std::make_pair(OVMS_EX_USAGE, ss.str());
+                }
             }
 
             if (unmatchedOptions.size()) {
@@ -404,15 +440,15 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ss << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
-        if (isHFPullOrPullAndStart(this->result) && result->count("list_models")) {
+        if ((isHFFlow(this->result) || result->count("task")) && result->count("list_models")) {
             ss << "error parsing options - --list_models cannot be used with --pull or --task" << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
-        if (isHFPullOrPullAndStart(this->result) && result->count("remove_from_config")) {
+        if ((isHFFlow(this->result) || result->count("task")) && result->count("remove_from_config")) {
             ss << "error parsing options - --remove_from_config cannot be used with --pull or --task" << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
-        if (isHFPullOrPullAndStart(this->result) && result->count("add_to_config")) {
+        if ((isHFFlow(this->result) || result->count("task")) && result->count("add_to_config")) {
             ss << "error parsing options - --add_to_config cannot be used with --pull or --task" << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
@@ -649,7 +685,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     if (result->count("target_device")) {
         modelsSettings.targetDevice = result->operator[]("target_device").as<std::string>();
         if (!modelsSettings.targetDevice.empty()) {
-            if (isHFPullOrPullAndStart(this->result)) {
+            if (isHFFlow(this->result) || isInMemoryGraphMode(this->result)) {
                 hfSettings.exportSettings.targetDevice = modelsSettings.targetDevice;
             } else {
                 modelsSettings.userSetSingleModelArguments.push_back("target_device");
@@ -668,16 +704,34 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     }
 }
 
-bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
-    // Keep `--task` in the broad mutually exclusive task/pull CLI category so
-    // parse-time checks that rely on this helper continue to reject combining
-    // task-based flows with config-management modes. More specific mode
-    // differentiation is handled by isInMemoryGraphMode().
-    return (result->count("pull") || result->count("task"));
+bool CLIParser::isHFFlow(const std::unique_ptr<cxxopts::ParseResult>& result) {
+    // True when the model originates from HuggingFace (--pull or --source_model).
+    // In HF flows the graph.pbtxt is written to disk alongside the downloaded model
+    // and persists across restarts. Contrast with isInMemoryGraphMode() where the
+    // graph is held only in process memory and rebuilt from CLI args on each startup.
+    return result->count("pull") || result->count("source_model");
 }
 
 bool CLIParser::isInMemoryGraphMode(const std::unique_ptr<cxxopts::ParseResult>& result) {
-    return (result->count("task") && !result->count("source_model") && !result->count("pull"));
+    // True for local-model deployments where the graph config is generated at startup
+    // and held ONLY in process memory (writeToFile=false; graph.pbtxt never touches disk).
+    // On each restart the graph is rebuilt from CLI arguments.
+    // Contrast with HF flows (isHFFlow) where graph.pbtxt is written to disk and persists.
+    if (result->count("source_model") || result->count("pull")) return false;
+    // Info/management commands do not create in-memory graphs.
+    if (result->count("help") || result->count("version")) return false;
+    if (result->count("add_to_config") || result->count("remove_from_config") || result->count("list_models")) return false;
+    // Explicit --task always drives in-memory graph creation.
+    if (result->count("task")) return true;
+    // Local model_path without explicit --task: needs an in-memory graph when
+    // graph.pbtxt is absent (first deployment) or when task-specific parameters
+    // are provided (user wants to update the deployment configuration).
+    if (!result->count("model_path")) return false;
+    const auto& modelPath = result->operator[]("model_path").as<std::string>();
+    const auto configPath = std::filesystem::path(modelPath) / MODEL_CONFIG_FILENAME;
+    const auto indexPath = std::filesystem::path(modelPath) / MODEL_INDEX_FILENAME;
+    if (!std::filesystem::exists(configPath) && !std::filesystem::exists(indexPath)) return false;
+    return !::ovms::graphPbtxtExists(modelPath) || ::ovms::hasTaskSpecificParameters(result->unmatched());
 }
 
 void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
@@ -686,7 +740,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
     }
     // Ovms Pull models mode || pull and start models mode
-    if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
+    if (isHFFlow(this->result) || isInMemoryGraphMode(this->result)) {
         if (isInMemoryGraphMode(this->result)) {
             serverSettings.serverMode = IN_MEMORY_GRAPH_MODE;
         } else if (result->count("pull")) {
@@ -733,10 +787,18 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         // When --task is used with --model_path but without --pull/--source_model,
         // use model_path as the model location (no HF download needed)
         if (!result->count("pull") && !result->count("source_model") && result->count("model_path")) {
-            hfSettings.exportSettings.modelPath = result->operator[]("model_path").as<std::string>();
+            const auto configuredModelPath = std::filesystem::path(result->operator[]("model_path").as<std::string>());
+            hfSettings.exportSettings.modelPath = std::filesystem::absolute(configuredModelPath).lexically_normal().string();
+            SPDLOG_DEBUG("Using local absolute model path for graph export: {}", hfSettings.exportSettings.modelPath);
         }
+        const std::string taskValue = getEffectiveTaskParameter();
         if (result->count("task")) {
-            hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
+            SPDLOG_INFO("Task '{}' provided by user", taskValue);
+        } else {
+            SPDLOG_INFO("Task '{}' inferred from model config", taskValue);
+        }
+        if (!taskValue.empty()) {
+            hfSettings.task = stringToEnum(taskValue);
             switch (hfSettings.task) {
                 case TEXT_GENERATION_GRAPH: {
                     if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
@@ -787,7 +849,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                     break;
                 }
                 case UNKNOWN_GRAPH: {
-                    throw std::logic_error("Error: --task parameter unsupported value: " + result->operator[]("task").as<std::string>());
+                    throw std::logic_error("Error: --task parameter unsupported value: " + taskValue);
                     break;
                 }
             }
