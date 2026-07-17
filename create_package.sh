@@ -36,6 +36,7 @@ ESPEAK_DATA_SRC=$(find /ovms/bazel-out/k8-*/bin/external/espeak_ng -type d -name
 if [ -n "$ESPEAK_DATA_SRC" ] && [ -d "$ESPEAK_DATA_SRC" ] ; then
     mkdir -p /ovms_release/share
     cp -rL "$ESPEAK_DATA_SRC" /ovms_release/share/ ;
+    chmod -R u+w /ovms_release/share/espeak-ng-data 2>/dev/null || true ;
 fi
 # Resolve the packaged eSpeak shared object dynamically so version bumps
 # do not require touching this script.

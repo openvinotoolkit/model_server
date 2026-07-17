@@ -15,10 +15,13 @@
 //*****************************************************************************
 
 #include <memory>
+#include <algorithm>
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <limits>
+#include <stdexcept>
+#include <vector>
 
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 #include "src/audio/text_to_speech/t2s_calculator.pb.h"
@@ -31,6 +34,8 @@
 
 namespace ovms {
 
+static constexpr const char* VOICES_DIR_NAME = "voices";
+
 static size_t getShapeElementsCount(const ov::Shape& shape) {
     size_t elementsCount = 1;
     for (const auto dim : shape) {
@@ -40,6 +45,35 @@ static size_t getShapeElementsCount(const ov::Shape& shape) {
         elementsCount *= dim;
     }
     return elementsCount;
+}
+
+static std::vector<std::filesystem::path> getVoiceEmbeddingPaths(const std::filesystem::path& voicesDir) {
+    std::vector<std::filesystem::path> voicePaths;
+    std::error_code errorCode;
+    std::filesystem::directory_iterator directoryIt(voicesDir, errorCode);
+    if (errorCode) {
+        throw std::runtime_error("Failed to open voices directory '" + voicesDir.string() + "': " + errorCode.message());
+    }
+
+    const std::filesystem::directory_iterator directoryEnd;
+    for (; directoryIt != directoryEnd; directoryIt.increment(errorCode)) {
+        if (errorCode) {
+            throw std::runtime_error("Failed to iterate voices directory '" + voicesDir.string() + "': " + errorCode.message());
+        }
+        const auto& entry = *directoryIt;
+        const bool isRegularFile = entry.is_regular_file(errorCode);
+        if (errorCode) {
+            throw std::runtime_error("Failed to inspect entry '" + entry.path().string() + "' in voices directory '" + voicesDir.string() + "': " + errorCode.message());
+        }
+        if (!isRegularFile) {
+            continue;
+        }
+        if (entry.path().extension() == ".bin") {
+            voicePaths.emplace_back(entry.path());
+        }
+    }
+    std::sort(voicePaths.begin(), voicePaths.end());
+    return voicePaths;
 }
 
 static ov::Tensor readSpeakerEmbedding(const std::filesystem::path& filePath, const ov::Shape& expectedShape) {
@@ -100,6 +134,8 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
         device = recommendTargetDevice();
         SPDLOG_INFO("No device specified for TTS model, using recommended device: {}", device);
     }
+    // Normalize the path to use OS-appropriate separators
+    parsedModelsPath = std::filesystem::absolute(parsedModelsPath);
     ov::AnyMap config;
     Status status = JsonParser::parsePluginConfig(pluginConfig, config);
     if (!status.ok()) {
@@ -108,6 +144,21 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
     }
     ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), device, config);
     const ov::Shape speakerEmbeddingShape = ttsPipeline->get_speaker_embedding_shape();
+    const std::filesystem::path voicesDir = parsedModelsPath / VOICES_DIR_NAME;
+    std::error_code ec;
+    if (std::filesystem::is_directory(voicesDir, ec)) {
+        try {
+            for (const auto& voicePath : getVoiceEmbeddingPaths(voicesDir)) {
+                const std::string voiceName = voicePath.stem().string();
+                voices.insert_or_assign(voiceName, readSpeakerEmbedding(voicePath, speakerEmbeddingShape));
+            }
+        } catch (const std::exception& e) {
+            SPDLOG_WARN("Failed to load voices from {}: {}", voicesDir.string(), e.what());
+        }
+    } else {
+        SPDLOG_DEBUG("Voices directory not found: {}", voicesDir.string());
+    }
+
     for (const auto& voice : graphVoices) {
         std::filesystem::path voicePath(voice.path());
         if (voicePath.is_relative()) {
@@ -115,6 +166,9 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
         }
         if (!std::filesystem::exists(voicePath))
             throw std::runtime_error{"Requested voice speaker embeddings file does not exist: " + voicePath.string()};
+        if (voices.find(voice.name()) != voices.end()) {
+            SPDLOG_DEBUG("Voice '{}' is already configured and will be overwritten with tensor from: {}", voice.name(), voicePath.string());
+        }
         voices[voice.name()] = readSpeakerEmbedding(voicePath, speakerEmbeddingShape);
     }
 }

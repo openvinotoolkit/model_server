@@ -36,21 +36,6 @@ const std::string Qwen3CoderToolParser::PARAMETER_END_TAG = "</parameter>";
 const std::string Qwen3CoderToolParser::FUNCTION_END_TAG = "</function>";
 const std::string Qwen3CoderToolParser::TOOL_END_TAG = "</tool_call>";
 
-static void trimNewline(std::string& str) {
-    if (str.empty()) {
-        return;
-    }
-    if (str.back() == '\n') {
-        str.pop_back();
-    }
-    if (str.empty()) {
-        return;
-    }
-    if (str.front() == '\n') {
-        str.erase(str.begin());
-    }
-}
-
 Status Qwen3CoderToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
     if (toolCallPositions.begin.size() != toolCallPositions.end.size()) {
         SPDLOG_DEBUG("Mismatched tool tags, begin: {}, end: {}", toolCallPositions.begin.size(), toolCallPositions.end.size());
@@ -67,92 +52,12 @@ Status Qwen3CoderToolParserImpl::removeToolCallsFromContentIfNeeded(std::string&
     }
     return StatusCode::OK;
 }
-// Exemplary schemas
-// {"type":"object","properties":{"location":{"type":"string"},"provide_temperature":{"type":"boolean"}},"required":["location"]}
-// {"type":"object","required":["location"],"properties":{"location":{"type":"string","description":"The location for which to get the weather, in the format of 'City, State', such as 'San Francisco, CA' if State for the city exists. 'City, Country' if State for the city doesn't exist."},"unit":{"type":"string","description":"The unit of temperature for the weather report.","enum":["celsius","fahrenheit"],"default":"fahrenheit"}}}
-static const ParametersTypeMap_t parseToolSchema(const std::string& functionName, const rapidjson::Value& schema) {
-    // we want to create mapping of parameter name to parameter type
-    SPDLOG_TRACE("Parse tool schema for tool: {}, schema: {}", functionName, schema.GetString());
-    ParametersTypeMap_t result;
-    if (!schema.IsObject()) {
-        SPDLOG_DEBUG("Tool schema is not a JSON object for tool: {}, schema: {}", functionName, schema.GetString());
-        return result;
-    }
-    if (!schema.HasMember("properties") || !schema["properties"].IsObject()) {
-        SPDLOG_DEBUG("Tool schema does not have properties object for tool: {}, schema: {}", functionName, schema.GetString());
-        return result;
-    }
-    const rapidjson::Value& properties = schema["properties"];
-    for (auto it = properties.MemberBegin(); it != properties.MemberEnd(); ++it) {
-        if (!it->value.IsObject()) {
-            SPDLOG_DEBUG("Tool schema property: {} is not an object for tool: {}, schema: {}", it->name.GetString(), functionName, schema.GetString());
-            continue;
-        }
-        if (!it->value.HasMember("type") || !it->value["type"].IsString()) {
-            SPDLOG_DEBUG("Tool schema property: {} does not have type string for tool: {}, schema: {}", it->name.GetString(), functionName, schema.GetString());
-            continue;
-        }
-        std::string paramName = it->name.GetString();
-        std::string typeStr = it->value["type"].GetString();
-        ParameterType type = ParameterType::UNKNOWN;
-        if (typeStr == "string") {
-            type = ParameterType::STRING;
-        } else if (typeStr == "number" || typeStr == "integer") {
-            type = ParameterType::NUMBER;
-        } else if (typeStr == "boolean") {
-            type = ParameterType::BOOLEAN;
-        } else if (typeStr == "array") {
-            type = ParameterType::ARRAY;
-        } else if (typeStr == "object") {
-            type = ParameterType::OBJECT;
-        } else {
-            SPDLOG_DEBUG("Tool schema property: {} has unknown type: {} for tool: {}, schema: {}", paramName, typeStr, functionName, schema.GetString());
-        }
-        SPDLOG_TRACE("Tool:{} param:{} type:{}", functionName, paramName, typeStr);
-        result.emplace(paramName, type);
-    }
-    return result;
-}
-
 #define DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(TAG)                         \
     auto pos = this->streamContent.find(TAG, this->getLastProcessedPosition()); \
     if (pos == std::string::npos) {                                             \
         SPDLOG_TRACE("Did not find: {}", TAG);                                  \
         break;                                                                  \
     }
-
-static const char* jsonTypeOf(const rapidjson::Value& val) {
-    if (val.IsObject())
-        return "object";
-    if (val.IsArray())
-        return "array";
-    if (val.IsString())
-        return "string";
-    if (val.IsBool())
-        return "bool";
-    if (val.IsInt())
-        return "int";
-    if (val.IsUint())
-        return "uint";
-    if (val.IsInt64())
-        return "int64";
-    if (val.IsUint64())
-        return "uint64";
-    if (val.IsDouble())
-        return "double";
-    if (val.IsNumber())
-        return "number";
-    if (val.IsNull())
-        return "null";
-    return "unknown";
-}
-static void enforceStringValue(rapidjson::Value& v,
-    rapidjson::Document::AllocatorType& alloc) {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    v.Accept(writer);
-    v.SetString(buffer.GetString(), buffer.GetLength(), alloc);
-}
 
 void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameterValueAsString) {
     if (this->removeNewlineAroundParameters)
@@ -167,11 +72,7 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
     if (paramIt != this->toolsParametersTypeMap.end()) {
         auto paramJt = paramIt->second.find(currentParameterName);
         if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::BOOLEAN)) {
-            if (parameterValueAsString == "True" || parameterValueAsString == "TRUE") {
-                parameterValueAsString = "true";
-            } else if (parameterValueAsString == "False" || parameterValueAsString == "FALSE") {
-                parameterValueAsString = "false";
-            }
+            normalizeBooleanString(parameterValueAsString);
         }
     }
     temp.Parse(parameterValueAsString.c_str());
@@ -310,18 +211,6 @@ std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::parseChunk(const std::strin
         return std::move(toolCalls);
     }
     return std::nullopt;
-}
-
-static ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas) {
-    SPDLOG_TRACE("Creating tools parameters types map with schemas size: {}", toolsSchemas.size());
-    ToolsParameterTypeMap_t toolsParametersTypes;
-    for (const auto& [toolName, toolSchemaWrapper] : toolsSchemas) {
-        const auto& toolSchemaStringRepr = toolSchemaWrapper.stringRepr;
-        const auto& toolSchemaRapidjsonRepr = toolSchemaWrapper.rapidjsonRepr;
-        SPDLOG_TRACE("Creating tools parameters types for tool: {}, schema: {}", toolName, toolSchemaStringRepr);
-        toolsParametersTypes.emplace(toolName, parseToolSchema(toolName, *toolSchemaRapidjsonRepr));
-    }
-    return toolsParametersTypes;
 }
 
 void Qwen3CoderToolParser::lazyFillInitToolParametersTypesMap() {
