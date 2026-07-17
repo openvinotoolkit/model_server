@@ -462,7 +462,8 @@ Status Server::startModules(ovms::Config& config) {
     if (config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
         // --task with --model_path: create graph in memory without HF download
         GraphExport graphExporter;
-        const auto& hfSettings = config.getServerSettings().hfSettings;
+        HFSettingsImpl hfSettings = config.getServerSettings().hfSettings;
+        hfSettings.exportSettings.modelPath = ".";
         status = graphExporter.createServableConfig(config.modelPath(), hfSettings, false);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to create in-memory graph config: {}", status.string());
