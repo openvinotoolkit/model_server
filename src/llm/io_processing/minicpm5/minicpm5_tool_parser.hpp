@@ -62,6 +62,7 @@ struct Minicpm5ToolParserImpl {
         InsideFunction,      // (IF) inside function body — looking for <param or </function>
         InsideParamName,     // (IPN) inside <param name="..." — reading attribute until >
         InsideParam,         // (IP) inside param value — reading until </param>
+        AfterFunction,       // (AF) after </function> — ready to emit tool call
     };
     // STATE DEMARKATION
     /*
@@ -111,6 +112,7 @@ private:
     void handleInsideFunctionState(ToolCalls_t& toolCalls);
     void handleInsideParamNameState();
     void handleInsideParamState();
+    void handleInsideAfterFunctionState(ToolCalls_t& toolCalls);
 
     static std::string extractNameAttribute(const std::string& content, size_t nameAttrValueStart, size_t tagEnd);
 };
@@ -190,6 +192,7 @@ struct fmt::formatter<ovms::Minicpm5ToolParserImpl::State> : fmt::formatter<std:
             {ovms::Minicpm5ToolParserImpl::State::InsideFunction, "InsideFunction"},
             {ovms::Minicpm5ToolParserImpl::State::InsideParamName, "InsideParamName"},
             {ovms::Minicpm5ToolParserImpl::State::InsideParam, "InsideParam"},
+            {ovms::Minicpm5ToolParserImpl::State::AfterFunction, "AfterFunction"},
         };
         auto it = stateMap.find(state);
         if (it != stateMap.end()) {

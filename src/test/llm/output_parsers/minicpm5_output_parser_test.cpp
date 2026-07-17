@@ -44,6 +44,7 @@ static std::map<std::string, std::string> minicpm5ToolSchemasInput = {
     {"search", R"({"properties":{"query":{"type":"string"}},"required":["query"]})"},
     {"get_stock", R"({"properties":{"ticker":{"type":"string"},"count":{"type":"integer"}},"required":["ticker"]})"},
     {"dummy", R"({"properties":{"config":{"type":"object"}},"required":["config"]})"},
+    {"pwd", R"({"properties":{},"required":[]})"},
 };
 
 static std::vector<std::unique_ptr<rapidjson::Document>> minicpm5SchemaDocsStorage;
@@ -105,11 +106,11 @@ protected:
     }
 
     std::vector<int64_t> encodeInput(const std::string& input) {
-        if (input == "<think>") {
-            return {8};  // <think> token ID
+        if (input == Minicpm5ReasoningParser::reasoningStartTag) {
+            return {Minicpm5ReasoningParser::reasoningStartTokenId};
         }
-        if (input == "</think>") {
-            return {9};  // </think> token ID
+        if (input == Minicpm5ReasoningParser::reasoningEndTag) {
+            return {Minicpm5ReasoningParser::reasoningEndTokenId};
         }
         auto generatedTensor = minicpm5Tokenizer->encode(input, ov::genai::add_special_tokens(true)).input_ids;
         return std::vector<int64_t>(
@@ -125,10 +126,10 @@ protected:
     void assertReasoningVec(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
             std::vector<int64_t> tokens = {};
-            if (chunk == "<think>") {
-                tokens = {8};  // <think> token ID
-            } else if (chunk == "</think>") {
-                tokens = {9};  // </think> token ID
+            if (chunk == Minicpm5ReasoningParser::reasoningStartTag) {
+                tokens = {Minicpm5ReasoningParser::reasoningStartTokenId};
+            } else if (chunk == Minicpm5ReasoningParser::reasoningEndTag) {
+                tokens = {Minicpm5ReasoningParser::reasoningEndTokenId};
             } else {
                 tokens = encodeInput(chunk);
             }
@@ -276,8 +277,8 @@ TEST_F(Minicpm5OutputParserTest, ParseReasoningWithoutStartingTag) {
 }
 
 TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
-    constexpr int64_t thinkStartTokenId = 8;  // <think>, per Minicpm5ReasoningParser
-    constexpr int64_t thinkEndTokenId = 9;    // </think>, per Minicpm5ReasoningParser
+    constexpr int64_t thinkStartTokenId = Minicpm5ReasoningParser::reasoningStartTokenId;
+    constexpr int64_t thinkEndTokenId = Minicpm5ReasoningParser::reasoningEndTokenId;
 
     auto outputParserWithReasoning =
         std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
@@ -354,6 +355,33 @@ TEST(Minicpm5ToolParserImplTest, SingleCallNoContent) {
     EXPECT_FALSE(calls[0].id.empty());
 }
 
+TEST(Minicpm5ToolParserImplTest, SingleCallWithEmptyParam) {
+    const std::string input =
+        R"(<function name="dummy"><param name="config"></param></function>)";
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    auto& calls = callsOpt.value();
+    ASSERT_EQ(calls.size(), 1u);
+    EXPECT_EQ(calls[0].name, "dummy");
+    EXPECT_EQ(calls[0].arguments, R"({"config":""})");
+}
+
+TEST(Minicpm5ToolParserImplTest, SingleCallWithNoArgs) {
+    const std::string input =
+        R"(<function name="dummy"></function>)";
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    auto& calls = callsOpt.value();
+    ASSERT_EQ(calls.size(), 1u);
+    EXPECT_EQ(calls[0].name, "dummy");
+    EXPECT_EQ(calls[0].arguments, R"({})");
+}
+
+
 TEST(Minicpm5ToolParserImplTest, TwoCalls) {
     const std::string input =
         R"(<function name="get_weather"><param name="city">Rome</param></function>)"
@@ -429,19 +457,6 @@ TEST(Minicpm5ToolParserImplTest, RemoveToolCallsFromContent) {
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(content.find("<function"), std::string::npos);
     EXPECT_EQ(content.find("</function>"), std::string::npos);
-}
-
-TEST(Minicpm5ToolParserImplTest, SingleQuoteAttribute) {
-    const std::string input =
-        "<function name='get_weather'><param name='city'>Sydney</param></function>";
-    auto content = input;
-    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
-    auto callsOpt = parser.parseChunk(content);
-    ASSERT_TRUE(callsOpt.has_value());
-    auto& calls = callsOpt.value();
-    ASSERT_EQ(calls.size(), 1u);
-    EXPECT_EQ(calls[0].name, "get_weather");
-    EXPECT_EQ(calls[0].arguments, R"({"city":"Sydney"})");
 }
 
 static ToolCalls_t streamInFragments(const std::string& input, size_t fragmentSize,

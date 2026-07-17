@@ -19,9 +19,9 @@
 
 #include "src/port/rapidjson_document.hpp"
 
-#include "../../../logging.hpp"
+#include "src/logging.hpp"
 #include "minicpm5_reasoning_parser.hpp"
-#include "../utils.hpp"
+#include "src/llm/io_processing/utils.hpp"
 
 namespace ovms {
 void Minicpm5ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {

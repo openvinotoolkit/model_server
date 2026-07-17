@@ -14,18 +14,18 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include "../base_output_parser.hpp"
+#include "src/llm/io_processing/base_output_parser.hpp"
 #include <vector>
 #include <string>
 
 namespace ovms {
 class Minicpm5ReasoningParser : public BaseOutputParser {
-protected:
-    const std::string parsingStartTag = "<think>";
-    const std::string parsingEndTag = "</think>";
+public:
+    static inline const std::string reasoningStartTag  = "<think>";
+    static inline const std::string reasoningEndTag  = "</think>";
 
-    const int64_t reasoningStartTokenId = 8;  // <think>
-    const int64_t reasoningEndTokenId = 9;    // </think>
+    static constexpr int64_t reasoningStartTokenId = 8;
+    static constexpr int64_t reasoningEndTokenId = 9;
 
 public:
     Minicpm5ReasoningParser() = delete;
@@ -35,7 +35,7 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags{this->parsingStartTag};
+        static const std::vector<std::string> parsingStartTags{this->reasoningStartTag};
         return parsingStartTags;
     }
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
@@ -43,7 +43,7 @@ public:
         return specialParsingStartTags;
     }
     const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
+        return reasoningEndTag;
     }
 
     bool requiresStreamingWithSpecialTokens() const override {

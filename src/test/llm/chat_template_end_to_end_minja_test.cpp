@@ -596,10 +596,7 @@ What's the weather in Paris?<|im_end|>
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
-// =============================================================================
-// MiniCPM5 chat template is not compatible with minja, therefore the test is expected to fail.
-// =============================================================================
-TEST_F(ChatTemplateEndToEndMinjaTest, MiniCPM5_ToolCallWithStringArgs) {
+TEST_F(ChatTemplateEndToEndMinjaTest, MiniCPM5_ToolCallWithStringArgsExpectedToFailMinjaDontSupportThisTemplate) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_minicpm5.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load minicpm5 template";
 
