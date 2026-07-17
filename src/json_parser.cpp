@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "json_parser.hpp"
 
+#include <algorithm>
 #include <map>
 #include <string>
 
@@ -57,6 +58,27 @@ std::string numericValueToString(const rapidjson::Value& v) {
     return "";
 }
 
+std::string normalizeWindowsPathSeparators(const std::string& value) {
+#ifdef _WIN32
+    std::string normalized = value;
+    std::replace(normalized.begin(), normalized.end(), '\\', '/');
+    return normalized;
+#else
+    return value;
+#endif
+}
+
+bool isPathLikePluginKey(const std::string& key) {
+    return key == "CACHE_DIR";
+}
+
+std::string maybeNormalizePathPluginValue(const std::string& key, const std::string& value) {
+    if (!isPathLikePluginKey(key)) {
+        return value;
+    }
+    return normalizeWindowsPathSeparators(value);
+}
+
 /**
 * @brief Parses json node for plugin config keys and values
 * 
@@ -88,7 +110,8 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                             continue;
                         }
                         if (propertyIt->value.IsString()) {
-                            properties[propertyIt->name.GetString()] = propertyIt->value.GetString();
+                            const std::string propertyKey = propertyIt->name.GetString();
+                            properties[propertyKey] = maybeNormalizePathPluginValue(propertyKey, propertyIt->value.GetString());
                         }
                         if (propertyIt->value.IsInt64()) {
                             properties[propertyIt->name.GetString()] = propertyIt->value.GetInt64();
@@ -117,6 +140,7 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
             continue;
         }
         if (it->value.IsString()) {
+            const std::string topKey = it->name.GetString();
             if (((it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("CPU_THROUGHPUT_AUTO"))) || ((it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) && (it->value.GetString() == std::string("GPU_THROUGHPUT_AUTO")))) {
                 pluginConfig["PERFORMANCE_HINT"] = "THROUGHPUT";
                 SPDLOG_WARN("{} plugin config key is deprecated. Use PERFORMANCE_HINT instead", it->name.GetString());
@@ -128,7 +152,7 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                     pluginConfig["INFERENCE_NUM_THREADS"] = it->value.GetString();
                     SPDLOG_WARN("{} plugin config key is deprecated. Use INFERENCE_NUM_THREADS instead", it->name.GetString());
                 } else {
-                    pluginConfig[it->name.GetString()] = it->value.GetString();
+                    pluginConfig[topKey] = maybeNormalizePathPluginValue(topKey, it->value.GetString());
                 }
             }
         }
