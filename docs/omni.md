@@ -190,6 +190,9 @@ When `voice` is omitted, the model's default speaker is used.
 - **Real-time factor** — speech generation speed depends on hardware; typically 1.8-2x slower than real-time on SPR-36 CPU
 - **No input transcription** — the model processes audio internally but doesn't return a transcript of user speech
 - **No voice cloning** — available voices are fixed per model checkpoint
+- **Audio input size limit** — decoded audio cannot exceed 1 GB (configurable via `OVMS_AUDIO_MAX_FILE_SIZE_BYTES` environment variable). Crafted files with spoofed headers are rejected.
+- **Audio input formats** — only WAV and MP3 are supported; mono or stereo only (stereo is downmixed to mono)
+- **Audio input channels** — files with more than 2 channels are rejected
 
 ## Issues
 - **Audio has slowly decaying volume**

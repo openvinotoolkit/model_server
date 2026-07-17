@@ -316,7 +316,18 @@ std::vector<float> readWithoutResample(const std::string_view& audioData, const 
             drwav_uninit(&wav);
             throw std::runtime_error("WAV audio has unsupported bits per sample");
         }
+        const uint64_t blockAlign = wav.channels * (wav.bitsPerSample / 8);
+        const uint64_t maxPossibleFrames = blockAlign ? (audioData.size() / blockAlign) : 0;
+        if (wav.totalPCMFrameCount > maxPossibleFrames) {
+            drwav_uninit(&wav);
+            throw std::runtime_error("WAV file header claims more frames than possible from data chunk size");
+        }
         const uint64_t n = wav.totalPCMFrameCount;
+        if (n > AUDIO_BUFFER_SIZE_LIMIT / wav.channels) {
+            drwav_uninit(&wav);
+            throw std::overflow_error("Decoded audio buffer size overflow");
+        }
+        validateAudioFileSizeAgainstMaxValue(n * wav.channels * sizeof(int16_t));
         std::vector<int16_t> pcm16(n * wav.channels);
         drwav_read_pcm_frames_s16(&wav, n, pcm16.data());
         drwav_uninit(&wav);
@@ -346,6 +357,10 @@ std::vector<float> readWithoutResample(const std::string_view& audioData, const 
             drmp3_uint64 framesRead = drmp3_read_pcm_frames_f32(&mp3, CHUNK_FRAMES, tempBuffer);
             if (framesRead == 0)
                 break;
+            if (pcmf32.size() > AUDIO_BUFFER_SIZE_LIMIT) {
+                drmp3_uninit(&mp3);
+                throw std::overflow_error("Decoded audio buffer size overflow");
+            }
             if (mp3.channels == 1) {
                 pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead);
             } else {
@@ -353,6 +368,7 @@ std::vector<float> readWithoutResample(const std::string_view& audioData, const 
                     pcmf32.push_back((tempBuffer[2 * i] + tempBuffer[2 * i + 1]) * 0.5f);
                 }
             }
+            validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
         }
         drmp3_uninit(&mp3);
     } else {
