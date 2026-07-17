@@ -25,6 +25,7 @@
 #include "src/status.hpp"
 #include "src/logging.hpp"
 #include "src/json_parser.hpp"
+#include "src/ov_utils.hpp"
 
 #include "src/audio/text_to_speech/t2s_servable.hpp"
 
@@ -94,13 +95,18 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
     } else {
         parsedModelsPath = fsModelsPath;
     }
+    std::string device = targetDevice;
+    if (device.empty()) {
+        device = recommendTargetDevice();
+        SPDLOG_INFO("No device specified for TTS model, using recommended device: {}", device);
+    }
     ov::AnyMap config;
     Status status = JsonParser::parsePluginConfig(pluginConfig, config);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", pluginConfig);
         throw std::runtime_error("Error during plugin_config option parsing");
     }
-    ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), targetDevice, config);
+    ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), device, config);
     const ov::Shape speakerEmbeddingShape = ttsPipeline->get_speaker_embedding_shape();
     for (const auto& voice : graphVoices) {
         std::filesystem::path voicePath(voice.path());

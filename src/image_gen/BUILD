@@ -26,6 +26,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libovms_queue",
         "//src:libovmsstring_utils",
+        "//src:libovms_ov_utils",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
