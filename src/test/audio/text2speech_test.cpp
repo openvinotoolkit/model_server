@@ -131,6 +131,16 @@ TEST_F(Text2SpeechHttpTest, nonExistingVoiceRequested) {
 
 class Text2SpeechConfigTest : public ::testing::Test {};
 
+namespace {
+ovms::Status validateText2SpeechGraphConfig(ConstructorEnabledModelManager& manager, std::string testPbtxt) {
+    adjustConfigForTargetPlatform(testPbtxt);
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    return mediapipeDummy.validate(manager);
+}
+}  // namespace
+
 TEST_F(Text2SpeechConfigTest, NodeNameMissing) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
@@ -151,10 +161,7 @@ TEST_F(Text2SpeechConfigTest, NodeNameMissing) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_NAME);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::LLM_NODE_MISSING_NAME);
 }
 
 TEST_F(Text2SpeechConfigTest, SidePacketMissing) {
@@ -177,10 +184,7 @@ TEST_F(Text2SpeechConfigTest, SidePacketMissing) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
 TEST_F(Text2SpeechConfigTest, MissingModelsPath) {
@@ -203,10 +207,7 @@ TEST_F(Text2SpeechConfigTest, MissingModelsPath) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 TEST_F(Text2SpeechConfigTest, InvalidPluginConfig) {
@@ -231,10 +232,7 @@ TEST_F(Text2SpeechConfigTest, InvalidPluginConfig) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 TEST_F(Text2SpeechConfigTest, MissingVoicesInGraphUsesModelVoicesDir) {
@@ -259,10 +257,7 @@ TEST_F(Text2SpeechConfigTest, MissingVoicesInGraphUsesModelVoicesDir) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::OK);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::OK);
 }
 
 TEST_F(Text2SpeechConfigTest, NonExistingVoicePath) {
@@ -293,10 +288,7 @@ TEST_F(Text2SpeechConfigTest, NonExistingVoicePath) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 TEST_F(Text2SpeechConfigTest, VoiceMissingPath) {
@@ -326,10 +318,7 @@ TEST_F(Text2SpeechConfigTest, VoiceMissingPath) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 TEST_F(Text2SpeechConfigTest, VoiceInvalidFile) {
@@ -360,8 +349,5 @@ TEST_F(Text2SpeechConfigTest, VoiceInvalidFile) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
