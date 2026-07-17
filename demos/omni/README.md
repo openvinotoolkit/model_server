@@ -1,60 +1,55 @@
-### Chat Completions API, Unary, AUDIO+TEXT -> TEXT
-```
-python3 omni_ccompletion_unary_AT_T.py kokoro.wav
-```
-```
-OpenVINO is an open-source toolkit for deploying high-performance AI solutions across cloud, AI PCs, edge devices, and physical AI-like. Develop your applications with both generative and conventional AI models, coming from the most popular model frameworks. Convert, optimize, and run inference, utilizing the full potential of Intel hardware. There are four main tools in OpenVINO to meet all your deployment needs.
+# Omni Pipeline Demo Clients
+
+Example clients demonstrating Qwen3-Omni multimodal capabilities with OpenVINO Model Server.
+
+**Requirements:** `pip install openai numpy sounddevice`
+
+## Demo Clients
+
+### Chat Completions API
+
+#### Audio+Text → Text (unary)
+```bash
+python3 chat_completions_unary_at_t.py recording.wav
 ```
 
-### Responses API, Unary, AUDIO+TEXT -> TEXT
-```
-python3 omni_responses_unary_AT_T.py kokoro.wav
-```
-```
-OpenVINO is an open-source toolkit for deploying high-performance AI solutions across cloud, AI PCs, edge devices, and physical AI-like. Develop your applications with both generative and conventional AI models coming from the most popular model frameworks. Convert, optimize, and run inference, utilizing the full potential of Intel hardware. There are four main tools in OpenVINO to meet all your deployment needs.
+#### Text → Audio+Text (unary)
+```bash
+python3 chat_completions_unary_t_at.py --prompt "Hello, how are you?" --voice f04
 ```
 
-### Chat Completions API, Unary, AUDIO+TEXT+IMAGE -> AUDIO+TEXT
-```
-python3 omni_ccompletion_unary_ATI_AT.py --audio kokoro.wav --image ../common/static/images/snail.jpeg --prompt "In the recording replace OpenVINO with animal depicted in this image and produce new audio with it."
-```
-```
-Audio input: kokoro.wav (format: wav)
-Image input: ../common/static/images/snail.jpeg
-
-Text: A snail is an open-source toolkit for deploying high-performance AI solutions across cloud, AI PCs, edge devices, and physical AI-like. Develop your applications with both generative and conventional AI models, coming from the most popular model frameworks. Convert, optimize, and run inference, utilizing the full potential of Intel hardware. There are four main tools in snail to meet all your deployment needs.
-Audio saved to: output.wav (2355584 bytes)
+#### Audio+Text+Image → Audio+Text (unary)
+```bash
+python3 chat_completions_unary_ati_at.py --audio recording.wav --image photo.jpg --voice m02
 ```
 
-### Chat Completions API, Unary, TEXT -> AUDIO+TEXT
-```
-python3 omni_ccompletion_unary_AT_T.py --prompt "List 3 biggest cities of Japan, pure text no signs or special letters." --voice "br_f019"
-```
-```
-Text: Tokyo Osaka Nagoya
-Audio saved to: output.wav (228224 bytes)
-Transcript: Tokyo Osaka Nagoya
+### Responses API
+
+#### Audio+Text → Text (unary)
+```bash
+python3 responses_unary_at_t.py recording.wav
 ```
 
-### Responses API, Stream, TEXT -> AUDIO+TEXT
+#### Text → Audio+Text (streaming)
+```bash
+python3 responses_stream_t_at.py --prompt "Tell me a short story" --voice f04
 ```
-python3 omni_responses_unary_AT_T.py --prompt "In  20 words, what is OpenVINO?" --voice m02
+
+#### Multi-turn Voice Chat (streaming, with mic recording)
+```bash
+python3 responses_multiturn_voice_chat.py --voice f04
+python3 responses_multiturn_voice_chat.py --voice m02 --no-stream --debug
 ```
 
-```
-Prompt: In  20 words, what is OpenVINO?
-Voice: m02
-Streaming from http://localhost:11338/v3/responses ...
+## Naming Convention
 
---- Text ---
-OpenVINO is an open-source toolkit for deploying high-performance AI solutions across cloud, edge, and devices.Playing audio...
+`{api}_{mode}_{input}_{output}.py`
 
+- **API:** `chat_completions` or `responses`
+- **Mode:** `unary`, `stream`, or `multiturn`
+- **Input:** `t` = text, `a` = audio, `i` = image (e.g., `at` = audio+text, `ati` = audio+text+image)
+- **Output:** `t` = text, `at` = audio+text
 
---- Audio streaming ---
-Audio stream complete.
+## Available Voices
 
---- Performance ---
-Audio duration: 5.18 s (124215 samples)
-Wall-clock time: 9.02 s
-Real-time factor: 1.74x (1.0 = real-time, lower = faster)
-```
+Model-dependent. For Qwen3-Omni Dense: `f04`, `f245`, `f37`, `m02`, `m31`, `m36`, `br_f019`

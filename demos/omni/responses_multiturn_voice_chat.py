@@ -4,6 +4,8 @@ Voice-to-voice conversational client for Omni pipeline.
 Records audio from microphone, sends to server, plays back response.
 Maintains conversation history using text transcripts.
 
+Multi turn with audio is not supported yet, @sgonorov
+
 Usage:
     python3 omni_voice_chat.py
     python3 omni_voice_chat.py --voice m02
@@ -15,7 +17,7 @@ Controls:
     [ENTER]  - Stop recording and send
     [q]      - Quit
 
-Requires: pip install sounddevice numpy requests
+Requires: pip install sounddevice numpy openai
 """
 
 import argparse
@@ -29,7 +31,7 @@ import wave
 
 import numpy as np
 import sounddevice as sd
-import requests
+from openai import OpenAI
 
 BASE_URL = "http://localhost:11338/v3"
 MODEL = "ovms-model"
@@ -88,31 +90,40 @@ def redact_payload_for_log(payload):
     return out
 
 
-def stream_response(payload):
-    """Send streaming request and yield SSE events."""
-    resp = requests.post(f"{BASE_URL}/responses", json=payload, stream=True, timeout=300)
-    if resp.status_code != 200:
-        print(f"\n  Error {resp.status_code}: {resp.text}")
+def stream_response(client, messages, model, voice, audio_format, max_tokens):
+    """Send streaming request via OpenAI SDK and yield events."""
+    try:
+        with client.responses.stream(
+            model=model,
+            input=messages,
+            max_output_tokens=max_tokens,
+            extra_body={
+                "modalities": ["text", "audio"],
+                "audio": {"voice": voice, "format": audio_format},
+            },
+        ) as stream:
+            for event in stream:
+                yield event
+    except Exception as e:
+        print(f"\n  Error: {e}")
         return
-    for line in resp.iter_lines(decode_unicode=True):
-        if not line or not line.startswith("data: "):
-            continue
-        data = line[6:]
-        if data == "[DONE]":
-            break
-        try:
-            yield json.loads(data)
-        except json.JSONDecodeError:
-            continue
 
 
-def unary_response(payload):
-    """Send non-streaming request and return response JSON."""
-    resp = requests.post(f"{BASE_URL}/responses", json=payload, timeout=300)
-    if resp.status_code != 200:
-        print(f"\n  Error {resp.status_code}: {resp.text}")
+def unary_response(client, messages, model, voice, audio_format, max_tokens):
+    """Send non-streaming request via OpenAI SDK and return response."""
+    try:
+        return client.responses.create(
+            model=model,
+            input=messages,
+            max_output_tokens=max_tokens,
+            extra_body={
+                "modalities": ["text", "audio"],
+                "audio": {"voice": voice, "format": audio_format},
+            },
+        )
+    except Exception as e:
+        print(f"\n  Error: {e}")
         return None
-    return resp.json()
 
 
 def play_audio_from_base64(audio_b64, audio_format="wav"):
@@ -163,6 +174,7 @@ def main():
     recorder = AudioRecorder()
     turn = 0
     audio_format = "pcm16"  # pcm16 works for both streaming and unary playback
+    client = OpenAI(base_url=BASE_URL, api_key="unused")
 
     print("=" * 50)
     print("  Voice-to-Voice Omni Chat")
@@ -204,22 +216,11 @@ def main():
             ]
         })
 
-        payload = {
-            "model": MODEL,
-            "modalities": ["text", "audio"],
-            "audio": {"voice": args.voice, "format": audio_format},
-            "input": messages,
-            "max_output_tokens": 512,
-        }
-
-        if streaming:
-            payload["stream"] = True
-
         # Debug: log payload
         if args.debug:
-            redacted = redact_payload_for_log(payload)
-            print(f"\n  [DEBUG] Turn {turn} payload:")
-            print(f"  {json.dumps(redacted, indent=4)}")
+            redacted = redact_payload_for_log({"input": messages})
+            print(f"\n  [DEBUG] Turn {turn} input ({len(messages)} messages):")
+            print(f"  {json.dumps(redacted['input'], indent=4)}")
 
         response_text = ""
         audio_data_b64 = ""
@@ -236,11 +237,11 @@ def main():
             first_text_time = None
             first_audio_time = None
 
-            for event in stream_response(payload):
-                event_type = event.get("type", "")
+            for event in stream_response(client, messages, MODEL, args.voice, audio_format, 512):
+                event_type = event.type
 
                 if event_type == "response.output_text.delta":
-                    delta = event.get("delta", "")
+                    delta = event.delta
                     response_text += delta
                     print(delta, end="", flush=True)
                     if first_text_time is None:
@@ -252,7 +253,7 @@ def main():
                         first_audio_time = time.time()
                         text_latency = first_audio_time - send_time
                         print(f"\n  🔊 Playing... (text took {text_latency:.1f}s)", flush=True)
-                    raw = base64.b64decode(event["delta"])
+                    raw = base64.b64decode(event.delta)
                     samples = np.frombuffer(raw, dtype=np.int16)
                     audio_stream.write(samples.reshape(-1, 1))
                     audio_chunks.append(samples)
@@ -276,28 +277,24 @@ def main():
         else:
             # --- Unary path ---
             print(f"\n  Waiting for response...", flush=True)
-            result = unary_response(payload)
+            result = unary_response(client, messages, MODEL, args.voice, audio_format, 512)
             if result is None:
                 continue
 
             elapsed = time.time() - send_time
 
             if args.debug:
-                # Truncate large base64 data for display
-                result_str = json.dumps(result, indent=4)
-                if len(result_str) > 3000:
-                    result_str = result_str[:3000] + "\n  ... (truncated)"
-                print(f"\n  [DEBUG] Response:\n  {result_str}")
+                print(f"\n  [DEBUG] Response id: {result.id}, status: {result.status}")
 
             # Extract text and audio from response
             audio_data_b64 = ""
-            for item in result.get("output", []):
-                if item.get("type") == "message":
-                    for part in item.get("content", []):
-                        if part.get("type") == "output_text":
-                            response_text = part.get("text", "")
-                        elif part.get("type") == "output_audio":
-                            audio_data_b64 = part.get("data", "")
+            for item in result.output:
+                if item.type == "message":
+                    for part in item.content:
+                        if part.type == "output_text":
+                            response_text = part.text
+                        elif part.type == "output_audio":
+                            audio_data_b64 = part.data if hasattr(part, 'data') else ""
 
             print(f"  Assistant: {response_text}")
 

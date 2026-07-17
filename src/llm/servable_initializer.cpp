@@ -463,7 +463,8 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     bool isOmni = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
     // Existence of embeddings models indicates we are dealing with VLM pipeline
     bool isVLM = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
-                  std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin")) && !isOmni;
+                     std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin")) &&
+                 !isOmni;
 
     // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
     if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {

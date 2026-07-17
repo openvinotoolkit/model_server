@@ -18,7 +18,9 @@
 
 #include <chrono>
 #include <cstring>
+#include <string>
 #include <vector>
+#include <utility>
 
 #include "absl/strings/escaping.h"
 
@@ -72,7 +74,7 @@ void OmniModelLegacyExecutor::processRequest() {
             size_t audioChunkCount = 0;
             auto speechStreamStart = std::chrono::steady_clock::now();
             if (requestExecutionContext->audioOutputRequested && requestExecutionContext->textStreamer) {
-                speechStreamer = [&ctx = *requestExecutionContext, &audioChunkCount, &speechStreamStart](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
+                speechStreamer = [& ctx = *requestExecutionContext, &audioChunkCount, &speechStreamStart](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
                     if (ctx.clientDisconnected.load()) {
                         return ov::genai::StreamingStatus::CANCEL;
                     }
@@ -87,8 +89,10 @@ void OmniModelLegacyExecutor::processRequest() {
                     std::vector<int16_t> pcm16(count);
                     for (size_t i = 0; i < count; i++) {
                         float s = pcm[i];
-                        if (s > 1.0f) s = 1.0f;
-                        if (s < -1.0f) s = -1.0f;
+                        if (s > 1.0f)
+                            s = 1.0f;
+                        if (s < -1.0f)
+                            s = -1.0f;
                         pcm16[i] = static_cast<int16_t>(s * 32767.0f);
                     }
                     std::string b64 = absl::Base64Escape(

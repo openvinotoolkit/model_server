@@ -242,8 +242,10 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
             std::vector<int16_t> pcm16(sampleCount);
             for (size_t i = 0; i < sampleCount; i++) {
                 float sample = pcmData[i];
-                if (sample > 1.0f) sample = 1.0f;
-                if (sample < -1.0f) sample = -1.0f;
+                if (sample > 1.0f)
+                    sample = 1.0f;
+                if (sample < -1.0f)
+                    sample = -1.0f;
                 pcm16[i] = static_cast<int16_t>(sample * 32767.0f);
             }
             audioBase64 = absl::Base64Escape(std::string_view(reinterpret_cast<const char*>(pcm16.data()), pcm16.size() * sizeof(int16_t)));

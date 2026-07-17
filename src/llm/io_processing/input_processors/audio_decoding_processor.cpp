@@ -19,6 +19,8 @@
 #include <cstring>
 #include <string>
 #include <variant>
+#include <vector>
+#include <utility>
 
 #include "absl/strings/escaping.h"
 #include <openvino/runtime/tensor.hpp>
