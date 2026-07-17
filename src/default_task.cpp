@@ -59,7 +59,9 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
     DefaultTaskDetector detector;
 
     if (modelPath.has_value() && !modelPath->empty()) {
-        const std::filesystem::path pathFs(*modelPath);
+        // Normalize first to remove any trailing separator so that filename()
+        // always returns the leaf directory name, e.g. "/models/llama/" → "llama".
+        const std::filesystem::path pathFs = std::filesystem::path(*modelPath).lexically_normal();
         // Use only the leaf directory name for keyword-based disambiguation
         // (e.g. "Qwen3-Embedding-0.6B"), not the full path which may contain
         // unrelated keywords from parent directories.

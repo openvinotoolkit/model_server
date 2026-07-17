@@ -59,7 +59,7 @@ const std::vector<std::pair<std::string, std::string>> CLIParserDetermineTaskTes
     {"sdxl", "image_generation"},
     {"flux_pipeline", "image_generation"},
     {"qwen3_multi_arch", "speech2text"},
-    {"invalid_architecture", ""}  // This model has an unsupported architecture and should throw an exception
+    {"invalid_architecture", ""}  // unrecognised architecture — detection returns nullopt
 };
 
 INSTANTIATE_TEST_SUITE_P(
