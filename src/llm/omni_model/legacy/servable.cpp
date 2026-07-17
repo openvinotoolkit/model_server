@@ -22,7 +22,10 @@
 #include <utility>
 #include <vector>
 
+#pragma warning(push)
+#pragma warning(disable : 6001)
 #include "absl/strings/escaping.h"
+#pragma warning(pop)
 
 #include "../../../logging.hpp"
 #include "../../../status.hpp"

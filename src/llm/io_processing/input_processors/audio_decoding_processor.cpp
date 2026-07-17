@@ -22,7 +22,10 @@
 #include <vector>
 #include <utility>
 
+#pragma warning(push)
+#pragma warning(disable : 6001)
 #include "absl/strings/escaping.h"
+#pragma warning(pop)
 #include <openvino/runtime/tensor.hpp>
 
 #include "../../../logging.hpp"
