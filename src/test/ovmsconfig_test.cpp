@@ -802,10 +802,12 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableWithBadAdditionalParameters) 
         "/config/path",
         "--target_device",
         "GPU",
+        "--invalid_param",
+        "value",
         "--model_path",
         "/model/path"};
-    int arg_count = 10;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed: target_device,");
+    int arg_count = 12;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - unmatched arguments: --invalid_param, value,");
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {
@@ -3148,6 +3150,40 @@ TEST(OvmsGraphCliParserTest, noneParserNamesAreAccepted) {
     EXPECT_EQ(graphSettings.toolParser.value(), "none");
     ASSERT_TRUE(graphSettings.reasoningParser.has_value());
     EXPECT_EQ(graphSettings.reasoningParser.value(), "none");
+}
+
+TEST_F(OvmsInferredTaskTest, positiveConfigureModeInfersTaskFromModel) {
+    const std::string modelPath = resolveTestModelPath("llama");
+    const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        FAIL() << "Test prerequisite missing: " << configJson.string();
+    }
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--configure",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--cache_size",
+        (char*)"3",
+    };
+    int arg_count = 6;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::CONFIGURE_MODE);
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigureModeRequiresTaskWhenCannotInfer) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--configure",
+        (char*)"--model_path",
+        (char*)"/non/existing/model/path",
+    };
+    int arg_count = 4;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv),
+        ::testing::ExitedWithCode(OVMS_EX_USAGE),
+        "Could not infer model task");
 }
 
 #pragma GCC diagnostic pop

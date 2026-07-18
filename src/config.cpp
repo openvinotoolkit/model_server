@@ -137,8 +137,13 @@ bool Config::check_hostname_or_ip(const std::string& input) {
     }
 }
 
-bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings) {
-    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path", "config_path"};
+bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings, ConfigExportType exportType) {
+    static const std::vector<std::string> allowedForRemove = {"model_name", "config_path"};
+    static const std::vector<std::string> allowedForAdd = {"model_name", "model_path", "config_path",
+        "batch_size", "shape", "layout", "mean", "scale", "color_format", "precision",
+        "model_version_policy", "nireq", "target_device", "plugin_config"};
+
+    const auto& allowedUserSettings = (exportType == ENABLE_MODEL) ? allowedForAdd : allowedForRemove;
     std::vector<std::string> usedButDisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;
@@ -156,7 +161,11 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
         for (const std::string& userSetting : usedButDisallowedUserSettings) {
             arguments += userSetting + ", ";
         }
-        std::cerr << "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed: " << arguments << std::endl;
+        if (exportType == ENABLE_MODEL) {
+            std::cerr << "Adding models to the configuration file does not support parameters: " << arguments << std::endl;
+        } else {
+            std::cerr << "Removing models from the configuration file allows passing only model_name parameter. Invalid parameters passed: " << arguments << std::endl;
+        }
 
         return false;
     }
@@ -169,9 +178,9 @@ bool Config::validate() {
         std::cerr << "--source_model should be used combined with --task" << std::endl;
         return false;
     }
-    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE || this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE) {
+    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE || this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE || this->serverSettings.serverMode == CONFIGURE_MODE) {
         // When --task is used with --model_path (no HF pulling), sourceModel and downloadPath are not required
-        bool taskWithModelPath = this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE && !this->modelsSettings.modelPath.empty();
+        bool taskWithModelPath = (this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE || this->serverSettings.serverMode == CONFIGURE_MODE) && !this->modelsSettings.modelPath.empty();
         if (!taskWithModelPath) {
             if (!serverSettings.hfSettings.sourceModel.size()) {
                 std::cerr << "source_model parameter is required for pull mode";
@@ -248,7 +257,7 @@ bool Config::validate() {
             }
         }
         // No more validation needed
-        if (this->serverSettings.serverMode == HF_PULL_MODE) {
+        if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == CONFIGURE_MODE) {
             return true;
         }
     }
@@ -316,7 +325,7 @@ bool Config::validate() {
             return false;
         }
 
-        if (!Config::validateUserSettingsInConfigAddRemoveModel(this->modelsSettings))
+        if (!Config::validateUserSettingsInConfigAddRemoveModel(this->modelsSettings, this->serverSettings.exportConfigType))
             return false;
     }
 

@@ -17,7 +17,6 @@
 
 #include <cstdlib>
 #include <filesystem>
-#include <iostream>
 #include <optional>
 #include <string>
 #include <utility>
@@ -69,14 +68,12 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
         ModelCatalogContext ctx(pathFs, identifier);
         const std::string task = detector.detect(ctx);
         if (task.empty()) {
-            std::cout << "Could not infer model task for path '" << *modelPath << "'" << std::endl;
             return std::nullopt;
         }
         return task;
     }
 
     if (!sourceModel.has_value() || sourceModel->empty()) {
-        std::cout << "Could not infer model task: neither model_path nor source_model provided" << std::endl;
         return std::nullopt;
     }
 
@@ -87,7 +84,6 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
             ModelCatalogContext ctx(localModelDir, *sourceModel);
             const std::string task = detector.detect(ctx);
             if (task.empty()) {
-                std::cout << "Could not infer model task for source model '" << *sourceModel << "'" << std::endl;
                 return std::nullopt;
             }
             return task;
@@ -117,13 +113,11 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
         if (indexStatus.ok()) {
             ctx.addContent("model_index.json", std::move(indexBody));
         } else {
-            std::cout << "Could not download model config from '" << configUrl << "' or '" << indexUrl << "'" << std::endl;
             return std::nullopt;
         }
     }
     const std::string task = detector.detect(ctx);
     if (task.empty()) {
-        std::cout << "Could not infer model task for source model '" << *sourceModel << "'" << std::endl;
         return std::nullopt;
     }
     return task;

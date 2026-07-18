@@ -76,7 +76,7 @@ ImageGenerationGraphSettingsImpl& ImageGenerationGraphCLIParser::defaultGraphSet
 }
 
 void ImageGenerationGraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "--pull --task image generation/edit/inpainting graph options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull --task image_generation [OPTIONS...]\n  ovms --configure --model_path <MODEL_PATH> --task image_generation [OPTIONS...]", "--task image_generation options");
     options->allow_unrecognised_options();
 
     // clang-format off
@@ -150,7 +150,7 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (serverSettings.serverMode != HF_PULL_MODE && serverSettings.serverMode != HF_PULL_AND_START_MODE) {
+        if (serverSettings.serverMode != HF_PULL_MODE && serverSettings.serverMode != HF_PULL_AND_START_MODE && serverSettings.serverMode != CONFIGURE_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
