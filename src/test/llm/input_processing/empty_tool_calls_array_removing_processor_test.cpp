@@ -48,7 +48,6 @@ TEST(EmptyToolCallsArrayRemovingProcessorTest, EmptyToolCallsArrayRemoved) {
     const auto& result = std::get<ov::genai::ChatHistory>(req.input);
     EXPECT_TRUE(result[0]["content"].is_string());
     EXPECT_EQ(result[0]["content"].as_string().value_or(""), "What is the weather in Szczecin?");
-    
 }
 
 TEST(EmptyToolCallsArrayRemovingProcessorTest, NonEmptyArrayPreserved) {
@@ -56,7 +55,6 @@ TEST(EmptyToolCallsArrayRemovingProcessorTest, NonEmptyArrayPreserved) {
     ov::AnyMap msg = {{"role", std::string("assistant")}};
     msg["tool_calls"] = ov::genai::JsonContainer::from_json_string(
         R"([{"name":"get_weather","parameters":{"city":"Szczecin"}}])");
-
 
     history.push_back(msg);
 
