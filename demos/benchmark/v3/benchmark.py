@@ -467,8 +467,16 @@ elif args["backend"] == "speech2text" or args["backend"] == "translations":
     print("Tokens:",num_tokens)
     print(f"Success rate: {success_rate}%. ({success_count}/{total_count})")
     print(f"Throughput - Tokens per second: {num_tokens / benchmark_results['duration']:^,.1f}")
-    print(f"Mean latency: {np.mean(benchmark_results['latencies'])*1000:.2f} ms")
-    print(f"Median latency: {np.median(benchmark_results['latencies'])*1000:.2f} ms")
+
+    successful_latencies = [
+        l for l, s in zip(benchmark_results['latencies'], benchmark_results['successes']) if s and l > 0
+    ]
+    if successful_latencies:
+        print(f"Mean latency: {np.mean(successful_latencies)*1000:.2f} ms")
+        print(f"Median latency: {np.median(successful_latencies)*1000:.2f} ms")
+    else:
+        print("Mean latency: n/a")
+        print("Median latency: n/a")
     print(f"Average document length: {num_tokens / len(docs)} tokens")
 else:
     num_tokens = count_tokens(docs=docs,model=args["model"])
