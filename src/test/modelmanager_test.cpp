@@ -2244,7 +2244,7 @@ TEST_F(ModelManagerCacheDirTest, MultipleModelsFromConfigJsonGetGlobalCacheDir) 
                 "config": {
                     "name": "model1",
                     "base_path": ")JSON" +
-        dummyModelPath + R"JSON(",
+                                dummyModelPath + R"JSON(",
                     "shape": "(1, 10)",
                     "target_device": "CPU",
                     "nireq": 1,
@@ -2255,7 +2255,7 @@ TEST_F(ModelManagerCacheDirTest, MultipleModelsFromConfigJsonGetGlobalCacheDir) 
                 "config": {
                     "name": "model2",
                     "base_path": ")JSON" +
-        dummyModelPath + R"JSON(",
+                                dummyModelPath + R"JSON(",
                     "shape": "(1, 10)",
                     "target_device": "CPU",
                     "nireq": 1
@@ -2313,7 +2313,7 @@ TEST_F(ModelManagerCacheDirTest, ConfigJsonWithMultipleModelsOneWithPluginConfig
                 "config": {
                     "name": "model_with_config",
                     "base_path": ")JSON" +
-        dummyModelPath + R"JSON(",
+                                dummyModelPath + R"JSON(",
                     "shape": "(1, 10)",
                     "target_device": "CPU",
                     "nireq": 2,
@@ -2324,7 +2324,7 @@ TEST_F(ModelManagerCacheDirTest, ConfigJsonWithMultipleModelsOneWithPluginConfig
                 "config": {
                     "name": "model_no_config",
                     "base_path": ")JSON" +
-        dummyModelPath + R"JSON(",
+                                dummyModelPath + R"JSON(",
                     "shape": "(1, 10)",
                     "target_device": "CPU",
                     "nireq": 1
