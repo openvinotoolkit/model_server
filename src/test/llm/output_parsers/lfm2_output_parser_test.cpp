@@ -167,8 +167,6 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
 TEST_F(LFM2OutputParserTest, ParseToolCallWithObjectArguments) {
     std::string inputWithProperClosure = "<|tool_call_start|>[dummy(config={'name': 'astro_config', 'value': 99})]<|tool_call_end|>";
 
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
@@ -188,8 +186,6 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithObjectArguments) {
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArguments) {
     std::string inputWithProperClosure = "<|tool_call_start|>[test1(arg1=\"data1, data2\")]<|tool_call_end|>";
 
-    // LFM2 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
     std::vector<std::string> inputs = {inputWithProperClosure};
     for (auto& input : inputs) {
         auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
@@ -601,7 +597,7 @@ TEST_F(LFM2OutputParserTest, StreamingWithContentBetweenToolCalls) {
         {"<|tool_call_end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ANOTHER_CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"ANOTHER_CONTENT_AFTER_TOOL_CALL"}})"},
         {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"solve", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[solve", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"(e", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":2,"function":{"name":"solve"}}]}})"},
         {"quation", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"=\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -685,7 +681,27 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithArgumentMissingEquals) {
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "broken");
 }
 
+TEST_F(LFM2OutputParserTest, ParseToolCallWithArgumentMissingValue) {
+    // Argument without value - parseSingleArgument sets isValid = false
+    std::string input = "<|tool_call_start|>[broken(arg1=)]<|tool_call_end|>";
+    auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    // The tool call is parsed but the argument value will be empty and invalid
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "broken");
+}
+
+TEST_F(LFM2OutputParserTest, ParseToolCallWithMissingSquareBracket) {
+    std::string input = "<|tool_call_start|>broken(arg1=1)<|tool_call_end|>";
+    auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
 // Tests with special characters
+
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingComparison) {
     std::string input = R"x(<|tool_call_start|>[search(query="price >= 100, (sale)", limit=5)]<|tool_call_end|>)x";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;

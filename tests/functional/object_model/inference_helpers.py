@@ -40,9 +40,6 @@ from grpc._channel import _InactiveRpcError
 from openai import OpenAI
 from pydantic import BaseModel
 from retry.api import retry_call
-from tensorflow import make_tensor_proto
-from tensorflow_serving.apis import get_model_status_pb2
-from tensorflow_serving.apis.predict_pb2 import PredictRequest
 from tritonclient.grpc import service_pb2, service_pb2_grpc
 from tritonclient.grpc.service_pb2 import ModelInferRequest
 from tritonclient.utils import InferenceServerException, deserialize_bytes_tensor, serialize_byte_tensor
@@ -62,19 +59,18 @@ from tests.functional.utils.inference.serving.openai import (
     AudioApi,
     ResponsesApi,
 )
-from tests.functional.utils.inference.serving.tf import TensorFlowServingWrapper
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import FrameworkMessages, skip_if_runtime
 from tests.functional.utils.generative_ai.validation_utils import GenerativeAIValidationUtils
 from tests.functional.config import binary_io_images_path, wait_for_messages_timeout
-from ovms.constants.model_dataset import (
+from tests.functional.models.models import ModelInfo
+from tests.functional.models.models_datasets import (
     BinaryDummyModelDataset,
     DefaultBinaryDataset,
     ExactShapeBinaryDataset,
     LanguageModelDataset,
     ModelDataset,
 )
-from ovms.constants.models import ModelInfo
 from tests.functional.constants.ovms import CurrentTarget as ct
 from tests.functional.constants.ovms import MediaPipeConstants, Ovms
 from tests.functional.constants.pipelines import SimpleMediaPipe
@@ -223,14 +219,6 @@ class BinaryInferenceRequest(InferenceRequest):
             request = {"request": request}
         elif isinstance(client, KserveWrapper) and isinstance(client, RestCommunicationInterface):
             request = self._create_kfs_post_request(input_data)
-        elif isinstance(client, TensorFlowServingWrapper) and isinstance(client, RestCommunicationInterface):
-            request = self._create_post_request(self.model.input_names, input_data, request_format=self.layout)
-        elif isinstance(client, TensorFlowServingWrapper) and isinstance(client, GrpcCommunicationInterface):
-            request = PredictRequest()
-            request.model_spec.name = self.model.name
-            for input_name, input_object in input_data.items():
-                request.inputs[input_name].CopyFrom(make_tensor_proto(input_object, shape=[len(input_object)]))
-            request = {"request": request}
         else:
             raise NotImplementedError
         return request
@@ -744,7 +732,7 @@ def predict_and_assert(inference_infos: List[InferenceInfo], validate_results=Tr
                 MediaPipeInferenceResponse.create(inference_info, outputs).validate(
                     inference_info.input_data, output_key=output_key
                 )
-            elif inference_info.model.is_llm:
+            elif inference_info.model.is_generative:
                 LLMInferenceResponse.create(inference_info, outputs).validate()
             else:
                 InferenceResponse.create(inference_info, outputs).validate(inference_info.input_data)
@@ -824,76 +812,20 @@ def prepare_and_run_set_of_predict_requests(ovms: OvmsInstance, models, api_type
 def get_model_status(client, accepted_model_states=None, model_version=None, port=None):
     model_state = None
     port = port if port is not None else client.port
-    if client.serving == KFS:
-        if accepted_model_states is not None:
-            for elem in accepted_model_states:
-                is_ready = True if elem == Ovms.ModelStatus.AVAILABLE else False
-                try:
-                    model_state = check_model_readiness(client.model, port, type(client), timeout=30, is_ready=is_ready)
-                except ModelNotReadyException:
-                    logger.info(f"Model state not in accepted state: {elem}")
-                finally:
-                    break
-            else:
-                raise ModelNotReadyException(f"Failed to check model: {client.model}")
+    if accepted_model_states is not None:
+        for elem in accepted_model_states:
+            is_ready = True if elem == Ovms.ModelStatus.AVAILABLE else False
+            try:
+                model_state = check_model_readiness(client.model, port, type(client), timeout=30, is_ready=is_ready)
+            except ModelNotReadyException:
+                logger.info(f"Model state not in accepted state: {elem}")
+            finally:
+                break
         else:
-            model_state = check_model_readiness(client.model, port, type(client))
+            raise ModelNotReadyException(f"Failed to check model: {client.model}")
     else:
-        status = client.get_model_status()
-        logger.debug(f"status: {status}")
-        if model_version is None:
-            model_state = Ovms.ModelStatus(status.model_version_status[0].state)
-        else:
-            for model_version_status in status.model_version_status:
-                if model_version_status.version == model_version:
-                    model_state = Ovms.ModelStatus(model_version_status.state)
-                    break
-        if accepted_model_states:
-            if model_state not in accepted_model_states:
-                model_str_name = client.model_name
-                raise ValueError(f"Incorrect state of {model_str_name}: {model_state}")
+        model_state = check_model_readiness(client.model, port, type(client))
     return model_state
-
-
-def get_and_validate_model_status(inference, expected_models_status):
-    status = inference.get_model_status()
-    if expected_models_status is not None:
-        assert len(expected_models_status) == len(status.model_version_status)
-
-    for i, model_version_status in enumerate(status.model_version_status):
-        model_state = model_version_status.state
-        error_message = model_version_status.status.error_message
-        version = model_version_status.version
-
-        if expected_models_status is None or expected_models_status[i].get("accepted_states", None) is None:
-            model_accepted_states = [
-                get_model_status_pb2.ModelVersionStatus.START,
-                get_model_status_pb2.ModelVersionStatus.AVAILABLE,
-                get_model_status_pb2.ModelVersionStatus.UNLOADING,
-                get_model_status_pb2.ModelVersionStatus.LOADING,
-                get_model_status_pb2.ModelVersionStatus.END,
-            ]
-        else:
-            model_accepted_states = expected_models_status[i]["accepted_states"]
-
-        if model_state not in model_accepted_states:
-            raise ValueError(f"Incorrect model state: {model_state}")
-
-        if expected_models_status is None or expected_models_status[i].get("accepted_error_messages", None) is None:
-            if model_state == get_model_status_pb2.ModelVersionStatus.LOADING:
-                model_accepted_error_messages = ["OK", "UNKNOWN"]
-            else:
-                model_accepted_error_messages = ["OK"]
-        else:
-            model_accepted_error_messages = expected_models_status[i]["accepted_error_messages"]
-
-        if error_message not in model_accepted_error_messages:
-            raise ValueError(f"Incorrect error message: {model_state}")
-
-        if expected_models_status is not None:
-            assert version == expected_models_status[i]["version"]
-
-    return status
 
 
 def get_multiple_model_status(models_and_expected_state):

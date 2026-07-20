@@ -25,6 +25,7 @@
 
 #include <fstream>
 
+#include <openvino/runtime/properties.hpp>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 
@@ -36,9 +37,13 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../config.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
+#include "io_processing/chat_template/analyzer.hpp"
+#include "io_processing/chat_template/probe.hpp"
+#include "io_processing/parser_config_validation.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
@@ -52,6 +57,38 @@
 namespace ovms {
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
+
+// Dry-run probes: render the chat template with synthetic inputs to empirically
+// detect what the template requires. This is model-agnostic and tests actual
+// template behavior rather than relying solely on string pattern matching.
+// Probes for:
+//   - requiresObjectArguments (workaround: string→object conversion of tool_call arguments)
+static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServableProperties> properties) {
+    if (properties->tokenizer.get_chat_template().empty()) {
+        return;
+    }
+    if (!properties->chatTemplateCaps.supportsToolCalls) {
+        return;
+    }
+
+#if (PYTHON_DISABLE == 0)
+    if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->templateProcessor.chatTemplate != nullptr) {
+        if (!probeChatTemplateCapsJinja(properties->templateProcessor, properties->chatTemplateCaps)) {
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Jinja cannot render this template's tool calls correctly");
+        }
+        return;
+    }
+#endif
+
+    // Minja path — use the shared probe component
+    if (!probeChatTemplateCapsMinja(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Minja cannot render this template's tool calls correctly");
+    }
+
+    if (!properties->reasoningParserName.empty() && !probeChatTemplateReasoning(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support reasoning_content field");
+    }
+}
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
 #if (PYTHON_DISABLE == 0)
@@ -81,6 +118,78 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         } else {
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
         }
+    }
+
+    // Analyze the chat template to detect capabilities and model family
+    std::string templateSource = properties->tokenizer.get_chat_template();
+    if (!templateSource.empty()) {
+        auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
+        properties->chatTemplateCaps = analysisResult.caps;
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
+            analysisResult.caps.toString());
+        // Auto-detect or report manually configured tool parser
+        if (isParserDisabled(properties->toolParserName)) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
+            properties->toolParserName.clear();
+        } else if (!properties->toolParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
+        } else if (analysisResult.detectedToolParser.has_value()) {
+            properties->toolParserName = analysisResult.detectedToolParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
+        }
+        // Auto-detect or report manually configured reasoning parser
+        if (isParserDisabled(properties->reasoningParserName)) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
+            properties->reasoningParserName.clear();
+        } else if (!properties->reasoningParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
+        } else if (analysisResult.detectedReasoningParser.has_value()) {
+            properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
+        }
+
+        // Dry-run probes: empirically verify requiresObjectArguments
+        // by rendering synthetic messages through GenAI's minja and checking the output.
+        // First check if minja can render basic chat at all (catches unsupported Jinja extensions)
+#if (PYTHON_DISABLE == 0)
+        if (properties->chatTemplateMode != ChatTemplateMode::JINJA) {
+#endif
+            if (!probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
+                                                           "Disabling /chat/completions endpoint for this model.");
+                properties->tokenizer.set_chat_template("");
+                return;
+            }
+#if (PYTHON_DISABLE == 0)
+        }
+#endif
+        probeServableChatTemplateCaps(properties);
+    }
+
+    // Populate the InputProcessorContext from the now-fully-initialized properties.
+    properties->inputProcessorContext.tokenizer = properties->tokenizer;
+    properties->inputProcessorContext.config.useMinja = (properties->chatTemplateMode != ChatTemplateMode::JINJA);
+    properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
+#if (PYTHON_DISABLE == 0)
+    properties->inputProcessorContext.templateProcessor = &properties->templateProcessor;
+#endif
+}
+
+void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties) {
+    // Propagate the global --cache_dir (ServerSettings) into the pipeline plugin config.
+    // Unlike the non-CB ModelInstance path (ModelInstance::setCacheOptions), these GenAI
+    // initializers construct the pipeline directly, so the server-level cache_dir is
+    // otherwise never applied and compiled-model cache artifacts are never persisted.
+    // An explicit CACHE_DIR in the node's plugin_config remains authoritative.
+    const std::string& globalCacheDir = Config::instance().cacheDir();
+    if (globalCacheDir.empty()) {
+        return;
+    }
+    if (properties->pluginConfig.find(ov::cache_dir.name()) == properties->pluginConfig.end()) {
+        properties->pluginConfig[ov::cache_dir.name()] = globalCacheDir;
+        SPDLOG_DEBUG("Applying global cache_dir to GenAI pipeline: {}", globalCacheDir);
+    } else {
+        SPDLOG_DEBUG("CACHE_DIR set explicitly in node plugin_config; keeping user value over global cache_dir");
     }
 }
 

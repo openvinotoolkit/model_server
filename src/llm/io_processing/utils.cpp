@@ -91,4 +91,89 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
     }
     return std::string::npos;
 }
+
+void trimNewline(std::string& str) {
+    if (str.empty()) {
+        return;
+    }
+    if (str.back() == '\n') {
+        str.pop_back();
+    }
+    if (str.empty()) {
+        return;
+    }
+    if (str.front() == '\n') {
+        str.erase(str.begin());
+    }
+}
+
+const char* jsonTypeOf(const rapidjson::Value& val) {
+    if (val.IsObject())
+        return "object";
+    if (val.IsArray())
+        return "array";
+    if (val.IsString())
+        return "string";
+    if (val.IsBool())
+        return "bool";
+    if (val.IsInt())
+        return "int";
+    if (val.IsUint())
+        return "uint";
+    if (val.IsInt64())
+        return "int64";
+    if (val.IsUint64())
+        return "uint64";
+    if (val.IsDouble())
+        return "double";
+    if (val.IsNumber())
+        return "number";
+    if (val.IsNull())
+        return "null";
+    return "unknown";
+}
+
+void enforceStringValue(rapidjson::Value& v, rapidjson::Document::AllocatorType& alloc) {
+    if (v.IsString()) {
+        return;
+    }
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    v.Accept(writer);
+    v.SetString(buffer.GetString(), buffer.GetLength(), alloc);
+}
+
+void normalizeBooleanString(std::string& value) {
+    if (value == "True" || value == "TRUE") {
+        value = "true";
+    } else if (value == "False" || value == "FALSE") {
+        value = "false";
+    }
+}
+
+std::string replaceSingleWithDoubleQuotes(const std::string& input) {
+    std::string result;
+    result.reserve(input.size());
+    bool insideDoubleQuote = false;
+    bool insideSingleQuote = false;
+    for (size_t i = 0; i < input.size(); ++i) {
+        char c = input[i];
+        if (c == '\\' && i + 1 < input.size()) {
+            result += c;
+            result += input[++i];
+            continue;
+        }
+        if (c == '"' && !insideSingleQuote) {
+            insideDoubleQuote = !insideDoubleQuote;
+            result += c;
+        } else if (c == '\'' && !insideDoubleQuote) {
+            insideSingleQuote = !insideSingleQuote;
+            result += '"';
+        } else {
+            result += c;
+        }
+    }
+    return result;
+}
+
 }  // namespace ovms

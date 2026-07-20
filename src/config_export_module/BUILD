@@ -27,6 +27,7 @@ ovms_cc_library(
         "//src/filesystem:libovmslocalfilesystem",
         "//src:libovmslogging",
         "//src:libovmsschema",
+        "//src/utils:rapidjson_utils",
     ],
     visibility = ["//visibility:public",],
 )

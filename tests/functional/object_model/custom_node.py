@@ -25,7 +25,7 @@ import numpy as np
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process
 from tests.functional.config import custom_nodes_path, ovms_c_repo_path
-from ovms.constants.models import ModelInfo
+from tests.functional.models.models import ModelInfo
 from tests.functional.constants.ovms import CurrentOvmsType
 from tests.functional.constants.paths import Paths
 
@@ -267,7 +267,6 @@ class CustomNodeImageTransformation(OvmsCCustomNode):
             "mean_values": "[-2,-2,-2]",
             "debug": "true",
         }
-
 
 @dataclass
 class CustomNodeDemultiply(OvmsTestDevCustomNode):

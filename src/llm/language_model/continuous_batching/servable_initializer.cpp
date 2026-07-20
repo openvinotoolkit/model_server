@@ -194,6 +194,10 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
 
     properties->device = nodeOptions.device();
+    if (properties->device.empty()) {
+        properties->device = recommendTargetDevice();
+        SPDLOG_INFO("No device specified, using recommended device: {}", properties->device);
+    }
     properties->bestOfLimit = nodeOptions.best_of_limit();
     properties->enableToolGuidedGeneration = nodeOptions.enable_tool_guided_generation();
 
@@ -230,6 +234,8 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
         return status;
     }
+
+    applyGlobalCacheDir(properties);
 
     if (properties->device == "CPU") {
         status = applyDefaultCpuProperties(properties->pluginConfig);

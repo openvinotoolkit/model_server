@@ -47,10 +47,10 @@ wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/c
 wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/python/classes.py
 ```
 
-##### 2.3 Install the Python-based ovmsclient package
+##### 2.3 Install the Python-based client package
 
 ```bash
-pip3 install ovmsclient
+pip3 install tritonclient[grpc] numpy
 ```
 
 
@@ -60,14 +60,24 @@ pip3 install ovmsclient
 ```bash
 echo 'import numpy as np
 from classes import imagenet_classes
-from ovmsclient import make_grpc_client
+import tritonclient.grpc as grpcclient
 
-client = make_grpc_client("localhost:9000")
+client = grpcclient.InferenceServerClient(url="localhost:9000")
 
+# Get model metadata to discover input/output names
+metadata = client.get_model_metadata("resnet")
+input_name = metadata.inputs[0].name
+output_name = metadata.outputs[0].name
+
+# Load image as binary
 with open("zebra.jpeg", "rb") as f:
-   img = f.read()
+    img_bytes = f.read()
 
-output = client.predict({"0": img}, "resnet")
+# Run inference
+infer_input = grpcclient.InferInput(input_name, [1], "BYTES")
+infer_input.set_data_from_numpy(np.array([img_bytes], dtype=np.object_))
+result = client.infer("resnet", [infer_input])
+output = result.as_numpy(output_name)
 result_index = np.argmax(output[0])
 print(imagenet_classes[result_index])' >> predict.py
 

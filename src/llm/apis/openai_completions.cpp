@@ -163,7 +163,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         return absl::InvalidArgumentError("Messages are not an array");
     if (it->value.GetArray().Size() == 0)
         return absl::InvalidArgumentError("Messages array cannot be empty");
-    bool jsonChanged = false;
     for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
         auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
@@ -196,57 +195,37 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                 continue;
             }
             if (memberName == "content" && member->value.IsArray()) {
-                // Adjust content field format when it is passed as an array of objects (typically with images)
-                if (member->value.GetArray().Size() == 0) {
-                    return absl::InvalidArgumentError("Invalid message structure - content array is empty");
-                }
-                jsonChanged = true;
-                std::string combinedText;
-                for (auto& v : member->value.GetArray()) {
+                // Empty content arrays are accepted and preserved as-is. The
+                // EmptyContentArrayNormalizationProcessor converts them to null before
+                // downstream processing.
+                for (const auto& v : member->value.GetArray()) {
                     if (!v.IsObject()) {
                         return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
                     }
-                    auto entry = v.GetObject();
+                    const auto entry = v.GetObject();
                     if (!entry.HasMember("type") || !entry["type"].IsString()) {
                         return absl::InvalidArgumentError("Invalid message structure - content object type missing");
                     }
-                    auto entryType = entry["type"].GetString();
-                    if (entryType == std::string("text")) {
+                    const std::string entryType = entry["type"].GetString();
+                    if (entryType == "text") {
                         if (!entry.HasMember("text") || !entry["text"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - content text missing");
                         }
-                        if (!combinedText.empty()) {
-                            combinedText += "\n";
-                        }
-                        combinedText.append(entry["text"].GetString(), entry["text"].GetStringLength());
-                        continue;
-                    } else if (entryType == std::string("image_url")) {
+                    } else if (entryType == "image_url") {
                         if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
                             return absl::InvalidArgumentError("Invalid message structure - content image_url missing");
                         }
-                        auto imageUrl = entry["image_url"].GetObject();
+                        const auto imageUrl = entry["image_url"].GetObject();
                         if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
                         }
-                        std::string url = imageUrl["url"].GetString();
-                        auto tensorResult = loadImage(url, allowedLocalMediaPath, allowedMediaDomains);
-                        if (!tensorResult.ok()) {
-                            return tensorResult.status();
-                        }
-                        request.imageHistory.push_back({i, tensorResult.value()});
                     } else {
                         return absl::InvalidArgumentError("Unsupported content type");
                     }
                 }
-                // Flatten all text parts (joined with newlines) into the "content" field.
-                // Images are stored separately in request.imageHistory.
-                Value contentText(rapidjson::kStringType);
-                contentText.SetString(combinedText.c_str(), combinedText.length(), doc.GetAllocator());
-                member->value = contentText;
-                // Add new field to the last message in history if content is text
-                if (member->value.IsString()) {
-                    request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
-                }
+                // Preserve content array for downstream processors
+                // (ImageDecodingProcessor for VLM, TextContentNormalizationProcessor for LM).
+                request.chatHistory.last()[memberName] = rapidJsonValueToJsonContainer(member->value);
             }
         }
         auto lastMessage = request.chatHistory.last();
@@ -256,20 +235,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         if (!lastMessage.contains("content")) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Message does not have content field which might be an issue for some chat templates. Adding empty content.");
             lastMessage["content"] = "";
-            obj.AddMember("content", Value().SetString("", doc.GetAllocator()), doc.GetAllocator());
-            jsonChanged = true;
         }
         // If message has tool calls, make sure each tool call has "arguments" field
-        auto status = ensureArgumentsInToolCalls(obj, jsonChanged);
+        auto status = ensureArgumentsInToolCalls(obj);
         if (status != absl::OkStatus()) {
             return status;
         }
-    }
-    if (jsonChanged) {
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        request.processedJson = buffer.GetString();
     }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed messages successfully");
     return absl::OkStatus();
@@ -600,8 +571,12 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(rapidjson::Doc
             if (hasToolCalls) {
                 toolCallsDetectedInStream = true;
             }
+        } else {
+            // No delta from the parser (e.g. generation ended on a swallowed token).
+            // The OpenAI API requires "delta" to always be present in each choice, so emit an empty object.
+            Value emptyDelta(kObjectType);
+            choice.AddMember("delta", emptyDelta, allocator);
         }
-        // If no "delta" member, choice has no delta — valid for the final finish_reason chunk.
     } else if (endpoint == Endpoint::COMPLETIONS) {
         // For /v1/completions, extract the plain text from the content delta.
         if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject() &&

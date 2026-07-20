@@ -233,7 +233,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(cfg.precision(), "");
     EXPECT_EQ(cfg.modelVersionPolicy(), "");
     EXPECT_EQ(cfg.nireq(), 0);
-    EXPECT_EQ(cfg.targetDevice(), "CPU");
+    EXPECT_EQ(cfg.targetDevice(), "");
     EXPECT_EQ(cfg.pluginConfig(), "");
 
     EXPECT_EQ(cfg.configPath(), getGenericFullPathForTmp("/tmp/config"));
