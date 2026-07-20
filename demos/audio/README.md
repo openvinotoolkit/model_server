@@ -257,15 +257,38 @@ pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/re
 mkdir -p models
 ```
 
-Export Speech-to-Text model with word timestamps enabled:
+Export Speech-to-Text model with word timestamps enabled.
+
+**CPU**
+
 ```console
-python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name whisper-large-v3-turbo-word-ts --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps
+python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name whisper-large-v3-turbo-word-ts --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps --target_device CPU
+```
+
+**GPU**
+
+```console
+python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name whisper-large-v3-turbo-word-ts --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps --target_device GPU
 ```
 
 :::{dropdown} **Deploying with Docker**
 
+Select deployment option depending on how you prepared models in the previous step.
+
+**CPU**
+
 ```bash
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --config_path /models/config.json
+```
+
+**GPU**
+
+In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
+to `docker run` command, use the image with GPU support.
+It can be applied using the commands below:
+
+```bash
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --config_path /models/config.json
 ```
 :::
 
@@ -377,7 +400,7 @@ To test the translations endpoint we first need to prepare an audio file with sp
 For non-English Kokoro input, set the `language` field explicitly.
 
 ```console
-curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-OpenVINO-FP16-OVMS\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
+curl -fS http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-OpenVINO-FP16-OVMS\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
 ```
 
 ### Deployment
