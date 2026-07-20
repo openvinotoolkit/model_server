@@ -1,0 +1,4 @@
+{
+  "architectures": ["XLMRobertaForSequenceClassification"],
+  "model_type": "xlm-roberta"
+}
