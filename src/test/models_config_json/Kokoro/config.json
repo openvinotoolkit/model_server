@@ -1,0 +1,9 @@
+{
+  "return_dict": true,
+  "output_hidden_states": false,
+  "dtype": null,
+  "chunk_size_feed_forward": 0,
+  "is_encoder_decoder": false,
+  "architectures": null,
+  "n_mels": 80
+}

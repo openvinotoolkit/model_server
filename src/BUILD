@@ -16,7 +16,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
-     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_DROGON",
+     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
      "create_config_settings", "PYBIND_DEPS", "ovms_cc_library")
 
 COPTS_OV_TRACE = select({
@@ -32,7 +32,7 @@ COPTS_CLOUD = select({
     "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
 })
 
-COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_DROGON + COPTS_CLOUD
+COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_CLOUD
 
 
 config_setting(
@@ -68,7 +68,6 @@ cc_shared_library(
     dynamic_deps = [],
     static_deps = [
         #"//src/filesystem:libovmsfilesystemfactory", // TODO missing symbols
-        "@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
         "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
@@ -355,7 +354,30 @@ ovms_cc_library(
         "ovms_exit_codes",
     ],
     visibility = ["//visibility:public",],
-    additional_copts = COPTS_DROGON,
+)
+ovms_cc_library(
+    name = "libovms_default_task_detector",
+    hdrs = ["default_task_detector.hpp"],
+    srcs = ["default_task_detector.cpp"],
+    deps = [
+        "//src/port:rapidjson_document",
+        "//src/port:rapidjson_error",
+        "//src/port:rapidjson_istreamwrapper",
+        "libovmsstring_utils",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "libovms_default_task",
+    hdrs = ["default_task.hpp"],
+    srcs = ["default_task.cpp"],
+    deps = [
+        "libovms_default_task_detector",
+        "libovmsstatus",
+        "//src/pull_module:curl_downloader",
+        "//src/pull_module:hf_env_vars",
+    ],
+    visibility = ["//visibility:public",],
 )
 ovms_cc_library(
     name = "libovms_cliparser",
@@ -363,6 +385,7 @@ ovms_cc_library(
     srcs = ["cli_parser.cpp"],
     deps = [
         "@com_github_jarro2783_cxxopts//:cxxopts",
+        "libovms_default_task",
         "libovms_server_settings",
         "libovms_version",
         "//src/filesystem:libovmsfilesystem",
@@ -517,7 +540,7 @@ ovms_cc_library(
         }) + [
         "//src/mediapipe_internal:libovms_mediapipe",
         "predict_request_validation_utils",
-        "tfs_utils",
+        "tensorflow_type_utils",
         "libovms_kfs_utils",
         "libovms_kfs_grpc_inference_service_h",
         "//src/kfserving_api:kfserving_api_cpp",
@@ -627,9 +650,6 @@ ovms_cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "@com_google_absl//absl/strings",
-        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        "@tensorflow_serving//tensorflow_serving/util:json_tensor",
-        "@org_tensorflow//tensorflow/core:framework",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src/utils:rapidjson_utils",
         "libovms_kfs_grpc_inference_service_h",
@@ -639,7 +659,6 @@ ovms_cc_library(
         "libovmsprofiler",
         "libovmsstatus",
         "libovmstimer",
-        "tfs_utils",
     ],
     visibility = ["//visibility:public"],
 )
@@ -661,6 +680,27 @@ ovms_cc_library(
         "libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "config_status_utils",
+    hdrs = ["config_status_utils.hpp"],
+    srcs = ["config_status_utils.cpp"],
+    deps = [
+        "model",
+        "modelinstance",
+        "model_metric_reporter",
+        "libovms_model_instance_provider",
+        "libovms_servable_name_checker",
+        "libovms_single_version_servable_definition",
+        "libovms_execution_context",
+        "libovmsmodelversionstatus",
+        "libovmsstatus",
+        "//src/dags:pipelinedefinitionstatus",
+        "//src/metrics:libovmsmetrics",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+    ],
 )
 
 ovms_cc_library(
@@ -706,8 +746,6 @@ ovms_cc_library(
     ],
     srcs = [
         "capi_frontend/capi.cpp",
-        "get_model_metadata_impl.cpp",
-        "get_model_metadata_impl.hpp",
         "http_server.hpp",
         "http_server.cpp",
         "http_rest_api_handler.hpp",
@@ -717,10 +755,6 @@ ovms_cc_library(
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
         "kfs_frontend/kfs_grpc_inference_service.cpp",
-        "model_service.hpp",
-        "model_service.cpp",
-        "prediction_service.cpp",
-        "prediction_service.hpp",
         "server.cpp",
         "server.hpp",
          ],
@@ -755,20 +789,14 @@ ovms_cc_library(
                 "//src/rerank:rerankcalculator_ov",
                 "//src/llm:llmcalculator",
             ],
-        }) + select({
-            "//:enable_drogon": [
-                "libdrogon_http_server",
-                "libmultipart_parser_drogon_impl",
-            ],
-            "//conditions:default" : [
-                "libnet_http_server",
-                # Add net-http implementation here if we ever want one
-            ],
         }) + [
+            "libdrogon_http_server",
+            "libmultipart_parser_drogon_impl",
             "cpp_headers",
             "libovms_shutdown_state",
             "ovms_header",
             "capi_backend_impl",
+            "config_status_utils",
             "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
             "modelconfig",
@@ -800,7 +828,6 @@ ovms_cc_library(
             "//src/dags:pipeline_factory",
             "//src/dags:dag_capi",
             "//src/dags:dag_kfs",
-            "//src/dags:dag_tfs",
             "//src/dags:custom_node_library_manager",
             "//src/dags:node",
             "//src/dags:node_library",
@@ -844,7 +871,6 @@ ovms_cc_library(
             "libovmsprecision_configuration",
             "libovms_tensorinfo",
             "libovmstimer",
-            "tfs_utils",
             "libovms_version",
             "libovms_version_impl",
             "serialization_common",
@@ -869,7 +895,6 @@ ovms_cc_library(
             "//src/servables_config_manager_module:servablesconfigmanagermodule",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",
-            "tfs_backend_impl",
             "anonymous_input_name",
             "libovms_servable_name_checker",
             "//src/metrics:libovms_metric_provider",
@@ -891,7 +916,7 @@ ovms_cc_library(
                     ],
                 }),
     visibility = ["//visibility:public",],
-    additional_copts = COPTS_DROGON + COPTS_OV_TRACE,
+    additional_copts = COPTS_OV_TRACE,
     additional_linkopts = select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
@@ -1266,21 +1291,14 @@ cc_import(
 )
 
 ovms_cc_library(
-    name = "tfs_utils",
-    hdrs = ["tfs_frontend/tfs_utils.hpp",],
-    srcs = [
-        "tfs_frontend/tfs_utils.cpp",],
+
+    name = "tensorflow_type_utils",
+    hdrs = ["tensorflow_type_utils.hpp"],
+    srcs = ["tensorflow_type_utils.cpp"],
     deps = [
-        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
-        "@org_tensorflow//tensorflow/core:framework", # Eigen Tensor
-        "libovmslogging",
-        "libovmsprofiler",
+        "@org_tensorflow//tensorflow/core:framework",
+        "libovmsprecision",
         "libovmsstatus",
-        "opencv_dep",
-        "tensor_conversion_common",
-        "inference_request_common",
-        "predict_request_validation_utils_impl",
     ],
     visibility = ["//visibility:public"],
 )
@@ -1297,7 +1315,6 @@ ovms_cc_library(
         "//src/port:rapidjson_stringbuffer",
     ],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_DROGON,
 )
 
 
@@ -1492,21 +1509,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "tfs_request_utils",
-    hdrs = ["tfs_frontend/tfs_request_utils.hpp",],
-    srcs = ["tfs_frontend/tfs_request_utils.cpp",],
-    deps = [
-            "libovmslogging",
-            "tfs_utils",
-            "libovmsstatus",
-            "libovmsshape",
-            "extractchoice",
-            "requesttensorextractor",
-    ],
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
-ovms_cc_library(
     name = "kfs_backend_impl",
     srcs = [
         "kfs_frontend/kfs_backend_impl.cpp",
@@ -1531,30 +1533,6 @@ ovms_cc_library(
     alwayslink = 1,
 )
 ovms_cc_library(
-    name = "tfs_backend_impl",
-    srcs = [
-        "tfs_frontend/tfs_backend_impl.cpp",
-        "tfs_frontend/tensor_conversion.cpp",
-    ],
-    deps = [
-            "tensor_conversion_after",
-            "modelinstance_h",
-            "tfs_utils",
-            "tfs_request_utils",
-            "requestprocessor",
-            "libovmstimer",
-            "tfs_serialization",
-            "inference_executor",
-            "tfs_deserialization",
-            "deserialization_main",
-            "executingstreamidguard",
-            "predict_request_validation_utils",
-            "tfs_validation",
-    ],
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
-ovms_cc_library(
     name = "kfs_validation",
     hdrs = ["kfs_frontend/validation.hpp"],
     srcs = ["kfs_frontend/validation.cpp"],
@@ -1567,21 +1545,6 @@ ovms_cc_library(
             "libovms_tensorinfo",
             "libovmsprecision",
 ],
-    visibility = ["//visibility:public",],
-)
-ovms_cc_library(
-    name = "tfs_validation",
-    hdrs = [],
-    srcs = ["tfs_frontend/validation.cpp"],
-    deps = ["predict_request_validation_utils",
-            "libovmsprofiler",
-            "libovmslogging",
-            "libovmsstatus",
-            "libovmsshape",
-            "tfs_utils",
-            "libovms_tensorinfo",
-            "libovmsprecision",
-    ],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -1601,24 +1564,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "tfs_serialization",
-    hdrs = ["tfs_frontend/serialization.hpp",],
-    srcs = ["tfs_frontend/serialization.cpp",],
-    deps = [
-            "//third_party:openvino",
-            "libovmslogging",
-            "libovmsstatus",
-            "tfs_utils",
-            "libovmsprofiler",
-            "serialization_common",
-            "libovms_tensorinfo",
-            "tensor_conversion",
-            "tensor_conversion_common",
-            "inference_request_common",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
     name = "kfs_deserialization",
     hdrs = ["kfs_frontend/deserialization.hpp",],
     srcs = ["kfs_frontend/deserialization.cpp",],
@@ -1633,26 +1578,6 @@ ovms_cc_library(
             "libovms_tensorinfo",
             "requesttensorextractor",
             "tensor_conversion",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "tfs_deserialization",
-    hdrs = ["tfs_frontend/deserialization.hpp",],
-    srcs = ["tfs_frontend/deserialization.cpp",],
-    deps = [
-            "//third_party:openvino",
-            "libovmslogging",
-            "deserialization_common",
-            "libovms_itensorfactory",
-            "tfs_utils",
-            "libovmsprofiler",
-            "libovmsstatus",
-            "libovms_tensorinfo",
-            "requesttensorextractor",
-            "tensor_conversion",
-            "tensor_conversion_common",
-            "inference_request_common",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2034,6 +1959,7 @@ ovms_cc_library(
     deps = ["cpp_headers",
             "@com_github_tencent_rapidjson//:rapidjson",
             "//third_party:openvino",
+            "//src/filesystem:libovmsfilesystem",
             "libovmslogging"],
     visibility = ["//visibility:public"],
 )
@@ -2102,26 +2028,6 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 
-# HTTP Server implementation using net_http of tensorflow
-# To use other library simply create new target and implementation of libhttp_async_writer_interface
-ovms_cc_library(
-    name = "libnet_http_server",
-    srcs = [
-        "net_http_async_writer_impl.hpp",
-        "net_http_async_writer_impl.cpp",
-    ],
-    deps = [
-        "libhttp_async_writer_interface",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-        "@tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
-        "libovmslogging",
-        "libovmsstatus",
-        "libhttp_status_code"
-    ],
-    visibility = ["//visibility:public",],
-)
-
 ovms_cc_library( # TODO split further
     name = "cpp_headers",
     hdrs = [
@@ -2157,8 +2063,6 @@ cc_binary(
     ],
     linkstatic = True,
 )
-
-
 
 cc_binary(
     name = "optimum-cli",
@@ -2204,12 +2108,6 @@ cc_binary(
             "//src/python/binding:pyovms.so",
         ],
         "//:disable_python": []
-    }) + select({
-        "//:espeak_on": [
-            "//third_party:espeak_ng",
-            "//third_party:espeak_ng_data",
-        ],
-        "//:espeak_off": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
@@ -2227,16 +2125,8 @@ cc_test(
         "test/demultiplexer_node_test.cpp",
         "test/deserialization_tests.cpp",
         "test/ensemble_config_change_stress.cpp",
-        "test/ensemble_flow_custom_node_tests.cpp",
-        "test/ensemble_mapping_config_tests.cpp",
         "test/ensemble_metadata_test.cpp",
-        "test/ensemble_tests.cpp",
-        "test/gather_node_test.cpp",
-        "test/get_model_metadata_response_test.cpp",
         "test/standalone_http_server_test.cpp",
-        "test/get_model_metadata_signature_test.cpp",
-        "test/get_model_metadata_validation_test.cpp",
-        "test/get_pipeline_metadata_response_test.cpp",
         "test/http_rest_api_handler_test.cpp",
         "test/kfs_metadata_test.cpp",
         "test/kfs_rest_test.cpp",
@@ -2247,7 +2137,6 @@ cc_test(
         "test/metrics_flow_test.cpp",
         "test/mockmodelinstancechangingstates.hpp",
         "test/model_cache_test.cpp",
-        "test/model_service_test.cpp",
         "test/model_test.cpp",
         "test/model_version_policy_test.cpp",
         "test/modelconfig_test.cpp",
@@ -2261,7 +2150,6 @@ cc_test(
         "test/ovmsconfig_test.cpp",
         "test/pipelinedefinitionstatus_test.cpp",
         "test/predict_validation_test.cpp",
-        "test/prediction_service_test.cpp",
         "test/rest_utils_test.cpp",
         "test/schema_test.cpp",
         "test/serialization_tests.cpp",
@@ -2273,11 +2161,8 @@ cc_test(
         "test/tensor_conversion_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
+        "test/task_determine_test.cpp",
         "test/test_http_utils.hpp",
-        "test/tfs_rest_parser_binary_inputs_test.cpp",
-        "test/tfs_rest_parser_column_test.cpp",
-        "test/tfs_rest_parser_nonamed_test.cpp",
-        "test/tfs_rest_parser_row_test.cpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
         "test/localfilesystem_test.cpp",
@@ -2325,15 +2210,12 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
+                "test/llm/chat_template_end_to_end_jinja_test.cpp",
             ],
             "//:disable_python" : [],
-        }) + select({
-            "//:enable_drogon": [
-                "test/multi_part_parser_drogon_test.cpp",
-            ],
-            "//conditions:default" : [
-            ],
-        }),
+        }) + [
+            "test/multi_part_parser_drogon_test.cpp",
+        ],
     data = [
         "test/add_two_inputs_model/1/add.xml",
         "test/add_two_inputs_model/1/add.bin",
@@ -2467,10 +2349,11 @@ cc_test(
         "//src:libcustom_node_image_transformation.so",
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
-    ],
+    ] + glob(["test/models_config_json/**"]),
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
+            "//src:libovms_default_task_detector",
             "//src/filesystem:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
             ":test_utils",
@@ -2510,6 +2393,7 @@ cc_test(
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
                 ":test_llm_output_parser_tests",
+                ":test_chat_template_workarounds",
                 ":test_llm_input_processing_tests",
                 ":test_llm_input_processing_integration_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
@@ -3032,6 +2916,28 @@ cc_library(
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
         "//src/llm:output_parsers",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "test_chat_template_workarounds",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = [
+        "test/llm/chat_template_analyzer_test.cpp",
+        "test/llm/chat_template_adapter_test.cpp",
+        "test/llm/chat_template_end_to_end_minja_test.cpp",
+    ],
+    deps = [
+        "@com_google_googletest//:gtest",
+        "//src/llm:chat_template_analyzer",
+        "//src/llm:chat_template_probe",
+        "//src/llm:io_processing_input_processors",
+        "//src/utils:env_guard",
+        "//third_party:genai",
+        ":test_platform_utils",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

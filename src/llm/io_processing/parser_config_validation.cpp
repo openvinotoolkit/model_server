@@ -32,6 +32,7 @@ const std::vector<std::string>& getSupportedToolParserNames() {
         "devstral",
         "lfm2",
         "gemma4",
+        "minicpm5",
     };
     return names;
 }
@@ -41,16 +42,26 @@ const std::vector<std::string>& getSupportedReasoningParserNames() {
         "qwen3",
         "gemma4",
         "gptoss",
+        "minicpm5",
+        "lfm2",
     };
     return names;
 }
 
+bool isParserDisabled(const std::string& name) {
+    return name == PARSER_DISABLED_VALUE;
+}
+
 bool isSupportedToolParserName(const std::string& name) {
+    if (isParserDisabled(name))
+        return true;
     const auto& names = getSupportedToolParserNames();
     return std::find(names.begin(), names.end(), name) != names.end();
 }
 
 bool isSupportedReasoningParserName(const std::string& name) {
+    if (isParserDisabled(name))
+        return true;
     const auto& names = getSupportedReasoningParserNames();
     return std::find(names.begin(), names.end(), name) != names.end();
 }

@@ -16,13 +16,16 @@
 
 #include "input_processor.hpp"
 
+#include <chrono>
 #include <typeinfo>
 #include <variant>
 
 #include "../../config.hpp"
 #include "../../logging.hpp"
 #include "input_processors/chat_template_processor.hpp"
+#include "input_processors/empty_content_array_normalization_processor.hpp"
 #include "input_processors/image_decoding_processor.hpp"
+#include "input_processors/chat_template_adapter.hpp"
 #include "input_processors/raw_prompt_extractor.hpp"
 #include "input_processors/text_content_normalization_processor.hpp"
 #include "input_processors/tokenization_processor.hpp"
@@ -35,18 +38,25 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
     // Chat template already adds special tokens; completions path needs them added by the tokenizer.
     const bool addSpecialTokens = !isChatPath;
 
-    if (context.config.isVLM && isChatPath) {
-        const auto& settings = Config::instance().getServerSettings();
-        processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
-            settings.allowedLocalMediaPath,
-            settings.allowedMediaDomains));
-    }
-
-    if (!context.config.isVLM && isChatPath) {
-        processors.emplace_back(std::make_unique<TextContentNormalizationProcessor>());
-    }
-
     if (isChatPath) {
+        // Normalize empty content arrays to null before any content-aware processor runs.
+        processors.emplace_back(std::make_unique<EmptyContentArrayNormalizationProcessor>());
+
+        // Flatten text-only content arrays for both LM and VLM. Arrays that contain
+        // images (or other modalities) are left untouched for ImageDecodingProcessor.
+        processors.emplace_back(std::make_unique<TextContentNormalizationProcessor>());
+
+        if (context.config.isVLM) {
+            const auto& settings = Config::instance().getServerSettings();
+            processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
+                settings.allowedLocalMediaPath,
+                settings.allowedMediaDomains));
+        }
+
+        if (context.chatTemplateCaps.needsWorkarounds()) {
+            processors.emplace_back(std::make_unique<ChatTemplateAdapter>(context.chatTemplateCaps));
+        }
+
 #if (PYTHON_DISABLE == 0)
         // Select the path at construction time. If !useMinja but templateProcessor is null
         // (shouldn't happen on a properly initialized servable), fall back to the native path.
@@ -78,9 +88,21 @@ absl::Status InputProcessor::process(InputRequest& req) {
         if (llm_calculator_logger->should_log(spdlog::level::trace)) {
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "InputProcessor: executing {}", typeid(*processor).name());
         }
-        auto status = processor->process(req);
-        if (!status.ok()) {
-            return status;
+        if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+            const auto start = std::chrono::steady_clock::now();
+            auto status = processor->process(req);
+            const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - start);
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "InputProcessor: {} took {} us",
+                typeid(*processor).name(), elapsed.count());
+            if (!status.ok()) {
+                return status;
+            }
+        } else {
+            auto status = processor->process(req);
+            if (!status.ok()) {
+                return status;
+            }
         }
     }
     return absl::OkStatus();
