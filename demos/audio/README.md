@@ -265,14 +265,14 @@ python export_model.py speech2text --source_model openai/whisper-large-v3-turbo 
 :::{dropdown} **Deploying with Docker**
 
 ```bash
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --model_path /models/whisper-large-v3-turbo-word-ts --model_name whisper-large-v3-turbo-word-ts
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --config_path /models/config.json
 ```
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
 
 ```bat
-ovms --rest_port 8000 --model_path models/whisper-large-v3-turbo-word-ts --model_name whisper-large-v3-turbo-word-ts
+ovms --rest_port 8000 --config_path models/config.json
 ```
 :::
 
@@ -374,8 +374,10 @@ You can replace `librispeech` with other datasets supported by the leaderboard c
 ## Translation
 To test the translations endpoint we first need to prepare an audio file with speech in a language other than English, e.g. Spanish. To generate such a sample, follow the [Speech generation](#speech-generation) section to deploy Kokoro and then run:
 
+For non-English Kokoro input, set the `language` field explicitly.
+
 ```console
-curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-OpenVINO-FP16-OVMS\", \"voice\": \"em_alex\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
+curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-OpenVINO-FP16-OVMS\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
 ```
 
 ### Deployment
