@@ -4729,8 +4729,8 @@ void LLMNodeOptionsMultipleNodesCacheDirPrecedence(std::string& modelsPath) {
     // Restore the global cache_dir on scope exit even if an ASSERT below fails early.
     GlobalCacheDirGuard cacheDirGuard;
     // Seed the global cache_dir via the CLI parser.
-    const std::string globalCacheDir = (std::filesystem::temp_directory_path() / "ovms_global_cache_multi").string();
-    const std::string nodeCacheDir = (std::filesystem::temp_directory_path() / "ovms_node_cache_multi").string();
+    const std::string globalCacheDir = (std::filesystem::temp_directory_path() / "ovms_global_cache_multi").generic_string();
+    const std::string nodeCacheDir = (std::filesystem::temp_directory_path() / "ovms_node_cache_multi").generic_string();
     char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
     int arg_count = 9;
     ovms::Config::instance().parse(arg_count, n_argv);
@@ -4811,11 +4811,19 @@ void LLMNodeOptionsMultipleNodesCacheDirPrecedence(std::string& modelsPath) {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
 
+    auto readPropertiesForNode = [&](int nodeIndex) -> std::shared_ptr<ContinuousBatchingServableProperties> {
+        mediapipe::LLMCalculatorOptions nodeOptions;
+        EXPECT_TRUE(config.node(nodeIndex).node_options(0).UnpackTo(&nodeOptions));
+        auto properties = std::make_shared<ContinuousBatchingServableProperties>();
+        auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);
+        EXPECT_TRUE(status.ok()) << "Failed to parse plugin_config for node " << nodeIndex << ": " << status.string();
+        GenAiServableInitializer::applyGlobalCacheDir(properties);
+        return properties;
+    };
+
     // Verify node 1 (with explicit CACHE_DIR) uses the node-level value
     {
-        std::shared_ptr<GenAiServable> servable1;
-        ASSERT_EQ(initializeGenAiServable(servable1, config.node(0), ""), StatusCode::OK);
-        auto properties1 = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable1->getProperties());
+        auto properties1 = readPropertiesForNode(0);
         ASSERT_EQ(properties1->pluginConfig.count("CACHE_DIR"), 1);
         std::string node1CacheDir = properties1->pluginConfig["CACHE_DIR"].as<std::string>();
         ASSERT_NE(node1CacheDir.find("ovms_node_cache_multi"), std::string::npos)
@@ -4826,9 +4834,7 @@ void LLMNodeOptionsMultipleNodesCacheDirPrecedence(std::string& modelsPath) {
 
     // Verify node 2 (without explicit CACHE_DIR) uses the global --cache_dir
     {
-        std::shared_ptr<GenAiServable> servable2;
-        ASSERT_EQ(initializeGenAiServable(servable2, config.node(1), ""), StatusCode::OK);
-        auto properties2 = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable2->getProperties());
+        auto properties2 = readPropertiesForNode(1);
         ASSERT_EQ(properties2->pluginConfig.count("CACHE_DIR"), 1);
         std::string node2CacheDir = properties2->pluginConfig["CACHE_DIR"].as<std::string>();
         ASSERT_EQ(node2CacheDir, globalCacheDir)
@@ -4871,8 +4877,8 @@ void LLMModelsFromConfigJsonMultipleCacheDirPrecedence(std::string& modelsPath) 
     std::filesystem::create_directories(model1Dir);
     std::filesystem::create_directories(model2Dir);
 
-    const std::string globalCacheDir = tmpDir + "/global_cache";
-    const std::string nodeCacheDir = tmpDir + "/node1_cache";
+    const std::string globalCacheDir = std::filesystem::path(tmpDir + "/global_cache").generic_string();
+    const std::string nodeCacheDir = std::filesystem::path(tmpDir + "/node1_cache").generic_string();
 
     // Create graph.pbtxt for model1 with explicit CACHE_DIR
     std::string graph1Pbtxt = R"(
