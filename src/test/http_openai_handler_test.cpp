@@ -2947,7 +2947,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedContentTypeFails
         "role": "user",
         "content": [
           {"type": "input_text", "text": "hi"},
-          {"type": "input_audio", "audio": "abc"}
+          {"type": "input_unsupported", "audio": "abc"}
         ]
       }
     ]
@@ -2959,7 +2959,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedContentTypeFails
     std::optional<uint32_t> maxModelLength;
     std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
         std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("unsupported input content item type: input_audio"));
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("unsupported input content item type: input_unsupported"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMissingContentFails) {

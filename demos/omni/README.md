@@ -6,7 +6,7 @@ Example clients for Qwen3-Omni multimodal model served by OpenVINO Model Server.
 
 ## Chat Completions API
 
-```bash
+```text
 # Text → text
 python3 chat_completions.py --prompt "What is OpenVINO?"
 
@@ -22,7 +22,7 @@ python3 chat_completions.py --audio recording.wav --image ./../common/static/ima
 
 ## Responses API
 
-```bash
+```text
 # Text → text
 python3 responses.py --prompt "What is OpenVINO?"
 

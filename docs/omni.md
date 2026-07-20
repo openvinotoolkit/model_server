@@ -5,7 +5,7 @@ OpenVINO Model Server supports **Qwen3-Omni** models — multimodal models that 
 ## Supported Models
 
 - Qwen3-Omni Dense (INT4/INT8/FP16)
-- Qwen3-Omni MoE (INT4/INT8/FP16) - **doesnt work yet**
+- Qwen3-Omni MoE (INT4/INT8/FP16) - **does not work yet**
 
 ## Quick Start
 
