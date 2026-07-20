@@ -403,7 +403,7 @@ TEST_F(OvmsConfigDeathTest, hfNoTaskParameter) {
         "/some/path",
     };
     int arg_count = 6;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - --task parameter wasn't passed");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
@@ -802,10 +802,12 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableWithBadAdditionalParameters) 
         "/config/path",
         "--target_device",
         "GPU",
+        "--invalid_param",
+        "value",
         "--model_path",
         "/model/path"};
-    int arg_count = 10;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed: target_device,");
+    int arg_count = 12;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - unmatched arguments: --invalid_param, value,");
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {
@@ -881,7 +883,35 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTask) {
         "/some/path",
     };
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--source_model should be used combined with --task");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
+}
+
+TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskInvalidArchitectureLocal) {
+    auto currentPath = std::filesystem::current_path();
+    auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "invalid_architecture",
+        "--model_repository_path",
+        (char*)repoPath.c_str(),
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
+}
+
+TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskNoArchitecturesLocal) {
+    auto currentPath = std::filesystem::current_path();
+    auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "no_architectures",
+        "--model_repository_path",
+        (char*)repoPath.c_str(),
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
 }
 
 TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
@@ -1223,7 +1253,7 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 0);
@@ -1258,7 +1288,7 @@ TEST(OvmsExportHfSettingsTest, positiveDefault) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, true);
     ASSERT_EQ(hfSettings.exportSettings.precision, "int8");
-    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "");
     ASSERT_EQ(hfSettings.downloadType, ovms::GIT_CLONE_DOWNLOAD);
     ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.has_value(), false);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
@@ -1403,7 +1433,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 0);
@@ -1443,7 +1473,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(exportSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(graphSettings.cacheSize, 0);
@@ -1698,7 +1728,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 10000);
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.modelName, modelName);
     ASSERT_EQ(exportSettings.modelPath, "./");
 }
@@ -1867,7 +1897,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::IMAGE_GENERATION_GRAPH);
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_TRUE(imageGenerationGraphSettings.maxResolution.empty());
     ASSERT_TRUE(imageGenerationGraphSettings.defaultResolution.empty());
     ASSERT_FALSE(imageGenerationGraphSettings.maxNumberImagesPerPrompt.has_value());
@@ -2005,7 +2035,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
-    ASSERT_EQ(exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.modelName, modelName);
 }
 
@@ -2148,7 +2178,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultTextToSpeech) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
     ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
-    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "");
     ASSERT_EQ(hfSettings.exportSettings.modelName, modelName);
 }
 
@@ -2283,7 +2313,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultSpeechToText) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::SPEECH_TO_TEXT_GRAPH);
     ASSERT_EQ(hfSettings.exportSettings.pluginConfig.numStreams, 1);
-    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "");
     ASSERT_EQ(hfSettings.exportSettings.modelName, modelName);
 }
 
@@ -2823,6 +2853,232 @@ TEST(OvmsConfigManipulationTest, positiveDisableModel) {
     ASSERT_EQ(modelSettings.configPath, configPath);
 }
 
+// ===================== Inferred Default Task Tests =====================
+// Fixture providing resolved paths to pre-built test model directories.
+class OvmsInferredTaskTest : public ::testing::Test {
+public:
+    static std::string resolveTestModelPath(const std::string& modelDirName) {
+        const std::string relPath = std::string("src/test/models_config_json/") + modelDirName;
+        auto current = std::filesystem::current_path();
+        auto candidate = std::filesystem::weakly_canonical(current / ".." / ".." / relPath);
+        if (std::filesystem::exists(candidate))
+            return candidate.string();
+        auto search = current;
+        while (search != search.parent_path()) {
+            auto c = search / relPath;
+            if (std::filesystem::exists(c))
+                return c.string();
+            search = search.parent_path();
+        }
+        return candidate.string();
+    }
+
+    static std::string resolveTestModelsRepoPath() {
+        const std::string relPath = "src/test/models_config_json";
+        auto current = std::filesystem::current_path();
+        auto candidate = std::filesystem::weakly_canonical(current / ".." / ".." / relPath);
+        if (std::filesystem::exists(candidate))
+            return candidate.string();
+        auto search = current;
+        while (search != search.parent_path()) {
+            auto c = search / relPath;
+            if (std::filesystem::exists(c))
+                return c.string();
+            search = search.parent_path();
+        }
+        return candidate.string();
+    }
+};
+
+// Scenario 1: --source_model with no explicit --task and a locally available repo copy.
+// The task must be detected from the model config.json and the server must start.
+TEST_F(OvmsInferredTaskTest, positiveSourceModelInferTaskFromLocalRepo) {
+    const std::string repoPath = resolveTestModelsRepoPath();
+    const std::filesystem::path llamaConfig = std::filesystem::path(repoPath) / "llama" / "config.json";
+    if (!std::filesystem::exists(llamaConfig)) {
+        FAIL() << "Test prerequisite missing: " << llamaConfig.string();
+    }
+    const std::string sourceModel = "llama";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model",
+        (char*)sourceModel.c_str(),
+        (char*)"--model_repository_path",
+        (char*)repoPath.c_str(),
+        (char*)"--rest_port",
+        (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+}
+
+// Scenario 2: --model_path points to a directory that has config.json but NO graph.pbtxt.
+// The task must be inferred and the server must start in IN_MEMORY_GRAPH_MODE.
+TEST_F(OvmsInferredTaskTest, positiveModelPathNoGraphPbtxtInferTask) {
+    const std::string modelPath = resolveTestModelPath("llama");
+    const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        FAIL() << "Test prerequisite missing: " << configJson.string();
+    }
+    // Verify the test fixture truly has no graph.pbtxt so the scenario is meaningful.
+    ASSERT_FALSE(std::filesystem::exists(std::filesystem::path(modelPath) / "graph.pbtxt"))
+        << "Unexpected graph.pbtxt in test model dir " << modelPath;
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--model_name",
+        (char*)"llama",
+        (char*)"--rest_port",
+        (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::IN_MEMORY_GRAPH_MODE);
+}
+
+// Scenario 3: Ambiguous architecture (Qwen3ForCausalLM) — modules.json present with Pooling type,
+// or model name contains "embed" keyword, infers embeddings.
+TEST_F(OvmsInferredTaskTest, positiveSourceModelInferEmbeddingsForAmbiguousArchitecture) {
+    const std::string repoPath = resolveTestModelsRepoPath();
+    const std::string sourceModel = "Qwen3-Embedding-0.6B";
+    const std::filesystem::path configJson = std::filesystem::path(repoPath) / sourceModel / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        FAIL() << "Test prerequisite missing: " << configJson.string();
+    }
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model",
+        (char*)sourceModel.c_str(),
+        (char*)"--model_repository_path",
+        (char*)repoPath.c_str(),
+        (char*)"--rest_port",
+        (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::EMBEDDINGS_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+}
+
+// Scenario 4: Ambiguous architecture (Qwen3ForCausalLM) — modules.json present with LogitScore type,
+// or model name contains "rerank" keyword, infers rerank.
+TEST_F(OvmsInferredTaskTest, positiveModelPathInferRerankForAmbiguousArchitecture) {
+    const std::string modelPath = resolveTestModelPath("Qwen3-Reranker-0.6B");
+    const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        FAIL() << "Test prerequisite missing: " << configJson.string();
+    }
+    ASSERT_FALSE(std::filesystem::exists(std::filesystem::path(modelPath) / "graph.pbtxt"))
+        << "Unexpected graph.pbtxt in test model dir " << modelPath;
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--model_name",
+        (char*)"qwen3-reranker",
+        (char*)"--rest_port",
+        (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::RERANK_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::IN_MEMORY_GRAPH_MODE);
+}
+
+// Scenario 5: Qwen3ForCausalLM without modules.json and without an embedding/rerank
+// keyword in the model name defaults to text_generation.
+TEST_F(OvmsInferredTaskTest, positiveSourceModelQwen3WithoutKeywordInfersTextGeneration) {
+    const std::string repoPath = resolveTestModelsRepoPath();
+    const std::string sourceModel = "Qwen3-8B";
+    const std::filesystem::path configJson = std::filesystem::path(repoPath) / sourceModel / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        FAIL() << "Test prerequisite missing: " << configJson.string();
+    }
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model",
+        (char*)sourceModel.c_str(),
+        (char*)"--model_repository_path",
+        (char*)repoPath.c_str(),
+        (char*)"--rest_port",
+        (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+}
+
+// Scenario 6: Null architectures with n_mels field should infer text2speech task.
+TEST_F(OvmsInferredTaskTest, positiveSourceModelInferText2SpeechForNullArchitecturesWithNMels) {
+    const std::string repoPath = resolveTestModelsRepoPath();
+    const std::string sourceModel = "Kokoro";
+    const std::filesystem::path configJson = std::filesystem::path(repoPath) / sourceModel / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        FAIL() << "Test prerequisite missing: " << configJson.string();
+    }
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model",
+        (char*)sourceModel.c_str(),
+        (char*)"--model_repository_path",
+        (char*)repoPath.c_str(),
+        (char*)"--rest_port",
+        (char*)"8080",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::TEXT_TO_SPEECH_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+}
+
+// Scenario 6b: Null architectures without special fields should fail.
+TEST_F(OvmsConfigDeathTest, negativeSourceModelNullArchitecturesWithoutSpecialFields) {
+    auto currentPath = std::filesystem::current_path();
+    auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
+    const std::string sourceModel = "NullArch";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--source_model",
+        (char*)sourceModel.c_str(),
+        (char*)"--model_repository_path",
+        (char*)repoPath.c_str(),
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
+}
+
+// Scenario 7: --model_path (LLM/text_generation model) with no explicit --task but with
+// an embeddings-specific parameter (--pooling). Task is inferred as text_generation and
+// --pooling is not a recognised text_generation option, so parsing must fail.
+TEST_F(OvmsConfigDeathTest, negativeModelPathInferredTaskWithMismatchedParam) {
+    const std::string modelPath = OvmsInferredTaskTest::resolveTestModelPath("llama");
+    if (!std::filesystem::exists(std::filesystem::path(modelPath) / "config.json")) {
+        FAIL() << "Test prerequisite missing: " << modelPath << "/config.json";
+    }
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path", (char*)modelPath.c_str(),
+        (char*)"--model_name", (char*)"llama",
+        (char*)"--rest_port", (char*)"8080",
+        (char*)"--pooling", (char*)"LAST",  // embeddings-only param, invalid for text_generation
+    };
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv),
+        ::testing::ExitedWithCode(OVMS_EX_USAGE),
+        "task: text_generation - error parsing options - unmatched arguments");
+}
+
 TEST(OvmsGraphCliParserTest, invalidToolParserNameThrowsInvalidArgument) {
     ovms::HFSettingsImpl hfSettings;
     ovms::GraphCLIParser parser;
@@ -2881,6 +3137,53 @@ TEST(OvmsGraphCliParserTest, emptyParserNamesAreAccepted) {
     EXPECT_EQ(graphSettings.toolParser.value(), "");
     ASSERT_TRUE(graphSettings.reasoningParser.has_value());
     EXPECT_EQ(graphSettings.reasoningParser.value(), "");
+}
+
+TEST(OvmsGraphCliParserTest, noneParserNamesAreAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--tool_parser", "none", "--reasoning_parser", "none"};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.toolParser.has_value());
+    EXPECT_EQ(graphSettings.toolParser.value(), "none");
+    ASSERT_TRUE(graphSettings.reasoningParser.has_value());
+    EXPECT_EQ(graphSettings.reasoningParser.value(), "none");
+}
+
+TEST_F(OvmsInferredTaskTest, positiveConfigureModeInfersTaskFromModel) {
+    const std::string modelPath = resolveTestModelPath("llama");
+    const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";
+    if (!std::filesystem::exists(configJson)) {
+        FAIL() << "Test prerequisite missing: " << configJson.string();
+    }
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--configure",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--cache_size",
+        (char*)"3",
+    };
+    int arg_count = 6;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::CONFIGURE_MODE);
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigureModeRequiresTaskWhenCannotInfer) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--configure",
+        (char*)"--model_path",
+        (char*)"/non/existing/model/path",
+    };
+    int arg_count = 4;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv),
+        ::testing::ExitedWithCode(OVMS_EX_USAGE),
+        "Could not infer model task");
 }
 
 #pragma GCC diagnostic pop

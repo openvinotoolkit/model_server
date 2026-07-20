@@ -57,6 +57,7 @@ Configuration options for the server are defined only via command-line options a
 | `api_key_file` | `string` | Path to the text file with the API key for generative endpoints `/v3/`. The value of first line is used. If not specified, server is using environment variable API_KEY. If not set, requests will not require authorization.| 
 | `allowed_local_media_path` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
 | `allowed_media_domains` | `string` | Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restrictions. If unset, URLs in requests are not supported."
+| `verbose_response` | `NA` | When enabled, responses include an extra `__verbose` object with additional debug information. Applies for text generation models |
 
 ## Config management mode options
 
@@ -68,9 +69,28 @@ Configuration options for the config management mode, which is used to manage co
 | `list_models`           | `NA`         | List all models paths in the model repository.                                                                                                      |
 | `model_name`            | `string`     | Name of the model as visible in serving. If `--model_path` is not provided, path is deduced from name.                                              |
 | `model_path`            | `string`     | Optional. Path to the model repository. If path is relative then it is prefixed with `--model_repository_path`.                                     |
-| `add_to_config`         | `NA`         | Directive to add new model to the config file.                                                                                                      |
+| `add_to_config`         | `NA`         | Directive to add new model to the config file. Accepts optional model parameters: `--batch_size`, `--shape`, `--layout`, `--mean`, `--scale`, `--color_format`, `--precision`, `--model_version_policy`, `--nireq`, `--target_device`, `--plugin_config`. |
 | `remove_from_config`    | `NA`     | Directive to remove model from the config file.                                                                                                     |
 | `config_path`           | `string`     | Path to the configuration file.                                                                                                                     |
+
+## Configure mode options
+
+Configure mode creates or updates `graph.pbtxt` for a local model without starting the server. It requires `--model_path` and `--task` parameters along with task-specific options.
+
+| Option                  | Value format | Description                                                                                                                                         |
+|-------------------------|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--configure`           | `NA`         | Runs in configure mode to create or update `graph.pbtxt` for a local model. Does not start the server.                                              |
+| `--model_path`          | `string`     | Path to the local model directory where `graph.pbtxt` will be created.                                                                              |
+| `--model_name`          | `string`     | Optional. Name of the model as exposed by the server.                                                                                               |
+| `--task`                | `string`     | Task type for the model (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`).                               |
+| `--target_device`       | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"NPU"/"MULTI"/"HETERO"`.                  |
+
+Task-specific options (e.g., `--max_num_seqs`, `--cache_size`, `--num_streams`) are the same as documented in the [pull mode task options](#text-generation) below.
+
+**Example:**
+```text
+ovms --configure --model_path /models/my_llm --task text_generation --target_device GPU --max_num_seqs 128 --cache_size 8
+```
 
 ## Pull mode configuration options
 
@@ -85,7 +105,7 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
 | `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
-| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`).              |
+| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
 | `--gguf_filename`           | `string`     | Filename of the wanted quantization type from Hugging Face GGUF repository.                                        |
 
@@ -116,10 +136,9 @@ There are also additional environment variables that may change the behavior of 
 |-------------------------------------|---------|------------------------------------------------------------------------------------------------------------|
 | `GIT_OPT_SET_SERVER_CONNECT_TIMEOUT`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
 | `GIT_OPT_SET_SERVER_TIMEOUT`        | `int`   | Timeout for reading from and writing to a remote server. Default value 4000 ms.                            |
-| `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |
-| `GIT_OPT_SET_ENABLE_SEARCH_PATHS`| `int`   | When set to 1, the pull functionality reads host-level git configuration locations like ~/.gitconfig. Default value 0.            |
+| `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |  
 
-Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
+Task specific parameters for different tasks (text generation/image generation/embeddings/rerank/text2speech/speech2text) are listed below:
 
 ### Text generation
 | option                                | Value format | Description                                                                                                                |
@@ -134,9 +153,10 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
 | `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).            |
 | `--model_distribution_policy`         | `string`     | TENSOR_PARALLEL distributes tensor to multiple sockets/devices and processes it in parallel. PIPELINE_PARALLEL distributes different tensors to process by each device. Accepted values: `TENSOR_PARALLEL`, `PIPELINE_PARALLEL` or empty (default). |
-| `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Currently supported: [qwen3, gptoss, gemma4]                     |
-| `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Currently supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
+| `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [qwen3, gptoss, lfm2, gemma4]                     |
+| `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
+| `--cache_interval_multiplier`         | `integer`    | Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: adaptive for the model.                  |
 
 ### Image generation
 | option                            | Value format | Description                                                                                                         |
@@ -165,3 +185,18 @@ Task specific parameters for different tasks (text generation/image generation/e
 |---------------------------|--------------|--------------------------------------------------------------------------------|
 | `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
 | `--max_allowed_chunks`    | `integer`    | Maximum allowed chunks. Default: 10000.                                        |
+
+### Text to speech
+| option                    | Value format | Description                                                                    |
+|---------------------------|--------------|--------------------------------------------------------------------------------|
+| `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
+| `--model_type`            | `string`     | Type of the source TTS model: `speecht5` (default) or `kokoro`.                |
+| `--vocoder`               | `string`     | The vocoder model to use for text2speech. For example `microsoft/speecht5_hifigan`. |
+
+### Speech to text
+| option                    | Value format | Description                                                                    |
+|---------------------------|--------------|--------------------------------------------------------------------------------|
+| `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
+
+
+

@@ -53,10 +53,10 @@ enum Endpoint {
 };
 
 static Endpoint getEndpoint(const std::string& url) {
-    if (absl::StartsWith(url, "/v3/audio/transcriptions")) {
+    if (absl::StartsWith(url, "/v3/audio/transcriptions") || absl::StartsWith(url, "/v1/audio/transcriptions")) {
         return Endpoint::TRANSCRIPTIONS;
     }
-    if (absl::StartsWith(url, "/v3/audio/translations")) {
+    if (absl::StartsWith(url, "/v3/audio/translations") || absl::StartsWith(url, "/v1/audio/translations")) {
         return Endpoint::TRANSLATIONS;
     }
     return Endpoint::UNSUPPORTED;
@@ -181,7 +181,7 @@ public:
             }
 
             if (requestStreaming) {
-                ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
+                ov::genai::ASRGenerationConfig config = pipe->sttPipeline->get_generation_config();
                 auto status = ovms::SttServable::updateTranscriptionConfig(config, pipe, payload);
                 if (status != absl::OkStatus()) {
                     return status;
@@ -218,7 +218,7 @@ private:
         writer.StartObject();
         writer.String("text");
         if (endpoint == Endpoint::TRANSCRIPTIONS) {
-            ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
+            ov::genai::ASRGenerationConfig config = pipe->sttPipeline->get_generation_config();
             auto status = ovms::SttServable::updateTranscriptionConfig(config, pipe, payload);
             if (status != absl::OkStatus())
                 return status;
@@ -227,7 +227,7 @@ private:
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before transcription");
             if (!disconnectStatus.ok())
                 return disconnectStatus;
-            const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config, disconnectCallback);
+            const ov::genai::ASRDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config, disconnectCallback);
             lock.unlock();
             disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after transcription");
             if (!disconnectStatus.ok())
@@ -237,7 +237,7 @@ private:
             serializeTimestamps(writer, result, config);
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
-            ov::genai::WhisperGenerationConfig config = pipe->sttPipeline->get_generation_config();
+            ov::genai::ASRGenerationConfig config = pipe->sttPipeline->get_generation_config();
             config.task = "translate";
             auto status = ovms::SttServable::parseTemperature(payload, config);
             if (status != absl::OkStatus())
@@ -246,7 +246,7 @@ private:
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before translation");
             if (!disconnectStatus.ok())
                 return disconnectStatus;
-            const ov::genai::WhisperDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config, disconnectCallback);
+            const ov::genai::ASRDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config, disconnectCallback);
             lock.unlock();
             disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after translation");
             if (!disconnectStatus.ok())
@@ -262,20 +262,22 @@ private:
     }
 
     static void serializeTimestamps(rapidjson::Writer<rapidjson::StringBuffer>& writer,
-        const ov::genai::WhisperDecodedResults& result, const ov::genai::WhisperGenerationConfig& config) {
+        const ov::genai::ASRDecodedResults& result, const ov::genai::ASRGenerationConfig& config) {
         if (config.word_timestamps) {
             writer.String("words");
             writer.StartArray();
             if (result.words.has_value()) {
-                for (const auto& word : *result.words) {
-                    writer.StartObject();
-                    writer.String("word");
-                    writer.String(word.word.c_str());
-                    writer.String("start");
-                    writer.Double(word.start_ts);
-                    writer.String("end");
-                    writer.Double(word.end_ts);
-                    writer.EndObject();
+                for (const auto& wordGroup : result.words.value()) {
+                    for (const auto& word : wordGroup) {
+                        writer.StartObject();
+                        writer.String("word");
+                        writer.String(word.text.c_str());
+                        writer.String("start");
+                        writer.Double(word.start_ts);
+                        writer.String("end");
+                        writer.Double(word.end_ts);
+                        writer.EndObject();
+                    }
                 }
             }
             writer.EndArray();
@@ -284,15 +286,17 @@ private:
             writer.String("segments");
             writer.StartArray();
             if (result.chunks.has_value()) {
-                for (const auto& chunk : *result.chunks) {
-                    writer.StartObject();
-                    writer.String("text");
-                    writer.String(chunk.text.c_str());
-                    writer.String("start");
-                    writer.Double(chunk.start_ts);
-                    writer.String("end");
-                    writer.Double(chunk.end_ts);
-                    writer.EndObject();
+                for (const auto& chunkGroup : result.chunks.value()) {
+                    for (const auto& chunk : chunkGroup) {
+                        writer.StartObject();
+                        writer.String("text");
+                        writer.String(chunk.text.c_str());
+                        writer.String("start");
+                        writer.Double(chunk.start_ts);
+                        writer.String("end");
+                        writer.Double(chunk.end_ts);
+                        writer.EndObject();
+                    }
                 }
             }
             writer.EndArray();

@@ -21,6 +21,8 @@
 
 namespace ovms {
 
+class ServableDefinition;
+
 enum class ServableQueryType : uint8_t {
     Model = 1 << 0,
     Pipeline = 1 << 1,
@@ -43,6 +45,8 @@ public:
     virtual ~ServableNameChecker() = default;
     virtual bool servableExists(const std::string& name, ServableQueryType check = ServableQueryType::All) const = 0;
     virtual bool aliasesConflict(const std::vector<std::string>& aliases, const std::string& ownGraphName) const = 0;
+    virtual ServableDefinition* findServableDefinition(const std::string& name) const = 0;
+    virtual std::vector<std::string> getServableDefinitionNames() const = 0;
 };
 
 }  // namespace ovms
