@@ -84,15 +84,19 @@ static const std::string PROBE_STR_ARGS_MSG =
 static const std::string PROBE_OBJ_ARGS_MSG =
     R"({"role":"assistant","content":"","tool_calls":[{"id":"call_0_ab","type":"function","function":{"name":"probe_fn","arguments":{")" + PROBE_NEEDLE + R"(":"val"}}}]})";
 
+static const std::string PROBE_REASONING_MSG =
+    R"({"role":"assistant","reasoning_content":")" + PROBE_NEEDLE + R"("})";
+
 // Analyze dry-run probe outputs and update caps accordingly.
 // Returns false if the template silently failed (tool calls not supported).
-static bool analyzeProbeResults(bool strOk, const std::string& strOut,
+static bool analyzeProbeToolArgumentResults(bool strOk, const std::string& strOut,
     bool objOk, const std::string& objOut,
     ChatTemplateCaps& caps) {
     auto rendersNativeArgs = [](const std::string& output) -> bool {
         return output.find("\"" + PROBE_NEEDLE + "\": \"") != std::string::npos ||
                output.find("\"" + PROBE_NEEDLE + "\":\"") != std::string::npos ||
                output.find("<parameter=" + PROBE_NEEDLE + ">") != std::string::npos ||
+               output.find("<param name=\"" + PROBE_NEEDLE + "\">") != std::string::npos ||
                output.find(PROBE_NEEDLE + ":<|") != std::string::npos ||
                output.find(PROBE_NEEDLE + "=") != std::string::npos;
     };
@@ -129,6 +133,56 @@ static bool analyzeProbeResults(bool strOk, const std::string& strOut,
     return true;
 }
 
+bool probeChatTemplateReasoning(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps) {
+    if (tokenizer.get_chat_template().empty()) {
+        return true;
+    }
+    if (!caps.needsWorkarounds() || caps.missnamedReasoningField.empty()) {
+        return true;
+    }
+
+    try {
+        ov::genai::ChatHistory history;
+        history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
+        history.push_back(ov::genai::JsonContainer::from_json_string(PROBE_REASONING_MSG));
+
+        std::string output = tokenizer.apply_chat_template(history, true);
+
+        if (output.find(PROBE_NEEDLE) != std::string::npos) {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Reasoning probe: standard 'reasoning_content' field supported");
+            caps.missnamedReasoningField.clear();
+            return true;
+        }
+
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Reasoning probe: 'reasoning_content' field silently ignored");
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Reasoning probe: 'reasoning_content' not supported: {}", e.what());
+    } catch (...) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Reasoning probe: 'reasoning_content' not supported (unknown exception)");
+    }
+
+    auto field = caps.missnamedReasoningField;
+    std::string altMsg = R"({"role":"assistant",")" + field + R"(":")" + PROBE_NEEDLE + R"("})";
+    try {
+        ov::genai::ChatHistory history;
+        history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
+        history.push_back(ov::genai::JsonContainer::from_json_string(altMsg));
+
+        std::string output = tokenizer.apply_chat_template(history, true);
+
+        if (output.find(PROBE_NEEDLE) != std::string::npos) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Reasoning probe: template uses '{}' instead of 'reasoning_content'", field);
+            return true;
+        }
+    } catch (...) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Reasoning probe: '{}' not supported", field);
+        return false;
+    }
+
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Reasoning probe: no reasoning field supported by template");
+    return false;
+}
+
 static std::pair<bool, std::string> renderProbeMessage(ov::genai::Tokenizer& tokenizer, const std::string& assistantMsg) {
     try {
         ov::genai::ChatHistory history;
@@ -163,7 +217,7 @@ bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
     auto [strOk, strOut] = strArgsFuture.get();
     auto [objOk, objOut] = objArgsFuture.get();
 
-    return analyzeProbeResults(strOk, strOut, objOk, objOut, caps);
+    return analyzeProbeToolArgumentResults(strOk, strOut, objOk, objOut, caps);
 }
 
 #if (PYTHON_DISABLE == 0)
@@ -197,7 +251,7 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, Cha
         return false;
     }
 
-    return analyzeProbeResults(strOk, strOut, objOk, objOut, caps);
+    return analyzeProbeToolArgumentResults(strOk, strOut, objOk, objOut, caps);
 }
 #endif
 

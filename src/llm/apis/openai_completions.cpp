@@ -571,8 +571,12 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(rapidjson::Doc
             if (hasToolCalls) {
                 toolCallsDetectedInStream = true;
             }
+        } else {
+            // No delta from the parser (e.g. generation ended on a swallowed token).
+            // The OpenAI API requires "delta" to always be present in each choice, so emit an empty object.
+            Value emptyDelta(kObjectType);
+            choice.AddMember("delta", emptyDelta, allocator);
         }
-        // If no "delta" member, choice has no delta — valid for the final finish_reason chunk.
     } else if (endpoint == Endpoint::COMPLETIONS) {
         // For /v1/completions, extract the plain text from the content delta.
         if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject() &&

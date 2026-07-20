@@ -1,0 +1,5 @@
+{
+  "architectures": ["BertModel"],
+  "model_type": "bert",
+  "hidden_size": 768
+}
