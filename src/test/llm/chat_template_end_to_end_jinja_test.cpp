@@ -140,13 +140,23 @@ protected:
         ASSERT_NE(servable->getProperties()->templateProcessor.chatTemplate, nullptr)
             << "Failed to load Python Jinja template processor";
 
-        // Step 3: Probe tool caps using Python Jinja (same function used in production)
+        // Step 3a: Probe tool caps using Python Jinja (same function used in production)
         if (!probeChatTemplateCapsJinja(servable->getProperties()->templateProcessor, caps)) {
             std::cout << "=== Jinja Probe FAILED: silent failure detected ===" << std::endl;
         }
 
+        // Step 3b: Probe reasoning caps using Python Jinja (same function used in production)
+        {
+            ov::genai::Tokenizer probeTokenizer(tokenizerModelPath);
+            probeTokenizer.set_chat_template(chatTemplate);
+            if (!probeChatTemplateReasoning(probeTokenizer, caps)) {
+                std::cout << "=== Jinja Reasoning Probe FAILED: silent failure detected ===" << std::endl;
+            }
+        }
+
         std::cout << "=== After Probe ===" << std::endl;
         std::cout << "  requiresObjectArguments: " << caps.requiresObjectArguments << std::endl;
+        std::cout << "  missnamedReasoningField: " << (caps.missnamedReasoningField.empty() ? "(none)" : caps.missnamedReasoningField) << std::endl;
 
         // Step 4: Apply workarounds to chat history
         chat_template_adapter::applyToHistory(caps, chatHistory);
@@ -194,6 +204,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, GptOss_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|start|>user<|message|>What's the weather in Paris?<|end|><|start|>assistant to=functions.get_weather <|channel|>commentary json<|message|>{"location":"Paris","unit":"celsius"}<|end|><|start|>assistant)";
     EXPECT_NE(appliedOutput.find(expectedOutput), std::string::npos) << appliedOutput;
@@ -222,6 +233,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen36_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -269,6 +281,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Gemma4_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s><|turn>user
 What's the weather in Paris?<turn|>
@@ -301,6 +314,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -343,6 +357,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Phi4Mini_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|system|>
 You are a helpful assistant.<|end|><|user|>What's the weather in Paris?<|end|><|assistant|>{"name": "get_weather", "arguments": {"location":"Paris","unit":"celsius"}}<|end|><|assistant|>)";
@@ -372,6 +387,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -410,13 +426,14 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Mistral7B_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]</s>)";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================
-// TODO: Implement assertions, where to take lfm2 deployments steps from?
+// LFM2 does not render tool calls in current chat template, therefore the output is the same as if there were no tool calls.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, LFM2_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm2.jinja");
@@ -429,7 +446,85 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM2_ToolCallWithStringArgs) {
 
     run();
 
-    // TODO: Implement assertions, where to take lfm2 deployments steps from?
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
+    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
+
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+TEST_F(ChatTemplateEndToEndJinjaTest, LFM25_ToolCallWithStringArgsAndReasoning) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2.5 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant", "reasoning_content":"Here is some reasoning content","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2");
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
+
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<think>Here is some reasoning content</think><|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+TEST_F(ChatTemplateEndToEndJinjaTest, LFM25_ReasoningAndEmptyToolCalls) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2.5 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant", "reasoning_content":"Here is some reasoning content","content":"","tool_calls":[]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2");
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
+
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<think>Here is some reasoning content</think><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================
@@ -450,9 +545,10 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM25_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
-    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
-    // TODO(przepeck): change once we have reasoning tool parser for lfm2.5
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2");
 
+    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
 
@@ -487,6 +583,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3VL_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -521,6 +618,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -528,6 +626,41 @@ What's the weather in Paris?<|im_end|>
 <tool_call>
 {"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}}
 </tool_call><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+// =============================================================================
+// MiniCPM5 uses <function name="..."><param name="...">...</param></function> format.
+// Template uses from_json filter which is supported by Jinja.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndJinjaTest, MiniCPM5_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_minicpm5.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "minicpm5");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "minicpm5");
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
+
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<function name="get_weather"><param name="location">Paris</param><param name="unit">celsius</param></function><|im_end|>
 <|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);

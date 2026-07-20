@@ -1,0 +1,5 @@
+{
+  "_class_name": "StableDiffusionXLPipeline",
+  "_diffusers_version": "0.34.0",
+  "_name_or_path": "stabilityai/stable-diffusion-xl-base-1.0"
+}

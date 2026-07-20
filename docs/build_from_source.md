@@ -205,6 +205,32 @@ dist/ubuntu22
 └── ovms.tar.gz.sha256
 ```
 
+### Optional `espeak-ng` for Speech Generation
+
+`espeak-ng` is optional in OVMS builds. It is used by Kokoro speech generation for:
+
+- non-English grapheme-to-phoneme conversion,
+- fallback phonemization of some out-of-vocabulary (OOV) English words.
+
+If you do not need Kokoro non-English support and can accept reduced English OOV fallback behavior, you can:
+
+- skip building `espeak-ng` during image/package build:
+
+```bash
+make targz_package ESPEAK=0
+```
+
+- or remove it from an already prepared package by deleting:
+     - `libespeak-ng.so*` from the package `lib` directory
+     - `share/espeak-ng-data/`
+
+Consequences of removing or disabling `espeak-ng`:
+
+- Speech generation endpoint still works for Kokoro English usage.
+- Non-English Kokoro text normalization/phonemization paths that depend on `espeak-ng` are not available.
+- English OOV words no longer use `espeak-ng` fallback, so pronunciation quality/coverage for uncommon words may degrade.
+- In practice, treat Kokoro as English-focused (for example `en-us` and `en-gb`) when `espeak-ng` is not present.
+
 ---
 
 Read more details about building and testing changes in [developer guide](./developer_guide.md).

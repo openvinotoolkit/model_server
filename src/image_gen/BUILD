@@ -26,6 +26,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libovms_queue",
         "//src:libovmsstring_utils",
+        "//src:libovms_ov_utils",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
@@ -38,6 +39,7 @@ ovms_cc_library(
     deps = [
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
+        "//src:libovms_ov_utils",
         "//src/filesystem:libovmsfilesystem",
         "//src:libovmsstring_utils",
         "imagegenutils",

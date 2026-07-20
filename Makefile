@@ -171,13 +171,8 @@ else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
-ifeq ($(ESPEAK),1)
-  ESPEAK_PARAMS = " --//:espeak=on"
-else
-  ESPEAK_PARAMS = " --//:espeak=off"
-endif
-CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(ESPEAK_PARAMS)
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(ESPEAK_PARAMS)$(REPO_ENV)
+CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(REPO_ENV)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
@@ -275,7 +270,8 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg KONFLUX=$(KONFLUX)\
 	--build-arg TARGETARCH=$(TARGETARCH)\
 	--build-arg OV_LIBDIR=$(OV_LIBDIR)\
-	--build-arg CF_PROTECTION=$(CF_PROTECTION)
+	--build-arg CF_PROTECTION=$(CF_PROTECTION)\
+	--build-arg ESPEAK=$(ESPEAK)
 
 
 .PHONY: default docker_build \

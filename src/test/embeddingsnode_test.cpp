@@ -31,7 +31,7 @@ using namespace ovms;
 
 class EmbeddingsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:
-    std::string endpoint = "/v3/embeddings";
+    std::string endpoint = "/v1/embeddings";
     static std::unique_ptr<std::thread> t;
 
 public:
@@ -396,7 +396,7 @@ TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
     )";
 
     // new routing will forward invalid JSON to graph named "embeddings"
-    const std::string uriThatMatchesGraphName = "/v3/embeddings_ov";
+    const std::string uriThatMatchesGraphName = "/v1/embeddings_ov";
 
     headers.clear();  // no sign of application/json
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", uriThatMatchesGraphName, headers), ovms::StatusCode::OK);
@@ -445,7 +445,7 @@ public:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpoint = "/v3/embeddings_ov";
+    const std::string endpoint = "/v1/embeddings_ov";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -547,7 +547,7 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
 
 class EmbeddingsTokenizeHttpTest : public V3HttpTest {
 protected:
-    const std::string endpointTokenize = "/v3/tokenize";
+    const std::string endpointTokenize = "/v1/tokenize";
     static std::unique_ptr<std::thread> t;
 
 public:
