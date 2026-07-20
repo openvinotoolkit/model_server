@@ -19,10 +19,9 @@
 
 namespace ovms {
 
-// Replaces empty tool_calls arrays ("tool_calls": []) in ChatHistory messages with null.
-// Runs for all chat paths (LM and VLM) and must execute before ImageDecodingProcessor
-// and EmptyToolCallsArrayRemovingProcessor so downstream processors and chat templates
-// see a null tool_calls instead of an empty array.
+// Removes empty tool_calls arrays ("tool_calls": []) from ChatHistory messages.
+// Runs for all chat paths (LM and VLM) and must execute before ChatTemplateProcessor
+// so downstream processors and chat templates do not render an empty tool_calls list.
 class EmptyToolCallsArrayRemovingProcessor : public BaseInputProcessor {
 public:
     absl::Status process(InputRequest& req) override;

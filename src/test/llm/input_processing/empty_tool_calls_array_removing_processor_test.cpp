@@ -46,6 +46,7 @@ TEST(EmptyToolCallsArrayRemovingProcessorTest, EmptyToolCallsArrayRemoved) {
 
     EXPECT_TRUE(status.ok());
     const auto& result = std::get<ov::genai::ChatHistory>(req.input);
+    EXPECT_FALSE(result[0].contains("tool_calls"));
     EXPECT_TRUE(result[0]["content"].is_string());
     EXPECT_EQ(result[0]["content"].as_string().value_or(""), "What is the weather in Szczecin?");
 }

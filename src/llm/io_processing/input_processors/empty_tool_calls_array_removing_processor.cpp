@@ -31,8 +31,8 @@ absl::Status EmptyToolCallsArrayRemovingProcessor::process(InputRequest& req) {
             continue;
         }
 
-        const auto content = chatHistory[i]["tool_calls"];
-        if (content.is_array() && content.size() == 0) {
+        const auto toolCalls = chatHistory[i]["tool_calls"];
+        if (toolCalls.is_array() && toolCalls.size() == 0) {
             chatHistory[i].erase("tool_calls");
         }
     }
