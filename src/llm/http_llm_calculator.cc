@@ -68,13 +68,13 @@ public:
 
     absl::Status Close(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {} ] Close", cc->NodeName());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator [Node: {} ] Close", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
         ovms::GenAiServableMap servableMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::GenAiServableMap>();
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
@@ -90,7 +90,7 @@ public:
         if (!this->executionContextHolder) {
             this->executionContext = servable->createExecutionContext();
         }
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
     absl::Status handleGenerationError(CalculatorContext* cc, const char* errorMessage) {

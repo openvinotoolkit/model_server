@@ -37,6 +37,16 @@ std::string documentToString(const rapidjson::Document& doc) {
     return buffer.GetString();
 }
 
+void addJsonOrStringMember(rapidjson::Value& obj, const char* key, const std::string& value, rapidjson::Document::AllocatorType& alloc) {
+    rapidjson::Document parsed(&alloc);
+    if (!parsed.Parse(value.c_str()).HasParseError() && parsed.IsObject()) {
+        rapidjson::Value jsonValue(parsed, alloc);
+        obj.AddMember(rapidjson::Value(key, alloc), jsonValue, alloc);
+    } else {
+        obj.AddMember(rapidjson::Value(key, alloc), rapidjson::Value(value.c_str(), alloc), alloc);
+    }
+}
+
 // Lightweight SAX handler that only tracks nesting depth.
 // No DOM allocation — all SAX events are accepted and discarded.
 struct DepthOnlyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, DepthOnlyHandler> {

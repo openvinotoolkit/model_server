@@ -2197,3 +2197,184 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInR
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
     modelWithModelInstanceLoadedWaitInLoadingState.reset();
 }
+
+// Tests for cache_dir behavior with config.json (Regression test for #4230)
+class ModelManagerCacheDirTest : public ::testing::Test {
+protected:
+    ovms::ServerSettingsImpl originalServerSettings;
+    ovms::ModelsSettingsImpl originalModelsSettings;
+    std::string tempDir;
+    std::string configFilePath;
+    std::string globalCacheDir;
+
+    void SetUp() override {
+        // Save current Config state
+        originalServerSettings = ovms::Config::instance().getServerSettings();
+        originalModelsSettings = ovms::Config::instance().getModelSettings();
+
+        // Create temporary directory
+        tempDir = std::filesystem::temp_directory_path().string() + "/ovms_cache_test_" +
+                  std::to_string(std::time(nullptr));
+        std::filesystem::create_directories(tempDir);
+        configFilePath = tempDir + "/config.json";
+        globalCacheDir = tempDir + "/cache";
+    }
+
+    void TearDown() override {
+        // Restore original Config state
+        ovms::Config::instance().parse(&originalServerSettings, &originalModelsSettings);
+
+        // Clean up temporary directory
+        std::error_code ec;
+        std::filesystem::remove_all(tempDir, ec);
+    }
+
+    void createConfigJson(const std::string& configContent) {
+        std::ofstream configFile(configFilePath);
+        configFile << configContent;
+    }
+};
+
+TEST_F(ModelManagerCacheDirTest, MultipleModelsFromConfigJsonGetGlobalCacheDir) {
+    const std::string dummyModelPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy");
+    // Create config.json with two models
+    std::string configContent = R"JSON({
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "model1",
+                    "base_path": ")JSON" +
+                                dummyModelPath + R"JSON(",
+                    "shape": "(1, 10)",
+                    "target_device": "CPU",
+                    "nireq": 1,
+                    "plugin_config": { "PERF_COUNT": "ON" }
+                }
+            },
+            {
+                "config": {
+                    "name": "model2",
+                    "base_path": ")JSON" +
+                                dummyModelPath + R"JSON(",
+                    "shape": "(1, 10)",
+                    "target_device": "CPU",
+                    "nireq": 1
+                }
+            }
+        ]
+})JSON";
+
+    createConfigJson(configContent);
+
+    // Apply global cache_dir for this test run without requiring CLI-only argument validation.
+    ovms::ServerSettingsImpl serverSettings;
+    ovms::ModelsSettingsImpl modelsSettings;
+    serverSettings.cacheDir = globalCacheDir;
+    modelsSettings.configPath = configFilePath;
+    ASSERT_TRUE(ovms::Config::instance().parse(&serverSettings, &modelsSettings));
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
+
+    rapidjson::Document document;
+    document.Parse(configContent.c_str());
+    ASSERT_FALSE(document.HasParseError());
+    ASSERT_TRUE(document.HasMember("model_config_list"));
+    ASSERT_TRUE(document["model_config_list"].IsArray());
+    ASSERT_EQ(document["model_config_list"].Size(), 2);
+
+    const auto rootDirectoryPath = std::filesystem::path(configFilePath).parent_path().string();
+    ovms::ModelConfig model1Config;
+    model1Config.setRootDirectoryPath(rootDirectoryPath);
+    auto status = model1Config.parseNode(document["model_config_list"][0]["config"]);
+    ASSERT_TRUE(status.ok())
+        << "Failed to parse model1 config: " << status.string();
+    model1Config.setCacheDir(globalCacheDir);
+
+    ovms::ModelConfig model2Config;
+    model2Config.setRootDirectoryPath(rootDirectoryPath);
+    status = model2Config.parseNode(document["model_config_list"][1]["config"]);
+    ASSERT_TRUE(status.ok())
+        << "Failed to parse model2 config: " << status.string();
+    model2Config.setCacheDir(globalCacheDir);
+
+    EXPECT_EQ(model1Config.getName(), "model1");
+    EXPECT_EQ(model1Config.getCacheDir(), globalCacheDir)
+        << "Model1 should have cache_dir set from CLI";
+    EXPECT_EQ(model2Config.getName(), "model2");
+    EXPECT_EQ(model2Config.getCacheDir(), globalCacheDir)
+        << "Model2 should have cache_dir set from CLI";
+}
+
+TEST_F(ModelManagerCacheDirTest, ConfigJsonWithMultipleModelsOneWithPluginConfig) {
+    const std::string dummyModelPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy");
+    // Create config.json with two models where one has additional plugin_config settings
+    std::string configContent = R"JSON({
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "model_with_config",
+                    "base_path": ")JSON" +
+                                dummyModelPath + R"JSON(",
+                    "shape": "(1, 10)",
+                    "target_device": "CPU",
+                    "nireq": 2,
+                    "plugin_config": { "PERF_COUNT": "ON", "LOG_LEVEL": "LOG_NONE" }
+                }
+            },
+            {
+                "config": {
+                    "name": "model_no_config",
+                    "base_path": ")JSON" +
+                                dummyModelPath + R"JSON(",
+                    "shape": "(1, 10)",
+                    "target_device": "CPU",
+                    "nireq": 1
+                }
+            }
+        ]
+})JSON";
+
+    createConfigJson(configContent);
+
+    // Apply global cache_dir for this test run without requiring CLI-only argument validation.
+    ovms::ServerSettingsImpl serverSettings;
+    ovms::ModelsSettingsImpl modelsSettings;
+    serverSettings.cacheDir = globalCacheDir;
+    modelsSettings.configPath = configFilePath;
+    ASSERT_TRUE(ovms::Config::instance().parse(&serverSettings, &modelsSettings));
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
+
+    rapidjson::Document document;
+    document.Parse(configContent.c_str());
+    ASSERT_FALSE(document.HasParseError());
+    ASSERT_TRUE(document.HasMember("model_config_list"));
+    ASSERT_TRUE(document["model_config_list"].IsArray());
+    ASSERT_EQ(document["model_config_list"].Size(), 2);
+
+    const auto rootDirectoryPath = std::filesystem::path(configFilePath).parent_path().string();
+    ovms::ModelConfig modelWithConfig;
+    modelWithConfig.setRootDirectoryPath(rootDirectoryPath);
+    auto status = modelWithConfig.parseNode(document["model_config_list"][0]["config"]);
+    ASSERT_TRUE(status.ok()) << "Failed to parse model_with_config: " << status.string();
+    modelWithConfig.setCacheDir(globalCacheDir);
+
+    ovms::ModelConfig modelWithoutConfig;
+    modelWithoutConfig.setRootDirectoryPath(rootDirectoryPath);
+    status = modelWithoutConfig.parseNode(document["model_config_list"][1]["config"]);
+    ASSERT_TRUE(status.ok()) << "Failed to parse model_no_config: " << status.string();
+    modelWithoutConfig.setCacheDir(globalCacheDir);
+
+    EXPECT_EQ(modelWithConfig.getName(), "model_with_config");
+    EXPECT_EQ(modelWithConfig.getCacheDir(), globalCacheDir)
+        << "model_with_config should have CLI cache_dir even with other plugin_config settings";
+
+    // Verify plugin_config is preserved
+    auto pluginConfig = modelWithConfig.getPluginConfig();
+    ASSERT_NE(pluginConfig.find("PERF_COUNT"), pluginConfig.end())
+        << "plugin_config settings should be preserved";
+    ASSERT_NE(pluginConfig.find("LOG_LEVEL"), pluginConfig.end())
+        << "plugin_config settings should be preserved";
+
+    EXPECT_EQ(modelWithoutConfig.getName(), "model_no_config");
+    EXPECT_EQ(modelWithoutConfig.getCacheDir(), globalCacheDir)
+        << "model_no_config should also have CLI cache_dir";
+}
