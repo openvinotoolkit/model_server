@@ -27,6 +27,7 @@
 #include "../servable_definition.hpp"
 #include "../servable_name_checker.hpp"
 #include "../status.hpp"
+#include "../ovms.h"  // NOLINT
 #include "mediapipegraphconfig.hpp"
 #include "mediapipegraphdefinition.hpp"
 #include "../logging.hpp"
@@ -40,6 +41,7 @@
 namespace {
 
 thread_local std::string gLastError;
+OVMS_Server* gExternalServerHandle = nullptr;
 
 std::vector<std::string> splitNewlineDelimited(const char* values) {
     std::vector<std::string> parsed;
@@ -103,6 +105,14 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT void OVMS_MPFactoryDestroy(void* factoryHand
 
 extern "C" MEDIAPIPE_RUNTIME_EXPORT const char* OVMS_MPFactoryGetLastError() {
     return gLastError.c_str();
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT void OVMS_MPSetExternalServerHandle(void* serverHandle) {
+    gExternalServerHandle = static_cast<OVMS_Server*>(serverHandle);
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT void* OVMS_MPGetExternalServerHandle() {
+    return static_cast<void*>(gExternalServerHandle);
 }
 
 extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryProcessConfig(void* factoryHandle,

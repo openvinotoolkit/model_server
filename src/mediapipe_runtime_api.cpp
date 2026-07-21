@@ -35,6 +35,13 @@
 #include "kfs_python_tensor_bridge.hpp"
 #include "mediapipe_graph_executor_interface.hpp"
 
+struct OVMS_Server_;
+using OVMS_Server = OVMS_Server_;
+struct OVMS_Status_;
+using OVMS_Status = OVMS_Status_;
+extern "C" OVMS_Status* OVMS_ServerNew(OVMS_Server** server);
+extern "C" void OVMS_StatusDelete(OVMS_Status* status);
+
 #ifdef __linux__
 extern "C" void* OVMS_MPFactoryCreate(void*) __attribute__((weak));
 extern "C" void OVMS_MPFactoryDestroy(void*) __attribute__((weak));
@@ -49,6 +56,7 @@ extern "C" const char* OVMS_MPFactoryGetNames(void*, int) __attribute__((weak));
 extern "C" void* OVMS_MPFactoryFindServableDefinitionByName(void*, const char*) __attribute__((weak));
 extern "C" int OVMS_MPGraphExportCreateServableConfig(const char*, const ovms::HFSettingsImpl*, int) __attribute__((weak));
 extern "C" const ovms::KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
+extern "C" void OVMS_MPSetExternalServerHandle(void*) __attribute__((weak));
 #endif
 
 namespace ovms {
@@ -72,6 +80,7 @@ struct MediapipeRuntimeApi::ApiSymbols {
     using GetNamesFn = const char* (*)(void*, int);
     using FindServableDefinitionFn = void* (*)(void*, const char*);
     using CreateServableConfigFn = int (*)(const char*, const HFSettingsImpl*, int);
+    using SetExternalServerHandleFn = void (*)(void*);
     LibraryHandle handle = nullptr;
     void* factoryHandle = nullptr;
 
@@ -87,6 +96,7 @@ struct MediapipeRuntimeApi::ApiSymbols {
     GetNamesFn getNames = nullptr;
     FindServableDefinitionFn findServableDefinition = nullptr;
     CreateServableConfigFn createServableConfig = nullptr;
+    SetExternalServerHandleFn setExternalServerHandle = nullptr;
 };
 
 #ifdef __linux__
@@ -207,6 +217,44 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             return;
         }
     }
+#elif _WIN32
+    {
+        HMODULE currentModule = GetModuleHandleA(nullptr);
+        if (currentModule != nullptr) {
+            api->create = reinterpret_cast<ApiSymbols::CreateFn>(resolveSymbol(currentModule, "OVMS_MPFactoryCreate"));
+            api->destroy = reinterpret_cast<ApiSymbols::DestroyFn>(resolveSymbol(currentModule, "OVMS_MPFactoryDestroy"));
+            api->lastError = reinterpret_cast<ApiSymbols::LastErrorFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetLastError"));
+            api->processConfig = reinterpret_cast<ApiSymbols::ProcessConfigFn>(resolveSymbol(currentModule, "OVMS_MPFactoryProcessConfig"));
+            api->createExecutor = reinterpret_cast<ApiSymbols::CreateExecutorFn>(resolveSymbol(currentModule, "OVMS_MPFactoryCreateExecutor"));
+            api->createExecutorHandle = reinterpret_cast<ApiSymbols::CreateExecutorHandleFn>(resolveSymbol(currentModule, "OVMS_MPFactoryCreateExecutorHandle"));
+            api->definitionExists = reinterpret_cast<ApiSymbols::DefinitionExistsFn>(resolveSymbol(currentModule, "OVMS_MPFactoryDefinitionExists"));
+            api->aliasesConflictExcluding = reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(currentModule, "OVMS_MPFactoryAliasesConflictExcluding"));
+            api->retireOtherThan = reinterpret_cast<ApiSymbols::RetireOtherThanFn>(resolveSymbol(currentModule, "OVMS_MPFactoryRetireOtherThan"));
+            api->getNames = reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetNames"));
+            api->findServableDefinition = reinterpret_cast<ApiSymbols::FindServableDefinitionFn>(resolveSymbol(currentModule, "OVMS_MPFactoryFindServableDefinitionByName"));
+            api->createServableConfig = reinterpret_cast<ApiSymbols::CreateServableConfigFn>(resolveSymbol(currentModule, "OVMS_MPGraphExportCreateServableConfig"));
+            api->setExternalServerHandle = reinterpret_cast<ApiSymbols::SetExternalServerHandleFn>(resolveSymbol(currentModule, "OVMS_MPSetExternalServerHandle"));
+
+            loadedFromInProcessSymbols =
+                api->create != nullptr &&
+                api->destroy != nullptr &&
+                api->lastError != nullptr &&
+                api->processConfig != nullptr &&
+                api->createExecutor != nullptr &&
+                api->createExecutorHandle != nullptr &&
+                api->definitionExists != nullptr &&
+                api->aliasesConflictExcluding != nullptr &&
+                api->retireOtherThan != nullptr &&
+                api->getNames != nullptr &&
+                api->findServableDefinition != nullptr &&
+                api->createServableConfig != nullptr;
+
+            if (loadedFromInProcessSymbols) {
+                SPDLOG_TRACE("MediaPipe runtime API resolved from in-process symbols (Windows)");
+                tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(currentModule);
+            }
+        }
+    }
 #endif
 
 #ifndef __linux__
@@ -294,9 +342,16 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         api->getNames = reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(api->handle, "OVMS_MPFactoryGetNames"));
         api->findServableDefinition = reinterpret_cast<ApiSymbols::FindServableDefinitionFn>(resolveSymbol(api->handle, "OVMS_MPFactoryFindServableDefinitionByName"));
         api->createServableConfig = reinterpret_cast<ApiSymbols::CreateServableConfigFn>(resolveSymbol(api->handle, "OVMS_MPGraphExportCreateServableConfig"));
+        api->setExternalServerHandle = reinterpret_cast<ApiSymbols::SetExternalServerHandleFn>(resolveSymbol(api->handle, "OVMS_MPSetExternalServerHandle"));
 
         tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(api->handle);
     }
+
+#ifdef __linux__
+    if (api->setExternalServerHandle == nullptr) {
+        api->setExternalServerHandle = OVMS_MPSetExternalServerHandle != nullptr ? OVMS_MPSetExternalServerHandle : reinterpret_cast<ApiSymbols::SetExternalServerHandleFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPSetExternalServerHandle"));
+    }
+#endif
 
     if (api->create == nullptr ||
         api->destroy == nullptr ||
@@ -318,6 +373,17 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     if (api->factoryHandle == nullptr) {
         SPDLOG_ERROR("MediaPipe runtime API factory creation failed");
         return;
+    }
+
+    if (api->setExternalServerHandle != nullptr) {
+        OVMS_Server* serverHandle = nullptr;
+        auto* status = OVMS_ServerNew(&serverHandle);
+        if (status != nullptr) {
+            OVMS_StatusDelete(status);
+            SPDLOG_WARN("Failed to obtain OVMS server handle for MediaPipe runtime-shared");
+        } else {
+            api->setExternalServerHandle(static_cast<void*>(serverHandle));
+        }
     }
 }
 

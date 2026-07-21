@@ -183,11 +183,7 @@ http_archive(
 git_repository(
      name = "mediapipe",
      remote = "https://github.com/openvinotoolkit/mediapipe",
-     commit = "13fdb23ef26b1aa6de5a4629885ab026f6966bf7", # Enable python nodes and ovms, geti calculators branch
-     patches = [
-         "//third_party:mediapipe_model_api_openvino_windows.patch",
-     ],
-     patch_args = ["-p1"],
+     commit = "f1be143e9137faf84a59b36c817335619a137206", # Fix capi ovms handle ownership
 )
 
 # Protobuf for Node dependencies
