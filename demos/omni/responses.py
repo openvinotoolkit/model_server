@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ def run_unary(client, args, content):
 
     if args.audio_output:
         kwargs["extra_body"] = {
-            "modalities": ["text", "audio"],
+            "modalities": ["text", "audio"] if not args.audio_only_output else ["audio"],
             "audio": {"voice": args.voice, "format": "wav"},
         }
 
@@ -104,7 +104,8 @@ def run_unary(client, args, content):
                 elif part.type == "output_audio":
                     audio_b64 = part.data if hasattr(part, "data") else ""
 
-    print(f"\nResponse: {text}")
+    if text:
+        print(f"\nResponse: {text}")
 
     if audio_b64 and args.save:
         audio_bytes = base64.b64decode(audio_b64)
@@ -129,7 +130,7 @@ def run_streaming(client, args, content):
 
     if args.audio_output:
         kwargs["extra_body"] = {
-            "modalities": ["text", "audio"],
+            "modalities": ["text", "audio"] if not args.audio_only_output else ["audio"],
             "audio": {"voice": args.voice, "format": "pcm16"},
         }
 
@@ -196,6 +197,7 @@ def main():
     parser.add_argument("--audio", "-a", help="Input audio file (WAV or MP3)")
     parser.add_argument("--image", "-i", help="Input image file (JPG or PNG)")
     parser.add_argument("--audio-output", action="store_true", help="Request audio in response")
+    parser.add_argument("--audio-only-output", action="store_true", help="Request ONLY audio in response")
     parser.add_argument("--voice", "-v", default="f04", choices=VOICES, help="Voice for audio output")
     parser.add_argument("--stream", action="store_true", help="Stream the response")
     parser.add_argument("--save", "-s", help="Save audio output to file")
@@ -203,6 +205,9 @@ def main():
     parser.add_argument("--url", default="http://localhost:11338/v3", help="Server base URL")
     parser.add_argument("--model", default="ovms-model", help="Model name")
     args = parser.parse_args()
+
+    if args.audio_only_output:
+        assert args.audio_output
 
     if args.audio_output:
         print(f"Voice: {args.voice}")

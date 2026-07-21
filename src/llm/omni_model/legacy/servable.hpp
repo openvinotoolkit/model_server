@@ -22,6 +22,7 @@
 #include <openvino/genai/omni/pipeline.hpp>
 #include <openvino/genai/omni/decoded_results.hpp>
 
+#include "../../apis/openai_request.hpp"
 #include "../../servable.hpp"
 #include "legacy_executor.hpp"
 #include "src/llm/llm_calculator.pb.h"
@@ -38,8 +39,9 @@ struct OmniModelLegacyServableExecutionContext : public GenAiServableExecutionCo
 
     // Audio output configuration (from request)
     bool audioOutputRequested{false};
+    bool textOutputRequested{true};
     std::string audioVoice;
-    std::string audioFormat{"wav"};
+    OpenAIRequest::AudioFormat audioFormat{OpenAIRequest::AudioFormat::WAV};
 
     std::atomic<bool> clientDisconnected{false};
 
@@ -64,7 +66,7 @@ public:
         properties->inputProcessorContext.config.isOmni = true;
     }
 
-    absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const HttpPayload& payload);
+    absl::Status validateEndpoint(Endpoint endpoint) const override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;

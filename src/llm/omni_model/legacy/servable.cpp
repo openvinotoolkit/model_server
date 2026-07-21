@@ -59,27 +59,10 @@
 
 namespace ovms {
 
-absl::Status OmniModelLegacyServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
-    if (payload.parsedJson->HasParseError()) {
-        return absl::InvalidArgumentError("Non-json request received in text generation calculator");
+absl::Status OmniModelLegacyServable::validateEndpoint(Endpoint endpoint) const {
+    if (endpoint == Endpoint::COMPLETIONS) {
+        return absl::InvalidArgumentError("Omni Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
-    if (payload.uri.find("/v3/v1/") != std::string::npos) {
-        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Endpoint {} is deprecated. Use /v1/ prefix instead.", payload.uri);
-    }
-    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions" ||
-        payload.uri == "/v1/chat/completions") {
-        executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
-    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses" ||
-               payload.uri == "/v1/responses") {
-        executionContext->endpoint = Endpoint::RESPONSES;
-    } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
-        executionContext->endpoint = Endpoint::TOKENIZE;
-    } else {
-        return absl::InvalidArgumentError("Wrong endpoint. Omni Servable allowed only on /v[13]/chat/completions, /v[13]/responses, /v[13]/tokenize");
-    }
-    executionContext->payload = payload;
     return absl::OkStatus();
 }
 
@@ -186,6 +169,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
     // Copy audio output config from parsed request to execution context
     const auto& req = omniExecutionContext->apiHandler->getRequest();
     omniExecutionContext->audioOutputRequested = req.audioOutputRequested;
+    omniExecutionContext->textOutputRequested = req.textOutputRequested;
     omniExecutionContext->audioVoice = req.audioVoice;
     omniExecutionContext->audioFormat = req.audioFormat;
 
@@ -237,7 +221,7 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
         const float* pcmData = waveform.data<const float>();
 
         std::string audioBase64;
-        if (omniExecutionContext->audioFormat == "wav") {
+        if (omniExecutionContext->audioFormat == OpenAIRequest::AudioFormat::WAV) {
             constexpr uint32_t OMNI_SAMPLE_RATE = 24000;
             constexpr uint16_t BITS_PER_SAMPLE = 32;
             void* wavData = nullptr;
@@ -259,31 +243,65 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
             audioBase64 = absl::Base64Escape(std::string_view(reinterpret_cast<const char*>(pcm16.data()), pcm16.size() * sizeof(int16_t)));
         }
 
-        // Parse response JSON and inject audio field
+        // Parse response JSON and inject audio field based on API type
         rapidjson::Document responseDoc;
         responseDoc.Parse(executionContext->response.c_str());
         if (!responseDoc.HasParseError()) {
             auto& alloc = responseDoc.GetAllocator();
-            if (responseDoc.HasMember("choices") && responseDoc["choices"].IsArray() && responseDoc["choices"].Size() > 0) {
+            if (executionContext->apiHandler->getEndpoint() == Endpoint::CHAT_COMPLETIONS) {
                 // Chat Completions format: inject into choices[0].message.audio
-                auto& message = responseDoc["choices"][0]["message"];
-                rapidjson::Value audioObj(rapidjson::kObjectType);
-                audioObj.AddMember("data", rapidjson::Value(audioBase64.c_str(), alloc), alloc);
-                std::string transcript = message.HasMember("content") && message["content"].IsString() ? message["content"].GetString() : "";
-                audioObj.AddMember("transcript", rapidjson::Value(transcript.c_str(), alloc), alloc);
-                message.AddMember("audio", audioObj, alloc);
-            } else if (responseDoc.HasMember("output") && responseDoc["output"].IsArray()) {
+                if (responseDoc.HasMember("choices") && responseDoc["choices"].IsArray() && responseDoc["choices"].Size() > 0) {
+                    auto& message = responseDoc["choices"][0]["message"];
+                    rapidjson::Value audioObj(rapidjson::kObjectType);
+                    audioObj.AddMember("data", rapidjson::Value(audioBase64.c_str(), alloc), alloc);
+                    std::string transcript = message.HasMember("content") && message["content"].IsString() ? message["content"].GetString() : "";
+                    audioObj.AddMember("transcript", rapidjson::Value(transcript.c_str(), alloc), alloc);
+                    message.AddMember("audio", audioObj, alloc);
+                }
+            } else if (executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
                 // Responses API format: append output_audio content part to the message output item
-                auto& output = responseDoc["output"];
-                for (rapidjson::SizeType i = 0; i < output.Size(); i++) {
-                    if (output[i].HasMember("type") && output[i]["type"].IsString() &&
-                        std::string(output[i]["type"].GetString()) == "message" &&
-                        output[i].HasMember("content") && output[i]["content"].IsArray()) {
-                        rapidjson::Value audioPart(rapidjson::kObjectType);
-                        audioPart.AddMember("type", rapidjson::Value("output_audio", alloc), alloc);
-                        audioPart.AddMember("data", rapidjson::Value(audioBase64.c_str(), alloc), alloc);
-                        output[i]["content"].PushBack(audioPart, alloc);
-                        break;
+                if (responseDoc.HasMember("output") && responseDoc["output"].IsArray()) {
+                    auto& output = responseDoc["output"];
+                    for (rapidjson::SizeType i = 0; i < output.Size(); i++) {
+                        if (output[i].HasMember("type") && output[i]["type"].IsString() &&
+                            std::string(output[i]["type"].GetString()) == "message" &&
+                            output[i].HasMember("content") && output[i]["content"].IsArray()) {
+                            rapidjson::Value audioPart(rapidjson::kObjectType);
+                            audioPart.AddMember("type", rapidjson::Value("output_audio", alloc), alloc);
+                            audioPart.AddMember("data", rapidjson::Value(audioBase64.c_str(), alloc), alloc);
+                            output[i]["content"].PushBack(audioPart, alloc);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // When text output is not requested (modalities: ["audio"]), suppress text content
+            if (!omniExecutionContext->textOutputRequested) {
+                if (executionContext->apiHandler->getEndpoint() == Endpoint::CHAT_COMPLETIONS) {
+                    if (responseDoc.HasMember("choices") && responseDoc["choices"].IsArray() && responseDoc["choices"].Size() > 0) {
+                        auto& message = responseDoc["choices"][0]["message"];
+                        if (message.HasMember("content")) {
+                            message["content"].SetNull();
+                        }
+                    }
+                } else if (executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
+                    // Remove output_text parts from message content, keep output_audio
+                    if (responseDoc.HasMember("output") && responseDoc["output"].IsArray()) {
+                        auto& output = responseDoc["output"];
+                        for (rapidjson::SizeType i = 0; i < output.Size(); i++) {
+                            if (output[i].HasMember("content") && output[i]["content"].IsArray()) {
+                                auto& content = output[i]["content"];
+                                for (rapidjson::SizeType j = 0; j < content.Size();) {
+                                    if (content[j].HasMember("type") && content[j]["type"].IsString() &&
+                                        std::string(content[j]["type"].GetString()) == "output_text") {
+                                        content.Erase(content.Begin() + j);
+                                    } else {
+                                        j++;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -292,6 +310,50 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             responseDoc.Accept(writer);
             executionContext->response = buffer.GetString();
+        }
+    }
+
+    // When text output is not requested and audio injection didn't already handle it,
+    // suppress text content in the response
+    if (!omniExecutionContext->textOutputRequested &&
+        !(omniExecutionContext->audioOutputRequested && !omniExecutionContext->results.speech_result.waveforms.empty())) {
+        rapidjson::Document responseDoc;
+        responseDoc.Parse(executionContext->response.c_str());
+        if (!responseDoc.HasParseError()) {
+            bool modified = false;
+            if (executionContext->apiHandler->getEndpoint() == Endpoint::CHAT_COMPLETIONS) {
+                if (responseDoc.HasMember("choices") && responseDoc["choices"].IsArray() && responseDoc["choices"].Size() > 0) {
+                    auto& message = responseDoc["choices"][0]["message"];
+                    if (message.HasMember("content")) {
+                        message["content"].SetNull();
+                        modified = true;
+                    }
+                }
+            } else if (executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
+                if (responseDoc.HasMember("output") && responseDoc["output"].IsArray()) {
+                    auto& output = responseDoc["output"];
+                    for (rapidjson::SizeType i = 0; i < output.Size(); i++) {
+                        if (output[i].HasMember("content") && output[i]["content"].IsArray()) {
+                            auto& content = output[i]["content"];
+                            for (rapidjson::SizeType j = 0; j < content.Size();) {
+                                if (content[j].HasMember("type") && content[j]["type"].IsString() &&
+                                    std::string(content[j]["type"].GetString()) == "output_text") {
+                                    content.Erase(content.Begin() + j);
+                                    modified = true;
+                                } else {
+                                    j++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (modified) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                responseDoc.Accept(writer);
+                executionContext->response = buffer.GetString();
+            }
         }
     }
 

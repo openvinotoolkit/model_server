@@ -767,12 +767,22 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsArray())
             return absl::InvalidArgumentError("modalities is not an array");
+        bool hasText = false;
+        bool hasAudio = false;
         for (const auto& mod : it->value.GetArray()) {
             if (!mod.IsString())
                 return absl::InvalidArgumentError("modalities array must contain strings");
-            if (std::string(mod.GetString()) == "audio") {
-                request.audioOutputRequested = true;
+            const std::string modality = mod.GetString();
+            if (modality == "audio") {
+                hasAudio = true;
+            } else if (modality == "text") {
+                hasText = true;
             }
+        }
+        request.audioOutputRequested = hasAudio;
+        // When modalities is explicitly provided and "text" is absent, suppress text in response
+        if (!hasText && hasAudio) {
+            request.textOutputRequested = false;
         }
     }
 
@@ -788,8 +798,12 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
         }
         auto formatIt = audioObj.FindMember("format");
         if (formatIt != audioObj.MemberEnd() && formatIt->value.IsString()) {
-            request.audioFormat = formatIt->value.GetString();
-            if (request.audioFormat != "wav" && request.audioFormat != "pcm16") {
+            std::string fmt = formatIt->value.GetString();
+            if (fmt == "wav") {
+                request.audioFormat = OpenAIRequest::AudioFormat::WAV;
+            } else if (fmt == "pcm16") {
+                request.audioFormat = OpenAIRequest::AudioFormat::PCM16;
+            } else {
                 return absl::InvalidArgumentError("audio.format must be \"wav\" or \"pcm16\"");
             }
         }

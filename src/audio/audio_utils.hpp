@@ -23,12 +23,19 @@
 
 namespace ovms::audio_utils {
 
+static constexpr uint32_t PIPELINE_SUPPORTED_SAMPLE_RATE = 16000;
+
 bool isWavBuffer(const std::string buf);
 
-std::vector<float> readWav(const std::string_view& wavData);
-std::vector<float> readMp3(const std::string_view& mp3Data);
+// Decode WAV data into mono float32 PCM samples.
+// If targetSampleRate > 0, resamples to that rate. Otherwise returns at native sample rate.
+std::vector<float> readWav(const std::string_view& wavData, uint32_t targetSampleRate = PIPELINE_SUPPORTED_SAMPLE_RATE);
 
-// Decode WAV or MP3 audio data into mono float32 PCM samples.
+// Decode MP3 data into mono float32 PCM samples.
+// If targetSampleRate > 0, resamples to that rate. Otherwise returns at native sample rate.
+std::vector<float> readMp3(const std::string_view& mp3Data, uint32_t targetSampleRate = PIPELINE_SUPPORTED_SAMPLE_RATE);
+
+// Decode WAV or MP3 audio data into mono float32 PCM samples based on format string.
 // No resampling is applied — returns the raw PCM at the file's native sample rate.
 std::vector<float> readWithoutResample(const std::string_view& audioData, const std::string& format);
 

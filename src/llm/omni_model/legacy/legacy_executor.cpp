@@ -53,12 +53,13 @@ void OmniModelLegacyExecutor::processRequest() {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Omni generation started");
         try {
             ov::genai::OmniTalkerSpeechConfig speechConfig;
+            speechConfig.audio_chunk_frames = 4;
             speechConfig.return_audio = requestExecutionContext->audioOutputRequested;
             if (!requestExecutionContext->audioVoice.empty()) {
                 speechConfig.speaker = requestExecutionContext->audioVoice;
             }
 
-            SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni generate: prompt length={}, images={}, videos={}, audios={}, return_audio={}",
+            SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni generate: prompt length={}, images={}, videos={}, audios={}, return_audio={}",
                 requestExecutionContext->inputRequest.promptText.size(),
                 requestExecutionContext->inputRequest.inputImages.size(),
                 requestExecutionContext->inputRequest.inputVideos.size(),
@@ -66,7 +67,7 @@ void OmniModelLegacyExecutor::processRequest() {
                 requestExecutionContext->audioOutputRequested);
             for (size_t i = 0; i < requestExecutionContext->inputRequest.inputAudios.size(); i++) {
                 const auto& t = requestExecutionContext->inputRequest.inputAudios[i];
-                SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni audio[{}]: shape={}, element_type={}",
+                SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni audio[{}]: shape={}, element_type={}",
                     i, t.get_shape().to_string(), t.get_element_type().to_string());
             }
 
@@ -75,16 +76,21 @@ void OmniModelLegacyExecutor::processRequest() {
             // Create speech streamer for streaming audio output via SSE
             ov::genai::OmniSpeechStreamerVariant speechStreamer = std::monostate{};
             size_t audioChunkCount = 0;
+            auto lastChunkReceiveTime = std::chrono::steady_clock::now();
             auto speechStreamStart = std::chrono::steady_clock::now();
             if (requestExecutionContext->audioOutputRequested && requestExecutionContext->textStreamer) {
-                speechStreamer = [& ctx = *requestExecutionContext, &audioChunkCount, &speechStreamStart](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
+                speechStreamer = [& ctx = *requestExecutionContext, &audioChunkCount, &lastChunkReceiveTime](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
+                    auto timeSinceLastChunk = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastChunkReceiveTime).count();
+                    auto serializationStartTime = std::chrono::steady_clock::now();
+                    lastChunkReceiveTime = std::chrono::steady_clock::now();
+
                     if (ctx.clientDisconnected.load()) {
                         return ov::genai::StreamingStatus::CANCEL;
                     }
-                    auto chunkStart = std::chrono::steady_clock::now();
                     if (audioChunkCount == 0) {
-                        speechStreamStart = chunkStart;
-                        SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni speech: first audio chunk received");
+                        SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni speech: first audio chunk received in {} ms", timeSinceLastChunk);
+                    } else {
+                        SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni speech: next audio chunk received in {} ms", timeSinceLastChunk);
                     }
                     // Convert float32 PCM to int16 and base64 encode
                     const float* pcm = audio_chunk.data<const float>();
@@ -108,10 +114,9 @@ void OmniModelLegacyExecutor::processRequest() {
                         audioDoc.GetAllocator());
                     ctx.deltaChannel.push(std::move(audioDoc));
                     audioChunkCount++;
-                    auto chunkEnd = std::chrono::steady_clock::now();
-                    auto chunkMs = std::chrono::duration_cast<std::chrono::microseconds>(chunkEnd - chunkStart).count();
-                    SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni speech chunk[{}]: {} samples, encode+push {} us, duration {:.1f} ms",
-                        audioChunkCount, count, chunkMs, count * 1000.0f / 24000.0f);
+                    auto serializationTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - serializationStartTime).count();
+                    SPDLOG_LOGGER_TRACE(llm_executor_logger, "Omni : Deserialization time {} ms", serializationTimeMs);
+                    lastChunkReceiveTime = std::chrono::steady_clock::now();
                     return ov::genai::StreamingStatus::RUNNING;
                 };
             }
@@ -129,11 +134,11 @@ void OmniModelLegacyExecutor::processRequest() {
                 speechStreamer);
             auto generateEnd = std::chrono::steady_clock::now();
             auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(generateEnd - generateStart).count();
-            SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni generate complete: total={} ms, audio_chunks={}",
+            SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni generate complete: total={} ms, audio_chunks={}",
                 totalMs, audioChunkCount);
             if (audioChunkCount > 0) {
                 auto speechMs = std::chrono::duration_cast<std::chrono::milliseconds>(generateEnd - speechStreamStart).count();
-                SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni speech phase: {} ms for {} chunks ({:.1f} ms/chunk)",
+                SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni speech phase: {} ms for {} chunks ({:.1f} ms/chunk)",
                     speechMs, audioChunkCount, static_cast<float>(speechMs) / audioChunkCount);
             }
         } catch (std::exception& e) {
@@ -167,7 +172,7 @@ void OmniModelLegacyExecutor::notify() {
 void OmniModelLegacyExecutorWrapper::run(OmniModelLegacyExecutor* executor, std::atomic<bool>* receivedEndSignal) {
     while (!(*receivedEndSignal)) {
         try {
-            SPDLOG_LOGGER_INFO(llm_executor_logger, "Omni executor all requests: {};", executor->requestsQueueSize());
+            SPDLOG_LOGGER_TRACE(llm_executor_logger, "Omni executor all requests: {};", executor->requestsQueueSize());
             if (executor->hasRequests()) {
                 executor->processRequest();
             } else {

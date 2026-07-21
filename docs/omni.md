@@ -4,8 +4,8 @@ OpenVINO Model Server supports **Qwen3-Omni** models — multimodal models that 
 
 ## Supported Models
 
-- Qwen3-Omni Dense (INT4/INT8/FP16)
-- Qwen3-Omni MoE (INT4/INT8/FP16) - **does not work yet**
+- Qwen3-Omni Dense (INT4/INT8/FP16/FP32)
+- Qwen3-Omni MoE (INT4/INT8/FP16/FP32) - **does not work yet**
 
 ## Quick Start
 
@@ -15,30 +15,14 @@ The model directory must contain `openvino_talker_model.xml` — OVMS auto-detec
 
 ```
 models/qwen3-omni/
-├── openvino_model.xml          # thinker (VLM)
-├── openvino_talker_model.xml   # talker (speech)
-├── openvino_code_predictor_model.xml
-├── openvino_code2wav_model.xml
+├── openvino_model.xml                  # thinker (VLM)
+├── openvino_talker_model.xml           # <----- new model
+├── openvino_code_predictor_model.xml   # <----- new model
+├── openvino_code2wav_model.xml         # <----- new model
 ├── config.json
 ├── generation_config.json
 ├── tokenizer.xml / tokenizer.json
 └── ...
-```
-
-### Graph Configuration
-It should be inside model folder, or simply run OVMS with `--task text_generation` param so it will automatically create one in memory.
-
-```protobuf
-node {
-  name: "LLMExecutor"
-  calculator: "HttpLLMCalculator"
-  node_options: {
-    [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-      models_path: "./"
-      # pipeline_type: OMNI  # optional — auto-detected from openvino_talker_model.xml
-    }
-  }
-}
 ```
 
 ## API Support

@@ -55,7 +55,6 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         }
 
         if (context.config.isOmni) {
-            SPDLOG_INFO("Adding AudioDecodingProcessor to the pipeline");
             processors.emplace_back(std::make_unique<AudioDecodingProcessor>());
         }
 

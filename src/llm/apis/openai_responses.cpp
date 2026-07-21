@@ -1478,7 +1478,7 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(rapidjson::Document 
         events.emplace_back(std::move(inProgressEvent));
     }
 
-    // parsedDelta is a pre-parsed Document produced by OVMSTextStreamer::flushChunk.
+    // parsedDelta is a pre-parsed Document produced by OVMSTextStreamer::flushChunk or AudioStreamer.
     // Shape: {"delta":{...}} for content/reasoning/tool_calls, or an empty Document{}
     // for finish-only chunks, or {"_audio_delta":"<base64>"} for audio chunks.
     if (parsedDelta.HasMember("_audio_delta") && parsedDelta["_audio_delta"].IsString()) {
