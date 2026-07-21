@@ -9,7 +9,7 @@ hidden:
 Chat completion API <ovms_docs_rest_api_chat>
 Completions API <ovms_docs_rest_api_completion>
 Embeddings API <ovms_docs_rest_api_embeddings>
-Tokenize API <#ovms_docs_rest_api_tokenize>
+Tokenize API <ovms_docs_rest_api_tokenize>
 Reranking API <ovms_docs_rest_api_rerank>
 Image generation API <ovms_docs_rest_api_image_generation>
 Image generation API <ovms_docs_rest_api_image_edit>

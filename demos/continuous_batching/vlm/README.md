@@ -11,7 +11,7 @@ ovms_demos_vlm_npu
 This demo shows how to deploy Vision Language Models in the OpenVINO Model Server.
 Text generation use case is exposed via OpenAI API `chat/completions` and `responses` endpoints.
 
-> **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Core Ultra Series on Ubuntu24, RedHat9 and Windows11.
+> **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ Xe2 GPU platforms on Ubuntu24 and Windows11. At least 22GB VRAM is needed to deploy model Qwen3.6-35B-A3B used in the demo. On platforms with less memory, use smaller model like [OpenVINO/Qwen3.5-4B-int4-ov](https://huggingface.co/OpenVINO/Qwen3.5-4B-int4-ov).
 
 ## Prerequisites
 
@@ -22,7 +22,6 @@ Text generation use case is exposed via OpenAI API `chat/completions` and `respo
 
 ## Fast deployment with OpenVINO models pulled directly from HuggingFace Hub
 VLM models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/OpenVINO)
-For other models go to the model preparation step and deployment for converted models.
 Here is an example of `Qwen3.6-35B-A3B-int4` deployment:
 
 :::{dropdown} **Deploying with Docker**
@@ -31,7 +30,7 @@ Running this command starts the container:
 ```bash
 mkdir -p models
 # in case GPU is available
-export GPU_ARGS=$(ls /dev/dri/render* >/dev/null 2>&1 && echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)")
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path /models --allowed_media_domains raw.githubusercontent.com
 ```
 :::
@@ -41,7 +40,7 @@ docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/model
 If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-mkdir models
+mkdir c:\models
 ovms --rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path c:\models --allowed_media_domains raw.githubusercontent.com
 ```
 
@@ -311,9 +310,6 @@ The picture features a zebra standing in a grassy area. The zebra is characteriz
 
 Check the [guide of using lm-evaluation-harness](../accuracy/README.md)
 
-## VLM models deployment with NPU acceleration
-
-Check [VLM usage with NPU acceleration](../../vlm_npu/README.md)
 
 
 ## References

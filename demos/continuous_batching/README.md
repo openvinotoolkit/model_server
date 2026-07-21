@@ -30,18 +30,20 @@ That makes it easy to use and efficient especially on Intel® Xeon® processors 
 
 ## Server Deployment
 
-**Container on Linux and CPU target device**
+**Container on Linux**
 
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p ${HOME}/models
-docker run -it -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/models/:rw openvino/model_server:weekly --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
+# in case GPU is available
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+
+docker run -d ${GPU_ARGS} -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/models/:rw openvino/model_server:weekly --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
-> **Note:** In case you want to use GPU target device, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
-to `docker run` command. The parameter `--target_device` should be also updated to `GPU`. 
+> **Note:** In case you want to use GPU target device, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`. Target device will be determined based on detected hardware with the priorities dGPU, iGPU, CPU. It can be set explicitly with --target_device parameter
 
 
-**Binary package on Windows 11 with GPU target device**
+**Binary package on Windows 11**
 
 After ovms is installed according to steps from [baremetal deployment guide](../../docs/deploying_server_baremetal.md), run the following command:
 
