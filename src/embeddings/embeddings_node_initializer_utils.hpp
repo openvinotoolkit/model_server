@@ -23,7 +23,7 @@
 namespace ovms {
 
 std::optional<mediapipe::EmbeddingsCalculatorOVOptions_Pooling> detectEmbeddingsPoolingFromConfig(
-    const std::filesystem::path& modelsPath);
+    const std::filesystem::path& poolingConfigPath);
 
 mediapipe::EmbeddingsCalculatorOVOptions_Pooling resolveEmbeddingsPooling(
     const std::filesystem::path& modelsPath,

@@ -17,8 +17,7 @@
 namespace ovms {
 
 std::optional<mediapipe::EmbeddingsCalculatorOVOptions_Pooling> detectEmbeddingsPoolingFromConfig(
-    const std::filesystem::path& modelsPath) {
-    const auto poolingConfigPath = modelsPath / "1_Pooling" / "config.json";
+    const std::filesystem::path& poolingConfigPath) {
     if (!std::filesystem::exists(poolingConfigPath)) {
         return std::nullopt;
     }
@@ -93,16 +92,15 @@ mediapipe::EmbeddingsCalculatorOVOptions_Pooling resolveEmbeddingsPooling(
         return *graphPooling;
     }
 
-    if (const auto detectedPooling = detectEmbeddingsPoolingFromConfig(modelsPath)) {
-        SPDLOG_DEBUG("Detected pooling '{}' from {}",
+    const auto poolingConfigPath = modelsPath / "1_Pooling" / "config.json";
+    if (const auto detectedPooling = detectEmbeddingsPoolingFromConfig(poolingConfigPath)) {
+        SPDLOG_INFO("Detected pooling '{}' from {}",
             mediapipe::EmbeddingsCalculatorOVOptions_Pooling_Name(*detectedPooling),
-            (modelsPath / "1_Pooling" / "config.json").string());
+            poolingConfigPath.string());
         return *detectedPooling;
     }
 
-    SPDLOG_WARN("No pooling type specified in graph config and no 1_Pooling/config.json found in {}. "
-        "Defaulting to CLS pooling.",
-        modelsPath.string());
+    SPDLOG_WARN("Pooling mode was not specified and could not be inferred. Defaulting to CLS pooling.");
     return mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS;
 }
 
