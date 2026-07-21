@@ -126,7 +126,7 @@ inline std::string materializeConfigForCurrentPlatform(const std::string& config
     adjustConfigForTargetPlatform(configContents);
     static std::atomic<uint64_t> counter{0};
     const auto generatedPath = std::filesystem::temp_directory_path() /
-        ("ovms_capi_config_" + std::to_string(counter.fetch_add(1)) + ".json");
+                               ("ovms_capi_config_" + std::to_string(counter.fetch_add(1)) + ".json");
     createConfigFileWithContent(configContents, generatedPath.string());
     return generatedPath.string();
 #else
@@ -156,7 +156,9 @@ struct ModelsSettingsGuard {
 };
 
 struct ServerGuard {
-    ServerGuard(const std::string& configPath, bool startGrpc = false) : serverSettingsGuard(startGrpc), modelsSettingsGuard(configPath) {
+    ServerGuard(const std::string& configPath, bool startGrpc = false) :
+        serverSettingsGuard(startGrpc),
+        modelsSettingsGuard(configPath) {
         THROW_ON_ERROR_CAPI(OVMS_ServerNew(&server));
         THROW_ON_ERROR_CAPI(OVMS_ServerStartFromConfigurationFile(server, serverSettingsGuard.settings, modelsSettingsGuard.settings));
     }
