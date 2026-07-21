@@ -30,15 +30,12 @@ cc_library(
 cc_import(
     name = "openvino_import_lib",
     interface_library = "lib/intel64/Release/openvino.lib",
-    shared_library = "bin/intel64/Release/openvino.dll",
+    system_provided = True,
     visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "openvino",
-    srcs = [
-        "bin/intel64/Release/openvino.dll",
-    ],
     visibility = ["//visibility:public"],
     deps = [
         ":openvino_import_lib",

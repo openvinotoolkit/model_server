@@ -271,6 +271,13 @@ test:linux --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/
 test:linux --test_env no_proxy=localhost
 test:linux --test_env "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
+# Windows test runtime env mirrors Linux test env intent.
+test:windows --test_env PATH=C:/opt/openvino/runtime/bin/intel64/Release;C:/opt/openvino/runtime/3rdparty/tbb/bin;C:/opt/Python312;C:/opt/Python312/DLLs
+test:windows --test_env OPENVINO_TOKENIZERS_PATH_GENAI=C:/opt/openvino/runtime/bin/intel64/Release/openvino_tokenizers.dll
+test:windows --test_env PYTHONPATH=C:/opt/openvino/python;%workspace%/bazel-bin/src/python/binding
+test:windows --test_env no_proxy=localhost
+test:windows --test_env "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
+
 # Bazelrc imports ############################################################################################################################
 # file below should contain sth like
 # build --remote_cache=http://IP:PORT
