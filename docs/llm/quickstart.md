@@ -19,7 +19,10 @@ You can use another model from [OpenVINO organization on HuggingFace](https://hu
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU
+# in case GPU is available
+export GPU_ARGS=$(ls /dev/dri/render* >/dev/null 2>&1 && echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)")
+
+docker run --user $(id -u):$(id -g) -d $GPU_ARGS --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --rest_port 8000
 ```
 :::
 
@@ -27,7 +30,8 @@ docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
 ```bat
-ovms.exe --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path models --rest_port 8000 --task text_generation --target_device GPU
+mkdir c:\models
+ovms.exe --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path c:\models --rest_port 8000
 ```
 :::
 ::::
@@ -40,24 +44,21 @@ The consecutive run of the command will check that the model exists and start se
 Wait for the model to load. You can check the status with a simple command:
 
 ```console
-curl http://localhost:8000/v1/config
+curl http://localhost:8000/v1/models
 ```
 
 :::{dropdown} Expected Response
 ```json
 {
-  "OpenVINO/Qwen3-8B-int4-ov": {
-    "model_version_status": [
-      {
-        "version": "1",
-        "state": "AVAILABLE",
-        "status": {
-          "error_code": "OK",
-          "error_message": "OK"
-        }
-      }
-    ]
-  }
+  "data": [
+    {
+      "id": "OpenVINO/Qwen3-8B-int4-ov",
+      "object": "model",
+      "created": 1784334119,
+      "owned_by": "OVMS"
+    }
+  ],
+  "object": "list"
 }
 ```
 :::
@@ -68,7 +69,7 @@ curl http://localhost:8000/v1/config
 
 :::{tab-item} Linux
 ```bash
-curl -s http://localhost:8000/v3/chat/completions \
+curl -s http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "OpenVINO/Qwen3-8B-int4-ov",
@@ -87,7 +88,7 @@ curl -s http://localhost:8000/v3/chat/completions \
 
 Windows Powershell
 ```powershell
-(Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
+(Invoke-WebRequest -Uri "http://localhost:8000/v1/chat/completions" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
  -Body '{"model": "OpenVINO/Qwen3-8B-int4-ov", "max_tokens": 30, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}]}').Content
@@ -95,7 +96,7 @@ Windows Powershell
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"OpenVINO/Qwen3-8B-int4-ov\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"What are the 3 main tourist attractions in Paris?\"}]}"
+curl -s http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"OpenVINO/Qwen3-8B-int4-ov\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"What are the 3 main tourist attractions in Paris?\"}]}"
 ```
 :::
 
@@ -139,7 +140,7 @@ Then run the following Python code:
 from openai import OpenAI
 
 client = OpenAI(
-  base_url="http://localhost:8000/v3",
+  base_url="http://localhost:8000/v1",
   api_key="unused"
 )
 
@@ -161,39 +162,7 @@ Expected output:
 Paris, the charming City of Light, is renowned for its rich history, iconic landmarks, architectural splendor, and artistic
 ```
 
-## Tokenization (release 2026.0 or weekly)
 
-The `tokenize` endpoint provides a simple API for tokenizing input text using the same tokenizer as the deployed LLM, VLM or [embedding](../../demos/embeddings/README.md#usage-of-tokenize-endpoint-release-20254-or-weekly). This allows you to see how your text will be split into tokens before feature extraction or inference. The endpoint accepts a string or list of strings and returns the corresponding token IDs.
-
-Example usage:
-```console
-curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"Qwen/Qwen3-8B\", \"text\": \"hello world\"}"
-```
-Response:
-```json
-{
-  "tokens":[14990,1879]
-}
-```
-
-It's possible to use additional parameters:
- - `pad_to_max_length` - whether to pad the sequence to the maximum length. Default is False. 
- - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number.
- - `padding_side` - side to pad the sequence, can be `left` or `right`. Default is `right`.
- - `add_special_tokens` - whether to add special tokens like BOS, EOS, PAD. Default is True. 
-
- Example usage:
-```console
-curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"Qwen/Qwen3-8B\", \"text\": \"hello world\", \"max_length\": 5, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
-```
-
-Response:
-```json
-{
-  "tokens": [151643,151643,151643,14990,1879]
-}
-```
-> **Note:** Additional parameters are working only with the latest models. That means it's required to export it manually with [export model script](../../demos/common/export_models/README.md)
 
 ## References
 - [Efficient LLM Serving - reference](reference.md)

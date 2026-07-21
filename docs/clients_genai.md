@@ -9,6 +9,7 @@ hidden:
 Chat completion API <ovms_docs_rest_api_chat>
 Completions API <ovms_docs_rest_api_completion>
 Embeddings API <ovms_docs_rest_api_embeddings>
+Tokenize API <#ovms_docs_rest_api_tokenize>
 Reranking API <ovms_docs_rest_api_rerank>
 Image generation API <ovms_docs_rest_api_image_generation>
 Image generation API <ovms_docs_rest_api_image_edit>
@@ -29,6 +30,7 @@ OpenAI compatible endpoints:
 - [audio/translations](./model_server_rest_api_speech_to_text.md#translation)
 - [audio/speech](./model_server_rest_api_text_to_speech.md)
 - [images/edit](./model_server_rest_api_image_edit.md)
+- [tokenize](./model_server_rest_api_tokenizer.md)
 - /models
 - /models/{model}
 
