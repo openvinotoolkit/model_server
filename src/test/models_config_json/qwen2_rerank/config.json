@@ -1,0 +1,6 @@
+{
+  "architectures": ["Qwen2ForSequenceClassification"],
+  "model_type": "qwen2",
+  "hidden_size": 1024,
+  "num_labels": 2
+}

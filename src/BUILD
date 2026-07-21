@@ -356,11 +356,36 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "libovms_default_task_detector",
+    hdrs = ["default_task_detector.hpp"],
+    srcs = ["default_task_detector.cpp"],
+    deps = [
+        "//src/port:rapidjson_document",
+        "//src/port:rapidjson_error",
+        "//src/port:rapidjson_istreamwrapper",
+        "libovmsstring_utils",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "libovms_default_task",
+    hdrs = ["default_task.hpp"],
+    srcs = ["default_task.cpp"],
+    deps = [
+        "libovms_default_task_detector",
+        "libovmsstatus",
+        "//src/pull_module:curl_downloader",
+        "//src/pull_module:hf_env_vars",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "libovms_cliparser",
     hdrs = ["cli_parser.hpp"],
     srcs = ["cli_parser.cpp"],
     deps = [
         "@com_github_jarro2783_cxxopts//:cxxopts",
+        "libovms_default_task",
         "libovms_server_settings",
         "libovms_version",
         "//src/filesystem:libovmsfilesystem",
@@ -1934,6 +1959,7 @@ ovms_cc_library(
     deps = ["cpp_headers",
             "@com_github_tencent_rapidjson//:rapidjson",
             "//third_party:openvino",
+            "//src/filesystem:libovmsfilesystem",
             "libovmslogging"],
     visibility = ["//visibility:public"],
 )
@@ -2038,8 +2064,6 @@ cc_binary(
     linkstatic = True,
 )
 
-
-
 cc_binary(
     name = "optimum-cli",
     srcs = [
@@ -2137,6 +2161,7 @@ cc_test(
         "test/tensor_conversion_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
+        "test/task_determine_test.cpp",
         "test/test_http_utils.hpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
@@ -2324,10 +2349,11 @@ cc_test(
         "//src:libcustom_node_image_transformation.so",
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
-    ],
+    ] + glob(["test/models_config_json/**"]),
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
+            "//src:libovms_default_task_detector",
             "//src/filesystem:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
             ":test_utils",

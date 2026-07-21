@@ -54,6 +54,7 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
         throw std::runtime_error("Error during plugin_config option parsing");
     }
+    applyGlobalCacheDirFallback(config);
     enableWordTimestamps = nodeOptions.enable_word_timestamps();
     if (enableWordTimestamps && device == "NPU") {
         config["STATIC_PIPELINE"] = true;

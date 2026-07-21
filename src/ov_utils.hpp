@@ -81,6 +81,8 @@ Status applyDefaultCpuProperties(ov::AnyMap& properties, uint16_t coreCount, uin
 
 // Logging
 // #1 model/global plugin  CompiledMode:DUMMY / Global OpenVINO plugin:CPU
+void applyGlobalCacheDirFallback(ov::AnyMap& properties);
+
 // #2 version/_
 // #3 target_device/_
 // {} {}

@@ -91,6 +91,7 @@ enum OvmsServerMode : int {
     LIST_MODELS_MODE,
     MODIFY_CONFIG_MODE,
     IN_MEMORY_GRAPH_MODE,
+    CONFIGURE_MODE,
     UNKNOWN_MODE
 };
 
