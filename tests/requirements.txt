@@ -11,7 +11,7 @@ jiwer>=4.0.0
 openai==2.43.0
 opencv-python==4.13.0.92
 paramiko==5.0.0
-Pillow==12.2.0
+Pillow==12.3.0
 protobuf==6.33.6
 psutil==7.2.2
 pylint==4.0.6
