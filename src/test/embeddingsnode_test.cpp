@@ -18,16 +18,190 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../embeddings/embeddings_node_initializer_utils.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "rapidjson/document.h"
 #include "test_http_utils.hpp"
+#include "test_file_utils.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
 
 using namespace ovms;
+
+namespace {
+
+struct EmbeddingsPoolingCase {
+    std::string testName;
+    std::string configContent;
+    mediapipe::EmbeddingsCalculatorOVOptions_Pooling expectedPooling;
+    mediapipe::EmbeddingsCalculatorOVOptions_Pooling overridePooling;
+};
+
+struct UnsupportedEmbeddingsPoolingCase {
+    std::string testName;
+    std::string configContent;
+};
+
+std::string getPoolingCaseName(const testing::TestParamInfo<EmbeddingsPoolingCase>& info) {
+    return info.param.testName;
+}
+
+std::string getUnsupportedPoolingCaseName(const testing::TestParamInfo<UnsupportedEmbeddingsPoolingCase>& info) {
+    return info.param.testName;
+}
+
+}  // namespace
+
+class EmbeddingsPoolingConfigTest : public ::testing::TestWithParam<EmbeddingsPoolingCase> {
+protected:
+    TempDir tempDir;
+
+    std::filesystem::path writePoolingConfig(const std::string& content) {
+        const auto poolingDir = tempDir.dir / "1_Pooling";
+        mkdirs(poolingDir);
+        writeFile(poolingDir, "config.json", content);
+        return tempDir.dir;
+    }
+};
+
+TEST_P(EmbeddingsPoolingConfigTest, detectsPoolingFromConfig) {
+    const auto& testCase = GetParam();
+    const auto modelDir = writePoolingConfig(testCase.configContent);
+
+    const auto pooling = detectEmbeddingsPoolingFromConfig(modelDir);
+
+    ASSERT_TRUE(pooling.has_value());
+    EXPECT_EQ(*pooling, testCase.expectedPooling);
+}
+
+TEST_P(EmbeddingsPoolingConfigTest, returnsConfigPoolingWhenGraphDoesNotSpecifyIt) {
+    const auto& testCase = GetParam();
+    const auto modelDir = writePoolingConfig(testCase.configContent);
+
+    const auto pooling = resolveEmbeddingsPooling(
+        modelDir,
+        false,
+        mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS);
+
+    EXPECT_EQ(pooling, testCase.expectedPooling);
+}
+
+TEST_P(EmbeddingsPoolingConfigTest, graphPoolingOverridesConfigPooling) {
+    const auto& testCase = GetParam();
+    const auto modelDir = writePoolingConfig(testCase.configContent);
+
+    const auto pooling = resolveEmbeddingsPooling(
+        modelDir,
+        true,
+        testCase.overridePooling);
+
+    EXPECT_EQ(pooling, testCase.overridePooling);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    EmbeddingsPoolingModes,
+    EmbeddingsPoolingConfigTest,
+    ::testing::Values(
+        EmbeddingsPoolingCase{
+            "Cls",
+            R"({
+                "pooling_mode_cls_token": true,
+                "pooling_mode_mean_tokens": false,
+                "pooling_mode_lasttoken": false
+            })",
+            mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS,
+            mediapipe::EmbeddingsCalculatorOVOptions_Pooling_LAST,
+        },
+        EmbeddingsPoolingCase{
+            "Mean",
+            R"({
+                "pooling_mode_cls_token": false,
+                "pooling_mode_mean_tokens": true,
+                "pooling_mode_lasttoken": false
+            })",
+            mediapipe::EmbeddingsCalculatorOVOptions_Pooling_MEAN,
+            mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS,
+        },
+        EmbeddingsPoolingCase{
+            "Last",
+            R"({
+                "pooling_mode_cls_token": false,
+                "pooling_mode_mean_tokens": false,
+                "pooling_mode_lasttoken": true
+            })",
+            mediapipe::EmbeddingsCalculatorOVOptions_Pooling_LAST,
+            mediapipe::EmbeddingsCalculatorOVOptions_Pooling_MEAN,
+        }),
+    getPoolingCaseName);
+
+class UnsupportedEmbeddingsPoolingConfigTest : public ::testing::TestWithParam<UnsupportedEmbeddingsPoolingCase> {
+protected:
+    TempDir tempDir;
+
+    std::filesystem::path writePoolingConfig(const std::string& content) {
+        const auto poolingDir = tempDir.dir / "1_Pooling";
+        mkdirs(poolingDir);
+        writeFile(poolingDir, "config.json", content);
+        return tempDir.dir;
+    }
+};
+
+TEST_P(UnsupportedEmbeddingsPoolingConfigTest, returnsNulloptForUnsupportedPoolingMode) {
+    const auto& testCase = GetParam();
+    const auto modelDir = writePoolingConfig(testCase.configContent);
+
+    const auto pooling = detectEmbeddingsPoolingFromConfig(modelDir);
+
+    EXPECT_FALSE(pooling.has_value());
+}
+
+TEST_P(UnsupportedEmbeddingsPoolingConfigTest, fallsBackToGraphDefaultWhenUnsupportedPoolingModeIsConfigured) {
+    const auto& testCase = GetParam();
+    const auto modelDir = writePoolingConfig(testCase.configContent);
+
+    const auto pooling = resolveEmbeddingsPooling(
+        modelDir,
+        false,
+        mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS);
+
+    EXPECT_EQ(pooling, mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    UnsupportedEmbeddingsPoolingModes,
+    UnsupportedEmbeddingsPoolingConfigTest,
+    ::testing::Values(
+        UnsupportedEmbeddingsPoolingCase{
+            "Max",
+            R"({
+                "pooling_mode_cls_token": false,
+                "pooling_mode_mean_tokens": false,
+                "pooling_mode_lasttoken": false,
+                "pooling_mode_max_tokens": true
+            })",
+        },
+        UnsupportedEmbeddingsPoolingCase{
+            "MeanSqrtLen",
+            R"({
+                "pooling_mode_cls_token": false,
+                "pooling_mode_mean_tokens": false,
+                "pooling_mode_lasttoken": false,
+                "pooling_mode_mean_sqrt_len_tokens": true
+            })",
+        },
+        UnsupportedEmbeddingsPoolingCase{
+            "WeightedMean",
+            R"({
+                "pooling_mode_cls_token": false,
+                "pooling_mode_mean_tokens": false,
+                "pooling_mode_lasttoken": false,
+                "pooling_mode_weightedmean_tokens": true
+            })",
+        }),
+    getUnsupportedPoolingCaseName);
 
 class EmbeddingsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:

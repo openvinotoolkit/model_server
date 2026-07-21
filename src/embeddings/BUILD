@@ -69,7 +69,7 @@ mediapipe_proto_library(
 
 ovms_cc_library(
     name = "embeddingscalculator_ov",
-    hdrs = [],
+    hdrs = ["embeddings_node_initializer_utils.hpp"],
     srcs = ["embeddings_calculator_ov.cc",
             "embeddings_node_initializer.cpp"],
     deps = [
