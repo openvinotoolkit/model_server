@@ -83,8 +83,7 @@ TEST_P(EmbeddingsPoolingConfigTest, returnsConfigPoolingWhenGraphDoesNotSpecifyI
 
     const auto pooling = resolveEmbeddingsPooling(
         modelDir,
-        false,
-        mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS);
+        std::nullopt);
 
     EXPECT_EQ(pooling, testCase.expectedPooling);
 }
@@ -95,8 +94,7 @@ TEST_P(EmbeddingsPoolingConfigTest, graphPoolingOverridesConfigPooling) {
 
     const auto pooling = resolveEmbeddingsPooling(
         modelDir,
-        true,
-        testCase.overridePooling);
+        std::make_optional(testCase.overridePooling));
 
     EXPECT_EQ(pooling, testCase.overridePooling);
 }
@@ -164,8 +162,7 @@ TEST_P(UnsupportedEmbeddingsPoolingConfigTest, fallsBackToGraphDefaultWhenUnsupp
 
     const auto pooling = resolveEmbeddingsPooling(
         modelDir,
-        false,
-        mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS);
+        std::nullopt);
 
     EXPECT_EQ(pooling, mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS);
 }

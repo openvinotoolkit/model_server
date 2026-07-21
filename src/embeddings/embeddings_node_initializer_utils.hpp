@@ -27,7 +27,6 @@ std::optional<mediapipe::EmbeddingsCalculatorOVOptions_Pooling> detectEmbeddings
 
 mediapipe::EmbeddingsCalculatorOVOptions_Pooling resolveEmbeddingsPooling(
     const std::filesystem::path& modelsPath,
-    bool hasGraphPooling,
-    mediapipe::EmbeddingsCalculatorOVOptions_Pooling graphPooling);
+    std::optional<mediapipe::EmbeddingsCalculatorOVOptions_Pooling> graphPooling);
 
 }  // namespace ovms
