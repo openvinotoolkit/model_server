@@ -50,12 +50,12 @@ Model server version with Python is shipped with those packages and new installa
 :sync: ubuntu-24-04
 Download precompiled package (without python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2/ovms_ubuntu24_2026.2.1_python_off.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2.1/ovms_ubuntu24_2026.2.1_python_off.tar.gz
 tar -xzvf ovms_ubuntu24_2026.2.1_python_off.tar.gz
 ```
 or precompiled package (with python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2/ovms_ubuntu24_2026.2.1_python_on.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2.1/ovms_ubuntu24_2026.2.1_python_on.tar.gz
 tar -xzvf ovms_ubuntu24_2026.2.1_python_on.tar.gz
 ```
 Install required libraries:
