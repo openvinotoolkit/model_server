@@ -43,10 +43,6 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         // Normalize empty content arrays to null before any content-aware processor runs.
         processors.emplace_back(std::make_unique<EmptyContentArrayNormalizationProcessor>());
 
-        // Flatten text-only content arrays for both LM and VLM. Arrays that contain
-        // images (or other modalities) are left untouched for ImageDecodingProcessor.
-        processors.emplace_back(std::make_unique<TextContentNormalizationProcessor>());
-
         if (context.config.isVLM) {  // isVLM is true both in VLMPipeline and OmniPipeline
             const auto& settings = Config::instance().getServerSettings();
             processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
@@ -57,6 +53,8 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         if (context.config.isOmni) {
             processors.emplace_back(std::make_unique<AudioDecodingProcessor>());
         }
+
+        processors.emplace_back(std::make_unique<TextContentNormalizationProcessor>());
 
         if (context.chatTemplateCaps.needsWorkarounds()) {
             processors.emplace_back(std::make_unique<ChatTemplateAdapter>(context.chatTemplateCaps));

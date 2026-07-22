@@ -66,12 +66,11 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
             continue;
         }
 
-        // First pass: decode images and detect non-image/non-text parts.
-        // Track image tag per content part index for the rebuild.
-        std::vector<std::string> imageTagByPart(content.size());
-        std::string imageTags;
-        std::string textContent;
-        bool hasOtherParts = false;
+        // Single pass: flatten text/image parts into a string in original order,
+        // collect non-text/non-image parts (e.g. input_audio) separately.
+        std::string flattenedContent;
+        bool previousPartWasText = false;
+        std::vector<size_t> otherPartIndices;
 
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
@@ -84,36 +83,35 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
                     return imageResult.status();
                 }
                 req.inputImages.push_back(std::move(imageResult).value());
-                imageTagByPart[j] = "<ov_genai_image_" + std::to_string(imageIndex) + ">\n";
-                imageTags += imageTagByPart[j];
-                imageIndex++;
+                flattenedContent += "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
+                previousPartWasText = false;
             } else if (type == "text") {
-                if (!textContent.empty()) {
-                    textContent += "\n";
+                if (previousPartWasText) {
+                    flattenedContent += "\n";
                 }
-                textContent += part["text"].as_string().value_or("");
+                flattenedContent += part["text"].as_string().value_or("");
+                previousPartWasText = true;
             } else {
-                hasOtherParts = true;
+                otherPartIndices.push_back(j);
             }
         }
 
-        if (hasOtherParts) {
-            // Rebuild content array preserving original order: replace image_url entries
-            // with image tag text parts, keep text and other parts (e.g. input_audio) in place.
+        if (otherPartIndices.empty()) {
+            // No non-text/non-image parts — collapse to a plain string.
+            if (!flattenedContent.empty()) {
+                chatHistory[i]["content"] = flattenedContent;
+            }
+        } else {
+            // Rebuild as array: flattened text+image string first, then other parts (e.g. input_audio).
             auto newContent = ov::genai::JsonContainer::array();
-            for (size_t j = 0; j < content.size(); j++) {
-                const auto part = content[j];
-                const auto type = part["type"].as_string().value_or("");
-                if (type == "image_url") {
-                    ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", imageTagByPart[j]}});
-                    newContent.push_back(textEntry);
-                } else {
-                    newContent.push_back(part);
-                }
+            if (!flattenedContent.empty()) {
+                ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", flattenedContent}});
+                newContent.push_back(textEntry);
+            }
+            for (size_t idx : otherPartIndices) {
+                newContent.push_back(content[idx]);
             }
             chatHistory[i]["content"] = newContent;
-        } else if (!imageTags.empty() || !textContent.empty()) {
-            chatHistory[i]["content"] = imageTags + textContent;
         }
     }
 
