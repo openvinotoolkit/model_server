@@ -422,12 +422,7 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         // NPU compiler needs a static sequence length for those.
         //
         // For long-context / Qwen-style dynamic models we deliberately do NOT propagate
-        // max_position_embeddings into config.max_length. It would be forwarded as
-        // NPUW_LLM_MAX_PROMPT_LEN, and the NPU compiler cannot legalize the resulting
-        // shape (e.g. VPU.NCE.Reduce fails EnsureNCEOpsSizeRequirements at seq_len=32768
-        // for Qwen3-Embedding). Instead the user can override MAX_PROMPT_LEN via
-        // plugin_config in graph.pbtxt; otherwise get_npu_text_embedding_config falls
-        // back to a default of 1024, matching ov::genai::TextEmbeddingPipeline behaviour.
+        // max_position_embeddings into config.max_length.
         if (getMaxModelLength().has_value() && getMaxModelLength().value() < 1024) {
             modelIsStatic = true;
             config.padding_side = "right";

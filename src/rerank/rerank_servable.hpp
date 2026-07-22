@@ -50,6 +50,8 @@ struct RerankServable : SidepacketServable {
             addBosToken = false;
         }
     }
+
+    std::shared_ptr<ov::Model> applyPrePostProcessing(ov::Core& core, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) override;
 };
 
 using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<RerankServable>>;
