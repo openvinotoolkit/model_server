@@ -2403,6 +2403,9 @@ cc_test(
                 ":text2image_test",
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
+                "libovms_mediapipe_kfs_executor",
+                "//src/mediapipe_internal:mediapipe_utils",
+                "tensorflow_type_utils",
             ],
             "//:disable_mediapipe" :
             [
