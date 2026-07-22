@@ -1,13 +1,13 @@
 # QuickStart - LLM models {#ovms_docs_llm_quickstart}
 
-Let's deploy [OpenVINO/Qwen3-8B-int4-ov](https://huggingface.co/OpenVINO/Qwen3-8B-int4-ov) model on Intel iGPU or ARC GPU.
+Let's deploy [OpenVINO/Qwen3-8B-int4-ov](https://huggingface.co/OpenVINO/Qwen3-8B-int4-ov) model on Intel iGPU or dGPU.
 It is [Qwen/Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B) quantized to INT4 precision and converted to IR format.
 You can use another model from [OpenVINO organization on HuggingFace](https://huggingface.co/OpenVINO) if you find one that better suits your needs and hardware configuration.
 
 ## Requirements
 - Linux or Windows 11
 - Docker Engine or `ovms` binary package [installed](../deploying_server_baremetal.md)
-- Intel iGPU or ARC GPU
+- Intel iGPU or dGPU
 
 ## Deployment Steps
 
