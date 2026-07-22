@@ -2257,12 +2257,6 @@ cc_binary(
             "//src/python:libpython_calculators",
         ],
         "//:disable_python": [],
-    }) + select({
-        "//:espeak_on": [
-            "//third_party:espeak_ng",
-            "//third_party:espeak_ng_data",
-        ],
-        "//:espeak_off": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
@@ -2600,7 +2594,6 @@ cc_test(
                 ":text2image_test",
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
-                "libovms_mediapipe_kfs_executor",
                 "//src/mediapipe_internal:mediapipe_utils",
                 "tensorflow_type_utils",
             ],

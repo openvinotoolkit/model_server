@@ -615,11 +615,11 @@ Status Server::startModules(ovms::Config& config) {
         return status;
     }
     if (config.getServerSettings().serverMode == CONFIGURE_MODE) {
-        GraphExport graphExporter;
+        MediapipeRuntimeApi runtimeApi(nullptr);
         HFSettingsImpl hfSettings = config.getServerSettings().hfSettings;
         std::string modelPath = config.modelPath();
         hfSettings.exportSettings.modelPath = ".";
-        status = graphExporter.createServableConfig(modelPath, hfSettings, true);
+        status = runtimeApi.createServableConfig(modelPath, hfSettings, true);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to create graph config: {}", status.string());
             return status;
