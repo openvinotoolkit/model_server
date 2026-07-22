@@ -66,9 +66,10 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
             continue;
         }
 
-        // Accumulate image tags and text parts from a single message's content array.
-        std::string imageTags;
-        std::string textContent;
+        // Flatten multipart content in its original order, replacing each image
+        // with the placeholder consumed by the VLM pipeline.
+        std::string flattenedContent;
+        bool previousPartWasText = false;
 
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
@@ -81,17 +82,19 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
                     return imageResult.status();
                 }
                 req.inputImages.push_back(std::move(imageResult).value());
-                imageTags += "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
+                flattenedContent += "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
+                previousPartWasText = false;
             } else if (type == "text") {
-                if (!textContent.empty()) {
-                    textContent += "\n";
+                if (previousPartWasText) {
+                    flattenedContent += "\n";
                 }
-                textContent += part["text"].as_string().value_or("");
+                flattenedContent += part["text"].as_string().value_or("");
+                previousPartWasText = true;
             }
         }
 
-        if (!imageTags.empty() || !textContent.empty()) {
-            chatHistory[i]["content"] = imageTags + textContent;
+        if (!flattenedContent.empty()) {
+            chatHistory[i]["content"] = flattenedContent;
         }
     }
 
