@@ -22,6 +22,7 @@
 
 namespace ovms {
 std::string documentToString(const rapidjson::Document& doc);
+void addJsonOrStringMember(rapidjson::Value& obj, const char* key, const std::string& value, rapidjson::Document::AllocatorType& alloc);
 
 // Default maximum nesting depth allowed for incoming JSON request bodies.
 inline constexpr std::size_t DEFAULT_MAX_JSON_NESTING_DEPTH = 100;

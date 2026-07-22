@@ -1,0 +1,5 @@
+{
+  "architectures": ["SeamlessM4TModel"],
+  "model_type": "seamless_m4t",
+  "hidden_size": 512
+}

@@ -1065,6 +1065,34 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsToolCallsFini
     ASSERT_NE(lastChunk.find("\"finish_reason\":\"tool_calls\""), std::string::npos) << lastChunk;
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkAlwaysIncludesDeltaField) {
+    // Verify that when parsedDelta has no "delta" member (empty Document from
+    // flush_chunk when generation ended on a swallowed token), the serialized
+    // chunk still contains "delta":{} — required by the OpenAI API spec.
+    std::string json = R"({
+    "model": "llama",
+    "stream": true,
+    "messages": [{"role": "user", "content": "Hello"}]
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, std::string{});
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    // Simulate an empty Document (no "delta" member) with a finish reason — this
+    // is what flush_chunk produces when the parser absorbs the final token.
+    rapidjson::Document emptyDoc;
+    emptyDoc.SetObject();
+    std::string serialized = apiHandler->serializeStreamingChunk(std::move(emptyDoc), ov::genai::GenerationFinishReason::LENGTH);
+
+    ASSERT_NE(serialized.find("\"delta\":{}"), std::string::npos) << "Expected empty delta object in: " << serialized;
+    ASSERT_NE(serialized.find("\"finish_reason\":\"length\""), std::string::npos) << serialized;
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseGenerationOutputReturnsToolCallsFinishReason) {
     std::string json = R"({
     "model": "llama",

@@ -337,6 +337,12 @@ RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_f
     $(if [[ "${debug_bazel_flags}" != *"py_off"* ]]; then echo -n "//src/python:libovmspython //src/python:libpython_calculators"; fi) \
     $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n "//src:ovms_test //src:python_runtime_library_test"; fi); fi;
 
+# espeak-ng is built as a separate step, independent of the OVMS binary.
+# Set ESPEAK=0 to skip the espeak build.
+ARG ESPEAK=1
+# hadolint ignore=DL3059
+RUN if [ "$ESPEAK" == "1" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //third_party:espeak_ng //third_party:espeak_ng_data; fi
+
 ARG RUN_TESTS=0
 RUN if [ "$RUN_TESTS" == "1" ] ; then mkdir -p demos/common/export_models/ && mv export_model.py demos/common/export_models/ && ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
 

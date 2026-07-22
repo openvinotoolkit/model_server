@@ -25,6 +25,7 @@
 
 #include <fstream>
 
+#include <openvino/runtime/properties.hpp>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 
@@ -36,6 +37,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../config.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
@@ -81,6 +83,10 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
     // Minja path — use the shared probe component
     if (!probeChatTemplateCapsMinja(properties->tokenizer, properties->chatTemplateCaps)) {
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Minja cannot render this template's tool calls correctly");
+    }
+
+    if (!properties->reasoningParserName.empty() && !probeChatTemplateReasoning(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support reasoning_content field");
     }
 }
 
@@ -204,6 +210,24 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
     properties->inputProcessorContext.templateProcessor =
         pyTemplatePrepared ? &properties->templateProcessor : nullptr;
 #endif
+}
+
+void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties) {
+    // Propagate the global --cache_dir (ServerSettings) into the pipeline plugin config.
+    // Unlike the non-CB ModelInstance path (ModelInstance::setCacheOptions), these GenAI
+    // initializers construct the pipeline directly, so the server-level cache_dir is
+    // otherwise never applied and compiled-model cache artifacts are never persisted.
+    // An explicit CACHE_DIR in the node's plugin_config remains authoritative.
+    const std::string& globalCacheDir = Config::instance().cacheDir();
+    if (globalCacheDir.empty()) {
+        return;
+    }
+    if (properties->pluginConfig.find(ov::cache_dir.name()) == properties->pluginConfig.end()) {
+        properties->pluginConfig[ov::cache_dir.name()] = globalCacheDir;
+        SPDLOG_DEBUG("Applying global cache_dir to GenAI pipeline: {}", globalCacheDir);
+    } else {
+        SPDLOG_DEBUG("CACHE_DIR set explicitly in node plugin_config; keeping user value over global cache_dir");
+    }
 }
 
 #if (PYTHON_DISABLE == 0)

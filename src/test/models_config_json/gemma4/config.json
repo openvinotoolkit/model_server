@@ -1,0 +1,4 @@
+{
+  "architectures": ["Gemma4ForConditionalGeneration"],
+  "model_type": "gemma4"
+}

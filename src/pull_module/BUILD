@@ -69,6 +69,13 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "hf_env_vars",
+    hdrs = ["hf_env_vars.hpp"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "gguf_downloader",
     srcs = ["gguf_downloader.cpp"],
     hdrs = ["gguf_downloader.hpp"],
@@ -109,6 +116,7 @@ ovms_cc_library(
     srcs = ["hf_pull_model_module.cpp"],
     hdrs = ["hf_pull_model_module.hpp"],
     deps =  [
+        ":hf_env_vars",
         ":curl_downloader",
         ":libgit2",
         "gguf_downloader",

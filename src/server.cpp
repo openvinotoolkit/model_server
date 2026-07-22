@@ -325,6 +325,10 @@ static void logConfig(const Config& config) {
         SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
         return;
     }
+    if (config.getServerSettings().serverMode == CONFIGURE_MODE) {
+        SPDLOG_DEBUG("model_path: {}", config.modelPath());
+        return;
+    }
     if (config.configPath().empty()) {
         SPDLOG_DEBUG("model_path: {}", config.modelPath());
         SPDLOG_DEBUG("model_name: {}", config.modelName());
@@ -608,6 +612,19 @@ Status Server::startModules(ovms::Config& config) {
         START_MODULE(it);
         auto hfModule = dynamic_cast<HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
+        return status;
+    }
+    if (config.getServerSettings().serverMode == CONFIGURE_MODE) {
+        GraphExport graphExporter;
+        HFSettingsImpl hfSettings = config.getServerSettings().hfSettings;
+        std::string modelPath = config.modelPath();
+        hfSettings.exportSettings.modelPath = ".";
+        status = graphExporter.createServableConfig(modelPath, hfSettings, true);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to create graph config: {}", status.string());
+            return status;
+        }
+        std::cout << "Graph: graph.pbtxt created in: " << modelPath << std::endl;
         return status;
     }
 

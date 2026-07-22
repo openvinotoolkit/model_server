@@ -1,0 +1,4 @@
+{
+  "architectures": ["Qwen3ASRForConditionalGeneration", "Qwen3ConditionalGeneration"],
+  "model_type": "qwen3_multi_arch"
+}

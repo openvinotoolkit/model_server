@@ -60,10 +60,24 @@ void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory) {
     }
 }
 
+void injectReasoningIntoMissnamedSection(ov::genai::ChatHistory& chatHistory, const std::string& templateReasoningFieldName) {
+    for (size_t msgIdx = 0; msgIdx < chatHistory.size(); ++msgIdx) {
+        auto message = chatHistory[msgIdx];
+        if (!message.contains("reasoning_content") || !message["reasoning_content"].is_string()) {
+            continue;
+        }
+
+        message[templateReasoningFieldName.c_str()] = message["reasoning_content"].get_string();
+    }
+}
+
 void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory) {
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Applying chat template adaptations: {}", caps.toString());
     if (caps.requiresObjectArguments) {
         funcArgsToObjectHistory(chatHistory);
+    }
+    if (!caps.missnamedReasoningField.empty()) {
+        injectReasoningIntoMissnamedSection(chatHistory, caps.missnamedReasoningField);
     }
 }
 
