@@ -58,25 +58,10 @@ def cleanup_directories() {
 }
 
 def get_short_bazel_path() {
-    def jobBaseName = env.JOB_BASE_NAME ?: "job"
-
-    if (jobBaseName.contains("release"))
+    if (env.JOB_BASE_NAME.contains("release"))
         return "rel"
-
-    // PR directories are also used by cleanup_directories(), so preserve their
-    // existing, human-readable naming convention.
-    if (jobBaseName ==~ /(?i)PR-[0-9]+/)
-        return jobBaseName.toUpperCase()
-    if (env.CHANGE_ID?.trim())
-        return "PR-${env.CHANGE_ID.trim()}"
-
-    // Bazel and MSVC can still hit MAX_PATH even when Windows long paths are
-    // enabled. Keep branch build roots short instead of embedding a potentially
-    // long JOB_BASE_NAME in --output_user_root. Hash the full Jenkins job name
-    // so the directory remains short and stable across builds of the same job.
-    def hashSource = env.JOB_NAME ?: jobBaseName
-    def hash = Integer.toUnsignedString(hashSource.hashCode(), 36)
-    return "b-${hash}"
+    else
+        return env.JOB_BASE_NAME.toUpperCase()
 }
 
 def deleteOldDirectories() {
