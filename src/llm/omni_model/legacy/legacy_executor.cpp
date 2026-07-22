@@ -53,7 +53,7 @@ void OmniModelLegacyExecutor::processRequest() {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Omni generation started");
         try {
             ov::genai::OmniTalkerSpeechConfig speechConfig;
-            speechConfig.audio_chunk_frames = 4;
+            speechConfig.audio_chunk_frames = 1;
             speechConfig.return_audio = requestExecutionContext->audioOutputRequested;
             if (!requestExecutionContext->audioVoice.empty()) {
                 speechConfig.speaker = requestExecutionContext->audioVoice;
@@ -77,10 +77,9 @@ void OmniModelLegacyExecutor::processRequest() {
             ov::genai::OmniSpeechStreamerVariant speechStreamer = std::monostate{};
             size_t audioChunkCount = 0;
             auto lastChunkReceiveTime = std::chrono::steady_clock::now();
-            auto speechStreamStart = std::chrono::steady_clock::now();
             if (requestExecutionContext->audioOutputRequested && requestExecutionContext->textStreamer) {
                 speechStreamer = [& ctx = *requestExecutionContext, &audioChunkCount, &lastChunkReceiveTime](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
-                    auto timeSinceLastChunk = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastChunkReceiveTime).count();
+                    auto timeSinceLastChunk = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - lastChunkReceiveTime).count() / 1000.0;
                     auto serializationStartTime = std::chrono::steady_clock::now();
                     lastChunkReceiveTime = std::chrono::steady_clock::now();
 
@@ -95,6 +94,7 @@ void OmniModelLegacyExecutor::processRequest() {
                     // Convert float32 PCM to int16 and base64 encode
                     const float* pcm = audio_chunk.data<const float>();
                     const size_t count = audio_chunk.get_size();
+                    SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni speech: audio chunk size {} samples", count);
                     std::vector<int16_t> pcm16(count);
                     for (size_t i = 0; i < count; i++) {
                         float s = pcm[i];
@@ -114,8 +114,8 @@ void OmniModelLegacyExecutor::processRequest() {
                         audioDoc.GetAllocator());
                     ctx.deltaChannel.push(std::move(audioDoc));
                     audioChunkCount++;
-                    auto serializationTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - serializationStartTime).count();
-                    SPDLOG_LOGGER_TRACE(llm_executor_logger, "Omni : Deserialization time {} ms", serializationTimeMs);
+                    auto serializationTimeMs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - serializationStartTime).count() / 1000.0;
+                    SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni speech: Streaming chunk serialization time {} ms", serializationTimeMs);
                     lastChunkReceiveTime = std::chrono::steady_clock::now();
                     return ov::genai::StreamingStatus::RUNNING;
                 };
@@ -133,14 +133,8 @@ void OmniModelLegacyExecutor::processRequest() {
                 requestExecutionContext->textStreamer,
                 speechStreamer);
             auto generateEnd = std::chrono::steady_clock::now();
-            auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(generateEnd - generateStart).count();
-            SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni generate complete: total={} ms, audio_chunks={}",
-                totalMs, audioChunkCount);
-            if (audioChunkCount > 0) {
-                auto speechMs = std::chrono::duration_cast<std::chrono::milliseconds>(generateEnd - speechStreamStart).count();
-                SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni speech phase: {} ms for {} chunks ({:.1f} ms/chunk)",
-                    speechMs, audioChunkCount, static_cast<float>(speechMs) / audioChunkCount);
-            }
+            auto totalMs = std::chrono::duration_cast<std::chrono::microseconds>(generateEnd - generateStart).count() / 1000.0;
+            SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni generate complete: total={} ms, audio_chunks={}", totalMs, audioChunkCount);
         } catch (std::exception& e) {
             requestExecutionContext->success = false;
             SPDLOG_LOGGER_ERROR(llm_executor_logger, "Omni pipeline generation failed: {}.", e.what());

@@ -117,6 +117,8 @@ def run_unary(client, args, content):
 def run_streaming(client, args, content):
     """Send a streaming request, print text, and play audio in real-time."""
     import time
+    import threading
+    import collections
     import numpy as np
     import sounddevice as sd
 
@@ -134,15 +136,33 @@ def run_streaming(client, args, content):
             "audio": {"voice": args.voice, "format": "pcm16"},
         }
 
-    # Open audio output if needed
+    # Non-blocking audio playback using a ring buffer
+    import collections
+    audio_buffer = collections.deque()  # deque of int16 samples (flat)
+    buffer_lock = threading.Lock()
+
+    def audio_callback(outdata, frames, time_info, status):
+        """Called by sounddevice when it needs more samples."""
+        with buffer_lock:
+            available = len(audio_buffer)
+            n = min(frames, available)
+            for i in range(n):
+                outdata[i, 0] = audio_buffer.popleft()
+            # Fill remainder with silence
+            if n < frames:
+                outdata[n:, 0] = 0
+
     audio_stream = None
     if args.audio_output:
-        audio_stream = sd.OutputStream(samplerate=SAMPLE_RATE, channels=1, dtype="int16")
+        audio_stream = sd.OutputStream(
+            samplerate=SAMPLE_RATE, channels=1, dtype="int16",
+            callback=audio_callback, blocksize=1024)
         audio_stream.start()
 
     all_audio = []
     audio_started = False
     start_time = time.time()
+    last_chunk_time = None
 
     print()
     with client.responses.stream(**kwargs) as stream:
@@ -155,16 +175,40 @@ def run_streaming(client, args, content):
                     print("\n\n[Audio streaming...]")
 
             elif event.type == "response.audio.delta":
+                now = time.time()
+                if last_chunk_time is not None:
+                    print(f"  inter-chunk: {(now - last_chunk_time)*1000:.1f} ms", end="")
+
                 if not audio_started:
                     audio_started = True
+                    print(f"  [first chunk at {(now - start_time)*1000:.0f} ms]")
+
+                decode_start = time.time()
                 raw = base64.b64decode(event.delta)
                 samples = np.frombuffer(raw, dtype=np.int16)
-                if audio_stream:
-                    audio_stream.write(samples.reshape(-1, 1))
+                decode_ms = (time.time() - decode_start) * 1000
+
+                with buffer_lock:
+                    audio_buffer.extend(samples)
                 all_audio.append(samples)
+
+                audio_ms = len(samples) / SAMPLE_RATE * 1000
+                print(f"  decode: {decode_ms:.2f} ms, samples: {len(samples)}, audio: {audio_ms:.0f} ms")
+                last_chunk_time = time.time()
 
             elif event.type == "response.audio.done":
                 pass
+
+    # Wait for playback to finish
+    if audio_stream and all_audio:
+        # Wait until buffer is drained (audio finishes playing)
+        while True:
+            with buffer_lock:
+                if len(audio_buffer) == 0:
+                    break
+            time.sleep(0.05)
+        # Extra buffer for the sounddevice internal buffer to flush
+        time.sleep(0.2)
 
     if audio_stream:
         audio_stream.stop()

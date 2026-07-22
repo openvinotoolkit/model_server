@@ -43,3 +43,8 @@ python3 responses.py --audio recording.wav --prompt "what is in the recording?" 
 ## Available Voices
 
 `f04`, `f245`, `f37`, `m02`, `m31`, `m36`, `br_f019` (model-dependent)
+
+
+## API Reference
+
+[Responses Streaming API](https://developers.openai.com/api/reference/resources/responses/streaming-events#response.audio.delta)
