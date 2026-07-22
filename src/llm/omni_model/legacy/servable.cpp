@@ -172,6 +172,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
     omniExecutionContext->textOutputRequested = req.textOutputRequested;
     omniExecutionContext->audioVoice = req.audioVoice;
     omniExecutionContext->audioFormat = req.audioFormat;
+    omniExecutionContext->audioChunkFrames = req.audioChunkFrames;
 
     return absl::OkStatus();
 }

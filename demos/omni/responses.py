@@ -86,9 +86,10 @@ def run_unary(client, args, content):
     }
 
     if args.audio_output:
+        # This is not OpenAI standard
         kwargs["extra_body"] = {
             "modalities": ["text", "audio"] if not args.audio_only_output else ["audio"],
-            "audio": {"voice": args.voice, "format": "wav"},
+            "audio": {"voice": args.voice, "format": "wav", "chunk_frames": args.chunk_frames},
         }
 
     response = client.responses.create(**kwargs)
@@ -133,7 +134,7 @@ def run_streaming(client, args, content):
     if args.audio_output:
         kwargs["extra_body"] = {
             "modalities": ["text", "audio"] if not args.audio_only_output else ["audio"],
-            "audio": {"voice": args.voice, "format": "pcm16"},
+            "audio": {"voice": args.voice, "format": "pcm16", "chunk_frames": args.chunk_frames},
         }
 
     # Non-blocking audio playback using a ring buffer
@@ -243,6 +244,7 @@ def main():
     parser.add_argument("--audio-output", action="store_true", help="Request audio in response")
     parser.add_argument("--audio-only-output", action="store_true", help="Request ONLY audio in response")
     parser.add_argument("--voice", "-v", default="f04", choices=VOICES, help="Voice for audio output")
+    parser.add_argument("--chunk-frames", type=int, default=4, help="Audio chunk frames (each frame=80ms, default=4=320ms chunks)")
     parser.add_argument("--stream", action="store_true", help="Stream the response")
     parser.add_argument("--save", "-s", help="Save audio output to file")
     parser.add_argument("--max-tokens", type=int, default=256, help="Max tokens to generate")

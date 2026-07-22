@@ -53,7 +53,7 @@ void OmniModelLegacyExecutor::processRequest() {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Omni generation started");
         try {
             ov::genai::OmniTalkerSpeechConfig speechConfig;
-            speechConfig.audio_chunk_frames = 1;
+            speechConfig.audio_chunk_frames = requestExecutionContext->audioChunkFrames;
             speechConfig.return_audio = requestExecutionContext->audioOutputRequested;
             if (!requestExecutionContext->audioVoice.empty()) {
                 speechConfig.speaker = requestExecutionContext->audioVoice;

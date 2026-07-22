@@ -88,6 +88,7 @@ struct OpenAIRequest {
     bool textOutputRequested{true};  // false when modalities is ["audio"] without "text"
     std::string audioVoice;          // maps to OmniTalkerSpeechConfig::speaker
     AudioFormat audioFormat{AudioFormat::WAV};
+    size_t audioChunkFrames{4};  // Number of codec frames per streaming audio chunk (each frame = 80ms @ 24kHz)
 
     OpenAIRequest() = default;
     ~OpenAIRequest() = default;

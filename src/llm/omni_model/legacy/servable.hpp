@@ -42,6 +42,7 @@ struct OmniModelLegacyServableExecutionContext : public GenAiServableExecutionCo
     bool textOutputRequested{true};
     std::string audioVoice;
     OpenAIRequest::AudioFormat audioFormat{OpenAIRequest::AudioFormat::WAV};
+    size_t audioChunkFrames{4};
 
     std::atomic<bool> clientDisconnected{false};
 

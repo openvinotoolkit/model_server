@@ -807,6 +807,14 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
                 return absl::InvalidArgumentError("audio.format must be \"wav\" or \"pcm16\"");
             }
         }
+        // This is not OpenAI standard, but we allow it since it is configuratble in OpenVINO GenAI
+        auto chunkFramesIt = audioObj.FindMember("chunk_frames");
+        if (chunkFramesIt != audioObj.MemberEnd() && chunkFramesIt->value.IsUint()) {
+            request.audioChunkFrames = chunkFramesIt->value.GetUint();
+            if (request.audioChunkFrames < 1) {
+                return absl::InvalidArgumentError("audio.chunk_frames must be >= 1");
+            }
+        }
     }
 
     // TODO: logit_bias
