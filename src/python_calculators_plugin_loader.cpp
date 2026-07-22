@@ -235,6 +235,8 @@ bool loadPythonCalculatorsPlugin() {
         return true;
     }
 
+    bool hasInProcessKfsBridge = getKfsPyTensorBridgeVTable() != nullptr;
+
 #ifdef __linux__
     const bool forceInProcessForTests = []() {
         const char* value = std::getenv("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS");
@@ -422,7 +424,6 @@ bool loadPythonCalculatorsPlugin() {
     }
 
 #elif _WIN32
-    bool hasInProcessKfsBridge = false;
     // Windows equivalent of Linux RTLD_DEFAULT lookup:
     // if OVMS_getKfsPyTensorBridgeVTable is already linked into the current
     // process (e.g. ovms_test with python bridge runtime), use it directly
