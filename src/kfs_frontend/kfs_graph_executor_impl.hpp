@@ -126,8 +126,8 @@ Status sendErrorImpl(
 
 inline bool requestHasInputSidePackets(const KFSRequest& request) {
     static const std::string timestampParam{"OVMS_MP_TIMESTAMP"};
-    for (const auto& [name, valueChoice] : request.parameters()) {
-        (void)valueChoice;
+    for (const auto& parameter : request.parameters()) {
+        const auto& name = parameter.first;
         if (name != timestampParam) {
             return true;
         }

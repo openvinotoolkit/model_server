@@ -42,6 +42,8 @@ using namespace py::literals;
 
 namespace {
 
+constexpr const char* PY_RUNTIME_INIT_ERROR_PREFIX = "OVMS_PY_RUNTIME_INIT_ERROR: ";
+
 struct PreparedChatTemplateRuntime {
     std::string bosToken;
     std::string eosToken;
@@ -62,7 +64,9 @@ bool ensureInterpreterInitialized(const char** output, const char* context) {
     if (Py_IsInitialized()) {
         return true;
     }
-    setRuntimeOutput(std::string("Python interpreter is not initialized for ") + context, output);
+    setRuntimeOutput(std::string(PY_RUNTIME_INIT_ERROR_PREFIX) +
+                         "Python interpreter is not initialized for " + context,
+        output);
     return false;
 }
 

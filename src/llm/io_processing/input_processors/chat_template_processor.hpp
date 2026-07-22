@@ -24,39 +24,30 @@
 #include "../base_input_processor.hpp"
 #include "../../runtime_chat_template.hpp"
 
-#if (PYTHON_DISABLE == 0)
-#include "../../py_jinja_template_processor.hpp"
-#endif
-
 namespace ovms {
+
+class PyJinjaTemplateProcessor;
 
 // Applies the chat template to ChatHistory, producing req.promptText.
 // Active when: input is ChatHistory variant (CHAT_COMPLETIONS and RESPONSES).
 //
-// Under PYTHON_DISABLE==0 two constructors select the path:
-//   - Jinja constructor (takes prepared runtime template and optional in-process processor)
-//     uses runtime Python Jinja first, then optional in-process fallback.
-//   - Minja  constructor (tokenizer only): calls tokenizer.apply_chat_template().
-// Under PYTHON_DISABLE==1 only the native tokenizer.apply_chat_template() path exists.
+// The processor decides the path based on configuration/resources passed in constructor:
+// - useMinja=true forces tokenizer.apply_chat_template().
+// - useMinja=false tries prepared runtime Jinja first, then optional in-process fallback
+//   (PYTHON_DISABLE==0 only), then tokenizer.apply_chat_template().
 class ChatTemplateProcessor : public BaseInputProcessor {
 public:
-#if (PYTHON_DISABLE == 0)
-    // Jinja path: preparedRuntimeChatTemplate may be null/unprepared; templateProcessor is optional fallback.
+    // templateProcessor is used only when PYTHON_DISABLE==0.
     ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
+        bool useMinja,
         const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate,
         PyJinjaTemplateProcessor* templateProcessor);
-    // Minja / native-OV path: no PyJinja processor needed.
-    explicit ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer);
-#else
-    ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
-        const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate);
-    explicit ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer);
-#endif
 
     absl::Status process(InputRequest& req) override;
 
 private:
     ov::genai::Tokenizer& tokenizer;  // non-owning; lifetime tied to InputProcessorContext
+    bool useMinja = false;
     const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate = nullptr;
 
     // add_generation_prompt lives inside chat_template_kwargs; MINJA's apply_chat_template

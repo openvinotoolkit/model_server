@@ -22,15 +22,17 @@
 #include <variant>
 
 #include "../../../logging.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "../../py_jinja_template_processor.hpp"
+#endif
 
 namespace ovms {
 namespace {
 
+constexpr const char* PY_RUNTIME_INIT_ERROR_PREFIX = "OVMS_PY_RUNTIME_INIT_ERROR: ";
+
 bool isPythonInitializationFailure(const std::string& errorMessage) {
-    return errorMessage.find("initialize") != std::string::npos ||
-           errorMessage.find("initialization") != std::string::npos ||
-           errorMessage.find("interpreter") != std::string::npos ||
-           errorMessage.find("runtime library") != std::string::npos;
+    return errorMessage.rfind(PY_RUNTIME_INIT_ERROR_PREFIX, 0) == 0;
 }
 
 }  // namespace
@@ -53,24 +55,27 @@ std::string ChatTemplateProcessor::serializeForJinja(const ov::genai::ChatHistor
 
 #if (PYTHON_DISABLE == 0)
 ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
+    bool useMinja,
     const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate,
-    PyJinjaTemplateProcessor* templateProcessor) :
+    PyJinjaTemplateProcessor* templateProcessorPtr) :
     tokenizer(tokenizer),
+    useMinja(useMinja),
     preparedRuntimeChatTemplate(preparedRuntimeChatTemplate),
-    templateProcessor(templateProcessor != nullptr ? std::make_optional(std::ref(*templateProcessor)) : std::nullopt) {}
-
-ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
-    tokenizer(tokenizer),
-    templateProcessor(std::nullopt) {}
-
+    templateProcessor(std::nullopt) {
+    if (templateProcessorPtr != nullptr) {
+        templateProcessor = std::ref(*templateProcessorPtr);
+    }
+}
 #else
 ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
-    const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate) :
+    bool useMinja,
+    const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate,
+    PyJinjaTemplateProcessor* templateProcessorPtr) :
     tokenizer(tokenizer),
-    preparedRuntimeChatTemplate(preparedRuntimeChatTemplate) {}
-
-ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
-    tokenizer(tokenizer) {}
+    useMinja(useMinja),
+    preparedRuntimeChatTemplate(preparedRuntimeChatTemplate) {
+    (void)templateProcessorPtr;
+}
 #endif
 
 absl::Status ChatTemplateProcessor::extractAddGenerationPrompt(const ov::genai::ChatHistory& chatHistory,
@@ -104,7 +109,7 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
 
     const std::string jsonBody = serializeForJinja(chatHistory);
 
-    if (preparedRuntimeChatTemplate != nullptr && preparedRuntimeChatTemplate->isPrepared()) {
+    if (!useMinja && preparedRuntimeChatTemplate != nullptr && preparedRuntimeChatTemplate->isPrepared()) {
         std::string runtimeOutput;
         auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
             *preparedRuntimeChatTemplate,
@@ -123,7 +128,7 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
     }
 
 #if (PYTHON_DISABLE == 0)
-    if (req.promptText.empty() && templateProcessor.has_value()) {
+    if (!useMinja && req.promptText.empty() && templateProcessor.has_value()) {
         std::string promptText;
         const bool success = PyJinjaTemplateProcessor::applyChatTemplate(
             templateProcessor.value().get(), jsonBody, promptText);

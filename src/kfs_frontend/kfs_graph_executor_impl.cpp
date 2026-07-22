@@ -203,7 +203,7 @@ static Status calculateSerializedBytesContentSize(
     return StatusCode::OK;
 }
 
-static Status serializeKfsTypedContentToRawBuffer(
+static Status serializeKfsTypedContentToRawBytes(
     const KFSRequest::InferInputTensor& input,
     const size_t expectedBytes,
     const std::string& inputName,
@@ -214,7 +214,7 @@ static Status serializeKfsTypedContentToRawBuffer(
         size_t bytesExpected = 0;
         OVMS_RETURN_ON_FAIL(calculateSerializedBytesContentSize(input, bytesExpected));
         if (bytesExpected != expectedBytes) {
-            return Status(StatusCode::INVALID_CONTENT_SIZE, "Invalid BYTES payload size for OVMS_PY_TENSOR input");
+            return Status(StatusCode::INVALID_CONTENT_SIZE, "Invalid BYTES payload size for typed InferInputTensor.contents");
         }
         outBuffer.resize(expectedBytes);
         uint8_t* dst = outBuffer.data();
@@ -234,7 +234,7 @@ static Status serializeKfsTypedContentToRawBuffer(
     const size_t dtypeSize = KFSDataTypeSize(input.datatype());
     if (dtypeSize == 0) {
         std::stringstream ss;
-        ss << "OVMS_PY_TENSOR typed InferInputTensor.contents is unsupported for datatype: "
+        ss << "Typed InferInputTensor.contents is unsupported for datatype: "
            << input.datatype() << "; input name: " << inputName;
         return Status(StatusCode::NOT_IMPLEMENTED, ss.str());
     }
@@ -335,7 +335,7 @@ static Status serializeKfsTypedContentToRawBuffer(
     }
     default: {
         std::stringstream ss;
-        ss << "OVMS_PY_TENSOR typed InferInputTensor.contents is unsupported for datatype: "
+        ss << "Typed InferInputTensor.contents is unsupported for datatype: "
            << input.datatype() << "; input name: " << inputName;
         return Status(StatusCode::NOT_IMPLEMENTED, ss.str());
     }
@@ -1042,12 +1042,17 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
                         rawBufPtr = &request->raw_input_contents().at(inputIndex);
                     } else if (isFixedSizeType || (isBytesType && hasBytesContents)) {
                         if (status.ok()) {
-                            status = serializeKfsTypedContentToRawBuffer(
+                            status = serializeKfsTypedContentToRawBytes(
                                 *requestInputItr,
                                 expectedBytes,
                                 inputName,
                                 *request,
                                 typedContentsBuffer);
+                            if (!status.ok()) {
+                                status = Status(status.getCode(),
+                                    "OVMS_PY_TENSOR typed contents handling failed for input: " + inputName +
+                                        "; details: " + status.string());
+                            }
                         }
                     } else {
                         status = Status(StatusCode::NOT_IMPLEMENTED,

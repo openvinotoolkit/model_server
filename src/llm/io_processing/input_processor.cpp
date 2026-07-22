@@ -57,25 +57,11 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
             processors.emplace_back(std::make_unique<ChatTemplateAdapter>(context.chatTemplateCaps));
         }
 
-#if (PYTHON_DISABLE == 0)
-        // Select Jinja path (runtime-prepared first, then optional in-process fallback).
-        if (!context.config.useMinja) {
-            processors.emplace_back(std::make_unique<ChatTemplateProcessor>(
-                context.tokenizer,
-                context.preparedRuntimeChatTemplate,
-                context.templateProcessor));
-        } else {
-            processors.emplace_back(std::make_unique<ChatTemplateProcessor>(context.tokenizer));
-        }
-#else
-        if (!context.config.useMinja) {
-            processors.emplace_back(std::make_unique<ChatTemplateProcessor>(
-                context.tokenizer,
-                context.preparedRuntimeChatTemplate));
-        } else {
-            processors.emplace_back(std::make_unique<ChatTemplateProcessor>(context.tokenizer));
-        }
-#endif
+        processors.emplace_back(std::make_unique<ChatTemplateProcessor>(
+            context.tokenizer,
+            context.config.useMinja,
+            context.preparedRuntimeChatTemplate,
+            context.templateProcessor));
     } else {
         processors.emplace_back(std::make_unique<RawPromptExtractor>());
     }

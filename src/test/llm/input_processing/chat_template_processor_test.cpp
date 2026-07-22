@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-// Unit tests for ChatTemplateProcessor — native tokenizer path (useMinja=false).
+// Unit tests for ChatTemplateProcessor — native tokenizer path (useMinja=true).
 //
 // The PyJinja path is exercised by Python-enabled integration tests and is not
 // covered here.
@@ -84,7 +84,7 @@ TEST_F(ChatTemplateProcessorTest, TextMessage_DefaultSystemInjected_GenerationPr
     history.push_back({{"role", "user"}, {"content", "What is OpenVINO?"}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer);
+    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr, nullptr);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -104,7 +104,7 @@ TEST_F(ChatTemplateProcessorTest, ExplicitSystemMessage_SuppressesDefaultSystemI
     history.push_back({{"role", "user"}, {"content", "Hello."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer);
+    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr, nullptr);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -127,7 +127,7 @@ TEST_F(ChatTemplateProcessorTest, MultiTurnConversation_AllTurnsRendered) {
     history.push_back({{"role", "user"}, {"content", "Second question."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer);
+    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr, nullptr);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -149,7 +149,7 @@ TEST_F(ChatTemplateProcessorTest, AddGenerationPromptFalse_OmitsGenerationPrompt
     history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"add_generation_prompt": false})"));
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer);
+    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr, nullptr);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -170,7 +170,7 @@ TEST_F(ChatTemplateProcessorTest, AddGenerationPromptNonBoolean_ReturnsInvalidAr
     history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"add_generation_prompt": "yes"})"));
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer);
+    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr, nullptr);
     const auto status = processor.process(req);
 
     ASSERT_FALSE(status.ok());
@@ -185,7 +185,7 @@ TEST_F(ChatTemplateProcessorTest, PromptTextPopulated_ChatHistoryVariantPreserve
     history.push_back({{"role", "user"}, {"content", "Hi."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer);
+    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr, nullptr);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -202,7 +202,7 @@ TEST_F(ChatTemplateProcessorTest, EmptyStringContent_TemplateStillProducesOutput
     history.push_back({{"role", "user"}, {"content", ""}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer);
+    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr, nullptr);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -224,7 +224,7 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
     history.push_back({{"role", "user"}, {"content", "Hello."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(tokenizer);
+    ChatTemplateProcessor processor(tokenizer, true, nullptr, nullptr);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
