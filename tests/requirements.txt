@@ -23,7 +23,7 @@ pyyaml==6.0.3
 requests==2.34.2
 requests-toolbelt==1.0.0
 retry==0.9.2
-setuptools==81.0.0
+setuptools==83.0.0
 soundfile==0.14.0
 tensorboard==2.20.0
 tensorflow==2.21.0
