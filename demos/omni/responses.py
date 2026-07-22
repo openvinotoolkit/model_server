@@ -74,6 +74,7 @@ def build_content(args):
         print(f"Image input: {args.image}")
 
     content.append({"type": "input_text", "text": args.prompt})
+
     return content
 
 

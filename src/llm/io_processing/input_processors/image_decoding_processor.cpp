@@ -66,12 +66,9 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
             continue;
         }
 
-        // Single pass: flatten text/image parts into a string in original order,
-        // collect non-text/non-image parts (e.g. input_audio) separately.
-        std::string flattenedContent;
-        bool previousPartWasText = false;
-        std::vector<size_t> otherPartIndices;
-
+        // Replace image_url parts with text tag parts in-place.
+        // {"type":"text","text":"<ov_genai_image_N>"}, all other parts preserved as-is.
+        // Flattening to string is deferred to TextContentNormalizationProcessor.
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
             const auto type = part["type"].as_string().value_or("");
@@ -83,35 +80,10 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
                     return imageResult.status();
                 }
                 req.inputImages.push_back(std::move(imageResult).value());
-                flattenedContent += "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-                previousPartWasText = false;
-            } else if (type == "text") {
-                if (previousPartWasText) {
-                    flattenedContent += "\n";
-                }
-                flattenedContent += part["text"].as_string().value_or("");
-                previousPartWasText = true;
-            } else {
-                otherPartIndices.push_back(j);
+                std::string tag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">";
+                ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", tag}});
+                content[j] = textEntry;
             }
-        }
-
-        if (otherPartIndices.empty()) {
-            // No non-text/non-image parts — collapse to a plain string.
-            if (!flattenedContent.empty()) {
-                chatHistory[i]["content"] = flattenedContent;
-            }
-        } else {
-            // Rebuild as array: flattened text+image string first, then other parts (e.g. input_audio).
-            auto newContent = ov::genai::JsonContainer::array();
-            if (!flattenedContent.empty()) {
-                ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", flattenedContent}});
-                newContent.push_back(textEntry);
-            }
-            for (size_t idx : otherPartIndices) {
-                newContent.push_back(content[idx]);
-            }
-            chatHistory[i]["content"] = newContent;
         }
     }
 
