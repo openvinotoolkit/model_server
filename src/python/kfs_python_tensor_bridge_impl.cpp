@@ -88,7 +88,12 @@ static int kfsBridgeDeserializeAndPush(
         auto* graph = static_cast<mediapipe::CalculatorGraph*>(graphPtr);
         auto absStatus = graph->AddPacketToInputStream(streamName, packet);
         if (!absStatus.ok()) {
-            SPDLOG_DEBUG("KFS Python tensor bridge: AddPacketToInputStream failed: {}",
+            SPDLOG_ERROR(
+                "KFS Python tensor bridge: AddPacketToInputStream failed for stream: {} datatype: {} raw_size: {} timestamp_us: {} status: {}",
+                streamName,
+                datatype,
+                rawSize,
+                timestampMicros,
                 absStatus.ToString());
             return -static_cast<int>(ovms::StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
         }

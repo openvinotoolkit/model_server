@@ -100,13 +100,12 @@ set "PATH=%setPath%"
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Set required libraries paths
 %openvinoBatch%
 if !errorlevel! neq 0 exit /b !errorlevel!
 %opencvBatch%
-if !errorlevel! neq 0 exit /b !errorlevel!
+set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Log all environment variables
 set > %envPath%

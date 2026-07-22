@@ -1083,6 +1083,17 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
                                 shapeVec.data(), shapeVec.size(),
                                 requestInputItr->datatype().c_str(),
                                 &graph, timestamp.Value());
+                            if (rc != 0) {
+                                SPDLOG_ERROR(
+                                    "OVMS_PY_TENSOR bridge deserializeAndPush failed for stream: {} datatype: {} bytes: {} rc: {} mapped_status: {} (UNKNOWN_ERROR={}, MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM={})",
+                                    inputName,
+                                    requestInputItr->datatype(),
+                                    dataSize,
+                                    rc,
+                                    static_cast<int>(-rc),
+                                    static_cast<int>(StatusCode::UNKNOWN_ERROR),
+                                    static_cast<int>(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM));
+                            }
                             status = (rc == 0)
                                          ? StatusCode::OK
                                          : Status(static_cast<StatusCode>(-rc),

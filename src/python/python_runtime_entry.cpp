@@ -115,6 +115,10 @@ bool existsInPath(const std::string& executableName) {
     return false;
 }
 
+// Validates Python-related environment paths needed by runtime checks.
+// - If PYTHONHOME is set, it must point to an existing directory.
+// - If PYTHONPATH is set, at least one non-empty entry must exist on disk.
+//   Non-existing entries are tolerated as long as at least one valid entry exists.
 bool validateEnvPaths(std::string& details) {
     if (const char* pythonHome = std::getenv("PYTHONHOME"); pythonHome != nullptr && pythonHome[0] != '\0') {
         std::error_code ec;
@@ -132,20 +136,27 @@ bool validateEnvPaths(std::string& details) {
 #endif
         std::string pathValue(pythonPath);
         size_t start = 0;
+        bool hadNonEmptyEntry = false;
+        bool hasExistingEntry = false;
         while (start <= pathValue.size()) {
             size_t end = pathValue.find(separator, start);
             std::string directory = (end == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, end - start);
             if (!directory.empty()) {
+                hadNonEmptyEntry = true;
                 std::error_code ec;
-                if (!std::filesystem::exists(std::filesystem::path(directory), ec)) {
-                    details = std::string("PYTHONPATH entry does not exist: ") + directory;
-                    return false;
+                if (std::filesystem::exists(std::filesystem::path(directory), ec) && !ec) {
+                    hasExistingEntry = true;
                 }
             }
             if (end == std::string::npos) {
                 break;
             }
             start = end + 1;
+        }
+
+        if (hadNonEmptyEntry && !hasExistingEntry) {
+            details = "PYTHONPATH does not contain any existing directory";
+            return false;
         }
     }
 

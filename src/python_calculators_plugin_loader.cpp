@@ -422,6 +422,7 @@ bool loadPythonCalculatorsPlugin() {
     }
 
 #elif _WIN32
+    bool hasInProcessKfsBridge = false;
     // Windows equivalent of Linux RTLD_DEFAULT lookup:
     // if OVMS_getKfsPyTensorBridgeVTable is already linked into the current
     // process (e.g. ovms_test with python bridge runtime), use it directly
@@ -434,9 +435,12 @@ bool loadPythonCalculatorsPlugin() {
             if (inProcessBridgeFn != nullptr) {
                 if (auto* vtable = inProcessBridgeFn(); vtable != nullptr) {
                     activateKfsBridge(vtable, "current process exports");
+                    hasInProcessKfsBridge = true;
                 }
             }
         }
+    } else {
+        hasInProcessKfsBridge = true;
     }
 
     std::vector<std::string> candidates{
@@ -551,7 +555,11 @@ bool loadPythonCalculatorsPlugin() {
     if (getKfsBridgeFn != nullptr) {
         auto* vtable = getKfsBridgeFn();
         if (vtable != nullptr) {
-            activateKfsBridge(vtable, "python calculators plugin");
+            if (hasInProcessKfsBridge) {
+                SPDLOG_TRACE("KFS Python tensor bridge already active from in-process exports; keeping existing bridge and skipping plugin bridge override");
+            } else {
+                activateKfsBridge(vtable, "python calculators plugin");
+            }
         }
     }
     return true;

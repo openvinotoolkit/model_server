@@ -42,7 +42,6 @@ set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 set "PYTHONHOME=C:\opt\Python312"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
@@ -55,6 +54,7 @@ set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 if %errorlevel% neq 0 exit /b %errorlevel%
 %opencvBatch%
 if %errorlevel% neq 0 exit /b %errorlevel%
+set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Preserve environment changes for parent scope
 endlocal & set "PATH=%PATH%" & set "PYTHONPATH=%PYTHONPATH%" & set "PYTHONHOME=%PYTHONHOME%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%"

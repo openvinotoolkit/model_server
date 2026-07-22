@@ -96,7 +96,6 @@ set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
 
 set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 set "PYTHONHOME=C:\opt\Python312"
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Set required libraries paths
 %openvinoBatch%
@@ -109,6 +108,7 @@ if !errorlevel! neq 0 (
     echo [ERROR] OpenCV setup_vars_opencv4.cmd failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
 )
+set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Start bazel build test
 %buildTestCommand% 2>&1 | tee win_build_test.log
