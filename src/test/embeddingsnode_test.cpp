@@ -70,8 +70,9 @@ protected:
 TEST_P(EmbeddingsPoolingConfigTest, detectsPoolingFromConfig) {
     const auto& testCase = GetParam();
     const auto modelDir = writePoolingConfig(testCase.configContent);
+    const auto poolingConfigPath = modelDir / "1_Pooling" / "config.json";
 
-    const auto pooling = detectEmbeddingsPoolingFromConfig(modelDir);
+    const auto pooling = detectEmbeddingsPoolingFromConfig(poolingConfigPath);
 
     ASSERT_TRUE(pooling.has_value());
     EXPECT_EQ(*pooling, testCase.expectedPooling);
@@ -150,8 +151,9 @@ protected:
 TEST_P(UnsupportedEmbeddingsPoolingConfigTest, returnsNulloptForUnsupportedPoolingMode) {
     const auto& testCase = GetParam();
     const auto modelDir = writePoolingConfig(testCase.configContent);
+    const auto poolingConfigPath = modelDir / "1_Pooling" / "config.json";
 
-    const auto pooling = detectEmbeddingsPoolingFromConfig(modelDir);
+    const auto pooling = detectEmbeddingsPoolingFromConfig(poolingConfigPath);
 
     EXPECT_FALSE(pooling.has_value());
 }
