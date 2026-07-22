@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <string>
 #include <utility>
 
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
