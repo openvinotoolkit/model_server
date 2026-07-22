@@ -16,7 +16,7 @@ docker run --user $(id -u):$(id -g) -d $GPU_ARGS --rm -p 8000:8000 -v $(pwd)/mod
 Run the client:
 
 ```bash
-curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d { "model": "Qwen/Qwen3-8B", "text": "hello world"}"
+curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d '{ "model": "Qwen/Qwen3-8B", "text": "hello world"}'
 ```
 Response:
 ```json
@@ -33,7 +33,7 @@ It's possible to use additional parameters:
 
  Example usage:
 ```bash
-curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d '{ "model": "Qwen/Qwen3-8B", "text": "hello world", "max_length": 5, "pad_to_max_length": true, "padding_side": "left", "add_special_tokens": true }"
+curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d '{ "model": "Qwen/Qwen3-8B", "text": "hello world", "max_length": 5, "pad_to_max_length": true, "padding_side": "left", "add_special_tokens": true }'
 ```
 
 Response:
