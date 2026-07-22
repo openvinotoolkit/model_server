@@ -365,7 +365,6 @@ node {
             models_path: "./",
             normalize_embeddings: true,
             truncate: false,
-            pooling: CLS,
             plugin_config: '{"NUM_STREAMS":"1"}',
         }
     }

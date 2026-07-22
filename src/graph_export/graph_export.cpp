@@ -319,9 +319,11 @@ node {
             normalize_embeddings: )"
             << graphSettings.normalize << R"(,
             truncate: )"
-            << graphSettings.truncate << R"(,
-            pooling: )"
-            << graphSettings.pooling << R"(,)";
+            << graphSettings.truncate << R"(,)";
+    if (graphSettings.pooling.has_value()) {
+        oss << R"(
+            pooling: )" << graphSettings.pooling.value() << R"(,)";
+    }
     if (!exportSettings.targetDevice.empty()) {
         oss << R"(
             target_device: ")" << exportSettings.targetDevice << R"(",)";
