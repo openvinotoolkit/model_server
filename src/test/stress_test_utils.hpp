@@ -50,14 +50,14 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "src/timer.hpp"
-#include "../tensorflow_type_utils.hpp"
 #include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"
 #include "platform_utils.hpp"
 #include "test_with_temp_dir.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/tensorflow_type_utils.hpp"
 #endif
 
 using namespace ovms;
