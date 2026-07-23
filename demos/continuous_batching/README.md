@@ -51,7 +51,6 @@ After ovms is installed according to steps from [baremetal deployment guide](../
 ovms.exe --model_repository_path c:\models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
 
-
 ## Readiness Check
 
 Wait for the model to load. You can check the status with a simple command:
