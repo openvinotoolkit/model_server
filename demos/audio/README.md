@@ -365,7 +365,7 @@ print(transcript.words)
 You can evaluate model accuracy (for example WER/CER) against ASR datasets using the Open ASR Leaderboard tooling.
 
 Clone the repository:
-```console
+```text
 git clone https://github.com/huggingface/open_asr_leaderboard.git
 cd open_asr_leaderboard
 ```
@@ -376,18 +376,18 @@ Download and apply OVMS API compatibility patch:
     git apply ovms_open_asr_leaderboard.patch
 
 Set OpenAI-compatible endpoint variables for OVMS:
-```console
+```text
 export OPENAI_BASE_URL=http://localhost:8000/v3
 export OPENAI_API_KEY="unused"
 ```
 
 Install dependencies:
-```console
+```text
 pip install -r requirements/requirements.txt -r requirements/requirements-api.txt openai>=1.0.0 torchcodec==0.12
 ```
 
 Run evaluation example:
-```console
+```text
 PYTHONPATH=. python api/run_eval.py \
   --model_name openai/whisper-large-v3-turbo-fp16-ov \
   --dataset_path "hf-audio/esb-datasets-test-only-sorted" \
@@ -396,7 +396,7 @@ PYTHONPATH=. python api/run_eval.py \
   --dataset "librispeech"
 ```
 Results:
-```console
+```text
 ...
 Transcribing: 100%|█████████▉| 2617/2620 [12:15<00:00,  5.23it/s]
 Transcribing: 100%|█████████▉| 2618/2620 [12:15<00:00,  5.31it/s]
