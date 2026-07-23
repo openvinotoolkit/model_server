@@ -115,9 +115,12 @@ pipeline {
         stage ("Promote package"){
             steps {
                 script {
+                    if (!env.BUILDSTAMP?.trim()) {
+                        env.BUILDSTAMP = new Date().format('yyyyMMddHHmmss')
+                    }
+                    echo "Buildstamp: ${env.BUILDSTAMP}"
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
-                        def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
                         def python_suffix = ""
                         if (env.OVMS_PYTHON_ENABLED == "1") {
                             python_suffix = "on"
