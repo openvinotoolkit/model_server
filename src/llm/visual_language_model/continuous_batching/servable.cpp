@@ -16,7 +16,6 @@
 
 #include "servable.hpp"
 
-#include <algorithm>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -35,29 +34,6 @@
 #endif
 
 namespace ovms {
-
-static void logVLMContinuousBatchingDebug(const std::shared_ptr<OpenAIApiHandler>& apiHandler, const ov::genai::GenerationHandle& generationHandle) {
-    const auto& usage = apiHandler->getUsage();
-    auto perfMetrics = generationHandle->get_vlm_perf_metrics();
-    constexpr double minPrefillDurationMs = 1e-9;
-    const double prepareEmbeddingsTimeMs = perfMetrics.get_prepare_embeddings_duration().mean;
-    const double llmTtftMs = perfMetrics.get_ttft().mean;
-    const double ttftMs = prepareEmbeddingsTimeMs + llmTtftMs;
-    const double prefillDurationMs = std::max(llmTtftMs, minPrefillDurationMs);
-    const double prefillSpeedTps = (1000.0 * perfMetrics.get_num_input_tokens()) / prefillDurationMs;
-
-    SPDLOG_LOGGER_DEBUG(
-        llm_calculator_logger,
-        "VLM continuous batching metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | prepare_embeddings_time_ms: {:.3f} | llm_ttft_ms: {:.3f} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f} | image_slice_count: {}",
-        perfMetrics.get_num_input_tokens(),
-        usage.completionTokens,
-        perfMetrics.get_num_input_tokens() + usage.completionTokens,
-        prepareEmbeddingsTimeMs,
-        llmTtftMs,
-        ttftMs,
-        prefillSpeedTps,
-        perfMetrics.get_image_slice_count());
-}
 
 absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
@@ -102,18 +78,22 @@ std::shared_ptr<GenAiServableProperties> VisualLanguageModelServable::getPropert
 
 absl::Status VisualLanguageModelServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::prepareCompleteResponse(executionContext);
-    if (status.ok()) {
+    if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-        logVLMContinuousBatchingDebug(executionContext->apiHandler, vlmExecutionContext->generationHandle);
+        auto perfMetrics = vlmExecutionContext->generationHandle->get_vlm_perf_metrics();
+        logVLMPerfMetricsDebug(perfMetrics, GenAiPipelineType::CONTINUOUS_BATCHING, false);
     }
     return status;
 }
 
 absl::Status VisualLanguageModelServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::preparePartialResponse(executionContext);
-    if (status.ok() && !executionContext->sendLoopbackSignal) {
+    if (status.ok() &&
+        !executionContext->sendLoopbackSignal &&
+        llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-        logVLMContinuousBatchingDebug(executionContext->apiHandler, vlmExecutionContext->generationHandle);
+        auto perfMetrics = vlmExecutionContext->generationHandle->get_vlm_perf_metrics();
+        logVLMPerfMetricsDebug(perfMetrics, GenAiPipelineType::CONTINUOUS_BATCHING, false);
     }
     return status;
 }
