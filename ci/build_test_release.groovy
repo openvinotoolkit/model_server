@@ -60,6 +60,7 @@ pipeline {
         stage ("BDBA scans"){
             when { expression { env.BDBA_SCAN == "true" } }
             steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                 script {
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
@@ -79,11 +80,13 @@ pipeline {
                         error "Cannot load ci/loadWin.groovy file."
                     }
                 }
+                }
             }
         }
         stage ("Signing files"){
             when { expression { env.SIGN_FILES == "true" && env.SIGN_USER_PASSWORD != "" } }
             steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                 echo "OVMS_PYTHON_ENABLED: ${env.OVMS_PYTHON_ENABLED}"
                 script {
                     if (env.RELEASE_TYPE == "RELEASE") {
@@ -105,6 +108,7 @@ pipeline {
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
                     }
+                }
                 }
             }
         }
