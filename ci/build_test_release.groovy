@@ -14,7 +14,6 @@ pipeline {
             steps {
                 script {
                     def buildstamp = new Date().format('yyyyMMddHHmmss')
-                    def shortCommit = bat(script: "git rev-parse --short=8 HEAD", returnStdout: true).trim().readLines().last()
                     echo "Buildstamp: ${buildstamp}"
                     echo "PRODUCT_VERSION: ${env.PRODUCT_VERSION}"
                     echo "RELEASE_TAG: ${env.RELEASE_TAG}"
@@ -38,7 +37,7 @@ pipeline {
                           } else {
                               python_suffix = "off"
                           }
-                          def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_${shortCommit}_python_${python_suffix}.zip"
+                          def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
                           def status = bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
                           if (status != 0) {
                               error "Failed to map network drive. Status code: ${status}"
