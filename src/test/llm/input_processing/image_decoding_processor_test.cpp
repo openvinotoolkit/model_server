@@ -106,8 +106,9 @@ TEST(ImageDecodingProcessorTest, InjectionGuardBlocksTagInArrayTextPart) {
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
 }
 
-TEST(ImageDecodingProcessorTest, MultipleTextPartsJoinedWithNewline) {
-    // Two text parts in a single message's content array should be joined with \n.
+TEST(ImageDecodingProcessorTest, TextOnlyArrayLeftUntouched) {
+    // An array with only text parts and no images should be left as-is.
+    // Flattening is deferred to TextContentNormalizationProcessor.
     ov::genai::ChatHistory history;
     ov::AnyMap msg;
     msg["role"] = std::string("user");
@@ -121,8 +122,13 @@ TEST(ImageDecodingProcessorTest, MultipleTextPartsJoinedWithNewline) {
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok());
+    EXPECT_TRUE(req.inputImages.empty());
     const auto& resultHistory = std::get<ov::genai::ChatHistory>(req.input);
-    EXPECT_EQ(resultHistory[0]["content"].as_string().value_or(""), "Before image.\nAfter image.");
+    // Content remains an array (not flattened to string)
+    EXPECT_TRUE(resultHistory[0]["content"].is_array());
+    EXPECT_EQ(resultHistory[0]["content"].size(), 2u);
+    EXPECT_EQ(resultHistory[0]["content"][0]["text"].as_string().value_or(""), "Before image.");
+    EXPECT_EQ(resultHistory[0]["content"][1]["text"].as_string().value_or(""), "After image.");
 }
 
 // --- URL / path validation tests -----------------------------------------
@@ -206,7 +212,7 @@ TEST(ImageDecodingProcessorTest, LocalPathInsideAllowedDirectoryButFileNotFound)
 
 TEST(ImageDecodingProcessorTest, Base64ImageDecodedAndStoredInInputImages) {
     // Minimal 1x1 PNG — verifies the success path: tensor is populated, image tag
-    // is written into content, and inputImages receives exactly one entry.
+    // replaces image_url in content array, and inputImages receives exactly one entry.
     const std::string base64Url =
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1Pe"
         "AAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
@@ -225,9 +231,52 @@ TEST(ImageDecodingProcessorTest, Base64ImageDecodedAndStoredInInputImages) {
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(req.inputImages.size(), 1u);
+    // Content is an array with image_url replaced by text tag part
     const auto& resultHistory = std::get<ov::genai::ChatHistory>(req.input);
-    const auto content = resultHistory[0]["content"].as_string().value_or("");
-    EXPECT_NE(content.find("<ov_genai_image_0>"), std::string::npos);
+    const auto content = resultHistory[0]["content"];
+    ASSERT_TRUE(content.is_array());
+    ASSERT_EQ(content.size(), 1u);
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
+    EXPECT_NE(content[0]["text"].as_string().value_or("").find("<ov_genai_image_0>"), std::string::npos);
+}
+
+TEST(ImageDecodingProcessorTest, ImageReplacedWhileOtherPartsPreserved) {
+    // Content: [text, image_url, input_audio] — after processing:
+    // [text, text(tag), input_audio] — image replaced, others untouched.
+    const std::string base64Url =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1Pe"
+        "AAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+
+    std::string contentJson =
+        R"([{"type":"text","text":"describe"},)"
+        R"({"type":"image_url","image_url":{"url":")" +
+        base64Url + R"("}},)"
+                    R"({"type":"input_audio","input_audio":{"data":"dGVzdA==","format":"wav"}}])";
+
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(contentJson);
+    history.push_back(msg);
+
+    InputRequest req = makeChatRequest(history);
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    ASSERT_TRUE(status.ok());
+    ASSERT_EQ(req.inputImages.size(), 1u);
+    const auto& resultHistory = std::get<ov::genai::ChatHistory>(req.input);
+    const auto content = resultHistory[0]["content"];
+    ASSERT_TRUE(content.is_array());
+    ASSERT_EQ(content.size(), 3u);
+    // First part: original text preserved
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[0]["text"].as_string().value_or(""), "describe");
+    // Second part: image_url replaced with text tag
+    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "text");
+    EXPECT_NE(content[1]["text"].as_string().value_or("").find("<ov_genai_image_0>"), std::string::npos);
+    // Third part: input_audio preserved as-is
+    EXPECT_EQ(content[2]["type"].as_string().value_or(""), "input_audio");
 }
 
 TEST(ImageDecodingProcessorTest, MultipleImageUrlsProduceSeparateInputImageSlots) {

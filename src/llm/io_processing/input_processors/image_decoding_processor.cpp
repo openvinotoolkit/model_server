@@ -67,7 +67,7 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
         }
 
         // Replace image_url parts with text tag parts in-place.
-        // {"type":"text","text":"<ov_genai_image_N>"}, all other parts preserved as-is.
+        // All other parts (text, input_audio, etc.) are preserved as-is.
         // Flattening to string is deferred to TextContentNormalizationProcessor.
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];

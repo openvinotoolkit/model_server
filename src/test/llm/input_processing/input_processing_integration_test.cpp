@@ -266,7 +266,7 @@ TEST_P(InputProcessingIntegrationTest, SingleBase64Image_DecodedAndTagInPrompt) 
     // Preserve the multipart order: [text("Describe this."), image].
     const std::string expected =
         std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe this.<ov_genai_image_0>\n<|im_end|>\n"
+        "<|im_start|>user\nDescribe this.\n<ov_genai_image_0><|im_end|>\n"
         "<|im_start|>assistant\n";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);
@@ -282,8 +282,8 @@ TEST_P(InputProcessingIntegrationTest, ThreeImages_AllDecodedWithCorrectTagIndic
     // Preserve the multipart order: [text("Describe all."), image, image, image].
     const std::string expected =
         std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe all."
-        "<ov_genai_image_0>\n<ov_genai_image_1>\n<ov_genai_image_2>\n<|im_end|>\n"
+        "<|im_start|>user\nDescribe all.\n"
+        "<ov_genai_image_0>\n<ov_genai_image_1>\n<ov_genai_image_2><|im_end|>\n"
         "<|im_start|>assistant\n";
     ASSERT_EQ(result.req.inputImages.size(), 3u);
     EXPECT_EQ(result.req.promptText, expected);
@@ -298,7 +298,7 @@ TEST_P(InputProcessingIntegrationTest, InterleavedTextAndImage_BothTextPartsInPr
     // Preserve the multipart order: [text("Before."), image, text("After.")].
     const std::string expected =
         std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nBefore.<ov_genai_image_0>\nAfter.<|im_end|>\n"
+        "<|im_start|>user\nBefore.\n<ov_genai_image_0>\nAfter.<|im_end|>\n"
         "<|im_start|>assistant\n";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);

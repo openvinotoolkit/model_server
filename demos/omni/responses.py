@@ -90,7 +90,8 @@ def run_unary(client, args, content):
         # This is not OpenAI standard
         kwargs["extra_body"] = {
             "modalities": ["text", "audio"] if not args.audio_only_output else ["audio"],
-            "audio": {"voice": args.voice, "format": "wav", "chunk_frames": args.chunk_frames},
+            "audio": {"voice": args.voice, "format": "wav"},
+            "chunk_frames": args.chunk_frames,
         }
 
     response = client.responses.create(**kwargs)
@@ -135,7 +136,8 @@ def run_streaming(client, args, content):
     if args.audio_output:
         kwargs["extra_body"] = {
             "modalities": ["text", "audio"] if not args.audio_only_output else ["audio"],
-            "audio": {"voice": args.voice, "format": "pcm16", "chunk_frames": args.chunk_frames},
+            "audio": {"voice": args.voice, "format": "pcm16"},
+            "chunk_frames": args.chunk_frames,
         }
 
     # Non-blocking audio playback using a ring buffer
