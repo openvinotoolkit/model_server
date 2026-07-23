@@ -57,6 +57,10 @@ class OmniModelLegacyExecutorWrapper {
 public:
     OmniModelLegacyExecutorWrapper(std::shared_ptr<ov::genai::OmniPipeline> pipe);
     ~OmniModelLegacyExecutorWrapper();
+
+    OmniModelLegacyExecutorWrapper(const OmniModelLegacyExecutorWrapper&) = delete;
+    OmniModelLegacyExecutorWrapper& operator=(const OmniModelLegacyExecutorWrapper&) = delete;
+
     void addRequest(std::shared_ptr<OmniModelLegacyServableExecutionContext> request);
 };
 }  // namespace ovms

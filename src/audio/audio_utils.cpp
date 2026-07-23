@@ -99,7 +99,7 @@ std::vector<float> readWav(const std::string_view& wavData, uint32_t targetSampl
         throw std::runtime_error("WAV file has unsupported bits per sample");
     }
 
-    const uint64_t blockAlign = wav.channels * (wav.bitsPerSample / 8);
+    const uint64_t blockAlign = static_cast<uint64_t>(wav.channels) * (wav.bitsPerSample / 8);
     const uint64_t maxPossibleFrames = blockAlign ? (wavData.size() / blockAlign) : 0;
     if (wav.totalPCMFrameCount > maxPossibleFrames) {
         drwav_uninit(&wav);
