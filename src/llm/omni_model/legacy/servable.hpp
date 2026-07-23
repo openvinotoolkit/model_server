@@ -21,6 +21,8 @@
 
 #include <openvino/genai/omni/pipeline.hpp>
 #include <openvino/genai/omni/decoded_results.hpp>
+#include <openvino/genai/omni/speech_streamer_base.hpp>
+#include <openvino/genai/omni/talker_speech_config.hpp>
 
 #include "../../apis/openai_request.hpp"
 #include "../../servable.hpp"
@@ -43,6 +45,10 @@ struct OmniModelLegacyServableExecutionContext : public GenAiServableExecutionCo
     std::string audioVoice;
     OpenAIRequest::AudioFormat audioFormat{OpenAIRequest::DEFAULT_AUDIO_FORMAT};
     size_t audioChunkFrames{OpenAIRequest::DEFAULT_AUDIO_CHUNK_FRAMES};
+
+    // Prepared in parseRequest, consumed by executor
+    ov::genai::OmniTalkerSpeechConfig speechConfig;
+    ov::genai::OmniSpeechStreamerVariant speechStreamer = std::monostate{};
 
     std::atomic<bool> clientDisconnected{false};
 

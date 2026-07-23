@@ -174,6 +174,44 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
     omniExecutionContext->audioFormat = req.audioFormat;
     omniExecutionContext->audioChunkFrames = req.audioChunkFrames;
 
+    // Prepare OmniTalkerSpeechConfig
+    omniExecutionContext->speechConfig.audio_chunk_frames = req.audioChunkFrames;
+    omniExecutionContext->speechConfig.return_audio = req.audioOutputRequested;
+    if (!req.audioVoice.empty()) {
+        omniExecutionContext->speechConfig.speaker = req.audioVoice;
+    }
+
+    // Prepare speech streamer for streaming audio output via SSE
+    if (req.audioOutputRequested && omniExecutionContext->textStreamer) {
+        omniExecutionContext->speechStreamer = [& ctx = *omniExecutionContext](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
+            if (ctx.clientDisconnected.load()) {
+                return ov::genai::StreamingStatus::CANCEL;
+            }
+            // Convert float32 PCM to int16 and base64 encode
+            const float* pcm = audio_chunk.data<const float>();
+            const size_t count = audio_chunk.get_size();
+            std::vector<int16_t> pcm16(count);
+            for (size_t i = 0; i < count; i++) {
+                float s = pcm[i];
+                if (s > 1.0f)
+                    s = 1.0f;
+                if (s < -1.0f)
+                    s = -1.0f;
+                pcm16[i] = static_cast<int16_t>(s * 32767.0f);
+            }
+            std::string b64 = absl::Base64Escape(
+                std::string_view(reinterpret_cast<const char*>(pcm16.data()), pcm16.size() * sizeof(int16_t)));
+
+            rapidjson::Document audioDoc;
+            audioDoc.SetObject();
+            audioDoc.AddMember("_audio_delta",
+                rapidjson::Value(b64.c_str(), audioDoc.GetAllocator()),
+                audioDoc.GetAllocator());
+            ctx.deltaChannel.push(std::move(audioDoc));
+            return ov::genai::StreamingStatus::RUNNING;
+        };
+    }
+
     return absl::OkStatus();
 }
 

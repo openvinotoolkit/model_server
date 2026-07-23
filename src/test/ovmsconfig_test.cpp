@@ -1549,7 +1549,7 @@ TEST(OvmsGraphConfigTest, negativePipelineType) {
     };
 
     int arg_count = 10;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "pipeline_type: INVALID is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO, OMNI");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "pipeline_type: INVALID is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, OMNI, AUTO");
 }
 
 TEST(OvmsGraphConfigTest, negativeTargetDevice) {
