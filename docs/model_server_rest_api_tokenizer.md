@@ -8,7 +8,7 @@ Deploy OVMS with LLM, VLM or embedding model:
 ```bash
 mkdir models
 # in case GPU is available
-export GPU_ARGS=$(ls /dev/dri/render* >/dev/null 2>&1 && echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)")
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 
 docker run --user $(id -u):$(id -g) -d $GPU_ARGS --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Qwen3-8B-int4-ov --model_repository_path /models --rest_port 8000
 ```
