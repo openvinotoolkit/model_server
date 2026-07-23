@@ -151,10 +151,6 @@ pipeline {
                         if (status != 0) {
                             error "Failed to copy file. Status code: ${status}"
                         }
-                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}.sha256\" \"${destPath}\\${env.BUILDSTAMP}\\${packageName}.sha256\"")
-                        if (status != 0) {
-                            error "Failed to copy sha256 file. Status code: ${status}"
-                        }
                         status = bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
                         if (status != 0) {
                             error "Failed to remove directory. Status code: ${status}"
