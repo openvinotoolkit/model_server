@@ -242,8 +242,17 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "python_runtime_module_api_hdrs",
+    hdrs = ["python_runtime_module_api.hpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "libovmspythonmodule",
-    hdrs = ["pythoninterpretermodule.hpp",],
+    hdrs = [
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
     srcs = ["pythoninterpretermodule.cpp",],
     deps = PYBIND_DEPS + [
         "//src:cpp_headers", # TODO make ovmslib depend on that
@@ -282,7 +291,10 @@ ovms_cc_library(
 # without pulling MediaPipe calculator registration code.
 ovms_cc_library(
     name = "pythoninterpretermodule_runtime",
-    hdrs = ["pythoninterpretermodule.hpp",],
+    hdrs = [
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
     srcs = ["pythoninterpretermodule.cpp",],
     deps = PYBIND_DEPS + [
         "//src:cpp_headers",
@@ -309,6 +321,7 @@ cc_binary(
         "python_backend.hpp",
         "pythoninterpretermodule.cpp",
         "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
         "python_runtime_entry.cpp",
         "utils.hpp",
     ],
@@ -341,6 +354,7 @@ cc_import(
         "ovms_py_tensor.hpp",
         "python_backend.hpp",
         "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
         "utils.hpp",
     ],
     visibility = ["//visibility:private"],
@@ -354,6 +368,7 @@ cc_import(
         "ovms_py_tensor.hpp",
         "python_backend.hpp",
         "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
         "utils.hpp",
     ],
     visibility = ["//visibility:private"],

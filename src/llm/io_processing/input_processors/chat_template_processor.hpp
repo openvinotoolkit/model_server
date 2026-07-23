@@ -33,7 +33,7 @@ class PyJinjaTemplateProcessor;
 //
 // The processor decides the path based on configuration/resources passed in constructor:
 // - useMinja=true forces tokenizer.apply_chat_template().
-// - useMinja=false tries prepared runtime Jinja first, then optional in-process fallback
+// - useMinja=false tries prepared runtime Jinja first
 //   (PYTHON_DISABLE==0 only), then tokenizer.apply_chat_template().
 class ChatTemplateProcessor : public BaseInputProcessor {
 public:

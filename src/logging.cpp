@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "logging.hpp"
 
+#include <mutex>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <vector>
@@ -139,36 +140,32 @@ static void adopt_default_logger_settings(std::shared_ptr<spdlog::logger> logger
 }
 
 void initialize_named_loggers_from_default() {
-    static bool wasRun = false;
-    if (wasRun) {
-        return;
-    }
+    static std::once_flag initNamedLoggersFlag;
+    std::call_once(initNamedLoggersFlag, []() {
+        auto defaultLogger = spdlog::default_logger();
+        if (defaultLogger == nullptr || defaultLogger->sinks().empty()) {
+            return;
+        }
 
-    auto defaultLogger = spdlog::default_logger();
-    if (defaultLogger == nullptr || defaultLogger->sinks().empty()) {
-        return;
-    }
-
-    adopt_default_logger_settings(gcs_logger, defaultLogger);
-    adopt_default_logger_settings(azurestorage_logger, defaultLogger);
-    adopt_default_logger_settings(s3_logger, defaultLogger);
-    adopt_default_logger_settings(modelmanager_logger, defaultLogger);
-    adopt_default_logger_settings(dag_executor_logger, defaultLogger);
-    adopt_default_logger_settings(capi_logger, defaultLogger);
+        adopt_default_logger_settings(gcs_logger, defaultLogger);
+        adopt_default_logger_settings(azurestorage_logger, defaultLogger);
+        adopt_default_logger_settings(s3_logger, defaultLogger);
+        adopt_default_logger_settings(modelmanager_logger, defaultLogger);
+        adopt_default_logger_settings(dag_executor_logger, defaultLogger);
+        adopt_default_logger_settings(capi_logger, defaultLogger);
 #if (MEDIAPIPE_DISABLE == 0)
-    adopt_default_logger_settings(mediapipe_logger, defaultLogger);
-    adopt_default_logger_settings(llm_executor_logger, defaultLogger);
-    adopt_default_logger_settings(llm_calculator_logger, defaultLogger);
-    adopt_default_logger_settings(s2t_calculator_logger, defaultLogger);
-    adopt_default_logger_settings(t2s_calculator_logger, defaultLogger);
-    adopt_default_logger_settings(embeddings_calculator_logger, defaultLogger);
-    adopt_default_logger_settings(rerank_calculator_logger, defaultLogger);
+        adopt_default_logger_settings(mediapipe_logger, defaultLogger);
+        adopt_default_logger_settings(llm_executor_logger, defaultLogger);
+        adopt_default_logger_settings(llm_calculator_logger, defaultLogger);
+        adopt_default_logger_settings(s2t_calculator_logger, defaultLogger);
+        adopt_default_logger_settings(t2s_calculator_logger, defaultLogger);
+        adopt_default_logger_settings(embeddings_calculator_logger, defaultLogger);
+        adopt_default_logger_settings(rerank_calculator_logger, defaultLogger);
 #endif
 #if (OV_TRACE == 1)
-    adopt_default_logger_settings(ov_logger, defaultLogger);
+        adopt_default_logger_settings(ov_logger, defaultLogger);
 #endif
-
-    wasRun = true;
+    });
 }
 
 void configure_logger(const std::string& log_level, const std::string& log_path) {

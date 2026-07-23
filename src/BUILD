@@ -877,6 +877,7 @@ ovms_cc_library(
         "libovmslogging",
         "modelmanager",
         "//src/metrics:libovmsmetrics",
+        "//src/python:python_runtime_module_api_hdrs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -1064,6 +1065,7 @@ ovms_cc_library(
         "//:disable_python": [],
         "//conditions:default": [
             "//src/python/binding:pyovms.so",
+            "//src/python:python_runtime_module_api_hdrs",
         ],
         }) + select({
             "//:is_windows_and_python_is_enabled": [

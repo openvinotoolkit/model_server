@@ -626,19 +626,15 @@ void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int comp
 // --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --model_repository_path c:\download
 void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int expected_code, int timeoutSeconds) {
     server.setShutdownRequest(0);
-    char* argv[] = {(char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)source_model.c_str(),
-        (char*)"--model_repository_path",
-        (char*)download_path.c_str(),
-        (char*)"--task",
-        (char*)task.c_str()};
-
-    int argc = 8;
-    t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
-        EXPECT_EQ(expected_code, server.start(argc, argv));
-    }));
+    std::vector<std::string> args = {"ovms",
+        "--pull",
+        "--source_model",
+        source_model,
+        "--model_repository_path",
+        download_path,
+        "--task",
+        task};
+    startServerWithArgs(t, server, std::move(args), expected_code);
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
@@ -663,21 +659,17 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
 void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Server& server,
     std::string& draftModel, std::string& source_model, std::string& download_path, std::string& task, int expected_code, int timeoutSeconds) {
     server.setShutdownRequest(0);
-    char* argv[] = {(char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)source_model.c_str(),
-        (char*)"--model_repository_path",
-        (char*)download_path.c_str(),
-        (char*)"--task",
-        (char*)task.c_str(),
-        (char*)"--draft_source_model",
-        (char*)draftModel.c_str()};
-
-    int argc = 10;
-    t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
-        EXPECT_EQ(expected_code, server.start(argc, argv));
-    }));
+    std::vector<std::string> args = {"ovms",
+        "--pull",
+        "--source_model",
+        source_model,
+        "--model_repository_path",
+        download_path,
+        "--task",
+        task,
+        "--draft_source_model",
+        draftModel};
+    startServerWithArgs(t, server, std::move(args), expected_code);
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
@@ -704,21 +696,17 @@ void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Serv
 
 void SetUpServerForDownloadWithLoras(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, std::string& source_loras, int expected_code, int timeoutSeconds) {
     server.setShutdownRequest(0);
-    char* argv[] = {(char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)source_model.c_str(),
-        (char*)"--model_repository_path",
-        (char*)download_path.c_str(),
-        (char*)"--task",
-        (char*)task.c_str(),
-        (char*)"--source_loras",
-        (char*)source_loras.c_str()};
-
-    int argc = 10;
-    t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
-        EXPECT_EQ(expected_code, server.start(argc, argv));
-    }));
+    std::vector<std::string> args = {"ovms",
+        "--pull",
+        "--source_model",
+        source_model,
+        "--model_repository_path",
+        download_path,
+        "--task",
+        task,
+        "--source_loras",
+        source_loras};
+    startServerWithArgs(t, server, std::move(args), expected_code);
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
@@ -727,20 +715,16 @@ void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Serve
     server.setShutdownRequest(0);
     std::string port = "9133";
     randomizeAndEnsureFree(port);
-    char* argv[] = {(char*)"ovms",
-        (char*)"--port",
-        (char*)port.c_str(),
-        (char*)"--source_model",
-        (char*)source_model.c_str(),
-        (char*)"--model_repository_path",
-        (char*)download_path.c_str(),
-        (char*)"--task",
-        (char*)task.c_str()};
-
-    int argc = 9;
-    t.reset(new std::thread([&argc, &argv, &server]() {
-        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-    }));
+    std::vector<std::string> args = {"ovms",
+        "--port",
+        port,
+        "--source_model",
+        source_model,
+        "--model_repository_path",
+        download_path,
+        "--task",
+        task};
+    startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
 
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
@@ -750,22 +734,18 @@ void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Serve
     std::string port = "9133";
     randomizeAndEnsureFree(port);
     randomizeAndEnsureFree(restPort);
-    char* argv[] = {(char*)"ovms",
-        (char*)"--port",
-        (char*)port.c_str(),
-        (char*)"--rest_port",
-        (char*)restPort.c_str(),
-        (char*)"--source_model",
-        (char*)source_model.c_str(),
-        (char*)"--model_repository_path",
-        (char*)download_path.c_str(),
-        (char*)"--task",
-        (char*)task.c_str()};
-
-    int argc = 11;
-    t.reset(new std::thread([&argc, &argv, &server]() {
-        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-    }));
+    std::vector<std::string> args = {"ovms",
+        "--port",
+        port,
+        "--rest_port",
+        restPort,
+        "--source_model",
+        source_model,
+        "--model_repository_path",
+        download_path,
+        "--task",
+        task};
+    startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
 
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
@@ -775,24 +755,20 @@ void SetUpServerForDownloadAndStartWithLoras(std::unique_ptr<std::thread>& t, ov
     std::string port = "9133";
     randomizeAndEnsureFree(port);
     randomizeAndEnsureFree(restPort);
-    char* argv[] = {(char*)"ovms",
-        (char*)"--port",
-        (char*)port.c_str(),
-        (char*)"--rest_port",
-        (char*)restPort.c_str(),
-        (char*)"--source_model",
-        (char*)source_model.c_str(),
-        (char*)"--model_repository_path",
-        (char*)download_path.c_str(),
-        (char*)"--task",
-        (char*)task.c_str(),
-        (char*)"--source_loras",
-        (char*)source_loras.c_str()};
-
-    int argc = 13;
-    t.reset(new std::thread([&argc, &argv, &server]() {
-        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-    }));
+    std::vector<std::string> args = {"ovms",
+        "--port",
+        port,
+        "--rest_port",
+        restPort,
+        "--source_model",
+        source_model,
+        "--model_repository_path",
+        download_path,
+        "--task",
+        task,
+        "--source_loras",
+        source_loras};
+    startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
 
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
@@ -801,24 +777,20 @@ void SetUpServerForDownloadAndStartGGUF(std::unique_ptr<std::thread>& t, ovms::S
     server.setShutdownRequest(0);
     std::string port = "9133";
     randomizeAndEnsureFree(port);
-    char* argv[] = {
-        (char*)"ovms",
-        (char*)"--port",
-        (char*)port.c_str(),
-        (char*)"--source_model",
-        (char*)sourceModel.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-        (char*)"--task",
-        (char*)task.c_str(),
-        (char*)"--gguf_filename",
-        (char*)ggufFilename.c_str(),
+    std::vector<std::string> args = {
+        "ovms",
+        "--port",
+        port,
+        "--source_model",
+        sourceModel,
+        "--model_repository_path",
+        downloadPath,
+        "--task",
+        task,
+        "--gguf_filename",
+        ggufFilename,
     };
-
-    int argc = 11;
-    t.reset(new std::thread([&argc, &argv, &server]() {
-        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-    }));
+    startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
 
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
@@ -828,30 +800,24 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
     randomizeAndEnsureFree(port);
     const char* withPythonArg = withPython ? "--with_python=true" : "--with_python=false";
     if (!api_key.empty()) {
-        char* argv[] = {(char*)"ovms",
-            (char*)"--config_path",
-            (char*)configPath,
-            (char*)"--port",
-            (char*)port.c_str(),
-            (char*)withPythonArg,
-            (char*)"--api_key_file",
-            (char*)api_key.c_str()};
-        int argc = 8;
-        t.reset(new std::thread([&argc, &argv, &server]() {
-            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-        }));
+        std::vector<std::string> args = {"ovms",
+            "--config_path",
+            configPath,
+            "--port",
+            port,
+            withPythonArg,
+            "--api_key_file",
+            api_key};
+        startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
         EnsureServerStartedWithTimeout(server, timeoutSeconds);
     } else {
-        char* argv[] = {(char*)"ovms",
-            (char*)"--config_path",
-            (char*)configPath,
-            (char*)"--port",
-            (char*)port.c_str(),
-            (char*)withPythonArg};
-        int argc = 6;
-        t.reset(new std::thread([&argc, &argv, &server]() {
-            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-        }));
+        std::vector<std::string> args = {"ovms",
+            "--config_path",
+            configPath,
+            "--port",
+            port,
+            withPythonArg};
+        startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
         EnsureServerStartedWithTimeout(server, timeoutSeconds);
     }
 }
@@ -860,17 +826,14 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
     server.setShutdownRequest(0);
     randomizeAndEnsureFree(port);
     std::string fullModelPath = getGenericFullPathForSrcTest(modelPath);
-    char* argv[] = {(char*)"ovms",
-        (char*)"--model_name",
-        (char*)modelName,
-        (char*)"--model_path",
-        (char*)fullModelPath.c_str(),
-        (char*)"--port",
-        (char*)port.c_str()};
-    int argc = 7;
-    t.reset(new std::thread([&argc, &argv, &server]() {
-        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-    }));
+    std::vector<std::string> args = {"ovms",
+        "--model_name",
+        modelName,
+        "--model_path",
+        fullModelPath,
+        "--port",
+        port};
+    startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
 
@@ -878,19 +841,16 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
     server.setShutdownRequest(0);
     randomizeAndEnsureFree(port);
     std::string fullModelPath = getGenericFullPathForSrcTest(modelPath);
-    char* argv[] = {(char*)"ovms",
-        (char*)"--model_name",
-        (char*)modelName,
-        (char*)"--model_path",
-        (char*)fullModelPath.c_str(),
-        (char*)"--port",
-        (char*)port.c_str(),
-        (char*)"--task",
-        (char*)task};
-    int argc = 9;
-    t.reset(new std::thread([&argc, &argv, &server]() {
-        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-    }));
+    std::vector<std::string> args = {"ovms",
+        "--model_name",
+        modelName,
+        "--model_path",
+        fullModelPath,
+        "--port",
+        port,
+        "--task",
+        task};
+    startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
 

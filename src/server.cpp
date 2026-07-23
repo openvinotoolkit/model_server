@@ -68,6 +68,7 @@
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
 #include "python/python_runtime_loader.hpp"
+#include "python/python_runtime_module_api.hpp"
 #include "mediapipe_runtime_api.hpp"
 #include "servablemanagermodule.hpp"
 #include "shutdown_state.hpp"
@@ -495,10 +496,11 @@ Status Server::startModules(ovms::Config& config) {
     if (config.getServerSettings().withPython) {
         std::shared_lock lock(modulesMtx);
         auto pythonModuleIt = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
-        if (pythonModuleIt != modules.end() && pythonModuleIt->second != nullptr && pythonModuleIt->second->ownsPythonInterpreter()) {
+        auto* pythonRuntimeApi = (pythonModuleIt != modules.end() && pythonModuleIt->second != nullptr) ? dynamic_cast<PythonRuntimeModuleApi*>(pythonModuleIt->second.get()) : nullptr;
+        if (pythonRuntimeApi != nullptr && pythonRuntimeApi->ownsPythonInterpreter()) {
             // Natively GIL is held by the thread that initialized interpreter, so we only need to release it, if we own the interpreter.
             // If it was initialized externally, then the external thread shall release the GIL before launching that module.
-            pythonModuleIt->second->releaseGILFromThisThread();
+            pythonRuntimeApi->releaseGILFromThisThread();
         }
     }
 #endif

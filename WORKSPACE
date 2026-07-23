@@ -176,7 +176,7 @@ http_archive(
 #### Will be used on feature release
 #local_repository(
 #    name = "mediapipe",
-#    path = "/home/rasapala/git/mediapipe",
+#    path = "C:\\git\\mediapipe",
 #)
 
 # Remote fallback for non-local development:

@@ -54,6 +54,7 @@
 #include "opencv2/opencv.hpp"
 
 #include "../python/python_backend.hpp"
+#include "../python/python_runtime_module_api.hpp"
 #include "c_api_test_utils.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
@@ -113,8 +114,8 @@ public:
 
 static PythonBackend* getPythonBackend() {
     auto* pythonModule = ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME);
-    if (pythonModule != nullptr) {
-        auto* pythonBackend = pythonModule->getPythonBackend();
+    if (auto* pythonRuntimeApi = dynamic_cast<const ovms::PythonRuntimeModuleApi*>(pythonModule)) {
+        auto* pythonBackend = pythonRuntimeApi->getPythonBackend();
         if (pythonBackend != nullptr) {
             return pythonBackend;
         }

@@ -204,6 +204,22 @@ struct GenAiServableProperties {
         return templateProcessor;
     }
 #endif
+
+    bool hasPreparedPyTemplateProcessor() const {
+#if (PYTHON_DISABLE == 0)
+        return templateProcessor.chatTemplate != nullptr;
+#else
+        return false;
+#endif
+    }
+
+    PyJinjaTemplateProcessor* getPreparedPyTemplateProcessorOrNull() {
+#if (PYTHON_DISABLE == 0)
+        return hasPreparedPyTemplateProcessor() ? &templateProcessor : nullptr;
+#else
+        return nullptr;
+#endif
+    }
 };
 
 class GenAiServable {

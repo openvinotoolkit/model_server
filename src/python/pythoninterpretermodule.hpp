@@ -18,6 +18,7 @@
 #include <thread>
 
 #include "../module.hpp"
+#include "python_runtime_module_api.hpp"
 
 namespace pybind11 {
 class gil_scoped_release;
@@ -28,7 +29,7 @@ namespace ovms {
 class Config;
 class PythonBackend;
 
-class PythonInterpreterModule : public Module {
+class PythonInterpreterModule : public Module, public PythonRuntimeModuleApi {
     std::unique_ptr<PythonBackend> pythonBackend;
     mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
     std::thread::id threadId;

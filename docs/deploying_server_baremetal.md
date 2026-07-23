@@ -170,91 +170,22 @@ You can also build model server from source by following the [developer guide](w
 Model Server supports two deployment configurations:
 
 **With Python Support** (`PYTHON_DISABLE=0`, default):
-- Python nodes are available and LLM chat-template handling has broader feature coverage
-- Requires runtime Python libraries to be available
-- Can gracefully degrade if Python libraries become unavailable
-
-> **Note**: Python support is recommended for advanced LLM template usage, but it does not guarantee successful rendering of every template.
+- Python nodes are available and LLM chat-template handling has broader feature coverage.
+- Requires runtime Python libraries to be available.
+- Can gracefully degrade if Python runtime libraries/plugins are unavailable.
 
 **Without Python Support** (`PYTHON_DISABLE=1`):
-- Lightweight deployment for C++ models only
-- Python nodes cannot be used
-- LLM models have limitations in template rendering (see above)
-- No Python runtime dependencies required
+- Lightweight deployment for C++ models only.
+- Python nodes are unavailable.
+- LLM template rendering has reduced feature coverage.
 
-### Runtime Python Library Requirements (Linux and Windows)
+For Python runtime setup, fallback behavior details, and common error resolution, see:
+- [Python Runtime Setup and Troubleshooting](python_runtime_setup_and_troubleshooting.md)
 
-If you deployed the **with-Python package** but Python libraries are missing at runtime:
+For Python nodes reference, see:
+- [Python Support Reference](./python_support/reference.md)
 
-**Error: "Failed to initialize Python interpreter"**
-- This occurs when system `libpython.so` is not found
-- **Fix for Ubuntu**: `sudo apt install libpython3.12-dev`
-- **Fix for RHEL**: `sudo yum install python312-devel`
-- **Fix for Windows**: rerun `setupvars.bat` or `setupvars.ps1` in the same shell before starting `ovms`
-- **Check**: Verify with `find /usr -name "libpython*" -type f`
-
-**Error: "Failed to create Python backend"**
-- This occurs when `pyovms` module cannot be loaded
-- **Cause**: Missing `PYTHONPATH` environment variable
-- **Fix**: Set `export PYTHONPATH=${PWD}/ovms/lib/python` (or appropriate path to package)
-- **Windows equivalent**:
-   - Command Prompt: `set PYTHONPATH=%CD%\ovms\lib\python`
-   - PowerShell: `$env:PYTHONPATH = "$PWD\ovms\lib\python"`
-- **Check**: Verify with `python3 -c "import pyovms; print(pyovms.__file__)"`
-
-**Warning: "Python calculators plugin failed to load"**
-- This is a **graceful degradation** - server continues running
-- **Impact**: Python nodes cannot be loaded, but non-Python models work fine
-- **Fix**: Ensure `libpython_calculators.so` (Linux) or `libpython_calculators.dll` (Windows) is in the library search path
-- **Check**: Verify server logs for plugin load diagnostics and Python feature availability
-
-### Fallback Behavior
-
-Model Server gracefully handles missing Python libraries:
-
-1. **Non-Python models/graphs**: Work normally
-2. **Python-dependent graph features**: Return descriptive errors when Python runtime/plugin is unavailable
-3. **LLM models**:
-   - Without Python runtime: Basic template rendering (no complex Jinja2 features)
-   - With Python runtime: Broader template support is available
-   - In both modes: template behavior still depends on template compatibility
-
-### Verify Python Support
-
-Check if your deployment has Python support:
-
-```bash
-# Method 1: Start OVMS and inspect logs
-# Look for Python runtime/plugin initialization messages and any fallback warnings.
-
-# Method 2: Try to load a Python node graph
-# If Python runtime and plugin are available, the graph loads.
-# If unavailable, OVMS keeps running and returns a clear "Python not available" style error for Python features.
-
-# Method 3: Verify package/runtime files
-# Linux example:
-#   export OVMS_PACKAGE_PATH=${PWD}/ovms
-#   export OVMS_LIB_PATH=${OVMS_PACKAGE_PATH}/lib
-# Windows Command Prompt example:
-#   set OVMS_PACKAGE_PATH=%CD%\ovms
-#   set OVMS_LIB_PATH=%OVMS_PACKAGE_PATH%\lib
-# Confirm OVMS Python package files exist in ${OVMS_PACKAGE_PATH}/lib/python
-# and optional plugin library exists in ${OVMS_LIB_PATH}.
-```
-
-### Migration Between Configurations
-
-**From without-Python to with-Python**:
-1. Download with-Python package
-2. Extract to same location (overwrites binary)
-3. Repeat the OS-specific setup from the installation tab above (Linux: `PYTHONPATH` and optional dependencies, Windows: `setupvars`)
-4. Restart server
-
-**From with-Python to without-Python**:
-1. Download without-Python package
-2. Extract to same location (overwrites binary)
-3. Repeat the OS-specific setup from the installation tab above for the selected package variant
-4. Restart server
+> **Note**: Python support is recommended for advanced LLM template usage, but it does not guarantee successful rendering of every template.
 
 ## Test the Deployment
 
@@ -293,5 +224,6 @@ Learn more about model server [starting parameters](parameters.md).
 
 - [Preparing Model Repository](models_repository.md)
 - [Using Cloud Storage](using_cloud_storage.md)
+- [Python Runtime Setup and Troubleshooting](python_runtime_setup_and_troubleshooting.md)
 - [Troubleshooting](troubleshooting.md)
 - [Model server parameters](parameters.md)

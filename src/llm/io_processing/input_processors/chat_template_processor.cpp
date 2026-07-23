@@ -110,26 +110,10 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         if (runtimeStatus == RuntimeChatTemplateStatus::APPLIED) {
             req.promptText = std::move(runtimeOutput);
         } else if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
-            if (runtimeError != RuntimeChatTemplateError::PYTHON_RUNTIME_INITIALIZATION) {
-                return absl::Status(absl::StatusCode::kInvalidArgument, runtimeOutput);
-            }
-            SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                "Runtime Jinja failed due to Python runtime initialization issue; trying fallback path. Error: {}",
-                runtimeOutput);
+            (void)runtimeError;
+            return absl::Status(absl::StatusCode::kInvalidArgument, runtimeOutput);
         }
     }
-
-#if (PYTHON_DISABLE == 0)
-    if (!useMinja && req.promptText.empty() && templateProcessor.has_value()) {
-        std::string promptText;
-        const bool success = PyJinjaTemplateProcessor::applyChatTemplate(
-            templateProcessor.value().get(), jsonBody, promptText);
-        if (!success) {
-            return absl::Status(absl::StatusCode::kInvalidArgument, promptText);
-        }
-        req.promptText = std::move(promptText);
-    }
-#endif
     if (req.promptText.empty()) {
         const auto& tools = chatHistory.get_tools();
         ov::genai::JsonContainer kwargs;

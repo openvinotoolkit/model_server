@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,25 +16,13 @@
 #pragma once
 
 namespace ovms {
-class Config;
-class Status;
-enum class ModuleState {
-    NOT_INITIALIZED,
-    STARTED_INITIALIZE,
-    INITIALIZED,
-    RELOADING,
-    STARTED_SHUTDOWN,
-    SHUTDOWN
-};
+class PythonBackend;
 
-class Module {
-protected:
-    ModuleState state = ModuleState::NOT_INITIALIZED;
-
+class PythonRuntimeModuleApi {
 public:
-    virtual Status start(const ovms::Config& config) = 0;
-    virtual void shutdown() = 0;
-    virtual ~Module() = default;
-    ModuleState getState() const;
+    virtual PythonBackend* getPythonBackend() const = 0;
+    virtual bool ownsPythonInterpreter() const = 0;
+    virtual void releaseGILFromThisThread() const = 0;
+    virtual ~PythonRuntimeModuleApi() = default;
 };
 }  // namespace ovms

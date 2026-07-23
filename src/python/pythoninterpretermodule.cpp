@@ -89,8 +89,7 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
 
     if (!PythonBackend::createPythonBackend(pythonBackend)) {
         SPDLOG_ERROR("Failed to create Python backend. "
-                     "Ensure pyovms module is available in PYTHONPATH and libovmspython.so is installed. "
-                     "Set PYTHONPATH=/opt/intel/openvino/python:/ovms/lib/python or appropriate paths.");
+                     "Ensure pyovms module is available in PYTHONPATH and libovmspython.so is installed.");
         return StatusCode::PYTHON_BACKEND_CREATION_FAILED;
     }
     // Load MediaPipe Python calculators only after Python runtime is fully operational.
