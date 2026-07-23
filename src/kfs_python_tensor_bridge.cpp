@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "kfs_python_tensor_bridge.hpp"
 
+#include <atomic>
+
 namespace ovms {
 
 #if defined(_WIN32)
@@ -24,15 +26,15 @@ namespace ovms {
 #endif
 
 namespace {
-const KfsPyTensorBridgeVTable* g_vtable = nullptr;
-}
+std::atomic<const KfsPyTensorBridgeVTable*> g_vtable{nullptr};
+}  // namespace
 
 void setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable) {
-    g_vtable = vtable;
+    g_vtable.store(vtable, std::memory_order_release);
 }
 
 const KfsPyTensorBridgeVTable* getKfsPyTensorBridgeVTable() {
-    return g_vtable;
+    return g_vtable.load(std::memory_order_acquire);
 }
 
 extern "C" KFS_BRIDGE_EXPORT void OVMS_setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable) {
