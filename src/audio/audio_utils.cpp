@@ -306,9 +306,9 @@ void validateAudioFileSize(
 
 std::vector<float> readWithoutResample(const std::string_view& audioData, const std::string& format) {
     if (format == "wav") {
-        return readWav(audioData, 0);
+        return readWav(audioData, DISABLED_RESAMPLING_SAMPLE_RATE);
     } else if (format == "mp3") {
-        return readMp3(audioData, 0);
+        return readMp3(audioData, DISABLED_RESAMPLING_SAMPLE_RATE);
     } else {
         throw std::runtime_error("Unsupported audio format: " + format);
     }

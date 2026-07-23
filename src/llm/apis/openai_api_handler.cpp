@@ -780,7 +780,7 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
             }
         }
         request.audioOutputRequested = hasAudio;
-        // When modalities is explicitly provided and "text" is absent, suppress text in response
+        // When "modalities" field is explicitly provided and "text" is absent, suppress text in response
         if (!hasText && hasAudio) {
             request.textOutputRequested = false;
         }

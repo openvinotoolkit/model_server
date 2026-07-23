@@ -5143,7 +5143,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioMissingDataFieldInChatComp
     ASSERT_FALSE(doc.HasParseError());
     auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
     EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
-        absl::InvalidArgumentError("Invalid message structure - input_audio does not have data field"));
+        absl::InvalidArgumentError("Invalid message structure - input_audio does not have a valid data field"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioInResponsesAPI) {

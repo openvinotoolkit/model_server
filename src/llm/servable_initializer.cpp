@@ -482,6 +482,7 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     // Existence of talker model indicates omni pipeline
     bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
     // Existence of embeddings models indicates we are dealing with VLM pipeline
+    // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
     bool hasEmbeddingsModels = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
                                    std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin")) &&
                                !hasTalkerModel;

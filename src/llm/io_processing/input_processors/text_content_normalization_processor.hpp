@@ -22,8 +22,8 @@ namespace ovms {
 // Flattens text-only content arrays in ChatHistory messages to plain strings.
 // Parts are joined with "\n" for backward compatibility with chat templates.
 // Runs for both LM and VLM chat paths: arrays that contain images (or other
-// non-text modalities) are left untouched for ImageDecodingProcessor.
-// Must run before ChatTemplateProcessor.
+// non-text modalities) are left untouched.
+// Must run before ChatTemplateProcessor and after Image/Audio decoding processors.
 class TextContentNormalizationProcessor : public BaseInputProcessor {
 public:
     absl::Status process(InputRequest& req) override;

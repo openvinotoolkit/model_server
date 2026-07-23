@@ -1426,6 +1426,18 @@ std::string OpenAIResponsesHandler::serializeFunctionCallOutputItemDoneEvent(con
     return buffer.GetString();
 }
 
+// --- Audio streaming event serializers ---
+
+std::string OpenAIResponsesHandler::serializeAudioDeltaEvent(const std::string& audioB64) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writeEventHeader(writer, "response.audio.delta");
+    writer.String("delta");
+    writer.String(audioB64.c_str());
+    writer.EndObject();
+    return buffer.GetString();
+}
+
 // --- Top-level streaming methods ---
 
 std::string OpenAIResponsesHandler::serializeStreamingCreatedEvent() {
@@ -1484,18 +1496,7 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(rapidjson::Document 
     if (parsedDelta.HasMember("_audio_delta") && parsedDelta["_audio_delta"].IsString()) {
         // Audio streaming chunk from speech_streamer
         const std::string audioB64 = parsedDelta["_audio_delta"].GetString();
-        responsesState.sequenceNumber++;
-        rapidjson::StringBuffer buf;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
-        writer.StartObject();
-        writer.Key("type");
-        writer.String("response.audio.delta");
-        writer.Key("delta");
-        writer.String(audioB64.c_str());
-        writer.Key("sequence_number");
-        writer.Uint64(responsesState.sequenceNumber);
-        writer.EndObject();
-        events.emplace_back(buf.GetString());
+        events.emplace_back(serializeAudioDeltaEvent(audioB64));
     } else if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject()) {
         const auto& deltaObj = parsedDelta["delta"];
         if (deltaObj.HasMember("reasoning_content") && deltaObj["reasoning_content"].IsString()) {

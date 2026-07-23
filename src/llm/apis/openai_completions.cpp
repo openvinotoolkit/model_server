@@ -225,7 +225,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         }
                         const auto inputAudio = entry["input_audio"].GetObject();
                         if (!inputAudio.HasMember("data") || !inputAudio["data"].IsString()) {
-                            return absl::InvalidArgumentError("Invalid message structure - input_audio does not have data field");
+                            return absl::InvalidArgumentError("Invalid message structure - input_audio does not have a valid data field");
                         }
                     } else {
                         return absl::InvalidArgumentError("Unsupported content type");

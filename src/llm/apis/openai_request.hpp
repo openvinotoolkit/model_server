@@ -84,11 +84,13 @@ struct OpenAIRequest {
     // Audio output (Omni pipeline)
     enum class AudioFormat { WAV,
         PCM16 };
+    static constexpr AudioFormat DEFAULT_AUDIO_FORMAT = AudioFormat::WAV;
     bool audioOutputRequested{false};
     bool textOutputRequested{true};  // false when modalities is ["audio"] without "text"
     std::string audioVoice;          // maps to OmniTalkerSpeechConfig::speaker
-    AudioFormat audioFormat{AudioFormat::WAV};
-    size_t audioChunkFrames{4};  // Number of codec frames per streaming audio chunk (each frame = 80ms @ 24kHz)
+    AudioFormat audioFormat{DEFAULT_AUDIO_FORMAT};
+    static constexpr size_t DEFAULT_AUDIO_CHUNK_FRAMES = 4;
+    size_t audioChunkFrames{DEFAULT_AUDIO_CHUNK_FRAMES};  // Number of codec frames per streaming audio chunk (each frame = 80ms @ 24kHz)
 
     OpenAIRequest() = default;
     ~OpenAIRequest() = default;
