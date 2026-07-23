@@ -88,24 +88,24 @@ std::vector<std::string> buildCandidates() {
     std::vector<std::string> candidates;
 #if defined(_WIN32)
     candidates.insert(candidates.end(), {
-        "libovmspython.dll",
-        "./libovmspython.dll",
-        "src/python/libovmspython.dll",
-        "./src/python/libovmspython.dll",
-        "bazel-bin/src/libovmspython.dll",
-        "./bazel-bin/src/libovmspython.dll",
-        "bazel-bin/src/python/libovmspython.dll",
-        "./bazel-bin/src/python/libovmspython.dll",
-    });
+                                            "libovmspython.dll",
+                                            "./libovmspython.dll",
+                                            "src/python/libovmspython.dll",
+                                            "./src/python/libovmspython.dll",
+                                            "bazel-bin/src/libovmspython.dll",
+                                            "./bazel-bin/src/libovmspython.dll",
+                                            "bazel-bin/src/python/libovmspython.dll",
+                                            "./bazel-bin/src/python/libovmspython.dll",
+                                        });
 #else
     candidates.insert(candidates.end(), {
-        "libovmspython.so",
-        "./libovmspython.so",
-        "src/python/libovmspython.so",
-        "./src/python/libovmspython.so",
-        "bazel-bin/src/python/libovmspython.so",
-        "./bazel-bin/src/python/libovmspython.so",
-    });
+                                            "libovmspython.so",
+                                            "./libovmspython.so",
+                                            "src/python/libovmspython.so",
+                                            "./src/python/libovmspython.so",
+                                            "bazel-bin/src/python/libovmspython.so",
+                                            "./bazel-bin/src/python/libovmspython.so",
+                                        });
 #endif
     return candidates;
 }
