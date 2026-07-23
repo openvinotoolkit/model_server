@@ -30,41 +30,6 @@ pipeline {
                           if (env.RUN_TESTS == "1") {
                             windows.unit_test()
                           }
-                          def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
-                          def python_suffix = ""
-                          if (env.OVMS_PYTHON_ENABLED == "1") {
-                              python_suffix = "on"
-                          } else {
-                              python_suffix = "off"
-                          }
-                          def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
-                          def status = bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
-                          if (status != 0) {
-                              error "Failed to map network drive. Status code: ${status}"
-                          }
-                          def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
-                          def latestPath = "${destPath}\\latest"
-                          
-                          status = bat(returnStatus:true, script: "if not exist \"${destPath}\\${buildstamp}\" mkdir \"${destPath}\\${buildstamp}\"")
-                          if (status != 0) {
-                              error "Failed to create directory. Status code: ${status}"
-                          }
-                          status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${destPath}\\${buildstamp}\\${packageName}\"")
-                          if (status != 0) {
-                              error "Failed to copy file. Status code: ${status}"
-                          }
-                          status = bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
-                          if (status != 0) {
-                              error "Failed to remove directory. Status code: ${status}"
-                          }
-                          status = bat(returnStatus:true, script: "mkdir \"${latestPath}\"")
-                          if (status != 0) {
-                              error "Failed to create directory. Status code: ${status}"
-                          }
-                          status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${latestPath}\\${packageName}\"")
-                          if (status != 0) {
-                              error "Failed to copy file. Status code: ${status}"
-                          }
                         } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
@@ -141,7 +106,57 @@ pipeline {
                         error "Cannot load ci/loadWin.groovy file."
                     }
                 }
+            }
         }
+        stage ("Promote package"){
+            steps {
+                script {
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
+                        def python_suffix = ""
+                        if (env.OVMS_PYTHON_ENABLED == "1") {
+                            python_suffix = "on"
+                        } else {
+                            python_suffix = "off"
+                        }
+                        def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
+                        def sourceFile = "ovms.zip"
+                        if (env.SIGN_FILES == "true" && env.SIGN_USER_PASSWORD != "") {
+                            sourceFile = "ovms_windows_python_${python_suffix}.zip"
+                        }
+                        def status = bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
+                        if (status != 0) {
+                            error "Failed to map network drive. Status code: ${status}"
+                        }
+                        def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
+                        def latestPath = "${destPath}\\latest"
+                        
+                        status = bat(returnStatus:true, script: "if not exist \"${destPath}\\${buildstamp}\" mkdir \"${destPath}\\${buildstamp}\"")
+                        if (status != 0) {
+                            error "Failed to create directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${destPath}\\${buildstamp}\\${packageName}\"")
+                        if (status != 0) {
+                            error "Failed to copy file. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
+                        if (status != 0) {
+                            error "Failed to remove directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "mkdir \"${latestPath}\"")
+                        if (status != 0) {
+                            error "Failed to create directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${latestPath}\\${packageName}\"")
+                        if (status != 0) {
+                            error "Failed to copy file. Status code: ${status}"
+                        }
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
+                }
+            }
         }
     }
 }
