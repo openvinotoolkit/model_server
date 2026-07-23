@@ -1949,7 +1949,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
-    ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
+    ASSERT_TRUE(embeddingsGraphSettings.pooling.has_value());
+    ASSERT_EQ(embeddingsGraphSettings.pooling.value(), "CLS");
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(exportSettings.targetDevice, "GPU");
     ASSERT_EQ(exportSettings.modelName, servingName);
@@ -1999,7 +2000,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
-    ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
+    ASSERT_TRUE(embeddingsGraphSettings.pooling.has_value());
+    ASSERT_EQ(embeddingsGraphSettings.pooling.value(), "LAST");
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(exportSettings.targetDevice, "GPU");
     ASSERT_EQ(exportSettings.modelName, servingName);
@@ -2033,7 +2035,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
-    ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
+    ASSERT_FALSE(embeddingsGraphSettings.pooling.has_value());
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.modelName, modelName);
@@ -2073,7 +2075,8 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
+    ASSERT_TRUE(embeddingsGraphSettings.pooling.has_value());
+    ASSERT_EQ(embeddingsGraphSettings.pooling.value(), "LAST");
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(exportSettings.targetDevice, "GPU");

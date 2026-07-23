@@ -34,6 +34,6 @@ message EmbeddingsCalculatorOVOptions {
       LAST = 1;
       MEAN = 2;
     }
-    optional Pooling pooling = 5 [default = CLS];
+    optional Pooling pooling = 5;
     optional bool truncate = 6 [default = false];
 }
