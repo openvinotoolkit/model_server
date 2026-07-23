@@ -123,16 +123,15 @@ static int kfsBridgeExtractPacketData(
         const auto* packet = static_cast<const mediapipe::Packet*>(packetPtr);
         const auto& wrapper = packet->Get<ovms::PyObjectWrapper<py::object>>();
 
-        std::string datatype = wrapper.getProperty<std::string>("datatype");
-        // pyovms.Tensor exposes shape as a readonly tuple.
-        std::vector<py::ssize_t> userShape =
-            wrapper.getProperty<std::vector<py::ssize_t>>("shape");
-        size_t size = wrapper.getProperty<size_t>("size");
-        void* ptr = wrapper.getProperty<void*>("ptr");
+        if (datatypeBuf == nullptr || datatypeMax == 0 || shapeBuf == nullptr || shapeLenOut == nullptr || dataPtrOut == nullptr || dataSizeOut == nullptr) {
+            return -static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
+        }
+        if (shapeMax == 0) {
+            return -static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
+        }
 
         std::strncpy(datatypeBuf, datatype.c_str(), datatypeMax - 1);
         datatypeBuf[datatypeMax - 1] = '\0';
-
         *shapeLenOut = std::min(userShape.size(), shapeMax);
         for (size_t i = 0; i < *shapeLenOut; i++) {
             shapeBuf[i] = static_cast<int64_t>(userShape[i]);
