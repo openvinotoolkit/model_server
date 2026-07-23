@@ -41,7 +41,7 @@ public:
     ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
         bool useMinja,
         const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate,
-        PyJinjaTemplateProcessor* templateProcessor);
+        PyJinjaTemplateProcessor* templateProcessor = nullptr);
 
     absl::Status process(InputRequest& req) override;
 
@@ -55,10 +55,12 @@ private:
     // kwargs so it isn't supplied twice.
     static absl::Status extractAddGenerationPrompt(const ov::genai::ChatHistory& chatHistory,
         ov::genai::JsonContainer& kwargs, bool& addGenerationPrompt);
+
 #if (PYTHON_DISABLE == 0)
-    // Present only on the PyJinja path; nullopt → use tokenizer.apply_chat_template().
+    // Present only on the PyJinja path; nullopt means use tokenizer.apply_chat_template().
     std::optional<std::reference_wrapper<PyJinjaTemplateProcessor>> templateProcessor;
 #endif
+
     // Serialises chatHistory to {"messages":[...], "tools":[...], "chat_template_kwargs":{...}}
     // for Python Jinja template engines.
     static std::string serializeForJinja(const ov::genai::ChatHistory& chatHistory);

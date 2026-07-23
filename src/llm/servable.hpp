@@ -196,6 +196,13 @@ struct GenAiServableProperties {
 
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
+
+    PyJinjaTemplateProcessor& getTemplateProcessor() {
+        return templateProcessor;
+    }
+    const PyJinjaTemplateProcessor& getTemplateProcessor() const {
+        return templateProcessor;
+    }
 #endif
 };
 

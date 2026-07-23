@@ -249,6 +249,7 @@ ovms_cc_library(
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
         "//src:libovms_module",
+        "//src:python_calculators_plugin_loader",
         "//src/mediapipe_internal:mediapipe_utils",
         "pythonbackend",
         "utils",
@@ -316,6 +317,7 @@ cc_binary(
         "//src:libovmsstatus",
         "//src:libovms_module",
         "//src:cpp_headers",
+        "//src:python_calculators_plugin_loader",
     ],
     copts = COPTS_SO,
     linkopts = LINKOPTS_SO,
@@ -453,6 +455,21 @@ ovms_cc_library(
     copts = COPTS_SO,
     visibility = ["//visibility:public"],
     alwayslink = 1,
+)
+
+# Python runtime loader library
+# Encapsulates platform-specific logic for loading libovmspython.so/dll
+ovms_cc_library(
+    name = "python_runtime_loader",
+    hdrs = ["python_runtime_loader.hpp"],
+    srcs = ["python_runtime_loader.cpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_module",
+        ":libovmspythonmodule",
+    ],
+    visibility = ["//visibility:public"],
 )
 
 # Plugin shared library containing MediaPipe Python calculators

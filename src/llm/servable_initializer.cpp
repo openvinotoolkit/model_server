@@ -167,13 +167,15 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 #if (PYTHON_DISABLE == 0)
     if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
         std::string runtimeOutput;
+        RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
         const auto prepareStatus = prepareRuntimeChatTemplate(
             chatTemplateDirectory,
             properties->tokenizer.get_chat_template(),
             properties->tokenizer.get_bos_token(),
             properties->tokenizer.get_eos_token(),
             properties->preparedRuntimeChatTemplate,
-            runtimeOutput);
+            runtimeOutput,
+            &runtimeError);
 
         if (prepareStatus == RuntimeChatTemplatePrepareStatus::PREPARED) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Prepared runtime chat template via libovmspython");
@@ -182,9 +184,16 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
                 SPDLOG_LOGGER_WARN(llm_calculator_logger,
                     "Runtime chat template API is unavailable. Falling back to in-process PyJinjaTemplateProcessor.");
             } else {
-                SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                    "Runtime chat template preparation failed: {}. Falling back to in-process PyJinjaTemplateProcessor.",
-                    runtimeOutput.empty() ? std::string("unknown error") : runtimeOutput);
+                if (runtimeError == RuntimeChatTemplateError::PYTHON_RUNTIME_INITIALIZATION) {
+                    SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                        "Runtime chat template preparation failed due to Python runtime initialization issue: {}. "
+                        "Falling back to in-process PyJinjaTemplateProcessor.",
+                        runtimeOutput.empty() ? std::string("unknown error") : runtimeOutput);
+                } else {
+                    SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                        "Runtime chat template preparation failed: {}. Falling back to in-process PyJinjaTemplateProcessor.",
+                        runtimeOutput.empty() ? std::string("unknown error") : runtimeOutput);
+                }
             }
             ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
             loadPyTemplateProcessor(properties, extraGenInfo);

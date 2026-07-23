@@ -588,8 +588,14 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "runtime_chat_template_loader",
-    hdrs = ["runtime_chat_template.hpp"],
-    srcs = ["runtime_chat_template.cpp"],
+    hdrs = [
+        "runtime_chat_template.hpp",
+        "runtime_chat_template_runtime_loader.hpp",
+    ],
+    srcs = [
+        "runtime_chat_template.cpp",
+        "runtime_chat_template_runtime_loader.cpp",
+    ],
     deps = [
         "//src:libovmslogging",
     ],

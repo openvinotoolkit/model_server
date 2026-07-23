@@ -137,11 +137,11 @@ protected:
 
         // Step 2: Initialize Jinja processor (needed for probe and rendering)
         initJinjaProcessor();
-        ASSERT_NE(servable->getProperties()->templateProcessor.chatTemplate, nullptr)
+        ASSERT_NE(servable->getProperties()->getTemplateProcessor().chatTemplate, nullptr)
             << "Failed to load Python Jinja template processor";
 
         // Step 3a: Probe tool caps using Python Jinja (same function used in production)
-        if (!probeChatTemplateCapsJinja(servable->getProperties()->templateProcessor, caps)) {
+        if (!probeChatTemplateCapsJinja(servable->getProperties()->getTemplateProcessor(), caps)) {
             std::cout << "=== Jinja Probe FAILED: silent failure detected ===" << std::endl;
         }
 
@@ -165,7 +165,7 @@ protected:
         std::string requestBody = "{\"messages\":" + chatHistory.get_messages().to_json_string() + "}";
         std::string renderOutput;
         bool success = PyJinjaTemplateProcessor::applyChatTemplate(
-            servable->getProperties()->templateProcessor,
+            servable->getProperties()->getTemplateProcessor(),
             requestBody, renderOutput);
         exceptionThrownDuringApplication = !success;
         appliedOutput = renderOutput;

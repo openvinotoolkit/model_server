@@ -57,10 +57,6 @@ enum : unsigned int {
     TOTAL,
     TIMER_END
 };
-
-bool containsEmbeddedNull(const std::string& value) {
-    return value.find('\0') != std::string::npos;
-}
 }  // namespace
 
 namespace ovms {

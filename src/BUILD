@@ -880,11 +880,22 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "python_calculators_plugin_loader",
+    hdrs = ["python_calculators_plugin_loader.hpp"],
+    srcs = ["python_calculators_plugin_loader.cpp"],
+    deps = [
+        "cpp_headers",
+        "libovmslogging",
+        "libovmsstatus",
+        "kfs_python_tensor_bridge",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library(
     name = "ovms_lib",
-    hdrs = [
-            "ovms_internal.h",
-    ],
     srcs = [
         "capi_frontend/capi.cpp",
         "http_server.hpp",
@@ -896,13 +907,17 @@ ovms_cc_library(
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
         "kfs_frontend/kfs_grpc_inference_service.cpp",
-        "python_calculators_plugin_loader.cpp",
-        "python_calculators_plugin_loader.hpp",
         "server.cpp",
         "server.hpp",
          ],
+        hdrs = [
+            "ovms_internal.h",
+        ],
         deps = select({
-            "//:not_disable_python": [],
+            "//:not_disable_python": [
+                "//src/python:python_runtime_loader",
+                "python_calculators_plugin_loader",
+            ],
             "//:disable_python": []
         }) + select({
             "//:not_disable_mediapipe" : [

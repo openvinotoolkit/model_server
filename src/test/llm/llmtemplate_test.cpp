@@ -123,7 +123,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
     LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = "";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), false);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), false);
     std::string errorOutput = "Expecting value: line 1 column 1 (char 0)";
     ASSERT_EQ(finalPrompt, errorOutput);
 }
@@ -139,7 +139,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
             "messages": []
         }
     )";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_TRUE(finalPrompt.empty());
 }
 
@@ -154,7 +154,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
             "messages": [{}]
         }
     )";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, "");
 }
 
@@ -168,7 +168,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
         }
     )";
     std::string expectedOutput = "User: How can I help you?";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -184,7 +184,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateAddGenerationPromptDefaultsTrue) {
             "messages": [{ "role": "user", "content": "hi" }]
         }
     )";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_NE(finalPrompt.find("<|GEN|>"), std::string::npos) << "default should add generation prompt, got: " << finalPrompt;
 }
 
@@ -201,7 +201,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateAddGenerationPromptFalse) {
             "chat_template_kwargs": { "add_generation_prompt": false }
         }
     )";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt.find("<|GEN|>"), std::string::npos) << "add_generation_prompt=false should omit generation prompt, got: " << finalPrompt;
     ASSERT_NE(finalPrompt.find("partial"), std::string::npos) << "assistant prefill content should be present, got: " << finalPrompt;
 }
@@ -216,7 +216,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
         }
     )";
     std::string expectedOutput = "User: How can I help you?User: 2How can I help you?";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -232,7 +232,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
         }
     )";
     std::string expectedOutput = "User: hello";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -250,7 +250,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaUppercase) {
         }
     )";
     std::string expectedOutput = " Hi, HELLO ";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -267,7 +267,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaException) {
         }
     )";
     std::string errorOutput = "list object has no element 3";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), false);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
@@ -304,7 +304,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateComparePythonAndGenAiProcessors) {
             ]
         }
     )";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, pythonProcessorOutput), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, pythonProcessorOutput), true);
     ov::genai::Tokenizer tokenizer(directoryPath);
     ov::genai::ChatHistory chatHistory;
     chatHistory.push_back({{"role", "system"}, {"content", "You are a helpful assistant."}});
@@ -348,43 +348,43 @@ TEST_F(LLMChatTemplateTest, ChatTemplateKwargsPositive) {
     // Explicitly setting enable_thinking to true
     payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({"enable_thinking": true})");
     expectedOutput = "Thinking is on";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 
     // Explicitly setting enable_thinking to false
     payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({"enable_thinking": false})");
     expectedOutput = "Thinking is off";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 
     // Setting chat_template_kwargs to empty object
     payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({})");
     expectedOutput = "Thinking is off";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 
     // Explicitly setting chat_template_kwargs to null
     payloadBody = CreatePayloadBodyWithChatTemplateKwargs("null");
     expectedOutput = "Thinking is off";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 
     // Setting chat_template_kwargs with multiple values including enable_thinking
     payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({"enable_thinking": true, "another_param": "value"})");
     expectedOutput = "Thinking is on";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 
     // Setting chat_template_kwargs with multiple values but without enable_thinking
     payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({"another_param": "value", "yet_another_param": [1,2,3]})");
     expectedOutput = "Thinking is off";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 
     // Default setting
     payloadBody = CreatePayloadBodyWithChatTemplateKwargs("");
     expectedOutput = "Thinking is off";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -397,13 +397,13 @@ TEST_F(LLMChatTemplateTest, ChatTemplateKwargsNegative) {
     std::string finalPrompt = "";
     std::string payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"("string, not_an_object")");
     std::string expectedOutput = "chat_template_kwargs must be an object";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), false);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedOutput);
 
     // chat_template_kwargs cannot contain keys that are natively provided to the template
     payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({"messages": [{"role": "user", "content": "hello"}]})");
     expectedOutput = "jinja2.environment.Template.render() got multiple values for keyword argument 'messages'";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), false);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -438,7 +438,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTojsonNoHtmlEscaping) {
             "tools": [{"type": "function", "function": {"name": "get_weather", "parameters": {"type": "object"}}}]
         }
     )";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     // Must contain literal <tools> tags, NOT &lt;tools&gt;
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("<tools>"));
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("</tools>"));
@@ -474,7 +474,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTojsonIndentWorks) {
             "tools": [{"type": "function", "function": {"name": "get_weather", "parameters": {"type": "object"}}}]
         }
     )";
-    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->getTemplateProcessor(), payloadBody, finalPrompt), true);
     // Must contain literal <tools> tags, NOT &lt;tools&gt;
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("<tools>"));
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("</tools>"));

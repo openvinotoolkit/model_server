@@ -951,6 +951,105 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
     return StatusCode::OK;
 }
 
+static Status createPacketAndPushPyTensorIntoGraph(
+    const std::string& inputName,
+    const std::shared_ptr<const KFSRequest>& request,
+    ::mediapipe::CalculatorGraph& graph,
+    const ::mediapipe::Timestamp& timestamp) {
+    const auto* bridge = getKfsPyTensorBridgeVTable();
+    if (bridge == nullptr) {
+        return kfsPyTensorBridgeUnavailable(inputName);
+    }
+
+    auto requestInputItr = request->inputs().begin();
+    OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, inputName, *request));
+
+    const auto inputIndex = requestInputItr - request->inputs().begin();
+    std::vector<int64_t> shapeVec(requestInputItr->shape().begin(), requestInputItr->shape().end());
+
+    // Validate shape overflow before touching raw_input_contents - the overflow
+    // check must fire even when no raw data is present (e.g. empty body tests).
+    const size_t dtypeSize = KFSDataTypeSize(requestInputItr->datatype());
+    const auto precision = KFSPrecisionToOvmsPrecision(requestInputItr->datatype());
+    const bool isBytesType = precision == Precision::STRING;
+    const bool isFixedSizeType = dtypeSize > 0 && !isBytesType;
+    const bool hasBytesContents = requestInputItr->has_contents() && requestInputItr->contents().bytes_contents_size() > 0;
+
+    size_t expectedBytes = 0;
+    if (isFixedSizeType) {
+        expectedBytes = 1;
+        const bool sizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(shapeVec, dtypeSize, expectedBytes);
+        if (!sizeValid) {
+            return Status(StatusCode::INVALID_CONTENT_SIZE,
+                "Provided shape and datatype declare too large buffer for OVMS_PY_TENSOR stream: " + inputName);
+        }
+    } else if (isBytesType && hasBytesContents) {
+        OVMS_RETURN_ON_FAIL(calculateSerializedBytesContentSize(*requestInputItr, expectedBytes));
+    }
+
+    const bool requiresSizeValidation = isFixedSizeType || (isBytesType && hasBytesContents);
+    auto pushToBridge = [&](const char* dataPtr, size_t dataSize) -> Status {
+        // Validate that the shape-implied buffer size matches the actual data.
+        // Custom datatypes (unrecognized by KFSDataTypeSize -> 0) skip the byte
+        // size check but are passed through; the Python handler owns that validation.
+        if (requiresSizeValidation && dataSize != expectedBytes) {
+            std::stringstream ss;
+            ss << "Expected: " << expectedBytes << " bytes; Actual: "
+               << dataSize << " bytes; input name: " << inputName;
+            return Status(StatusCode::INVALID_CONTENT_SIZE, ss.str());
+        }
+
+        const int rc = bridge->deserializeAndPush(
+            inputName.c_str(),
+            dataPtr,
+            dataSize,
+            shapeVec.data(),
+            shapeVec.size(),
+            requestInputItr->datatype().c_str(),
+            &graph,
+            timestamp.Value());
+        if (rc != 0) {
+            SPDLOG_ERROR(
+                "OVMS_PY_TENSOR bridge deserializeAndPush failed for stream: {} datatype: {} bytes: {} rc: {} mapped_status: {} (UNKNOWN_ERROR={}, MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM={})",
+                inputName,
+                requestInputItr->datatype(),
+                dataSize,
+                rc,
+                static_cast<int>(-rc),
+                static_cast<int>(StatusCode::UNKNOWN_ERROR),
+                static_cast<int>(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM));
+            return Status(static_cast<StatusCode>(-rc),
+                "KFS Python tensor bridge deserialization failed");
+        }
+
+        return StatusCode::OK;
+    };
+
+    if (request->raw_input_contents_size() > static_cast<int>(inputIndex)) {
+        const auto& rawBuffer = request->raw_input_contents().at(inputIndex);
+        return pushToBridge(rawBuffer.data(), rawBuffer.size());
+    }
+
+    if (isFixedSizeType || (isBytesType && hasBytesContents)) {
+        std::vector<uint8_t> typedContentsBuffer;
+        Status serializationStatus = serializeKfsTypedContentToRawBytes(
+            *requestInputItr,
+            expectedBytes,
+            inputName,
+            *request,
+            typedContentsBuffer);
+        if (!serializationStatus.ok()) {
+            return Status(serializationStatus.getCode(),
+                "OVMS_PY_TENSOR typed contents handling failed for input: " + inputName +
+                    "; details: " + serializationStatus.string());
+        }
+        return pushToBridge(reinterpret_cast<const char*>(typedContentsBuffer.data()), typedContentsBuffer.size());
+    }
+
+    return Status(StatusCode::NOT_IMPLEMENTED,
+        "OVMS_PY_TENSOR requires raw_input_contents for non-standard datatype");
+}
+
 // Required for unary/streaming where it is OVMS who creates the request but it is not the packet type and we have to clean up.
 // In case when passing ownership is not required (unary-unary or first request of streaming) it is enough to pass shared_ptr with no-op destructor.
 // Specializations are for special case when the request itself is the packet and we need to ensure there is no double free.
@@ -1005,109 +1104,7 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
         SPDLOG_DEBUG("Request processing Mediapipe ImageFrame: {}", inputName);
         status = createPacketAndPushIntoGraph<mediapipe::ImageFrame, Holder>(inputName, request, graph, timestamp, nullptr);
     } else if (inputPacketType == mediapipe_packet_type_enum::OVMS_PY_TENSOR) {
-        const auto* bridge = getKfsPyTensorBridgeVTable();
-        if (bridge == nullptr) {
-            status = kfsPyTensorBridgeUnavailable(inputName);
-        } else {
-            auto requestInputItr = request->inputs().begin();
-            status = getRequestInput(requestInputItr, inputName, *request);
-            if (status.ok()) {
-                const auto inputIndex = requestInputItr - request->inputs().begin();
-                std::vector<int64_t> shapeVec(
-                    requestInputItr->shape().begin(), requestInputItr->shape().end());
-                // Validate shape overflow before touching raw_input_contents — the overflow
-                // check must fire even when no raw data is present (e.g. empty body tests).
-                const size_t dtypeSize = KFSDataTypeSize(requestInputItr->datatype());
-                const auto precision = KFSPrecisionToOvmsPrecision(requestInputItr->datatype());
-                const bool isBytesType = precision == Precision::STRING;
-                const bool isFixedSizeType = dtypeSize > 0 && !isBytesType;
-                const bool hasBytesContents = requestInputItr->has_contents() && requestInputItr->contents().bytes_contents_size() > 0;
-                size_t expectedBytes = 0;
-                if (isFixedSizeType) {
-                    expectedBytes = 1;
-                    const bool sizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(
-                        shapeVec, dtypeSize, expectedBytes);
-                    if (!sizeValid) {
-                        status = Status(StatusCode::INVALID_CONTENT_SIZE,
-                            "Provided shape and datatype declare too large buffer for OVMS_PY_TENSOR stream: " + inputName);
-                    }
-                } else if (isBytesType && hasBytesContents) {
-                    status = calculateSerializedBytesContentSize(*requestInputItr, expectedBytes);
-                }
-                if (status.ok()) {
-                    const std::string* rawBufPtr = nullptr;
-                    std::vector<uint8_t> typedContentsBuffer;
-
-                    if (request->raw_input_contents_size() > static_cast<int>(inputIndex)) {
-                        rawBufPtr = &request->raw_input_contents().at(inputIndex);
-                    } else if (isFixedSizeType || (isBytesType && hasBytesContents)) {
-                        if (status.ok()) {
-                            status = serializeKfsTypedContentToRawBytes(
-                                *requestInputItr,
-                                expectedBytes,
-                                inputName,
-                                *request,
-                                typedContentsBuffer);
-                            if (!status.ok()) {
-                                status = Status(status.getCode(),
-                                    "OVMS_PY_TENSOR typed contents handling failed for input: " + inputName +
-                                        "; details: " + status.string());
-                            }
-                        }
-                    } else {
-                        status = Status(StatusCode::NOT_IMPLEMENTED,
-                            "OVMS_PY_TENSOR requires raw_input_contents for non-standard datatype");
-                    }
-
-                    if (status.ok()) {
-                        const char* dataPtr = nullptr;
-                        size_t dataSize = 0;
-                        if (rawBufPtr != nullptr) {
-                            dataPtr = rawBufPtr->data();
-                            dataSize = rawBufPtr->size();
-                        } else {
-                            dataPtr = reinterpret_cast<const char*>(typedContentsBuffer.data());
-                            dataSize = typedContentsBuffer.size();
-                        }
-
-                        // Validate that the shape-implied buffer size matches the actual data.
-                        // Custom datatypes (unrecognised by KFSDataTypeSize → 0) skip the byte
-                        // size check but are passed through; the Python handler owns that validation.
-                        if (isFixedSizeType || (isBytesType && hasBytesContents)) {
-                            if (status.ok() && dataSize != expectedBytes) {
-                                std::stringstream ss;
-                                ss << "Expected: " << expectedBytes << " bytes; Actual: "
-                                   << dataSize << " bytes; input name: " << inputName;
-                                status = Status(StatusCode::INVALID_CONTENT_SIZE, ss.str());
-                            }
-                        }
-                        if (status.ok()) {
-                            const int rc = bridge->deserializeAndPush(
-                                inputName.c_str(),
-                                dataPtr, dataSize,
-                                shapeVec.data(), shapeVec.size(),
-                                requestInputItr->datatype().c_str(),
-                                &graph, timestamp.Value());
-                            if (rc != 0) {
-                                SPDLOG_ERROR(
-                                    "OVMS_PY_TENSOR bridge deserializeAndPush failed for stream: {} datatype: {} bytes: {} rc: {} mapped_status: {} (UNKNOWN_ERROR={}, MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM={})",
-                                    inputName,
-                                    requestInputItr->datatype(),
-                                    dataSize,
-                                    rc,
-                                    static_cast<int>(-rc),
-                                    static_cast<int>(StatusCode::UNKNOWN_ERROR),
-                                    static_cast<int>(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM));
-                            }
-                            status = (rc == 0)
-                                         ? StatusCode::OK
-                                         : Status(static_cast<StatusCode>(-rc),
-                                               "KFS Python tensor bridge deserialization failed");
-                        }  // if (status.ok())
-                    }
-                }  // if (status.ok()) after overflow check
-            }
-        }
+        status = createPacketAndPushPyTensorIntoGraph(inputName, request, graph, timestamp);
     } else if ((inputPacketType == mediapipe_packet_type_enum::OVTENSOR) ||
                (inputPacketType == mediapipe_packet_type_enum::UNKNOWN)) {
         SPDLOG_DEBUG("Request processing OVTensor: {}", inputName);

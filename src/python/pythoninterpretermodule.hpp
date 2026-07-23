@@ -43,5 +43,9 @@ public:
     void releaseGILFromThisThread() const override;
     void reacquireGILForThisThread() const;
     bool ownsPythonInterpreter() const override;
+
+private:
+    // Load MediaPipe Python calculators plugin after interpreter is operational
+    void loadPythonCalculatorsPlugin();
 };
 }  // namespace ovms

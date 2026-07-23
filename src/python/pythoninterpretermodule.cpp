@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <string>
 #include <utility>
+#include "../python_calculators_plugin_loader.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
@@ -92,9 +93,22 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
                      "Set PYTHONPATH=/opt/intel/openvino/python:/ovms/lib/python or appropriate paths.");
         return StatusCode::PYTHON_BACKEND_CREATION_FAILED;
     }
+    // Load MediaPipe Python calculators only after Python runtime is fully operational.
+    // This avoids loading optional calculator/runtime glue in environments where
+    // Python support cannot start successfully.
+    loadPythonCalculatorsPlugin();
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE_NAME);
     return StatusCode::OK;
+}
+
+void PythonInterpreterModule::loadPythonCalculatorsPlugin() {
+    if (::ovms::loadPythonCalculatorsPlugin()) {
+        SPDLOG_INFO("MediaPipe Python calculators plugin loaded successfully");
+    } else {
+        SPDLOG_WARN("Failed to load MediaPipe Python calculators plugin. "
+                    "Python-based MediaPipe calculators will not be available.");
+    }
 }
 
 void PythonInterpreterModule::shutdown() {

@@ -16,146 +16,21 @@
 
 #include "runtime_chat_template.hpp"
 
+#include "runtime_chat_template_runtime_loader.hpp"
+
 #include <string>
-#include <mutex>
 #include <utility>
-#include <vector>
-
-#if defined(_WIN32)
-#include <windows.h>
-#else
-#include <dlfcn.h>
-#endif
-
-#include "../logging.hpp"
 
 namespace ovms {
 namespace {
 
-using CreatePreparedChatTemplateRuntimeFn = bool (*)(
-    const char* modelsPath,
-    const char* chatTemplate,
-    const char* bosToken,
-    const char* eosToken,
-    void** preparedHandle,
-    const char** output);
+constexpr const char* PY_RUNTIME_INIT_ERROR_PREFIX = "OVMS_PY_RUNTIME_INIT_ERROR: ";
 
-using ApplyPreparedChatTemplateRuntimeFn = bool (*)(
-    void* preparedHandle,
-    const char* requestBody,
-    const char** output);
-
-using DestroyPreparedChatTemplateRuntimeFn = void (*)(void* preparedHandle);
-
-using ApplyChatTemplateRuntimeFn = bool (*)(
-    const char* modelsPath,
-    const char* requestBody,
-    const char* chatTemplate,
-    const char* bosToken,
-    const char* eosToken,
-    const char** output);
-
-struct RuntimeApi {
-    bool initialized = false;
-    bool available = false;
-#if defined(_WIN32)
-    HMODULE handle = nullptr;
-#else
-    void* handle = nullptr;
-#endif
-    CreatePreparedChatTemplateRuntimeFn createPreparedFn = nullptr;
-    ApplyPreparedChatTemplateRuntimeFn applyPreparedFn = nullptr;
-    DestroyPreparedChatTemplateRuntimeFn destroyPreparedFn = nullptr;
-    ApplyChatTemplateRuntimeFn applyFn = nullptr;
-};
-
-RuntimeApi& runtimeApi() {
-    static RuntimeApi api;
-    return api;
-}
-
-std::mutex& runtimeApiMutex() {
-    static std::mutex m;
-    return m;
-}
-
-void initializeRuntimeApiLocked() {
-    auto& api = runtimeApi();
-    if (api.initialized) {
-        return;
+RuntimeChatTemplateError classifyRuntimeError(const std::string& runtimeOutput) {
+    if (runtimeOutput.rfind(PY_RUNTIME_INIT_ERROR_PREFIX, 0) == 0) {
+        return RuntimeChatTemplateError::PYTHON_RUNTIME_INITIALIZATION;
     }
-
-    api.initialized = true;
-#if defined(_WIN32)
-    const std::vector<std::string> candidates = {
-        "libovmspython.dll",
-        "./libovmspython.dll",
-        "src/python/libovmspython.dll",
-        "./src/python/libovmspython.dll",
-        "bazel-bin/src/libovmspython.dll",
-        "./bazel-bin/src/libovmspython.dll",
-        "bazel-bin/src/python/libovmspython.dll",
-        "./bazel-bin/src/python/libovmspython.dll",
-    };
-
-    for (const auto& candidate : candidates) {
-        api.handle = LoadLibraryA(candidate.c_str());
-        if (api.handle != nullptr) {
-            break;
-        }
-    }
-
-    if (api.handle == nullptr) {
-        SPDLOG_DEBUG("Python runtime library libovmspython.dll not available for runtime chat template processing");
-        return;
-    }
-
-    api.applyFn = reinterpret_cast<ApplyChatTemplateRuntimeFn>(
-        GetProcAddress(api.handle, "OVMS_applyChatTemplateRuntime"));
-    api.createPreparedFn = reinterpret_cast<CreatePreparedChatTemplateRuntimeFn>(
-        GetProcAddress(api.handle, "OVMS_createPreparedChatTemplateRuntime"));
-    api.applyPreparedFn = reinterpret_cast<ApplyPreparedChatTemplateRuntimeFn>(
-        GetProcAddress(api.handle, "OVMS_applyPreparedChatTemplateRuntime"));
-    api.destroyPreparedFn = reinterpret_cast<DestroyPreparedChatTemplateRuntimeFn>(
-        GetProcAddress(api.handle, "OVMS_destroyPreparedChatTemplateRuntime"));
-#else
-    const std::vector<std::string> candidates = {
-        "libovmspython.so",
-        "./libovmspython.so",
-        "src/python/libovmspython.so",
-        "./src/python/libovmspython.so",
-        "bazel-bin/src/python/libovmspython.so",
-        "./bazel-bin/src/python/libovmspython.so",
-    };
-
-    for (const auto& candidate : candidates) {
-        api.handle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_LOCAL);
-        if (api.handle != nullptr) {
-            break;
-        }
-    }
-
-    if (api.handle == nullptr) {
-        SPDLOG_DEBUG("Python runtime library libovmspython.so not available for runtime chat template processing");
-        return;
-    }
-
-    api.applyFn = reinterpret_cast<ApplyChatTemplateRuntimeFn>(
-        dlsym(api.handle, "OVMS_applyChatTemplateRuntime"));
-    api.createPreparedFn = reinterpret_cast<CreatePreparedChatTemplateRuntimeFn>(
-        dlsym(api.handle, "OVMS_createPreparedChatTemplateRuntime"));
-    api.applyPreparedFn = reinterpret_cast<ApplyPreparedChatTemplateRuntimeFn>(
-        dlsym(api.handle, "OVMS_applyPreparedChatTemplateRuntime"));
-    api.destroyPreparedFn = reinterpret_cast<DestroyPreparedChatTemplateRuntimeFn>(
-        dlsym(api.handle, "OVMS_destroyPreparedChatTemplateRuntime"));
-#endif
-
-    if (api.applyFn == nullptr || api.createPreparedFn == nullptr || api.applyPreparedFn == nullptr || api.destroyPreparedFn == nullptr) {
-        SPDLOG_WARN("Python runtime library missing chat template runtime symbols");
-        return;
-    }
-
-    api.available = true;
+    return RuntimeChatTemplateError::EXECUTION_FAILURE;
 }
 
 }  // namespace
@@ -196,20 +71,19 @@ RuntimeChatTemplatePrepareStatus prepareRuntimeChatTemplate(
     const std::string& bosToken,
     const std::string& eosToken,
     PreparedRuntimeChatTemplate& preparedTemplate,
-    std::string& output) {
-    std::lock_guard<std::mutex> lock(runtimeApiMutex());
-    initializeRuntimeApiLocked();
-
-    auto& api = runtimeApi();
-    if (!api.available || api.createPreparedFn == nullptr || api.destroyPreparedFn == nullptr) {
+    std::string& output,
+    RuntimeChatTemplateError* error) {
+    if (error != nullptr) {
+        *error = RuntimeChatTemplateError::NONE;
+    }
+    const auto* api = getRuntimeChatTemplateRuntimeApi();
+    if (api == nullptr || api->createPreparedFn == nullptr || api->destroyPreparedFn == nullptr) {
         return RuntimeChatTemplatePrepareStatus::UNAVAILABLE;
     }
 
-    preparedTemplate.reset();
-
     void* runtimeHandle = nullptr;
     const char* runtimeOutput = nullptr;
-    bool ok = api.createPreparedFn(
+    bool ok = api->createPreparedFn(
         modelsPath.c_str(),
         chatTemplate.c_str(),
         bosToken.c_str(),
@@ -227,28 +101,44 @@ RuntimeChatTemplatePrepareStatus prepareRuntimeChatTemplate(
         if (output.empty()) {
             output = "Failed to prepare chat template using runtime Python Jinja";
         }
+        if (error != nullptr) {
+            *error = classifyRuntimeError(output);
+        }
         return RuntimeChatTemplatePrepareStatus::ERROR;
     }
 
-    preparedTemplate.handle = runtimeHandle;
-    preparedTemplate.destroyFn = api.destroyPreparedFn;
+    if (runtimeHandle == nullptr) {
+        if (output.empty()) {
+            output = "Failed to prepare chat template using runtime Python Jinja";
+        }
+        if (error != nullptr) {
+            *error = RuntimeChatTemplateError::EXECUTION_FAILURE;
+        }
+        return RuntimeChatTemplatePrepareStatus::ERROR;
+    }
+
+    PreparedRuntimeChatTemplate newPreparedTemplate;
+    newPreparedTemplate.handle = runtimeHandle;
+    newPreparedTemplate.destroyFn = api->destroyPreparedFn;
+    preparedTemplate = std::move(newPreparedTemplate);
     return RuntimeChatTemplatePrepareStatus::PREPARED;
 }
 
 RuntimeChatTemplateStatus tryApplyPreparedChatTemplateRuntime(
     const PreparedRuntimeChatTemplate& preparedTemplate,
     const std::string& requestBody,
-    std::string& output) {
-    std::lock_guard<std::mutex> lock(runtimeApiMutex());
-    initializeRuntimeApiLocked();
-
-    auto& api = runtimeApi();
-    if (!api.available || api.applyPreparedFn == nullptr || !preparedTemplate.isPrepared()) {
+    std::string& output,
+    RuntimeChatTemplateError* error) {
+    if (error != nullptr) {
+        *error = RuntimeChatTemplateError::NONE;
+    }
+    const auto* api = getRuntimeChatTemplateRuntimeApi();
+    if (api == nullptr || api->applyPreparedFn == nullptr || !preparedTemplate.isPrepared()) {
         return RuntimeChatTemplateStatus::UNAVAILABLE;
     }
 
     const char* runtimeOutput = nullptr;
-    bool ok = api.applyPreparedFn(
+    bool ok = api->applyPreparedFn(
         preparedTemplate.handle,
         requestBody.c_str(),
         &runtimeOutput);
@@ -262,6 +152,9 @@ RuntimeChatTemplateStatus tryApplyPreparedChatTemplateRuntime(
     if (!ok) {
         if (output.empty()) {
             output = "Failed to apply prepared chat template using runtime Python Jinja";
+        }
+        if (error != nullptr) {
+            *error = classifyRuntimeError(output);
         }
         return RuntimeChatTemplateStatus::ERROR;
     }

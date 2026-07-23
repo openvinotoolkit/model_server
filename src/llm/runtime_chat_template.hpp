@@ -19,6 +19,12 @@
 
 namespace ovms {
 
+enum class RuntimeChatTemplateError {
+    NONE,
+    PYTHON_RUNTIME_INITIALIZATION,
+    EXECUTION_FAILURE,
+};
+
 enum class RuntimeChatTemplatePrepareStatus {
     PREPARED,
     UNAVAILABLE,
@@ -33,7 +39,8 @@ RuntimeChatTemplatePrepareStatus prepareRuntimeChatTemplate(
     const std::string& bosToken,
     const std::string& eosToken,
     PreparedRuntimeChatTemplate& preparedTemplate,
-    std::string& output);
+    std::string& output,
+    RuntimeChatTemplateError* error = nullptr);
 
 enum class RuntimeChatTemplateStatus {
     APPLIED,
@@ -44,7 +51,8 @@ enum class RuntimeChatTemplateStatus {
 RuntimeChatTemplateStatus tryApplyPreparedChatTemplateRuntime(
     const PreparedRuntimeChatTemplate& preparedTemplate,
     const std::string& requestBody,
-    std::string& output);
+    std::string& output,
+    RuntimeChatTemplateError* error = nullptr);
 
 struct PreparedRuntimeChatTemplate {
     PreparedRuntimeChatTemplate() = default;
@@ -67,11 +75,13 @@ private:
         const std::string& bosToken,
         const std::string& eosToken,
         PreparedRuntimeChatTemplate& preparedTemplate,
-        std::string& output);
+        std::string& output,
+        RuntimeChatTemplateError* error);
     friend RuntimeChatTemplateStatus tryApplyPreparedChatTemplateRuntime(
         const PreparedRuntimeChatTemplate& preparedTemplate,
         const std::string& requestBody,
-        std::string& output);
+        std::string& output,
+        RuntimeChatTemplateError* error);
 };
 
 RuntimeChatTemplateStatus tryApplyChatTemplateRuntime(

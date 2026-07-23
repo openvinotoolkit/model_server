@@ -27,16 +27,6 @@
 #endif
 
 namespace ovms {
-namespace {
-
-constexpr const char* PY_RUNTIME_INIT_ERROR_PREFIX = "OVMS_PY_RUNTIME_INIT_ERROR: ";
-
-bool isPythonInitializationFailure(const std::string& errorMessage) {
-    return errorMessage.rfind(PY_RUNTIME_INIT_ERROR_PREFIX, 0) == 0;
-}
-
-}  // namespace
-
 std::string ChatTemplateProcessor::serializeForJinja(const ov::genai::ChatHistory& chatHistory) {
     // Build the minimal JSON object expected by Jinja runtime/in-process handlers:
     // {"messages":[...], "tools":[...], "chat_template_kwargs":{...}}
@@ -111,14 +101,16 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
 
     if (!useMinja && preparedRuntimeChatTemplate != nullptr && preparedRuntimeChatTemplate->isPrepared()) {
         std::string runtimeOutput;
+        RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
         auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
             *preparedRuntimeChatTemplate,
             jsonBody,
-            runtimeOutput);
+            runtimeOutput,
+            &runtimeError);
         if (runtimeStatus == RuntimeChatTemplateStatus::APPLIED) {
             req.promptText = std::move(runtimeOutput);
         } else if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
-            if (!isPythonInitializationFailure(runtimeOutput)) {
+            if (runtimeError != RuntimeChatTemplateError::PYTHON_RUNTIME_INITIALIZATION) {
                 return absl::Status(absl::StatusCode::kInvalidArgument, runtimeOutput);
             }
             SPDLOG_LOGGER_WARN(llm_calculator_logger,
