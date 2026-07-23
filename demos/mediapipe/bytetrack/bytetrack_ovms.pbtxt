@@ -1,5 +1,4 @@
 input_stream: "IMAGE:input_video"
-# input_side_packet: "INPUT_FILE_PATH:input_file_path" #simple_run_graph_main.cc
 output_stream: "IMAGE:output"
 
 node: {
@@ -102,11 +101,11 @@ node {
   output_stream: "DETECTIONS:tracked_detections"
   options: {
     [mediapipe.ByteTrackCalculatorOptions.ext] {
-      track_high_threshold:0.5
-      track_low_threshold:0.1
+      track_high_threshold:0.7
+      track_low_threshold:0.55
       new_track_threshold:0.35
       matching_threshold: 0.8
-      track_buffer: 30
+      track_buffer: 60
       fuse_score: false
     }
   }
@@ -122,7 +121,7 @@ node {
 # Draws annotations and overlays them on top of the input images.
 node {
   calculator: "AnnotationOverlayCalculator"
-  input_stream: "IMAGE:transformed_input_video"
+  input_stream: "IMAGE:input_video"
   input_stream: "detections_render_data"
   output_stream: "IMAGE:output"
 }
