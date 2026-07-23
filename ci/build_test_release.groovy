@@ -127,7 +127,12 @@ pipeline {
                         def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
                         def sourceFile = "ovms.zip"
                         if (env.SIGN_FILES == "true" && env.SIGN_USER_PASSWORD != "") {
-                            sourceFile = "ovms_windows_python_${python_suffix}.zip"
+                            def signedFiles = "${env.WORKSPACE}\\dist\\windows\\ovms_windows_python_${python_suffix}.zip"
+                            if (fileExists(signedFiles)) {
+                                sourceFile = "ovms_windows_python_${python_suffix}.zip"
+                            } else {
+                                echo "WARNING: Signed file not found, falling back to unsigned ovms.zip"
+                            }
                         }
                         def status = bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
                         if (status != 0) {
@@ -144,6 +149,10 @@ pipeline {
                         if (status != 0) {
                             error "Failed to copy file. Status code: ${status}"
                         }
+                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}.sha256\" \"${destPath}\\${env.BUILDSTAMP}\\${packageName}.sha256\"")
+                        if (status != 0) {
+                            error "Failed to copy sha256 file. Status code: ${status}"
+                        }
                         status = bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
                         if (status != 0) {
                             error "Failed to remove directory. Status code: ${status}"
@@ -155,6 +164,10 @@ pipeline {
                         status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${latestPath}\\${packageName}\"")
                         if (status != 0) {
                             error "Failed to copy file. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}.sha256\" \"${latestPath}\\${packageName}.sha256\"")
+                        if (status != 0) {
+                            error "Failed to copy sha256 file. Status code: ${status}"
                         }
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
