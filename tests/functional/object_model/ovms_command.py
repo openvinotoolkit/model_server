@@ -17,7 +17,6 @@
 from dataclasses import dataclass
 from typing import Union
 
-from tests.functional.constants.target_device import TargetDevice
 from tests.functional.utils.logger import get_logger
 from tests.functional.constants.os_type import OsType
 from tests.functional.config import enable_plugin_config_target_device
@@ -109,7 +108,7 @@ def create_ovms_command(
             plugin_config=plugin_config if use_parameter else None,
             batchsize=batch_size if use_parameter else None,
             nireq=parameters.nireq if use_parameter else None,
-            target_device=(parameters.target_device or TargetDevice.CPU) if use_parameter else None,
+            target_device=parameters.target_device if use_parameter else None,
             shape=shape if use_parameter else None,
             model_version_policy=parameters.model_version_policy if use_parameter else None,
             **common_parameters,
