@@ -281,7 +281,8 @@ Status HfPullModelModule::clone() {
         return status;
     }
 
-    MediapipeRuntimeApi runtimeApi(nullptr);
+    PythonBackend* pythonBackend = nullptr;
+    MediapipeRuntimeApi runtimeApi(pythonBackend);
     status = runtimeApi.createServableConfig(graphDirectory, this->hfSettings, true);  // when downloading from HF we always create config file, but when using local model with --task we create config in memory without writing to file
     if (!status.ok()) {
         return status;

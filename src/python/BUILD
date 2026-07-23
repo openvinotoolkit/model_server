@@ -319,6 +319,8 @@ cc_binary(
         "ovms_py_tensor.hpp",
         "python_backend.cpp",
         "python_backend.hpp",
+        "python_runtime_env.cpp",
+        "python_runtime_env.hpp",
         "pythoninterpretermodule.cpp",
         "pythoninterpretermodule.hpp",
         "python_runtime_module_api.hpp",

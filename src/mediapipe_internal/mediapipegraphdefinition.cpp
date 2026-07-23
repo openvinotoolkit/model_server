@@ -180,8 +180,8 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
 }
 
 Status MediapipeGraphDefinition::validateReferencedNodesRegistered() {
-    const auto registeredCalculators = mediapipe::CalculatorBaseRegistry::GetRegisteredNames();
-    const auto registeredSubgraphs = mediapipe::SubgraphRegistry::GetRegisteredNames();
+    const auto& registeredCalculators = mediapipe::CalculatorBaseRegistry::GetRegisteredNames();
+    const auto& registeredSubgraphs = mediapipe::SubgraphRegistry::GetRegisteredNames();
 
     std::unordered_map<std::string, bool> missingNamesMap;
     for (const auto& node : this->config.node()) {
@@ -276,19 +276,16 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     std::unique_lock lock(metadataMtx);
     auto status = createInputsInfo();
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create inputs info for mediapipe graph definition: {}", getName());
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage createInputsInfo for graph: {} status: {}", getName(), status.string());
         return status;
     }
     status = createOutputsInfo();
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage createOutputsInfo for graph: {} status: {}", getName(), status.string());
         return status;
     }
     status = createInputSidePacketsInfo();
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create input side packets info for mediapipe graph definition: {}", getName());
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage createInputSidePacketsInfo for graph: {} status: {}", getName(), status.string());
         return status;
     }
@@ -484,9 +481,7 @@ Status MediapipeGraphDefinition::setStreamTypes() {
             }
         }
         SPDLOG_LOGGER_ERROR(modelmanager_logger,
-            "TfLiteTensor stream type detected in mediapipe graph: {}. input_streams: [{}] output_streams: [{}]. "
-            "TfLiteTensor serialization/deserialization is not supported in KServe path.",
-            getName(), inputTfLiteNames, outputTfLiteNames);
+            "TfLiteTensor stream type is unsupported. Detected in mediapipe graph: {}. input_streams: [{}] output_streams: [{}]. " getName(), inputTfLiteNames, outputTfLiteNames);
         return Status(StatusCode::NOT_IMPLEMENTED,
             "TfLiteTensor stream type is not supported in mediapipe KServe execution path");
     }

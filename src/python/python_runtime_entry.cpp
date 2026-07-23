@@ -16,6 +16,7 @@
 
 #include "../module.hpp"
 #include "pythoninterpretermodule.hpp"
+#include "python_runtime_env.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -60,46 +61,14 @@ void setRuntimeOutput(const std::string& outputText, const char** output) {
     }
 }
 
-bool ensureInterpreterInitialized(const char** output, const char* context) {
-    if (Py_IsInitialized()) {
-        return true;
-    }
+bool isInterpreterInitialized() {
+    return Py_IsInitialized();
+}
+
+void setInterpreterNotInitializedError(const char** output, const char* context) {
     setRuntimeOutput(std::string(PY_RUNTIME_INIT_ERROR_PREFIX) +
                          "Python interpreter is not initialized for " + context,
         output);
-    return false;
-}
-
-bool existsInPath(const std::string& executableName) {
-    const char* pathEnv = std::getenv("PATH");
-    if (pathEnv == nullptr || pathEnv[0] == '\0') {
-        return false;
-    }
-
-#ifdef _WIN32
-    const char separator = ';';
-#else
-    const char separator = ':';
-#endif
-
-    std::string pathValue(pathEnv);
-    size_t start = 0;
-    while (start <= pathValue.size()) {
-        size_t end = pathValue.find(separator, start);
-        std::string directory = (end == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, end - start);
-        if (!directory.empty()) {
-            auto candidate = std::filesystem::path(directory) / executableName;
-            std::error_code ec;
-            if (std::filesystem::exists(candidate, ec) && !ec) {
-                return true;
-            }
-        }
-        if (end == std::string::npos) {
-            break;
-        }
-        start = end + 1;
-    }
-    return false;
 }
 
 [[maybe_unused]] bool hasOperationalPythonExecutable(std::string& details) {
@@ -110,7 +79,7 @@ bool existsInPath(const std::string& executableName) {
 #endif
 
     for (const auto& candidate : candidates) {
-        if (existsInPath(candidate)) {
+        if (ovms::existsExecutableInPath(candidate)) {
             return true;
         }
     }
@@ -203,6 +172,7 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
     // }
 
     bool ownsInterpreter = false;
+    bool success = false;
     try {
         if (!Py_IsInitialized()) {
             py::initialize_interpreter();
@@ -213,10 +183,7 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
             // Validate that OVMS Python bindings are importable and executable.
             py::module_::import("pyovms");
         }
-        if (ownsInterpreter) {
-            py::finalize_interpreter();
-        }
-        return true;
+        success = true;
     } catch (const py::error_already_set& e) {
         lastError = e.what();
     } catch (const std::exception& e) {
@@ -228,6 +195,11 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
     if (ownsInterpreter && Py_IsInitialized()) {
         py::finalize_interpreter();
     }
+
+    if (success) {
+        return true;
+    }
+
     if (errorMessage != nullptr) {
         *errorMessage = lastError.c_str();
     }
@@ -250,7 +222,8 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyChatTemplateRuntime(
         return false;
     }
 
-    if (!ensureInterpreterInitialized(output, "chat template application")) {
+    if (!isInterpreterInitialized()) {
+        setInterpreterNotInitializedError(output, "chat template application");
         return false;
     }
 
@@ -412,7 +385,8 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
         return false;
     }
 
-    if (!ensureInterpreterInitialized(output, "chat template preparation")) {
+    if (!isInterpreterInitialized()) {
+        setInterpreterNotInitializedError(output, "chat template preparation");
         return false;
     }
 
@@ -560,7 +534,8 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyPreparedChatTemplateRuntime(
         return false;
     }
 
-    if (!ensureInterpreterInitialized(output, "prepared chat template application")) {
+    if (!isInterpreterInitialized()) {
+        setInterpreterNotInitializedError(output, "prepared chat template application");
         return false;
     }
 

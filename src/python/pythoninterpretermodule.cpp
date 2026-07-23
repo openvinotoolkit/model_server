@@ -55,7 +55,7 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
         } catch (const pybind11::error_already_set& e) {
             SPDLOG_ERROR("Failed to initialize Python interpreter: {}. "
                          "Ensure libpython.so and dependencies are installed on the system. "
-                         "For Ubuntu: apt install libpython3.12-dev; For RHEL: yum install python312-devel. "
+                         "Make sure python-dev package is installed for the Python version used. "
                          "Check that PYTHONPATH is set correctly if using custom Python installation.",
                 e.what());
             return StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED;
