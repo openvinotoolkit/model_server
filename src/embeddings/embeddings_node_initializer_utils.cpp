@@ -65,9 +65,9 @@ std::optional<mediapipe::EmbeddingsCalculatorOVOptions_Pooling> detectEmbeddings
 
     using Pooling = mediapipe::EmbeddingsCalculatorOVOptions_Pooling;
     static const std::pair<const char*, Pooling> kSupportedModes[] = {
-        {"pooling_mode_cls_token",   mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS},
+        {"pooling_mode_cls_token", mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS},
         {"pooling_mode_mean_tokens", mediapipe::EmbeddingsCalculatorOVOptions_Pooling_MEAN},
-        {"pooling_mode_lasttoken",   mediapipe::EmbeddingsCalculatorOVOptions_Pooling_LAST},
+        {"pooling_mode_lasttoken", mediapipe::EmbeddingsCalculatorOVOptions_Pooling_LAST},
     };
 
     std::optional<Pooling> detected;
