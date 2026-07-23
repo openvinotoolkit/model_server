@@ -872,7 +872,8 @@ const std::string basicMediapipeConfig = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU"
         }
         }
     ],
@@ -888,7 +889,8 @@ static const std::string basicMediapipeConfigWithAddedGraph = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU"
         }
         }
     ],
@@ -908,7 +910,8 @@ static const std::string basicMediapipeConfigWithRemovedGraph = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU"
         }
         }
     ],
@@ -932,6 +935,7 @@ static const std::string basicMediapipeConfigWithReloadedModel = R"({
         {"config": {
                 "name": "dummy",
                 "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
                 "nireq": 47
         }
         }
@@ -948,7 +952,8 @@ static const std::string basicMediapipeConfigWithNewGraphPath = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU"
         }
         }
     ],
@@ -964,7 +969,8 @@ const std::string basicMediapipeQueueConfig = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU"
         }
         }
     ],
@@ -980,7 +986,8 @@ static const std::string basicMediapipeQueueConfigWithAddedGraph = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU"
         }
         }
     ],
@@ -1000,7 +1007,8 @@ static const std::string basicMediapipeQueueConfigWithRemovedGraph = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU"
         }
         }
     ],
@@ -1024,6 +1032,7 @@ static const std::string basicMediapipeQueueConfigWithReloadedModel = R"({
         {"config": {
                 "name": "dummy",
                 "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU",
                 "nireq": 47
         }
         }
@@ -1040,7 +1049,8 @@ static const std::string basicMediapipeQueueConfigWithNewGraphPath = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": "/ovms/src/test/dummy",
+                "target_device": "CPU"
         }
         }
     ],

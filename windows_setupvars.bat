@@ -73,13 +73,4 @@ echo [ERROR] Setup finished with error
 if "!SETUP_EXIT_CODE!"=="0" set "SETUP_EXIT_CODE=!errorlevel!"
 
 :propagate_env
-endlocal & (
-    set "PATH=%PATH%"
-    set "PYTHONPATH=%PYTHONPATH%"
-    set "PYTHONHOME=%PYTHONHOME%"
-    set "BAZEL_VS=%BAZEL_VS%"
-    set "BAZEL_VC=%BAZEL_VC%"
-    set "BAZEL_SH=%BAZEL_SH%"
-    set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%"
-    exit /b %SETUP_EXIT_CODE%
-)
+endlocal & set "PATH=%PATH%" & set "PYTHONPATH=%PYTHONPATH%" & set "PYTHONHOME=%PYTHONHOME%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & exit /b %SETUP_EXIT_CODE%
