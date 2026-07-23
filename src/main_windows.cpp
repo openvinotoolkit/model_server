@@ -31,6 +31,7 @@
 #include <windows.h>
 #include <tchar.h>
 #include <errors.h>
+#include <winrt/Windows.ApplicationModel.h>
 
 #include "main_windows.hpp"
 #include "module_names.hpp"
@@ -107,8 +108,30 @@ inline std::wstring stringToWstring(const std::string& str, UINT codePage = CP_T
     return str2;
 }
 
+static void setOpenvinoTokenizersPathFromMsixDependencies() {
+    constexpr wchar_t PACKAGE_NAME[] = L"Intel.OpenVINO.Tokenizers.2026.3.0.0";
+    constexpr wchar_t TOKENIZERS_RELATIVE_PATH[] = L"\\runtime\\bin\\intel64\\Release\\openvino_tokenizers.dll";
+
+    try {
+        winrt::Windows::Foundation::Collections::IVectorView<winrt::Windows::ApplicationModel::Package> deps =
+            winrt::Windows::ApplicationModel::Package::Current().Dependencies();
+        for (const winrt::Windows::ApplicationModel::Package& dep : deps) {
+            if (dep.Id().Name() == PACKAGE_NAME) {
+                const std::wstring dllPath = dep.InstalledLocation().Path().c_str() + std::wstring(TOKENIZERS_RELATIVE_PATH);
+                SetEnvironmentVariableW(L"OPENVINO_TOKENIZERS_PATH_GENAI", dllPath.c_str());
+                DEBUG_LOG("OPENVINO_TOKENIZERS_PATH_GENAI initialized from package dependency.");
+                return;
+            }
+        }
+    } catch (const winrt::hresult_error&) {
+        // Not all deployments are packaged; keep default behavior when package metadata is unavailable.
+    }
+}
+
 int main_windows(int argc, char** argv) {
     DEBUG_LOG("Windows Main - Entry");
+    setOpenvinoTokenizersPathFromMsixDependencies();
+
     OvmsWindowsServiceManager::instance().ovmsParams.argc = argc;
     OvmsWindowsServiceManager::instance().ovmsParams.argv = argv;
     OvmsWindowsServiceManager::logParameters(argc, argv, "OVMS Main Argument");
