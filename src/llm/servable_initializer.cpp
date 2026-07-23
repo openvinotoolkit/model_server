@@ -479,26 +479,29 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     }
 
     std::filesystem::path parsedModelsPathFs(parsedModelsPath);
+
     // Existence of talker model indicates omni pipeline
     bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
-    // Existence of embeddings models indicates we are dealing with VLM pipeline
+    bool hasVlmModels = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
+                         std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
+
+    // Existence of text embeddings and vision embeddings models indicates we are dealing with VLM pipeline
     // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
-    bool hasEmbeddingsModels = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
-                                   std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin")) &&
-                               !hasTalkerModel;
+    bool isOmni = hasTalkerModel && hasVlmModels;
+    bool isVLM = !hasTalkerModel && hasVlmModels;
 
     // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
     if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {
-        if (hasTalkerModel) {
+        if (isOmni) {
             pipelineType = PipelineType::OMNI;
         } else if (nodeOptions.device() == "NPU") {
-            if (hasEmbeddingsModels) {
+            if (isVLM) {
                 pipelineType = PipelineType::VLM;
             } else {
                 pipelineType = PipelineType::LM;
             }
         } else {
-            if (hasEmbeddingsModels) {
+            if (isVLM) {
                 pipelineType = PipelineType::VLM_CB;
             } else {
                 pipelineType = PipelineType::LM_CB;
@@ -526,12 +529,12 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (hasEmbeddingsModels && (pipelineType != PipelineType::VLM && pipelineType != PipelineType::VLM_CB)) {
+        if (isVLM && (pipelineType != PipelineType::VLM && pipelineType != PipelineType::VLM_CB)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates VLM pipeline, but pipeline type is set to non-VLM type.");
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (!hasEmbeddingsModels && (pipelineType == PipelineType::VLM || pipelineType == PipelineType::VLM_CB)) {
+        if (!isVLM && (pipelineType == PipelineType::VLM || pipelineType == PipelineType::VLM_CB)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates non-VLM pipeline, but pipeline type is set to VLM type.");
             return StatusCode::INTERNAL_ERROR;
         }

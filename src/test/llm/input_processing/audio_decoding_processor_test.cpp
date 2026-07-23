@@ -28,8 +28,10 @@
 
 #include "../../../llm/io_processing/input_processors/audio_decoding_processor.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
+#include "../../wav_test_utils.hpp"
 
 using namespace ovms;
+using test_utils::buildWavBuffer;
 
 // Helpers ----------------------------------------------------------------
 
@@ -37,43 +39,6 @@ static InputRequest makeChatRequest(ov::genai::ChatHistory chatHistory) {
     InputRequest req;
     req.input = std::move(chatHistory);
     return req;
-}
-
-// Builds a minimal valid PCM16 mono WAV buffer (16 kHz, given number of samples).
-static std::string buildWavBuffer(uint32_t numSamples, uint32_t sampleRate = 16000) {
-    constexpr uint16_t channels = 1;
-    constexpr uint16_t bitsPerSample = 16;
-    const uint32_t byteRate = sampleRate * channels * bitsPerSample / 8;
-    const uint16_t blockAlign = channels * bitsPerSample / 8;
-    const uint32_t dataSize = numSamples * blockAlign;
-    const uint32_t riffSize = 36 + dataSize;
-
-    std::string out;
-    out.reserve(44 + dataSize);
-    auto append = [&out](const void* p, size_t n) {
-        out.append(reinterpret_cast<const char*>(p), n);
-    };
-    out.append("RIFF", 4);
-    append(&riffSize, 4);
-    out.append("WAVE", 4);
-    out.append("fmt ", 4);
-    uint32_t fmtChunkSize = 16;
-    uint16_t audioFormat = 1;  // PCM
-    append(&fmtChunkSize, 4);
-    append(&audioFormat, 2);
-    append(&channels, 2);
-    append(&sampleRate, 4);
-    append(&byteRate, 4);
-    append(&blockAlign, 2);
-    append(&bitsPerSample, 2);
-    out.append("data", 4);
-    append(&dataSize, 4);
-    // Write simple non-zero samples for verification
-    for (uint32_t i = 0; i < numSamples; i++) {
-        int16_t sample = static_cast<int16_t>(i % 1000);
-        append(&sample, 2);
-    }
-    return out;
 }
 
 // Encodes binary data to base64.
@@ -122,6 +87,10 @@ TEST(AudioDecodingProcessorTest, SkipsMessagesWithNonArrayContent) {
 
     EXPECT_TRUE(status.ok());
     EXPECT_TRUE(req.inputAudios.empty());
+    const auto& result = std::get<ov::genai::ChatHistory>(req.input);
+    ASSERT_EQ(result.size(), 2u);
+    EXPECT_EQ(result[0]["content"].as_string().value_or(""), "You are helpful.");
+    EXPECT_EQ(result[1]["content"].as_string().value_or(""), "What is OpenVINO?");
 }
 
 TEST(AudioDecodingProcessorTest, ValidWavAudioDecodedSuccessfully) {

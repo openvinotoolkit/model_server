@@ -33,6 +33,11 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <rapidjson/document.h>
 
+#pragma warning(push)
+#pragma warning(disable : 6001)
+#include "absl/strings/escaping.h"
+#pragma warning(pop)
+
 #include "../../../llm/apis/openai_completions.hpp"
 #include "../../../llm/apis/openai_responses.hpp"
 #include "../../../llm/io_processing/base_generation_config_builder.hpp"
@@ -41,9 +46,12 @@
 #include "../../../llm/io_processing/input_processor_context.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "../../platform_utils.hpp"
+#include "../../wav_test_utils.hpp"
 
 namespace ovms {
 namespace {
+
+using test_utils::buildWavBuffer;
 
 // SmolLM2-360M-Instruct injects this default system turn when the first message
 // is not 'system' (verified from tokenizer_config.json chat_template).
@@ -85,7 +93,7 @@ protected:
         std::shared_ptr<rapidjson::Document> doc;  // keeps handler's reference alive
     };
 
-    RunResult runPipeline(const std::string& json, bool isVLM = false) {
+    RunResult runPipeline(const std::string& json, bool isVLM = false, bool isOmni = false) {
         RunResult result;
 
         result.doc = std::make_shared<rapidjson::Document>();
@@ -125,6 +133,7 @@ protected:
 
         InputProcessorContext ctx;
         ctx.config.isVLM = isVLM;
+        ctx.config.isOmni = isOmni;
         ctx.config.useMinja = false;
         ctx.tokenizer = *sharedTokenizer;
 
@@ -432,6 +441,52 @@ INSTANTIATE_TEST_SUITE_P(BothEndpoints, InputProcessingIntegrationTest,
     });
 
 // ---------------------------------------------------------------------------
+// Omni (text + image + audio) integration test
+// ---------------------------------------------------------------------------
+
+static std::string toBase64(const std::string& raw) {
+    std::string encoded;
+    absl::Base64Escape(raw, &encoded);
+    return encoded;
+}
+
+TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {
+    // Build a request with text + image + audio in a single message.
+    const std::string audioB64 = toBase64(buildWavBuffer(160));
+
+    std::string json;
+    if (GetParam() == Endpoint::CHAT_COMPLETIONS) {
+        json = R"({"model":"m","messages":[{"role":"user","content":[)"
+               R"({"type":"text","text":"Describe both."},)"
+               R"({"type":"image_url","image_url":{"url":")" +
+               std::string(TINY_PNG) + R"("}},)"
+                                       R"({"type":"input_audio","input_audio":{"data":")" +
+               audioB64 + R"(","format":"wav"}}]}]})";
+    } else {
+        json = R"({"model":"m","input":[{"type":"message","role":"user","content":[)"
+               R"({"type":"input_text","text":"Describe both."},)"
+               R"({"type":"input_image","image_url":{"url":")" +
+               std::string(TINY_PNG) + R"("}},)"
+                                       R"({"type":"input_audio","input_audio":{"data":")" +
+               audioB64 + R"(","format":"wav"}}]}]})";
+    }
+
+    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/true);
+
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+
+    // Image decoded
+    ASSERT_EQ(result.req.inputImages.size(), 1u);
+    // Audio decoded
+    ASSERT_EQ(result.req.inputAudios.size(), 1u);
+    EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
+    // Prompt contains text and image tag (audio is not in prompt — GenAI prepends it)
+    EXPECT_NE(result.req.promptText.find("Describe both."), std::string::npos);
+    EXPECT_NE(result.req.promptText.find("<ov_genai_image_0>"), std::string::npos);
+}
+
+// ---------------------------------------------------------------------------
 // Endpoint equivalence — non-parameterized, runs both explicitly.
 // ---------------------------------------------------------------------------
 
@@ -487,7 +542,7 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
 
     const std::string expectedPrompt =
         std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe this.<ov_genai_image_0>\n<|im_end|>\n"
+        "<|im_start|>user\nDescribe this.\n<ov_genai_image_0><|im_end|>\n"
         "<|im_start|>assistant\n";
     EXPECT_EQ(chatPrompt, expectedPrompt);
     EXPECT_EQ(responsesPrompt, expectedPrompt);
