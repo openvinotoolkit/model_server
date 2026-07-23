@@ -126,10 +126,12 @@ pipeline {
                         }
                         def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
                         def sourceFile = "ovms.zip"
+                        def shaFile = ""
                         if (env.SIGN_FILES == "true" && env.SIGN_USER_PASSWORD != "") {
                             def signedFiles = "${env.WORKSPACE}\\dist\\windows\\ovms_windows_python_${python_suffix}.zip"
                             if (fileExists(signedFiles)) {
                                 sourceFile = "ovms_windows_python_${python_suffix}.zip"
+                                shaFile = "ovms_windows_python_${python_suffix}.zip.sha256"
                             } else {
                                 echo "WARNING: Signed file not found, falling back to unsigned ovms.zip"
                             }
@@ -165,9 +167,11 @@ pipeline {
                         if (status != 0) {
                             error "Failed to copy file. Status code: ${status}"
                         }
-                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}.sha256\" \"${latestPath}\\${packageName}.sha256\"")
-                        if (status != 0) {
-                            error "Failed to copy sha256 file. Status code: ${status}"
+                        if (shaFile != "") {
+                            status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${shaFile}\" \"${latestPath}\\${packageName}.sha256\"")
+                            if (status != 0) {
+                                error "Failed to copy sha256 file. Status code: ${status}"
+                            }
                         }
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
