@@ -190,7 +190,31 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("api_key_file",
                 "path to the text file containing API key for authentication for generative endpoints. If not set, authentication is disabled.",
                 cxxopts::value<std::string>()->default_value(""),
-                "API_KEY");
+                "API_KEY")
+            ("grpc_certificate_path",
+                "Path to the PEM-encoded server certificate for gRPC TLS. Must be set together with grpc_key_path to enable TLS.",
+                cxxopts::value<std::string>(),
+                "GRPC_CERTIFICATE_PATH")
+            ("grpc_key_path",
+                "Path to the PEM-encoded private key for gRPC TLS. Must be set together with grpc_certificate_path to enable TLS.",
+                cxxopts::value<std::string>(),
+                "GRPC_KEY_PATH")
+            ("grpc_ca_path",
+                "Path to the PEM-encoded CA certificate for gRPC mutual TLS (mTLS). Requires grpc_certificate_path and grpc_key_path. When set, client certificates are required and verified.",
+                cxxopts::value<std::string>(),
+                "GRPC_CA_PATH")
+            ("rest_certificate_path",
+                "Path to the PEM-encoded server certificate for REST TLS (HTTPS). Must be set together with rest_key_path to enable TLS.",
+                cxxopts::value<std::string>(),
+                "REST_CERTIFICATE_PATH")
+            ("rest_key_path",
+                "Path to the PEM-encoded private key for REST TLS (HTTPS). Must be set together with rest_certificate_path to enable TLS.",
+                cxxopts::value<std::string>(),
+                "REST_KEY_PATH")
+            ("rest_ca_path",
+                "Path to the PEM-encoded CA certificate for REST client-certificate verification. Requires rest_certificate_path and rest_key_path. Note: mTLS for REST requires Drogon TLS support.",
+                cxxopts::value<std::string>(),
+                "REST_CA_PATH");
 
         options->add_options("multi model")
             ("config_path",
@@ -595,6 +619,19 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
 
     if (result->count("rest_bind_address"))
         serverSettings.restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
+
+    if (result->count("grpc_certificate_path"))
+        serverSettings.grpcCertPath = result->operator[]("grpc_certificate_path").as<std::string>();
+    if (result->count("grpc_key_path"))
+        serverSettings.grpcKeyPath = result->operator[]("grpc_key_path").as<std::string>();
+    if (result->count("grpc_ca_path"))
+        serverSettings.grpcCaPath = result->operator[]("grpc_ca_path").as<std::string>();
+    if (result->count("rest_certificate_path"))
+        serverSettings.restCertPath = result->operator[]("rest_certificate_path").as<std::string>();
+    if (result->count("rest_key_path"))
+        serverSettings.restKeyPath = result->operator[]("rest_key_path").as<std::string>();
+    if (result->count("rest_ca_path"))
+        serverSettings.restCaPath = result->operator[]("rest_ca_path").as<std::string>();
 
     if (result->count("grpc_max_threads"))
         serverSettings.grpcMaxThreads = result->operator[]("grpc_max_threads").as<uint32_t>();

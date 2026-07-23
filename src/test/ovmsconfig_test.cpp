@@ -270,6 +270,48 @@ TEST_F(OvmsConfigDeathTest, invalidGrpcBindAddress) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "grpc_bind_address has invalid format");
 }
 
+TEST_F(OvmsConfigDeathTest, grpcCertWithoutKey) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--grpc_certificate_path", "/some/cert.pem"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "grpc_certificate_path and grpc_key_path must both be set");
+}
+
+TEST_F(OvmsConfigDeathTest, grpcKeyWithoutCert) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--grpc_key_path", "/some/key.pem"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "grpc_certificate_path and grpc_key_path must both be set");
+}
+
+TEST_F(OvmsConfigDeathTest, restCertWithoutKey) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8081", "--port", "8080", "--rest_certificate_path", "/some/cert.pem"};
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "REST TLS .* is not supported in this build");
+}
+
+TEST_F(OvmsConfigDeathTest, restKeyWithoutCert) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8081", "--port", "8080", "--rest_key_path", "/some/key.pem"};
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "REST TLS .* is not supported in this build");
+}
+
+TEST_F(OvmsConfigDeathTest, grpcCertNonExistentFile) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--grpc_certificate_path", "/nonexistent/cert.pem", "--grpc_key_path", "/nonexistent/key.pem"};
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "File path provided as --grpc_certificate_path does not exist");
+}
+
+TEST_F(OvmsConfigDeathTest, grpcCaWithoutCertKey) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--grpc_ca_path", "/some/ca.pem"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "grpc_ca_path requires grpc_certificate_path and grpc_key_path");
+}
+
+TEST_F(OvmsConfigDeathTest, restCaWithoutCertKey) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8081", "--port", "8080", "--rest_ca_path", "/some/ca.pem"};
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "REST TLS .* is not supported in this build");
+}
+
 TEST_F(OvmsConfigDeathTest, negativeMultiParams) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--batch_size", "10"};
     int arg_count = 5;
@@ -2382,6 +2424,59 @@ TEST(OvmsAPIKeyConfig, positiveAPIKeyFile) {
     ASSERT_EQ(config.getServerSettings().apiKey, "1234");
     // Clean up the temporary file
     std::remove("api_key.txt");
+}
+
+TEST(OvmsTLSConfig, positiveGrpcTLSWithExistingFiles) {
+    // Config validation only checks file existence, not certificate validity,
+    // so empty placeholder files are sufficient here.
+    std::ofstream certFileTmp("tls_cert.pem");
+    certFileTmp << "cert";
+    certFileTmp.close();
+    std::ofstream keyFileTmp("tls_key.pem");
+    keyFileTmp << "key";
+    keyFileTmp.close();
+    std::ofstream caFileTmp("tls_ca.pem");
+    caFileTmp << "ca";
+    caFileTmp.close();
+
+    std::string modelName = "test_name";
+    std::string modelPath = "model_path";
+    std::string certPath = "tls_cert.pem";
+    std::string keyPath = "tls_key.pem";
+    std::string caPath = "tls_ca.pem";
+    std::string rest_port = "8080";
+    std::string grpc_port = "8081";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--port",
+        (char*)grpc_port.c_str(),
+        (char*)"--rest_port",
+        (char*)rest_port.c_str(),
+        (char*)"--grpc_certificate_path",
+        (char*)certPath.c_str(),
+        (char*)"--grpc_key_path",
+        (char*)keyPath.c_str(),
+        (char*)"--grpc_ca_path",
+        (char*)caPath.c_str(),
+    };
+
+    int arg_count = 15;
+    ConstructorEnabledConfig config;
+    // parse() calls exit() on validation failure; reaching the asserts below means validation passed.
+    // Note: REST TLS is intentionally NOT exercised here — it is gated (fail-closed) in this
+    // build because Drogon lacks OpenSSL; see OvmsConfigDeathTest.restCertWithoutKey etc.
+    config.parse(arg_count, n_argv);
+    EXPECT_EQ(config.grpcCertPath(), certPath);
+    EXPECT_EQ(config.grpcKeyPath(), keyPath);
+    EXPECT_EQ(config.grpcCaPath(), caPath);
+
+    std::remove("tls_cert.pem");
+    std::remove("tls_key.pem");
+    std::remove("tls_ca.pem");
 }
 
 TEST(OvmsAPIKeyConfig, positiveAPIKeyEnv) {
