@@ -13,8 +13,8 @@ pipeline {
             when { expression { env.PACKAGE_URL == "" } }
             steps {
                 script {
-                    def buildstamp = new Date().format('yyyyMMddHHmmss')
-                    echo "Buildstamp: ${buildstamp}"
+                    env.BUILDSTAMP = new Date().format('yyyyMMddHHmmss')
+                    echo "Buildstamp: ${env.BUILDSTAMP}"
                     echo "PRODUCT_VERSION: ${env.PRODUCT_VERSION}"
                     echo "RELEASE_TAG: ${env.RELEASE_TAG}"
                     echo "JOB_BASE_NAME: ${env.JOB_BASE_NAME}"
@@ -136,11 +136,11 @@ pipeline {
                         def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
                         def latestPath = "${destPath}\\latest"
                         
-                        status = bat(returnStatus:true, script: "if not exist \"${destPath}\\${buildstamp}\" mkdir \"${destPath}\\${buildstamp}\"")
+                        status = bat(returnStatus:true, script: "if not exist \"${destPath}\\${env.BUILDSTAMP}\" mkdir \"${destPath}\\${env.BUILDSTAMP}\"")
                         if (status != 0) {
                             error "Failed to create directory. Status code: ${status}"
                         }
-                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${destPath}\\${buildstamp}\\${packageName}\"")
+                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${destPath}\\${env.BUILDSTAMP}\\${packageName}\"")
                         if (status != 0) {
                             error "Failed to copy file. Status code: ${status}"
                         }
