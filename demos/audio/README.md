@@ -29,38 +29,16 @@ See the [T2s calculator documentation](../../docs/speech_generation/reference.md
 
 **Deploying with Docker**
 
-**CPU**
-
 ```bash
 mkdir models
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU --task text2speech
 ```
 
-**GPU**
-
-In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
-to `docker run` command, use the image with GPU support.
-It can be applied using the commands below:
-
-```bash
-mkdir models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device GPU --task text2speech
-```
-
 **Deploying on Bare Metal**
-
-**CPU**
 
 ```bat
 mkdir c:\models
 ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path c:\models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU --task text2speech
-```
-
-**GPU**
-
-```bat
-mkdir c:\models
-ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path c:\models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device GPU --task text2speech
 ```
 
 ### Request Generation 
@@ -417,7 +395,42 @@ Where:
 You can replace `librispeech` with other datasets supported by the leaderboard configuration. For multilingual models run_eval_ml.py should be used.
 
 ## Translation
-To test the translations endpoint we first need to prepare an audio file with speech in a language other than English, e.g. Spanish. To generate such a sample, follow the [Speech generation](#speech-generation) section to deploy Kokoro and then run:
+To test the translations endpoint you can use your own sample or create one with Kokoro model.
+### Sample generation
+To prepare an audio file with speech in a language other than English, e.g. Spanish. To generate such a sample, follow the [Speech generation](#speech-generation) section to deploy Kokoro and then run:
+
+
+**Deploying with Docker**
+
+**CPU**
+
+```bash
+mkdir -p models
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU --task text2speech
+```
+
+**GPU**
+
+```bash
+mkdir -p models
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device GPU --task text2speech
+```
+
+**Deploying on Bare Metal**
+
+**CPU**
+
+```bat
+mkdir models
+ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU --task text2speech
+```
+
+**GPU**
+
+```bat
+mkdir models
+ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device GPU --task text2speech
+```
 
 For non-English Kokoro input, set the `language` field explicitly.
 
