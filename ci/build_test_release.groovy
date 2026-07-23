@@ -167,7 +167,7 @@ pipeline {
                         if (status != 0) {
                             error "Failed to copy file. Status code: ${status}"
                         }
-                        if (shaFile != "") {
+                        if (shaFile != "" && fileExists("${env.WORKSPACE}\\dist\\windows\\${shaFile}")) {
                             status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${shaFile}\" \"${latestPath}\\${packageName}.sha256\"")
                             if (status != 0) {
                                 error "Failed to copy sha256 file. Status code: ${status}"
