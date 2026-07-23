@@ -122,6 +122,10 @@ static int kfsBridgeExtractPacketData(
     try {
         const auto* packet = static_cast<const mediapipe::Packet*>(packetPtr);
         const auto& wrapper = packet->Get<ovms::PyObjectWrapper<py::object>>();
+        const auto datatype = wrapper.getProperty<std::string>("datatype");
+        const auto userShape = wrapper.getProperty<std::vector<py::ssize_t>>("shape");
+        const auto ptr = wrapper.getProperty<void*>("ptr");
+        const auto size = wrapper.getProperty<size_t>("size");
 
         if (datatypeBuf == nullptr || datatypeMax == 0 || shapeBuf == nullptr || shapeLenOut == nullptr || dataPtrOut == nullptr || dataSizeOut == nullptr) {
             return -static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
