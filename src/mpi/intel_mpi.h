@@ -114,6 +114,11 @@ typedef enum {
 } imp_pixel_format_t;
 
 typedef enum {
+    IMP_MEM_SYSTEM     = 0,  // host RAM — y_data/uv_data valid
+    IMP_MEM_VA_SURFACE = 1,  // VA surface on GPU — va_surface_id/va_display valid
+} imp_tensor_memory_type_t;
+
+typedef enum {
     IMP_LAYOUT_NHWC = 0,        // [batch, height, width, channels]
     IMP_LAYOUT_NCHW = 1,        // [batch, channels, height, width]
     IMP_LAYOUT_HWC = 2,         // [height, width, channels]
@@ -325,6 +330,11 @@ typedef struct {
     uint32_t branch_count;              // Number of branches (0 = single branch at source res)
     bool sync_appsink;                  // If true (file mode): force single-buffer queue+appsink (disable pre-buffering)
     uint32_t queue_depth;               // If nonzero (file mode): bound queue + appsink max-buffers to N (overrides sync_appsink)
+    // When true AND VA-API GPU decode is available: decoded frames stay in VA surface memory
+    // (IMP_MEM_VA_SURFACE). Use imp_tensor_get_va_surface() to obtain VASurfaceID for
+    // zero-copy import into an OpenVINO VAContext. No DMA copy to system RAM occurs.
+    // When false (default): frames are delivered as system-memory NV12 (IMP_MEM_SYSTEM).
+    bool use_va_surface_memory;
 } imp_video_decode_opts_t;
 
 /**
@@ -960,7 +970,16 @@ imp_status_t imp_tensor_get_element_type(imp_tensor_t* tensor,
                                           imp_element_type_t* type);
 
 /**
+ * Get the memory location of an NV12 tensor.
+ *
+ * @param tensor  Tensor handle
+ * @return IMP_MEM_SYSTEM for host-RAM tensors, IMP_MEM_VA_SURFACE for GPU surface tensors.
+ */
+imp_tensor_memory_type_t imp_tensor_get_memory_type(imp_tensor_t* tensor);
+
+/**
  * Get NV12 plane pointers and dimensions for CPU-side NV12 tensors.
+ * Only valid when imp_tensor_get_memory_type() == IMP_MEM_SYSTEM.
  *
  * @param tensor     Tensor handle (must be format IMP_FORMAT_NV12, device CPU)
  * @param y_data     Output: pointer to Y plane (width * height bytes)
@@ -974,6 +993,26 @@ imp_status_t imp_tensor_get_nv12_planes(imp_tensor_t* tensor,
                                         const uint8_t** uv_data,
                                         int* width,
                                         int* height);
+
+/**
+ * Get VA surface handle for GPU-resident NV12 tensors.
+ * Only valid when imp_tensor_get_memory_type() == IMP_MEM_VA_SURFACE.
+ *
+ * The returned VASurfaceID is valid until the next imp_video_read_frame()
+ * call on the same branch, or until imp_video_close().
+ *
+ * @param tensor      Tensor handle
+ * @param surface_id  Output: VASurfaceID (cast from uint32_t)
+ * @param va_display  Output: VADisplay used for this surface (cast from void*)
+ * @param width       Output: frame width in pixels
+ * @param height      Output: frame height in pixels
+ * @return IMP_OK on success, IMP_ERROR_INVALID_ARGUMENT if not a VA surface tensor
+ */
+imp_status_t imp_tensor_get_va_surface(imp_tensor_t* tensor,
+                                       uint32_t* surface_id,
+                                       void**    va_display,
+                                       int*      width,
+                                       int*      height);
 
 /**
  * Release tensor
@@ -1023,6 +1062,33 @@ imp_status_t imp_hw_decode_supported(imp_context_t* ctx, bool* supported);
  * @return Status code
  */
 imp_status_t imp_hw_encode_supported(imp_context_t* ctx, bool* supported);
+
+/**
+ * Returns true if VA-API GPU decode is available on this system.
+ * Safe to call before imp_context_create().
+ */
+bool imp_video_va_available(void);
+
+/**
+ * Returns the process-wide VADisplay (cast to void*) for use with
+ * ov::intel_gpu::ocl::VAContext.  Only valid when imp_video_va_available()
+ * returns true AND VA surface sharing was successfully initialised.
+ * Returns nullptr otherwise.
+ */
+void* imp_video_va_display(void);
+
+/**
+ * Override the VADisplay used by gst_loader for VA surface sharing.
+ * Call this BEFORE imp_video_open() when using use_va_surface_memory=true.
+ *
+ * Purpose: OpenVINO creates its own internal VADisplay when you call
+ * compile_model("GPU").  Passing that display here ensures GStreamer VA
+ * surfaces are valid in OV's VA context — both sides see the same display.
+ *
+ * @param va_display  VADisplay (cast from void*) obtained from
+ *                    ov::intel_gpu::ocl::VAContext::operator VADisplay().
+ */
+void imp_video_set_va_display(void* va_display);
 
 #ifdef __cplusplus
 }

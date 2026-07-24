@@ -107,7 +107,10 @@ cc_binary(
         "//src/mpi:intel_mpi",
         "//third_party:openvino",
     ],
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": [],
+        "//conditions:default": ["-lOpenCL"],
+    }),
 )
 
 cc_library(

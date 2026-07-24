@@ -109,6 +109,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libffi-dev \
         libssl-dev \
         libdrm-dev \
+        libva-dev \
         nasm \
         yasm \
         libavcodec-dev \
@@ -141,7 +142,7 @@ RUN meson setup \
     -Dlibnice=disabled \
     -Dugly=disabled \
     -Dgst-plugins-bad:gpl=disabled \
-    -Dgst-plugins-bad:va=disabled \
+    -Dgst-plugins-bad:va=enabled \
     -Dgst-plugins-bad:doc=disabled \
     -Dgst-plugins-bad:nls=disabled \
     -Dgst-plugins-bad:directfb=disabled \
@@ -226,6 +227,24 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # Runtime dlopen picks up /opt/gstreamer/lib at runtime via LD_LIBRARY_PATH or ldconfig.
 COPY --from=gstreamer-builder /opt/gstreamer /opt/gstreamer
 RUN echo /opt/gstreamer/lib > /etc/ld.so.conf.d/gstreamer.conf && ldconfig
+
+# Intel VA-API media driver — required for GStreamer vapostproc GPU decode.
+# Use Intel's official GPU repository for up-to-date libva + iHD driver (Ubuntu apt ships
+# 24.1.0 which crashes on DG2/Flex 140; Intel repo has 24.3.4+ with the fix).
+RUN if [ "$BASE_OS" = "ubuntu24" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends wget gpg && \
+        wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \
+            gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu noble client" > \
+            /etc/apt/sources.list.d/intel-gpu-noble.list && \
+        apt-get update && \
+        apt-get install -y --no-install-recommends \
+            intel-media-va-driver-non-free \
+            libva2 \
+            libva-drm2 && \
+        apt-get clean && rm -rf /var/lib/apt/lists/* ; \
+    fi
 # on ubuntu 24.04 python3.12 is used as default python for ovms build and release
 # TF build needs python3.10 with numpy as it does not support python3.12
 RUN python3.10 -m pip install "numpy<2.0.0" --no-cache-dir

@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Intel Corporation
+// Copyright (c) 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,6 +60,26 @@ bool gst_loader_init();
  * Returns false if GStreamer is not installed or init has not been called.
  */
 bool gst_loader_available();
+
+/**
+ * Returns true if VA-API (vapostproc) is available for GPU-accelerated decode.
+ * Only valid after gst_loader_init() returns true.
+ */
+bool gst_loader_va_available();
+
+/**
+ * Override the process-wide VADisplay with one obtained from OV's GPU context.
+ * Must be called before linux_video_open() when VA surface sharing is wanted.
+ */
+void gst_loader_set_va_display(void* va_display);
+
+/**
+ * Returns the process-wide VADisplay (cast to void*) created during init.
+ * Only valid when VA surface sharing is enabled (libgstva + libva loaded).
+ * Returns nullptr when VA surface sharing is not available.
+ * Use with ov::intel_gpu::ocl::VAContext for zero-copy GPU inference.
+ */
+void* gst_loader_va_display();
 
 // ---------------------------------------------------------------------------
 // High-level Linux video operations.

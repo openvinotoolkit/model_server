@@ -804,12 +804,33 @@ imp_status_t imp_tensor_get_nv12_planes(imp_tensor_t* tensor,
                                         int* height) {
     if (!tensor || !y_data || !uv_data || !width || !height)
         return IMP_ERROR_INVALID_ARGUMENT;
-    if (tensor->format != IMP_FORMAT_NV12 || tensor->device_type != IMP_DEVICE_CPU)
+    if (tensor->memory_type != IMP_MEM_SYSTEM || tensor->format != IMP_FORMAT_NV12)
         return IMP_ERROR_INVALID_ARGUMENT;
     *y_data  = tensor->y_data;
     *uv_data = tensor->uv_data;
     *width   = tensor->width;
     *height  = tensor->height;
+    return IMP_OK;
+}
+
+imp_tensor_memory_type_t imp_tensor_get_memory_type(imp_tensor_t* tensor) {
+    if (!tensor) return IMP_MEM_SYSTEM;
+    return tensor->memory_type;
+}
+
+imp_status_t imp_tensor_get_va_surface(imp_tensor_t* tensor,
+                                       uint32_t* surface_id,
+                                       void**    va_display,
+                                       int*      width,
+                                       int*      height) {
+    if (!tensor || !surface_id || !va_display || !width || !height)
+        return IMP_ERROR_INVALID_ARGUMENT;
+    if (tensor->memory_type != IMP_MEM_VA_SURFACE)
+        return IMP_ERROR_INVALID_ARGUMENT;
+    *surface_id = tensor->va_surface_id;
+    *va_display = tensor->va_display;
+    *width      = tensor->width;
+    *height     = tensor->height;
     return IMP_OK;
 }
 
@@ -837,6 +858,24 @@ imp_status_t imp_hw_encode_supported(imp_context_t* ctx, bool* supported) {
     if (supported) *supported = true;
     return IMP_OK;
 }
+
+#ifndef _WIN32
+bool imp_video_va_available(void) {
+    gst_loader_init();  // no-op if already initialised
+    return gst_loader_va_available();
+}
+void* imp_video_va_display(void) {
+    gst_loader_init();
+    return gst_loader_va_display();
+}
+void imp_video_set_va_display(void* va_display) {
+    gst_loader_set_va_display(va_display);
+}
+#else
+bool imp_video_va_available(void) { return false; }
+void* imp_video_va_display(void)  { return nullptr; }
+void imp_video_set_va_display(void* /*va_display*/) {}
+#endif
 
 // ============================================================================
 // Image decode / encode and audio decode / encode — Windows-only.

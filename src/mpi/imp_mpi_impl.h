@@ -152,6 +152,15 @@ struct imp_tensor_s {
     imp_pixel_format_t format = IMP_FORMAT_NV12;
     bool              valid   = false;
 
+    // Memory location: system RAM or GPU VA surface.
+    imp_tensor_memory_type_t memory_type = IMP_MEM_SYSTEM;
+
+    // VA surface fields (when memory_type == IMP_MEM_VA_SURFACE).
+    // The surface is valid until the next imp_video_read_frame() on the same
+    // branch or imp_video_close().  va_display is borrowed from the stream.
+    uint32_t  va_surface_id = 0;
+    void*     va_display    = nullptr;  // VADisplay, not owned
+
     // Optional ov::Tensor (for non-NV12 or GPU tensors)
     ov::Tensor        ov_tensor;
     imp_device_type_t device_type = IMP_DEVICE_CPU;
@@ -167,8 +176,19 @@ struct imp_branch_info_t {
     int              width   = 0;
     int              height  = 0;
     std::string      name;
-    imp_nv12_frame_t frame;             // pre-allocated frame buffer
+    imp_nv12_frame_t frame;             // fallback compact-copy buffer (stride ≠ width)
     imp_tensor_s     tensor_cache;      // reusable tensor wrapper
+
+    // Zero-copy borrow state (Approach 1 — system-memory path).
+    // The mapped GstVideoFrame and owning GstSample are kept alive between
+    // read_frame calls so the tensor's y_data/uv_data remain valid.
+    // Released on the next read_frame call or linux_video_close().
+    void* live_sample = nullptr;   // GstSample* — unreffed on next read or close
+    void* live_vframe = nullptr;   // heap-alloc'd GstVideoFrame* — unmapped+deleted on next read or close
+
+    // VA surface borrow state (Approach 2 — GPU surface path).
+    // Separate sample pointer; vframe is never mapped for VA surfaces.
+    void* live_va_sample = nullptr;  // GstSample* for VA surface, unreffed on next read or close
 
     // Per-branch timing
     double total_decode_ms      = 0;
@@ -182,7 +202,9 @@ struct imp_branch_info_t {
 
 struct imp_video_stream_s {
     GstElement* pipeline = nullptr;
-    bool use_hw_decode   = false;
+    bool use_hw_decode        = false;
+    bool use_va_surface_memory = false;  // true when VA surface output requested
+    void* va_display          = nullptr; // VADisplay shared across branches (borrowed from gst_loader)
 
     // Dynamic branches (replaces fixed fullres + small appsinks)
     std::vector<imp_branch_info_t> branches;

@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Intel Corporation
+// Copyright (c) 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,6 +36,8 @@
 
 // ---- standard headers -------------------------------------------------------
 #include <dlfcn.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -93,11 +95,24 @@ struct GstFunctionTable {
 
     // glib-2.0
     void (*g_error_free)(GError*);
+
+    // libgstva-1.0 (VA surface extraction)
+    // gst_va_buffer_get_surface returns VASurfaceID (uint32_t)
+    uint32_t (*gst_va_buffer_get_surface)(GstBuffer*);
+
+    // libva-drm / libva (VADisplay lifecycle)
+    void* (*vaGetDisplayDRM)(int);                          // returns VADisplay
+    int   (*vaInitialize)(void*, int*, int*);               // (VADisplay, &major, &minor)
+    int   (*vaTerminate)(void*);                            // (VADisplay)
 };
 
-static GstFunctionTable s_fns = {};
-static bool s_available       = false;
-static bool s_initialized     = false;
+static GstFunctionTable s_fns       = {};
+static bool s_available             = false;
+static bool s_initialized           = false;
+static bool s_va_available          = false;  // true when vapostproc element found
+static bool s_va_surface_capable    = false;  // true when gst_va + libva dlopen succeeded
+static void* s_va_display           = nullptr; // process-wide VADisplay (valid for lifetime of loader)
+static int   s_drm_fd               = -1;      // /dev/dri/renderD128 fd (owned)
 
 // ============================================================================
 // Symbol loading helpers
@@ -149,6 +164,51 @@ static bool load_symbols(void* gst_h, void* app_h,
 #undef LOAD_SYM
 
 // ============================================================================
+// Optional VA symbol loading (non-fatal — only enables surface-sharing path)
+// ============================================================================
+
+static void try_load_va_symbols() {
+    void* gstva_h   = dlopen("libgstva-1.0.so.0",  RTLD_LAZY | RTLD_GLOBAL);
+    void* vadrm_h   = dlopen("libva-drm.so.2",     RTLD_LAZY | RTLD_GLOBAL);
+    void* va_h      = dlopen("libva.so.2",          RTLD_LAZY | RTLD_GLOBAL);
+
+    if (!gstva_h || !vadrm_h || !va_h) return;
+
+    auto* get_surf = reinterpret_cast<decltype(s_fns.gst_va_buffer_get_surface)>(
+        dlsym(gstva_h, "gst_va_buffer_get_surface"));
+    auto* get_disp = reinterpret_cast<decltype(s_fns.vaGetDisplayDRM)>(
+        dlsym(vadrm_h, "vaGetDisplayDRM"));
+    auto* va_init  = reinterpret_cast<decltype(s_fns.vaInitialize)>(
+        dlsym(va_h, "vaInitialize"));
+    auto* va_term  = reinterpret_cast<decltype(s_fns.vaTerminate)>(
+        dlsym(va_h, "vaTerminate"));
+
+    if (!get_surf || !get_disp || !va_init || !va_term) return;
+
+    s_fns.gst_va_buffer_get_surface = get_surf;
+    s_fns.vaGetDisplayDRM           = get_disp;
+    s_fns.vaInitialize              = va_init;
+    s_fns.vaTerminate               = va_term;
+
+    // Open DRM device and initialise a VADisplay for the lifetime of this process.
+    s_drm_fd = open("/dev/dri/renderD128", O_RDWR);
+    if (s_drm_fd < 0) return;
+
+    void* disp = get_disp(s_drm_fd);
+    if (!disp) return;
+
+    int maj = 0, min = 0;
+    if (va_init(disp, &maj, &min) == 0 /* VA_STATUS_SUCCESS */) {
+        s_va_display        = disp;
+        s_va_surface_capable = true;
+        std::cerr << "[GstLoader] VA surface sharing enabled (VA-API "
+                  << maj << "." << min << ", DRM fd " << s_drm_fd << ").\n";
+    } else {
+        va_term(disp);
+    }
+}
+
+// ============================================================================
 // Public loader API
 // ============================================================================
 
@@ -174,29 +234,99 @@ bool gst_loader_init() {
 
     s_available = true;
     std::cerr << "[GstLoader] GStreamer loaded successfully.\n";
+
+    // Probe for VA-API support without loading the plugin in-process
+    // (in-process factory probe causes heap corruption when dlopen'd glib
+    //  conflicts with the system glib used by VA driver init).
+    //
+    // We check two conditions:
+    //   1. The GStreamer VA plugin shared library is present.
+    //   2. An Intel iHD VA driver is present in the DRI directory.
+    //
+    // Possible plugin locations (system install vs. custom prefix).
+    static const char* va_plugin_paths[] = {
+        "/opt/gstreamer/lib/gstreamer-1.0/libgstva.so",
+        "/usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstva.so",
+        nullptr,
+    };
+    static const char* va_driver_paths[] = {
+        "/usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so",
+        "/usr/lib/x86_64-linux-gnu/dri/i965_drv_video.so",
+        nullptr,
+    };
+
+    auto file_exists = [](const char* p) {
+        struct stat st;
+        return stat(p, &st) == 0;
+    };
+
+    bool plugin_found = false;
+    for (int i = 0; va_plugin_paths[i]; i++) {
+        if (file_exists(va_plugin_paths[i])) { plugin_found = true; break; }
+    }
+    bool driver_found = false;
+    for (int i = 0; va_driver_paths[i]; i++) {
+        if (file_exists(va_driver_paths[i])) { driver_found = true; break; }
+    }
+
+    if (plugin_found && driver_found) {
+        s_va_available = true;
+        std::cerr << "[GstLoader] VA-API available — GPU decode enabled.\n";        // Try to also enable VA surface sharing (needs libgstva + libva).
+        try_load_va_symbols();    } else {
+        std::cerr << "[GstLoader] VA-API not available"
+                  << (plugin_found ? "" : " (libgstva.so missing)")
+                  << (driver_found ? "" : " (VA driver missing)")
+                  << " — using CPU decode.\n";
+    }
+
     return true;
 }
 
-bool gst_loader_available() { return s_available; }
+bool gst_loader_available()    { return s_available; }
+bool gst_loader_va_available() { return s_va_available; }
+void* gst_loader_va_display()  { return s_va_display; }
+
+void gst_loader_set_va_display(void* va_display) {
+    // Allow the caller (e.g. after OV VAContext creation) to replace the
+    // process-wide VADisplay so GStreamer VA surfaces are valid in OV's
+    // GPU context.  The old display is intentionally NOT terminated here
+    // because OV owns its own lifecycle; we simply stop using our probe copy.
+    s_va_display = va_display;
+    s_va_surface_capable = (va_display != nullptr);
+}
 
 // ============================================================================
-// Internal: read one NV12 frame from an appsink
+// Internal: borrow-read one NV12 frame from an appsink (system-memory path).
+//
+// Zero-copy when the GstBuffer planes are packed (stride == width).
+// The GstSample and mapped GstVideoFrame are kept alive in `branch` so the
+// tensor's y_data/uv_data pointers remain valid until the NEXT call or close.
+// Falls back to a compact memcpy when stride != width (uncommon).
 // ============================================================================
 
-static bool read_nv12_from_appsink(GstElement* appsink,
-                                    imp_nv12_frame_t* frame,
-                                    double& total_ms,
-                                    double& pull_ms,
-                                    double& copy_ms) {
+static bool read_frame_borrow(imp_branch_info_t& branch,
+                               double& total_ms,
+                               double& pull_ms,
+                               double& copy_ms) {
     const auto& f = s_fns;
-    auto decode_start = chrono::high_resolution_clock::now();
 
-    auto ps = chrono::high_resolution_clock::now();
+    // Release the previous borrowed frame before pulling the next one.
+    if (branch.live_vframe) {
+        f.gst_video_frame_unmap(static_cast<GstVideoFrame*>(branch.live_vframe));
+        delete static_cast<GstVideoFrame*>(branch.live_vframe);
+        branch.live_vframe = nullptr;
+    }
+    if (branch.live_sample) {
+        f.gst_sample_unref(static_cast<GstSample*>(branch.live_sample));
+        branch.live_sample = nullptr;
+    }
+
+    auto t0 = chrono::high_resolution_clock::now();
     GstSample* sample = f.gst_app_sink_try_pull_sample(
-        GST_APP_SINK(appsink), GST_SECOND);
+        GST_APP_SINK(branch.appsink), GST_SECOND);
+    auto t1 = chrono::high_resolution_clock::now();
     if (!sample) return false;
-    pull_ms += chrono::duration<double, std::milli>(
-        chrono::high_resolution_clock::now() - ps).count();
+    pull_ms += chrono::duration<double, std::milli>(t1 - t0).count();
 
     GstBuffer* buffer = f.gst_sample_get_buffer(sample);
     GstCaps*   caps   = f.gst_sample_get_caps(sample);
@@ -204,51 +334,102 @@ static bool read_nv12_from_appsink(GstElement* appsink,
     GstVideoInfo info;
     f.gst_video_info_from_caps(&info, caps);
 
-    frame->allocate(info.width, info.height);
-    frame->valid = false;
+    auto* vframe = new GstVideoFrame{};
+    auto t2 = chrono::high_resolution_clock::now();
 
-    auto cs = chrono::high_resolution_clock::now();
-
-    GstVideoFrame vframe;
-    if (f.gst_video_frame_map(&vframe, &info, buffer, GST_MAP_READ)) {
-        uint8_t* y_data   = static_cast<uint8_t*>(
-            GST_VIDEO_FRAME_PLANE_DATA(&vframe, 0));
-        int      y_stride = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 0);
-
-        if (y_stride == frame->width) {
-            memcpy(frame->y_plane.data(), y_data,
-                   frame->width * frame->height);
-        } else {
-            for (int row = 0; row < frame->height; row++)
-                memcpy(frame->y_plane.data() + row * frame->width,
-                       y_data + row * y_stride, frame->width);
-        }
-
-        uint8_t* uv_data   = static_cast<uint8_t*>(
-            GST_VIDEO_FRAME_PLANE_DATA(&vframe, 1));
-        int      uv_stride = GST_VIDEO_FRAME_PLANE_STRIDE(&vframe, 1);
-
-        if (uv_stride == frame->width) {
-            memcpy(frame->uv_plane.data(), uv_data,
-                   frame->width * (frame->height / 2));
-        } else {
-            for (int row = 0; row < frame->height / 2; row++)
-                memcpy(frame->uv_plane.data() + row * frame->width,
-                       uv_data + row * uv_stride, frame->width);
-        }
-
-        frame->valid = true;
-        f.gst_video_frame_unmap(&vframe);
+    if (!f.gst_video_frame_map(vframe, &info, buffer, GST_MAP_READ)) {
+        delete vframe;
+        f.gst_sample_unref(sample);
+        return false;
     }
 
-    f.gst_sample_unref(sample);
+    uint8_t* y_ptr    = static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(vframe, 0));
+    int      y_stride = GST_VIDEO_FRAME_PLANE_STRIDE(vframe, 0);
+    uint8_t* uv_ptr   = static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(vframe, 1));
+    int      uv_stride = GST_VIDEO_FRAME_PLANE_STRIDE(vframe, 1);
 
-    copy_ms  += chrono::duration<double, std::milli>(
-        chrono::high_resolution_clock::now() - cs).count();
-    total_ms += chrono::duration<double, std::milli>(
-        chrono::high_resolution_clock::now() - decode_start).count();
+    bool packed = (y_stride == info.width) && (uv_stride == info.width);
 
-    return frame->valid;
+    if (packed) {
+        // Zero-copy: tensor points directly into the mapped GstBuffer memory.
+        branch.tensor_cache.y_data  = y_ptr;
+        branch.tensor_cache.uv_data = uv_ptr;
+        branch.live_sample = sample;
+        branch.live_vframe = vframe;
+    } else {
+        // Fallback: compact copy (stride != width — uncommon, e.g. some cameras).
+        branch.frame.allocate(info.width, info.height);
+        for (int row = 0; row < info.height; row++)
+            memcpy(branch.frame.y_plane.data()  + row * info.width,
+                   y_ptr  + row * y_stride, info.width);
+        for (int row = 0; row < info.height / 2; row++)
+            memcpy(branch.frame.uv_plane.data() + row * info.width,
+                   uv_ptr + row * uv_stride, info.width);
+        branch.tensor_cache.y_data  = branch.frame.y_plane.data();
+        branch.tensor_cache.uv_data = branch.frame.uv_plane.data();
+        f.gst_video_frame_unmap(vframe);
+        delete vframe;
+        f.gst_sample_unref(sample);
+    }
+
+    branch.tensor_cache.width       = info.width;
+    branch.tensor_cache.height      = info.height;
+    branch.tensor_cache.valid       = true;
+    branch.tensor_cache.memory_type = IMP_MEM_SYSTEM;
+
+    auto t3 = chrono::high_resolution_clock::now();
+    copy_ms  += chrono::duration<double, std::milli>(t3 - t2).count();
+    total_ms += chrono::duration<double, std::milli>(t3 - t0).count();
+    return true;
+}
+
+// ============================================================================
+// Internal: read one NV12 frame as a VA surface (GPU surface-sharing path).
+//
+// The GstBuffer remains in VA memory — no DMA copy to system RAM.
+// The VASurfaceID is extracted and stored in the tensor.
+// The GstSample is kept alive until the next call or close.
+// ============================================================================
+
+static bool read_frame_va_surface(imp_branch_info_t& branch,
+                                   void* va_display,
+                                   double& total_ms,
+                                   double& pull_ms,
+                                   double& /*copy_ms*/) {
+    const auto& f = s_fns;
+
+    // Release previous VA surface sample.
+    if (branch.live_va_sample) {
+        f.gst_sample_unref(static_cast<GstSample*>(branch.live_va_sample));
+        branch.live_va_sample = nullptr;
+    }
+
+    auto t0 = chrono::high_resolution_clock::now();
+    GstSample* sample = f.gst_app_sink_try_pull_sample(
+        GST_APP_SINK(branch.appsink), GST_SECOND);
+    auto t1 = chrono::high_resolution_clock::now();
+    if (!sample) return false;
+    pull_ms += chrono::duration<double, std::milli>(t1 - t0).count();
+
+    GstBuffer* buffer = f.gst_sample_get_buffer(sample);
+
+    // Extract VASurfaceID directly — no system-memory map.
+    uint32_t surface_id = f.gst_va_buffer_get_surface(buffer);
+
+    branch.live_va_sample = sample;
+
+    branch.tensor_cache.y_data       = nullptr;
+    branch.tensor_cache.uv_data      = nullptr;
+    branch.tensor_cache.width        = branch.width;
+    branch.tensor_cache.height       = branch.height;
+    branch.tensor_cache.valid        = true;
+    branch.tensor_cache.memory_type  = IMP_MEM_VA_SURFACE;
+    branch.tensor_cache.va_surface_id = surface_id;
+    branch.tensor_cache.va_display    = va_display;
+
+    auto t2 = chrono::high_resolution_clock::now();
+    total_ms += chrono::duration<double, std::milli>(t2 - t0).count();
+    return true;
 }
 
 // ============================================================================
@@ -269,6 +450,11 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
 
     const auto& f = s_fns;
     auto start = chrono::high_resolution_clock::now();
+
+    // Ensure GStreamer finds the custom plugin dir and VA driver before init.
+    // setenv with overwrite=0 so user-set values take precedence.
+    setenv("GST_PLUGIN_PATH", "/opt/gstreamer/lib/gstreamer-1.0", 0);
+    setenv("LIBVA_DRIVER_NAME", "iHD", 0);
 
     f.gst_init(nullptr, nullptr);
 
@@ -335,33 +521,81 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
     std::string path = source->path;
     std::replace(path.begin(), path.end(), '\\', '/');
 
+    // Choose decode pipeline:
+    //   VA surface (GPU, zero-copy): decodebin ! vapostproc ! video/x-raw(memory:VAMemory) ! appsink
+    //     - Decoded frame stays in GPU VA surface memory; no DMA copy.
+    //     - Use imp_tensor_get_va_surface() + OV VAContext for inference.
+    //   VA system (GPU, borrow):     decodebin ! vapostproc ! video/x-raw,format=NV12 ! appsink
+    //     - GPU decode + borrow from GstBuffer: one unavoidable DMA copy VA→RAM,
+    //       but our own memcpy is eliminated.
+    //   CPU fallback (borrow):       decodebin ! videoconvert ! videoscale ! video/x-raw,format=NV12 ! appsink
+    const bool want_va_surface = s_va_available && s_va_surface_capable
+                                 && opts && opts->use_va_surface_memory;
+    const bool use_va = s_va_available;
+
+    auto make_branch_pipeline = [&](const std::string& loc,
+                                     int w, int h,
+                                     const std::string& sink_name,
+                                     const std::string& sp) -> std::string {
+        // VA surface path: keep frame in GPU memory (no DMA copy).
+        if (want_va_surface) {
+            std::string caps =
+                "video/x-raw(memory:VAMemory),format=NV12,width=" + std::to_string(w) +
+                ",height=" + std::to_string(h);
+            return "filesrc location=\"" + loc + "\" ! "
+                   "decodebin ! "
+                   "vapostproc ! "
+                   + caps + " ! "
+                   "appsink name=" + sink_name + " " + sp;
+        }
+        // System-memory paths (borrow or CPU decode).
+        std::string caps =
+            "video/x-raw,format=NV12,width=" + std::to_string(w) +
+            ",height=" + std::to_string(h);
+        if (use_va) {
+            return "filesrc location=\"" + loc + "\" ! "
+                   "decodebin ! "
+                   "vapostproc ! "
+                   + caps + " ! "
+                   "appsink name=" + sink_name + " " + sp;
+        } else {
+            return "filesrc location=\"" + loc + "\" ! "
+                   "decodebin ! "
+                   "videoconvert ! "
+                   "videoscale ! "
+                   + caps + " ! "
+                   "appsink name=" + sink_name + " " + sp;
+        }
+    };
+
     if (resolved.size() == 1) {
         const auto& rb = resolved[0];
-        pipeline_str =
-            "filesrc location=\"" + path + "\" ! "
-            "decodebin ! "
-            "videoconvert ! "
-            "videoscale ! "
-            "video/x-raw,format=NV12,"
-            "width=" + std::to_string(rb.width) +
-            ",height=" + std::to_string(rb.height) + " ! "
-            "appsink name=branch_0 " + sink_props;
+        pipeline_str = make_branch_pipeline(path, rb.width, rb.height,
+                                             "branch_0", sink_props);
     } else {
-        // Multi-branch via tee
+        // Multi-branch via tee — VA path uses vapostproc per branch
+        std::string convert_scale;
+        if (want_va_surface) {
+            convert_scale = "vapostproc";
+        } else if (use_va) {
+            convert_scale = "vapostproc";
+        } else {
+            convert_scale = "videoconvert ! videoscale";
+        }
         pipeline_str =
             "filesrc location=\"" + path + "\" ! "
             "decodebin ! "
-            "videoconvert ! tee name=t";
+            "tee name=t";
 
         for (size_t i = 0; i < resolved.size(); i++) {
             const auto& rb = resolved[i];
             std::string sink_name = "branch_" + std::to_string(i);
+            std::string mem_caps = want_va_surface
+                ? "video/x-raw(memory:VAMemory),format=NV12,width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height)
+                : "video/x-raw,format=NV12,width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height);
             pipeline_str +=
-                " t. ! queue ! "
-                "videoscale ! "
-                "video/x-raw,format=NV12,"
-                "width=" + std::to_string(rb.width) +
-                ",height=" + std::to_string(rb.height) + " ! "
+                " t. ! queue ! " + convert_scale + " ! " +
+                mem_caps + " ! "
                 "appsink name=" + sink_name + " " + sink_props;
         }
     }
@@ -423,17 +657,23 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
         f.gst_object_unref(pad);
     }
 
-    s->use_hw_decode = false;  // CPU decode
+    s->use_hw_decode         = use_va;
+    s->use_va_surface_memory = want_va_surface;
+    s->va_display            = want_va_surface ? s_va_display : nullptr;
 
     auto end = chrono::high_resolution_clock::now();
     ctx->timing.video_open_ms =
         chrono::duration<double, std::milli>(end - start).count();
 
+    const char* decode_mode = want_va_surface ? "VA-API/GPU surface"
+                            : use_va          ? "VA-API/GPU"
+                            :                   "CPU";
     for (size_t i = 0; i < s->branches.size(); i++) {
         const auto& b = s->branches[i];
         std::cout << "[linux_video_open] Branch " << i
                   << " [" << b.name << "]: "
-                  << b.width << "x" << b.height << " NV12 (CPU)\n";
+                  << b.width << "x" << b.height
+                  << " NV12 (" << decode_mode << ")\n";
     }
 
     *stream = s;
@@ -452,22 +692,24 @@ imp_status_t linux_video_read_frame(imp_tensor_t** tensor,
 
     auto& branch = stream->branches[branch_index];
 
-    bool ok = read_nv12_from_appsink(
-        branch.appsink, &branch.frame,
-        branch.total_decode_ms,
-        branch.total_decode_pull_ms,
-        branch.total_decode_copy_ms);
+    bool ok;
+    if (stream->use_va_surface_memory) {
+        ok = read_frame_va_surface(
+            branch, stream->va_display,
+            branch.total_decode_ms,
+            branch.total_decode_pull_ms,
+            branch.total_decode_copy_ms);
+    } else {
+        ok = read_frame_borrow(
+            branch,
+            branch.total_decode_ms,
+            branch.total_decode_pull_ms,
+            branch.total_decode_copy_ms);
+    }
 
     if (!ok) return IMP_ERROR_STREAM_END;
 
-    branch.tensor_cache.y_data      = branch.frame.y_plane.data();
-    branch.tensor_cache.uv_data     = branch.frame.uv_plane.data();
-    branch.tensor_cache.width       = branch.frame.width;
-    branch.tensor_cache.height      = branch.frame.height;
-    branch.tensor_cache.format      = IMP_FORMAT_NV12;
-    branch.tensor_cache.valid       = true;
     branch.tensor_cache.device_type = IMP_DEVICE_CPU;
-
     if (tensor) *tensor = &branch.tensor_cache;
     return IMP_OK;
 }
@@ -479,6 +721,25 @@ imp_status_t linux_video_read_frame(imp_tensor_t** tensor,
 void linux_video_close(imp_video_stream_t* stream) {
     if (!stream) return;
     const auto& f = s_fns;
+
+    // Release any live borrowed/VA frames BEFORE stopping the pipeline —
+    // the buffers must be returned to GStreamer's pool first.
+    for (auto& b : stream->branches) {
+        if (b.live_vframe) {
+            f.gst_video_frame_unmap(static_cast<GstVideoFrame*>(b.live_vframe));
+            delete static_cast<GstVideoFrame*>(b.live_vframe);
+            b.live_vframe = nullptr;
+        }
+        if (b.live_sample) {
+            f.gst_sample_unref(static_cast<GstSample*>(b.live_sample));
+            b.live_sample = nullptr;
+        }
+        if (b.live_va_sample) {
+            f.gst_sample_unref(static_cast<GstSample*>(b.live_va_sample));
+            b.live_va_sample = nullptr;
+        }
+    }
+
     if (stream->pipeline) {
         f.gst_element_set_state(stream->pipeline, GST_STATE_NULL);
         for (auto& b : stream->branches) {

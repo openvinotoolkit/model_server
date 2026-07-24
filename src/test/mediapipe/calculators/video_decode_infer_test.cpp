@@ -22,12 +22,18 @@
  * non-zero otherwise.
  */
 
+#include <chrono>
 #include <cstring>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
+using Clock = std::chrono::high_resolution_clock;
+using Ms    = std::chrono::duration<double, std::milli>;
+
 #include <openvino/openvino.hpp>
+#include <openvino/runtime/intel_gpu/ocl/va.hpp>
 
 #include "src/mpi/intel_mpi.h"
 
@@ -84,11 +90,13 @@ static void nv12_to_bgr_float_nchw(const uint8_t* y_plane,
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <video_file> <model_xml>\n";
+        std::cerr << "Usage: " << argv[0] << " <video_file> <model_xml> [threshold] [infer_device]\n";
         return 2;
     }
-    const char* video_path = argv[1];
-    const char* model_path = argv[2];
+    const char* video_path   = argv[1];
+    const char* model_path   = argv[2];
+    const float threshold    = (argc > 3) ? std::stof(argv[3]) : 0.5f;
+    const std::string device = (argc > 4) ? argv[4] : "CPU";
 
     // ---- Open standalone context -----------------------------------------
     imp_context_t* ctx = nullptr;
@@ -98,13 +106,83 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // ---- Decide whether to request VA surface memory ----------------------
+    // VA surface mode is used when GPU decode is available AND inference runs
+    // on GPU: the frame never leaves GPU memory — zero host copies.
+    const bool want_va = (device == "GPU") && imp_video_va_available();
+
+    // ---- Load + compile model -----------------------------------------------
+    // Model must be compiled BEFORE video is opened so that when want_va=true
+    // we can extract OV's internal VADisplay and inject it into gst_loader.
+    // This ensures GStreamer VA surfaces are valid in OV's GPU context.
+    ov::Core core;
+    ov::CompiledModel model;
+
+    std::cout << "Inference device: " << device << "\n";
+
+    if (want_va) {
+        // VA surface path: let OV create the GPU context first, then compile
+        // with NV12 surface preprocessing. We extract OV's internal VADisplay
+        // and inject it into gst_loader so both GStreamer and OV share one VA
+        // context — required for valid VASurfaceID cross-context access.
+        auto raw_model = core.read_model(model_path);
+
+        ov::preprocess::PrePostProcessor ppp(raw_model);
+        ppp.input()
+            .tensor()
+            .set_element_type(ov::element::u8)
+            .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES,
+                              {"y", "uv"})
+            .set_memory_type(ov::intel_gpu::memory_type::surface);
+        ppp.input()
+            .preprocess()
+            .convert_color(ov::preprocess::ColorFormat::BGR)
+            .convert_element_type(ov::element::f32);
+        ppp.input().model().set_layout("NCHW");
+        auto processed = ppp.build();
+
+        // Compile once to get OV's own VADisplay.
+        auto tmp_compiled = core.compile_model(processed, "GPU");
+        auto ov_va_ctx = tmp_compiled.get_context().as<ov::intel_gpu::ocl::VAContext>();
+        VADisplay ov_va_disp = ov_va_ctx;
+
+        // Override gst_loader's VADisplay BEFORE opening the video stream so
+        // GStreamer VA surfaces are allocated in the same VA context as OV.
+        imp_video_set_va_display(ov_va_disp);
+
+        // Re-compile explicitly with OV's VAContext so subsequent
+        // create_tensor_nv12 calls share the same device.
+        auto va_ctx_build = ov::intel_gpu::ocl::VAContext(core, ov_va_disp);
+        try {
+            model = core.compile_model(processed, va_ctx_build);
+        } catch (const std::exception& e) {
+            std::cerr << "model compile (VA) failed: " << e.what() << "\n";
+            imp_context_destroy(ctx);
+            return 1;
+        }
+        std::cout << "Model compiled with VA surface input (NV12 two-plane). "
+                     "Shared VADisplay=" << (void*)ov_va_disp << "\n";
+    } else {
+        // System-memory path: standard compile.
+        try {
+            model = core.compile_model(model_path, device);
+        } catch (const std::exception& e) {
+            std::cerr << "model compile failed: " << e.what() << "\n";
+            imp_context_destroy(ctx);
+            return 1;
+        }
+    }
+
     // ---- Open video ---------------------------------------------------------
     imp_video_source_t* src = nullptr;
     imp_video_source_create(&src, IMP_SOURCE_FILE);
     imp_video_source_set(src, "path", video_path);
 
+    imp_video_decode_opts_t vopts{};
+    vopts.use_va_surface_memory = want_va;
+
     imp_video_stream_t* stream = nullptr;
-    st = imp_video_open(&stream, src, ctx, nullptr);
+    st = imp_video_open(&stream, src, ctx, &vopts);
     imp_video_source_destroy(src);
 
     if (st != IMP_OK) {
@@ -118,34 +196,43 @@ int main(int argc, char* argv[]) {
     imp_video_get_info(stream, &frame_w, &frame_h, nullptr, nullptr);
     std::cout << "Video opened: " << frame_w << "x" << frame_h << "\n";
 
-    // ---- Load model ---------------------------------------------------------
-    ov::Core core;
-    ov::CompiledModel model;
-    try {
-        model = core.compile_model(model_path, "CPU");
-    } catch (const std::exception& e) {
-        std::cerr << "model compile failed: " << e.what() << "\n";
-        imp_video_close(stream);
-        imp_context_destroy(ctx);
-        return 1;
+    auto in_shape = model.input(0).get_shape();  // [1,3,H,W] or [1,1,H,W] per plane for NV12
+    // For NV12 VA surface input the model has two inputs (y, uv) — use output shape for sizing.
+    int model_h = 0, model_w = 0;
+    if (want_va) {
+        // Input 0 is the Y plane [1,1,H,W]; resize happens inside OV.
+        // The model's first input is the full-res source — use the original model input size.
+        auto out_shape = model.output(0).get_shape();
+        // fall back: read from original model to get H,W
+        auto orig = core.read_model(model_path);
+        auto orig_in = orig->input(0).get_shape();
+        model_h = static_cast<int>(orig_in[2]);
+        model_w = static_cast<int>(orig_in[3]);
+    } else {
+        model_h = static_cast<int>(in_shape[2]);
+        model_w = static_cast<int>(in_shape[3]);
     }
-
-    auto in_shape = model.input(0).get_shape();  // [1,3,H,W]
-    int model_h   = static_cast<int>(in_shape[2]);
-    int model_w   = static_cast<int>(in_shape[3]);
     std::cout << "Model input: " << model_w << "x" << model_h << "\n";
 
     ov::InferRequest req = model.create_infer_request();
 
+    // VA context for surface import (only used in VA path)
+    std::optional<ov::intel_gpu::ocl::VAContext> va_ctx_infer;
+    if (want_va) {
+        va_ctx_infer = model.get_context().as<ov::intel_gpu::ocl::VAContext>();
+    }
+
     // ---- Decode + infer loop ------------------------------------------------
     int frame_count      = 0;
     int total_detections = 0;
-    const float threshold = 0.5f;
     std::vector<float> nchw_buf;
+    double t_decode_ms = 0, t_preproc_ms = 0, t_infer_ms = 0;
 
     for (;;) {
         imp_tensor_t* tensor = nullptr;
+        auto t0 = Clock::now();
         st = imp_video_read_frame(&tensor, stream, 0);
+        auto t1 = Clock::now();
         if (st == IMP_ERROR_STREAM_END) break;
         if (st != IMP_OK || !tensor) {
             std::cerr << "read_frame failed: " << st << "\n";
@@ -153,23 +240,54 @@ int main(int argc, char* argv[]) {
         }
 
         frame_count++;
+        t_decode_ms += Ms(t1 - t0).count();
 
-        const uint8_t* y_ptr  = nullptr;
-        const uint8_t* uv_ptr = nullptr;
-        int fw = 0, fh = 0;
-        imp_tensor_get_nv12_planes(tensor, &y_ptr, &uv_ptr, &fw, &fh);
+        auto t2 = Clock::now();
 
-        nv12_to_bgr_float_nchw(y_ptr, uv_ptr,
-                                fw, fh,
-                                model_w, model_h, nchw_buf);
+        if (imp_tensor_get_memory_type(tensor) == IMP_MEM_VA_SURFACE) {
+            // VA surface path: import surface directly into OV — zero copies.
+            uint32_t surface_id = 0;
+            void*    va_disp    = nullptr;
+            int      fw = 0, fh = 0;
+            imp_tensor_get_va_surface(tensor, &surface_id, &va_disp, &fw, &fh);
 
-        ov::Tensor input_tensor(ov::element::f32,
-                                {1, 3,
-                                 static_cast<size_t>(model_h),
-                                 static_cast<size_t>(model_w)},
-                                nchw_buf.data());
-        req.set_input_tensor(input_tensor);
-        req.infer();
+            auto nv12 = va_ctx_infer->create_tensor_nv12(
+                static_cast<size_t>(fh),
+                static_cast<size_t>(fw),
+                static_cast<uint32_t>(surface_id));
+
+            // NV12_TWO_PLANES: set y input (index 0) and uv input (index 1).
+            req.set_input_tensor(0, nv12.first);
+            req.set_input_tensor(1, nv12.second);
+
+            auto t3 = Clock::now();
+            t_preproc_ms += Ms(t3 - t2).count();  // essentially zero
+
+            req.infer();
+            auto t4 = Clock::now();
+            t_infer_ms += Ms(t4 - t3).count();
+
+        } else {
+            // System-memory path: CPU NV12→BGR conversion then infer.
+            const uint8_t* y_ptr  = nullptr;
+            const uint8_t* uv_ptr = nullptr;
+            int fw = 0, fh = 0;
+            imp_tensor_get_nv12_planes(tensor, &y_ptr, &uv_ptr, &fw, &fh);
+
+            nv12_to_bgr_float_nchw(y_ptr, uv_ptr, fw, fh, model_w, model_h, nchw_buf);
+            auto t3 = Clock::now();
+            t_preproc_ms += Ms(t3 - t2).count();
+
+            ov::Tensor input_tensor(ov::element::f32,
+                                    {1, 3,
+                                     static_cast<size_t>(model_h),
+                                     static_cast<size_t>(model_w)},
+                                    nchw_buf.data());
+            req.set_input_tensor(input_tensor);
+            req.infer();
+            auto t4 = Clock::now();
+            t_infer_ms += Ms(t4 - t3).count();
+        }
 
         auto out = req.get_output_tensor(0);
         const float* det  = out.data<const float>();
@@ -187,8 +305,15 @@ int main(int argc, char* argv[]) {
                       << "  detections=" << frame_dets << "\n";
     }
 
+    double t_total_ms = t_decode_ms + t_preproc_ms + t_infer_ms;
     std::cout << "Done: " << frame_count << " frames, "
               << "total detections=" << total_detections << "\n";
+    std::cout << "\nPer-frame averages (ms):\n"
+              << "  decode      : " << t_decode_ms  / frame_count << "\n"
+              << "  preprocess  : " << t_preproc_ms / frame_count << "\n"
+              << "  infer       : " << t_infer_ms   / frame_count << "\n"
+              << "  total timed : " << t_total_ms   / frame_count << "\n"
+              << "  FPS (timed) : " << 1000.0 * frame_count / t_total_ms << "\n";
 
     imp_video_close(stream);
     imp_context_destroy(ctx);
