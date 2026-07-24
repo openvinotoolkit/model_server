@@ -25,6 +25,7 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 // #include "profiler.hpp"
 
@@ -135,7 +136,7 @@ protected:
     /**
      * 
      */
-    std::vector<T> inferRequests;
+    std::unordered_map<int, T> inferRequests;
     std::queue<std::promise<int>> promises;
 };
 }  // namespace ovms
