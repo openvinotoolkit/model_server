@@ -31,9 +31,12 @@
 #include <windows.h>
 #include <tchar.h>
 #include <errors.h>
+#pragma warning(push)
+#pragma warning(disable : 28252 28253 6101)
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Storage.h>
+#pragma warning(pop)
 
 #include "main_windows.hpp"
 #include "module_names.hpp"
