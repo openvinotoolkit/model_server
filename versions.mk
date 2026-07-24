@@ -36,4 +36,4 @@ GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/op
 
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.13.0
-CURL_VERSION ?= 8.20.0_2
+CURL_VERSION ?= 8.21.0_4

@@ -69,9 +69,10 @@ mediapipe_proto_library(
 
 ovms_cc_library(
     name = "embeddingscalculator_ov",
-    hdrs = [],
+    hdrs = ["embeddings_node_initializer_utils.hpp"],
     srcs = ["embeddings_calculator_ov.cc",
-            "embeddings_node_initializer.cpp"],
+            "embeddings_node_initializer.cpp",
+            "embeddings_node_initializer_utils.cpp"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
