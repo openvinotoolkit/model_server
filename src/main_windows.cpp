@@ -33,6 +33,7 @@
 #include <errors.h>
 #pragma warning(push)
 #pragma warning(disable : 28252 28253 6101)
+#include <winrt/base.h>
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Storage.h>
@@ -122,19 +123,21 @@ static void setOpenvinoTokenizersPathFromMsixDependencies() {
             winrt::Windows::ApplicationModel::Package::Current().Dependencies();
         for (const winrt::Windows::ApplicationModel::Package& dep : deps) {
             if (dep.Id().Name() == PACKAGE_NAME) {
-                const std::wstring dllPath = dep.InstalledLocation().Path().c_str() + std::wstring(TOKENIZERS_RELATIVE_PATH);
+                const std::wstring dllPath = std::wstring(dep.InstalledLocation().Path().c_str()) + TOKENIZERS_RELATIVE_PATH;
                 SetEnvironmentVariableW(L"OPENVINO_TOKENIZERS_PATH_GENAI", dllPath.c_str());
                 DEBUG_LOG("OPENVINO_TOKENIZERS_PATH_GENAI initialized from package dependency.");
                 return;
             }
         }
-    } catch (const winrt::hresult_error&) {
+    } catch (const winrt::hresult_error& ex) {
         // Not all deployments are packaged; keep default behavior when package metadata is unavailable.
+        DEBUG_LOG("Failed to resolve Tokenizer dependency. HRESULT: " + std::to_string(ex.code().value) + ", message: " + winrt::to_string(ex.message()));
     }
 }
 
 int main_windows(int argc, char** argv) {
     DEBUG_LOG("Windows Main - Entry");
+    winrt::init_apartment();
     setOpenvinoTokenizersPathFromMsixDependencies();
 
     OvmsWindowsServiceManager::instance().ovmsParams.argc = argc;
