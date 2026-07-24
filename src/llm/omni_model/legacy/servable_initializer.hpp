@@ -15,18 +15,23 @@
 //*****************************************************************************
 #pragma once
 
-#include "../base_input_processor.hpp"
+#include <memory>
+#include <string>
+
+#pragma warning(push)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_graph.h"
+#pragma GCC diagnostic pop
+#pragma warning(pop)
+#include "../../servable_initializer.hpp"
 
 namespace ovms {
+class Status;
 
-// Flattens text-only content arrays in ChatHistory messages to plain strings.
-// Parts are joined with "\n" for backward compatibility with chat templates.
-// Runs for both LM and VLM chat paths: arrays that contain images (or other
-// non-text modalities) are left untouched.
-// Must run before ChatTemplateProcessor and after Image/Audio decoding processors.
-class TextContentNormalizationProcessor : public BaseInputProcessor {
+class OmniModelLegacyServableInitializer : public GenAiServableInitializer {
 public:
-    absl::Status process(InputRequest& req) override;
+    Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) override;
 };
-
 }  // namespace ovms

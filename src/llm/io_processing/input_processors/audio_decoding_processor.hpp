@@ -15,21 +15,16 @@
 //*****************************************************************************
 #pragma once
 
+#include "../base_input_processor.hpp"
+
 namespace ovms {
 
-// Deployment-level configuration for InputProcessor, populated once at servable init.
-struct InputProcessingConfig {
-    // True for VLM servables. Enables ImageDecodingProcessor; TokenizationProcessor
-    // still runs (to populate inputIds for usage statistics and max-length checks)
-    // but inputIds is not passed to the VLM pipeline for inference.
-    bool isVLM = false;
-    // True for Omni servables. Enables AudioDecodingProcessor in addition to
-    // ImageDecodingProcessor (implies isVLM-like behavior for images).
-    bool isOmni = false;
-    // True when the GenAI built-in tokenizer.apply_chat_template() should be used
-    // even on Python-enabled builds (i.e. ChatTemplateMode::MINJA).
-    // False (default) uses PyJinjaTemplateProcessor when PYTHON_DISABLE==0.
-    bool useMinja = false;
+// Decodes input_audio content entries from ChatHistory messages into ov::Tensor
+// and populates InputRequest::inputAudios.
+// Active when: config.isOmni && input is ChatHistory variant.
+class AudioDecodingProcessor : public BaseInputProcessor {
+public:
+    absl::Status process(InputRequest& req) override;
 };
 
 }  // namespace ovms

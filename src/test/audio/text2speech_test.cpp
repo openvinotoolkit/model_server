@@ -27,6 +27,7 @@
 #include "../constructor_enabled_model_manager.hpp"
 
 using namespace ovms;
+using namespace ovms::audio_utils;
 
 class Text2SpeechHttpTest : public V3HttpTest {
 protected:
