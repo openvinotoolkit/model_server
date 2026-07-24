@@ -26,6 +26,7 @@
 
 #ifdef __linux__
 #include <cerrno>
+#include <csignal>
 #include <dlfcn.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -57,6 +58,15 @@ using GetKfsPyTensorBridgeVTableFn = const KfsPyTensorBridgeVTable* (*)();
 static PluginHandle pythonCalculatorsHandle = nullptr;
 static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
 
+void activateKfsBridge(const KfsPyTensorBridgeVTable* vtable, const char* source) {
+    if (vtable == nullptr) {
+        return;
+    }
+
+    setKfsPyTensorBridgeVTable(vtable);
+    SPDLOG_TRACE("KFS Python tensor bridge activated from {}", source);
+}
+
 #ifdef __linux__
 int pythonPluginDlopenFlags() {
     int flags = RTLD_LAZY | RTLD_GLOBAL;
@@ -73,29 +83,6 @@ std::string safeDlerror() {
     return std::string("dlerror returned null");
 }
 
-void activateKfsBridge(const KfsPyTensorBridgeVTable* vtable, const char* source) {
-    if (vtable == nullptr) {
-        return;
-    }
-
-    setKfsPyTensorBridgeVTable(vtable);
-    SPDLOG_TRACE("KFS Python tensor bridge activated from {}", source);
-}
-
-#endif
-
-#ifdef _WIN32
-void activateKfsBridge(const KfsPyTensorBridgeVTable* vtable, const char* source) {
-    if (vtable == nullptr) {
-        return;
-    }
-
-    setKfsPyTensorBridgeVTable(vtable);
-    SPDLOG_TRACE("KFS Python tensor bridge activated from {}", source);
-}
-#endif
-
-#ifdef __linux__
 // Weak reference allows using in-process bridge when linked into the binary
 // (e.g. ovms_test) without requiring -rdynamic for RTLD_DEFAULT lookups.
 bool probePluginLoadInChildProcess(const std::string& pluginPath) {
@@ -113,21 +100,21 @@ bool probePluginLoadInChildProcess(const std::string& pluginPath) {
     if (probePid == 0) {
         // Ensure child process can find shared libraries like libmediapipe_framework.so
         // Add /ovms/lib to LD_LIBRARY_PATH for plugin loading
-        const char* existing_ld = std::getenv("LD_LIBRARY_PATH");
-        std::string ld_lib_path = "/ovms/lib";
-        if (existing_ld != nullptr && existing_ld[0] != '\0') {
-            ld_lib_path = ld_lib_path + ":" + existing_ld;
+        const char* existingLd = std::getenv("LD_LIBRARY_PATH");
+        std::string ldLibPath = "/ovms/lib";
+        if (existingLd != nullptr && existingLd[0] != '\0') {
+            ldLibPath = ldLibPath + ":" + existingLd;
         }
-        setenv("LD_LIBRARY_PATH", ld_lib_path.c_str(), 1);
+        setenv("LD_LIBRARY_PATH", ldLibPath.c_str(), 1);
 
         // Keep process symbols globally visible in the probe process as well.
         // This mirrors the parent behavior and helps resolve plugin dependencies
         // that expect OVMS symbols to be available from the main executable.
         void* probeMainSymbols = dlopen(NULL, RTLD_NOW | RTLD_GLOBAL);
         if (probeMainSymbols == nullptr) {
-            const char* dlopen_main_error = dlerror();
-            if (dlopen_main_error) {
-                fprintf(stderr, "[PROBE] dlopen(NULL) failed: %s\n", dlopen_main_error);
+            const char* dlopenMainError = dlerror();
+            if (dlopenMainError) {
+                fprintf(stderr, "[PROBE] dlopen(NULL) failed: %s\n", dlopenMainError);
             }
         }
 
@@ -141,20 +128,30 @@ bool probePluginLoadInChildProcess(const std::string& pluginPath) {
             _exit(0);
         }
         // Probe failed - log details before exiting
-        const char* dlopen_error = dlerror();
-        if (dlopen_error) {
+        const char* dlopenError = dlerror();
+        if (dlopenError) {
             // Write to stderr since this is a child process
-            fprintf(stderr, "[PROBE] dlopen failed for %s: %s\n", pluginPath.c_str(), dlopen_error);
+            fprintf(stderr, "[PROBE] dlopen failed for %s: %s\n", pluginPath.c_str(), dlopenError);
         }
         _exit(1);
     }
 
+    // Bound the EINTR retry count so a pathological signal storm can never
+    // trap the parent OVMS process in an infinite wait loop. A dlopen probe
+    // is expected to finish in milliseconds; 100 retries is orders of
+    // magnitude beyond any realistic signal delivery rate.
+    constexpr int kMaxWaitRetries = 100;
     int waitStatus = 0;
+    int retries = 0;
     while (waitpid(probePid, &waitStatus, 0) == -1) {
-        if (errno == EINTR) {
+        if (errno == EINTR && ++retries < kMaxWaitRetries) {
             continue;
         }
-        SPDLOG_DEBUG("Could not wait for Python calculators plugin probe for {}. Will try loading directly.", pluginPath);
+        SPDLOG_DEBUG("Could not wait for Python calculators plugin probe for {} (errno={}, retries={}). Will try loading directly.",
+            pluginPath, errno, retries);
+        // Best-effort cleanup so the probe child does not linger as a zombie.
+        kill(probePid, SIGKILL);
+        waitpid(probePid, nullptr, WNOHANG);
         return true;
     }
 

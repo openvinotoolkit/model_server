@@ -75,6 +75,17 @@ private:
      */
     GraphQueueSizeValue graphQueueSize;
 
+    /**
+     * @brief Optional pbtxt content used in IN_MEMORY_GRAPH_MODE.
+     *
+     * Populated by ModelManager::startFromConfig from the pbtxt that
+     * Server::startModules produced via MediapipeRuntimeApi. When set,
+     * MediapipeGraphDefinition::validateForConfigFileExistence uses this
+     * instead of reading graph.pbtxt from disk. Not thread-safe by design:
+     * set during startup, read afterwards.
+     */
+    std::optional<std::string> inMemoryGraphPbTxt;
+
 public:
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
@@ -150,6 +161,21 @@ public:
 
     void setCurrentGraphPbTxtMD5(const std::string& currentGraphPbTxtMD5) {
         this->currentGraphPbTxtMD5 = currentGraphPbTxtMD5;
+    }
+
+    /**
+     * @brief Populate the in-memory pbtxt buffer used in IN_MEMORY_GRAPH_MODE.
+     *        Called by ModelManager::startFromConfig; ownership is moved in.
+     */
+    void setInMemoryGraphPbTxt(std::string pbtxt) {
+        this->inMemoryGraphPbTxt = std::move(pbtxt);
+    }
+
+    /**
+     * @brief Access the in-memory pbtxt content, if any.
+     */
+    const std::optional<std::string>& getInMemoryGraphPbTxt() const {
+        return this->inMemoryGraphPbTxt;
     }
 
     /**

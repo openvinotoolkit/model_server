@@ -730,6 +730,7 @@ ovms_cc_library(
         "libovmsstatus",
         "libovmslogging",
         "libovms_servable_definition",
+        "//src/utils:newline_delimited",
     ],
     visibility = ["//visibility:public"],
 )
@@ -767,7 +768,6 @@ ovms_cc_library(
         "//src/dags:pipelinedefinition",
         "//src/filesystem:libovmsfilesystem",
         "//src/filesystem:libovmsfilesystemfactory",
-        "//src/graph_export:in_memory_graph_store",
         "//src/metrics:libovms_metric_provider",
         "//src/metrics:libovmsmetrics",
         "@com_github_tencent_rapidjson//:rapidjson",

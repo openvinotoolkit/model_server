@@ -25,7 +25,6 @@
 #include <spdlog/spdlog.h>
 
 #include "src/filesystem/filesystem.hpp"
-#include "src/graph_export/in_memory_graph_store.hpp"
 #include "../status.hpp"
 
 namespace ovms {
@@ -130,9 +129,8 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
 }
 
 void MediapipeGraphConfig::logGraphConfigContent() const {
-    auto inMemoryContent = InMemoryGraphStore::getContentSnapshot();
-    if (inMemoryContent.has_value()) {
-        SPDLOG_DEBUG("Content of in-memory graph config:\n{}", inMemoryContent.value());
+    if (this->inMemoryGraphPbTxt.has_value()) {
+        SPDLOG_DEBUG("Content of in-memory graph config:\n{}", this->inMemoryGraphPbTxt.value());
         return;
     }
     std::ifstream fileStream(this->graphPath);

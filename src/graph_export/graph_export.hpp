@@ -27,13 +27,17 @@ class Status;
 class GraphExport {
 public:
     GraphExport();
-    Status createServableConfig(const std::string& directoryPath, const HFSettingsImpl& graphSettings, bool writeToFile = true);
+    // Writes graph.pbtxt into directoryPath (persistent HF pull / download flow).
+    Status createServableConfig(const std::string& directoryPath, const HFSettingsImpl& graphSettings);
+    // Returns the pbtxt content via outPbtxt without touching disk. Used by the
+    // IN_MEMORY_GRAPH_MODE startup path (--task + --model_path, no HF download).
+    Status createServableConfigInMemory(const std::string& directoryPath, const HFSettingsImpl& graphSettings, std::string& outPbtxt);
     static std::variant<std::optional<std::string>, Status> createPluginString(const ExportSettings& exportSettings);
     static std::string getDraftModelDirectoryName(std::string draftModel);
     static std::string getDraftModelDirectoryPath(const std::string& directoryPath, const std::string& draftModel);
 
-    static bool hasInMemoryGraphContent();
-    static std::string getInMemoryGraphContent();
-    static void clearInMemoryGraphContent();
+private:
+    // Shared implementation: outPbtxt == nullptr writes to disk; otherwise fills the buffer.
+    Status createServableConfigDispatch(const std::string& directoryPath, const HFSettingsImpl& graphSettings, std::string* outPbtxt);
 };
 }  // namespace ovms

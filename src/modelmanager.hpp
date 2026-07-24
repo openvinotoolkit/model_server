@@ -362,11 +362,11 @@ public:
     Status getModelOutputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const override;
     Status hasAutoModelParameters(const std::string& name, model_version_t version, bool& batchAuto, bool& shapeAuto) const override;
 
+#if (MEDIAPIPE_DISABLE == 0)
     Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
         const std::string& name);
     Status createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
         const std::string& name);
-#if (MEDIAPIPE_DISABLE == 0)
     MediapipeRuntimeApi* getMediapipeRuntimeApi() const;
 #endif
 

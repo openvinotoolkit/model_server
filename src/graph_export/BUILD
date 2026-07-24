@@ -18,16 +18,6 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
-    name = "in_memory_graph_store",
-    srcs = ["in_memory_graph_store.cpp"],
-    hdrs = ["in_memory_graph_store.hpp"],
-    deps = [
-        "@ovms//src:cpp_headers",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
     name = "graph_export_paths",
     srcs = ["graph_export_paths.cpp"],
     hdrs = ["graph_export_paths.hpp"],
@@ -53,7 +43,6 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@ovms//src:libovmsschema",
         "@ovms//src:libovms_version",
-        "@ovms//src/graph_export:in_memory_graph_store",
         "@ovms//src/graph_export:graph_export_paths",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",

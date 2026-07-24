@@ -247,6 +247,11 @@ struct ServerSettingsImpl {
     ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;
     OvmsServerMode serverMode = SERVING_MODELS_MODE;
+    // Populated once by Server::startModules when serverMode == IN_MEMORY_GRAPH_MODE
+    // (task inferred, --model_path given, no HF download). Consumers (ModelManager,
+    // MediapipeGraphDefinition, MediapipeGraphConfig) read this instead of taking a
+    // dependency on //src/graph_export. Not mutated after startup, so no locking needed.
+    std::optional<std::string> inMemoryGraphPbtxt;
 };
 
 struct ModelsSettingsImpl {

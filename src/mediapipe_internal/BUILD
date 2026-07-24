@@ -140,7 +140,6 @@ ovms_cc_library(
     deps = [
         "//src/filesystem:libovmsfilesystem",
         "//src:libovmsstatus",
-        "//src/graph_export:in_memory_graph_store",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
@@ -251,6 +250,7 @@ ovms_cc_library(
     ],
     deps = [
         ":libovms_mediapipe",
+        "//src/utils:newline_delimited",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

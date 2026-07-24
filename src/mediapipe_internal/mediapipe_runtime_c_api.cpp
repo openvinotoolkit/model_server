@@ -16,6 +16,8 @@
 
 #include "mediapipefactory.hpp"
 
+#include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <set>
 #include <string>
@@ -28,6 +30,7 @@
 #include "../servable_name_checker.hpp"
 #include "../status.hpp"
 #include "../ovms.h"  // NOLINT
+#include "../utils/newline_delimited.hpp"
 #include "mediapipegraphconfig.hpp"
 #include "mediapipegraphdefinition.hpp"
 #include "../logging.hpp"
@@ -42,39 +45,6 @@ namespace {
 
 thread_local std::string gLastError;
 OVMS_Server* gExternalServerHandle = nullptr;
-
-std::vector<std::string> splitNewlineDelimited(const char* values) {
-    std::vector<std::string> parsed;
-    if (values == nullptr || values[0] == '\0') {
-        return parsed;
-    }
-
-    std::string data(values);
-    size_t start = 0;
-    while (start <= data.size()) {
-        size_t end = data.find('\n', start);
-        std::string value = (end == std::string::npos) ? data.substr(start) : data.substr(start, end - start);
-        if (!value.empty()) {
-            parsed.push_back(std::move(value));
-        }
-        if (end == std::string::npos) {
-            break;
-        }
-        start = end + 1;
-    }
-    return parsed;
-}
-
-std::string joinWithNewlines(const std::vector<std::string>& values) {
-    std::string joined;
-    for (size_t i = 0; i < values.size(); ++i) {
-        joined += values[i];
-        if (i + 1 < values.size()) {
-            joined += '\n';
-        }
-    }
-    return joined;
-}
 
 ovms::Status processConfigInternal(ovms::MediapipeFactory* factory,
     const ovms::MediapipeGraphConfig& config,
@@ -182,7 +152,7 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryAliasesConflictExcluding(v
     }
 
     auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
-    auto parsedAliases = splitNewlineDelimited(aliases);
+    auto parsedAliases = ovms::splitNewlineDelimited(aliases);
     return factory->aliasesConflictExcluding(parsedAliases, ownGraphName) ? 1 : 0;
 }
 
@@ -192,7 +162,7 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT void OVMS_MPFactoryRetireOtherThan(void* fac
     }
 
     auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
-    auto parsedNames = splitNewlineDelimited(names);
+    auto parsedNames = ovms::splitNewlineDelimited(names);
     std::set<std::string> graphNames(parsedNames.begin(), parsedNames.end());
     factory->retireOtherThan(std::move(graphNames));
 }
@@ -210,7 +180,7 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT const char* OVMS_MPFactoryGetNames(void* fac
     } else {
         names = factory->getMediapipePipelinesNames();
     }
-    gLastError = joinWithNewlines(names);
+    gLastError = ovms::joinWithNewlines(names);
     return gLastError.c_str();
 }
 
@@ -224,15 +194,43 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT void* OVMS_MPFactoryFindServableDefinitionBy
 }
 
 extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPGraphExportCreateServableConfig(const char* directoryPath,
-    const ovms::HFSettingsImpl* hfSettings,
-    int writeToFile) {
+    const ovms::HFSettingsImpl* hfSettings) {
     if (directoryPath == nullptr || hfSettings == nullptr) {
         gLastError = "Invalid arguments for OVMS_MPGraphExportCreateServableConfig";
         return static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
     }
 
     ovms::GraphExport graphExporter;
-    auto status = graphExporter.createServableConfig(directoryPath, *hfSettings, writeToFile != 0);
+    auto status = graphExporter.createServableConfig(directoryPath, *hfSettings);
     gLastError = status.string();
     return static_cast<int>(status.getCode());
+}
+
+// In-memory variant: returns the generated pbtxt via *outPbtxt (malloc'd, caller must free).
+// Used by Server::startModules in IN_MEMORY_GRAPH_MODE to obtain the graph without writing to disk.
+extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPGraphExportCreateServableConfigInMemory(const char* directoryPath,
+    const ovms::HFSettingsImpl* hfSettings,
+    char** outPbtxt) {
+    if (directoryPath == nullptr || hfSettings == nullptr || outPbtxt == nullptr) {
+        gLastError = "Invalid arguments for OVMS_MPGraphExportCreateServableConfigInMemory";
+        return static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
+    }
+    *outPbtxt = nullptr;
+
+    ovms::GraphExport graphExporter;
+    std::string pbtxt;
+    auto status = graphExporter.createServableConfigInMemory(directoryPath, *hfSettings, pbtxt);
+    gLastError = status.string();
+    if (!status.ok()) {
+        return static_cast<int>(status.getCode());
+    }
+    char* buffer = static_cast<char*>(std::malloc(pbtxt.size() + 1));
+    if (buffer == nullptr) {
+        gLastError = "Out of memory allocating in-memory pbtxt buffer";
+        return static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
+    }
+    std::memcpy(buffer, pbtxt.data(), pbtxt.size());
+    buffer[pbtxt.size()] = '\0';
+    *outPbtxt = buffer;
+    return static_cast<int>(ovms::StatusCode::OK);
 }

@@ -1,3 +1,4 @@
+#pragma once
 //*****************************************************************************
 // Copyright 2026 Intel Corporation
 //
@@ -76,16 +77,15 @@ public:
     MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;
     ServableDefinition* findServableDefinitionByName(const std::string& name) const;
     Status createServableConfig(const std::string& directoryPath,
+        const HFSettingsImpl& hfSettings) const;
+    // In-memory variant: returns the generated pbtxt via outPbtxt without writing to disk.
+    Status createServableConfigInMemory(const std::string& directoryPath,
         const HFSettingsImpl& hfSettings,
-        bool writeToFile) const;
+        std::string& outPbtxt) const;
 
 private:
     struct ApiSymbols;
     std::unique_ptr<ApiSymbols> api;
-
-    static std::string joinWithNewlines(const std::vector<std::string>& values);
-    static std::string joinWithNewlines(const std::set<std::string>& values);
-    static std::vector<std::string> splitNewlineDelimited(const std::string& data);
 };
 
 }  // namespace ovms

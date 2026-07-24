@@ -53,8 +53,7 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
             return StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED;
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Failed to initialize Python interpreter (unexpected error): {}. "
-                         "The Python runtime may not be properly configured. "
-                         "Verify libpython.so is in library search path: export LD_LIBRARY_PATH=/path/to/python/lib:$LD_LIBRARY_PATH",
+                         "The Python runtime may not be properly configured. ",
                 e.what());
             return StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED;
         }

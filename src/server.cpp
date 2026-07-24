@@ -55,7 +55,6 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
-#include "graph_export/in_memory_graph_store.hpp"
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
@@ -423,7 +422,7 @@ Status Server::startModules(ovms::Config& config) {
         HFSettingsImpl hfSettings = config.getServerSettings().hfSettings;
         std::string modelPath = config.modelPath();
         hfSettings.exportSettings.modelPath = ".";
-        status = runtimeApi.createServableConfig(modelPath, hfSettings, true);
+        status = runtimeApi.createServableConfig(modelPath, hfSettings);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to create graph config: {}", status.string());
             return status;
@@ -485,11 +484,13 @@ Status Server::startModules(ovms::Config& config) {
         // --task with --model_path: create graph in memory without HF download
         MediapipeRuntimeApi runtimeApi(nullptr);
         const auto& hfSettings = config.getServerSettings().hfSettings;
-        status = runtimeApi.createServableConfig(config.modelPath(), hfSettings, false);
+        std::string pbtxt;
+        status = runtimeApi.createServableConfigInMemory(config.modelPath(), hfSettings, pbtxt);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to create in-memory graph config: {}", status.string());
             return status;
         }
+        config.setInMemoryGraphPbtxt(std::move(pbtxt));
         SPDLOG_INFO("Graph config created in memory from model_path: {}", config.modelPath());
     }
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
@@ -558,7 +559,7 @@ void Server::shutdownModules() {
         ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
     }
 #endif
-    InMemoryGraphStore::clearContent();
+    ovms::Config::instance().setInMemoryGraphPbtxt(std::nullopt);
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     std::shared_lock lock(modulesMtx);

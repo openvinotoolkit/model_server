@@ -29,7 +29,6 @@ using PythonLibraryHandle = HMODULE;
 
 #include "../logging.hpp"
 #include "../module.hpp"
-#include "pythoninterpretermodule.hpp"
 
 namespace ovms {
 

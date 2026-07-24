@@ -56,7 +56,6 @@
 #include "dags/pipelinedefinition.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/filesystemfactory.hpp"
-#include "graph_export/in_memory_graph_store.hpp"
 #include "logging.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipegraphconfig.hpp"
@@ -231,13 +230,20 @@ Status ModelManager::startFromConfig() {
     MediapipeGraphConfig mpConfig;
     mpConfig.setGraphName(config.modelName());
     mpConfig.setRootDirectoryPath(this->rootDirectoryPath);
+    // Forward the in-memory pbtxt buffer (populated by Server::startModules in
+    // IN_MEMORY_GRAPH_MODE) onto mpConfig so downstream consumers
+    // (MediapipeGraphDefinition, MediapipeGraphConfig::logGraphConfigContent)
+    // can read it without depending on the global Config.
+    if (const auto& inMemoryPbtxt = config.getServerSettings().inMemoryGraphPbtxt; inMemoryPbtxt.has_value()) {
+        mpConfig.setInMemoryGraphPbTxt(*inMemoryPbtxt);
+    }
     if (!CheckStartFromGraph(config.modelPath(), mpConfig, false)) {
         CheckStartFromGraph(config.modelPath(), mpConfig, true);
     }
 
     std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
     std::ifstream ifs(mpConfig.getGraphPath());
-    bool graphAvailable = ifs.is_open() || (config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE && InMemoryGraphStore::getContentSnapshot().has_value());
+    bool graphAvailable = ifs.is_open() || mpConfig.getInMemoryGraphPbTxt().has_value();
     if (graphAvailable) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
         status = ModelManager::validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
@@ -414,7 +420,7 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} exists", mpConfig.getGraphName(), mpConfig.getGraphPath());
         return true;
     }
-    if (Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE && InMemoryGraphStore::getContentSnapshot().has_value()) {
+    if (mpConfig.getInMemoryGraphPbTxt().has_value()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} using in-memory graph content", mpConfig.getGraphName());
         return true;
     }
@@ -1593,27 +1599,17 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableMediapipePipelin
 }
 #endif
 
+#if (MEDIAPIPE_DISABLE == 0)
 Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
-#if (MEDIAPIPE_DISABLE == 0)
     return this->mediapipeFactory->create(graph, name);
-#else
-    SPDLOG_ERROR("Mediapipe support was disabled during build process...");
-    return StatusCode::INTERNAL_ERROR;
-#endif
 }
 
 Status ModelManager::createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
     const std::string& name) {
-#if (MEDIAPIPE_DISABLE == 0)
     return this->mediapipeFactory->createHandle(graph, name);
-#else
-    SPDLOG_ERROR("Mediapipe support was disabled during build process...");
-    return StatusCode::INTERNAL_ERROR;
-#endif
 }
 
-#if (MEDIAPIPE_DISABLE == 0)
 MediapipeRuntimeApi* ModelManager::getMediapipeRuntimeApi() const {
     return this->mediapipeFactory.get();
 }

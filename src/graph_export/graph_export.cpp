@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #include "graph_export.hpp"
-#include "in_memory_graph_store.hpp"
 #include "graph_export_paths.hpp"
 
 #include <algorithm>
@@ -55,18 +54,6 @@
 #pragma warning(pop)
 #endif
 namespace ovms {
-
-bool GraphExport::hasInMemoryGraphContent() {
-    return InMemoryGraphStore::hasContent();
-}
-
-std::string GraphExport::getInMemoryGraphContent() {
-    return InMemoryGraphStore::getContent();
-}
-
-void GraphExport::clearInMemoryGraphContent() {
-    InMemoryGraphStore::clearContent();
-}
 
 static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
 static const std::string OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX = "# OVMS_GRAPH_QUEUE_MAX_SIZE: ";
@@ -116,7 +103,10 @@ std::string GraphExport::getDraftModelDirectoryPath(const std::string& directory
     }                                                                             \
     auto pluginConfigOpt = std::get<std::optional<std::string>>(pluginConfigOrStatus)
 
-static Status createPbtxtFile(const std::string& directoryPath, const std::string& pbtxtContent, bool writeToFile) {
+// Dispatches the generated pbtxt either to disk (outPbtxt == nullptr) or into the
+// caller-provided string buffer (outPbtxt != nullptr). Used by the internal graph
+// template helpers below to avoid duplicating the write vs. capture branch.
+static Status createPbtxtFile(const std::string& directoryPath, const std::string& pbtxtContent, std::string* outPbtxt) {
 #if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
     SPDLOG_TRACE("Created graph config file:\n{}", pbtxtContent);
@@ -126,8 +116,8 @@ static Status createPbtxtFile(const std::string& directoryPath, const std::strin
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
 #endif
-    if (!writeToFile) {
-        InMemoryGraphStore::setContent(pbtxtContent);
+    if (outPbtxt != nullptr) {
+        *outPbtxt = pbtxtContent;
         return StatusCode::OK;
     }
     // clang-format on
@@ -135,7 +125,7 @@ static Status createPbtxtFile(const std::string& directoryPath, const std::strin
     return FileSystem::createFileOverwrite(fullPath, pbtxtContent);
 }
 
-static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
+static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, std::string* outPbtxt) {
     if (!std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for text generation.");
         return StatusCode::INTERNAL_ERROR;
@@ -234,10 +224,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         }
     }
     })";
-    return createPbtxtFile(directoryPath, oss.str(), writeToFile);
+    return createPbtxtFile(directoryPath, oss.str(), outPbtxt);
 }
 
-static Status createRerankGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
+static Status createRerankGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, std::string* outPbtxt) {
     if (!std::holds_alternative<RerankGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for reranking.");
         return StatusCode::INTERNAL_ERROR;
@@ -282,10 +272,10 @@ node {
         }
     }
 })";
-    return createPbtxtFile(directoryPath, oss.str(), writeToFile);
+    return createPbtxtFile(directoryPath, oss.str(), outPbtxt);
 }
 
-static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
+static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, std::string* outPbtxt) {
     if (!std::holds_alternative<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for embeddings.");
         return StatusCode::INTERNAL_ERROR;
@@ -333,10 +323,10 @@ node {
     oss << R"(}
     }
 })";
-    return createPbtxtFile(directoryPath, oss.str(), writeToFile);
+    return createPbtxtFile(directoryPath, oss.str(), outPbtxt);
 }
 
-static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
+static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, std::string* outPbtxt) {
     if (!std::holds_alternative<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for speech generation.");
         return StatusCode::INTERNAL_ERROR;
@@ -387,15 +377,15 @@ node {
     }
 #endif
     // clang-format on
-    if (!writeToFile) {
-        InMemoryGraphStore::setContent(oss.str());
+    if (outPbtxt != nullptr) {
+        *outPbtxt = oss.str();
         return StatusCode::OK;
     }
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
+static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, std::string* outPbtxt) {
     if (!std::holds_alternative<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for speech to text.");
         return StatusCode::INTERNAL_ERROR;
@@ -460,15 +450,15 @@ node {
     }
 #endif
     // clang-format on
-    if (!writeToFile) {
-        InMemoryGraphStore::setContent(oss.str());
+    if (outPbtxt != nullptr) {
+        *outPbtxt = oss.str();
         return StatusCode::OK;
     }
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
+static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings, std::string* outPbtxt) {
     if (!std::holds_alternative<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for image generation.");
         return StatusCode::INTERNAL_ERROR;
@@ -592,13 +582,21 @@ node: {
 }
 )";
     // clang-format on
-    return createPbtxtFile(directoryPath, oss.str(), writeToFile);
+    return createPbtxtFile(directoryPath, oss.str(), outPbtxt);
 }
 
 GraphExport::GraphExport() {
 }
 
-Status GraphExport::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings, bool writeToFile) {
+Status GraphExport::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    return createServableConfigDispatch(directoryPath, hfSettings, nullptr);
+}
+
+Status GraphExport::createServableConfigInMemory(const std::string& directoryPath, const HFSettingsImpl& hfSettings, std::string& outPbtxt) {
+    return createServableConfigDispatch(directoryPath, hfSettings, &outPbtxt);
+}
+
+Status GraphExport::createServableConfigDispatch(const std::string& directoryPath, const HFSettingsImpl& hfSettings, std::string* outPbtxt) {
     if (directoryPath.empty()) {
         SPDLOG_ERROR("Directory path empty: {}", directoryPath);
         return StatusCode::PATH_INVALID;
@@ -621,17 +619,17 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         }
     }
     if (hfSettings.task == TEXT_GENERATION_GRAPH) {
-        return createTextGenerationGraphTemplate(directoryPath, hfSettings, writeToFile);
+        return createTextGenerationGraphTemplate(directoryPath, hfSettings, outPbtxt);
     } else if (hfSettings.task == EMBEDDINGS_GRAPH) {
-        return createEmbeddingsGraphTemplate(directoryPath, hfSettings, writeToFile);
+        return createEmbeddingsGraphTemplate(directoryPath, hfSettings, outPbtxt);
     } else if (hfSettings.task == RERANK_GRAPH) {
-        return createRerankGraphTemplate(directoryPath, hfSettings, writeToFile);
+        return createRerankGraphTemplate(directoryPath, hfSettings, outPbtxt);
     } else if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
-        return createImageGenerationGraphTemplate(directoryPath, hfSettings, writeToFile);
+        return createImageGenerationGraphTemplate(directoryPath, hfSettings, outPbtxt);
     } else if (hfSettings.task == TEXT_TO_SPEECH_GRAPH) {
-        return createTextToSpeechGraphTemplate(directoryPath, hfSettings, writeToFile);
+        return createTextToSpeechGraphTemplate(directoryPath, hfSettings, outPbtxt);
     } else if (hfSettings.task == SPEECH_TO_TEXT_GRAPH) {
-        return createSpeechToTextGraphTemplate(directoryPath, hfSettings, writeToFile);
+        return createSpeechToTextGraphTemplate(directoryPath, hfSettings, outPbtxt);
     } else if (hfSettings.task == UNKNOWN_GRAPH) {
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;
