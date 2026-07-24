@@ -44,7 +44,6 @@ set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 set "PYTHONHOME=C:\opt\Python312"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
@@ -63,6 +62,7 @@ if !errorlevel! neq 0 (
     set "SETUP_EXIT_CODE=!errorlevel!"
     goto :exit_build_error
 )
+set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :exit_build
 echo [INFO] Setup finished
@@ -73,10 +73,4 @@ echo [ERROR] Setup finished with error
 if "!SETUP_EXIT_CODE!"=="0" set "SETUP_EXIT_CODE=!errorlevel!"
 
 :propagate_env
-endlocal & (
-    set "PATH=%PATH%"
-    set "PYTHONPATH=%PYTHONPATH%"
-    set "PYTHONHOME=%PYTHONHOME%"
-    set "BAZEL_SH=%BAZEL_SH%"
-    exit /b %SETUP_EXIT_CODE%
-)
+endlocal & set "PATH=%PATH%" & set "PYTHONPATH=%PYTHONPATH%" & set "PYTHONHOME=%PYTHONHOME%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & exit /b %SETUP_EXIT_CODE%

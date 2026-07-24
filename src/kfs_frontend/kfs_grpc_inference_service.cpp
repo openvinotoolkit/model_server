@@ -31,12 +31,7 @@
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-// clang-format off
-// kfs_graph_executor_impl needs to be included before mediapipegraphexecutor
-// because it contains functions required by graph execution template
-#include "kfs_graph_executor_impl.hpp"
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
-// clang-format on
+#include "../mediapipe_graph_executor_interface.hpp"
 #endif
 #include "src/metrics/metric.hpp"
 #include "../model.hpp"
@@ -62,7 +57,7 @@ enum : unsigned int {
     TOTAL,
     TIMER_END
 };
-}
+}  // namespace
 
 namespace ovms {
 
@@ -117,6 +112,10 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
     // if no version requested give response for default version
     const auto& name = request->name();
     const auto& versionString = request->version();
+    if (containsEmbeddedNull(name)) {
+        SPDLOG_DEBUG("ModelReady requested model name contains embedded null byte");
+        return StatusCode::MODEL_NAME_MISSING;
+    }
     auto model = manager.findModelByName(name);
     SPDLOG_DEBUG("ModelReady requested name: {}, version: {}", name, versionString);
     if (model == nullptr) {
@@ -192,6 +191,11 @@ Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* contex
 Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext, KFSModelExtraMetadata& extraMetadata) {
     const auto& name = request->name();
     const auto& versionString = request->version();
+
+    if (containsEmbeddedNull(name)) {
+        SPDLOG_DEBUG("GetModelMetadata requested model name contains embedded null byte");
+        return StatusCode::MODEL_NAME_MISSING;
+    }
 
     auto model = this->modelManager.findModelByName(name);
     SPDLOG_DEBUG("ModelMetadata requested name: {}, version: {}", name, versionString);
@@ -291,13 +295,12 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         if (status == StatusCode::PIPELINE_DEFINITION_NAME_MISSING) {
             SPDLOG_DEBUG("Requested DAG: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
 #if (MEDIAPIPE_DISABLE == 0)
-            std::unique_ptr<MediapipeGraphExecutor> executor;
-            status = this->modelManager.createPipeline(executor, request->model_name());
+            std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+            status = this->modelManager.createPipelineHandle(executor, request->model_name());
             if (!status.ok()) {
                 return status;
             }
-            status = executor->infer(request, response, executionContext);
-            return status;
+            return executor->infer(request, response, executionContext);
 #else
             SPDLOG_DEBUG("Requested DAG: {} does not exist. Mediapipe support was disabled during build process...", request->model_name());
 #endif
@@ -334,8 +337,8 @@ Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* cont
         SPDLOG_DEBUG(status.string());
         return status;
     }
-    std::unique_ptr<MediapipeGraphExecutor> executor;
-    auto status = this->modelManager.createPipeline(executor, firstRequest.model_name());
+    std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+    auto status = this->modelManager.createPipelineHandle(executor, firstRequest.model_name());
     if (!status.ok()) {
         return status;
     }

@@ -33,6 +33,7 @@ class Status;
 class MediapipeGraphConfig;
 class MediapipeGraphDefinition;
 class MediapipeGraphExecutor;
+class MediapipeGraphExecutorInterface;
 class PythonBackend;
 
 class MediapipeFactory {
@@ -53,6 +54,8 @@ public:
 
 public:
     Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
+        const std::string& name) const;
+    Status createHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& pipeline,
         const std::string& name) const;
 
     MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;

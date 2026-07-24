@@ -32,24 +32,32 @@ using namespace py::literals;
 
 namespace ovms {
 
+#if defined(_WIN32)
+#define PYTHON_BACKEND_EXPORT __declspec(dllexport)
+#else
+#define PYTHON_BACKEND_EXPORT __attribute__((visibility("default")))
+#endif
+
 class PythonBackend {
     std::unique_ptr<py::module_> pyovmsModule;
     std::unique_ptr<py::object> tensorClass;
 
 public:
-    PythonBackend();
-    ~PythonBackend();
-    static bool createPythonBackend(std::unique_ptr<PythonBackend>& pythonBackend);
+    PYTHON_BACKEND_EXPORT PythonBackend();
+    PYTHON_BACKEND_EXPORT ~PythonBackend();
+    PYTHON_BACKEND_EXPORT static bool createPythonBackend(std::unique_ptr<PythonBackend>& pythonBackend);
 
-    bool createOvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype,
+    PYTHON_BACKEND_EXPORT bool createOvmsPyTensor(const std::string& name, void* ptr, const std::vector<py::ssize_t>& shape, const std::string& datatype,
         py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor, bool copy = false);
 
-    bool createEmptyOvmsPyTensor(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype,
+    PYTHON_BACKEND_EXPORT bool createEmptyOvmsPyTensor(const std::string& name, const std::vector<py::ssize_t>& shape, const std::string& datatype,
         py::ssize_t size, std::unique_ptr<PyObjectWrapper<py::object>>& outTensor);
 
     // Checks if object is tensorClass instance. Throws UnexpectedPythonObjectError if it's not.
-    void validateOvmsPyTensor(const py::object& object) const;
+    PYTHON_BACKEND_EXPORT void validateOvmsPyTensor(const py::object& object) const;
 
-    bool getOvmsPyTensorData(std::unique_ptr<PyObjectWrapper<py::object>>& outTensor, void** data);
+    PYTHON_BACKEND_EXPORT bool getOvmsPyTensorData(std::unique_ptr<PyObjectWrapper<py::object>>& outTensor, void** data);
 };
+
+#undef PYTHON_BACKEND_EXPORT
 }  // namespace ovms

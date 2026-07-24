@@ -58,6 +58,8 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         "//src:libovmsstatus",
         "//src:libovmstimer",
+    ],
+    implementation_deps = [
         "@mediapipe//mediapipe/framework:calculator_graph",
     ],
     visibility = ["//visibility:public"],
@@ -71,12 +73,7 @@ ovms_cc_library(
     srcs = [
         "graphqueue.cpp",
     ],
-    deps = select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
-            ],
-            "//:disable_python": []
-        }) + [
+    deps = [
         ":graph_executor_constants",
         ":graph_side_packets",
         ":mediapipe_utils",
@@ -90,6 +87,8 @@ ovms_cc_library(
         "//src:model_metric_reporter",
         "//src:libovmsprofiler",
         "//third_party:openvino",
+    ],
+    implementation_deps = [
         "@mediapipe//mediapipe/framework:calculator_graph",
     ],
     visibility = ["//visibility:public"],
@@ -123,6 +122,8 @@ ovms_cc_library(
     deps = [
         ":graph_executor_constants",
         ":graph_side_packets",
+    ],
+    implementation_deps = [
         "@mediapipe//mediapipe/framework:calculator_graph",
     ],
     visibility = ["//visibility:public"],
@@ -139,10 +140,33 @@ ovms_cc_library(
     deps = [
         "//src/filesystem:libovmsfilesystem",
         "//src:libovmsstatus",
-        "//src/graph_export:graph_export",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "mediapipegraphexecutor_h",
+    hdrs = [
+        "mediapipegraphexecutor.hpp",
+    ],
+    deps = [
+        "//src:mediapipe_executor_interface",
+        ":graph_executor_constants",
+        ":graph_side_packets",
+        ":graphqueue",
+        ":mediapipe_utils",
+        ":side_packet_builder",
+        "//src/llm:execution_context_utils",
+        "//src:model_metric_reporter",
+        "//src:libovms_execution_context",
+        "//src:libovmsprofiler",
+        "//src:libovmsstatus",
+        "//src:libovmstimer",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "@mediapipe//mediapipe/framework/port:status",
     ],
     visibility = ["//visibility:public"],
 )
@@ -157,17 +181,14 @@ ovms_cc_library(
         "mediapipegraphexecutor.cpp",
         "mediapipegraphexecutor.hpp",
     ],
-    deps = select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
-            ],
-            "//:disable_python": []
-        }) + [
+    deps = [
         ":graphqueue",
         ":mediapipegraphconfig",
         ":node_initializer",
         ":mediapipe_utils",
         ":side_packet_builder",
+        "//src:mediapipe_executor_interface",
+        "//src/python:python_calculators_runtime_objects",
         "//src/dags:pipelinedefinitionstatus",
         "//src:libovms_single_version_servable_definition",
         "//src:libovms_tensorinfo",
@@ -187,8 +208,49 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         "//src/llm:execution_context_utils",
         "//src/utils:env_guard",
+    ],
+    implementation_deps = [
         "@mediapipe//mediapipe/framework:calculator_graph",
         "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler_cc_proto",
+        "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",
+    ],
+    additional_copts = select({
+        "//conditions:default": ["-fvisibility=default"],
+        "//src:windows": [],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_runtime_owner",
+    deps = [
+        ":libovms_mediapipe",
+        "//src:libovms_mediapipe_kfs_runtime_executor",
+        "//src:libovms_mediapipe_http_executor",
+        "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
+        "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
+        "@mediapipe//mediapipe/calculators/geti/utils:utils",
+        "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
+        "//src/embeddings:embeddingscalculator_ov",
+        "//src/rerank:rerankcalculator_ov",
+        "//src/llm:llmcalculator",
+        "//src/image_gen:image_gen_calculator",
+        "//src/audio/speech_to_text:s2t_calculator",
+        "//src/audio/text_to_speech:t2s_calculator",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_runtime_c_api_exports",
+    srcs = [
+        "mediapipe_runtime_c_api.cpp",
+    ],
+    deps = [
+        ":libovms_mediapipe",
+        "//src/utils:newline_delimited",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

@@ -32,23 +32,29 @@ config_setting(
     values = {"compilation_mode": "dbg"},
 )
 
+cc_import(
+    name = "opencv_import_lib",
+    interface_library = select({
+        ":opt_build": "x64/vc16/lib/opencv_world" + OPENCV_VERSION + ".lib",
+        ":dbg_build": "x64/vc16/lib/opencv_world" + OPENCV_VERSION + "d.lib",
+    }),
+    shared_library = select({
+        ":opt_build": "x64/vc16/bin/opencv_world" + OPENCV_VERSION + ".dll",
+        ":dbg_build": "x64/vc16/bin/opencv_world" + OPENCV_VERSION + "d.dll",
+    }),
+    visibility = ["//visibility:public"],
+)
+
 # The following build rule assumes that the executable "opencv-4.13.0-windows.exe"
 # is downloaded and the files are extracted to local.
 # If you install OpenCV separately, please modify the build rule accordingly.
 cc_library(
     name = "opencv",
-    srcs = select({
-        ":opt_build": [
-            "x64/vc16/lib/opencv_world" + OPENCV_VERSION + ".lib",
-            "x64/vc16/bin/opencv_world" + OPENCV_VERSION + ".dll",
-        ],
-        ":dbg_build": [
-            "x64/vc16/lib/opencv_world" + OPENCV_VERSION + "d.lib",
-            "x64/vc16/bin/opencv_world" + OPENCV_VERSION + "d.dll",
-        ],
-    }),
     hdrs = glob(["include/opencv2/**/*.h*"]),
     includes = ["include/"],
     linkstatic = 1,
     visibility = ["//visibility:public"],
+    deps = [
+        ":opencv_import_lib",
+    ],
 )

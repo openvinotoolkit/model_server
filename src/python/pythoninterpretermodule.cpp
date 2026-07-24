@@ -17,6 +17,7 @@
 
 #include <string>
 #include <utility>
+#include "../python_calculators_plugin_loader.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
@@ -32,32 +33,72 @@
 namespace py = pybind11;
 
 namespace ovms {
+
 Status PythonInterpreterModule::start(const ovms::Config&) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE_NAME);
     this->threadId = std::this_thread::get_id();
+
     if (!Py_IsInitialized()) {
         SPDLOG_INFO("Initializing python interpreter", PYTHON_INTERPRETER_MODULE_NAME);
-        py::initialize_interpreter();
-        ownsInterpreter = true;
+        try {
+            py::initialize_interpreter();
+            ownsInterpreter = true;
+        } catch (const pybind11::error_already_set& e) {
+            SPDLOG_ERROR("Failed to initialize Python interpreter: {}. "
+                         "Ensure libpython.so and dependencies are installed on the system. "
+                         "Make sure python-dev package is installed for the Python version used. "
+                         "Check that PYTHONPATH is set correctly if using custom Python installation.",
+                e.what());
+            return StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED;
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to initialize Python interpreter (unexpected error): {}. "
+                         "The Python runtime may not be properly configured. ",
+                e.what());
+            return StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED;
+        }
     } else {
         SPDLOG_INFO("Python interpreter already initialized", PYTHON_INTERPRETER_MODULE_NAME);
         ownsInterpreter = false;
     }
 
-    py::gil_scoped_acquire acquire;
-    py::exec(R"(
-        import sys
-        print("Python version:")
-        print(sys.version)
-        print("Python sys.path output:")
-        print(sys.path)
-    )");
-    if (!PythonBackend::createPythonBackend(pythonBackend))
-        return StatusCode::INTERNAL_ERROR;
+    try {
+        py::gil_scoped_acquire acquire;
+        py::exec(R"(
+            import sys
+            print("Python version:")
+            print(sys.version)
+            print("Python sys.path output:")
+            print(sys.path)
+        )");
+    } catch (const pybind11::error_already_set& e) {
+        SPDLOG_ERROR("Python initialization check failed: {}. "
+                     "Python interpreter may be corrupted or missing required modules.",
+            e.what());
+        return StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED;
+    }
+
+    if (!PythonBackend::createPythonBackend(pythonBackend)) {
+        SPDLOG_ERROR("Failed to create Python backend. "
+                     "Ensure pyovms module is available in PYTHONPATH and libovmspython.so is installed.");
+        return StatusCode::PYTHON_BACKEND_CREATION_FAILED;
+    }
+    // Load MediaPipe Python calculators only after Python runtime is fully operational.
+    // This avoids loading optional calculator/runtime glue in environments where
+    // Python support cannot start successfully.
+    loadPythonCalculatorsPlugin();
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE_NAME);
     return StatusCode::OK;
+}
+
+void PythonInterpreterModule::loadPythonCalculatorsPlugin() {
+    if (::ovms::loadPythonCalculatorsPlugin()) {
+        SPDLOG_INFO("MediaPipe Python calculators plugin loaded successfully");
+    } else {
+        SPDLOG_WARN("Failed to load MediaPipe Python calculators plugin. "
+                    "Python-based MediaPipe calculators will not be available.");
+    }
 }
 
 void PythonInterpreterModule::shutdown() {
@@ -72,8 +113,9 @@ void PythonInterpreterModule::shutdown() {
     pythonBackend.reset();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
-    if (ownsInterpreter)
+    if (ownsInterpreter) {
         py::finalize_interpreter();
+    }
 }
 
 void PythonInterpreterModule::releaseGILFromThisThread() const {

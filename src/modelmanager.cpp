@@ -56,11 +56,10 @@
 #include "dags/pipelinedefinition.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/filesystemfactory.hpp"
-#include "graph_export/graph_export.hpp"
 #include "logging.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-#include "mediapipe_internal/mediapipefactory.hpp"
-#include "mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "mediapipe_internal/mediapipegraphconfig.hpp"
+#include "mediapipe_runtime_api.hpp"
 #endif
 #include "metrics/metric_config.hpp"
 #include "metrics/metric_registry.hpp"
@@ -84,7 +83,7 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
     pipelineFactory(std::make_unique<PipelineFactory>()),
 #if (MEDIAPIPE_DISABLE == 0)
-    mediapipeFactory(std::make_unique<MediapipeFactory>(pythonBackend)),
+    mediapipeFactory(std::make_unique<MediapipeRuntimeApi>(pythonBackend)),
 #endif
     waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
     metricConfig(std::make_unique<MetricConfig>()),
@@ -231,13 +230,20 @@ Status ModelManager::startFromConfig() {
     MediapipeGraphConfig mpConfig;
     mpConfig.setGraphName(config.modelName());
     mpConfig.setRootDirectoryPath(this->rootDirectoryPath);
+    // Forward the in-memory pbtxt buffer (populated by Server::startModules in
+    // IN_MEMORY_GRAPH_MODE) onto mpConfig so downstream consumers
+    // (MediapipeGraphDefinition, MediapipeGraphConfig::logGraphConfigContent)
+    // can read it without depending on the global Config.
+    if (const auto& inMemoryPbtxt = config.getServerSettings().inMemoryGraphPbtxt; inMemoryPbtxt.has_value()) {
+        mpConfig.setInMemoryGraphPbTxt(*inMemoryPbtxt);
+    }
     if (!CheckStartFromGraph(config.modelPath(), mpConfig, false)) {
         CheckStartFromGraph(config.modelPath(), mpConfig, true);
     }
 
     std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
     std::ifstream ifs(mpConfig.getGraphPath());
-    bool graphAvailable = ifs.is_open() || (GraphExport::hasInMemoryGraphContent() && config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE);
+    bool graphAvailable = ifs.is_open() || mpConfig.getInMemoryGraphPbTxt().has_value();
     if (graphAvailable) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
         status = ModelManager::validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
@@ -414,7 +420,7 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} exists", mpConfig.getGraphName(), mpConfig.getGraphPath());
         return true;
     }
-    if (GraphExport::hasInMemoryGraphContent() && Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
+    if (mpConfig.getInMemoryGraphPbTxt().has_value()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} using in-memory graph content", mpConfig.getGraphName());
         return true;
     }
@@ -449,27 +455,30 @@ Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const Models
     return StatusCode::OK;
 }
 
-Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory) {
+Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeRuntimeApi& factory) {
     if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
         return StatusCode::OK;
     }
     mediapipesInConfigFile.insert(config.getGraphName());
-    MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
-    if (mediapipeGraphDefinition == nullptr) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
-        auto status = factory.createDefinition(config.getGraphName(), config, *this, *this);
-        return status;
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+        "Processing mediapipe graph config: {} graph_path: {} runtime_loaded: {}",
+        config.getGraphName(),
+        config.getGraphPath(),
+        factory.isLoaded());
+    auto status = factory.processConfig(config, *this, *this);
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger,
+            "Failed to process mediapipe graph config: {} status: {}",
+            config.getGraphName(),
+            status.string());
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+            "Processed mediapipe graph config successfully: {} definition_exists: {}",
+            config.getGraphName(),
+            factory.definitionExists(config.getGraphName()));
     }
-    if (mediapipeGraphDefinition->isReloadRequired(config)) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} triggering reload", config.getGraphName());
-        auto status = factory.reloadDefinition(config.getGraphName(),
-            config,
-            *this);
-        return status;
-    }
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} already loaded and reload is not required", config.getGraphName());
-    return StatusCode::OK;
+    return status;
 }
 #endif
 
@@ -1584,15 +1593,27 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
     return names;
 }
 
+#if (MEDIAPIPE_DISABLE == 0)
+const std::vector<std::string> ModelManager::getNamesOfAvailableMediapipePipelines() const {
+    return mediapipeFactory->getNamesOfAvailableMediapipePipelines();
+}
+#endif
+
+#if (MEDIAPIPE_DISABLE == 0)
 Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
-#if (MEDIAPIPE_DISABLE == 0)
     return this->mediapipeFactory->create(graph, name);
-#else
-    SPDLOG_ERROR("Mediapipe support was disabled during build process...");
-    return StatusCode::INTERNAL_ERROR;
-#endif
 }
+
+Status ModelManager::createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
+    const std::string& name) {
+    return this->mediapipeFactory->createHandle(graph, name);
+}
+
+MediapipeRuntimeApi* ModelManager::getMediapipeRuntimeApi() const {
+    return this->mediapipeFactory.get();
+}
+#endif
 
 void ModelManager::setRootDirectoryPath(const std::string& configFileFullPath) {
     FileSystem::setRootDirectoryPath(this->rootDirectoryPath, configFileFullPath);
@@ -1635,7 +1656,7 @@ const PipelineFactory& ModelManager::getPipelineFactory() const {
 // MediapipeGraphDefinition) are never removed from their maps during server
 // lifetime. They only transition to RETIRED state. This matches the existing
 // contract of PipelineFactory::findDefinitionByName and
-// MediapipeFactory::findDefinitionByName which also return raw pointers.
+// Mediapipe runtime API definition lookup which also returns raw pointers.
 ServableDefinition* ModelManager::findServableDefinition(const std::string& name) const {
     auto model = findModelByName(name);
     if (model) {
@@ -1646,7 +1667,7 @@ ServableDefinition* ModelManager::findServableDefinition(const std::string& name
         return pipelineDefinition;
     }
 #if (MEDIAPIPE_DISABLE == 0)
-    auto* mediapipeDefinition = mediapipeFactory->findDefinitionByName(name);
+    auto* mediapipeDefinition = mediapipeFactory->findServableDefinitionByName(name);
     if (mediapipeDefinition) {
         return mediapipeDefinition;
     }

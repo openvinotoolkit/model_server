@@ -106,6 +106,7 @@ protected:
     virtual Status validateForConfigFileExistence();
     Status resolveGraphQueueSize();
     Status validateForConfigLoadableness();
+    Status validateReferencedNodesRegistered();
 
     Status setStreamTypes();
     Status dryInitializeTest();

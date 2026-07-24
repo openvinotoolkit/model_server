@@ -30,7 +30,6 @@
 #include "../config.hpp"
 #include "src/utils/env_guard.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "src/graph_export/graph_export.hpp"
 #include "src/metrics/metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../ov_utils.hpp"
@@ -43,6 +42,10 @@
 #include "../version.hpp"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+#pragma warning(push)
+#pragma warning(disable : 6001 4324 6385 6386 6326 6246)
+#include "mediapipe/framework/deps/registration.h"
+#pragma warning(pop)
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 #include "node_initializer.hpp"
@@ -66,10 +69,10 @@ const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
-    if (GraphExport::hasInMemoryGraphContent() && ovms::Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
-        const std::string& content = GraphExport::getInMemoryGraphContent();
-        this->chosenConfig = content;
-        this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(content));
+    const auto& inMemoryPbtxt = this->mgconfig.getInMemoryGraphPbTxt();
+    if (inMemoryPbtxt.has_value()) {
+        this->chosenConfig = *inMemoryPbtxt;
+        this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(this->chosenConfig));
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using in-memory graph content for mediapipe graph definition: {}", this->getName());
         return StatusCode::OK;
     }
@@ -173,6 +176,45 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
     return StatusCode::OK;
 }
 
+Status MediapipeGraphDefinition::validateReferencedNodesRegistered() {
+    const auto& registeredCalculators = mediapipe::CalculatorBaseRegistry::GetRegisteredNames();
+    const auto& registeredSubgraphs = mediapipe::SubgraphRegistry::GetRegisteredNames();
+
+    std::unordered_map<std::string, bool> missingNamesMap;
+    for (const auto& node : this->config.node()) {
+        const auto& nodeName = node.calculator();
+        if (nodeName.empty()) {
+            continue;
+        }
+        const bool isRegistered =
+            registeredCalculators.find(nodeName) != registeredCalculators.end() ||
+            registeredSubgraphs.find(nodeName) != registeredSubgraphs.end();
+        if (!isRegistered) {
+            missingNamesMap[nodeName] = true;
+        }
+    }
+
+    if (missingNamesMap.empty()) {
+        return StatusCode::OK;
+    }
+
+    std::vector<std::string> missingNames;
+    missingNames.reserve(missingNamesMap.size());
+    for (const auto& [name, _] : missingNamesMap) {
+        missingNames.emplace_back(name);
+    }
+    std::sort(missingNames.begin(), missingNames.end());
+    const std::string missingNamesList = joins(missingNames, ", ");
+
+    SPDLOG_LOGGER_ERROR(modelmanager_logger,
+        "Mediapipe graph: {} references unregistered calculators/subgraphs: [{}]",
+        this->getName(),
+        missingNamesList);
+    return Status(
+        StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
+        "Missing registered calculators/subgraphs: " + missingNamesList);
+}
+
 Status MediapipeGraphDefinition::dryInitializeTest() {
     ::mediapipe::CalculatorGraph graph;
     try {
@@ -193,6 +235,12 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 }
 Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validation context for mediapipe: {} graph_path: {} subconfig_path: {}", getName(), this->mgconfig.getGraphPath(), this->mgconfig.getSubconfigPath());
+#if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Build flag OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME is enabled for mediapipe: {}", getName());
+#else
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Build flag OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME is disabled for mediapipe: {}", getName());
+#endif
     if (!this->sidePacketMaps->empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
@@ -204,49 +252,61 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     }
     Status validationResult = validateForConfigFileExistence();
     if (!validationResult.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage validateForConfigFileExistence for graph: {} status: {}", getName(), validationResult.string());
         return validationResult;
     }
     validationResult = validateForConfigLoadableness();
     if (!validationResult.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage validateForConfigLoadableness for graph: {} status: {}", getName(), validationResult.string());
+        return validationResult;
+    }
+    validationResult = validateReferencedNodesRegistered();
+    if (!validationResult.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage validateReferencedNodesRegistered for graph: {} status: {}", getName(), validationResult.string());
         return validationResult;
     }
     validationResult = resolveGraphQueueSize();
     if (!validationResult.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage resolveGraphQueueSize for graph: {} status: {}", getName(), validationResult.string());
         return validationResult;
     }
     std::unique_lock lock(metadataMtx);
     auto status = createInputsInfo();
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create inputs info for mediapipe graph definition: {}", getName());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage createInputsInfo for graph: {} status: {}", getName(), status.string());
         return status;
     }
     status = createOutputsInfo();
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage createOutputsInfo for graph: {} status: {}", getName(), status.string());
         return status;
     }
     status = createInputSidePacketsInfo();
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create input side packets info for mediapipe graph definition: {}", getName());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage createInputSidePacketsInfo for graph: {} status: {}", getName(), status.string());
         return status;
     }
     // Detect what deserialization needs to be performed
     status = this->setStreamTypes();
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage setStreamTypes for graph: {} status: {}", getName(), status.string());
         return status;
     }
     // here we will not be available if calculator does not exist in OVMS
     status = this->dryInitializeTest();
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage dryInitializeTest for graph: {} status: {}", getName(), status.string());
         return status;
     }
 
     status = this->initializeNodes();
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage initializeNodes for graph: {} status: {}", getName(), status.string());
         return status;
     }
     status = this->initializeQueueIfRequired();
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage initializeQueueIfRequired for graph: {} status: {}", getName(), status.string());
         return status;
     }
 
@@ -399,8 +459,28 @@ Status MediapipeGraphDefinition::setStreamTypes() {
         return v == mediapipe_packet_type_enum::TFLITETENSOR;
     });
     if (anyInputTfLite || anyOutputTfLite) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "There is no support for TfLiteTensor deserialization & serialization");
-        return StatusCode::NOT_IMPLEMENTED;
+        std::string inputTfLiteNames;
+        for (const auto& [name, type] : inputTypes) {
+            if (type == mediapipe_packet_type_enum::TFLITETENSOR) {
+                if (!inputTfLiteNames.empty()) {
+                    inputTfLiteNames += ", ";
+                }
+                inputTfLiteNames += name;
+            }
+        }
+        std::string outputTfLiteNames;
+        for (const auto& [name, type] : outputTypes) {
+            if (type == mediapipe_packet_type_enum::TFLITETENSOR) {
+                if (!outputTfLiteNames.empty()) {
+                    outputTfLiteNames += ", ";
+                }
+                outputTfLiteNames += name;
+            }
+        }
+        SPDLOG_LOGGER_ERROR(modelmanager_logger,
+            "TfLiteTensor stream type is unsupported. Detected in mediapipe graph: {}. input_streams: [{}] output_streams: [{}]. ", getName(), inputTfLiteNames, outputTfLiteNames);
+        return Status(StatusCode::NOT_IMPLEMENTED,
+            "TfLiteTensor stream type is not supported in mediapipe KServe execution path");
     }
     bool kfsRequestPass = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
         const auto& [k, v] = p;
@@ -489,9 +569,10 @@ Status MediapipeGraphDefinition::initializeNodes() {
 
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
+        const auto& node = config.node(i);
         for (const auto& initializer : registry.all()) {
-            if (initializer->matches(config.node(i).calculator())) {
-                Status status = initializer->initialize(config.node(i), getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend);
+            if (initializer->matches(node.calculator())) {
+                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend);
                 if (!status.ok()) {
                     return status;
                 }

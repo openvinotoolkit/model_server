@@ -50,7 +50,8 @@ void PythonNodeResources::finalize() {
                 return;
             }
 
-            ovmsPythonModel.get()->attr("finalize")();
+            py::object finalizeMethod = ovmsPythonModel.get()->attr("finalize");
+            finalizeMethod();
         } catch (const pybind11::error_already_set& e) {
             SPDLOG_ERROR("Failed to process python node finalize method. {}  Python node handler_path: {} ", e.what(), this->handlerPath);
             return;
@@ -177,6 +178,8 @@ PythonNodeResources::~PythonNodeResources() {
     SPDLOG_DEBUG("Calling Python node resource destructor");
     this->finalize();
     py::gil_scoped_acquire acquire;
+    // Release python refs while GIL is held. Otherwise member destruction after
+    // leaving the destructor body may decref without GIL and crash.
     this->ovmsPythonModel.reset();
 }
 
