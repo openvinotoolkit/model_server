@@ -56,12 +56,16 @@ public:
 
 private:
     ov::genai::Tokenizer tokenizer;
+    std::string toolParserName;
+    std::string reasoningParserName;
+    ToolsSchemas_t toolNameSchemaMap;
     std::unique_ptr<BaseOutputParser> toolParser = nullptr;       // Tool parser for extracting tool calls
     std::unique_ptr<BaseOutputParser> reasoningParser = nullptr;  // Reasoning parser for extracting reasoning content
 
     // Streaming related members
     ProcessingPhase processingPhase = UNKNOWN;
     StreamOutputCache streamOutputCache;
+    bool implicitReasoningStart_ = false;
 
     // Parsing methods below read chunks from streamOutputCache hence no string argument is needed
 
@@ -85,25 +89,18 @@ public:
     bool isReasoningParserAvailable() const;
     std::string getToolParserStartTag() const;
 
+    // Reset streaming state and recreate parser instances to clear internal parser state.
+    void resetStreamingState();
+
     // Auto-detect and apply implicit reasoning start based on the prompt produced by the chat template.
     void detectAndSetImplicitReasoningStart(const std::string& renderedPrompt);
-
-    // Parse model output in the unary mode. Returns ParsedOutput containing data extracted by internal parsers.
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable);
 
     // Parse model output chunk in the steaming mode. Returns a JSON object containing the delta that conforms to OpenAI API
     // or nullopt if no response can be produced.
     // tokens holds the token IDs that produced chunkResponse (may be empty; currently informational for future use).
     std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason);
 
-    bool requiresStreamingWithSpecialTokens() const {
-        if (!reasoningParser) {
-            return toolParser && toolParser->requiresStreamingWithSpecialTokens();
-        } else if (!toolParser) {
-            return reasoningParser && reasoningParser->requiresStreamingWithSpecialTokens();
-        } else {
-            return (reasoningParser && reasoningParser->requiresStreamingWithSpecialTokens()) && (toolParser && toolParser->requiresStreamingWithSpecialTokens());
-        }
-    }
+    // Decide decode mode dynamically based on user preference and current parser phase.
+    bool needSpecialTokensForCurrentDecode(bool userWantsSpecialTokens = false) const;
 };
 }  // namespace ovms

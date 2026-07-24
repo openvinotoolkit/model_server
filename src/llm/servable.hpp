@@ -16,6 +16,7 @@
 #pragma once
 
 #include <condition_variable>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -151,6 +152,28 @@ struct GenAiServableExecutionContext {
     DeltaChannel deltaChannel;     // thread-safe delta queue used by all streaming paths
     GenerationPhase generationPhase = GenerationPhase::INPUT_TOKEN_PROCESSING;
 };
+
+// Base execution context shared by all Legacy (non-CB) servables.
+// Carries the synchronisation fields and a minimal type-erased interface that
+// allows the shared preparePartialResponse implementation (prepareLegacyPartialResponse)
+// to access type-specific results data without knowing the concrete results type.
+struct LegacyServableExecutionContextBase : public GenAiServableExecutionContext {
+    std::promise<void> readySignal;
+    std::future<void> finished = readySignal.get_future();
+    bool success{true};
+
+    // Returns the first finish reason from the concrete results, defaulting to STOP
+    // when the finish_reasons list is empty (e.g. cancelled or error path).
+    virtual ov::genai::GenerationFinishReason legacyFinishReason() const = 0;
+    // Forwards prompt and completion token counts from the concrete results into
+    // the handler's usage tracking fields.
+    virtual void setLegacyUsage(OpenAIApiHandler& apiHandler) = 0;
+    virtual ~LegacyServableExecutionContextBase() = default;
+};
+
+// Shared preparePartialResponse logic for both LLM-Legacy and VLM-Legacy servables.
+// Defined in servable.cpp. Both Legacy servable overrides delegate here.
+absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
 struct ExtraGenerationInfo {
     std::string bosTokenFromTokenizer;
@@ -304,6 +327,21 @@ public:
     */
     virtual absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 };
+
+// Intermediate base class for both LegacyServable and VisualLanguageModelLegacyServable.
+// Provides the single shared override of preparePartialResponse that delegates to
+// prepareLegacyPartialResponse, so neither concrete class needs to repeat it.
+class LegacyServableBase : public GenAiServable {
+public:
+    LegacyServableBase() = default;
+    LegacyServableBase(LegacyServableBase&&) = default;
+    LegacyServableBase& operator=(LegacyServableBase&&) = default;
+    LegacyServableBase(const LegacyServableBase&) = delete;
+    LegacyServableBase& operator=(const LegacyServableBase&) = delete;
+
+    absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
+};
+
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
 void logRequestDetails(const HttpPayload& payload);
 }  // namespace ovms

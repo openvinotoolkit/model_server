@@ -223,40 +223,18 @@ void Qwen3CoderToolParser::lazyFillInitToolParametersTypesMap() {
     SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", this->toolsParametersTypes.size());
 }
 
-Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
-    BaseOutputParser(tokenizer),
+Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
+                                             std::optional<ParsingConfig> configOverride) :
+    BaseOutputParser(tokenizer, [&]() {
+        if (configOverride.has_value()) return std::move(*configOverride);
+        ParsingConfig cfg;
+        cfg.startTags = {TOOL_START_TAG, FUNCTION_NAME_TAG};
+        return cfg;
+    }()),
     toolSchemas(toolSchemas),
     streamParser(this->toolsParametersTypes) {
 }
 
-void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    // there may be multiple parameters per function,
-    // there may be multiple lines per parameter value
-    // there may be no parameters for a function
-    // there may be multiple tool_call sections in the content
-    // there is only one function per tool call
-    // <tool_call>
-    // <function=FUNCTION_NAME>
-    // <parameter=PARAM_NAME>
-    // PARAM_VALUE
-    // </parameter>
-    // </function>
-    // </tool_call>
-    this->lazyFillInitToolParametersTypesMap();
-    auto toolCallsOpt = this->streamParser.parseChunk(parsedOutput.content);
-    if (toolCallsOpt.has_value()) {
-        // TODO do we want to support not ending in content state?
-        parsedOutput.toolCalls = std::move(toolCallsOpt.value());
-        SPDLOG_DEBUG("Parsing ended successfully, removing tool calls from content");
-        auto status = this->streamParser.removeToolCallsFromContentIfNeeded(parsedOutput.content);
-        if (!status.ok()) {
-            SPDLOG_DEBUG("Failed to remove tool calls from content: {}", status.string());
-        }
-        return;
-    }
-    SPDLOG_DEBUG("Parsing ended, no tool calls found");
-    return;
-}
 std::optional<std::string> Qwen3CoderToolParserImpl::getCurrentFunctionName() const {
     if (this->currentFunction.name.empty()) {
         return std::nullopt;

@@ -318,9 +318,8 @@ bool Gemma4ToolParser::parseInToolCallEndedState() {
         this->streamingPosition = toolCallEndTagPos + TOOL_CALL_END_TAG.length();
         this->currentState = State::AfterToolCall;
     } else {
-        this->streamingPosition = toolCallEndTagPos + TOOL_CALL_END_TAG.length();
-        this->currentState = State::AfterToolCall;
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Detected end of tool call at position: {}, returning to content state", toolCallEndTagPos);
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Waiting for more data in ToolCallEnded state; no complete next tool call prefix or end tag found from position: {}", this->streamingPosition);
+        return false;
     }
     return true;
 }
@@ -384,6 +383,17 @@ std::optional<rapidjson::Document> Gemma4ToolParser::parseChunk(const std::strin
                 content = this->streamingContent.substr(this->streamingPosition);
             }
             this->streamingPosition += content.size();
+
+            if (finishReason != ov::genai::GenerationFinishReason::NONE) {
+                for (const std::string& tagToErase : {TURN_END_TAG, TOOL_RESPONSE_START_TAG}) {
+                    size_t tagPos = content.find(tagToErase);
+                    while (tagPos != std::string::npos) {
+                        content.erase(tagPos, tagToErase.length());
+                        tagPos = content.find(tagToErase, tagPos);
+                    }
+                }
+            }
+
             return wrapDeltaContent(content);
         }
         if (this->currentState == State::AfterToolCall) {
@@ -392,6 +402,14 @@ std::optional<rapidjson::Document> Gemma4ToolParser::parseChunk(const std::strin
     }
 
     if (finishReason != ov::genai::GenerationFinishReason::NONE) {
+        // Unary/STOP flush can arrive after a chunk that only advanced one state
+        // (e.g. parsed the tool name but not yet the immediately following "}").
+        // Give the state machine one last chance to consume already-buffered data
+        // before deciding whether an arguments delta exists.
+        if (this->currentState == State::ToolCallParameters) {
+            parseToolCallParametersState();
+        }
+
         if ((this->currentState == State::ToolCallParameters || this->currentState == State::ToolCallEnded) && !this->toolCall.arguments.empty()) {
             return wrapDeltaArgs(this->toolCall.arguments, toolCallIndex);
         }
@@ -400,7 +418,7 @@ std::optional<rapidjson::Document> Gemma4ToolParser::parseChunk(const std::strin
             auto content = this->streamingContent.substr(this->streamingPosition);
             this->streamingPosition += content.size();
 
-            for (const std::string& tagToErase : getSpecialTagsToErase()) {
+            for (const std::string& tagToErase : {TURN_END_TAG, TOOL_RESPONSE_START_TAG}) {
                 size_t tagPos = content.find(tagToErase);
                 while (tagPos != std::string::npos) {
                     content.erase(tagPos, tagToErase.length());
@@ -449,81 +467,4 @@ bool Gemma4ToolParser::parseSingleToolCall(const std::string& toolStr, ToolCall&
     return false;
 }
 
-void Gemma4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    std::vector<std::string> tools;
-    std::vector<std::pair<size_t, size_t>> toolCallPositions;
-    size_t pos = 0;
-
-    while (pos != std::string::npos) {
-        size_t start = std::string::npos;
-        size_t end = std::string::npos;
-
-        auto it = std::find(generatedTokens.begin() + pos, generatedTokens.end(), botTokenId);
-        if (it != generatedTokens.end()) {
-            start = std::distance(generatedTokens.begin(), it);
-        } else {
-            break;
-        }
-        auto itArgs = std::find(generatedTokens.begin() + start, generatedTokens.end(), eotTokenId);
-        if (itArgs != generatedTokens.end()) {
-            end = std::distance(generatedTokens.begin(), itArgs);
-        } else {
-            break;
-        }
-
-        std::string toolCallStr = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin() + start + 1, generatedTokens.begin() + end + 1), ov::AnyMap{ov::genai::skip_special_tokens(false)});
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool list string: {}", toolCallStr);
-
-        while (!toolCallStr.empty()) {
-            size_t nextToolPos = toolCallStr.find(TOOL_CALL_NAME_PREFIX, TOOL_CALL_NAME_PREFIX.length());
-            size_t toolEndPos;
-            if (nextToolPos == std::string::npos) {
-                toolEndPos = toolCallStr.rfind(TOOL_ARGS_END_INDICATOR);
-            } else {
-                toolEndPos = nextToolPos - 1;
-            }
-            std::string singleTool;
-            if (toolEndPos != std::string::npos) {
-                singleTool = toolCallStr.substr(0, toolEndPos + TOOL_ARGS_END_INDICATOR.length());
-                if (toolEndPos + TOOL_ARGS_END_INDICATOR.length() < toolCallStr.length()) {
-                    toolCallStr = toolCallStr.substr(toolEndPos + TOOL_ARGS_END_INDICATOR.length());
-                } else {
-                    toolCallStr.clear();
-                }
-                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed single tool string {}", singleTool);
-            } else {
-                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "No more tool strings found in the decoded string: {}", toolCallStr);
-                break;
-            }
-
-            if (!singleTool.empty()) {
-                tools.push_back(singleTool);
-            }
-        }
-
-        pos = end;
-        toolCallPositions.emplace_back(start, end);
-    }
-
-    for (const std::string& tool : tools) {
-        ToolCall toolCall;
-        auto wasToolCallParsed = parseSingleToolCall(tool, toolCall);
-        if (wasToolCallParsed) {
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool call - name: {}, args: {}", toolCall.name, toolCall.arguments);
-            parsedOutput.toolCalls.push_back(toolCall);
-        } else {
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse tool call from string: {}", tool);
-        }
-    }
-    std::vector<int64_t> contentWithoutToolCalls = generatedTokens;
-    for (auto it = toolCallPositions.rbegin(); it != toolCallPositions.rend(); ++it) {
-        contentWithoutToolCalls.erase(contentWithoutToolCalls.begin() + it->first, contentWithoutToolCalls.begin() + it->second + 1);
-    }
-
-    auto reasoningEnd = std::find(contentWithoutToolCalls.begin(), contentWithoutToolCalls.end(), reasoningEndTokenId);
-    if (reasoningEnd != contentWithoutToolCalls.end()) {
-        contentWithoutToolCalls.erase(contentWithoutToolCalls.begin(), reasoningEnd + 1);
-    }
-    parsedOutput.content = tokenizer.decode(contentWithoutToolCalls, ov::AnyMap{ov::genai::skip_special_tokens(true)});
-}
 }  // namespace ovms

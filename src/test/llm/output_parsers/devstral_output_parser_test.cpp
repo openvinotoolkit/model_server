@@ -20,6 +20,7 @@
 
 #include "src/llm/io_processing/base_output_parser.hpp"
 #include "src/llm/io_processing/output_parser.hpp"
+#include "output_parser_test_utils.hpp"
 #include "test/platform_utils.hpp"
 
 using namespace ovms;
@@ -85,7 +86,7 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string testInput = input;
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -98,7 +99,7 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithSingleToolCall_MissingEn
     std::string testInput = "Reasoning before tool call [TOOL_CALLS] example_tool [ARGS]{\"arg1\":\"value1\",\"arg2\":42}";
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "Reasoning before tool call ");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -111,7 +112,7 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithSingleToolCall_EmptyArgu
     std::string testInput = "Reasoning before tool call [TOOL_CALLS]example_tool[ARGS]</s>";
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "Reasoning before tool call ");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -124,7 +125,7 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = devstralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, "");
@@ -134,7 +135,7 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall
     std::string testInput = "Reasoning before tool call [TOOL_CALLS]example_tool[ARGS]{\"arg1\":\"value1\",\"arg2\":42}</s>";
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "Reasoning before tool call ");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -147,8 +148,11 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithInvalidOrder) {
     std::string testInput = "Reasoning before tool call [ARGS]example_tool[TOOL_CALLS]{\"arg1\":\"value1\",\"arg2\":42}</s>";
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "Reasoning before tool call example_tool{\"arg1\":\"value1\",\"arg2\":42}");
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    // [ARGS] appears before [TOOL_CALLS] (invalid order): [TOOL_CALLS] is consumed by OutputParser;
+    // [ARGS] is not a recognised start tag so it stays in content; chars after [TOOL_CALLS] are
+    // flushed as content when the devstral parser gives up waiting for [ARGS].
+    EXPECT_EQ(parsedOutput.content, "Reasoning before tool call [ARGS]example_tool{\"arg1\":\"value1\",\"arg2\":42}");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
@@ -158,7 +162,7 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithMissingArgsTag) {
     std::string testInput = input;
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     // Same expected content as tokenizer does not add special tokens
     EXPECT_EQ(parsedOutput.content, "Some content example_tool{\"arg1\":\"value1\",\"arg2\":42}");
     EXPECT_EQ(parsedOutput.reasoning, "");
@@ -170,7 +174,7 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithArrayArguments) {
     std::string testInput = input;
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -184,7 +188,7 @@ TEST_F(DevstralOutputParserTest, ParseToolCallOutputWithInvalidArguments) {
     std::string testInput = input;
     auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);

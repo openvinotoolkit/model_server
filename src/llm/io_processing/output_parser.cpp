@@ -181,7 +181,7 @@ std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(const std::
 }
 
 OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
-    tokenizer(tokenizer) {
+    tokenizer(tokenizer), toolParserName(toolParserName), reasoningParserName(reasoningParserName), toolNameSchemaMap(toolNameSchemaMap) {
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
     } else if (toolParserName == "hermes3") {
@@ -231,13 +231,6 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
     }
 
-    // TODO: To be considered: If we still need this check after introduction of OvmsTextStreamer.
-    if (toolParser && reasoningParser) {
-        if (toolParser->requiresStreamingWithSpecialTokens() != reasoningParser->requiresStreamingWithSpecialTokens()) {
-            throw std::runtime_error("Cannot use tool parser " + toolParserName + " with reasoning parser " + reasoningParserName +
-                                     " as they have different requirements for special tokens in streaming mode");
-        }
-    }
 }
 
 bool OutputParser::isToolParserAvailable() const {
@@ -256,7 +249,65 @@ std::string OutputParser::getToolParserStartTag() const {
     }
 }
 
+void OutputParser::resetStreamingState() {
+    processingPhase = UNKNOWN;
+    streamOutputCache.clear();
+
+    toolParser = nullptr;
+    reasoningParser = nullptr;
+
+    if (toolParserName == "llama3") {
+        toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
+    } else if (toolParserName == "hermes3") {
+        toolParser = std::make_unique<Hermes3ToolParser>(tokenizer);
+    } else if (toolParserName == "phi4") {
+        toolParser = std::make_unique<Phi4ToolParser>(tokenizer);
+    } else if (toolParserName == "mistral") {
+        toolParser = std::make_unique<MistralToolParser>(tokenizer);
+    } else if (toolParserName == "gptoss") {
+        toolParser = std::make_unique<GptOssToolParser>(tokenizer);
+    } else if (toolParserName == "qwen3coder") {
+        toolParser = std::make_unique<Qwen3CoderToolParser>(tokenizer, toolNameSchemaMap);
+    } else if (toolParserName == "devstral") {
+        toolParser = std::make_unique<DevstralToolParser>(tokenizer, toolNameSchemaMap);
+    } else if (toolParserName == "lfm2") {
+        toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
+    } else if (toolParserName == "gemma4") {
+        toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
+    }
+
+    if (reasoningParserName == "qwen3") {
+        reasoningParser = std::make_unique<Qwen3ReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "gemma4") {
+        reasoningParser = std::make_unique<Gemma4ReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "gptoss") {
+        reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
+    }
+
+    if (implicitReasoningStart_) {
+        setImplicitReasoningStart(true);
+    }
+}
+
+bool OutputParser::needSpecialTokensForCurrentDecode(bool userWantsSpecialTokens) const {
+    if (userWantsSpecialTokens) {
+        return true;
+    }
+    if (toolParser && toolParser->getParsingConfig().alwaysNeedsSpecialTokens) {
+        return true;
+    }
+    if (reasoningParser && reasoningParser->getParsingConfig().alwaysNeedsSpecialTokens) {
+        return true;
+    }
+    if ((processingPhase == TOOL_CALLS_PROCESSING_TOOL || processingPhase == TOOL_CALLS_WAITING_FOR_TOOL) &&
+        toolParser && toolParser->getParsingConfig().toolCallPhaseNeedsSpecialTokens) {
+        return true;
+    }
+    return false;
+}
+
 void OutputParser::setImplicitReasoningStart(bool value) {
+    implicitReasoningStart_ = value;
     if (!reasoningParser) {
         return;
     }
@@ -280,26 +331,6 @@ void OutputParser::detectAndSetImplicitReasoningStart(const std::string& rendere
         [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
     setImplicitReasoningStart(detected);
     return;
-}
-
-ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable) {
-    // Model output is processed by the chain of parsers. Each parser extracts relevant part of the output and fills the ParsedOutput structure.
-    // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
-    // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
-
-    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false)));
-    }
-    ParsedOutput parsedOutput;
-    parsedOutput.content = tokenizer.decode(generatedTokens);
-    if (reasoningParser) {
-        reasoningParser->parse(parsedOutput, generatedTokens);
-    }
-    // We run tool parser only if the parser is available and tools have been provided in the request.
-    if (toolParser && toolsAvailable) {
-        toolParser->parse(parsedOutput, generatedTokens);
-    }
-    return parsedOutput;
 }
 
 std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {

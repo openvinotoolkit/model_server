@@ -28,6 +28,7 @@
 #include "src/port/rapidjson_document.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
+#include "parsing_config.hpp"
 
 #include "src/llm/apis/tool_schema_wrapper.hpp"
 
@@ -69,21 +70,49 @@ ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& tool
 class BaseOutputParser {
 protected:
     ov::genai::Tokenizer tokenizer;
+
+    // Parsing configuration set by sub-class constructors.
+    ParsingConfig parsingConfig;
+
+    // Token IDs resolved from parsingConfig.specialTokenStartTags on construction.
+    // Maps token_id -> tag_string so the OutputParser can synthesise the boundary
+    // text when a token-ID-based phase transition fires.
+    std::unordered_map<int64_t, std::string> resolvedStartTokenToTag;
+
     // When true, the chat template has already emitted the parser's start tag as the
     // trailing tokens of the prompt, so the model output is expected to begin already
     // inside the parsed segment (e.g. reasoning) without producing the start tag itself.
-    // Used by reasoning parsers for models like Qwen3.6, Qwen3-VL.
-    // append "<think>\n" at the end of the prompt when thinking is enabled.
     bool implicitStart = false;
+
+    // Resolve specialTokenStartTags → resolvedStartTokenToTag using the tokenizer.
+    // Called once from constructors that set parsingConfig.specialTokenStartTags.
+    void resolveSpecialTokenIds() {
+        for (const auto& tag : parsingConfig.specialTokenStartTags) {
+            if (tag.empty()) continue;
+            const auto tensor = tokenizer.encode(tag, ov::genai::add_special_tokens(false)).input_ids;
+            if (tensor.get_size() == 1) {
+                resolvedStartTokenToTag[tensor.data<int64_t>()[0]] = tag;
+            }
+        }
+    }
 
 public:
     BaseOutputParser() = delete;
     explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer) :
         tokenizer(tokenizer) {}
+
+    explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer, ParsingConfig config) :
+        tokenizer(tokenizer), parsingConfig(std::move(config)) {
+        resolveSpecialTokenIds();
+    }
+
     virtual ~BaseOutputParser() = default;
 
     void setImplicitStart(bool value) { implicitStart = value; }
     bool isImplicitStart() const { return implicitStart; }
+
+    const ParsingConfig& getParsingConfig() const { return parsingConfig; }
+    const std::unordered_map<int64_t, std::string>& getResolvedStartTokenToTag() const { return resolvedStartTokenToTag; }
 
     // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
     // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
@@ -94,45 +123,30 @@ public:
 
     // --- Specialized output parsers interface ---
 
-    // Parse model output and extract relevant information to parsedOutput fields. Raw generated tokens are provided as an argument.
-    // Additionally parsedOutput.content is already filled with decoded content when this method is called, enabling chain or parsing.
-    // Parser is also responsible for removing extracted part from the parsedOutput.content if necessary.
-    virtual void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) = 0;
-
     // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.
     // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.
     // tokens holds the token IDs that produced chunkResponse (may be empty; currently informational for future use).
     virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) = 0;
 
     // Get the tags that marks the beginning of the segment that should be processed by the parser.
-    // This method is used in streaming mode to determine if the parser should start processing the content.
-    // If empty string is returned, it means that the parser will never start processing the content.
-    virtual const std::vector<std::string>& getParsingStartTags() const = 0;
-
-    // Get a vector of additional tags that mark beginning of the segment that should be processed by the parser.
-    // These tags are considered only if they are the first output produced by the model.
-    // In streaming mode it means that they are considered only in UNKNOWN phase.
-    virtual const std::vector<std::string>& getSpecialParsingStartTags() const = 0;
-
-    // Get the tag that marks the end of the segment that should be processed by the parser.
-    // This method is used in streaming mode to determine if the parser should stop processing the content.
-    // If empty string is returned, it means that the parser will keep processing until the end of the content.
-    virtual const std::string& getParsingEndTag() const = 0;
-
-    // Indicates whether the parser requires special tokens to be present in the streaming output.
-    // If true, the tokenizer used in the TextStreamer should be configured to not skip special tokens.
-    // This is important for parsers that rely on special tokens to identify parsing boundaries or
-    // specific segments of the output.
-    virtual bool requiresStreamingWithSpecialTokens() const {
-        return false;
+    // Defaults to parsingConfig.startTags; sub-classes may override for dynamic or legacy behaviour.
+    virtual const std::vector<std::string>& getParsingStartTags() const {
+        return parsingConfig.startTags;
     }
 
-    // Get the vector of special tags that should be erased from the content before parsing.
-    // This is useful for cleaning up the content from tags that are necessary for parsing
-    // but should not be present in the final output.
+    // Get additional tags checked only in the UNKNOWN phase.
+    virtual const std::vector<std::string>& getSpecialParsingStartTags() const {
+        return parsingConfig.specialStartTags;
+    }
+
+    // Get the tag that marks the end of the segment.
+    virtual const std::string& getParsingEndTag() const {
+        return parsingConfig.endTag;
+    }
+
+    // Get parser-specific control tags to remove from plain content deltas.
     virtual const std::vector<std::string>& getSpecialTagsToErase() const {
-        static const std::vector<std::string> emptyVector;
-        return emptyVector;
+        return parsingConfig.contentTagsToErase;
     }
 };
 }  // namespace ovms

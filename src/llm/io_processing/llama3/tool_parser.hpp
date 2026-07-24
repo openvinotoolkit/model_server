@@ -28,13 +28,7 @@
 namespace ovms {
 class Llama3ToolParser : public BaseOutputParser {
 protected:
-    const std::string parsingStartTag = "<|python_tag|>";
-    // Tools calls are expected to be the last part of the content and there is no unique separator between tools, so we do not specify an end tag.
-    const std::string parsingEndTag = "";
-
-    // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
-    int64_t botTokenId = 128010;
-    // ";" is used as a separator between tool calls in the response
+    // "" separator between tool calls
     std::string separator = ";";
 
     // Streaming required members
@@ -51,22 +45,24 @@ protected:
 
 public:
     Llama3ToolParser() = delete;
-    explicit Llama3ToolParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    static ParsingConfig defaultParsingConfig() {
+        ParsingConfig cfg;
+        // <|python_tag|> is a special token. Put it in both startTags (text-based,
+        // used when the text is passed directly, e.g. in streaming tests) and
+        // specialTokenStartTags (token-ID-based, used in production where the token
+        // decodes to empty with skip_special_tokens=true).
+        cfg.startTags             = {"<|python_tag|>"};
+        cfg.specialTokenStartTags = {"<|python_tag|>"};
+        cfg.specialStartTags      = {"{"};
+        return cfg;
+    }
+
+    explicit Llama3ToolParser(ov::genai::Tokenizer& tokenizer,
+                               std::optional<ParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+                         configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags = {parsingStartTag};
-        return parsingStartTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags = {"{"};
-        return specialParsingStartTags;
-    }
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
-    }
 };
 }  // namespace ovms

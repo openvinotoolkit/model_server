@@ -143,22 +143,10 @@ private:
 
 public:
     Qwen3CoderToolParser() = delete;
-    explicit Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas);
+    explicit Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
+                                   std::optional<ParsingConfig> configOverride = std::nullopt);
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> startTags = {TOOL_START_TAG, FUNCTION_NAME_TAG};
-        return startTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags = {};
-        return specialParsingStartTags;
-    }
-    const std::string& getParsingEndTag() const override {
-        static const std::string EMPTY_STRING = "";
-        return EMPTY_STRING;
-    }
 
 private:
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);

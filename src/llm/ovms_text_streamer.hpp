@@ -59,10 +59,9 @@ public:
     using Callback = std::function<ov::genai::StreamingStatus(rapidjson::Document, bool /*isLast*/)>;
 
     // outputParser may be nullptr (e.g. for the unary VLM path).
-    // TODO(phase3): rework ownership — OVMSTextStreamer should not need to keep
-    // the parser alive; it will be restructured in the next refactor phase.
     // toolsAvailable must be evaluated after parseRequest() has processed the body.
-    // decodeParams controls skip_special_tokens etc. — static for Phase 1.
+    // decodeParams controls skip_special_tokens etc. — the value is used as the baseline
+    // user preference; the parser's per-phase requirements are layered on top dynamically.
     OVMSTextStreamer(
         const ov::genai::Tokenizer& tokenizer,
         std::shared_ptr<OutputParser> output_parser,
@@ -71,24 +70,24 @@ public:
         const ov::AnyMap& decode_params);
 
     ov::genai::StreamingStatus write(int64_t token) override;
-    // TextStreamer::write(const vector<int64_t>&) calls ov::genai::TextStreamer::write(token)
-    // with a qualified (non-virtual) call, bypassing this class's write(int64_t) override.
-    // Override here to ensure our flush logic fires for every token.
-    // TODO(phase2): revisit once GenAI provides a cleaner extensibility hook.
     ov::genai::StreamingStatus write(const std::vector<int64_t>& tokens) override;
     void end() override;
 
 private:
-    // TODO(phase3): see constructor comment — ownership will be reworked.
     std::shared_ptr<OutputParser> m_output_parser;
     bool m_tools_available;
     Callback m_callback;
+    // Whether the user's request specified skip_special_tokens=false.
+    bool m_user_wants_special = false;
+    // Current effective decode mode (special tokens on/off). Tracked so mode changes
+    // can be detected at the start of write(token) and the cache reset accordingly.
+    bool m_current_special_mode = false;
 
-    // Must match the file-scope constexpr in openvino/genai text_streamer.cpp.
-    // Named here so a future GenAI change is a single update point.
     static constexpr size_t DELAY_N_TOKENS = 3;
 
-    // Flush text[m_printed_len : print_until] with the corresponding token slice.
+    // Apply decode params matching the current mode to the base class protected member.
+    void applyDecodeParams(bool useSpecial);
+
     ov::genai::StreamingStatus flush_chunk(
         const std::string& text,
         size_t print_until,

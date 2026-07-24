@@ -270,7 +270,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "io_processing_base_output_parser",
-    hdrs = ["io_processing/base_output_parser.hpp"],
+    hdrs = ["io_processing/base_output_parser.hpp",
+            "io_processing/parsing_config.hpp"],
     srcs = ["io_processing/base_output_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -486,9 +487,21 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "text_streamer",
+    hdrs = ["ovms_text_streamer.hpp"],
+    srcs = ["ovms_text_streamer.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libovmslogging",
+        "//third_party:genai",
+        ":output_parsers",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "genai_servables",
     hdrs = ["servable.hpp",
-            "ovms_text_streamer.hpp",
             "servable_initializer.hpp", 
             "language_model/continuous_batching/servable.hpp",
             "language_model/continuous_batching/llm_executor.hpp",
@@ -506,7 +519,6 @@ ovms_cc_library(
             "text_utils.hpp"],
     srcs = ["servable.cpp",
             "servable_initializer.cpp",
-            "ovms_text_streamer.cpp",
             "language_model/continuous_batching/servable.cpp",
             "language_model/continuous_batching/servable_initializer.cpp",
             "visual_language_model/continuous_batching/servable.cpp",
@@ -533,6 +545,7 @@ ovms_cc_library(
         "//src/filesystem:libovmsfilesystem",
         "//src/tokenize:tokenize_parser",
         "llmcalculator_cc_proto",
+        ":text_streamer",
         ":openai_completions_api_handler",
         ":openai_responses_handler",
         ":generation_config_builders",

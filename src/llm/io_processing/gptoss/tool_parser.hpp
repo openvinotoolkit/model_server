@@ -49,33 +49,24 @@ class GptOssToolParser : public BaseOutputParser {
 
 public:
     GptOssToolParser() = delete;
-    explicit GptOssToolParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
+
+    static ParsingConfig defaultParsingConfig() {
+        ParsingConfig cfg;
+        cfg.startTags            = {"<|channel|>commentary to=",
+                                    "<|channel|>analysis to="};
+        cfg.endTag               = "<|call|>";
+        cfg.alwaysNeedsSpecialTokens     = true;
+        cfg.toolCallPhaseNeedsSpecialTokens = true;
+        return cfg;
+    }
+
+    explicit GptOssToolParser(ov::genai::Tokenizer& tokenizer,
+                               std::optional<ParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+                         configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
 
     // Unary
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     // Streaming
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags{
-            parsingStartTag,
-            "<|channel|>analysis to=",  // Workaround: allow tool calls emitted from the analysis channel (non-standard behavior observed in some model outputs).
-        };
-        return parsingStartTags;
-    }
-
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags = {};
-        return specialParsingStartTags;
-    }
-
-    const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
-    }
-
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
 };
 }  // namespace ovms
