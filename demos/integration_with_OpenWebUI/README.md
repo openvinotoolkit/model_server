@@ -461,11 +461,10 @@ Then it's ready to use. In new chat it's possible to toggle **Code Interpreter**
 
 ### Step 1: Models Preparation
 
-Start by downloading `export_model.py` script and run it to download and quantize the model for speech generation:
+Start by pulling the pre-exported Kokoro model with OVMS and adding it to the server config:
 ```console 
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-python export_model.py text2speech --source_model microsoft/speecht5_tts --weight-format fp32 --model_name microsoft/speecht5_tts --config_file_path models/config.json --model_repository_path models --vocoder microsoft/speecht5_hifigan
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --target_device GPU
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json --model_path luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_name Kokoro-82M-OpenVINO-FP16-OVMS
 ```
 
 Next, download and add to config model for transcription:
@@ -496,7 +495,7 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_serve
    * URL: `http://localhost:8000/v3`
    * Set Engine type to `OpenAI` 
    * STT Model: `OpenVINO/whisper-base-fp16-ov`
-   * TTS Model: `microsoft/speecht5_tts`
+   * TTS Model: `Kokoro-82M-OpenVINO-FP16-OVMS`
    * Put anything in API key
 3. Click **Save**
 

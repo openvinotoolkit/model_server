@@ -118,7 +118,6 @@ When pulling models outside of OpenVINO organization the optimum-cli api is used
 |------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
 | `--extra_quantization_params`| `string`     | Add advanced quantization parameters. Check [optimum-intel](https://github.com/huggingface/optimum-intel) documentation. Example: `--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2`  |
 | `--weight-format`            | `string`     | Model precision used in optimum-cli export with conversion. Default `int8`.                |
-| `--vocoder`                  | `string`     | The vocoder model to use for text2speech. For example `microsoft/speecht5_hifigan`.        |
 
 There are also additional environment variables that may change the behavior of pulling:
 
@@ -190,8 +189,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | option                    | Value format | Description                                                                    |
 |---------------------------|--------------|--------------------------------------------------------------------------------|
 | `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
-| `--model_type`            | `string`     | Type of the source TTS model: `speecht5` (default) or `kokoro`.                |
-| `--vocoder`               | `string`     | The vocoder model to use for text2speech. For example `microsoft/speecht5_hifigan`. |
+| `--model_type`            | `string`     | Type of the source TTS model. Supported values: `kokoro` (default, recommended) and `speecht5` (legacy). |
 
 ### Speech to text
 | option                    | Value format | Description                                                                    |
