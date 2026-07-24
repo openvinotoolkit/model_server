@@ -259,7 +259,16 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             properties->pluginConfig, properties->tokenizerPluginConfig);
         properties->tokenizer = properties->pipeline->get_tokenizer();
     } catch (const std::exception& e) {
-        SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
+        // Some architectures (e.g. Gemma) export without a ScaledDotProductAttention op, so the
+        // SDPAToPagedAttention transformation required by continuous batching cannot be applied.
+        // Report this distinctly (at warning level) so callers can fall back to the legacy pipeline
+        // when appropriate, rather than logging it as a hard error on an otherwise-recoverable path.
+        const std::string error = e.what();
+        if (error.find("ScaledDotProductAttention") != std::string::npos) {
+            SPDLOG_WARN("Model at models_path: {} does not support PagedAttention required by continuous batching: {}", parsedModelsPath, error);
+            return StatusCode::LLM_NODE_PAGED_ATTENTION_NOT_SUPPORTED;
+        }
+        SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, error);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
