@@ -31,7 +31,7 @@ This demo can be followed without changes on Panther Lake host with 64GB RAM and
 :sync: Windows
 ```bat
 mkdir models
-ovms.exe --pull --source_model OpenVINO/gpt-oss-20b-int4-ov --model_repository_path models --tool_parser gptoss --reasoning_parser gptoss --task text_generation --target_device GPU
+ovms.exe --pull --source_model OpenVINO/gpt-oss-20b-int4-ov --model_repository_path models --task text_generation --target_device GPU
 ovms.exe --add_to_config --config_path  models\config.json --model_path OpenVINO\gpt-oss-20b-int4-ov --model_name ovms-model
 ovms.exe --rest_port 8000 --config_path models\config.json --allowed_media_domains raw.githubusercontent.com
 ```
@@ -40,7 +40,7 @@ ovms.exe --rest_port 8000 --config_path models\config.json --allowed_media_domai
 :sync: Linux
 ```bash
 mkdir models
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model OpenVINO/gpt-oss-20b-int4-ov --model_repository_path /models --task text_generation --tool_parser gptoss --reasoning_parser gptoss --target_device GPU
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model OpenVINO/gpt-oss-20b-int4-ov --model_repository_path /models --task text_generation --target_device GPU
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path  /models/config.json --model_path OpenVINO/gpt-oss-20b-int4-ov --model_name ovms-model
 docker run -d -u $(id -u):$(id -g) -v $PWD/models:/models -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json --allowed_media_domains raw.githubusercontent.com
 ```
