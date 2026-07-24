@@ -2087,6 +2087,7 @@ cc_binary(
         "//src:windows" : [
             "runtimeobject.lib",
             "oleaut32.lib",
+            "ole32.lib",
         ],
     }),
     copts = COMMON_STATIC_LIBS_COPTS,
