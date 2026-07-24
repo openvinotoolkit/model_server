@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -44,6 +45,85 @@
 #include "../tokenize/tokenize_parser.hpp"
 
 namespace ovms {
+
+static constexpr double MIN_PREFILL_DURATION_MS = 1e-9;
+
+static const char* getPipelineTypeName(GenAiPipelineType pipelineType) {
+    switch (pipelineType) {
+    case GenAiPipelineType::LEGACY:
+        return "legacy";
+    case GenAiPipelineType::CONTINUOUS_BATCHING:
+        return "continuous_batching";
+    }
+    return "unknown";
+}
+
+RequestPerfMetrics getRequestPerfMetrics(
+    ov::genai::PerfMetrics& perfMetrics,
+    double prepareEmbeddingsTimeMs,
+    bool ttftIncludesPrepareEmbeddings) {
+    const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
+    const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();
+    const double metricsTtftMs = perfMetrics.get_ttft().mean;
+    const double llmTtftMs = ttftIncludesPrepareEmbeddings
+                                 ? std::max(metricsTtftMs - prepareEmbeddingsTimeMs, 0.0)
+                                 : metricsTtftMs;
+    const double ttftMs = ttftIncludesPrepareEmbeddings
+                              ? metricsTtftMs
+                              : metricsTtftMs + prepareEmbeddingsTimeMs;
+    const double prefillSpeedTps =
+        (1000.0 * inputTokenCount) / std::max(llmTtftMs, MIN_PREFILL_DURATION_MS);
+
+    return {
+        inputTokenCount,
+        outputTokenCount,
+        inputTokenCount + outputTokenCount,
+        llmTtftMs,
+        ttftMs,
+        prefillSpeedTps};
+}
+
+void logLLMPerfMetricsDebug(ov::genai::PerfMetrics& perfMetrics, GenAiPipelineType pipelineType) {
+    if (!llm_calculator_logger->should_log(spdlog::level::debug)) {
+        return;
+    }
+    const auto metrics = getRequestPerfMetrics(perfMetrics);
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "LLM {} request metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f}",
+        getPipelineTypeName(pipelineType),
+        metrics.inputTokenCount,
+        metrics.outputTokenCount,
+        metrics.totalTokenCount,
+        metrics.ttftMs,
+        metrics.prefillSpeedTps);
+}
+
+void logVLMPerfMetricsDebug(
+    ov::genai::VLMPerfMetrics& perfMetrics,
+    GenAiPipelineType pipelineType,
+    bool ttftIncludesPrepareEmbeddings) {
+    if (!llm_calculator_logger->should_log(spdlog::level::debug)) {
+        return;
+    }
+    const double prepareEmbeddingsTimeMs = perfMetrics.get_prepare_embeddings_duration().mean;
+    const auto metrics = getRequestPerfMetrics(
+        perfMetrics,
+        prepareEmbeddingsTimeMs,
+        ttftIncludesPrepareEmbeddings);
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "VLM {} request metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | prepare_embeddings_time_ms: {:.3f} | llm_ttft_ms: {:.3f} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f} | image_slice_count: {}",
+        getPipelineTypeName(pipelineType),
+        metrics.inputTokenCount,
+        metrics.outputTokenCount,
+        metrics.totalTokenCount,
+        prepareEmbeddingsTimeMs,
+        metrics.llmTtftMs,
+        metrics.ttftMs,
+        metrics.prefillSpeedTps,
+        perfMetrics.get_total_image_slice_count());
+}
 
 void GenAiServable::determineDecodingMethod() {
     getProperties()->decodingMethod = DecodingMethod::STANDARD;

@@ -188,6 +188,7 @@ absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServab
         return absl::CancelledError();
     }
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
+    logLLMPerfMetricsDebug(legacyExecutionContext->results.perf_metrics, GenAiPipelineType::LEGACY);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
@@ -275,6 +276,7 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        logLLMPerfMetricsDebug(legacyExecutionContext->results.perf_metrics, GenAiPipelineType::LEGACY);
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }

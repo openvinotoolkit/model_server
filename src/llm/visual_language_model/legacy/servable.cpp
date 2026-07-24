@@ -229,6 +229,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
     const std::string& completeText = legacyExecutionContext->accumulatedUnaryText;
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
         legacyExecutionContext->results, completeText);
+    logVLMPerfMetricsDebug(legacyExecutionContext->results.perf_metrics, GenAiPipelineType::LEGACY, true);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
@@ -323,6 +324,7 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        logVLMPerfMetricsDebug(legacyExecutionContext->results.perf_metrics, GenAiPipelineType::LEGACY, true);
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }

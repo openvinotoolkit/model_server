@@ -28,7 +28,9 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <rapidjson/document.h>
+#include <openvino/genai/perf_metrics.hpp>
 #include "openvino/genai/text_streamer.hpp"
+#include <openvino/genai/visual_language/perf_metrics.hpp>
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
@@ -47,6 +49,30 @@
 namespace ovms {
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
+
+enum class GenAiPipelineType {
+    LEGACY,
+    CONTINUOUS_BATCHING,
+};
+
+struct RequestPerfMetrics {
+    size_t inputTokenCount;
+    size_t outputTokenCount;
+    size_t totalTokenCount;
+    double llmTtftMs;
+    double ttftMs;
+    double prefillSpeedTps;
+};
+
+RequestPerfMetrics getRequestPerfMetrics(
+    ov::genai::PerfMetrics& perfMetrics,
+    double prepareEmbeddingsTimeMs = 0.0,
+    bool ttftIncludesPrepareEmbeddings = false);
+void logLLMPerfMetricsDebug(ov::genai::PerfMetrics& perfMetrics, GenAiPipelineType pipelineType);
+void logVLMPerfMetricsDebug(
+    ov::genai::VLMPerfMetrics& perfMetrics,
+    GenAiPipelineType pipelineType,
+    bool ttftIncludesPrepareEmbeddings);
 
 /*
 GenAiServable support.

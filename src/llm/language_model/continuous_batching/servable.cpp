@@ -144,4 +144,26 @@ absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared
     return absl::OkStatus();
 }
 
+absl::Status ContinuousBatchingServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto status = GenAiServable::prepareCompleteResponse(executionContext);
+    if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
+        auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
+        auto perfMetrics = cbExecutionContext->generationHandle->get_perf_metrics();
+        logLLMPerfMetricsDebug(perfMetrics, GenAiPipelineType::CONTINUOUS_BATCHING);
+    }
+    return status;
+}
+
+absl::Status ContinuousBatchingServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto status = GenAiServable::preparePartialResponse(executionContext);
+    if (status.ok() &&
+        !executionContext->sendLoopbackSignal &&
+        llm_calculator_logger->should_log(spdlog::level::debug)) {
+        auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
+        auto perfMetrics = cbExecutionContext->generationHandle->get_perf_metrics();
+        logLLMPerfMetricsDebug(perfMetrics, GenAiPipelineType::CONTINUOUS_BATCHING);
+    }
+    return status;
+}
+
 }  // namespace ovms
