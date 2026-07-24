@@ -64,7 +64,19 @@ pipeline {
       timeout(time: 4, unit: 'HOURS')
     }
     triggers {
-      issueCommentTrigger('.*ok-to-build*')
+      GenericTrigger(
+        genericVariables: [
+          [key: 'gh_event', value: '$.action'],
+          [key: 'gh_comment', value: '$.comment.body'],
+          [key: 'gh_assoc', value: '$.comment.author_association'],
+          [key: 'gh_pr_number', value: '$.issue.number']
+        ],
+        regexpFilterText: '$gh_event $gh_comment $gh_assoc $gh_pr_number',
+        regexpFilterExpression: '^created (?s:.*)ok-to-build(?s:.*) (MEMBER|OWNER|COLLABORATOR) [0-9]+$',
+        causeString: 'Triggered by trusted PR comment: $gh_comment',
+        printContributedVariables: true,
+        printPostContent: false
+      )
     }
     stages {
         stage('Configure') {
