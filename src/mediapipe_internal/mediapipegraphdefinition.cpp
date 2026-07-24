@@ -210,6 +210,42 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     if (!validationResult.ok()) {
         return validationResult;
     }
+    // Phase-1 restriction: idle unload is not supported for graphs with Python nodes.
+    // Python nodes may hold per-request iterator state (e.g. PythonExecutorCalculator)
+    // that cannot be safely reconstructed after a resource-free/reload cycle.
+    if (mgconfig.getIdleUnloadTimeoutSeconds() > 0) {
+        for (int i = 0; i < this->config.node_size(); ++i) {
+            const std::string& calculator = this->config.node(i).calculator();
+            if (calculator == "PythonExecutorCalculator" || calculator == "PyTorchCalculator") {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                    "Mediapipe graph {}: idle_unload_timeout_seconds is not supported for graphs "
+                    "containing Python calculator nodes ({}). "
+                    "Remove idle_unload_timeout_seconds or remove the Python node.",
+                    getName(), calculator);
+                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            }
+        }
+        // Phase-1 scope restriction: idle_unload_timeout_seconds is validated only for
+        // LLM/VLM continuous-batching graphs (graphs containing HttpLLMCalculator).
+        // Other node types (embeddings, rerank, STT, TTS, image-gen, plain passthrough)
+        // have not been validated for the idle-unload/lazy-reload cycle.
+        bool hasLlmCalculator = false;
+        for (int i = 0; i < this->config.node_size(); ++i) {
+            if (this->config.node(i).calculator() == "HttpLLMCalculator") {
+                hasLlmCalculator = true;
+                break;
+            }
+        }
+        if (!hasLlmCalculator) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                "Mediapipe graph {}: idle_unload_timeout_seconds is only supported for "
+                "LLM/VLM continuous-batching graphs (HttpLLMCalculator) in this release. "
+                "Remove idle_unload_timeout_seconds from non-LLM graph configurations.",
+                getName());
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
+    }
+
     validationResult = resolveGraphQueueSize();
     if (!validationResult.ok()) {
         return validationResult;
@@ -257,6 +293,8 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
 
     lock.unlock();
     notifier.passed = true;
+    // Graph resources are now loaded (covers both initial load and wake-up reload).
+    SET_IF_ENABLED(this->reporter->graphLoaded, 1);
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
@@ -294,7 +332,18 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     pythonBackend(pythonBackend),
     reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
     mgconfig = config;
+    idleUnloadTimeoutSecondsCache.store(mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     passKfsRequestFlag = false;
+    // Allocate lastActivityTimeNs initialized to now so the idle timer starts from
+    // when the graph was loaded, not from the steady_clock epoch (which would
+    // cause immediate unload of a freshly loaded graph before any request arrives).
+    // Held as a shared_ptr so executors can safely refresh it even after the
+    // definition is retired/destroyed.
+    lastActivityTimeNs = std::make_shared<std::atomic<int64_t>>(
+        std::chrono::steady_clock::now().time_since_epoch().count());
+    // Allocate the active-inference counter once; shared with every executor
+    // created by this definition so executors can decrement it on completion.
+    activeInferenceCount = std::make_shared<std::atomic<int64_t>>(0);
 }
 
 Status MediapipeGraphDefinition::createInputsInfo() {
@@ -351,6 +400,13 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
 }
 
 Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>& pipeline) {
+    // Update idle-tracking timestamp on every inference acquisition path.
+    // Status endpoints / health checks do not reach this method, so idle
+    // tracking is automatically inference-only.
+    lastActivityTimeNs->store(
+        std::chrono::steady_clock::now().time_since_epoch().count(),
+        std::memory_order_relaxed);
+
     std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
     if (!status.ok()) {
@@ -363,12 +419,14 @@ Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>&
         pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
             this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
             *this->sidePacketMaps,
-            this->pythonBackend, this->reporter.get(), std::move(graphIdGuard));
+            this->pythonBackend, this->reporter.get(), std::move(graphIdGuard),
+            this->activeInferenceCount, this->lastActivityTimeNs);
     } else {
         pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
             this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
             *this->sidePacketMaps,
-            this->pythonBackend, this->reporter.get());
+            this->pythonBackend, this->reporter.get(),
+            this->activeInferenceCount, this->lastActivityTimeNs);
     }
     SPDLOG_DEBUG("Created Mediapipe graph executor: {}", getName());
     return status;
@@ -438,18 +496,25 @@ Status MediapipeGraphDefinition::setStreamTypes() {
 }
 
 Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config) {
+    // Serialize against unload()/wakeUp() on the watcher/request threads.
+    // Recursive: wakeUpIfUnloaded() already holds this and calls reload().
+    std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
     while (requestsHandlesCounter > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     this->mgconfig = config;
+    // Refresh the lock-free cache while we still hold lifecycleMtx.
+    idleUnloadTimeoutSecondsCache.store(this->mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     this->queue.reset();
     this->sidePacketMaps = std::make_shared<GraphSidePackets>();
     return validate(checker);
 }
 
 void MediapipeGraphDefinition::retire() {
+    // Serialize against unload()/wakeUp()/reload() on other threads.
+    std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
     // Block creating new unloadGuards
     this->status.handle(RetireEvent());
     while (requestsHandlesCounter > 0) {
@@ -457,6 +522,142 @@ void MediapipeGraphDefinition::retire() {
     }
     this->queue.reset();
     this->sidePacketMaps.reset();
+}
+
+bool MediapipeGraphDefinition::isIdleUnloadEnabled() const {
+    // Lock-free read of the cached timeout (mgconfig is only safe under lifecycleMtx).
+    return idleUnloadTimeoutSecondsCache.load(std::memory_order_relaxed) > 0;
+}
+
+bool MediapipeGraphDefinition::shouldUnloadDueToIdle() const {
+    // Advisory pre-filter ONLY — reads no unsynchronized per-definition state.
+    // It must NOT read this->status (the state-machine variant) without the lock,
+    // since the config thread can mutate it concurrently. unload() performs the
+    // authoritative state==AVAILABLE check under lifecycleMtx.
+    // requestsHandlesCounter, lastActivityTimeNs and idleUnloadTimeoutSecondsCache
+    // are all atomics, so every read here is data-race-free. We never read mgconfig
+    // (only safe under lifecycleMtx) on this advisory path.
+    int64_t timeoutSeconds = idleUnloadTimeoutSecondsCache.load(std::memory_order_relaxed);
+    if (timeoutSeconds <= 0) {
+        return false;
+    }
+    if (requestsHandlesCounter.load(std::memory_order_relaxed) != 0) {
+        return false;
+    }
+    // Guard: if inferences are actively executing, never report idle.
+    // activeInferenceCount is bumped when a MediapipeGraphExecutor is created (in
+    // create()) by its RAII ActiveInferenceGuard, held for the executor's lifetime
+    // (which spans the inference), and decremented (with a lastActivityTimeNs refresh)
+    // when the executor is destroyed after the inference completes or throws.
+    if (activeInferenceCount && activeInferenceCount->load(std::memory_order_acquire) > 0) {
+        return false;
+    }
+    int64_t lastActivity = lastActivityTimeNs->load(std::memory_order_relaxed);
+    int64_t nowNs = std::chrono::steady_clock::now().time_since_epoch().count();
+    int64_t timeoutNs = timeoutSeconds * 1'000'000'000LL;
+    return (nowNs - lastActivity) >= timeoutNs;
+}
+
+Status MediapipeGraphDefinition::unload() {
+    // Serialize against wakeUpIfUnloaded()/reload()/retire() using the SAME lock so
+    // all lifecycle mutations are mutually exclusive. This prevents the watcher thread
+    // from tearing down resources while the config thread reloads/retires, or while a
+    // request thread is in the middle of a wake-up reload.
+    std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
+
+    // Re-check the preconditions under the lock. Only AVAILABLE graphs with no
+    // in-flight requests may be unloaded. If the state changed (e.g. a wake-up
+    // moved us to RELOADING/AVAILABLE) or a request arrived after the watcher's
+    // shouldUnloadDueToIdle() check, skip this cycle WITHOUT touching resources.
+    if (status.getStateCode() != PipelineDefinitionStateCode::AVAILABLE) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+            "Skipping idle-unload of mediapipe graph {}: state is no longer AVAILABLE", getName());
+        return StatusCode::OK;
+    }
+    if (requestsHandlesCounter.load(std::memory_order_acquire) != 0) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+            "Skipping idle-unload of mediapipe graph {}: requests in flight", getName());
+        return StatusCode::OK;
+    }
+    // Guard: if inferences are actively executing, skip this unload cycle.
+    // This catches the case where the executor's inference is running (past create())
+    // but before ActiveInferenceGuard has decremented — i.e. a long generation that
+    // outlives idle_unload_timeout_seconds. Re-checked under the lock so the decision
+    // is consistent with the in-flight inference completing concurrently.
+    if (activeInferenceCount && activeInferenceCount->load(std::memory_order_acquire) > 0) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+            "Skipping idle-unload of mediapipe graph {}: active inferences in progress", getName());
+        return StatusCode::OK;
+    }
+
+    // Transition state: AVAILABLE -> UNLOADED (blocks new unloadGuards in waitForLoaded).
+    this->status.handle(UnloadEvent());
+
+    // Defensive: only tear down resources if the transition actually happened.
+    // (UnloadEvent is a no-op on any non-AVAILABLE state.)
+    if (status.getStateCode() != PipelineDefinitionStateCode::UNLOADED) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger,
+            "Idle-unload of mediapipe graph {} aborted: state did not transition to UNLOADED (now {})",
+            getName(), pipelineDefinitionStateCodeToString(status.getStateCode()));
+        return StatusCode::OK;
+    }
+
+    // Once UNLOADED, no new unloadGuards can be acquired and we verified
+    // requestsHandlesCounter == 0 above, so there is nothing to drain.
+    // Release queue (pooled graphs hold GPU/CPU resources).
+    this->queue.reset();
+    // Release heavy side-packet resources (GenAI servables, embeddings, etc.)
+    // Keep the sidePacketMaps object itself — clear() drops the shared_ptrs inside,
+    // freeing GPU VRAM.  validate()/initializeNodes() will repopulate it on wake-up.
+    this->sidePacketMaps->clear();
+
+    SET_IF_ENABLED(this->reporter->graphLoaded, 0);
+    SPDLOG_LOGGER_INFO(modelmanager_logger,
+        "Mediapipe graph {} idle-unloaded (freed GPU/CPU resources after {}s idle timeout)",
+        getName(), mgconfig.getIdleUnloadTimeoutSeconds());
+    return StatusCode::OK;
+}
+
+Status MediapipeGraphDefinition::wakeUpIfUnloaded(const ServableNameChecker& checker) {
+    // Recursive: this holds lifecycleMtx and then calls reload(), which re-acquires it.
+    std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
+    // Double-check under lock: another thread may have already completed the reload.
+    if (status.getStateCode() != PipelineDefinitionStateCode::UNLOADED) {
+        return StatusCode::OK;
+    }
+    // Re-use the existing reload path:
+    //   handle(ReloadEvent) -> fresh sidePacketMaps -> validate() -> initializeNodes()
+    // The stored mgconfig holds all required configuration.
+    SPDLOG_LOGGER_INFO(modelmanager_logger,
+        "Mediapipe graph {} is UNLOADED; triggering lazy wake-up reload", getName());
+    auto start = std::chrono::steady_clock::now();
+    Status reloadStatus = reload(checker, this->mgconfig);
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - start);
+    if (reloadStatus.ok()) {
+        // Only reset the idle timer on a successful wake; on failure leave it so
+        // the existing failure-state handling applies and we don't mask the error.
+        lastActivityTimeNs->store(
+            std::chrono::steady_clock::now().time_since_epoch().count(),
+            std::memory_order_relaxed);
+        SPDLOG_LOGGER_INFO(modelmanager_logger,
+            "Mediapipe graph {} wake-up completed in {}ms",
+            getName(), elapsed.count());
+    } else {
+        // Wake-up reload failed (e.g. model files temporarily unavailable). reload()
+        // ran validate() which left the state in LOADING_PRECONDITION_FAILED. Revert
+        // to UNLOADED so the NEXT inference request retries the wake — making a
+        // transient failure self-healing rather than permanently wedging a previously
+        // healthy idle graph. We are still holding lifecycleMtx here.
+        // (If validate() somehow ended elsewhere, UnloadEvent is a no-op on states
+        // other than AVAILABLE/LOADING_PRECONDITION_FAILED, so this is safe.)
+        this->status.handle(UnloadEvent());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger,
+            "Mediapipe graph {} wake-up failed after {}ms: {}. Reverted to UNLOADED; "
+            "next request will retry the wake.",
+            getName(), elapsed.count(), reloadStatus.string());
+    }
+    return reloadStatus;
 }
 
 bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& config) const {

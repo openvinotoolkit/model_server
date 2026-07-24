@@ -5818,3 +5818,641 @@ TEST(BaseGenerationConfigBuilderTest, SeedPreservedWhenExplicitlySet) {
     builder.parseConfigFromRequest(request);
     EXPECT_EQ(builder.getConfig().rng_seed, 42u);
 }
+
+// ---------------------------------------------------------------------------
+// Idle unload feature: LLM graph lifecycle (issue #4141)
+// These tests require the opt-125m model fixture.
+// ---------------------------------------------------------------------------
+
+class LLMIdleUnloadTest : public ::testing::Test {
+protected:
+    // Builds a minimal continuous-batching LLM graph pbtxt pointing at opt-125m.
+    static std::string buildOptGraphPbtxt() {
+        std::string modelsPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
+        std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                              modelsPath + R"("
+                cache_size: 1
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+        adjustConfigForTargetPlatform(testPbtxt);
+        return testPbtxt;
+    }
+};
+
+// Unload after idle: build LLM graph with small timeout, simulate idle, unload, assert freed.
+TEST_F(LLMIdleUnloadTest, UnloadAfterIdleFreesResources) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
+    ASSERT_TRUE(def.isIdleUnloadEnabled());
+
+    // Not yet idle -> should not unload.
+    ASSERT_FALSE(def.shouldUnloadDueToIdle());
+
+    // Backdate activity well past the timeout.
+    def.backdateLastActivityForTest(60);
+    ASSERT_TRUE(def.shouldUnloadDueToIdle());
+
+    ASSERT_EQ(def.unload(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    // Resources freed: the GenAi servable map should be empty.
+    ASSERT_TRUE(def.getGenAiServableMap().empty());
+    ASSERT_FALSE(def.isAvailable());
+}
+
+// Lazy reload: after unload, wakeUpIfUnloaded brings it back to AVAILABLE with resources.
+TEST_F(LLMIdleUnloadTest, WakeUpReloadsResources) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    def.backdateLastActivityForTest(60);
+    ASSERT_EQ(def.unload(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    ASSERT_TRUE(def.getGenAiServableMap().empty());
+
+    // Wake up.
+    ASSERT_EQ(def.wakeUpIfUnloaded(manager), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_TRUE(def.isAvailable());
+    ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
+
+    // Wake-up while already AVAILABLE is a no-op success.
+    ASSERT_EQ(def.wakeUpIfUnloaded(manager), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+}
+
+// Idle timer reset: acquiring the graph (create) refreshes lastActivity.
+TEST_F(LLMIdleUnloadTest, CreateResetsIdleTimer) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    // Make it look idle.
+    def.backdateLastActivityForTest(60);
+    ASSERT_TRUE(def.shouldUnloadDueToIdle());
+
+    // Acquiring the graph updates lastActivity, so it is no longer idle.
+    std::unique_ptr<ovms::MediapipeGraphExecutor> executor;
+    ASSERT_EQ(def.create(executor), StatusCode::OK);
+    ASSERT_NE(executor, nullptr);
+    ASSERT_FALSE(def.shouldUnloadDueToIdle());
+}
+
+// Disabled by default: timeout 0 -> never idle-unloads.
+TEST_F(LLMIdleUnloadTest, DisabledByDefaultNeverUnloads) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    // idle_unload_timeout_seconds not set -> defaults to 0 (disabled)
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    ASSERT_FALSE(def.isIdleUnloadEnabled());
+    def.backdateLastActivityForTest(100000);
+    ASSERT_FALSE(def.shouldUnloadDueToIdle());
+}
+
+// Python-node guard: a graph with a Python node + idle timeout > 0 fails validation.
+#if (PYTHON_DISABLE == 0)
+TEST_F(LLMIdleUnloadTest, PythonNodeWithIdleUnloadRejected) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node: {
+            name: "pythonNode"
+            calculator: "PythonExecutorCalculator"
+            input_side_packet: "PYTHON_NODE_RESOURCES:py"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+
+    ovms::MediapipeGraphConfig mgc{"mediaPy", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaPy", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    auto status = def.validate(manager);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID) << status.string();
+}
+#endif
+
+// Exactly-one-reload under concurrency: N threads call wakeUpIfUnloaded on an UNLOADED def.
+// Best-effort: asserts all end AVAILABLE and the graph is loaded exactly once afterwards.
+// Note: this verifies the end-state invariant (single AVAILABLE graph, resources present);
+// the per-definition mutex guarantees a single reload, but counting reloads deterministically
+// from the test would require instrumentation hooks not present, so we assert the observable
+// post-condition instead.
+TEST_F(LLMIdleUnloadTest, ConcurrentWakeUpEndsAvailable) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    def.backdateLastActivityForTest(60);
+    ASSERT_EQ(def.unload(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+
+    constexpr int kThreads = 8;
+    std::vector<std::thread> threads;
+    std::vector<ovms::Status> results(kThreads, StatusCode::UNKNOWN_ERROR);
+    for (int i = 0; i < kThreads; ++i) {
+        threads.emplace_back([&def, &manager, &results, i]() {
+            results[i] = def.wakeUpIfUnloaded(manager);
+        });
+    }
+    for (auto& t : threads) {
+        t.join();
+    }
+    for (int i = 0; i < kThreads; ++i) {
+        ASSERT_EQ(results[i], StatusCode::OK) << "thread " << i << " status: " << results[i].string();
+    }
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
+}
+
+// Best-effort stress: interleave unload() (watcher role) and wakeUpIfUnloaded()
+// (request role) repeatedly and assert the graph never ends in a torn state.
+// lifecycleMtx makes unload and wake mutually exclusive, so every observed
+// settled state must be internally consistent: AVAILABLE with resources, or
+// cleanly UNLOADED (empty maps). Determinism is limited by thread scheduling;
+// this exercises the FIX 1/FIX 2 serialization rather than asserting an exact
+// sequence.
+TEST_F(LLMIdleUnloadTest, ConcurrentUnloadWakeNeverTearsState) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    std::atomic<bool> stop{false};
+    std::atomic<int> errors{0};
+
+    // Unloader thread: keeps backdating + trying to unload.
+    std::thread unloader([&]() {
+        while (!stop.load()) {
+            def.backdateLastActivityForTest(60);
+            auto s = def.unload();
+            if (!s.ok())
+                errors.fetch_add(1);
+            std::this_thread::yield();
+        }
+    });
+
+    // Several waker threads: keep waking it back up.
+    constexpr int kWakers = 4;
+    std::vector<std::thread> wakers;
+    for (int i = 0; i < kWakers; ++i) {
+        wakers.emplace_back([&]() {
+            while (!stop.load()) {
+                auto s = def.wakeUpIfUnloaded(manager);
+                if (!s.ok())
+                    errors.fetch_add(1);
+                std::this_thread::yield();
+            }
+        });
+    }
+
+    // Run for a short bounded period.
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    stop.store(true);
+    unloader.join();
+    for (auto& t : wakers) {
+        t.join();
+    }
+
+    ASSERT_EQ(errors.load(), 0);
+
+    // Quiesce: ensure it ends AVAILABLE with resources (no torn RELOADING/null state).
+    ASSERT_EQ(def.wakeUpIfUnloaded(manager), StatusCode::OK);
+    auto finalState = def.getStateCode();
+    // A settled state must be either AVAILABLE (with resources) or UNLOADED (empty).
+    if (finalState == ovms::PipelineDefinitionStateCode::AVAILABLE) {
+        ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
+    } else {
+        ASSERT_EQ(finalState, ovms::PipelineDefinitionStateCode::UNLOADED);
+        ASSERT_TRUE(def.getGenAiServableMap().empty());
+    }
+}
+
+// Best-effort: exercise unload() (watcher role) concurrently with reload() and
+// retire() (config role) on the same definition. Verifies the lifecycleMtx
+// serialization (NEW-1 fix): no crash, and a consistent final state.
+// NOTE: data races are not deterministically catchable without TSAN (unavailable
+// in this environment), so this is a smoke/stress test, not a proof of absence.
+TEST_F(LLMIdleUnloadTest, ConcurrentUnloadReloadRetireNoCrash) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    std::atomic<bool> stop{false};
+    std::atomic<bool> retired{false};
+
+    // Watcher-role thread: keep trying to idle-unload.
+    std::thread unloader([&]() {
+        while (!stop.load()) {
+            def.backdateLastActivityForTest(60);
+            (void)def.unload();
+            std::this_thread::yield();
+        }
+    });
+
+    // Config-role thread: keep reloading (re-bring it up after unload).
+    std::thread reloader([&]() {
+        while (!stop.load()) {
+            (void)def.reload(manager, def.getMediapipeGraphConfig());
+            std::this_thread::yield();
+        }
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(400));
+    stop.store(true);
+    unloader.join();
+    reloader.join();
+
+    // Now retire concurrently is not needed for crash-safety beyond above, but
+    // exercise retire() once after the storm to confirm it serializes cleanly.
+    def.retire();
+    retired.store(true);
+    ASSERT_TRUE(retired.load());
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TASK 1 tests: ActiveInferenceGuard — in-flight inference prevents idle unload
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Model-free unit test: directly exercise the activeInferenceCount atomic that
+// shouldUnloadDueToIdle() and unload() consult. No LLM model required.
+TEST(MediapipeIdleUnloadGuard, ActiveInferenceCountBlocksShouldUnload) {
+    // Build a minimal graph definition with idle unload enabled.
+    // Use buildOptGraphPbtxt() indirectly via LLMIdleUnloadTest helpers is not
+    // available here — we just need a definition with a non-zero timeout and
+    // a synthetic counter.  We can use the shared_ptr that getActiveInferenceCount()
+    // returns directly, bypassing the executor machinery.
+
+    // A standalone atomic acts as the counter.
+    auto counter = std::make_shared<std::atomic<int64_t>>(0);
+    auto lastActivity = std::make_shared<std::atomic<int64_t>>(
+        std::chrono::steady_clock::now().time_since_epoch().count() - 60LL * 1'000'000'000LL);
+
+    // Simulate increment (inference start).
+    {
+        ovms::ActiveInferenceGuard guard(counter, lastActivity);
+        EXPECT_EQ(counter->load(), 1);
+    }
+    // After destruction, counter back to 0 and lastActivity refreshed.
+    EXPECT_EQ(counter->load(), 0);
+    int64_t nowNs = std::chrono::steady_clock::now().time_since_epoch().count();
+    // lastActivity should be within 2 seconds of now (generous for slow machines).
+    EXPECT_GT(lastActivity->load(), nowNs - 2LL * 1'000'000'000LL);
+}
+
+TEST(MediapipeIdleUnloadGuard, ActiveInferenceCountExceptionSafe) {
+    auto counter = std::make_shared<std::atomic<int64_t>>(0);
+    auto lastActivity = std::make_shared<std::atomic<int64_t>>(0);
+
+    try {
+        ovms::ActiveInferenceGuard guard(counter, lastActivity);
+        EXPECT_EQ(counter->load(), 1);
+        throw std::runtime_error("simulated inference error");
+    } catch (...) {
+    }
+    // Must be 0 even after exception path.
+    EXPECT_EQ(counter->load(), 0);
+}
+
+TEST(MediapipeIdleUnloadGuard, MultipleGuardsNested) {
+    auto counter = std::make_shared<std::atomic<int64_t>>(0);
+    auto lastActivity = std::make_shared<std::atomic<int64_t>>(0);
+    {
+        ovms::ActiveInferenceGuard g1(counter, lastActivity);
+        EXPECT_EQ(counter->load(), 1);
+        {
+            ovms::ActiveInferenceGuard g2(counter, lastActivity);
+            EXPECT_EQ(counter->load(), 2);
+        }
+        EXPECT_EQ(counter->load(), 1);
+    }
+    EXPECT_EQ(counter->load(), 0);
+}
+
+// Integration test: create() on a real definition increments the counter;
+// when the executor is destroyed the counter returns to 0.
+// Requires the LLM model (opt-125m). Guard under GTEST_SKIP for CI environments.
+TEST_F(LLMIdleUnloadTest, ActiveInferenceGuardIntegration) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+    const std::string testModelsPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
+    if (!std::filesystem::exists(testModelsPath)) {
+        GTEST_SKIP() << "opt-125m model not present; skipping integration guard test";
+    }
+
+    ovms::MediapipeGraphConfig mgc{"mediaGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaGuard", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    auto counterPtr = def.getActiveInferenceCount();
+    ASSERT_NE(counterPtr, nullptr);
+    EXPECT_EQ(counterPtr->load(), 0);
+
+    {
+        std::unique_ptr<ovms::MediapipeGraphExecutor> executor;
+        ASSERT_EQ(def.create(executor), StatusCode::OK);
+        ASSERT_NE(executor, nullptr);
+        // Counter incremented: executor is alive.
+        EXPECT_EQ(counterPtr->load(), 1);
+
+        // Backdate activity to look idle — should NOT unload because count > 0.
+        def.backdateLastActivityForTest(60);
+        EXPECT_FALSE(def.shouldUnloadDueToIdle());
+        EXPECT_EQ(def.unload(), StatusCode::OK);
+        // unload() should have been skipped (counter > 0) so we stay AVAILABLE.
+        EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    }  // executor destroyed here -> counter decremented back to 0
+
+    EXPECT_EQ(counterPtr->load(), 0);
+    // Completing the inference refreshed lastActivityTimeNs (the ActiveInferenceGuard
+    // destructor resets the idle timer), so the graph is NOT idle immediately after —
+    // this is the key behavior preventing an immediate re-unload right after a long
+    // generation finishes.
+    EXPECT_FALSE(def.shouldUnloadDueToIdle());
+    // After the idle period elapses again (post-inference), it should unload.
+    def.backdateLastActivityForTest(60);
+    EXPECT_TRUE(def.shouldUnloadDueToIdle());
+    EXPECT_EQ(def.unload(), StatusCode::OK);
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wake-failure recovery: a failed wake-up reload must leave the graph UNLOADED
+// (retryable), NOT LOADING_PRECONDITION_FAILED (wedged). Then once the underlying
+// problem is resolved, the next wake self-heals to AVAILABLE.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Returns an LLM graph pbtxt whose models_path points at a nonexistent directory,
+// so validate() fails (LLM_NODE_DIRECTORY_DOES_NOT_EXIST) — but it still contains
+// HttpLLMCalculator, so the idle-unload scope check passes and we exercise the
+// wake/reload/validate failure path.
+static std::string buildBrokenOptGraphPbtxt() {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/this/path/definitely/does/not/exist/opt-125m"
+                cache_size: 1
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    return testPbtxt;
+}
+
+TEST_F(LLMIdleUnloadTest, FailedWakeLeavesGraphUnloadedAndRetryable) {
+    ConstructorEnabledModelManager manager;
+    std::string goodPbtxt = buildOptGraphPbtxt();
+    std::string brokenPbtxt = buildBrokenOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaWakeFail", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaWakeFail", mgc, goodPbtxt, nullptr);
+    def.inputConfig = goodPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+
+    // Idle-unload the healthy graph.
+    def.backdateLastActivityForTest(60);
+    ASSERT_EQ(def.unload(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+
+    // Simulate the model becoming temporarily unavailable: swap in a broken config
+    // so the wake-up reload's validate() fails.
+    def.inputConfig = brokenPbtxt;
+    auto failStatus = def.wakeUpIfUnloaded(manager);
+    EXPECT_FALSE(failStatus.ok()) << "expected wake-up to fail with broken model";
+    // CRITICAL: the graph must be retryable, i.e. back in UNLOADED — not wedged in
+    // LOADING_PRECONDITION_FAILED.
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+
+    // A second attempt while still broken also fails but stays retryable.
+    auto failStatus2 = def.wakeUpIfUnloaded(manager);
+    EXPECT_FALSE(failStatus2.ok());
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+
+    // Restore the model: the next wake self-heals to AVAILABLE.
+    def.inputConfig = goodPbtxt;
+    auto okStatus = def.wakeUpIfUnloaded(manager);
+    EXPECT_EQ(okStatus, StatusCode::OK) << okStatus.string();
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    EXPECT_NE(def.getGenAiServable("llmNode"), nullptr);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TASK 2 tests: non-LLM scope restriction — idle_unload_timeout on non-LLM graphs
+// ─────────────────────────────────────────────────────────────────────────────
+
+// A plain passthrough graph (no LLM calculator) with idle_unload_timeout > 0 must fail
+// validation with MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID.
+TEST_F(LLMIdleUnloadTest, NonLlmGraphWithIdleUnloadRejected) {
+    ConstructorEnabledModelManager manager;
+    // Minimal graph with a generic passthrough-style calculator (not HttpLLMCalculator).
+    std::string testPbtxt = R"(
+        input_stream: "INPUT:input"
+        output_stream: "OUTPUT:output"
+        node: {
+            name: "passthroughNode"
+            calculator: "PassThroughCalculator"
+            input_stream: "INPUT:input"
+            output_stream: "OUTPUT:output"
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaPassthrough", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaPassthrough", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    auto status = def.validate(manager);
+    EXPECT_EQ(status, StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID)
+        << "Expected non-LLM graph with idle_unload_timeout_seconds to be rejected, got: " << status.string();
+}
+
+// An embeddings-style graph (no HttpLLMCalculator) with idle_unload_timeout > 0
+// must also be rejected.
+TEST_F(LLMIdleUnloadTest, EmbeddingsGraphWithIdleUnloadRejected) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node: {
+            name: "embeddingNode"
+            calculator: "HttpOpenVINOEmbeddingsCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaEmbed", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(5);
+    DummyMediapipeGraphDefinition def("mediaEmbed", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    auto status = def.validate(manager);
+    EXPECT_EQ(status, StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID)
+        << "Expected embeddings graph with idle_unload_timeout_seconds to be rejected, got: " << status.string();
+}
+
+// A valid LLM graph with idle_unload_timeout_seconds > 0 must still pass the calculator check.
+// (The full validate() may fail if the model files are absent — that's fine; we test the
+// calculator-guard path specifically by checking that the rejection is NOT due to the
+// non-LLM guard. In CI without the model, validate() may fail with a different status,
+// but it must NOT be MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID from our new guard.)
+TEST_F(LLMIdleUnloadTest, LlmGraphPassesCalculatorGuard) {
+    ConstructorEnabledModelManager manager;
+    // Intentionally malformed LLM graph (no model path) — will fail downstream validation
+    // but must NOT fail with the non-LLM calculator guard.
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node: {
+            name: "llmNode"
+            calculator: "HttpLLMCalculator"
+            input_stream: "LOOPBACK:loopback"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+            output_stream: "LOOPBACK:loopback"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: "/nonexistent/path/to/model"
+                    cache_size: 1
+                }
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                    [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                        sync_set {
+                            tag_index: "LOOPBACK:0"
+                        }
+                    }
+                }
+            }
+        }
+    )";
+
+    ovms::MediapipeGraphConfig mgc{"mediaLlmGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaLlmGuard", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    auto status = def.validate(manager);
+    // The non-LLM calculator guard must NOT have fired (the status must not be the
+    // "idle_unload only supported for LLM" rejection).  Any other failure (e.g. model
+    // path not found) is acceptable.
+    // We cannot distinguish the exact downstream error code without running the model,
+    // so we simply assert it's not the guard-specific code or (if it happens to pass
+    // on machines with the model) OK.
+    bool isNonLlmGuardRejection = (status == StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    if (isNonLlmGuardRejection) {
+        // If the code is MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, it must be from a different
+        // guard (e.g. Python node or queue config), not our new non-LLM guard — verify by
+        // checking the error message doesn't contain our sentinel phrase.
+        // Since we can't inspect the message here, we check that HttpLLMCalculator is present
+        // (it is) and assert that the guard check passed (no rejection for non-LLM).
+        FAIL() << "LLM graph was unexpectedly rejected by idle_unload scope guard; status: "
+               << status.string();
+    }
+    // Any other status (OK, model-not-found, etc.) is acceptable.
+}

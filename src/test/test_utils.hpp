@@ -777,6 +777,23 @@ public:
 
     ovms::GenAiServableMap& getGenAiServableMap() { return this->sidePacketMaps->genAiServableMap; }
 
+    // Test seams for idle-unload concurrency tests.
+    // Drive the underlying state machine directly.
+    void forceReloadEventForTest() { this->status.handle(ovms::ReloadEvent()); }
+    void forceValidationPassedEventForTest() { this->status.handle(ovms::ValidationPassedEvent()); }
+    // Identity of the sidePacketMaps shared_ptr, so a test can detect whether it
+    // was reset/swapped (unload uses clear(), not reset(), so the pointer must be stable).
+    const void* sidePacketMapsPtrForTest() const { return static_cast<const void*>(this->sidePacketMaps.get()); }
+    bool sidePacketMapsEmptyForTest() { return this->sidePacketMaps->empty(); }
+    // Insert a harmless marker into a side-packet map so we can detect teardown.
+    void insertSidePacketMarkerForTest(const std::string& key) {
+        this->sidePacketMaps->genAiServableMap.insert({key, nullptr});
+    }
+    bool hasSidePacketMarkerForTest(const std::string& key) {
+        return this->sidePacketMaps->genAiServableMap.count(key) > 0;
+    }
+    uint64_t requestsHandlesCounterForTest() const { return this->requestsHandlesCounter.load(); }
+
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,
         std::string inputConfig,

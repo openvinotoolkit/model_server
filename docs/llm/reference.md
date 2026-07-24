@@ -109,6 +109,16 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional string tool_parser` - name of the parser to use for tool calls extraction from model output before creating a response;
 -    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false];
 -    `optional SparseAttentionConfig sparse_attention_config` - Sparse attention configuration. Disabled if not specified.
+-    `optional int64 idle_unload_timeout_seconds` - unload the graph's model resources after this many seconds with no inference requests, freeing GPU/CPU memory; the model is reloaded automatically on the next request. `0` disables the feature [default = 0]. See [Idle model unload](#idle-model-unload).
+
+### Idle model unload
+When `idle_unload_timeout_seconds` is set to a positive value, the model server unloads the LLM graph's heavy resources (the continuous batching pipeline, freeing GPU VRAM / host memory) after the configured period without any inference requests. The first request after an unload transparently reloads the model and is served once it is ready, so the GPU can be used by other workloads while a model is idle.
+
+Notes:
+- Only inference requests reset the idle timer; status/metrics/health endpoints do not keep a model loaded.
+- The first request after an idle unload pays the reload latency. Combine with [model caching](../model_cache.md) (`--cache_dir`) so the reload is a fast cache import rather than a full recompile.
+- The graph reports as `AVAILABLE` while idle-unloaded (it auto-reloads on demand). The `ovms_graph_loaded` metric reports `1` when loaded and `0` when idle-unloaded.
+- Supported for LLM continuous-batching graphs. Graphs containing Python nodes are not supported with this setting.
 
 ### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.

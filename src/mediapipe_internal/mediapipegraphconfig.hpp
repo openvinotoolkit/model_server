@@ -75,6 +75,14 @@ private:
      */
     GraphQueueSizeValue graphQueueSize;
 
+    /**
+     * @brief Idle unload timeout in seconds.
+     * 0 (default) = feature disabled.
+     * When > 0, the graph's heavy resources are freed after this many seconds
+     * of zero in-flight requests, and lazily reloaded on the next inference.
+     */
+    int idleUnloadTimeoutSeconds = 0;
+
 public:
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
@@ -193,6 +201,14 @@ public:
             return static_cast<int>(hwThreads);
         }
         return std::get<int>(*this->graphQueueSize);
+    }
+
+    int getIdleUnloadTimeoutSeconds() const {
+        return this->idleUnloadTimeoutSeconds;
+    }
+
+    void setIdleUnloadTimeoutSeconds(int seconds) {
+        this->idleUnloadTimeoutSeconds = seconds;
     }
 
     bool isReloadRequired(const MediapipeGraphConfig& rhs) const;

@@ -129,6 +129,12 @@ private:
     void watcher(std::future<void> exitSignal, bool watchConfigFile);
 
     /**
+     * @brief Sweep mediapipe graph definitions and unload any that have been
+     *        idle past their configured idle_unload_timeout_seconds.
+     */
+    void unloadIdleGraphs();
+
+    /**
      * @brief Cleaner thread for resources cleanup
      */
     void cleanerRoutine(uint32_t resourcesCleanupIntervalMillisec, std::future<void> cleanerExitSignal);

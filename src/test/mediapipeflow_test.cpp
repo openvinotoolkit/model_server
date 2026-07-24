@@ -54,6 +54,7 @@
 #include "../model.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../precision.hpp"
+#include "../servable_definition_unload_guard.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
@@ -4408,4 +4409,100 @@ TEST_F(UnaryQueueReinitTest, GraphIsReinitializedAfterCalculatorError) {
         auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
         ASSERT_TRUE(status.ok());
     }
+}
+
+// ---------------------------------------------------------------------------
+// Idle unload feature: unload() guard correctness (issue #4141, model-free)
+// Verifies FIX 1: unload() must NOT tear down resources unless the state was
+// actually AVAILABLE and the UnloadEvent transition really happened.
+// ---------------------------------------------------------------------------
+
+// A trivial pbtxt is enough; these tests never reach validate(), they drive the
+// state machine directly to exercise unload()'s preconditions.
+static const std::string kIdleUnloadDummyPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+)";
+
+TEST(MediapipeIdleUnloadGuard, UnloadIsNoOpWhenStateBegin) {
+    ovms::MediapipeGraphConfig mgc{"idleGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("idleGuard", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    // Fresh definition is in BEGIN (validate never called).
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    def.insertSidePacketMarkerForTest("marker");
+    const void* mapsBefore = def.sidePacketMapsPtrForTest();
+
+    ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+
+    // State unchanged and resources untouched.
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_TRUE(def.hasSidePacketMarkerForTest("marker"));
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);
+}
+
+TEST(MediapipeIdleUnloadGuard, UnloadIsNoOpWhenStateReloading) {
+    ovms::MediapipeGraphConfig mgc{"idleGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("idleGuard", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    // Drive BEGIN -> AVAILABLE -> RELOADING.
+    def.forceValidationPassedEventForTest();
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    def.forceReloadEventForTest();
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+
+    def.insertSidePacketMarkerForTest("marker");
+    const void* mapsBefore = def.sidePacketMapsPtrForTest();
+
+    ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+
+    // Critical: unload() must NOT have cleared resources while RELOADING.
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+    ASSERT_TRUE(def.hasSidePacketMarkerForTest("marker"));
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);
+}
+
+TEST(MediapipeIdleUnloadGuard, UnloadTransitionsAndTearsDownWhenAvailable) {
+    ovms::MediapipeGraphConfig mgc{"idleGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("idleGuard", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    def.forceValidationPassedEventForTest();
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    def.insertSidePacketMarkerForTest("marker");
+    const void* mapsBefore = def.sidePacketMapsPtrForTest();
+
+    ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+
+    // Now it should have transitioned and cleared (but kept the same object).
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    ASSERT_FALSE(def.hasSidePacketMarkerForTest("marker"));
+    ASSERT_TRUE(def.sidePacketMapsEmptyForTest());
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);  // clear(), not reset()
+}
+
+TEST(MediapipeIdleUnloadGuard, UnloadSkipsWhenRequestsInFlight) {
+    ovms::MediapipeGraphConfig mgc{"idleGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("idleGuard", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    def.forceValidationPassedEventForTest();
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    def.insertSidePacketMarkerForTest("marker");
+    const void* mapsBefore = def.sidePacketMapsPtrForTest();
+
+    {
+        // Simulate an in-flight request by holding an unload guard (bumps the counter).
+        ovms::ServableDefinitionUnloadGuard guard(def);
+        ASSERT_EQ(def.requestsHandlesCounterForTest(), 1u);
+
+        // unload() must skip without tearing down because counter > 0.
+        ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+        ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+        ASSERT_TRUE(def.hasSidePacketMarkerForTest("marker"));
+        ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);
+    }
+    // After the guard releases, unload() now proceeds.
+    ASSERT_EQ(def.requestsHandlesCounterForTest(), 0u);
+    ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    ASSERT_TRUE(def.sidePacketMapsEmptyForTest());
 }
