@@ -481,7 +481,7 @@ Status MediapipeGraphDefinition::setStreamTypes() {
             }
         }
         SPDLOG_LOGGER_ERROR(modelmanager_logger,
-            "TfLiteTensor stream type is unsupported. Detected in mediapipe graph: {}. input_streams: [{}] output_streams: [{}]. " getName(), inputTfLiteNames, outputTfLiteNames);
+            "TfLiteTensor stream type is unsupported. Detected in mediapipe graph: {}. input_streams: [{}] output_streams: [{}]. ", getName(), inputTfLiteNames, outputTfLiteNames);
         return Status(StatusCode::NOT_IMPLEMENTED,
             "TfLiteTensor stream type is not supported in mediapipe KServe execution path");
     }

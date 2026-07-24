@@ -248,6 +248,16 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "python_runtime_env",
+    hdrs = ["python_runtime_env.hpp"],
+    srcs = ["python_runtime_env.cpp"],
+    deps = [
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "libovmspythonmodule",
     hdrs = [
         "pythoninterpretermodule.hpp",
@@ -277,6 +287,7 @@ ovms_cc_library(
     srcs = ["python_runtime_entry.cpp"],
     deps = PYBIND_DEPS + [
         "libovmspythonmodule",
+        "python_runtime_env",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovms_module",
@@ -319,8 +330,6 @@ cc_binary(
         "ovms_py_tensor.hpp",
         "python_backend.cpp",
         "python_backend.hpp",
-        "python_runtime_env.cpp",
-        "python_runtime_env.hpp",
         "pythoninterpretermodule.cpp",
         "pythoninterpretermodule.hpp",
         "python_runtime_module_api.hpp",
@@ -328,6 +337,7 @@ cc_binary(
         "utils.hpp",
     ],
     deps = PYBIND_DEPS + [
+        "python_runtime_env",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovms_module",
