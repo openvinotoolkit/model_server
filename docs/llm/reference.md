@@ -109,6 +109,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional string tool_parser` - name of the parser to use for tool calls extraction from model output before creating a response;
 -    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false];
 -    `optional SparseAttentionConfig sparse_attention_config` - Sparse attention configuration. Disabled if not specified.
+-    `optional string generation_config_path` - path to a `generation_config.json` holding the default generation parameters for this node. Absolute, or relative to `models_path`. When unset, `generation_config.json` from `models_path` is used. Lets several deployments backed by the same model weights use different generation defaults without duplicating the model directory.
 
 ### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.

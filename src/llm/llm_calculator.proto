@@ -151,4 +151,11 @@ message LLMCalculatorOptions {
     }
 
     optional ChatTemplateMode chat_template_mode = 26;
+
+    // Optional path to a generation_config.json holding the default generation
+    // parameters for this node. Absolute, or relative to models_path. When unset,
+    // generation_config.json from models_path is used. Allows several deployments
+    // backed by the same model weights to use different generation defaults
+    // without duplicating the model directory.
+    optional string generation_config_path = 27;
 }
