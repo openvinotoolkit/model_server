@@ -455,7 +455,7 @@ Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const Models
     return StatusCode::OK;
 }
 
-Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile) {
+Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeRuntimeApi& factory) {
     if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
         return StatusCode::OK;
@@ -465,8 +465,8 @@ Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, 
         "Processing mediapipe graph config: {} graph_path: {} runtime_loaded: {}",
         config.getGraphName(),
         config.getGraphPath(),
-        this->mediapipeFactory->isLoaded());
-    auto status = mediapipeFactory->processConfig(config, *this, *this);
+        factory.isLoaded());
+    auto status = factory.processConfig(config, *this, *this);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger,
             "Failed to process mediapipe graph config: {} status: {}",
@@ -476,7 +476,7 @@ Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger,
             "Processed mediapipe graph config successfully: {} definition_exists: {}",
             config.getGraphName(),
-            this->mediapipeFactory->definitionExists(config.getGraphName()));
+            factory.definitionExists(config.getGraphName()));
     }
     return status;
 }
@@ -559,7 +559,7 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
             if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
                 mediapipeGraphConfig.logGraphConfigContent();
             }
-            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesAlreadyLoaded);
+            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesAlreadyLoaded, *mediapipeFactory);
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             }

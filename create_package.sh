@@ -104,6 +104,11 @@ if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
 	fi
 	cp -v "$OVMS_PY_RUNTIME_LIB" /ovms_release/lib/
 	cp -v "$OVMS_PY_CALCULATORS_LIB" /ovms_release/lib/
+	# Verify the copies landed in the staging directory.
+	if [ ! -f /ovms_release/lib/libovmspython.so ] || [ ! -f /ovms_release/lib/libpython_calculators.so ]; then
+		echo "Missing libovmspython.so or libpython_calculators.so in package staging after cp."
+		exit 1
+	fi
 fi
 
 if ! [[ $debug_bazel_flags == *"mp_off"* ]]; then
@@ -114,11 +119,9 @@ if ! [[ $debug_bazel_flags == *"mp_off"* ]]; then
 		exit 1
 	fi
 	cp -v "$OVMS_MP_RUNTIME_LIB" /ovms_release/lib/
-fi
-
-if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
-	if [ ! -f /ovms_release/lib/libovmspython.so ]; then
-		echo "Missing libovmspython.so in package staging. Ensure //src/python:libovmspython is built."
+	# Verify the copy landed in the staging directory.
+	if [ ! -f /ovms_release/lib/libovms_mediapipe_runtime_shared.so ]; then
+		echo "Missing libovms_mediapipe_runtime_shared.so in package staging after cp."
 		exit 1
 	fi
 fi
