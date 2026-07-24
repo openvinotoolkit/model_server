@@ -415,11 +415,14 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& 
         postProcInferRequestsQueue = std::make_unique<OVInferRequestsQueue>(postProcCompiledModel, numberOfParallelInferRequests);
         npuPostprocessingRequired = true;
 
-        // These are the settings for NPU model
-        if (getMaxModelLength().has_value()) {
-            config.max_length = getMaxModelLength().value();
-        }
-        // Models other than Qwen requires reshaping to static shape to work on NPU.
+        // NPU model settings.
+        //
+        // For short-context models (max_position_embeddings < 1024) we reshape to a static
+        // shape and pin config.max_length to the model's max_position_embeddings, since the
+        // NPU compiler needs a static sequence length for those.
+        //
+        // For long-context / Qwen-style dynamic models we deliberately do NOT propagate
+        // max_position_embeddings into config.max_length.
         if (getMaxModelLength().has_value() && getMaxModelLength().value() < 1024) {
             modelIsStatic = true;
             config.padding_side = "right";
