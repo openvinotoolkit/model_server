@@ -30,8 +30,8 @@ See the [T2s calculator documentation](../../docs/speech_generation/reference.md
 **Deploying with Docker**
 
 ```bash
-mkdir models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU
+mkdir -p ${HOME}/models
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU
 ```
 
 **Deploying on Bare Metal**
@@ -107,26 +107,21 @@ Many variances of Whisper models can be deployed in a single command by using pr
 In this demo we will use OpenVINO/whisper-large-v3-turbo-fp16-ov, which is a fine-tuned version of Whisper large-v3.
 
 :::{dropdown} **Deploying with Docker**
-
-**CPU**
-
 ```bash
-mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path /models
-```
-
-**GPU**
-
-```bash
-mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path /models
+mkdir -p ${HOME}/models
+# in case GPU is available
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path /models
 ```
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
 
+The same command can be used for CPU and GPU deployments. OVMS will auto-detect device settings when `--target_device` is not provided.
+
 ```bat
-ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path models
+mkdir c:\models
+ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path c:\models
 ```
 :::
 
@@ -247,33 +242,29 @@ Prepare export script and dependencies:
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir -p models
+mkdir -p ${HOME}/models
 ```
 
 Export Speech-to-Text model with word timestamps enabled.
 ```console
-python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name whisper-large-v3-turbo-word-ts --config_file_path models/config.json --model_repository_path models --overwrite_models --enable_word_timestamps
+python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name whisper-large-v3-turbo-word-ts --config_file_path ${HOME}/models/config.json --model_repository_path ${HOME}/models --overwrite_models --enable_word_timestamps
 ```
 
 :::{dropdown} **Deploying with Docker**
-
-**CPU**
-
 ```bash
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --config_path /models/config.json
-```
-
-**GPU**
-
-```bash
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --config_path /models/config.json
+# in case GPU is available
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json
 ```
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
 
+The same command can be used for CPU and GPU deployments.
+
 ```bat
-ovms --rest_port 8000 --config_path models/config.json
+mkdir c:\models
+ovms --rest_port 8000 --config_path c:\models\config.json
 ```
 :::
 
@@ -380,34 +371,20 @@ To prepare an audio file with speech in a language other than English, e.g. Span
 
 **Deploying with Docker**
 
-**CPU**
-
 ```bash
-mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU
-```
-
-**GPU**
-
-```bash
-mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device GPU
+mkdir -p ${HOME}/models
+# in case GPU is available
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS
 ```
 
 **Deploying on Bare Metal**
 
-**CPU**
+The same command can be used for CPU and GPU deployments. OVMS will auto-detect device settings when `--target_device` is not provided.
 
 ```bat
-mkdir models
-ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU
-```
-
-**GPU**
-
-```bat
-mkdir models
-ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device GPU
+mkdir c:\models
+ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path c:\models --model_name Kokoro-82M-OpenVINO-FP16-OVMS
 ```
 
 For non-English Kokoro input, set the `language` field explicitly.
@@ -421,27 +398,21 @@ Whisper models can be deployed in a single command by using pre-configured model
 Here is an example of OpenVINO/whisper-large-v3-fp16-ov deployment:
 
 :::{dropdown} **Deploying with Docker**
-
-**CPU**
-
 ```bash
-mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path /models --model_name whisper-large-v3-fp16-ov
-```
-
-**GPU**
-
-```bash
-mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path /models --model_name whisper-large-v3-fp16-ov
+mkdir -p ${HOME}/models
+# in case GPU is available
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path /models --model_name whisper-large-v3-fp16-ov
 ```
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
 
+The same command can be used for CPU and GPU deployments. OVMS will auto-detect device settings when `--target_device` is not provided.
+
 ```bat
-mkdir models
-ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path models --model_name whisper-large-v3-fp16-ov
+mkdir c:\models
+ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path c:\models --model_name whisper-large-v3-fp16-ov
 ```
 :::
 
