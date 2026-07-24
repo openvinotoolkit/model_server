@@ -18,6 +18,7 @@ node {
     name: "llmNode1"
     calculator: "HttpLLMCalculator"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     output_stream: "LOOPBACK:loopback"
