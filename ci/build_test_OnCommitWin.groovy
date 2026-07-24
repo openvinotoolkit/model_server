@@ -20,11 +20,13 @@ pipeline {
                           windows.clean()
                           windows.build()
                           windows.unit_test()
+                          tag = ""
                           if (env.USE_BRANCH_NAME_IN_PACKAGE_NAME == "true") {
                             def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
-                            tag = "${safeBranchName}-${env.CUSTOM_TAG}"
-                          } else {
-                            tag = env.CUSTOM_TAG
+                            tag += "-${safeBranchName}"
+                          }
+                          if (env.CUSTOM_TAG != null && env.CUSTOM_TAG != "") {
+                            tag += "-${env.CUSTOM_TAG}"
                           }
                           def python_presence = ""
                           if (env.OVMS_PYTHON_ENABLED == "1") {
@@ -33,7 +35,7 @@ pipeline {
                               python_presence = "without_python"
                           }
                           if (env.OV_SHARE_05_IP != null && env.OV_SHARE_05_IP != "") {
-                            bat(returnStatus:true, script: "copy /Y ${env.WORKSPACE}\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-${python_presence}-${tag}.zip")
+                            bat(returnStatus:true, script: "copy /Y ${env.WORKSPACE}\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-${python_presence}${tag}.zip")
                             }
                           } finally {
                           windows.archive_build_artifacts()
