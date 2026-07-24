@@ -20,6 +20,7 @@
 #include <sstream>
 #include <string>
 #include <chrono>
+#include <cstdlib>
 #include <iomanip>
 #include <utility>
 #include <vector>
@@ -138,6 +139,7 @@ static void setOpenvinoTokenizersPathFromMsixDependencies() {
         if (findInstalledPackageByName(PACKAGE_NAME, installedPath)) {
             const std::wstring dllPath = installedPath + TOKENIZERS_RELATIVE_PATH;
             SetEnvironmentVariableW(L"OPENVINO_TOKENIZERS_PATH_GENAI", dllPath.c_str());
+            _wputenv_s(L"OPENVINO_TOKENIZERS_PATH_GENAI", dllPath.c_str());
             DEBUG_LOG("OPENVINO_TOKENIZERS_PATH_GENAI initialized from installed package lookup: " << wstringToString(dllPath));
             return;
         }
