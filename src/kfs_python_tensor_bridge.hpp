@@ -24,7 +24,21 @@
 
 namespace ovms {
 
+// Bump this whenever KfsPyTensorBridgeVTable layout or the semantics of any
+// existing entry change. The vtable is only accepted by
+// setKfsPyTensorBridgeVTable()/OVMS_setKfsPyTensorBridgeVTable() when the
+// caller's abiVersion matches this value exactly. This protects against
+// silently loading a libpython_calculators built against a different
+// generation of the bridge contract.
+inline constexpr uint32_t KFS_PY_TENSOR_BRIDGE_ABI_VERSION = 1;
+
 struct KfsPyTensorBridgeVTable {
+    // Must be initialized to KFS_PY_TENSOR_BRIDGE_ABI_VERSION by the producer
+    // (libpython_calculators). Kept as the first field so that the setter can
+    // safely read it before touching any other member even if the rest of the
+    // layout drifts.
+    uint32_t abiVersion;
+
     // Deserialize one OVMS_PY_TENSOR input from a KFS request and push the
     // resulting mediapipe packet into the graph.
     //
@@ -71,7 +85,14 @@ struct KfsPyTensorBridgeVTable {
 // by python_calculators_plugin_loader after loading libpython_calculators.so.
 // getKfsPyTensorBridgeVTable is called by the KFS graph executor at request
 // time to decide whether the bridge is available.
-void setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable);
+//
+// setKfsPyTensorBridgeVTable rejects any non-null vtable whose abiVersion
+// does not equal KFS_PY_TENSOR_BRIDGE_ABI_VERSION; in that case the stored
+// pointer is left as nullptr (so KFS OVMS_PY_TENSOR paths fall back to
+// NOT_IMPLEMENTED instead of dispatching through a mismatched contract) and
+// the function returns false. Passing nullptr always succeeds and returns
+// true (used to clear the vtable on shutdown/test teardown).
+bool setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable);
 const KfsPyTensorBridgeVTable* getKfsPyTensorBridgeVTable();
 
 }  // namespace ovms

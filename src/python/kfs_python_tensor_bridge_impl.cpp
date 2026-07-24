@@ -155,6 +155,7 @@ static int kfsBridgeExtractPacketData(
 
 // Static vtable — always valid for the lifetime of libpython_calculators.so
 static const ovms::KfsPyTensorBridgeVTable g_kfsBridgeVTable{
+    ovms::KFS_PY_TENSOR_BRIDGE_ABI_VERSION,
     kfsBridgeDeserializeAndPush,
     kfsBridgeExtractPacketData,
 };

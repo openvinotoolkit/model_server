@@ -118,7 +118,7 @@ void tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(
 #endif
 ) {
     using GetKfsBridgeFn = const ovms::KfsPyTensorBridgeVTable* (*)();
-    using SetKfsBridgeFn = void (*)(const ovms::KfsPyTensorBridgeVTable*);
+    using SetKfsBridgeFn = int (*)(const ovms::KfsPyTensorBridgeVTable*);
 
     if (ovms::getKfsPyTensorBridgeVTable() != nullptr) {
         return;

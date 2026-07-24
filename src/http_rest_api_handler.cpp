@@ -732,14 +732,13 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
         return status;
     }
 
-    std::unique_ptr<MediapipeGraphExecutorInterface> executor;
-    status = this->modelManager.createPipelineHandle(executor, modelName);
-    if (!status.ok()) {
-        SPDLOG_ERROR("MediaPipe executor creation failed for model: {} with error: {}", modelName, status.string());
-        return status;
-    }
-
     if (streamFieldVal == false) {
+        std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+        status = this->modelManager.createPipelineHandle(executor, modelName);
+        if (!status.ok()) {
+            SPDLOG_ERROR("MediaPipe executor creation failed for model: {} with error: {}", modelName, status.string());
+            return status;
+        }
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Unary};
         return executor->infer(request.get(), &response, executionContext);
     } else {

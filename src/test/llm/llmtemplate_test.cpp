@@ -30,6 +30,7 @@
 #include <rapidjson/error/en.h>
 
 #include "src/filesystem/filesystem.hpp"
+#include "../../config.hpp"
 #include "../../http_payload.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../httpservermodule.hpp"
@@ -37,7 +38,9 @@
 #include "../../llm/language_model/continuous_batching/servable_initializer.hpp"
 #include "../../llm/py_jinja_template_processor.hpp"
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../../python/pythoninterpretermodule.hpp"
 #include "../../server.hpp"
+#include "../../status.hpp"
 #include "../platform_utils.hpp"
 
 #pragma GCC diagnostic push
@@ -52,6 +55,12 @@
 #include "src/test/test_with_temp_dir.hpp"
 
 using namespace ovms;
+
+// Deliberately a raw pointer with static storage: the process-wide Python
+// interpreter must NOT be torn down during C++ static destructor ordering,
+// where spdlog and other subsystems are already gone. A static unique_ptr
+// would run ~PythonInterpreterModule at exit and crash inside shutdown().
+static PythonInterpreterModule* llmTemplateTestPythonModule = nullptr;
 
 class LLMChatTemplateTest : public TestWithTempDir {
 protected:
@@ -69,11 +78,24 @@ protected:
         GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), extraGenInfo);
     }
 
-    void SetUp() {
-        const char* skipGlobalPyEnv = std::getenv("OVMS_TEST_SKIP_GLOBAL_PY_ENV");
-        if (skipGlobalPyEnv != nullptr && std::string(skipGlobalPyEnv) == "1") {
-            GTEST_SKIP() << "Skipping Python Jinja chat-template tests when global Python test environment is disabled";
+    static void SetUpTestSuite() {
+        // Ensure a Python interpreter is available for loadPyTemplateProcessor /
+        // applyChatTemplate regardless of ovms_test's default
+        // OVMS_TEST_SKIP_GLOBAL_PY_ENV=1 setting. If the global environment (or
+        // another suite / HTTP server) already brought Python up, reuse it.
+        if (llmTemplateTestPythonModule == nullptr) {
+            auto module = std::make_unique<PythonInterpreterModule>();
+            const auto startStatus = module->start(Config::instance());
+            ASSERT_TRUE(startStatus.ok())
+                << "PythonInterpreterModule failed to start — libpython/pyovms not usable in this test binary.";
+            if (module->ownsPythonInterpreter()) {
+                module->releaseGILFromThisThread();
+            }
+            llmTemplateTestPythonModule = module.release();
         }
+    }
+
+    void SetUp() {
         TestWithTempDir::SetUp();
         tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
         jinjaConfigFilePath = directoryPath + "/chat_template.jinja";

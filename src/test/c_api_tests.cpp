@@ -279,14 +279,14 @@ TEST(CAPIStartTest, InitializingMultipleServers) {
 TEST(CAPIStartTest, StartFlow) {
     OVMS_Server* srv = nullptr;
     OVMS_ServerSettings* serverSettings = nullptr;
-    OVMS_ModelsSettings* modelsSettings = nullptr;
 
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerNew(nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsNew(nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsNew(nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&srv));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ModelsSettingsGuard modelsSettingsGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config.json"));
+    OVMS_ModelsSettings* modelsSettings = modelsSettingsGuard.settings;
 
     ASSERT_NE(srv, nullptr);
     ASSERT_NE(serverSettings, nullptr);
@@ -295,8 +295,6 @@ TEST(CAPIStartTest, StartFlow) {
     // Cannot start due to configuration error
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 5555));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 5555));  // The same port
-    const auto configPath = materializeConfigForCurrentPlatform(getGenericFullPathForSrcTest("/ovms/src/test/configs/config.json"));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configPath.c_str()));
 
     // Expect fail
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings),
@@ -311,7 +309,6 @@ TEST(CAPIStartTest, StartFlow) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings),
         StatusCode::SERVER_ALREADY_STARTED);
 
-    OVMS_ModelsSettingsDelete(modelsSettings);
     OVMS_ServerSettingsDelete(serverSettings);
     OVMS_ServerDelete(srv);
 }
@@ -903,14 +900,12 @@ TEST_F(CAPIInference, NegativeInference) {
     randomizeAndEnsureFree(port);
     // prepare options
     OVMS_ServerSettings* serverSettings = 0;
-    OVMS_ModelsSettings* modelsSettings = 0;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ModelsSettingsGuard modelsSettingsGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json"));
+    OVMS_ModelsSettings* modelsSettings = modelsSettingsGuard.settings;
     ASSERT_NE(serverSettings, nullptr);
     ASSERT_NE(modelsSettings, nullptr);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    const auto configPath = materializeConfigForCurrentPlatform(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json"));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configPath.c_str()));
 
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
@@ -1989,10 +1984,6 @@ public:
         this->model = std::make_shared<ov::Model>(ov::ResultVector{result}, ov::ParameterVector{input}, "dummy");
         this->model->inputs()[0].get_tensor().set_names({DUMMY_MODEL_INPUT_NAME});
         this->model->outputs()[0].get_tensor().set_names({DUMMY_MODEL_OUTPUT_NAME});
-        try {
-            this->ieCore.register_plugin("C:\\opt\\openvino\\runtime\\bin\\intel64\\Release\\openvino_intel_cpu_plugin.dll", "CPU");
-        } catch (...) {
-        }
         this->compiledModel = std::make_shared<ov::CompiledModel>(this->ieCore.compile_model(this->model, "CPU"));
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
         this->loadedInputName = this->compiledModel->inputs().front().get_any_name();

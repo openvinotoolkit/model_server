@@ -583,6 +583,9 @@ ovms_cc_library(
     name = "kfs_python_tensor_bridge",
     hdrs = ["kfs_python_tensor_bridge.hpp"],
     srcs = ["kfs_python_tensor_bridge.cpp"],
+    deps = [
+        "@com_github_gabime_spdlog//:spdlog",
+    ],
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -2351,7 +2354,7 @@ cc_test(
         "test/task_determine_test.cpp",
         "test/test_http_utils.hpp",
         "test/threadsafequeue_test.cpp",
-        "test/unit_tests.cpp",
+        "test/gtest_main.cpp",
         "test/localfilesystem_test.cpp",
         ] + select({
             "//:not_disable_cloud": [
@@ -3239,6 +3242,8 @@ cc_library(
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
         "//src/llm:io_processing_input_processors",
+        "//src/llm:runtime_chat_template_loader",
+        "//src/python:libovmspythonmodule",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

@@ -67,8 +67,10 @@
 #include "profiler.hpp"
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
+#if (PYTHON_DISABLE == 0)
 #include "python/python_runtime_loader.hpp"
 #include "python/python_runtime_module_api.hpp"
+#endif
 #include "mediapipe_runtime_api.hpp"
 #include "servablemanagermodule.hpp"
 #include "shutdown_state.hpp"

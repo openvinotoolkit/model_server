@@ -114,26 +114,6 @@ struct ServerSettingsGuard {
     OVMS_ServerSettings* settings{nullptr};
 };
 
-inline std::string materializeConfigForCurrentPlatform(const std::string& configPath) {
-#ifdef _WIN32
-    if (!std::filesystem::exists(configPath)) {
-        return configPath;
-    }
-    if (std::filesystem::path(configPath).extension() != ".json") {
-        return configPath;
-    }
-    std::string configContents = GetFileContents(configPath);
-    adjustConfigForTargetPlatform(configContents);
-    static std::atomic<uint64_t> counter{0};
-    const auto generatedPath = std::filesystem::temp_directory_path() /
-                               ("ovms_capi_config_" + std::to_string(counter.fetch_add(1)) + ".json");
-    createConfigFileWithContent(configContents, generatedPath.string());
-    return generatedPath.string();
-#else
-    return configPath;
-#endif
-}
-
 struct ModelsSettingsGuard {
     ModelsSettingsGuard(const std::string& configPath) {
         THROW_ON_ERROR_CAPI(OVMS_ModelsSettingsNew(&settings));
@@ -153,6 +133,34 @@ struct ModelsSettingsGuard {
 
     std::string resolvedConfigPath;
     bool ownsResolvedConfigPath{false};
+
+private:
+    // Prepares a config file suitable for the current platform and returns its path.
+    // On Windows, rewrites the JSON to adjust paths for the target platform and writes
+    // it to a new temporary file whose lifetime is owned by this guard instance (see
+    // ownsResolvedConfigPath) and removed in the destructor. On other platforms it
+    // returns the input path unchanged and the guard takes no ownership of it.
+    // Kept private so callers cannot bypass the guard's cleanup - always create a
+    // ModelsSettingsGuard when materialization is needed.
+    static std::string materializeConfigForCurrentPlatform(const std::string& configPath) {
+#ifdef _WIN32
+        if (!std::filesystem::exists(configPath)) {
+            return configPath;
+        }
+        if (std::filesystem::path(configPath).extension() != ".json") {
+            return configPath;
+        }
+        std::string configContents = GetFileContents(configPath);
+        adjustConfigForTargetPlatform(configContents);
+        static std::atomic<uint64_t> counter{0};
+        const auto generatedPath = std::filesystem::temp_directory_path() /
+                                   ("ovms_capi_config_" + std::to_string(counter.fetch_add(1)) + ".json");
+        createConfigFileWithContent(configContents, generatedPath.string());
+        return generatedPath.string();
+#else
+        return configPath;
+#endif
+    }
 };
 
 struct ServerGuard {

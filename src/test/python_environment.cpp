@@ -23,7 +23,7 @@
 
 namespace {
 #if (PYTHON_DISABLE == 0)
-PythonEnvironment* g_pythonEnvironment = nullptr;
+PythonEnvironment* pythonEnvironment = nullptr;
 #endif
 }  // namespace
 
@@ -37,13 +37,13 @@ void PythonEnvironment::SetUp() {
     if (pythonModule->ownsPythonInterpreter()) {
         pythonModule->releaseGILFromThisThread();
     }
-    g_pythonEnvironment = this;
+    pythonEnvironment = this;
 #endif
 }
 
 void PythonEnvironment::TearDown() {
 #if (PYTHON_DISABLE == 0)
-    g_pythonEnvironment = nullptr;
+    pythonEnvironment = nullptr;
     if (pythonModule != nullptr) {
         if (pythonModule->ownsPythonInterpreter()) {
             pythonModule->reacquireGILForThisThread();
@@ -83,10 +83,10 @@ ovms::PythonBackend* getGlobalPythonBackend() {
 
 ovms::PythonInterpreterModule* getGlobalPythonInterpreterModule() {
 #if (PYTHON_DISABLE == 0)
-    if (g_pythonEnvironment == nullptr) {
+    if (pythonEnvironment == nullptr) {
         return nullptr;
     }
-    return g_pythonEnvironment->getPythonInterpreterModule();
+    return pythonEnvironment->getPythonInterpreterModule();
 #else
     return nullptr;
 #endif

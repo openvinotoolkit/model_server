@@ -337,11 +337,17 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyChatTemplateRuntime(
                 elif not isinstance(chat_template_kwargs, dict):
                     raise Exception("chat_template_kwargs must be an object")
 
+                # add_generation_prompt is passed as part of chat_template_kwargs; pop it out so
+                # it is not also supplied via **chat_template_kwargs below (duplicate keyword).
+                add_generation_prompt = chat_template_kwargs.pop("add_generation_prompt", True)
+                if not isinstance(add_generation_prompt, bool):
+                    raise Exception("add_generation_prompt accepts values true or false")
+
                 tools = request_json["tools"] if "tools" in request_json else None
                 if tools is None:
-                    output = template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True, **chat_template_kwargs)
+                    output = template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=add_generation_prompt, **chat_template_kwargs)
                 else:
-                    output = tool_template.render(messages=messages, tools=tools, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True, **chat_template_kwargs)
+                    output = tool_template.render(messages=messages, tools=tools, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=add_generation_prompt, **chat_template_kwargs)
             except Exception as e:
                 error = str(e)
         )",
@@ -564,11 +570,17 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyPreparedChatTemplateRuntime(
                 elif not isinstance(chat_template_kwargs, dict):
                     raise Exception("chat_template_kwargs must be an object")
 
+                # add_generation_prompt is passed as part of chat_template_kwargs; pop it out so
+                # it is not also supplied via **chat_template_kwargs below (duplicate keyword).
+                add_generation_prompt = chat_template_kwargs.pop("add_generation_prompt", True)
+                if not isinstance(add_generation_prompt, bool):
+                    raise Exception("add_generation_prompt accepts values true or false")
+
                 tools = request_json["tools"] if "tools" in request_json else None
                 if tools is None:
-                    output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True, **chat_template_kwargs)
+                    output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=add_generation_prompt, **chat_template_kwargs)
                 else:
-                    output = tool_chat_template.render(messages=messages, tools=tools, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True, **chat_template_kwargs)
+                    output = tool_chat_template.render(messages=messages, tools=tools, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=add_generation_prompt, **chat_template_kwargs)
             except Exception as e:
                 error = str(e)
         )",

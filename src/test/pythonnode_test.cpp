@@ -1063,12 +1063,23 @@ TEST_F(PythonFlowTest, KfsPythonTensorBridgeVTableRegistration) {
     const auto* original = getKfsPyTensorBridgeVTable();
 
     const KfsPyTensorBridgeVTable testVtable{
+        KFS_PY_TENSOR_BRIDGE_ABI_VERSION,
         nullptr,
         nullptr,
     };
 
-    setKfsPyTensorBridgeVTable(&testVtable);
+    ASSERT_TRUE(setKfsPyTensorBridgeVTable(&testVtable));
     ASSERT_EQ(getKfsPyTensorBridgeVTable(), &testVtable);
+
+    // A vtable with a mismatched ABI version must be rejected and must clear
+    // the previously installed vtable so callers fall back to NOT_IMPLEMENTED.
+    const KfsPyTensorBridgeVTable mismatchedVtable{
+        KFS_PY_TENSOR_BRIDGE_ABI_VERSION + 1,
+        nullptr,
+        nullptr,
+    };
+    ASSERT_FALSE(setKfsPyTensorBridgeVTable(&mismatchedVtable));
+    ASSERT_EQ(getKfsPyTensorBridgeVTable(), nullptr);
 
     // Restore global state for the rest of the suite.
     setKfsPyTensorBridgeVTable(original);

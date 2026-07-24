@@ -45,6 +45,14 @@ public:
 
     absl::Status process(InputRequest& req) override;
 
+    // Serialises chatHistory to {"messages":[...], "tools":[...], "chat_template_kwargs":{...}}
+    // for Python Jinja template engines.
+    //
+    // Public for unit tests: this is the OVMS-owned JSON shape that the PyJinja /
+    // runtime chat-template path receives, so the tests need to be able to lock it
+    // down independently of the Python runtime being loaded.
+    static std::string serializeForJinja(const ov::genai::ChatHistory& chatHistory);
+
 private:
     ov::genai::Tokenizer& tokenizer;  // non-owning; lifetime tied to InputProcessorContext
     bool useMinja = false;
@@ -60,10 +68,6 @@ private:
     // Present only on the PyJinja path; nullopt means use tokenizer.apply_chat_template().
     std::optional<std::reference_wrapper<PyJinjaTemplateProcessor>> templateProcessor;
 #endif
-
-    // Serialises chatHistory to {"messages":[...], "tools":[...], "chat_template_kwargs":{...}}
-    // for Python Jinja template engines.
-    static std::string serializeForJinja(const ov::genai::ChatHistory& chatHistory);
 };
 
 }  // namespace ovms

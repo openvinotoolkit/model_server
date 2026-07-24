@@ -17,6 +17,8 @@
 
 #include <atomic>
 
+#include <spdlog/spdlog.h>
+
 namespace ovms {
 
 #if defined(_WIN32)
@@ -26,19 +28,34 @@ namespace ovms {
 #endif
 
 namespace {
+// Non-owning pointer. The vtable object is owned by the caller of
+// setKfsPyTensorBridgeVTable() (typically a statically-initialized instance
+// in the Python runtime plugin). The caller must ensure the vtable outlives
+// every getKfsPyTensorBridgeVTable() consumer, and must reset it to nullptr
+// before the underlying storage is destroyed.
 std::atomic<const KfsPyTensorBridgeVTable*> g_vtable{nullptr};
 }  // namespace
 
-void setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable) {
+bool setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable) {
+    if (vtable != nullptr && vtable->abiVersion != KFS_PY_TENSOR_BRIDGE_ABI_VERSION) {
+        SPDLOG_ERROR(
+            "KFS Python tensor bridge ABI version mismatch: expected {}, got {}. "
+            "Refusing to install vtable; OVMS_PY_TENSOR KFS paths will remain unavailable. "
+            "Rebuild libpython_calculators against the current ovms tree.",
+            KFS_PY_TENSOR_BRIDGE_ABI_VERSION, vtable->abiVersion);
+        g_vtable.store(nullptr, std::memory_order_release);
+        return false;
+    }
     g_vtable.store(vtable, std::memory_order_release);
+    return true;
 }
 
 const KfsPyTensorBridgeVTable* getKfsPyTensorBridgeVTable() {
     return g_vtable.load(std::memory_order_acquire);
 }
 
-extern "C" KFS_BRIDGE_EXPORT void OVMS_setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable) {
-    setKfsPyTensorBridgeVTable(vtable);
+extern "C" KFS_BRIDGE_EXPORT int OVMS_setKfsPyTensorBridgeVTable(const KfsPyTensorBridgeVTable* vtable) {
+    return setKfsPyTensorBridgeVTable(vtable) ? 1 : 0;
 }
 
 }  // namespace ovms
