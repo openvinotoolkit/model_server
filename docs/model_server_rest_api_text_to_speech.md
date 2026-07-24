@@ -16,8 +16,9 @@ Request body must be in JSON format, and the request must have `Content-Type: ap
 curl http://localhost:8000/v3/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "microsoft/speecht5_tts",
-    "input": "The quick brown fox jumped over the lazy dog.",
+    "model": "Kokoro-82M-OpenVINO-FP16-OVMS",
+    "voice": "af_alloy",
+    "input": "The quick brown fox jumped over the lazy dog."
   }' \
   -o speech.wav
 ```
