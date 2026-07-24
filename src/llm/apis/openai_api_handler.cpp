@@ -762,6 +762,65 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
 
     request.maxModelLength = maxModelLength;
 
+    // modalities: array of strings; optional — controls output modalities
+    it = doc.FindMember("modalities");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsArray())
+            return absl::InvalidArgumentError("modalities is not an array");
+        bool hasText = false;
+        bool hasAudio = false;
+        for (const auto& mod : it->value.GetArray()) {
+            if (!mod.IsString())
+                return absl::InvalidArgumentError("modalities array must contain strings");
+            const std::string modality = mod.GetString();
+            if (modality == "audio") {
+                hasAudio = true;
+            } else if (modality == "text") {
+                hasText = true;
+            }
+        }
+        request.audioOutputRequested = hasAudio;
+        // When "modalities" field is explicitly provided and "text" is absent, suppress text in response
+        if (!hasText && hasAudio) {
+            request.textOutputRequested = false;
+        }
+    }
+
+    // audio: object; optional — required when modalities includes "audio"
+    it = doc.FindMember("audio");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsObject())
+            return absl::InvalidArgumentError("audio is not an object");
+        auto audioObj = it->value.GetObject();
+        auto voiceIt = audioObj.FindMember("voice");
+        if (voiceIt != audioObj.MemberEnd() && voiceIt->value.IsString()) {
+            request.audioVoice = voiceIt->value.GetString();
+        }
+        auto formatIt = audioObj.FindMember("format");
+        if (formatIt != audioObj.MemberEnd() && formatIt->value.IsString()) {
+            std::string fmt = formatIt->value.GetString();
+            if (fmt == "wav") {
+                request.audioFormat = OpenAIRequest::AudioFormat::WAV;
+            } else if (fmt == "pcm16") {
+                request.audioFormat = OpenAIRequest::AudioFormat::PCM16;
+            } else {
+                return absl::InvalidArgumentError("audio.format must be \"wav\" or \"pcm16\"");
+            }
+        }
+    }
+
+    // chunk_frames: integer; optional — number of codec frames per streaming audio chunk
+    // This is not OpenAI standard, but we allow it since it is configurable in OpenVINO GenAI
+    it = doc.FindMember("chunk_frames");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsUint())
+            return absl::InvalidArgumentError("chunk_frames must be a positive integer");
+        request.audioChunkFrames = it->value.GetUint();
+        if (request.audioChunkFrames < 1) {
+            return absl::InvalidArgumentError("chunk_frames must be >= 1");
+        }
+    }
+
     // TODO: logit_bias
     // TODO: top_logprobs
     // TODO: response_format

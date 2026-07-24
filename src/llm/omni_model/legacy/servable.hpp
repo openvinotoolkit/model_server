@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,26 +19,37 @@
 #include <string>
 #include <vector>
 
-#include <openvino/genai/visual_language/pipeline.hpp>
+#include <openvino/genai/omni/pipeline.hpp>
+#include <openvino/genai/omni/decoded_results.hpp>
+#include <openvino/genai/omni/speech_streamer_base.hpp>
+#include <openvino/genai/omni/talker_speech_config.hpp>
 
+#include "../../apis/openai_request.hpp"
 #include "../../servable.hpp"
 #include "legacy_executor.hpp"
 #include "src/llm/llm_calculator.pb.h"
 
 namespace ovms {
 
-struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableExecutionContext {
-    ov::genai::VLMDecodedResults results;
+struct OmniModelLegacyServableExecutionContext : public GenAiServableExecutionContext {
+    ov::genai::OmniDecodedResults results;
     std::promise<void> readySignal;
     std::future<void> finished = readySignal.get_future();
-    // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
     bool success{true};
-    // Accumulated decoded text for the unary path — populated via OVMSTextStreamer
-    // callback so that the user's skip_special_tokens / decode params are respected.
     std::string accumulatedUnaryText;
 
-    // Disconnection handling
+    // Audio output configuration (from request)
+    bool audioOutputRequested{false};
+    bool textOutputRequested{true};
+    std::string audioVoice;
+    OpenAIRequest::AudioFormat audioFormat{OpenAIRequest::DEFAULT_AUDIO_FORMAT};
+    size_t audioChunkFrames{OpenAIRequest::DEFAULT_AUDIO_CHUNK_FRAMES};
+
+    // Prepared in parseRequest, consumed by executor
+    ov::genai::OmniTalkerSpeechConfig speechConfig;
+    ov::genai::OmniSpeechStreamerVariant speechStreamer = std::monostate{};
+
     std::atomic<bool> clientDisconnected{false};
 
     void signalDisconnection() {
@@ -47,25 +58,21 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     }
 };
 
-struct VisualLanguageModelLegacyServableProperties : public GenAiServableProperties {
-    ov::genai::SchedulerConfig schedulerConfig;
-    std::shared_ptr<ov::genai::VLMPipeline> pipeline;
-    std::shared_ptr<VisualLanguageModelLegacyExecutorWrapper> legacyExecutor;
+struct OmniModelLegacyServableProperties : public GenAiServableProperties {
+    std::shared_ptr<ov::genai::OmniPipeline> pipeline;
+    std::shared_ptr<OmniModelLegacyExecutorWrapper> legacyExecutor;
 };
 
-class VisualLanguageModelLegacyServable : public GenAiServable {
-    std::shared_ptr<VisualLanguageModelLegacyServableProperties> properties;
-
-protected:
-    void notifyExecutorThread();
+class OmniModelLegacyServable : public GenAiServable {
+    std::shared_ptr<OmniModelLegacyServableProperties> properties;
 
 public:
-    VisualLanguageModelLegacyServable() {
-        properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
+    OmniModelLegacyServable() {
+        properties = std::make_shared<OmniModelLegacyServableProperties>();
         properties->inputProcessorContext.config.isVLM = true;
+        properties->inputProcessorContext.config.isOmni = true;
     }
 
-    // Interface methods
     absl::Status validateEndpoint(Endpoint endpoint) const override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
