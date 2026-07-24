@@ -156,6 +156,7 @@ ovms_cc_library(
             "io_processing/input_processors/chat_template_adapter.hpp",
             "io_processing/chat_template/caps.hpp",
             "io_processing/input_processors/empty_content_array_normalization_processor.hpp",
+            "io_processing/input_processors/empty_tool_calls_array_removing_processor.hpp",
             "io_processing/input_processors/raw_prompt_extractor.hpp",
             "io_processing/input_processors/text_content_normalization_processor.hpp",
             "io_processing/input_processors/tokenization_processor.hpp"],
@@ -163,6 +164,7 @@ ovms_cc_library(
             "io_processing/input_processors/chat_template_processor.cpp",
             "io_processing/input_processors/chat_template_adapter.cpp",
             "io_processing/input_processors/empty_content_array_normalization_processor.cpp",
+            "io_processing/input_processors/empty_tool_calls_array_removing_processor.cpp",
             "io_processing/input_processors/text_content_normalization_processor.cpp",
             "io_processing/input_processors/tokenization_processor.cpp"],
     deps = [
