@@ -459,11 +459,10 @@ Status resolveGenerationConfigPath(std::string& outPath, const std::string& pars
         }
         overridePath = base / overridePath;
     }
-    if (!std::filesystem::exists(overridePath)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node generation_config_path: {} does not exist.", overridePath.string());
+    if (!std::filesystem::exists(overridePath) || !std::filesystem::is_regular_file(overridePath)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node generation_config_path: {} does not exist or is not a regular file.", overridePath.string());
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
-    outPath = overridePath.string();
     return StatusCode::OK;
 }
 
