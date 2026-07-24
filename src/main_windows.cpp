@@ -36,6 +36,7 @@
 #include <winrt/base.h>
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Management.Deployment.h>
 #include <winrt/Windows.Storage.h>
 #pragma warning(pop)
 
@@ -114,21 +115,33 @@ inline std::wstring stringToWstring(const std::string& str, UINT codePage = CP_T
     return str2;
 }
 
+// Short-term patch: look up the Tokenizers package directly by its known package name via
+// PackageManager, regardless of whether/how it is declared as a dependency in any manifest.
+// This avoids relying on Package::Current().Dependencies() at all.
+static bool findInstalledPackageByName(const std::wstring& packageName, std::wstring& outInstalledPath) {
+    winrt::Windows::Management::Deployment::PackageManager packageManager;
+    for (const winrt::Windows::ApplicationModel::Package& pkg : packageManager.FindPackagesForUser(L"")) {
+        if (std::wstring(pkg.Id().Name().c_str()) == packageName) {
+            outInstalledPath = std::wstring(pkg.InstalledLocation().Path().c_str());
+            return true;
+        }
+    }
+    return false;
+}
+
 static void setOpenvinoTokenizersPathFromMsixDependencies() {
     constexpr wchar_t PACKAGE_NAME[] = L"Intel.OpenVINO.Tokenizers.2026.3.0.0";
     constexpr wchar_t TOKENIZERS_RELATIVE_PATH[] = L"\\runtime\\bin\\intel64\\Release\\openvino_tokenizers.dll";
 
     try {
-        winrt::Windows::Foundation::Collections::IVectorView<winrt::Windows::ApplicationModel::Package> deps =
-            winrt::Windows::ApplicationModel::Package::Current().Dependencies();
-        for (const winrt::Windows::ApplicationModel::Package& dep : deps) {
-            if (dep.Id().Name() == PACKAGE_NAME) {
-                const std::wstring dllPath = std::wstring(dep.InstalledLocation().Path().c_str()) + TOKENIZERS_RELATIVE_PATH;
-                SetEnvironmentVariableW(L"OPENVINO_TOKENIZERS_PATH_GENAI", dllPath.c_str());
-                DEBUG_LOG("OPENVINO_TOKENIZERS_PATH_GENAI initialized from package dependency.");
-                return;
-            }
+        std::wstring installedPath;
+        if (findInstalledPackageByName(PACKAGE_NAME, installedPath)) {
+            const std::wstring dllPath = installedPath + TOKENIZERS_RELATIVE_PATH;
+            SetEnvironmentVariableW(L"OPENVINO_TOKENIZERS_PATH_GENAI", dllPath.c_str());
+            DEBUG_LOG("OPENVINO_TOKENIZERS_PATH_GENAI initialized from installed package lookup: " << wstringToString(dllPath));
+            return;
         }
+        DEBUG_LOG("Tokenizers MSIX package '" << wstringToString(std::wstring(PACKAGE_NAME)) << "' not found for current user. Keeping default behavior.");
     } catch (const winrt::hresult_error& ex) {
         // Not all deployments are packaged; keep default behavior when package metadata is unavailable.
         std::ostringstream errMsg;
