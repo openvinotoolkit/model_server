@@ -31,14 +31,14 @@ See the [T2s calculator documentation](../../docs/speech_generation/reference.md
 
 ```bash
 mkdir models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU --task text2speech
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU
 ```
 
 **Deploying on Bare Metal**
 
 ```bat
 mkdir c:\models
-ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path c:\models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU --task text2speech
+ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path c:\models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU
 ```
 
 ### Request Generation 
@@ -115,7 +115,7 @@ Select deployment option depending on how you prepared models in the previous st
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path /models --target_device CPU
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path /models --target_device CPU
 ```
 **GPU**
 
@@ -124,7 +124,7 @@ to `docker run` command, use the image with GPU support.
 It can be applied using the commands below:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path /models --target_device GPU
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path /models --target_device GPU
 ```
 :::
 
@@ -133,7 +133,7 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-a
 If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-ovms --rest_port 8000 --task speech2text --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path models --target_device GPU
+ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path models --target_device GPU
 ```
 :::
 
@@ -406,14 +406,14 @@ To prepare an audio file with speech in a language other than English, e.g. Span
 
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU --task text2speech
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU
 ```
 
 **GPU**
 
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device GPU --task text2speech
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device GPU
 ```
 
 **Deploying on Bare Metal**
@@ -422,14 +422,14 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-a
 
 ```bat
 mkdir models
-ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU --task text2speech
+ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU
 ```
 
 **GPU**
 
 ```bat
 mkdir models
-ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device GPU --task text2speech
+ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device GPU
 ```
 
 For non-English Kokoro input, set the `language` field explicitly.
@@ -451,7 +451,7 @@ Select deployment option depending on how you prepared models in the previous st
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path /models --model_name whisper-large-v3-fp16-ov --task speech2text --target_device CPU
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path /models --model_name whisper-large-v3-fp16-ov --target_device CPU
 ```
 **GPU**
 
@@ -460,7 +460,7 @@ to `docker run` command, use the image with GPU support.
 It can be applied using the commands below:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path /models --model_name whisper-large-v3-fp16-ov --task speech2text --target_device GPU
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path /models --model_name whisper-large-v3-fp16-ov --target_device GPU
 ```
 :::
 
@@ -470,11 +470,11 @@ If you run on GPU make sure to have appropriate drivers installed, so the device
 
 ```bat
 mkdir models
-ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path models --model_name whisper-large-v3-fp16-ov --task speech2text --target_device CPU
+ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path models --model_name whisper-large-v3-fp16-ov --target_device CPU
 ```
 or
 ```bat
-ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path models --model_name whisper-large-v3-fp16-ov --task speech2text --target_device GPU
+ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path models --model_name whisper-large-v3-fp16-ov --target_device GPU
 ```
 :::
 
