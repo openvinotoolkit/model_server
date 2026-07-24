@@ -16,10 +16,14 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <filesystem>
+#include <optional>
 
+#include "src/filesystem/filesystem.hpp"
 #include "src/mediapipe_internal/graph_side_packets.hpp"
 #include "src/mediapipe_internal/node_initializer.hpp"
 #include "src/stringutils.hpp"
+#include "embeddings_node_initializer_utils.hpp"
 #include "embeddings_servable.hpp"
 #include "mediapipe/framework/calculator.pb.h"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
@@ -27,6 +31,14 @@
 #include "src/logging.hpp"
 
 namespace ovms {
+namespace {
+
+std::filesystem::path resolveModelsPath(const std::string& modelsPath, const std::string& basePath) {
+    return FileSystem::resolvePathWithBase(modelsPath, basePath);
+}
+
+}  // namespace
+
 class EmbeddingsNodeInitializer : public NodeInitializer {
     static constexpr const char* CALCULATOR_NAME = "EmbeddingsCalculatorOV";
 
@@ -56,12 +68,18 @@ public:
         }
         mediapipe::EmbeddingsCalculatorOVOptions nodeOptions;
         nodeConfig.node_options(0).UnpackTo(&nodeOptions);
+
+        const auto modelsPath = resolveModelsPath(nodeOptions.models_path(), basePath);
+        const std::optional<mediapipe::EmbeddingsCalculatorOVOptions_Pooling> graphPooling =
+            nodeOptions.has_pooling() ? std::make_optional(nodeOptions.pooling()) : std::nullopt;
+        const auto pooling = resolveEmbeddingsPooling(modelsPath, graphPooling);
+
         auto servable = std::make_shared<EmbeddingsServable>(
             nodeOptions.models_path(),
             nodeOptions.target_device(),
             nodeOptions.plugin_config(),
             basePath,
-            nodeOptions.pooling(),
+            pooling,
             nodeOptions.normalize_embeddings());
         servable->initialize(
             nodeOptions.models_path(),
