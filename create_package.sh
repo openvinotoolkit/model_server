@@ -116,6 +116,23 @@ fi
 if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libOpenCL.so* /ovms_release/lib/ ; fi
 if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL.so* /ovms_release/lib/ ; fi
 
+# libxml2 is a runtime dependency of the ovms binary (Dockerfile.ubuntu apt-installs
+# it into the runtime image), but it is provided by the base image rather than by
+# bazel-out, so the portable tarball never bundled it. The Docker image is therefore
+# fine while the baremetal package fails to start on any host whose system libxml2 /
+# ICU soname differs from the ubuntu build base -- e.g. Ubuntu 26.04 ships
+# libxml2.so.16 + ICU 78, not the libxml2.so.2 + ICU 74 this build links against:
+#   ovms: error while loading shared libraries: libxml2.so.2: cannot open shared object file
+# Bundle libxml2 and its ICU dependency chain (ovms -> libxml2.so.2 -> libicuuc ->
+# libicudata) so the tarball is self-contained. The copies land before the patchelf
+# rpath pass below, so they get '$ORIGIN/../lib' and resolve one another in the bundle.
+# See https://github.com/openvinotoolkit/model_server/issues/4362
+if [[ "$BASE_OS" =~ "ubuntu" ]] ; then
+	cp -P /usr/lib/x86_64-linux-gnu/libxml2.so.2* /ovms_release/lib/
+	cp -P /usr/lib/x86_64-linux-gnu/libicuuc.so.* /ovms_release/lib/
+	cp -P /usr/lib/x86_64-linux-gnu/libicudata.so.* /ovms_release/lib/
+fi
+
 if [ "$FUZZER_BUILD" == "0" ]; then find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \; ; fi;
 cd /ovms_release/bin
 if [ "$FUZZER_BUILD" == "0" ]; then patchelf --remove-rpath ./ovms && patchelf --set-rpath '$ORIGIN/../lib/' ./ovms; fi;
