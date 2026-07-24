@@ -2082,7 +2082,13 @@ cc_binary(
     ] + select({
         "//conditions:default": [],
         "//src:windows" : ["main_windows.hpp", "main_windows.cpp",],}),
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//conditions:default": [],
+        "//src:windows" : [
+            "runtimeobject.lib",
+            "oleaut32.lib",
+        ],
+    }),
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
         "//src:ovms_lib",
