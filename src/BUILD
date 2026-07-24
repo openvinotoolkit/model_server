@@ -2301,7 +2301,6 @@ cc_test(
     linkstatic = 1,
     env = {
         "OVMS_TEST_PYTHON_CALCULATORS_INPROCESS": "1",
-        "OVMS_TEST_SKIP_GLOBAL_PY_ENV": "1",
         "OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS": "1",
     },
     srcs = [
@@ -3243,7 +3242,6 @@ cc_library(
         ":test_platform_utils",
         "//src/llm:io_processing_input_processors",
         "//src/llm:runtime_chat_template_loader",
-        "//src/python:libovmspythonmodule",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

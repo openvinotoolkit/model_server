@@ -16,7 +16,6 @@
 #include <fstream>
 #include <memory>
 #include <string>
-#include <cstdlib>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -30,7 +29,6 @@
 #include <rapidjson/error/en.h>
 
 #include "src/filesystem/filesystem.hpp"
-#include "../../config.hpp"
 #include "../../http_payload.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../httpservermodule.hpp"
@@ -38,9 +36,7 @@
 #include "../../llm/language_model/continuous_batching/servable_initializer.hpp"
 #include "../../llm/py_jinja_template_processor.hpp"
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../../python/pythoninterpretermodule.hpp"
 #include "../../server.hpp"
-#include "../../status.hpp"
 #include "../platform_utils.hpp"
 
 #pragma GCC diagnostic push
@@ -56,12 +52,6 @@
 
 using namespace ovms;
 
-// Deliberately a raw pointer with static storage: the process-wide Python
-// interpreter must NOT be torn down during C++ static destructor ordering,
-// where spdlog and other subsystems are already gone. A static unique_ptr
-// would run ~PythonInterpreterModule at exit and crash inside shutdown().
-static PythonInterpreterModule* llmTemplateTestPythonModule = nullptr;
-
 class LLMChatTemplateTest : public TestWithTempDir {
 protected:
     std::string tokenizerConfigFilePath;
@@ -76,23 +66,6 @@ protected:
                   << servable->getProperties()->tokenizer.get_original_chat_template() << std::endl;
         ExtraGenerationInfo extraGenInfo = GenAiServableInitializer::readExtraGenerationInfo(servable->getProperties(), directoryPath);
         GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), extraGenInfo);
-    }
-
-    static void SetUpTestSuite() {
-        // Ensure a Python interpreter is available for loadPyTemplateProcessor /
-        // applyChatTemplate regardless of ovms_test's default
-        // OVMS_TEST_SKIP_GLOBAL_PY_ENV=1 setting. If the global environment (or
-        // another suite / HTTP server) already brought Python up, reuse it.
-        if (llmTemplateTestPythonModule == nullptr) {
-            auto module = std::make_unique<PythonInterpreterModule>();
-            const auto startStatus = module->start(Config::instance());
-            ASSERT_TRUE(startStatus.ok())
-                << "PythonInterpreterModule failed to start — libpython/pyovms not usable in this test binary.";
-            if (module->ownsPythonInterpreter()) {
-                module->releaseGILFromThisThread();
-            }
-            llmTemplateTestPythonModule = module.release();
-        }
     }
 
     void SetUp() {

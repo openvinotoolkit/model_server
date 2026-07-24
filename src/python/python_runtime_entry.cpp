@@ -150,11 +150,6 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
         *errorMessage = nullptr;
     }
 
-    const char* skipGlobalPyEnv = std::getenv("OVMS_TEST_SKIP_GLOBAL_PY_ENV");
-    if (skipGlobalPyEnv != nullptr && std::string(skipGlobalPyEnv) == "1" && Py_IsInitialized()) {
-        return true;
-    }
-
     if (!validateEnvPaths(lastError)) {
         if (errorMessage != nullptr) {
             *errorMessage = lastError.c_str();

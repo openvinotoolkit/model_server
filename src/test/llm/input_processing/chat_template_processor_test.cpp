@@ -42,13 +42,10 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/tokenizer.hpp>
 
-#include "../../../config.hpp"
 #include "../../../llm/io_processing/input_processors/chat_template_processor.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "../../../llm/runtime_chat_template.hpp"
 #include "../../../llm/runtime_chat_template_runtime_loader.hpp"
-#include "../../../python/pythoninterpretermodule.hpp"
-#include "../../../status.hpp"
 #include "../../platform_utils.hpp"
 
 namespace ovms {
@@ -320,11 +317,11 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
 // chat-template API (dlopen'd from libovmspython), which routes through
 // standard Python Jinja2 instead of GenAI's embedded minja.
 //
-// The unit-test binary is built with libovmspython alongside. The fixture
-// bootstraps the Python interpreter itself when it isn't already running,
-// so it works regardless of ovms_test's default OVMS_TEST_SKIP_GLOBAL_PY_ENV
-// setting. If either bootstrap step fails, the tests fail loudly (they do
-// not silently skip).
+// The unit-test binary is built with libovmspython alongside. The global
+// PythonEnvironment (see gtest_main.cpp) initializes the interpreter for
+// the whole process, so this fixture only prepares the tokenizer and the
+// runtime chat template. If either preparation step fails, the tests fail
+// loudly (they do not silently skip).
 //
 // Rendering asserts are token-substring based rather than exact-string, because
 // PyJinja and minja can differ in incidental whitespace even when driven by the
@@ -334,29 +331,10 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
 #if (PYTHON_DISABLE == 0)
 static std::unique_ptr<ov::genai::Tokenizer> pyJinjaTokenizer;
 static std::unique_ptr<PreparedRuntimeChatTemplate> sharedPreparedRuntimeTemplate;
-// Deliberately a raw pointer with static storage: the process-wide Python
-// interpreter must NOT be torn down during C++ static destructor ordering,
-// where spdlog and other subsystems are already gone. A static unique_ptr
-// would run ~PythonInterpreterModule at exit and crash inside shutdown().
-static PythonInterpreterModule* localPythonModule = nullptr;
 
 class ChatTemplateProcessorPyJinjaTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite() {
-        // If the global PythonEnvironment already brought the interpreter up
-        // (OVMS_TEST_SKIP_GLOBAL_PY_ENV != "1"), reuse it. Otherwise start our
-        // own PythonInterpreterModule so this fixture is self-sufficient.
-        if (localPythonModule == nullptr) {
-            auto module = std::make_unique<PythonInterpreterModule>();
-            const auto startStatus = module->start(Config::instance());
-            ASSERT_TRUE(startStatus.ok())
-                << "PythonInterpreterModule failed to start — libpython/pyovms not usable in this test binary.";
-            if (module->ownsPythonInterpreter()) {
-                module->releaseGILFromThisThread();
-            }
-            localPythonModule = module.release();
-        }
-
         ASSERT_NE(getRuntimeChatTemplateRuntimeApi(), nullptr)
             << "libovmspython is not loadable — the unit-test binary is expected to be built "
                "alongside //src/python:libovmspython.so.";
@@ -385,10 +363,6 @@ protected:
     static void TearDownTestSuite() {
         sharedPreparedRuntimeTemplate.reset();
         pyJinjaTokenizer.reset();
-        // Intentionally do NOT delete localPythonModule: py::finalize_interpreter
-        // is process-global, other suites may still need Python, and running
-        // shutdown() during C++ static destructor ordering crashes (spdlog is
-        // already dead by then).
     }
 };
 
