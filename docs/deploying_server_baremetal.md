@@ -15,12 +15,12 @@ You can download model server package in two configurations. One with Python sup
 :sync: ubuntu-22-04
 Download precompiled package (without python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2/ovms_ubuntu22_2026.2.1_python_off.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2.1/ovms_ubuntu22_2026.2.1_python_off.tar.gz
 tar -xzvf ovms_ubuntu22_2026.2.1_python_off.tar.gz
 ```
 or precompiled package (with python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2/ovms_ubuntu22_2026.2.1_python_on.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.2.1/ovms_ubuntu22_2026.2.1_python_on.tar.gz
 tar -xzvf ovms_ubuntu22_2026.2.1_python_on.tar.gz
 ```
 Install required libraries:
