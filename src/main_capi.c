@@ -111,7 +111,23 @@ int main() {
     for (int i = 0; i < NUM_ELEMENTS; i++) {
         expectedOutput[i] = INPUT_ELEMENT_VALUE + 1.0f;
     }
-    if (memcmp(oData, expectedOutput, DATA_SIZE) != 0) {
+    // Compare with a small tolerance rather than exact bytes: on some targets
+    // (e.g. ARM CPU) OpenVINO defaults to f16 inference precision, so results
+    // differ from the exact f32 value within rounding error and an exact memcmp
+    // would spuriously fail. The tolerance still catches genuinely wrong output.
+    const float* outFloats = (const float*)oData;
+    int outputCorrect = 1;
+    for (int i = 0; i < NUM_ELEMENTS; i++) {
+        float diff = outFloats[i] - expectedOutput[i];
+        if (diff < 0.0f) {
+            diff = -diff;
+        }
+        if (diff > 0.01f) {
+            outputCorrect = 0;
+            break;
+        }
+    }
+    if (!outputCorrect) {
         fprintf(stderr, "output is not correct\n");
 
         OVMS_InferenceResponseDelete(response);

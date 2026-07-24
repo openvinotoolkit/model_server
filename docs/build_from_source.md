@@ -133,12 +133,61 @@ Example:
 make release_image GPU=1
 ```
 
+### `TARGETARCH`
+
+Target CPU architecture of the produced image. Default value: `amd64`. Set to `arm64`
+to build a native `aarch64` image (see [Building for ARM64](#building-for-arm64-aarch64)
+below). On `arm64` the build automatically selects the ARM-appropriate toolchain
+options (branch protection instead of Intel CET), the `aarch64` OpenVINO runtime
+library layout, and skips the x86-only Intel GPU/NPU components.
+
+Example:
+```bash
+make ovms_builder_image TARGETARCH=arm64 BASE_OS=ubuntu22 OV_USE_BINARY=1 DLDT_PACKAGE_URL=<aarch64 OpenVINO GenAI package>
+```
+
 ## Building minimal image
 
 Building minimalistic OVMS docker image requires disabling all optional features:
 
 ```bash
 make release_image GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
+```
+
+## Building for ARM64 (aarch64)
+
+OpenVINO Model Server can be built and run natively on `aarch64` (ARM64) Linux as a
+CPU-only image. The build must run **on an `aarch64` host** (cross-building is not
+supported here) and uses pre-built OpenVINO binaries via `OV_USE_BINARY=1`.
+
+Notes specific to ARM64:
+- Set `TARGETARCH=arm64`.
+- The OpenVINO GenAI nightly packages publish `aarch64` archives for **Ubuntu 22.04
+  only**, so build with `BASE_OS=ubuntu22` and point `DLDT_PACKAGE_URL` at the
+  matching `..._arm64.tar.gz` archive.
+- ARM64 is CPU-only: the Intel GPU/NPU drivers and `intel-opencl-icd` are x86-only
+  and are skipped automatically. Build with `GPU=0` and do not request the GPU image
+  variant.
+- `MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1` are recommended for a minimal image.
+
+Build the release image:
+```bash
+make release_image \
+    TARGETARCH=arm64 \
+    BASE_OS=ubuntu22 \
+    OV_USE_BINARY=1 \
+    DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/<version>/openvino_genai_ubuntu22_<version>_arm64.tar.gz \
+    GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
+```
+
+Verify the resulting image runs and serves a model:
+```bash
+docker run --rm openvino/model_server:latest --version
+docker run -d --name ovms -p 8000:8000 \
+    -v $(pwd)/src/test/dummy:/models/dummy:ro \
+    openvino/model_server:latest \
+    --model_name dummy --model_path /models/dummy --rest_port 8000
+curl http://localhost:8000/v2/health/ready
 ```
 
 ## Building Binary Package
