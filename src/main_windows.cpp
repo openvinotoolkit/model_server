@@ -32,6 +32,8 @@
 #include <tchar.h>
 #include <errors.h>
 #include <winrt/Windows.ApplicationModel.h>
+#include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Storage.h>
 
 #include "main_windows.hpp"
 #include "module_names.hpp"
