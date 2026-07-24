@@ -233,6 +233,23 @@ public:
 
     static std::string normalizeConfiguredPath(const std::string& pathString);
 
+    /**
+     * @brief Resolves a path against a base directory. If the given path is
+     * relative it is appended to basePath; if it is already absolute it is
+     * returned unchanged.
+     *
+     * @param path      The path to resolve (may be relative or absolute).
+     * @param basePath  The base directory used when path is relative.
+     * @return std::filesystem::path
+     */
+    static std::filesystem::path resolvePathWithBase(const std::string& path, const std::string& basePath) {
+        std::filesystem::path fsPath(path);
+        if (fsPath.is_relative()) {
+            return std::filesystem::path(basePath) / fsPath;
+        }
+        return fsPath;
+    }
+
     static std::string joinPath(std::initializer_list<std::string> segments) {
         std::string joined;
 

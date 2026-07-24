@@ -131,7 +131,7 @@ struct TextGenGraphSettingsImpl {
 struct EmbeddingsGraphSettingsImpl {
     std::string normalize = "true";
     std::string truncate = "false";
-    std::string pooling = "CLS";
+    std::optional<std::string> pooling;
 };
 
 struct TextToSpeechGraphSettingsImpl {

@@ -15,18 +15,18 @@
 //*****************************************************************************
 #pragma once
 
-#include "../base_input_processor.hpp"
+#include <filesystem>
+#include <optional>
+
+#include "src/embeddings/embeddings_calculator_ov.pb.h"
 
 namespace ovms {
 
-// Flattens text-only content arrays in ChatHistory messages to plain strings.
-// Parts are joined with "\n" for backward compatibility with chat templates.
-// Runs for both LM and VLM chat paths: arrays that contain images (or other
-// non-text modalities) are left untouched.
-// Must run before ChatTemplateProcessor and after Image/Audio decoding processors.
-class TextContentNormalizationProcessor : public BaseInputProcessor {
-public:
-    absl::Status process(InputRequest& req) override;
-};
+std::optional<mediapipe::EmbeddingsCalculatorOVOptions_Pooling> detectEmbeddingsPoolingFromConfig(
+    const std::filesystem::path& poolingConfigPath);
+
+mediapipe::EmbeddingsCalculatorOVOptions_Pooling resolveEmbeddingsPooling(
+    const std::filesystem::path& modelsPath,
+    std::optional<mediapipe::EmbeddingsCalculatorOVOptions_Pooling> graphPooling);
 
 }  // namespace ovms

@@ -159,6 +159,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "io_processing_input_processors",
     hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
+            "io_processing/input_processors/audio_decoding_processor.hpp",
             "io_processing/input_processors/chat_template_processor.hpp",
             "io_processing/input_processors/chat_template_adapter.hpp",
             "io_processing/chat_template/caps.hpp",
@@ -167,6 +168,7 @@ ovms_cc_library(
             "io_processing/input_processors/text_content_normalization_processor.hpp",
             "io_processing/input_processors/tokenization_processor.hpp"],
     srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
+            "io_processing/input_processors/audio_decoding_processor.cpp",
             "io_processing/input_processors/chat_template_processor.cpp",
             "io_processing/input_processors/chat_template_adapter.cpp",
             "io_processing/input_processors/empty_content_array_normalization_processor.cpp",
@@ -180,6 +182,7 @@ ovms_cc_library(
         ":runtime_chat_template_loader",
         "//third_party:genai",
         "//src:libovmslogging",
+        "//src/audio:audio_utils",
     ] + select({
         "//:disable_python": [],
         "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,
@@ -505,6 +508,9 @@ ovms_cc_library(
             "visual_language_model/legacy/servable.hpp",
             "visual_language_model/legacy/servable_initializer.hpp",
             "visual_language_model/legacy/legacy_executor.hpp",
+            "omni_model/legacy/servable.hpp",
+            "omni_model/legacy/servable_initializer.hpp",
+            "omni_model/legacy/legacy_executor.hpp",
             "text_utils.hpp"],
     srcs = ["servable.cpp",
             "servable_initializer.cpp",
@@ -517,10 +523,13 @@ ovms_cc_library(
             "language_model/legacy/legacy_executor.cpp",
             "visual_language_model/legacy/servable.cpp",
             "visual_language_model/legacy/servable_initializer.cpp",
-                "visual_language_model/legacy/legacy_executor.cpp"],
+            "visual_language_model/legacy/legacy_executor.cpp",
+            "omni_model/legacy/servable.cpp",
+            "omni_model/legacy/servable_initializer.cpp",
+            "omni_model/legacy/legacy_executor.cpp"],
     deps = select({
                 "//:not_disable_python": [],
-            "//:disable_python": []
+                "//:disable_python": []
         }) + [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",

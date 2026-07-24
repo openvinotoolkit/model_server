@@ -2947,7 +2947,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedContentTypeFails
         "role": "user",
         "content": [
           {"type": "input_text", "text": "hi"},
-          {"type": "input_audio", "audio": "abc"}
+          {"type": "input_unsupported", "audio": "abc"}
         ]
       }
     ]
@@ -2959,7 +2959,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesUnsupportedContentTypeFails
     std::optional<uint32_t> maxModelLength;
     std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler =
         std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("unsupported input content item type: input_audio"));
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("unsupported input content item type: input_unsupported"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMissingContentFails) {
@@ -4988,4 +4988,202 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCom
     ASSERT_NE(response.find("[DONE]"), std::string::npos)
         << "[DONE] must be present: " << response;
     ASSERT_FALSE(ctxBase->sendLoopbackSignal);
+}
+
+// === Audio/Modalities Parsing Tests (Omni pipeline support) ===
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingModalitiesWithAudioSetsAudioOutputRequested) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"modalities":["text","audio"],"audio":{"voice":"m02","format":"wav"}})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getRequest().audioOutputRequested);
+    EXPECT_TRUE(apiHandler->getRequest().textOutputRequested);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingModalitiesAudioOnlySuppressesText) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"modalities":["audio"],"audio":{"voice":"m02","format":"pcm16"}})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getRequest().audioOutputRequested);
+    EXPECT_FALSE(apiHandler->getRequest().textOutputRequested);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingModalitiesTextOnlyKeepsDefaults) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"modalities":["text"]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getRequest().audioOutputRequested);
+    EXPECT_TRUE(apiHandler->getRequest().textOutputRequested);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingModalitiesNotAnArrayFails) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"modalities":"audio"})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("modalities is not an array"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingModalitiesNonStringElementFails) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"modalities":[123]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("modalities array must contain strings"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingAudioVoiceAndFormatWav) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"modalities":["audio"],"audio":{"voice":"f04","format":"wav"}})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_EQ(apiHandler->getRequest().audioVoice, "f04");
+    EXPECT_EQ(apiHandler->getRequest().audioFormat, ovms::OpenAIRequest::AudioFormat::WAV);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingAudioFormatPcm16) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"audio":{"voice":"m31","format":"pcm16"}})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_EQ(apiHandler->getRequest().audioVoice, "m31");
+    EXPECT_EQ(apiHandler->getRequest().audioFormat, ovms::OpenAIRequest::AudioFormat::PCM16);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingAudioInvalidFormatFails) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"audio":{"voice":"m02","format":"mp3"}})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("audio.format must be \"wav\" or \"pcm16\""));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingAudioNotAnObjectFails) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"audio":"invalid"})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("audio is not an object"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingAudioChunkFrames) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"chunk_frames":8})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_EQ(apiHandler->getRequest().audioChunkFrames, 8u);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingAudioChunkFramesDefaultIsFour) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"audio":{"voice":"m02","format":"wav"}})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_EQ(apiHandler->getRequest().audioChunkFrames, 4u);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingModalitiesNullIsIgnored) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"modalities":null})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_FALSE(apiHandler->getRequest().audioOutputRequested);
+    EXPECT_TRUE(apiHandler->getRequest().textOutputRequested);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingAudioNullIsIgnored) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"audio":null})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_EQ(apiHandler->getRequest().audioFormat, ovms::OpenAIRequest::AudioFormat::WAV);  // default
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioContentPartInChatCompletions) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":[{"type":"text","text":"describe this"},{"type":"input_audio","input_audio":{"data":"dGVzdA==","format":"wav"}}]}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    // Content array is preserved for AudioDecodingProcessor
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    EXPECT_TRUE(chatHistory[0]["content"].is_array());
+    EXPECT_EQ(chatHistory[0]["content"][1]["type"].as_string().value_or(""), "input_audio");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioMissingObjectInChatCompletionsFails) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":[{"type":"input_audio"}]}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("Invalid message structure - input_audio object missing"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioMissingDataFieldInChatCompletionsFails) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":[{"type":"input_audio","input_audio":{"format":"wav"}}]}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("Invalid message structure - input_audio does not have a valid data field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioInResponsesAPI) {
+    std::string json = R"({"model":"llama","input":[{"role":"user","content":[{"type":"input_text","text":"describe"},{"type":"input_audio","input_audio":{"data":"dGVzdA==","format":"wav"}}]}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::RESPONSES);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    EXPECT_TRUE(chatHistory[0]["content"].is_array());
+    EXPECT_EQ(chatHistory[0]["content"][1]["type"].as_string().value_or(""), "input_audio");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioMissingObjectInResponsesFails) {
+    std::string json = R"({"model":"llama","input":[{"role":"user","content":[{"type":"input_audio"}]}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::RESPONSES);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("input_audio requires input_audio object field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioMissingDataInResponsesFails) {
+    std::string json = R"({"model":"llama","input":[{"role":"user","content":[{"type":"input_audio","input_audio":{"format":"wav"}}]}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::RESPONSES);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("input_audio.data is missing or invalid"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingModalitiesWorksForResponsesEndpoint) {
+    std::string json = R"({"model":"llama","input":[{"role":"user","content":[{"type":"input_text","text":"hi"}]}],"modalities":["text","audio"],"audio":{"voice":"f245","format":"pcm16"}})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::RESPONSES);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getRequest().audioOutputRequested);
+    EXPECT_TRUE(apiHandler->getRequest().textOutputRequested);
+    EXPECT_EQ(apiHandler->getRequest().audioVoice, "f245");
+    EXPECT_EQ(apiHandler->getRequest().audioFormat, ovms::OpenAIRequest::AudioFormat::PCM16);
 }
