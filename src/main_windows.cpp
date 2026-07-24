@@ -131,13 +131,17 @@ static void setOpenvinoTokenizersPathFromMsixDependencies() {
         }
     } catch (const winrt::hresult_error& ex) {
         // Not all deployments are packaged; keep default behavior when package metadata is unavailable.
-        DEBUG_LOG("Failed to resolve Tokenizer dependency. HRESULT: " + std::to_string(ex.code().value) + ", message: " + winrt::to_string(ex.message()));
+        std::ostringstream errMsg;
+        errMsg << "Failed to resolve Tokenizers MSIX dependency. HRESULT: 0x" << std::hex << std::uppercase
+               << static_cast<unsigned int>(ex.code().value) << ", message: " << winrt::to_string(ex.message());
+        DEBUG_LOG(errMsg.str());
     }
 }
 
 int main_windows(int argc, char** argv) {
     DEBUG_LOG("Windows Main - Entry");
-    winrt::init_apartment();
+    // Multi-threaded apartment: OVMS is a server process with no STA/message-loop dependency.
+    winrt::init_apartment(winrt::apartment_type::multi_threaded);
     setOpenvinoTokenizersPathFromMsixDependencies();
 
     OvmsWindowsServiceManager::instance().ovmsParams.argc = argc;
