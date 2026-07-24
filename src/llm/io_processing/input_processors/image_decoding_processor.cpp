@@ -66,11 +66,9 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
             continue;
         }
 
-        // Flatten multipart content in its original order, replacing each image
-        // with the placeholder consumed by the VLM pipeline.
-        std::string flattenedContent;
-        bool previousPartWasText = false;
-
+        // Replace image_url parts with text tag parts in-place.
+        // All other parts (text, input_audio, etc.) are preserved as-is.
+        // Flattening to string is deferred to TextContentNormalizationProcessor.
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
             const auto type = part["type"].as_string().value_or("");
@@ -82,19 +80,10 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
                     return imageResult.status();
                 }
                 req.inputImages.push_back(std::move(imageResult).value());
-                flattenedContent += "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-                previousPartWasText = false;
-            } else if (type == "text") {
-                if (previousPartWasText) {
-                    flattenedContent += "\n";
-                }
-                flattenedContent += part["text"].as_string().value_or("");
-                previousPartWasText = true;
+                std::string tag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">";
+                ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", tag}});
+                content[j] = textEntry;
             }
-        }
-
-        if (!flattenedContent.empty()) {
-            chatHistory[i]["content"] = flattenedContent;
         }
     }
 
