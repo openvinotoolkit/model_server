@@ -42,7 +42,11 @@ void OmniModelLegacyExecutor::processRequest() {
         requestExecutionContext->success = false;
         SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Client disconnected, skipping request processing.");
     } else {
-        SPDLOG_LOGGER_TRACE(llm_executor_logger, "Omni generation started");
+        SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni generate: prompt_len={}, images={}, audios={}, return_audio={}",
+            requestExecutionContext->inputRequest.promptText.size(),
+            requestExecutionContext->inputRequest.inputImages.size(),
+            requestExecutionContext->inputRequest.inputAudios.size(),
+            requestExecutionContext->speechConfig.return_audio);
         try {
             std::vector<ov::genai::VideoMetadata> videosMetadata;
             requestExecutionContext->results = pipe->generate(
@@ -55,11 +59,11 @@ void OmniModelLegacyExecutor::processRequest() {
                 requestExecutionContext->speechConfig,
                 requestExecutionContext->textStreamer,
                 requestExecutionContext->speechStreamer);
+            SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Omni generate: completed successfully");
         } catch (std::exception& e) {
             requestExecutionContext->success = false;
             SPDLOG_LOGGER_ERROR(llm_executor_logger, "Omni pipeline generation failed: {}.", e.what());
         }
-        SPDLOG_LOGGER_TRACE(llm_executor_logger, "Omni generation ended");
     }
     requestExecutionContext->readySignal.set_value();
     requestExecutionContext->deltaChannel.signalComplete();

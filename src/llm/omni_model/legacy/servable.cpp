@@ -76,11 +76,14 @@ std::shared_ptr<GenAiServableProperties> OmniModelLegacyServable::getProperties(
 
 absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto omniExecutionContext = std::static_pointer_cast<OmniModelLegacyServableExecutionContext>(executionContext);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Omni parseRequest: begin, ctx use_count={}", executionContext.use_count());
     if (omniExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
 
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Omni parseRequest: copying baseGenerationConfig");
     omniExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Omni parseRequest: creating API handler");
     try {
         if (omniExecutionContext->endpoint == Endpoint::RESPONSES) {
             omniExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*omniExecutionContext->payload.parsedJson,
@@ -101,6 +104,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to create API handler: {}", e.what());
         return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Omni parseRequest: API handler created, calling parseRequest on handler");
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
@@ -108,6 +112,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
     }
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Omni parseRequest: handler parseRequest done, setting up streamer");
 
     ov::AnyMap streamerConfig;
     if (omniExecutionContext->apiHandler->isStream()) {
@@ -156,6 +161,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
             std::move(unaryCallback),
             streamerConfig);
     }
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Omni parseRequest: extracting InputRequest");
     GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
@@ -165,6 +171,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
         return inputRequestResult.status();
     }
     omniExecutionContext->inputRequest = std::move(*inputRequestResult);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Omni parseRequest: InputRequest extracted, prompt length={}", omniExecutionContext->inputRequest.promptText.size());
 
     // Copy audio output config from parsed request to execution context
     const auto& req = omniExecutionContext->apiHandler->getRequest();
@@ -173,6 +180,8 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
     omniExecutionContext->audioVoice = req.audioVoice;
     omniExecutionContext->audioFormat = req.audioFormat;
     omniExecutionContext->audioChunkFrames = req.audioChunkFrames;
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Omni parseRequest: audio config copied, audioOut={}, voice='{}', chunkFrames={}",
+        req.audioOutputRequested, req.audioVoice, req.audioChunkFrames);
 
     // Prepare OmniTalkerSpeechConfig
     omniExecutionContext->speechConfig.audio_chunk_frames = req.audioChunkFrames;
@@ -212,6 +221,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
         };
     }
 
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Omni parseRequest: complete");
     return absl::OkStatus();
 }
 
