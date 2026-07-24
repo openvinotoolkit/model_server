@@ -122,7 +122,7 @@ static void setOpenvinoTokenizersPathFromMsixDependencies() {
             winrt::Windows::ApplicationModel::Package::Current().Dependencies();
         for (const winrt::Windows::ApplicationModel::Package& dep : deps) {
             if (dep.Id().Name() == PACKAGE_NAME) {
-                const std::wstring dllPath = dep.InstalledLocation().Path().c_str() + std::wstring(TOKENIZERS_RELATIVE_PATH);
+                const std::wstring dllPath = std::wstring(dep.InstalledLocation().Path().c_str()) + TOKENIZERS_RELATIVE_PATH;
                 SetEnvironmentVariableW(L"OPENVINO_TOKENIZERS_PATH_GENAI", dllPath.c_str());
                 DEBUG_LOG("OPENVINO_TOKENIZERS_PATH_GENAI initialized from package dependency.");
                 return;
