@@ -92,7 +92,6 @@ pipeline {
               def trustedCommentTrigger = (
                 env.gh_event == 'created' &&
                 (env.gh_comment ?: '') ==~ /(?is).*\bok-to-build\b.*/ &&
-                (env.gh_assoc ?: '') ==~ /(MEMBER|OWNER|COLLABORATOR)/ &&
                 (env.gh_pr_number ?: '') == (env.CHANGE_ID ?: '')
               )
               if (isForkPr && !trustedCommentTrigger) {
