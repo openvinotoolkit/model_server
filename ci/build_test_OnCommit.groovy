@@ -13,6 +13,7 @@ def test_agent_linux = "ovms_ptl"
 def disable_doc_tests_linux = false
 def disable_doc_tests_windows = false
 def validation_branch = "develop"
+def run_oncommit_stages = true
 
 def withGithubStageStatus = { String context, String stageName, Closure body ->
   if (env.CHANGE_ID) {
@@ -86,6 +87,22 @@ pipeline {
               println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
               agent_name_linux = env.NODE_NAME
               println "Running on NODE = ${env.NODE_NAME}"
+
+              def isForkPr = env.CHANGE_ID && env.CHANGE_FORK
+              def trustedCommentTrigger = (
+                env.gh_event == 'created' &&
+                (env.gh_comment ?: '') ==~ /(?is).*\bok-to-build\b.*/ &&
+                (env.gh_assoc ?: '') ==~ /(MEMBER|OWNER|COLLABORATOR)/ &&
+                (env.gh_pr_number ?: '') == (env.CHANGE_ID ?: '')
+              )
+              if (isForkPr && !trustedCommentTrigger) {
+                run_oncommit_stages = false
+                currentBuild.description = "Fork PR detected: waiting for trusted 'ok-to-build' comment trigger"
+                println "Skipping pipeline stages for fork PR ${env.CHANGE_ID}."
+                println "Reason: this run was not triggered by a trusted 'ok-to-build' comment."
+                return
+              }
+
               shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
               echo shortCommit
               echo sh(script: 'env|sort', returnStdout: true)
@@ -202,6 +219,9 @@ pipeline {
           }
         }
         stage('Style, SDL') {
+          when {
+            expression { run_oncommit_stages }
+          }
           options {
                 timeout(time: 20, unit: 'MINUTES')
           }
@@ -233,6 +253,9 @@ pipeline {
           }
         }
         stage('Cleanup node') {
+          when {
+            expression { run_oncommit_stages }
+          }
           options {
               timeout(time: 30, unit: 'MINUTES')
           }
@@ -254,6 +277,9 @@ pipeline {
           }
         }
         stage('Build') {
+          when {
+            expression { run_oncommit_stages }
+          }
           options {
             timeout(time: 4, unit: 'HOURS')
           }
@@ -328,6 +354,9 @@ pipeline {
           }
         }
         stage("Tests in parallel") {
+          when {
+            expression { run_oncommit_stages }
+          }
           options {
             timeout(time: 120, unit: 'MINUTES')
           }
