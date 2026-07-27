@@ -408,26 +408,14 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_FALSE(caps.supportsToolCalls);
-    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
-{
-  "tool_calls": [
-    {
-      "name": "get_weather",
-      "arguments": {
-        "location": "Paris",
-        "unit": "celsius"
-      },
-      "id": "call_abc123"
-    }
-  ],
-  "content": ""
-}<|im_end|>
+<|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
 <|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
