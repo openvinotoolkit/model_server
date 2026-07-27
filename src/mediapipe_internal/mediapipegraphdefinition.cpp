@@ -173,7 +173,7 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
             if (node.calculator() != "HttpLLMCalculator") {
                 continue;
             }
-            bool hasExecutionContextSidePacket = true;
+            bool hasExecutionContextSidePacket = false;
             for (const auto& sidePacket : node.input_side_packet()) {
                 if (sidePacket.find("LLM_NODE_EXECUTION_CONTEXTS") != std::string::npos) {
                     hasExecutionContextSidePacket = true;
