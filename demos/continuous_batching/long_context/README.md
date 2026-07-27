@@ -1,7 +1,7 @@
 # Long context optimizations for LLM models {#ovms_demo_long_context}
 
 Using LLM models with very long context and prompts might be particularly challenging. The key goals are to get maximum throughput, minimal latency and reasonable memory consumption.
-It is very common for applications using RAG chain, documents summarization, question answering and many more. 
+It is very common for applications using RAG chains, document summarization, question answering, and many more. 
 The optimizations below can significantly boost performance:
 
 - Prefix caching
@@ -23,13 +23,13 @@ Compression reduces this memory usage, enabling longer prompts or more parallel 
 This parameter is applicable only to pipelines with continuous batching and paged attention. It is not used with NPU device.
 
 **Max prompt length**
-Because NPU is using static memory allocation for prompt processing, there was introduced a dedicated parameter for NPU device - max_num_prompt. The default value 1024 should be adjust to the expected requests size.
+Because NPU uses static memory allocation for prompt processing, a dedicated parameter for NPU device `max_prompt_len` has been introduced. The default value of 1024 should be adjusted to match expected request sizes.
 
 **Cache interval multiplier**
 This parameter is dedicated for models with linear attention and prefix caching enabled. It adjusts the allocation size for state blocks internally in openvino.genai backend. For processing long inputs with low memory footprint, it is recommended to increase this parameter from default value 8 to higher like 64.  
 
 **Max number batched tokens**
-This parameter influences behavior of continuous batching algorithm and the size of chunked prompts for batching. It is efficient to use default value of 256 tokens when concurrent processing is expected. When usually one client is connecting to the local model, especially with long prompts, increasing the value might improve first token latency.
+This parameter influences the behavior of the continuous batching algorithm and the size of chunked prompts. The default value of 256 tokens is efficient when concurrent processing is expected. When typically only one client connects to the local model (especially with long prompts), increasing this value can improve first token latency.
 
 ## Deployment
 
@@ -44,20 +44,25 @@ mkdir models
 ::: {tab-item} GPU
 :sync: GPU
 ```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov  --tool_parser gptoss --reasoning_parser gptoss --task text_generation --kv_cache_precision u4 --target_device GPU --cache_size 5 --max_num_batched_tokens 4096
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/gpt-oss-20b-int4-ov --kv_cache_precision u4 --target_device GPU --cache_size 5 --max_num_batched_tokens 8192
 ```
 :::
 :::{tab-item} NPU
 ```bash
-docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --max_prompt_len 16000 --tool_parser hermes3 --task text_generation --target_device NPU
+docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:8000 --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --max_prompt_len 8000 --tool_parser hermes3 --task text_generation --target_device NPU
 ```
 :::
 ::::
 
 ## Testing latency
 
-Using `vllm` benchmark it's possible to check performance of the model with desired context length. It's also possible to set prefix parameters to check the performance benefit from prefix caching.
-The command below can generate synthetic load with configurable cached prompt length (5000) and new tokens length (10). 
+The `vllm` benchmark tool can measure model performance with various context lengths and prefix configurations. This allows you to verify performance gains from prefix caching under realistic conditions.
+
+**Key metrics used in the performance tables below:**
+- **TTFT (Time To First Token)**: Latency from sending a request to receiving the first output token (in milliseconds)
+- **TPOT (Time Per Output Token)**: Average time to generate each subsequent token after the first (in milliseconds)
+
+The command below generates synthetic load with a configurable cached prompt length (5000) and new tokens length (10): 
 ```text
 pip install vllm --extra-index-url https://wheels.vllm.ai/nightly/cpu
 vllm bench serve --backend  openai --base-url http://localhost:8000/v3 --endpoint /completions --model  OpenVINO/gpt-oss-20b-int4-ov --tokenizer openai/gpt-oss-20b --prefix-repetition-prefix-len 50000 --prefix-repetition-suffix-len 10 --prefix-repetition-output-len 20 --prefix-repetition-num-prefixes 1  --num-prompts 1 --max_concurrency 1 --dataset-name prefix_repetition --num-warmups 1 --seed 1
@@ -79,7 +84,7 @@ Those results confirm gain from prefix caching for repeated tokens and demonstra
 
 
 
-***NPU Platform: Intel(R) Core(TM) Ultra X7 368H**
+**NPU Platform: Intel(R) Core(TM) Ultra X7 368H**
 
 | Context Length (tokens) | TTFT No Cache (ms) | TPOT No Cache (ms) | TTFT Prefix Cached (ms) | TPOT Prefix Cached (ms) |
 |---------------|---------------|---------------|---------------|---------------|
@@ -88,12 +93,11 @@ Those results confirm gain from prefix caching for repeated tokens and demonstra
 | 2,000         | 2 662       |     79.74        | 1 518       |     80.09        |
 | 4,000         | 6 505       |     76.75        | 2 509       |     77.37        |
 | 8,000         | 15 432      |     76.74	     | 3 285       |     77.51        |
-| 16,000        | 43 117      |     80.30        | 5 356       |     80.97        |
 
 This table shows the gain from prefix caching on NPU device and flat latency for whole range to prompt length.
 
 
-## Cache Precision
+## KV Cache Precision
 
 KV cache compression has minimal impact on accuracy and significantly reduces memory consumption and benchmark time.
 The default value is  u8, but it's possible to change it to u4, f16 or f32.
@@ -108,24 +112,41 @@ Lower precision in KV Cache reduces the memory consumption and can also improve 
 
 Parameter `--max_prompt_len` has impact on the latency. It should be adjusted for expected input length to optimize performance.
 
-|     Max prompt length     |     TTFT (ms)    |     TPOT (ms)     |
+|     Max prompt length     |     1k input TTFT (ms)    |     TPOT (ms)     |
 |---------------------------|------------------|-------------------|
-|           16K             |       2 514      |       77.17       |
-|            4K             |       2 183      |       53.19       |
+|           8K             |       1 637      |       55.88       |
+|           1K             |       1 436      |       52.19       |
 
 
 ## Recommendations
 
-Take advantage of prefix caching to process repeated tokens faster. 
+### General Strategy
+- **Leverage prefix caching** to process repeated tokens faster (enabled by default)
+- **Set KV cache size** via `--cache_size` parameter based on available memory, expected concurrency, and context length
 
-Use KV cache compression as `u4` unless no compromise on accuracy is possible.
+### KV Cache Configuration
+- Use `u4` KV cache compression (default matches model precision). Increase precision only if memory pressure is low.
 
-Set the KV cache size via `--cache_size` parameter based on the available memory, expected concurrency and context length. It will improve the performance.
+### GPU Deployments
+- Combine prefix caching with KV cache compression for optimal latency and memory usage
+- Adjust `--cache_size` based on available VRAM
 
-For NPU set parameter `--max_prompt_len` based on expected input length. Lower `max_prompt_len` values, will reduce memory usage and latency.
+### NPU Deployments
+- Set `--max_prompt_len` based on expected input length. Lower values reduce memory usage and latency.
+- NPU is recommended for short to medium context lengths (typically up to 8K tokens)
 
-For models with linear attention like Qwen3.6-35B-A3B, set parameter --cache_interval_multiplier=64 to reduce memory usage with prefix caching
+### Models with Linear Attention (e.g., Qwen3.6-35B-A3B)
+- Set `--cache_interval_multiplier=64` to optimize memory usage with prefix caching
+  - Default (adaptive): optimizes memory for long context
+  - 64: recommended for medium context
+  - 8: this minimal value optimize for performance, recommended with short inputs
 
-In a scenario with low concurrency and long context, increase `max_num_batched_tokens` to higher numbers like 4096 or even max model context.
+### Low-Concurrency / Long-Context Scenarios
+- Increase `--max_num_batched_tokens` to 4096 or even the model's max context length
+- This improves TTFT, especially for long inputs
+- Trade-off: may increase memory usage under higher concurrency
 
-**Note:** You can force reducing the concurrency on the server using a parameter `--rest_workers` which by default allows number of connections the same like number of CPU cores. Alternatively the limit can be set on the model level in `--max_num_seqs`.
+### Concurrency Control
+To limit concurrent requests on the server:
+- `--rest_workers`: Controls number of simultaneous connections (default: number of CPU cores)
+- `--max_num_seqs`: Limits concurrency at the model level for finer control
