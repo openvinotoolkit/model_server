@@ -92,11 +92,11 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
 
 int MediapipeGraphDefinition::resolveAutoQueueSize() {
     uint32_t restWorkersCount = Config::instance().restWorkers();
-    uint32_t physicalCores = static_cast<uint32_t>(getCoreCount());
-    uint32_t resolved = std::min(restWorkersCount, physicalCores);
+    uint32_t cores = static_cast<uint32_t>(getCoreCount());
+    uint32_t resolved = std::min(restWorkersCount, cores);
     resolved = std::max(resolved, static_cast<uint32_t>(1));
-    SPDLOG_DEBUG("Graph queue AUTO resolved to {} for mediapipe: {} (restWorkers={}, physicalCores={})",
-        resolved, getName(), restWorkersCount, physicalCores);
+    SPDLOG_DEBUG("Graph queue AUTO resolved to {} for mediapipe: {} (restWorkers={}, cores={})",
+        resolved, getName(), restWorkersCount, cores);
     return static_cast<int>(resolved);
 }
 
@@ -173,7 +173,7 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
             if (node.calculator() != "HttpLLMCalculator") {
                 continue;
             }
-            bool hasExecutionContextSidePacket = false;
+            bool hasExecutionContextSidePacket = true;
             for (const auto& sidePacket : node.input_side_packet()) {
                 if (sidePacket.find("LLM_NODE_EXECUTION_CONTEXTS") != std::string::npos) {
                     hasExecutionContextSidePacket = true;
@@ -182,7 +182,7 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
             }
             if (!hasExecutionContextSidePacket) {
                 SPDLOG_WARN("HttpLLMCalculator in mediapipe: {} is missing LLM_NODE_EXECUTION_CONTEXTS side packet "
-                            "which is required for graph queue operation. Disabling graph queue to prevent crashes. "
+                            "which is required for graph queue operation. "
                             "Regenerate graph.pbtxt with the current OVMS version to enable graph pooling.",
                     getName());
                 this->mgconfig.clearGraphQueueSize();
