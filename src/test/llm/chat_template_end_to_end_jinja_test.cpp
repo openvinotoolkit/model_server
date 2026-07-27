@@ -532,3 +532,65 @@ What's the weather in Paris?<|im_end|>
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
+
+// =============================================================================
+// Onyx (early preview model) chat template, rendered via the real Python Jinja2
+// engine. Onyx's template does not read the standard OpenAI "tool_calls" array
+// at all -- only message['content'] (plain string) and an Onyx-specific
+// message['recipient'] field (e.g. "functions.get_weather", "self", "user").
+// ChatTemplateAnalyzer now recognizes Onyx's control tokens (see analyzer.cpp),
+// but deliberately leaves caps.supportsToolCalls false: that flag means "this
+// template natively re-serializes an incoming OpenAI tool_calls array", which
+// this test demonstrates Onyx's template does NOT do (the tool call is silently
+// dropped below).
+// =============================================================================
+TEST_F(ChatTemplateEndToEndJinjaTest, Onyx_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_onyx.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "onyx");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "onyx");
+
+    EXPECT_FALSE(caps.supportsToolCalls);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+
+    // Unlike the minja path (which has its own generic tool-call fallback),
+    // the real Python Jinja2 engine has no such fallback: the template renders
+    // message['content'] literally, i.e. the empty string, and the tool call
+    // information is silently dropped.
+    std::string expectedOutput = R"(</s><|start|>system<|message|>You are a helpful assistant.<|eot|><|start|>user<|message|>What's the weather in Paris?<|eot|><|start|>assistant<|message|><|eot|><|start|>assistant)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+// =============================================================================
+// Onyx's own message shape via Python Jinja2: "recipient" field instead of the
+// OpenAI "tool_calls" array. Ends the turn with "<|eom|>" (continuation marker)
+// rather than "<|eot|>".
+// =============================================================================
+TEST_F(ChatTemplateEndToEndJinjaTest, Onyx_ToolCallWithRecipientField) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_onyx.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","recipient":"functions.get_weather","content":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    std::string expectedOutput = R"(</s><|start|>system<|message|>You are a helpful assistant.<|eot|><|start|>user<|message|>What's the weather in Paris?<|eot|><|start|>assistant to=functions.get_weather<|message|>{"location":"Paris","unit":"celsius"}<|eom|><|start|>assistant)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}

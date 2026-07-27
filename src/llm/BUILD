@@ -353,6 +353,36 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
+ovms_cc_library(
+    name = "io_processing_onyx_tool_parser",
+    hdrs = ["io_processing/onyx/onyx_tool_parser.hpp"],
+    srcs = ["io_processing/onyx/onyx_tool_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_onyx_reasoning_parser",
+    hdrs = ["io_processing/onyx/onyx_reasoning_parser.hpp"],
+    srcs = ["io_processing/onyx/onyx_reasoning_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
     name = "output_parsers",
     hdrs = [
@@ -390,6 +420,8 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":io_processing_lfm2_tool_parser",
         ":io_processing_gemma4_tool_parser",
         ":io_processing_qwen3_reasoning_parser",
+        ":io_processing_onyx_tool_parser",
+        ":io_processing_onyx_reasoning_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
     ],

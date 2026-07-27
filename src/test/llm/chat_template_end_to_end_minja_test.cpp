@@ -489,6 +489,145 @@ What's the weather in Paris?<|im_end|>
 }
 
 // =============================================================================
+// Onyx (early preview model) chat template. Unlike every other template in this
+// suite, Onyx's own Jinja template does not consume the standard OpenAI
+// "tool_calls" list at all -- it only reads message['content'] (a plain string)
+// and an Onyx-specific message['recipient'] field (e.g. "functions.get_weather",
+// "self", "user"). Feeding it a standard tool_calls-shaped assistant message
+// therefore renders an effectively empty assistant turn.
+// ChatTemplateAnalyzer now recognizes Onyx's control tokens (see analyzer.cpp) and
+// sets detectedToolParser/detectedReasoningParser, but deliberately leaves
+// caps.supportsToolCalls false since the template can't natively round-trip an
+// OpenAI tool_calls history (demonstrated by this very test), so no input-side
+// workaround is applied either -- detectedToolParser only affects output parsing.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndMinjaTest, Onyx_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_onyx.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load onyx template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "onyx");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "onyx");
+
+    EXPECT_FALSE(caps.supportsToolCalls);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+
+    // The template itself never reads "tool_calls" (it only looks at
+    // message['content'] and message['recipient']). Because caps.supportsToolCalls
+    // is false here, OVMS does not apply its own tool-call workaround either.
+    // Minja's own generic fallback (used for templates it detects have no native
+    // tool-call rendering) kicks in instead and serializes the whole message
+    // (tool_calls + content) as a JSON blob into message['content'] -- the
+    // function name/args are NOT lost, but they end up as raw, unparsed JSON text
+    // rather than in Onyx's native " to=functions.<name>" / <|eom|> framing.
+    std::string expectedOutput = R"(</s><|start|>system<|message|>You are a helpful assistant.<|eot|><|start|>user<|message|>What's the weather in Paris?<|eot|><|start|>assistant<|message|>{
+  "tool_calls": [
+    {
+      "name": "get_weather",
+      "arguments": {
+        "location": "Paris",
+        "unit": "celsius"
+      },
+      "id": "call_abc123"
+    }
+  ],
+  "content": ""
+}<|eot|><|start|>assistant)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+// =============================================================================
+// Onyx's own message shape: instead of the OpenAI "tool_calls" array, the
+// assistant turn carries a "recipient" field (here "functions.get_weather")
+// and a plain-string content holding the raw JSON arguments. This is the shape
+// Onyx's template actually understands, ending the turn with "<|eom|>" (a
+// continuation marker) rather than "<|eot|>".
+// =============================================================================
+TEST_F(ChatTemplateEndToEndMinjaTest, Onyx_ToolCallWithRecipientField) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_onyx.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load onyx template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","recipient":"functions.get_weather","content":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"})"));
+
+    run(true);
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    std::string expectedOutput = R"(</s><|start|>system<|message|>You are a helpful assistant.<|eot|><|start|>user<|message|>What's the weather in Paris?<|eot|><|start|>assistant to=functions.get_weather<|message|>{"location":"Paris","unit":"celsius"}<|eom|><|start|>assistant)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+// =============================================================================
+// Full-scope round trip: exercises every message shape the Onyx template
+// natively understands in a single history, not just one shape in isolation --
+// user prompt -> assistant tool call (recipient=functions.<name>, continuation
+// "<|eom|>") -> tool call response (role="tool") -> assistant final answer
+// (recipient="user", "<|eot|>").
+//
+// This surfaces a second, previously undocumented gap alongside the tool_calls
+// one above (see muse/chat_template_issues.md): because caps.supportsToolCalls
+// is false for Onyx, ChatTemplateAdapter's generic fallback also intercepts
+// plain role="tool" messages -- not just assistant tool_calls -- and rewrites
+// them into a synthetic role="user" message serializing {tool, content} as a
+// JSON blob, rather than passing them through to the template's own native
+// "tool"-role branch (which expects message['name'] + message['content'] and
+// would render "<|start|>tool <name><|message|>...<|eot|>"). So even a chat
+// history built entirely out of Onyx's own native fields (recipient) still
+// does not round-trip once a plain OpenAI-shaped tool response message is
+// mixed in.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndMinjaTest, Onyx_FullMultiTurnToolCallRoundTrip) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_onyx.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load onyx template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","recipient":"functions.get_weather","content":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"tool","name":"get_weather","content":"{\"temperature\":15,\"unit\":\"celsius\"}"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","recipient":"user","content":"It's 15C in Paris."})"));
+
+    run(true);
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    EXPECT_FALSE(caps.supportsToolCalls);
+
+    // Known gap (see class comment above): the "tool" message is NOT rendered via
+    // the template's native "<|start|>tool <name><|message|>...<|eot|>" branch --
+    // ChatTemplateAdapter's fallback rewrites it into a synthetic user message
+    // carrying a JSON blob first.
+    std::string expectedOutput =
+        R"(</s><|start|>system<|message|>You are a helpful assistant.<|eot|>)"
+        R"(<|start|>user<|message|>What's the weather in Paris?<|eot|>)"
+        R"(<|start|>assistant to=functions.get_weather<|message|>{"location":"Paris","unit":"celsius"}<|eom|>)"
+        "<|start|>user<|message|>{\n"
+        "  \"tool_response\": {\n"
+        "    \"tool\": \"get_weather\",\n"
+        "    \"content\": \"{\\\"temperature\\\":15,\\\"unit\\\":\\\"celsius\\\"}\"\n"
+        "  }\n"
+        "}<|eot|>"
+        R"(<|start|>assistant to=user<|message|>It's 15C in Paris.<|eot|>)"
+        R"(<|start|>assistant)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+// =============================================================================
 // Synthetic test: template that throws on basic rendering (e.g. uses undefined
 // filter). The basic render probe should catch this and return false.
 // =============================================================================

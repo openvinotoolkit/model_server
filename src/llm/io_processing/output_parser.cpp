@@ -17,8 +17,8 @@
 #include <algorithm>
 #include <unordered_set>
 
-#include "../../logging.hpp"
-#include "../../stringutils.hpp"
+#include "src/logging.hpp"
+#include "src/stringutils.hpp"
 #include "output_parser.hpp"
 #include "parser_config_validation.hpp"
 #include "llama3/tool_parser.hpp"
@@ -33,6 +33,8 @@
 #include "gptoss/reasoning_parser.hpp"
 #include "lfm2/lfm2_tool_parser.hpp"
 #include "gemma4/gemma4_tool_parser.hpp"
+#include "onyx/onyx_tool_parser.hpp"
+#include "onyx/onyx_reasoning_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -196,6 +198,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
+    } else if (toolParserName == "onyx") {
+        toolParser = std::make_unique<OnyxToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: \"" + toolParserName +
                                  "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
@@ -207,6 +211,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Gemma4ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "gptoss") {
         reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "onyx") {
+        reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
