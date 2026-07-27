@@ -22,7 +22,9 @@
 #include "../dags/pipeline.hpp"
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
-#include "../kfs_frontend/kfs_graph_executor_impl.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "src/kfs_frontend/kfs_graph_executor_impl.hpp"
+#endif
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"

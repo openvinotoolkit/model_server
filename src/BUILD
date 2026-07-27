@@ -2403,6 +2403,9 @@ cc_test(
                 ":text2image_test",
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
+                "libovms_mediapipe_kfs_executor",
+                "//src/mediapipe_internal:mediapipe_utils",
+                "tensorflow_type_utils",
             ],
             "//:disable_mediapipe" :
             [
@@ -2545,6 +2548,14 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+cc_library(
+    name = "test_wav_utils",
+    hdrs = ["test/wav_test_utils.hpp"],
+    linkstatic = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
 )
 
 cc_library(
@@ -2954,6 +2965,7 @@ cc_library(
     deps = [
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
+        ":test_wav_utils",
         "//src/llm:io_processing_input_processors",
     ],
     copts = COPTS_TESTS,
@@ -2968,6 +2980,7 @@ cc_library(
     deps = [
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
+        ":test_wav_utils",
         "//src/llm:openai_completions_api_handler",
         "//src/llm:openai_responses_handler",
         "//src/llm:io_processing_input_processor",

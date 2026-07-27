@@ -35,10 +35,10 @@ IF "%~2"=="--with_python" (
 
 IF "%~3"=="--with_tests" (
     echo Building model server with tests
-    set "buildTargets=//src:ovms //src:ovms_test"
+    set "buildTargets=//src:ovms //src:ovms_test //third_party:espeak_ng //third_party:espeak_ng_data"
 ) ELSE (
     echo Building model server without tests
-    set "buildTargets=//src:ovms"
+    set "buildTargets=//src:ovms //third_party:espeak_ng //third_party:espeak_ng_data"
 )
 
 IF "%~4"=="--integrity" (
