@@ -29,6 +29,19 @@ absl::Status TextContentNormalizationProcessor::process(InputRequest& req) {
     ov::genai::ChatHistory& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
     for (size_t i = 0; i < chatHistory.size(); i++) {
         const auto content = chatHistory[i]["content"];
+        if (content.is_null()) {
+            // TODO @atobiszei to check if really needed when we have IR
+            // Standard OpenAI shape for e.g. an assistant message that only carries
+            // "tool_calls" sets "content": null (openai_completions.cpp stores this
+            // verbatim -- only a *missing* content field is defaulted to ""). Some
+            // chat templates (e.g. Onyx's) unconditionally render content for every
+            // message regardless of role/tool_calls and are not written to expect
+            // null there, which raises a template error instead of just omitting
+            // the text. Normalize null the same way a missing field is already
+            // defaulted, so every template sees a plain string as before.
+            chatHistory[i]["content"] = std::string("");
+            continue;
+        }
         if (!content.is_array()) {
             continue;
         }

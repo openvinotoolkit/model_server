@@ -19,11 +19,15 @@
 
 namespace ovms {
 
-// Flattens text-only content arrays in ChatHistory messages to plain strings.
-// Parts are joined with "\n" for backward compatibility with chat templates.
-// Runs for both LM and VLM chat paths: arrays that contain images (or other
-// non-text modalities) are left untouched.
-// Must run before ChatTemplateProcessor and after Image/Audio decoding processors.
+// Flattens text-only content arrays in ChatHistory messages to plain strings, and
+// normalizes an explicit "content": null (the standard OpenAI shape for e.g. an
+// assistant message that only carries tool_calls) to "" -- some chat templates
+// (e.g. Onyx's) unconditionally render content for every message and are not
+// written to expect null there. Parts/null are joined/replaced for backward
+// compatibility with chat templates. Runs for both LM and VLM chat paths: arrays
+// that contain images (or other non-text modalities) are left untouched for
+// ImageDecodingProcessor.
+// Must run before ChatTemplateProcessor.
 class TextContentNormalizationProcessor : public BaseInputProcessor {
 public:
     absl::Status process(InputRequest& req) override;
