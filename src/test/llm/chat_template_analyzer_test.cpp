@@ -61,6 +61,21 @@ TEST_F(ChatTemplateAnalyzerTest, detectsGptOss) {
     EXPECT_TRUE(result.caps.supportsToolCalls);
 }
 
+// --- Onyx ---
+
+TEST_F(ChatTemplateAnalyzerTest, detectsOnyx) {
+    std::string tmpl = loadTemplate("chat_template_onyx.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "onyx");
+    ASSERT_TRUE(result.detectedReasoningParser.has_value());
+    EXPECT_EQ(result.detectedReasoningParser.value(), "onyx");
+    // Onyx's template never reads the OpenAI "tool_calls" array, so unlike every
+    // other detected family, supportsToolCalls stays false -- see analyzer.cpp.
+    EXPECT_FALSE(result.caps.supportsToolCalls);
+}
+
 // --- Gemma4 ---
 
 TEST_F(ChatTemplateAnalyzerTest, detectsGemma4) {
