@@ -38,7 +38,7 @@
 #include "../servable_name_checker.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
-#include "../systeminfo.hpp"
+#include "src/systeminfo.hpp"
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"

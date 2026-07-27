@@ -58,7 +58,7 @@
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
-#include "../systeminfo.hpp"
+#include "src/systeminfo.hpp"
 #include "src/tensorflow_type_utils.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "c_api_test_utils.hpp"
@@ -4167,10 +4167,10 @@ TEST(MediapipeGraphQueueSizeDirective, AutoValue) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
     int queueSize = def.getMediapipeGraphConfig().getInitialQueueSize();
     EXPECT_GT(queueSize, 0);
-    // AUTO should not exceed physical core count
-    uint32_t physicalCores = static_cast<uint32_t>(ovms::getPhysicalCoresPerSocket()) * static_cast<uint32_t>(ovms::getSocketsCount());
-    if (physicalCores > 0) {
-        EXPECT_LE(queueSize, static_cast<int>(physicalCores));
+    // AUTO should not exceed getCoreCount() (accounts for Docker/cgroup limits)
+    uint32_t coreCount = static_cast<uint32_t>(ovms::getCoreCount());
+    if (coreCount > 0) {
+        EXPECT_LE(queueSize, static_cast<int>(coreCount));
     }
 }
 
