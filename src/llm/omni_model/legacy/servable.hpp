@@ -52,6 +52,17 @@ struct OmniModelLegacyServableExecutionContext : public GenAiServableExecutionCo
 
     std::atomic<bool> clientDisconnected{false};
 
+    // Reset per-request state. Called at the start of each new request since the
+    // execution context is reused across requests (created once in calculator Open).
+    void resetForNewRequest() {
+        readySignal = std::promise<void>();
+        finished = readySignal.get_future();
+        success = true;
+        accumulatedUnaryText.clear();
+        clientDisconnected = false;
+        speechStreamer = std::monostate{};
+    }
+
     void signalDisconnection() {
         clientDisconnected = true;
         deltaChannel.signalComplete();

@@ -77,6 +77,7 @@ std::shared_ptr<GenAiServableProperties> OmniModelLegacyServable::getProperties(
 absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto omniExecutionContext = std::static_pointer_cast<OmniModelLegacyServableExecutionContext>(executionContext);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Omni parseRequest: begin, ctx use_count={}", executionContext.use_count());
+    omniExecutionContext->resetForNewRequest();
     if (omniExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
