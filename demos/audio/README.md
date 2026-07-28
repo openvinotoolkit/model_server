@@ -290,6 +290,13 @@ ovms --rest_port 8000 --config_path c:\models\config.json
 ```
 :::
 
+### Readiness Check
+
+Wait for the model to load. You can check the status with a simple command:
+```console
+curl http://localhost:8000/v1/models
+```
+
 :::{dropdown} **Unary call with cURL (word timestamps)**
 
 ```bash
