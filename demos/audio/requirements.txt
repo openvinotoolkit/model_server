@@ -1,5 +1,5 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
-torch==2.12.1+cpu
+torch==2.13.0
 torchaudio==2.11.0+cpu
 torchcodec==0.14.0
 soundfile
