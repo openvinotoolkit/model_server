@@ -111,6 +111,7 @@ In this demo we will use OpenVINO/whisper-large-v3-turbo-fp16-ov, which is a fin
 mkdir -p ${HOME}/models
 # in case GPU is available
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+
 docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --model_name whisper-large-v3-turbo-fp16-ov --model_repository_path /models
 ```
 :::
@@ -242,18 +243,32 @@ Prepare export script and dependencies:
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir -p ${HOME}/models
 ```
 
 Export Speech-to-Text model with word timestamps enabled.
-```console
+
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
+```bash
+mkdir -p ${HOME}/models
 python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name whisper-large-v3-turbo-word-ts --config_file_path ${HOME}/models/config.json --model_repository_path ${HOME}/models --overwrite_models --enable_word_timestamps
 ```
+:::
+:::{tab-item} Windows
+:sync: Windows
+```bat
+mkdir c:\models
+python export_model.py speech2text --source_model openai/whisper-large-v3-turbo --weight-format fp16 --model_name whisper-large-v3-turbo-word-ts --config_file_path c:\models\config.json --model_repository_path c:\models --overwrite_models --enable_word_timestamps
+```
+:::
+::::
 
 :::{dropdown} **Deploying with Docker**
 ```bash
 # in case GPU is available
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+
 docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json
 ```
 :::
@@ -375,6 +390,7 @@ To prepare an audio file with speech in a language other than English, e.g. Span
 mkdir -p ${HOME}/models
 # in case GPU is available
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+
 docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS
 ```
 
@@ -402,6 +418,7 @@ Here is an example of OpenVINO/whisper-large-v3-fp16-ov deployment:
 mkdir -p ${HOME}/models
 # in case GPU is available
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+
 docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path /models --model_name whisper-large-v3-fp16-ov
 ```
 :::

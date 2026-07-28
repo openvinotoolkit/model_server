@@ -462,10 +462,23 @@ Then it's ready to use. In new chat it's possible to toggle **Code Interpreter**
 ### Step 1: Models Preparation
 
 Start by pulling the pre-exported Kokoro model with OVMS and adding it to the server config:
-```console 
+
+::::{tab-set}
+:::{tab-item} Windows
+:sync: Windows
+```bat
+ovms.exe --pull --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path models --target_device GPU
+ovms.exe --add_to_config --config_path models\config.json --model_path luis-castillo\Kokoro-82M-OpenVINO-FP16-OVMS --model_name Kokoro-82M-OpenVINO-FP16-OVMS
+```
+:::
+:::{tab-item} Linux (using Docker)
+:sync: Linux
+```bash
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --target_device GPU
 docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json --model_path luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_name Kokoro-82M-OpenVINO-FP16-OVMS
 ```
+:::
+::::
 
 Next, download and add to config model for transcription:
 
