@@ -126,6 +126,13 @@ ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov --m
 ```
 :::
 
+### Readiness Check
+
+Wait for the model to load. You can check the status with a simple command:
+```console
+curl http://localhost:8000/v1/models
+```
+
 The default configuration should work in most cases but the parameters can be tuned via OVMS arguments. See the [s2t calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
 
 ### Request Generation 
