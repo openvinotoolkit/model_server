@@ -19,9 +19,22 @@
 # Any variable can be overridden by the environment or command-line.
 
 # Source repository git commits / branches (used for source builds)
-OV_SOURCE_BRANCH ?= 894ddbcccf0755986b5a6bab807e7d9dd5cb8bb1
-OV_TOKENIZERS_BRANCH ?= 2eca683e943db7aa2ba784d19f7d62399bf3ae03
-OV_GENAI_BRANCH ?= fbbeb800ff5e6c6029b3747f87c1231a8b424d5e
+# NOTE: pinned to the commits required by the onyx-support patches in
+# ./patches (see patches/openvino/readme.md and patches/openvino.genai/readme.md).
+# This is a temporary, one-off pin - restore the previous commits below once
+# the patches are no longer needed:
+#   OV_SOURCE_BRANCH ?= d08e55c64c37fde1f4f6157cc5f5e07dd36ce5e8  (pre-patch branch tip)
+#   OV_GENAI_BRANCH ?= 8981d6f848f17985979be0a9224251d181f68c56  (pre-patch branch tip)
+# NOTE: OV_TOKENIZERS_BRANCH is intentionally left at its original commit -
+# the tokenizers commit referenced by the genai patch's submodule bump
+# (935443f5275ce93f362f9eb4fa2d9fa762dd3f22) does not exist in the
+# openvinotoolkit/openvino_tokenizers repo (only reachable from a fork used
+# during genai development), and OVMS builds tokenizers as a separate
+# component (BUILD_TOKENIZERS=OFF in the genai cmake invocation) so this pin
+# does not affect the OVMS build.
+OV_SOURCE_BRANCH ?= 5b6997da03a7a0713fb4376f9109b4832383cc24
+OV_TOKENIZERS_BRANCH ?= master
+OV_GENAI_BRANCH ?= c637ed85efebf1a44d5f0433845849a2d80b353c
 
 # Source repository organizations
 OV_SOURCE_ORG ?= openvinotoolkit
