@@ -1,0 +1,5 @@
+{
+  "architectures": ["Qwen3ForCausalLM"],
+  "model_type": "qwen3",
+  "hidden_size": 1024
+}

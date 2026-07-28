@@ -219,6 +219,14 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
                         }
+                    } else if (entryType == "input_audio") {
+                        if (!entry.HasMember("input_audio") || !entry["input_audio"].IsObject()) {
+                            return absl::InvalidArgumentError("Invalid message structure - input_audio object missing");
+                        }
+                        const auto inputAudio = entry["input_audio"].GetObject();
+                        if (!inputAudio.HasMember("data") || !inputAudio["data"].IsString()) {
+                            return absl::InvalidArgumentError("Invalid message structure - input_audio does not have a valid data field");
+                        }
                     } else {
                         return absl::InvalidArgumentError("Unsupported content type");
                     }
@@ -571,8 +579,12 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(rapidjson::Doc
             if (hasToolCalls) {
                 toolCallsDetectedInStream = true;
             }
+        } else {
+            // No delta from the parser (e.g. generation ended on a swallowed token).
+            // The OpenAI API requires "delta" to always be present in each choice, so emit an empty object.
+            Value emptyDelta(kObjectType);
+            choice.AddMember("delta", emptyDelta, allocator);
         }
-        // If no "delta" member, choice has no delta — valid for the final finish_reason chunk.
     } else if (endpoint == Endpoint::COMPLETIONS) {
         // For /v1/completions, extract the plain text from the content delta.
         if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject() &&

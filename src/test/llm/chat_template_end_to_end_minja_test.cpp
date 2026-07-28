@@ -105,7 +105,7 @@ protected:
             }
         }
 
-        // Step 3: Tool probe (only if template supports tools)
+        // Step 3a: Tool probe (only if template supports tools)
         if (caps.supportsToolCalls) {
             ov::genai::Tokenizer probeTokenizer(tokenizerPath);
             probeTokenizer.set_chat_template(chatTemplate);
@@ -115,8 +115,19 @@ protected:
             }
         }
 
+        // Step 3b: Probe reasoning caps using Python Jinja (same function used in production)
+        {
+            ov::genai::Tokenizer probeTokenizer(tokenizerPath);
+            probeTokenizer.set_chat_template(chatTemplate);
+            bool probeOk = probeChatTemplateReasoning(probeTokenizer, caps);
+            if (!probeOk) {
+                std::cout << "=== Reasoning Probe FAILED: minja cannot render reasoning ===" << std::endl;
+            }
+        }
+
         std::cout << "=== After Probe ===" << std::endl;
         std::cout << "  requiresObjectArguments: " << caps.requiresObjectArguments << std::endl;
+        std::cout << "  missnamedReasoningField: " << (caps.missnamedReasoningField.empty() ? "(none)" : caps.missnamedReasoningField) << std::endl;
 
         // Step 4: Apply workarounds to the chat history
         chat_template_adapter::applyToHistory(caps, chatHistory);
@@ -240,6 +251,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     // FIXME: Why is </s> here? because of facebook-opt125?
     std::string expectedOutput = R"(</s><|turn>user
@@ -276,6 +288,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
 
     EXPECT_FALSE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 }
 
 // =============================================================================
@@ -301,6 +314,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Phi4Mini_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|system|>
 You are a helpful assistant.<|end|><|user|>What's the weather in Paris?<|end|><|assistant|>{"name": "get_weather", "arguments": {"location":"Paris","unit":"celsius"}}<|end|><|assistant|>)";
@@ -330,6 +344,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -369,13 +384,14 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]</s>)";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================
-// // TODO: Implement assertions, where to take lfm2 deployments steps from?
+// // LFM2 does not render tool calls in current chat template, minja inserts them as stringified JSON, which is not correct.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm2.jinja");
@@ -388,13 +404,35 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
 
     run(true);
 
-    // TODO: Implement assertions, where to take lfm2 deployments steps from?
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
+    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+
+    EXPECT_FALSE(caps.supportsToolCalls);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
+
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+{
+  "tool_calls": [
+    {
+      "name": "get_weather",
+      "arguments": {
+        "location": "Paris",
+        "unit": "celsius"
+      },
+      "id": "call_abc123"
+    }
+  ],
+  "content": ""
+}<|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
-// =============================================================================
-// Minja can't handle this chat template for some reason.
-// TODO(przepeck): ensure this tests the same template as we will publish to HF
-// =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2.5 template";
@@ -410,14 +448,82 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
-    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2");
 
-    // TODO: It just does not work for now, documented with assertion
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
-    EXPECT_FALSE(caps.supportsToolCalls);
-    EXPECT_FALSE(caps.requiresObjectArguments);  // TODO(przepeck): change once we have it working
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
 
-    // TODO: Expect appliedOutput once fixed
+TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgsAndReasoning) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2.5 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant", "reasoning_content":"Here is some reasoning content","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(true);
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2");
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
+
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<think>Here is some reasoning content</think><|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ReasoningAndEmptyToolCalls) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm25.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load lfm2.5 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant", "reasoning_content":"Here is some reasoning content","content":"","tool_calls":[]})"));
+
+    run(true);
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2");
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
+
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<think>Here is some reasoning content</think><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================
@@ -442,6 +548,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3VL_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -476,6 +583,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3_30B_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
@@ -486,6 +594,30 @@ What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+TEST_F(ChatTemplateEndToEndMinjaTest, MiniCPM5_ToolCallWithStringArgsExpectedToFailMinjaDontSupportThisTemplate) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_minicpm5.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load minicpm5 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(true);
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+    ASSERT_TRUE(basicRenderOk);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "minicpm5");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "minicpm5");
+
+    EXPECT_FALSE(caps.supportsToolCalls);
+    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 }
 
 // =============================================================================
@@ -506,4 +638,5 @@ TEST_F(ChatTemplateEndToEndMinjaTest, BrokenTemplate_BasicRenderFails) {
     // Minja silently fails (without exception), but our basic render check should catch it by parsing results.
     ASSERT_FALSE(exceptionThrownDuringApplication);
     EXPECT_FALSE(basicRenderOk);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 }

@@ -152,6 +152,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "io_processing_input_processors",
     hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
+            "io_processing/input_processors/audio_decoding_processor.hpp",
             "io_processing/input_processors/chat_template_processor.hpp",
             "io_processing/input_processors/chat_template_adapter.hpp",
             "io_processing/chat_template/caps.hpp",
@@ -160,6 +161,7 @@ ovms_cc_library(
             "io_processing/input_processors/text_content_normalization_processor.hpp",
             "io_processing/input_processors/tokenization_processor.hpp"],
     srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
+            "io_processing/input_processors/audio_decoding_processor.cpp",
             "io_processing/input_processors/chat_template_processor.cpp",
             "io_processing/input_processors/chat_template_adapter.cpp",
             "io_processing/input_processors/empty_content_array_normalization_processor.cpp",
@@ -172,6 +174,7 @@ ovms_cc_library(
         ":io_processing_input_request",
         "//third_party:genai",
         "//src:libovmslogging",
+        "//src/audio:audio_utils",
     ] + select({
         "//:disable_python": [],
         "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,
@@ -275,6 +278,7 @@ ovms_cc_library(
         "//src/port:rapidjson_writer",
         "//src/port:rapidjson_document",
         ":io_processing_utils",
+        ":apis_tool_schema_wrapper",
         "//third_party:genai",
     ],
 )
@@ -306,9 +310,9 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "io_processing_lfm2_tool_parser",
-    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
-    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
+    name = "io_processing_lfm2_utils",
+    hdrs = ["io_processing/lfm2/lfm2_utils.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_utils.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_document",
@@ -320,6 +324,29 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "io_processing_lfm2_tool_parser",
+    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
+    deps = [
+        ":io_processing_lfm2_utils",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+
+ovms_cc_library(
+    name = "io_processing_lfm25_tool_parser",
+    hdrs = ["io_processing/lfm2/lfm25_tool_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm25_tool_parser.cpp"],
+    deps = [
+        ":io_processing_lfm2_utils",
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library(
     name = "io_processing_gemma4_tool_parser",
     hdrs = ["io_processing/gemma4/gemma4_tool_parser.hpp", "io_processing/gemma4/gemma4_reasoning_parser.hpp"],
@@ -338,9 +365,48 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "io_processing_minicpm5_tool_parser",
+    hdrs = [
+        "io_processing/minicpm5/minicpm5_tool_parser.hpp",
+        "io_processing/minicpm5/minicpm5_reasoning_parser.hpp",
+    ],
+    srcs = [
+        "io_processing/minicpm5/minicpm5_tool_parser.cpp",
+        "io_processing/minicpm5/minicpm5_reasoning_parser.cpp",
+    ],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src/utils:rapidjson_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        ":apis_tool_schema_wrapper",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "io_processing_qwen3_reasoning_parser",
     hdrs = ["io_processing/qwen3/reasoning_parser.hpp"],
     srcs = ["io_processing/qwen3/reasoning_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_lfm25_reasoning_parser",
+    hdrs = ["io_processing/lfm2/lfm25_reasoning_parser.hpp"],
+    srcs = ["io_processing/lfm2/lfm25_reasoning_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_document",
@@ -388,8 +454,11 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":io_processing_parser_config_validation",
         ":io_processing_qwen3coder_tool_parser",
         ":io_processing_lfm2_tool_parser",
+        ":io_processing_lfm25_tool_parser",
         ":io_processing_gemma4_tool_parser",
+        ":io_processing_minicpm5_tool_parser",
         ":io_processing_qwen3_reasoning_parser",
+        ":io_processing_lfm25_reasoning_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
     ],
@@ -431,6 +500,9 @@ ovms_cc_library(
             "visual_language_model/legacy/servable.hpp",
             "visual_language_model/legacy/servable_initializer.hpp",
             "visual_language_model/legacy/legacy_executor.hpp",
+            "omni_model/legacy/servable.hpp",
+            "omni_model/legacy/servable_initializer.hpp",
+            "omni_model/legacy/legacy_executor.hpp",
             "text_utils.hpp"],
     srcs = ["servable.cpp",
             "servable_initializer.cpp",
@@ -443,7 +515,10 @@ ovms_cc_library(
             "language_model/legacy/legacy_executor.cpp",
             "visual_language_model/legacy/servable.cpp",
             "visual_language_model/legacy/servable_initializer.cpp",
-            "visual_language_model/legacy/legacy_executor.cpp"],
+            "visual_language_model/legacy/legacy_executor.cpp",
+            "omni_model/legacy/servable.cpp",
+            "omni_model/legacy/servable_initializer.cpp",
+            "omni_model/legacy/legacy_executor.cpp"],
     deps = [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",

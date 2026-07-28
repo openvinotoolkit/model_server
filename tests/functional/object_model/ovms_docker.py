@@ -373,6 +373,7 @@ class OvmsDockerLauncher(object):
                 resolution=resolution,
                 cache_size=cache_size,
                 pooling=model.pooling if model is not None else None,
+                single_mediapipe_model_mode=parameters.single_mediapipe_model_mode,
             )
         else:
             command = parameters.custom_command

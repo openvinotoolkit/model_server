@@ -66,10 +66,9 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
             continue;
         }
 
-        // Accumulate image tags and text parts from a single message's content array.
-        std::string imageTags;
-        std::string textContent;
-
+        // Replace image_url parts with text tag parts in-place.
+        // All other parts (text, input_audio, etc.) are preserved as-is.
+        // Flattening to string is deferred to TextContentNormalizationProcessor.
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
             const auto type = part["type"].as_string().value_or("");
@@ -81,17 +80,10 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
                     return imageResult.status();
                 }
                 req.inputImages.push_back(std::move(imageResult).value());
-                imageTags += "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            } else if (type == "text") {
-                if (!textContent.empty()) {
-                    textContent += "\n";
-                }
-                textContent += part["text"].as_string().value_or("");
+                std::string tag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">";
+                ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", tag}});
+                content[j] = textEntry;
             }
-        }
-
-        if (!imageTags.empty() || !textContent.empty()) {
-            chatHistory[i]["content"] = imageTags + textContent;
         }
     }
 

@@ -16,6 +16,7 @@
 #include "kfs_utils.hpp"
 
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -292,6 +293,34 @@ int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tensor) {
     return tensor.contents().bytes_contents_size();
 }
 
+Status buildShapeFromStringTensorRequest(const ::KFSRequest::InferInputTensor& src, size_t numElements, ov::Shape& shape) {
+    if (src.shape_size() > 0) {
+        size_t shapeElements = 1;
+        bool validShape = true;
+        for (int i = 0; i < src.shape_size(); i++) {
+            int64_t dim = src.shape().at(i);
+            if (dim < 0) {
+                validShape = false;
+                break;
+            }
+            size_t dimSize = static_cast<size_t>(dim);
+            if (dimSize != 0 && shapeElements > std::numeric_limits<size_t>::max() / dimSize) {
+                validShape = false;  // multiplication would overflow
+                break;
+            }
+            shape.push_back(dimSize);
+            shapeElements *= dimSize;
+        }
+        if (!validShape || shapeElements != numElements) {
+            SPDLOG_DEBUG("Input string shape mismatch: shape product {} != parsed string count {}; rejecting request", shapeElements, numElements);
+            return StatusCode::INVALID_STRING_INPUT;
+        }
+    } else {
+        shape = ov::Shape{numElements};
+    }
+    return StatusCode::OK;
+}
+
 Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
     std::vector<uint32_t> stringSizes;
     uint32_t totalStringsLength = 0;
@@ -305,7 +334,12 @@ Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest
         SPDLOG_DEBUG("Input string format conversion failed");
         return StatusCode::INVALID_STRING_INPUT;
     }
-    tensor = ov::Tensor(ov::element::Type_t::string, ov::Shape{batchSize});
+    ov::Shape shape;
+    auto status = buildShapeFromStringTensorRequest(src, batchSize, shape);
+    if (!status.ok()) {
+        return status;
+    }
+    tensor = ov::Tensor(ov::element::Type_t::string, shape);
     std::string* data = tensor.data<std::string>();
     size_t tensorStringsOffset = 0;
     for (size_t i = 0; i < stringSizes.size(); i++) {

@@ -18,6 +18,7 @@
 #include "../tensor_conversion_common.hpp"
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -61,7 +62,28 @@ Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::InferInput
     return StatusCode::OK;
 }
 
-template Status convertStringRequestToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+template <>
+Status convertStringRequestToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
+    OVMS_PROFILE_FUNCTION();
+    if (buffer != nullptr) {
+        return convertBinaryExtensionStringFromBufferToNativeOVTensor(src, tensor, buffer);
+    }
+    int numElements = getBinaryInputsSize(src);
+    if (numElements < 0) {
+        return StatusCode::INVALID_STRING_INPUT;
+    }
+    ov::Shape shape;
+    auto status = buildShapeFromStringTensorRequest(src, static_cast<size_t>(numElements), shape);
+    if (!status.ok()) {
+        return status;
+    }
+    tensor = ov::Tensor(ov::element::Type_t::string, shape);
+    std::string* data = tensor.data<std::string>();
+    for (int i = 0; i < numElements; i++) {
+        data[i].assign(getBinaryInput(src, i));
+    }
+    return StatusCode::OK;
+}
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const TensorInfo& tensorInfo, const std::string* buffer);
 }  // namespace ovms
 

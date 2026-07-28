@@ -17,39 +17,19 @@
 #include <string>
 #include <vector>
 #include "src/llm/io_processing/base_output_parser.hpp"
+#include "../../../logging.hpp"
+#include "./lfm2_utils.hpp"
 
 namespace ovms {
 class Lfm2ToolParser : public BaseOutputParser {
 protected:
     static const std::string TOOL_CALL_START_TAG;
     static const std::string TOOL_CALL_END_TAG;
-    static const std::string EOS_TOKEN_STR;
 
-    static const std::string TOOL_LIST_START_INDICATOR;
-    static const std::string TOOL_LIST_END_INDICATOR;
-    static const std::string TOOL_ARGS_START_INDICATOR;
-    static const std::string TOOL_ARGS_END_INDICATOR;
-    static const std::string TOOL_SEPARATOR_STR;
-
-    static const int64_t botTokenId;
-    static const int64_t eotTokenId;
-
-    static constexpr size_t MAX_TOOL_CALLS = 100;
-    static constexpr size_t MAX_TOOLS_PER_CALL = 100;
-    static constexpr int TOOL_CALL_INDEX_START = -1;
-    enum class State {
-        Content,             // Content -> ToolCallStarted (on TOOL_CALL_START_TAG)
-        ToolCallStarted,     // ToolCallStarted -> ToolCallParameters (on TOOL_ARGS_START_INDICATOR, emits name)
-        ToolCallParameters,  // ToolCallParameters -> ToolCallEnded (on TOOL_ARGS_END_INDICATOR, emits args)
-        ToolCallEnded,       // ToolCallEnded -> ToolCallStarted (on separator) | AfterToolCall (on end tag/list end)
-        AfterToolCall        // AfterToolCall -> Content
-    };
+    static const int64_t toolCallStartTokenId;
+    static const int64_t toolCallEndTokenId;
 
 public:
-    struct Argument {
-        std::string name;
-        std::string value;
-    };
     Lfm2ToolParser() = delete;
     explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
@@ -79,32 +59,15 @@ public:
         return true;
     }
 
-    static std::string normalizeArgStr(const std::string& arg);
-    static std::string parseArrayParameter(std::string argumentStr);
-    static std::string parseObjectParameter(std::string argumentStr);
-
 private:
-    void writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
-
-    Argument parseSingleArgument(const std::string& argumentStr);
-    std::vector<Argument> parseArguments(const std::string& argumentsStr);
-    void cutEOSFromContent(std::string& content);
-
-    bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
-    bool parseNewContent();
-    bool parseInContentState();
-    bool parseInToolCallState();
-    bool parseToolCallParametersState();
-    bool parseInToolCallEndedState();
-
-    rapidjson::Document wrapDeltaContent(const std::string& content);
-    rapidjson::Document wrapDeltaArgs(const std::string& argsStr);
-
     std::string streamingContent;
     size_t streamingPosition{0};
     State currentState{State::Content};
     ToolCall toolCall;
+    TagIds tagIds{TOOL_CALL_START_TAG, TOOL_CALL_END_TAG, toolCallStartTokenId, toolCallEndTokenId};
 
     int toolCallIndex{TOOL_CALL_INDEX_START};
+
+    bool parseNewContent();
 };
 }  // namespace ovms

@@ -1,0 +1,204 @@
+//*****************************************************************************
+// Copyright 2026 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#pragma once
+
+#include <map>
+#include <optional>
+#include <set>
+#include <stack>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include <openvino/genai/tokenizer.hpp>
+
+#include "src/port/rapidjson_document.hpp"
+
+#include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/apis/tool_schema_wrapper.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
+
+namespace ovms {
+
+// MiniCPM5 tool call format (attribute-style XML):
+// <function name="get_weather"><param name="city">Beijing</param><param name="unit">celsius</param></function>
+//
+// Multiple <function ...>...</function> blocks may appear concatenated.
+// Reasoning (<think>...</think>) is stripped earlier in the chain by the reasoning parser,
+// so this tool parser only deals with <function ...> blocks.
+
+struct Minicpm5Functool {
+    std::string name;
+    void clear() {
+        name.clear();
+        argumentsAsDocument.SetObject();
+    }
+    rapidjson::Document argumentsAsDocument;
+    Minicpm5Functool() {
+        argumentsAsDocument.SetObject();
+    }
+};
+
+struct Minicpm5ToolParserImpl {
+    enum class State {
+        Content,             // (C) looking for <function
+        InsideFunctionName,  // (IFN) inside <function name="..." — reading attribute until >
+        InsideFunction,      // (IF) inside function body — looking for <param or </function>
+        InsideParamName,     // (IPN) inside <param name="..." — reading attribute until >
+        InsideParam,         // (IP) inside param value — reading until </param>
+        AfterFunction,       // (AF) after </function> — ready to emit tool call
+    };
+    // STATE DEMARKATION
+    /*
+    Content
+    <function name="...">        <- InsideFunctionName reads up to >
+    InsideFunction
+    (<param name="...">          <- InsideParamName reads up to >
+    InsideParam</param>InsideFunction)*
+    </function>Content
+    */
+
+    explicit Minicpm5ToolParserImpl(const ToolsParameterTypeMap_t& toolsParametersTypeMap);
+
+    /*
+     * Feed a chunk; returns any completed tool calls found so far.
+     */
+    std::optional<ToolCalls_t> parseChunk(const std::string& chunk);
+
+    std::optional<std::string> getCurrentFunctionName() const;
+
+    Status removeToolCallsFromContentIfNeeded(std::string& outContent);
+
+    State getCurrentState() const { return this->currentState; }
+    size_t getLastProcessedPosition() const { return this->lastProcessedPosition; }
+
+private:
+    const ToolsParameterTypeMap_t& toolsParametersTypeMap;
+    const bool removeNewlineAroundParameters = true;
+    State currentState = State::Content;
+    Minicpm5Functool currentFunction;
+    std::string currentParameterName;
+    std::string streamContent;
+    size_t lastProcessedPosition{0};
+
+    struct ToolCallPositions {
+        std::stack<size_t> begin;
+        std::stack<size_t> end;
+    };
+    ToolCallPositions toolCallPositions;
+
+    void addParameterToCurrentFunctionDoc(std::string& parameterValueAsString);
+
+    bool parseUntilStateChange(ToolCalls_t& toolCalls);
+
+    void handleInsideContentState();
+    void handleInsideFunctionNameState();
+    void handleInsideFunctionState(ToolCalls_t& toolCalls);
+    void handleInsideParamNameState();
+    void handleInsideParamState();
+    void handleInsideAfterFunctionState(ToolCalls_t& toolCalls);
+
+    static std::string extractNameAttribute(const std::string& content, size_t nameAttrValueStart, size_t tagEnd);
+};
+
+class Minicpm5ToolParser : public BaseOutputParser {
+public:
+    // Tag literals used by the state machine
+    static const std::string FUNCTION_START_TAG;  // <function
+    static const std::string NAME_ATTR_PREFIX;    // name="  (or name=')
+    static const std::string XML_TAG_END;         // >
+    static const std::string PARAM_START_TAG;     // <param
+    static const std::string PARAM_END_TAG;       // </param>
+    static const std::string FUNCTION_END_TAG;    // </function>
+
+    static const std::string EOS_TOKEN_STR;  // <|im_end|>
+    static const std::string SOS_TOKEN_STR;  // <s>
+
+    static const int64_t reasoningStartTokenId = 8;  // <think>
+    static const int64_t reasoningEndTokenId = 9;    // </think>
+
+private:
+    const ToolsSchemas_t& toolSchemas;
+    ToolsParameterTypeMap_t toolsParametersTypes;
+    bool filledParametersTypesMap{false};
+    Minicpm5ToolParserImpl streamParser;
+    int toolCallIndex{-1};
+    ToolCalls_t currentToolCalls;
+    rapidjson::Document currentJson;
+    std::set<int> returnedFirstDeltas;
+    std::set<int> returnedCompleteDeltas;
+
+public:
+    Minicpm5ToolParser() = delete;
+    explicit Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas);
+
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+
+    const std::vector<std::string>& getParsingStartTags() const override {
+        static const std::vector<std::string> startTags = {FUNCTION_START_TAG};
+        return startTags;
+    }
+    const std::vector<std::string>& getSpecialParsingStartTags() const override {
+        static const std::vector<std::string> specialParsingStartTags = {};
+        return specialParsingStartTags;
+    }
+    const std::string& getParsingEndTag() const override {
+        static const std::string EMPTY_STRING = "";
+        return EMPTY_STRING;
+    }
+
+    bool requiresStreamingWithSpecialTokens() const override {
+        return true;
+    }
+
+    const std::vector<std::string>& getSpecialTagsToErase() const override {
+        static const std::vector<std::string> tagsToErase = {SOS_TOKEN_STR, EOS_TOKEN_STR};
+        return tagsToErase;
+    }
+
+private:
+    const std::vector<int64_t> removeReasoningTokens(const std::vector<int64_t>& generatedTokens);
+    std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
+    std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
+    rapidjson::Document wrapCombinedDelta(const ToolCall& toolCall);
+    void lazyFillInitToolParametersTypesMap();
+};
+
+}  // namespace ovms
+
+template <>
+struct fmt::formatter<ovms::Minicpm5ToolParserImpl::State> : fmt::formatter<std::string> {
+    auto format(const ovms::Minicpm5ToolParserImpl::State& state, fmt::format_context& ctx) const {
+        std::unordered_map<ovms::Minicpm5ToolParserImpl::State, std::string> stateMap = {
+            {ovms::Minicpm5ToolParserImpl::State::Content, "Content"},
+            {ovms::Minicpm5ToolParserImpl::State::InsideFunctionName, "InsideFunctionName"},
+            {ovms::Minicpm5ToolParserImpl::State::InsideFunction, "InsideFunction"},
+            {ovms::Minicpm5ToolParserImpl::State::InsideParamName, "InsideParamName"},
+            {ovms::Minicpm5ToolParserImpl::State::InsideParam, "InsideParam"},
+            {ovms::Minicpm5ToolParserImpl::State::AfterFunction, "AfterFunction"},
+        };
+        auto it = stateMap.find(state);
+        if (it != stateMap.end()) {
+            return fmt::formatter<std::string>::format(it->second, ctx);
+        } else {
+            return fmt::formatter<std::string>::format("Unknown", ctx);
+        }
+    }
+};

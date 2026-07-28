@@ -211,7 +211,7 @@ public:
          */
     ModelConfig(const std::string& name = "",
         const std::string& basePath = "",
-        const std::string& targetDevice = "CPU",
+        const std::string& targetDevice = "",
         const std::string& configBatchSize = "",
         uint64_t nireq = 0,
         const std::string& cacheDir = "",
