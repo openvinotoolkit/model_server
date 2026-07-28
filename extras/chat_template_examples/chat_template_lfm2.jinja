@@ -1,3 +1,7 @@
+{#-
+  Modifications:
+    *  Adding rendering of executed tool calls to the model input. It improves accuracy in multiturn scenarios and adds support for Minja.
+#}
 {{- bos_token -}}
 
 {%- macro format_arg_value(arg_value) -%}
