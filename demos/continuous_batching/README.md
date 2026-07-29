@@ -17,7 +17,7 @@ ovms_demos_continuous_batching_accuracy
 
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
 Text generation use case is exposed via OpenAI API `chat/completions`, `completions` and `responses` endpoints.
-That makes it easy to use and efficient especially on on Intel® Xeon® processors and ARC GPUs.
+That makes it easy to use and efficient especially on Intel® Xeon® processors and ARC GPUs.
 
 > **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, and Intel® Core Ultra Series on Ubuntu24 and Windows11.
 
@@ -30,51 +30,51 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 ## Server Deployment
 
-**Container on Linux and CPU target device**
+**Container on Linux**
 
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p ${HOME}/models
-docker run -it -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/models/:rw openvino/model_server:weekly --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device CPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
+# in case GPU is available
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+
+docker run -d ${GPU_ARGS} -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/models/:rw openvino/model_server:weekly --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
-> **Note:** In case you want to use GPU target device, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
-to `docker run` command. The parameter `--target_device` should be also updated to `GPU`. 
+> **Note:** In case you want to use GPU target device, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`. Target device will be determined based on detected hardware with the priorities dGPU, iGPU, CPU. It can be set explicitly with --target_device parameter
 
 
-**Binary package on Windows 11 with GPU target device**
+**Binary package on Windows 11**
 
 After ovms is installed according to steps from [baremetal deployment guide](../../docs/deploying_server_baremetal.md), run the following command:
 
 ```bat
-ovms.exe --model_repository_path c:\models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --task text_generation --target_device GPU --tool_parser hermes3 --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
+ovms.exe --model_repository_path c:\models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
-
 
 ## Readiness Check
 
 Wait for the model to load. You can check the status with a simple command:
 ```console
-curl http://localhost:8000/v3/models
+curl http://localhost:8000/v1/models
 ```
 ```json
 {
-  "object": "list",
   "data": [
     {
       "id": "Qwen3-30B-A3B-Instruct-2507-int4-ov",
       "object": "model",
-      "created": 1772928358,
+      "created": 1784334119,
       "owned_by": "OVMS"
     }
-  ]
+  ],
+  "object": "list"
 }
 ```
 
 ## Request Generation
 
-Model exposes both `chat/completions`, `completions` and `responses` endpoints with and without stream capabilities.
+Model exposes both `chat/completions` and `responses` endpoints with and without stream capabilities.
 Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
-Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template. Here is demonstrated model `Qwen/Qwen3-30B-A3B-Instruct-2507` in int4 precision. It has chat capability so `chat/completions` endpoint will be employed:
 
 ### Unary calls to chat/completions endpoint using cURL 
 
@@ -82,7 +82,7 @@ Completion endpoint should be used to pass the prompt directly by the client and
 
 :::{tab-item} Linux
 ```bash
-curl http://localhost:8000/v3/chat/completions \
+curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "Qwen3-30B-A3B-Instruct-2507-int4-ov",
@@ -105,7 +105,7 @@ curl http://localhost:8000/v3/chat/completions \
 :::{tab-item} Windows
 Windows Powershell
 ```powershell
-(Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
+(Invoke-WebRequest -Uri "http://localhost:8000/v1/chat/completions" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
  -Body '{"model": "Qwen3-30B-A3B-Instruct-2507-int4-ov", "max_completion_tokens": 500, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "If 1=3 2=3 3=5 4=4 5=4 Then, 6=?"}]}').Content
@@ -113,7 +113,7 @@ Windows Powershell
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"Qwen3-30B-A3B-Instruct-2507-int4-ov\", \"max_completion_tokens\": 500, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"If 1=3 2=3 3=5 4=4 5=4 Then, 6=?\"}]}"
+curl -s http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"Qwen3-30B-A3B-Instruct-2507-int4-ov\", \"max_completion_tokens\": 500, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"If 1=3 2=3 3=5 4=4 5=4 Then, 6=?\"}]}"
 ```
 :::
 
@@ -135,7 +135,7 @@ curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/
     }
   ],
   "created": 1772929186,
-  "model": "ovms-model",
+  "model": "Qwen3-30B-A3B-Instruct-2507-int4-ov",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 45,
@@ -153,7 +153,7 @@ curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/
 
 :::{tab-item} Linux
 ```bash
-curl http://localhost:8000/v3/responses \
+curl http://localhost:8000/v1/responses \
   -H "Content-Type: application/json" \
   -d '{
     "model": "Qwen3-30B-A3B-Instruct-2507-int4-ov",
@@ -166,7 +166,7 @@ curl http://localhost:8000/v3/responses \
 :::{tab-item} Windows
 Windows Powershell
 ```powershell
-(Invoke-WebRequest -Uri "http://localhost:8000/v3/responses" `
+(Invoke-WebRequest -Uri "http://localhost:8000/v1/responses" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
  -Body '{"model": "Qwen3-30B-A3B-Instruct-2507-int4-ov", "max_output_tokens": 30, "input": "What is OpenVINO?"}').Content
@@ -174,7 +174,7 @@ Windows Powershell
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/responses -H "Content-Type: application/json" -d "{\"model\": \"Qwen3-30B-A3B-Instruct-2507-int4-ov\", \"max_output_tokens\": 30, \"input\": \"What is OpenVINO?\"}"
+curl -s http://localhost:8000/v1/responses -H "Content-Type: application/json" -d "{\"model\": \"Qwen3-30B-A3B-Instruct-2507-int4-ov\", \"max_output_tokens\": 30, \"input\": \"What is OpenVINO?\"}"
 ```
 :::
 
@@ -229,7 +229,7 @@ pip3 install openai
 from openai import OpenAI
 
 client = OpenAI(
-  base_url="http://localhost:8000/v3",
+  base_url="http://localhost:8000/v1",
   api_key="unused"
 )
 
@@ -284,7 +284,7 @@ pip3 install openai
 from openai import OpenAI
 
 client = OpenAI(
-  base_url="http://localhost:8000/v3",
+  base_url="http://localhost:8000/v1",
   api_key="unused"
 )
 
@@ -332,7 +332,7 @@ So, **6 = 3**.
 from openai import OpenAI
 
 client = OpenAI(
-  base_url="http://localhost:8000/v3",
+  base_url="http://localhost:8000/v1",
   api_key="unused"
 )
 
@@ -385,9 +385,9 @@ Check the demo [structured output](./structured_output/README.md)
 Check the [guide of using lm-evaluation-harness](./accuracy/README.md)
 
 ## References
+- [Official OpenVINO LLM models in HuggingFace](https://huggingface.co/collections/OpenVINO/llm)
 - [Export models to OpenVINO format](../common/export_models/README.md)
 - [Supported LLM models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#large-language-models-llms)
-- [Official OpenVINO LLM models in HuggingFace](https://huggingface.co/collections/OpenVINO/llm)
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
 - [Completions API](../../docs/model_server_rest_api_completions.md)
 - [Responses API](../../docs/model_server_rest_api_responses.md)

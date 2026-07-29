@@ -2551,6 +2551,14 @@ cc_library(
 )
 
 cc_library(
+    name = "test_wav_utils",
+    hdrs = ["test/wav_test_utils.hpp"],
+    linkstatic = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+
+cc_library(
     name = "libtest_environment",
     linkstatic = 1,
     alwayslink = True,
@@ -2957,6 +2965,7 @@ cc_library(
     deps = [
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
+        ":test_wav_utils",
         "//src/llm:io_processing_input_processors",
     ],
     copts = COPTS_TESTS,
@@ -2971,6 +2980,7 @@ cc_library(
     deps = [
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
+        ":test_wav_utils",
         "//src/llm:openai_completions_api_handler",
         "//src/llm:openai_responses_handler",
         "//src/llm:io_processing_input_processor",
