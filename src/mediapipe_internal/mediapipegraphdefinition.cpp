@@ -38,6 +38,7 @@
 #include "../servable_name_checker.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
+#include "src/systeminfo.hpp"
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"
 #include "../version.hpp"
@@ -89,6 +90,16 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     return StatusCode::OK;
 }
 
+int MediapipeGraphDefinition::resolveAutoQueueSize() {
+    uint32_t restWorkersCount = Config::instance().restWorkers();
+    uint32_t cores = static_cast<uint32_t>(getCoreCount());
+    uint32_t resolved = std::min(restWorkersCount, cores);
+    resolved = std::max(resolved, static_cast<uint32_t>(1));
+    SPDLOG_DEBUG("Graph queue AUTO resolved to {} for mediapipe: {} (restWorkers={}, cores={})",
+        resolved, getName(), restWorkersCount, cores);
+    return static_cast<int>(resolved);
+}
+
 // Precondition: chosenConfig must be populated (call after validateForConfigFileExistence).
 // Uses this->chosenConfig to parse the directive and this->config (parsed protobuf) for node inspection.
 Status MediapipeGraphDefinition::resolveGraphQueueSize() {
@@ -111,7 +122,8 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
     if (std::regex_search(this->chosenConfig, match, directiveRegex)) {
         std::string value = match[1].str();
         if (value == "AUTO") {
-            this->mgconfig.setGraphQueueSizeAuto();
+            int resolvedSize = resolveAutoQueueSize();
+            this->mgconfig.setGraphQueueSize(resolvedSize);
         } else {
             auto parsed = stoi32(value);
             if (!parsed.has_value()) {
@@ -151,6 +163,30 @@ Status MediapipeGraphDefinition::resolveGraphQueueSize() {
                         getName());
                     return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
                 }
+            }
+        }
+        // 3. Backward compatibility: HttpLLMCalculator requires LLM_NODE_EXECUTION_CONTEXTS
+        //    side packet for correct graph queue operation. Old pbtxt files may be missing it,
+        //    which causes issues with enabled graph queue
+        for (int i = 0; i < this->config.node_size(); ++i) {
+            const auto& node = this->config.node(i);
+            if (node.calculator() != "HttpLLMCalculator") {
+                continue;
+            }
+            bool hasExecutionContextSidePacket = false;
+            for (const auto& sidePacket : node.input_side_packet()) {
+                if (sidePacket.find("LLM_NODE_EXECUTION_CONTEXTS") != std::string::npos) {
+                    hasExecutionContextSidePacket = true;
+                    break;
+                }
+            }
+            if (!hasExecutionContextSidePacket) {
+                SPDLOG_WARN("HttpLLMCalculator in mediapipe: {} is missing LLM_NODE_EXECUTION_CONTEXTS side packet "
+                            "which is required for graph queue operation. "
+                            "Regenerate graph.pbtxt with the current OVMS version to enable graph pooling.",
+                    getName());
+                this->mgconfig.clearGraphQueueSize();
+                return StatusCode::OK;
             }
         }
         return StatusCode::OK;

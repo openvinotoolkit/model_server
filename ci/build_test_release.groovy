@@ -13,9 +13,8 @@ pipeline {
             when { expression { env.PACKAGE_URL == "" } }
             steps {
                 script {
-                    def buildstamp = new Date().format('yyyyMMddHHmmss')
-                    def shortCommit = bat(script: "git rev-parse --short=8 HEAD", returnStdout: true).trim().readLines().last()
-                    echo "Buildstamp: ${buildstamp}"
+                    env.BUILDSTAMP = new Date().format('yyyyMMddHHmmss')
+                    echo "Buildstamp: ${env.BUILDSTAMP}"
                     echo "PRODUCT_VERSION: ${env.PRODUCT_VERSION}"
                     echo "RELEASE_TAG: ${env.RELEASE_TAG}"
                     echo "JOB_BASE_NAME: ${env.JOB_BASE_NAME}"
@@ -30,41 +29,6 @@ pipeline {
                           windows.build()
                           if (env.RUN_TESTS == "1") {
                             windows.unit_test()
-                          }
-                          def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
-                          def python_suffix = ""
-                          if (env.OVMS_PYTHON_ENABLED == "1") {
-                              python_suffix = "on"
-                          } else {
-                              python_suffix = "off"
-                          }
-                          def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_${shortCommit}_python_${python_suffix}.zip"
-                          def status = bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
-                          if (status != 0) {
-                              error "Failed to map network drive. Status code: ${status}"
-                          }
-                          def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
-                          def latestPath = "${destPath}\\latest"
-                          
-                          status = bat(returnStatus:true, script: "if not exist \"${destPath}\\${buildstamp}\" mkdir \"${destPath}\\${buildstamp}\"")
-                          if (status != 0) {
-                              error "Failed to create directory. Status code: ${status}"
-                          }
-                          status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${destPath}\\${buildstamp}\\${packageName}\"")
-                          if (status != 0) {
-                              error "Failed to copy file. Status code: ${status}"
-                          }
-                          status = bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
-                          if (status != 0) {
-                              error "Failed to remove directory. Status code: ${status}"
-                          }
-                          status = bat(returnStatus:true, script: "mkdir \"${latestPath}\"")
-                          if (status != 0) {
-                              error "Failed to create directory. Status code: ${status}"
-                          }
-                          status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\ovms.zip\" \"${latestPath}\\${packageName}\"")
-                          if (status != 0) {
-                              error "Failed to copy file. Status code: ${status}"
                           }
                         } finally {
                             windows.archive_build_artifacts()
@@ -96,6 +60,7 @@ pipeline {
         stage ("BDBA scans"){
             when { expression { env.BDBA_SCAN == "true" } }
             steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                 script {
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
@@ -115,11 +80,13 @@ pipeline {
                         error "Cannot load ci/loadWin.groovy file."
                     }
                 }
+                }
             }
         }
         stage ("Signing files"){
             when { expression { env.SIGN_FILES == "true" && env.SIGN_USER_PASSWORD != "" } }
             steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                 echo "OVMS_PYTHON_ENABLED: ${env.OVMS_PYTHON_ENABLED}"
                 script {
                     if (env.RELEASE_TYPE == "RELEASE") {
@@ -142,7 +109,74 @@ pipeline {
                         error "Cannot load ci/loadWin.groovy file."
                     }
                 }
+                }
+            }
         }
+        stage ("Promote package"){
+            steps {
+                script {
+                    if (!env.BUILDSTAMP?.trim()) {
+                        env.BUILDSTAMP = new Date().format('yyyyMMddHHmmss')
+                    }
+                    echo "Buildstamp: ${env.BUILDSTAMP}"
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        def python_suffix = ""
+                        if (env.OVMS_PYTHON_ENABLED == "1") {
+                            python_suffix = "on"
+                        } else {
+                            python_suffix = "off"
+                        }
+                        def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
+                        def sourceFile = "ovms.zip"
+                        def shaFile = ""
+                        if (env.SIGN_FILES == "true" && env.SIGN_USER_PASSWORD != "") {
+                            def signedFiles = "${env.WORKSPACE}\\dist\\windows\\ovms_windows_python_${python_suffix}.zip"
+                            if (fileExists(signedFiles)) {
+                                sourceFile = "ovms_windows_python_${python_suffix}.zip"
+                                shaFile = "ovms_windows_python_${python_suffix}.zip.sha256"
+                            } else {
+                                echo "WARNING: Signed file not found, falling back to unsigned ovms.zip"
+                            }
+                        }
+                        def status = bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
+                        if (status != 0) {
+                            error "Failed to map network drive. Status code: ${status}"
+                        }
+                        def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
+                        def latestPath = "${destPath}\\latest"
+                        
+                        status = bat(returnStatus:true, script: "if not exist \"${destPath}\\${env.BUILDSTAMP}\" mkdir \"${destPath}\\${env.BUILDSTAMP}\"")
+                        if (status != 0) {
+                            error "Failed to create directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${destPath}\\${env.BUILDSTAMP}\\${packageName}\"")
+                        if (status != 0) {
+                            error "Failed to copy file. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
+                        if (status != 0) {
+                            error "Failed to remove directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "mkdir \"${latestPath}\"")
+                        if (status != 0) {
+                            error "Failed to create directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${latestPath}\\${packageName}\"")
+                        if (status != 0) {
+                            error "Failed to copy file. Status code: ${status}"
+                        }
+                        if (shaFile != "" && fileExists("${env.WORKSPACE}\\dist\\windows\\${shaFile}")) {
+                            status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${shaFile}\" \"${latestPath}\\${packageName}.sha256\"")
+                            if (status != 0) {
+                                error "Failed to copy sha256 file. Status code: ${status}"
+                            }
+                        }
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
+                }
+            }
         }
     }
 }

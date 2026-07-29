@@ -53,8 +53,8 @@ void EmbeddingsGraphCLIParser::createOptions() {
             cxxopts::value<std::string>()->default_value("false"),
             "truncate")
         ("pooling",
-            "Pooling option. One of: CLS, LAST, MEAN.",
-            cxxopts::value<std::string>()->default_value("CLS"),
+            "Pooling option. One of: CLS, LAST, MEAN. If omitted, OVMS will detect pooling automatically.",
+            cxxopts::value<std::string>(),
             "POOLING");
 }
 
@@ -96,10 +96,13 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
         hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
         embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
         embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
-        embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();
+        if (result->count("pooling") > 0) {
+            embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();
+        }
     }
-    if (!(embeddingsGraphSettings.pooling == "CLS" || embeddingsGraphSettings.pooling == "LAST" || embeddingsGraphSettings.pooling == "MEAN")){
-        throw std::invalid_argument("Only CLS and LAST pooling modes are supported");
+    if (embeddingsGraphSettings.pooling.has_value() &&
+        !(embeddingsGraphSettings.pooling.value() == "CLS" || embeddingsGraphSettings.pooling.value() == "LAST" || embeddingsGraphSettings.pooling.value() == "MEAN")) {
+        throw std::invalid_argument("Only CLS, LAST and MEAN pooling modes are supported");
     }
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
 }
