@@ -453,18 +453,16 @@ Status resolveGenerationConfigPath(std::string& outPath, const std::string& pars
     }
     // Explicit per-node override. A relative path is resolved against models_path
     // (its parent directory when models_path points at a file, e.g. a GGUF).
-    std::filesystem::path overridePath(nodeOptions.generation_config_path());
-    if (overridePath.is_relative()) {
-        std::filesystem::path base(parsedModelsPath);
-        if (!std::filesystem::is_directory(base)) {
-            base = base.parent_path();
-        }
-        overridePath = base / overridePath;
+    std::filesystem::path base(parsedModelsPath);
+    if (!std::filesystem::is_directory(base)) {
+        base = base.parent_path();
     }
+    std::filesystem::path overridePath = FileSystem::resolvePathWithBase(nodeOptions.generation_config_path(), base.string());
     if (!std::filesystem::exists(overridePath) || !std::filesystem::is_regular_file(overridePath)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node generation_config_path: {} does not exist or is not a regular file.", overridePath.string());
-        return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
+        return StatusCode::LLM_NODE_GENERATION_CONFIG_DOES_NOT_EXIST;
     }
+    outPath = overridePath.string();
     return StatusCode::OK;
 }
 
