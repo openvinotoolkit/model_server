@@ -86,8 +86,8 @@ An asynchronous benchmarking client can be used to access the model server perfo
 > Values greater than `1.0x` mean faster-than-real-time generation, while values below `1.0x` mean slower-than-real-time.
 
 ```console
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/requirements.txt openai>=1.0.0
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/benchmark.py -o benchmark.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/3/demos/benchmark/v3/requirements.txt openai>=1.0.0
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/3/demos/benchmark/v3/benchmark.py -o benchmark.py
 python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model Kokoro-82M-OpenVINO-FP16-OVMS --batch_size 1 --limit 1000 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset ihm --voice af_alloy
 Number of documents: 1000
 100%|█████████████████████████████████████████████████████████████████████████████████| 1000/1000 [16:37<00:00,  1.00it/s]
@@ -248,8 +248,8 @@ If you need word-level timestamps support, export the model with `export_model.p
 
 Prepare export script and dependencies:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/3/demos/common/export_models/export_model.py -o export_model.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/3/demos/common/export_models/requirements.txt
 ```
 
 Export Speech-to-Text model with word timestamps enabled.
@@ -348,7 +348,7 @@ cd open_asr_leaderboard
 
 Download and apply OVMS API compatibility patch:
 
-    curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/external/open_asr_leaderboard.patch -o ovms_open_asr_leaderboard.patch
+    curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/3/external/open_asr_leaderboard.patch -o ovms_open_asr_leaderboard.patch
     git apply ovms_open_asr_leaderboard.patch
 
 Set OpenAI-compatible endpoint variables for OVMS:
