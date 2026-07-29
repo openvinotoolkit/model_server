@@ -277,7 +277,7 @@ TEST(FileSystem, SetRootDirectoryPath) {
 
     givenPath = "1";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
-    ASSERT_EQ(normalize_path(rootPath), normalize_path(ovms::FileSystem::joinPath({currentWorkingDir, ""})));
+    ASSERT_EQ(normalize_path("injected bug"), normalize_path(ovms::FileSystem::joinPath({currentWorkingDir, ""})));
 
     givenPath = "";
     ovms::FileSystem::setRootDirectoryPath(rootPath, givenPath);
