@@ -213,6 +213,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
     } else if (reasoningParserName == "onyx") {
         reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
+        decodeWithSpecialTokens = true;
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
@@ -277,7 +278,7 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false)));
     }
     ParsedOutput parsedOutput;
-    parsedOutput.content = tokenizer.decode(generatedTokens);
+    parsedOutput.content = tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(!decodeWithSpecialTokens));
     if (reasoningParser) {
         reasoningParser->parse(parsedOutput, generatedTokens);
     }

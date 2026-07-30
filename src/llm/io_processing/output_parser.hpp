@@ -58,6 +58,7 @@ private:
     ov::genai::Tokenizer tokenizer;
     std::unique_ptr<BaseOutputParser> toolParser = nullptr;       // Tool parser for extracting tool calls
     std::unique_ptr<BaseOutputParser> reasoningParser = nullptr;  // Reasoning parser for extracting reasoning content
+    bool decodeWithSpecialTokens = false;  // Onyx parsers match on special token text (e.g. <|message|>, <|eom|>)
 
     // Streaming related members
     ProcessingPhase processingPhase = UNKNOWN;
