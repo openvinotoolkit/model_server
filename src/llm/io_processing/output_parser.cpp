@@ -211,13 +211,10 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         }
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
-<<<<<<< HEAD
     } else if (toolParserName == "minicpm5") {
         toolParser = std::make_unique<Minicpm5ToolParser>(tokenizer, toolNameSchemaMap);
-=======
     } else if (toolParserName == "onyx") {
         toolParser = std::make_unique<OnyxToolParser>(tokenizer);
->>>>>>> 4d9b4248 (Model enablement WIP)
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: \"" + toolParserName +
                                  "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
@@ -229,15 +226,13 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Gemma4ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "gptoss") {
         reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
-<<<<<<< HEAD
     } else if (reasoningParserName == "minicpm5") {
         reasoningParser = std::make_unique<Minicpm5ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "lfm2") {
         reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
-=======
     } else if (reasoningParserName == "onyx") {
         reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
->>>>>>> 4d9b4248 (Model enablement WIP)
+        decodeWithSpecialTokens = true;
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
@@ -303,7 +298,7 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false)));
     }
     ParsedOutput parsedOutput;
-    parsedOutput.content = tokenizer.decode(generatedTokens);
+    parsedOutput.content = tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(!decodeWithSpecialTokens));
     if (reasoningParser) {
         reasoningParser->parse(parsedOutput, generatedTokens);
     }
