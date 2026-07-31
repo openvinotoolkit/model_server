@@ -21,10 +21,10 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
+import psutil
 from dateutil import parser
 
 from tests.functional.utils.logger import get_logger
-from tests.functional.utils.process import Process
 from tests.functional.config import artifacts_dir
 
 logger = get_logger(__name__)
@@ -213,22 +213,13 @@ class WindowsResourceMonitor(ResourceMonitor):
     COUNTER_FIELDS = [PAGE_FAULTS]
     LOGGED_FIELDS = LOGGED_MEMORY_FIELDS + COUNTER_FIELDS
     SAMPLE_INTERVAL_SEC = 1.0
-
-    PS_COMMAND_TEMPLATE = (
-        "powershell -NoProfile -Command \""
-        "$p = Get-Process -Id {pid}; "
-        "Write-Output $p.WorkingSet64; "
-        "Write-Output $p.PrivateMemorySize64; "
-        "Write-Output $p.PagedMemorySize64; "
-        "Write-Output (Get-CimInstance Win32_Process -Filter 'ProcessId={pid}').PageFaults\""
-    )
     # Optional callback invoked after save_data with (log_path).
     on_data_saved = None
 
-    def __init__(self, ovms_pid, proc=None):
+    def __init__(self, ovms_pid):
         super().__init__()
         self.ovms_pid = ovms_pid
-        self.proc = proc if proc is not None else Process()
+        self._process = psutil.Process(int(ovms_pid))
         self._stats_data_raw = []
 
     def cleanup(self):
@@ -239,19 +230,17 @@ class WindowsResourceMonitor(ResourceMonitor):
 
     def _get_resource_data(self):
         stats = {"DATE": datetime.now().isoformat()}
-        cmd = self.PS_COMMAND_TEMPLATE.format(pid=self.ovms_pid)
-        _, stdout, stderr = self.proc.run_and_check_return_all(cmd)
-        lines = [line.strip() for line in stdout.strip().splitlines() if line.strip()]
-        if len(lines) < 4:
-            raise AssertionError(
-                f"Unexpected PowerShell output while collecting resource data for "
-                f"pid {self.ovms_pid}: expected at least 4 non-empty lines, got "
-                f"{len(lines)}. stdout={stdout!r}, stderr={stderr!r}"
-            )
-        stats[self.WORKING_SET_SIZE] = float(lines[0]) / (1024 * 1024)
-        stats[self.PRIVATE_BYTES] = float(lines[1]) / (1024 * 1024)
-        stats[self.PAGE_FILE_USAGE] = float(lines[2]) / (1024 * 1024)
-        stats[self.PAGE_FAULTS] = int(lines[3])
+        try:
+            info = self._process.memory_info()
+        except psutil.Error as error:
+            logger.warning(f"Stopping Windows resource monitor for pid {self.ovms_pid}: {error}")
+            raise StopIteration(str(error)) from error
+        # wset/private/pagefile are the Win32 counters .NET exposes as
+        # WorkingSet64/PrivateMemorySize64/PagedMemorySize64.
+        stats[self.WORKING_SET_SIZE] = float(info.wset) / (1024 * 1024)
+        stats[self.PRIVATE_BYTES] = float(info.private) / (1024 * 1024)
+        stats[self.PAGE_FILE_USAGE] = float(info.pagefile) / (1024 * 1024)
+        stats[self.PAGE_FAULTS] = int(info.num_page_faults)
         return stats
 
     def check_resources(self):
