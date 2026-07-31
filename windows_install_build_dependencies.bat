@@ -139,7 +139,7 @@ IF /I EXIST %bash_path% (
 
 :: Set default OV_USE_BINARY if not set
 if "%OV_USE_BINARY%"=="" (
-    set "OV_USE_BINARY=1"
+    set "OV_USE_BINARY=0"
 )
 
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
@@ -248,13 +248,13 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
 )
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (
-    git clone https://github.com/%OV_SOURCE_ORG%/openvino %BAZEL_SHORT_PATH%\openvino_src
+    git clone https://github.com/intel-sandbox/openvino.private %BAZEL_SHORT_PATH%\openvino_src
 )
 
 set "BACK_CWD=%cd%"
 cd %BAZEL_SHORT_PATH%\openvino_src
 git fetch origin
-git checkout %OV_SOURCE_BRANCH%
+git checkout muse_onyx
 if !errorlevel! neq 0 exit /b !errorlevel!
 git submodule update --init --recursive
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -264,7 +264,7 @@ IF /I NOT EXIST build (
 )
 cd build
 set "TBB_DIR="
-cmake -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
+cmake -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DPython3_EXECUTABLE=%PYTHONHOME%\python.exe ..
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -298,11 +298,11 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 ::::::::::::::::::::::: OpenVINO GenAI
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
-    git clone https://github.com/%OV_GENAI_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
+    git clone https://github.com/intel-sandbox/openvino.genai.private %BAZEL_SHORT_PATH%\openvino_genai_src
 )
 cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
-git checkout %OV_GENAI_BRANCH%
+git checkout muse_onyx
 if !errorlevel! neq 0 exit /b !errorlevel!
 git pull --recurse-submodules
 IF /I NOT EXIST build (
