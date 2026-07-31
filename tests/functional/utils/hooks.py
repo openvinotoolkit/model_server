@@ -310,9 +310,10 @@ def get_binary_artifacts(
             os.makedirs(binary_package_dst_path)
         shutil.copy(ovms_binary_src_path, os.path.join(binary_package_dst_path, ovms_binary_full_name))
     proc.run_and_check(f"tar -xf {ovms_binary_full_name}", cwd=binary_package_dst_path)
-    setupvars_script_dst = os.path.join(binary_package_dst_path, "ovms", "setupvars.bat")
-    if not os.path.exists(setupvars_script_dst):
-        shutil.copy2(config.setupvars_script_path, setupvars_script_dst)
+    if get_host_os() == OsType.Windows:
+        setupvars_script_dst = os.path.join(binary_package_dst_path, "ovms", "setupvars.bat")
+        if not os.path.exists(setupvars_script_dst):
+            shutil.copy2(config.setupvars_script_path, setupvars_script_dst)
 
 
 def run_docker_build_ovms_image(cmd, ovms_image_name, cwd, timeout=None):
