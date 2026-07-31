@@ -14,20 +14,23 @@ Check out the [quickstart guide](quickstart.md) for a simple example that shows 
 
 ## Servable Types
 
-Starting with 2025.1, we can highlight four servable types. Such distinction is made based on the input type and underlying GenAI pipeline.
+OpenVINO Model Server facilitates multiple servable types for text generation. They reflect input type and underlying GenAI pipeline.
 The servable types are:
 - Language Model Continuous Batching,
 - Language Model Stateful,
 - Visual Language Model Continuous Batching,
-- Visual Language Model Stateful.
+- Visual Language Model Stateful,
+- Omni Model Stateful
 
-First part - Language Model / Visual Language Model - determines whether servable accepts only text or both text and images on the input.
+First part - Language Model / Visual Language Model / Omni Model - determines whether servable accepts only text, both text and images on the input or operate on multiple modalities on both input and output.
 Second part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only with the Stateful servable type.
 
-User does not have to explicitly select servable type. It is inferred based on model directory contents and selected target device.
-Model directory contents determine if model can work only with text or visual input as well. As for target device, setting it to `NPU` will always pick Stateful servable, while any other device will result in deploying Continuous Batching servable. 
+The Omni servable support is currently limited to stateful only. See the [Omni model documentation](../omni.md) for configuration and usage details.
 
-Stateful servables ignore most of the configuration used by Continuous Batching, but this will be mentioned later. Some servable types have additional limitations mentioned in the limitations section at the end of this document.
+User does not have to explicitly select servable type. It is inferred based on model directory contents and selected target device.
+Model directory contents determine if model can work only with text or visual input as well. As for target device, setting it to `NPU` will always pick Stateful servable, while any other device will result in deploying Continuous Batching servable.
+
+Stateful servables ignore most of the configuration used by Continuous Batching. Some servable types have additional limitations mentioned in the limitations section at the end of this document.
 
 Despite all the differences, all servable types share the same LLM calculator which imposes certain flow in every GenAI-based endpoint.
 
@@ -287,6 +290,7 @@ __Tool parsers:__
 - `lfm2`
 - `gemma4`
 - `onyx`
+- `minicpm5`
 
 __Reasoning parsers:__
 - `qwen3`
@@ -294,6 +298,7 @@ __Reasoning parsers:__
 - `lfm2`
 - `gemma4`
 - `onyx`
+- `minicpm5`
 
 #### Automatic parser detection
 
@@ -401,6 +406,8 @@ Loading chat template proceeds as follows:
 
 If both `chat_template.jinja` file and `chat_template` field from `tokenizer_config.json` are successfully loaded, `chat_template.jinja` takes precedence over `tokenizer_config.json`.
 
+After loading the template, the server analyzes its source to automatically detect and apply compatibility adjustments for known template quirks — for example, some templates expect tool call `arguments` as a dict instead of a JSON string, and others use a non-standard field name for reasoning content. When these patterns are detected, the server adapts the request transparently before applying the template. No configuration is required. If a model produces unexpected tool call or reasoning output, checking server startup logs for `chatTemplateCaps` can help diagnose which adjustments were applied.
+
 Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`.
 
 Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
@@ -411,7 +418,9 @@ When working with tools, `/chat/completions` API accepts `tool_choice` parameter
   - `none` - model server will try to push the model not to call any tool
   - `required` - model server will try to push the model to call at least one tool
 
-Additionally `tool_choice` can be an object describing specific tool to be called. For more see [API reference](../model_server_rest_api_chat.md#request). 
+Additionally `tool_choice` can be an object describing specific tool to be called. For more see [API reference](../model_server_rest_api_chat.md#request).
+
+The `/chat/completions` endpoint also accepts an `add_generation_prompt` parameter (boolean, default `true`). When set to `false`, the chat template is rendered without the trailing assistant generation prompt — the standard technique for assistant prefill, where you supply a partial assistant turn and want the model to continue from it without any additional prompt injection.
 
 ## Output processing
 
@@ -435,12 +444,12 @@ Some servable types introduce additional limitations:
 - sequential request processing (only one request is handled at a time),
 - only a single response can be returned. Parameter `n` is not supported.
 - prompt lookup decoding is not supported
-- `usage` is not supported in streaming mode
 - Greedy search and multinomial sampling algorithms are supported - **beam search is not**.
 - **[NPU only]** models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
 
 ### Visual Language servable limitations
 - works only on `/chat/completions` endpoint,
+- user-supplied `<ov_genai_image_N>` placeholder strings in message content are rejected — these are reserved for internal image injection by the server,
 - **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected.
 
 ## References
@@ -448,3 +457,4 @@ Some servable types introduce additional limitations:
 - [Completions API](../model_server_rest_api_completions.md)
 - Demos on [CPU/GPU](../../demos/continuous_batching/README.md) and [NPU](../../demos/llm_npu/README.md)
 - VLM Demos on [CPU/GPU](../../demos/continuous_batching/vlm/README.md) and [NPU](../../demos/vlm_npu/README.md)
+- [Omni Demo](../../demos/omni/README.md)
