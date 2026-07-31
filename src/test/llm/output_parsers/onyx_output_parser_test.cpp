@@ -242,6 +242,16 @@ TEST_F(OnyxOutputParserTest, FinalAnswerWithoutRecipient) {
     EXPECT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
+TEST_F(OnyxOutputParserTest, LiteralToEqualsInContentNotStripped) {
+    // "to=" appearing in the answer body must not be mistaken for an envelope prefix.
+    ParsedOutput parsedOutput = generateParsedOutput(
+        " to=user<|message|>Send email to=admin for help.<|eot|>");
+
+    EXPECT_EQ(parsedOutput.content, "Send email to=admin for help.");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    EXPECT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
 TEST_F(OnyxOutputParserTest, PrivateReasoningOnly) {
     ParsedOutput parsedOutput = generateParsedOutput(" to=self<|message|>Let me think about this.<|eom|>");
 
@@ -318,6 +328,27 @@ TEST_F(OnyxOutputParserTest, PrivateReasoningThenToolCallWithArgs) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"location":"Paris","unit":"celsius"})");
+}
+
+TEST_F(OnyxOutputParserTest, ReasoningAndToolCallAndContentIsolated) {
+    // Reasoning + tool call + final answer in one generation: verify no cross-contamination.
+    ParsedOutput parsedOutput = generateParsedOutput(
+        " to=self<|message|>I need the weather first.<|eom|>" +
+        onyxToolTurn("get_weather", {{"location", "Paris"}}) +
+        "<|start|>assistant to=user<|message|>Here is the result.<|eot|>");
+
+    EXPECT_EQ(parsedOutput.reasoning, "I need the weather first.");
+    EXPECT_EQ(parsedOutput.content, "Here is the result.");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"location":"Paris"})");
+    // Ensure no leakage of reasoning or ATEM XML into content.
+    EXPECT_EQ(parsedOutput.content.find("self"), std::string::npos);
+    EXPECT_EQ(parsedOutput.content.find("atem"), std::string::npos);
+    EXPECT_EQ(parsedOutput.content.find("weather"), std::string::npos);
+    // Ensure no leakage of content or ATEM XML into reasoning.
+    EXPECT_EQ(parsedOutput.reasoning.find("result"), std::string::npos);
+    EXPECT_EQ(parsedOutput.reasoning.find("atem"), std::string::npos);
 }
 
 TEST_F(OnyxOutputParserTest, ToolCallNotParsedWhenToolsUnavailable) {
