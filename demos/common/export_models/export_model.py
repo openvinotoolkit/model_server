@@ -54,8 +54,8 @@ parser_text.add_argument('--draft_eagle3_mode', action='store_true', help='Set t
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
-parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
-parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral", "lfm2"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
+parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss", "lfm2", "gemma4"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
+parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral", "lfm2", "gemma4"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
 
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
@@ -92,7 +92,7 @@ parser_image_generation.add_argument('--source_loras', default=None,
 parser_text2speech = subparsers.add_parser('text2speech', help='export model for text2speech endpoint')
 add_common_arguments(parser_text2speech)
 parser_text2speech.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
-parser_text2speech.add_argument('--model_type', default='speecht5', choices=['speecht5', 'kokoro'], help='Type of the source TTS model. speecht5 uses optimum-cli; kokoro uses a dedicated PyTorch->OpenVINO conversion path.', dest='model_type')
+parser_text2speech.add_argument('--model_type', default='kokoro', choices=['speecht5', 'kokoro'], help='Type of the source TTS model. speecht5 uses optimum-cli; kokoro uses a dedicated PyTorch->OpenVINO conversion path.', dest='model_type')
 parser_text2speech.add_argument('--vocoder', type=str, help='The vocoder model to use for speecht5. For example microsoft/speecht5_hifigan. Ignored for kokoro.', dest='vocoder')
 parser_text2speech.add_argument('--speaker_name', type=str, help='Name of the speaker (speecht5 only; for kokoro all voices from the HF repo are exported).', dest='speaker_name')
 parser_text2speech.add_argument('--speaker_path', type=str, help='Path to the speaker.bin file (speecht5 only; for kokoro all voices from the HF repo are exported).', dest='speaker_path')
@@ -503,15 +503,6 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
-def _list_kokoro_voices(destination_path):
-    """optimum-cli's Kokoro exporter writes per-voice speaker embeddings to
-    <destination_path>/voices/<name>.bin. Return the sorted list of voice names."""
-    voices_dir = os.path.join(destination_path, "voices")
-    if not os.path.isdir(voices_dir):
-        print("Warning: no voices/ directory found under", destination_path)
-        return []
-    return sorted(Path(p).stem for p in Path(voices_dir).glob("*.bin"))
-
 def export_text2speech_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting text2speech model to ",destination_path)
@@ -519,16 +510,12 @@ def export_text2speech_model(model_repository_path, source_model, model_name, pr
 
     if model_type == 'kokoro':
         # optimum-intel registers Kokoro under library_name=kokoro / task=text-to-audio.
-        # The kokoro exporter also dumps each speaker embedding to voices/<name>.bin.
         if not os.path.isfile(os.path.join(destination_path, 'openvino_model.xml')) or args['overwrite_models']:
             optimum_command = "optimum-cli export openvino --model {} --task text-to-audio --weight-format {} {} --trust-remote-code {}".format(
                 source_model, precision, task_parameters['extra_quantization_params'], destination_path)
             print('Running command:', optimum_command)
             if os.system(optimum_command):
                 raise ValueError("Failed to export kokoro model", source_model)
-        voice_names = _list_kokoro_voices(destination_path)
-        # Render the graph with every available voice (path is relative to graph.pbtxt).
-        task_parameters['voices'] = [{'name': n, 'path': f'./voices/{n}.bin'} for n in voice_names]
     else:
         if not os.path.isdir(destination_path) or args['overwrite_models']:
             if not task_parameters.get('vocoder'):

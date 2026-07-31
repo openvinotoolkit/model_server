@@ -34,7 +34,7 @@
 namespace {
 const std::string expectedConfigContents = R"({
     "model_config_list": [
-        { 
+        {
             "config": {
                 "name": "model1",
                 "base_path": "/model1/Path"
@@ -132,4 +132,74 @@ TEST_F(ConfigCreationFullTest, positiveEndToEndEnableDisable) {
     t->join();
     configContents = GetFileContents(this->modelsSettings.configPath);
     ASSERT_EQ(expectedEmptyConfigContents, configContents) << configContents;
+}
+
+TEST_F(ConfigCreationFullTest, positiveConfigureGraphForLLMModel) {
+    ovms::Server& server = ovms::Server::instance();
+    server.setShutdownRequest(0);
+
+    std::string modelPath = this->directoryPath;
+    char* argv[] = {
+        (char*)"ovms",
+        (char*)"--configure",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
+        (char*)"--target_device",
+        (char*)"CPU",
+        (char*)"--cache_size",
+        (char*)"1",
+    };
+    int argc = 10;
+
+    ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+
+    std::string graphPath = ovms::FileSystem::appendSlash(modelPath) + "graph.pbtxt";
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_FALSE(graphContents.empty()) << "graph.pbtxt should be created";
+    EXPECT_NE(std::string::npos, graphContents.find("models_path: \".\"")) << graphContents;
+    EXPECT_NE(std::string::npos, graphContents.find("device: \"CPU\"")) << graphContents;
+    EXPECT_NE(std::string::npos, graphContents.find("cache_size: 1,")) << graphContents;
+}
+
+TEST_F(ConfigCreationFullTest, positiveAddToConfigWithBatchSize) {
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<std::thread> t;
+    server.setShutdownRequest(0);
+
+    std::string dummyModelPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy");
+    std::string modelName = "dummy";
+    std::string batchSize = "10";
+    char* argv[] = {
+        (char*)"ovms",
+        (char*)"--add_to_config",
+        (char*)"--config_path",
+        (char*)this->modelsSettings.configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--model_path",
+        (char*)dummyModelPath.c_str(),
+        (char*)"--batch_size",
+        (char*)batchSize.c_str(),
+    };
+    int argc = 10;
+
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != ovms::ModuleState::NOT_INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 3)) {
+    }
+
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED);
+    server.setShutdownRequest(1);
+    t->join();
+
+    std::string configContents = GetFileContents(this->modelsSettings.configPath);
+    EXPECT_NE(std::string::npos, configContents.find("\"name\": \"dummy\"")) << configContents;
+    EXPECT_NE(std::string::npos, configContents.find("\"base_path\": \"" + dummyModelPath + "\"")) << configContents;
+    EXPECT_NE(std::string::npos, configContents.find("\"batch_size\": \"10\"")) << configContents;
 }

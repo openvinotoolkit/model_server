@@ -24,15 +24,9 @@ node {
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     node_options: {
       [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-        models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+        models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
         plugin_config: '{"NUM_STREAMS": "1" }',
         target_device: "CPU"
-        voices: [
-        {
-          name: "speaker1",
-          path: "/ovms/src/test/audio/speaker.bin",
-        }
-      ]
       }
     }
 }

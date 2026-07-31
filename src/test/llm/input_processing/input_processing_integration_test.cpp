@@ -263,11 +263,10 @@ TEST_P(InputProcessingIntegrationTest, SingleBase64Image_DecodedAndTagInPrompt) 
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
 
-    // ImageDecodingProcessor accumulates image tags before text:
-    // content = "<ov_genai_image_0>\nDescribe this."
+    // Preserve the multipart order: [text("Describe this."), image].
     const std::string expected =
         std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\n<ov_genai_image_0>\nDescribe this.<|im_end|>\n"
+        "<|im_start|>user\nDescribe this.<ov_genai_image_0>\n<|im_end|>\n"
         "<|im_start|>assistant\n";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);
@@ -280,12 +279,11 @@ TEST_P(InputProcessingIntegrationTest, ThreeImages_AllDecodedWithCorrectTagIndic
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
 
-    // All image tags precede the text part (processor accumulation order).
+    // Preserve the multipart order: [text("Describe all."), image, image, image].
     const std::string expected =
         std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\n"
-        "<ov_genai_image_0>\n<ov_genai_image_1>\n<ov_genai_image_2>\n"
-        "Describe all.<|im_end|>\n"
+        "<|im_start|>user\nDescribe all."
+        "<ov_genai_image_0>\n<ov_genai_image_1>\n<ov_genai_image_2>\n<|im_end|>\n"
         "<|im_start|>assistant\n";
     ASSERT_EQ(result.req.inputImages.size(), 3u);
     EXPECT_EQ(result.req.promptText, expected);
@@ -297,10 +295,10 @@ TEST_P(InputProcessingIntegrationTest, InterleavedTextAndImage_BothTextPartsInPr
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
 
-    // [text("Before."), image, text("After.")] → image tag before joined text.
+    // Preserve the multipart order: [text("Before."), image, text("After.")].
     const std::string expected =
         std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\n<ov_genai_image_0>\nBefore.\nAfter.<|im_end|>\n"
+        "<|im_start|>user\nBefore.<ov_genai_image_0>\nAfter.<|im_end|>\n"
         "<|im_start|>assistant\n";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);
@@ -489,7 +487,7 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
 
     const std::string expectedPrompt =
         std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\n<ov_genai_image_0>\nDescribe this.<|im_end|>\n"
+        "<|im_start|>user\nDescribe this.<ov_genai_image_0>\n<|im_end|>\n"
         "<|im_start|>assistant\n";
     EXPECT_EQ(chatPrompt, expectedPrompt);
     EXPECT_EQ(responsesPrompt, expectedPrompt);

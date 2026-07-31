@@ -73,4 +73,5 @@ Status validateTensor(const TensorInfo& tensorInfo,
 Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
 const std::string& getBinaryInput(const ::KFSRequest::InferInputTensor& tensor, size_t i);
 int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tensor);
+Status buildShapeFromStringTensorRequest(const ::KFSRequest::InferInputTensor& src, size_t numElements, ov::Shape& shape);
 }  // namespace ovms

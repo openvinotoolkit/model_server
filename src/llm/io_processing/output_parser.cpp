@@ -32,9 +32,13 @@
 #include "gemma4/gemma4_reasoning_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
 #include "lfm2/lfm2_tool_parser.hpp"
+#include "lfm2/lfm25_tool_parser.hpp"
+#include "lfm2/lfm25_reasoning_parser.hpp"
 #include "gemma4/gemma4_tool_parser.hpp"
 #include "onyx/onyx_tool_parser.hpp"
 #include "onyx/onyx_reasoning_parser.hpp"
+#include "minicpm5/minicpm5_tool_parser.hpp"
+#include "minicpm5/minicpm5_reasoning_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -195,11 +199,22 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (toolParserName == "devstral") {
         toolParser = std::make_unique<DevstralToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "lfm2") {
-        toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
+        auto vocab = tokenizer.get_vocab();
+        auto token = vocab.find(Lfm25ToolParser::TOOL_CALL_START_TAG);
+        auto tokenId = token != vocab.end() ? token->second : -1;
+        if (tokenId == Lfm25ToolParser::toolCallStartTokenId) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using Lfm25ToolParser for tool parsing");
+            toolParser = std::make_unique<Lfm25ToolParser>(tokenizer);
+        } else {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using Lfm2ToolParser for tool parsing");
+            toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
+        }
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
     } else if (toolParserName == "onyx") {
         toolParser = std::make_unique<OnyxToolParser>(tokenizer, toolNameSchemaMap);
+    } else if (toolParserName == "minicpm5") {
+        toolParser = std::make_unique<Minicpm5ToolParser>(tokenizer, toolNameSchemaMap);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: \"" + toolParserName +
                                  "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
@@ -214,11 +229,16 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (reasoningParserName == "onyx") {
         reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
         decodeWithSpecialTokens = true;
+    } else if (reasoningParserName == "minicpm5") {
+        reasoningParser = std::make_unique<Minicpm5ReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "lfm2") {
+        reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
     }
 
+    // TODO: To be considered: If we still need this check after introduction of OvmsTextStreamer.
     if (toolParser && reasoningParser) {
         if (toolParser->requiresStreamingWithSpecialTokens() != reasoningParser->requiresStreamingWithSpecialTokens()) {
             throw std::runtime_error("Cannot use tool parser " + toolParserName + " with reasoning parser " + reasoningParserName +

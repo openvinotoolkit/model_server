@@ -49,92 +49,10 @@ OnyxToolParserImpl::OnyxToolParserImpl() :
 OnyxToolParserImpl::OnyxToolParserImpl(const ToolsParameterTypeMap_t& toolsParametersTypeMap) :
     toolsParametersTypeMap(toolsParametersTypeMap) {}
 
-static void trimNewline(std::string& str) {
-    if (str.empty()) {
-        return;
-    }
-    if (str.back() == '\n') {
-        str.pop_back();
-    }
-    if (str.empty()) {
-        return;
-    }
-    if (str.front() == '\n') {
-        str.erase(str.begin());
-    }
-}
-
-// Build parameterName -> ParameterType from a tool JSON schema (same shape as
-// Qwen3CoderToolParser's parseToolSchema).
-static const ParametersTypeMap_t parseToolSchema(const std::string& functionName, const rapidjson::Value& schema) {
-    ParametersTypeMap_t result;
-    if (!schema.IsObject()) {
-        SPDLOG_DEBUG("Tool schema is not a JSON object for tool: {}", functionName);
-        return result;
-    }
-    if (!schema.HasMember("properties") || !schema["properties"].IsObject()) {
-        SPDLOG_DEBUG("Tool schema does not have properties object for tool: {}", functionName);
-        return result;
-    }
-    const rapidjson::Value& properties = schema["properties"];
-    for (auto it = properties.MemberBegin(); it != properties.MemberEnd(); ++it) {
-        if (!it->value.IsObject()) {
-            continue;
-        }
-        if (!it->value.HasMember("type") || !it->value["type"].IsString()) {
-            continue;
-        }
-        std::string paramName = it->name.GetString();
-        std::string typeStr = it->value["type"].GetString();
-        ParameterType type = ParameterType::UNKNOWN;
-        if (typeStr == "string") {
-            type = ParameterType::STRING;
-        } else if (typeStr == "number" || typeStr == "integer") {
-            type = ParameterType::NUMBER;
-        } else if (typeStr == "boolean") {
-            type = ParameterType::BOOLEAN;
-        } else if (typeStr == "array") {
-            type = ParameterType::ARRAY;
-        } else if (typeStr == "object") {
-            type = ParameterType::OBJECT;
-        } else {
-            SPDLOG_DEBUG("Tool schema property: {} has unknown type: {} for tool: {}", paramName, typeStr, functionName);
-        }
-        result.emplace(paramName, type);
-    }
-    return result;
-}
-
-static ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas) {
-    ToolsParameterTypeMap_t toolsParametersTypes;
-    for (const auto& [toolName, toolSchemaWrapper] : toolsSchemas) {
-        toolsParametersTypes.emplace(toolName, parseToolSchema(toolName, *toolSchemaWrapper.rapidjsonRepr));
-    }
-    return toolsParametersTypes;
-}
-
-static const char* jsonTypeOf(const rapidjson::Value& val) {
-    if (val.IsObject())
-        return "object";
-    if (val.IsArray())
-        return "array";
-    if (val.IsString())
-        return "string";
-    if (val.IsBool())
-        return "bool";
-    if (val.IsNumber())
-        return "number";
-    if (val.IsNull())
-        return "null";
-    return "unknown";
-}
-
-static void enforceStringValue(rapidjson::Value& v, rapidjson::Document::AllocatorType& alloc) {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    v.Accept(writer);
-    v.SetString(buffer.GetString(), buffer.GetLength(), alloc);
-}
+// parseToolSchema / createToolsParametersTypesMap now live in base_output_parser
+// (shared with Qwen3CoderToolParser, Minicpm5ToolParser, ...); trimNewline,
+// jsonTypeOf and enforceStringValue come from io_processing/utils. This parser
+// reuses them instead of keeping its own copies.
 
 void OnyxToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameterValueAsString) {
     if (this->removeNewlineAroundParameters)

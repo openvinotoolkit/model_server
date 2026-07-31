@@ -19,21 +19,18 @@
 # Any variable can be overridden by the environment or command-line.
 
 # Source repository git commits / branches (used for source builds)
-# NOTE: pinned to the commits required by the onyx-support patches in
-# ./patches (see patches/openvino/readme.md and patches/openvino.genai/readme.md).
-# This is a temporary, one-off pin - restore the previous commits below once
-# the patches are no longer needed:
+# NOTE: OV_SOURCE_BRANCH and OV_GENAI_BRANCH are pinned to the commits required
+# by the onyx-support patches in ./patches (see patches/openvino/readme.md and
+# patches/openvino.genai/readme.md). This is a temporary, one-off pin - restore
+# the previous commits below once the patches are no longer needed:
 #   OV_SOURCE_BRANCH ?= d08e55c64c37fde1f4f6157cc5f5e07dd36ce5e8  (pre-patch branch tip)
 #   OV_GENAI_BRANCH ?= 8981d6f848f17985979be0a9224251d181f68c56  (pre-patch branch tip)
-# NOTE: OV_TOKENIZERS_BRANCH is intentionally left at its original commit -
-# the tokenizers commit referenced by the genai patch's submodule bump
-# (935443f5275ce93f362f9eb4fa2d9fa762dd3f22) does not exist in the
-# openvinotoolkit/openvino_tokenizers repo (only reachable from a fork used
-# during genai development), and OVMS builds tokenizers as a separate
-# component (BUILD_TOKENIZERS=OFF in the genai cmake invocation) so this pin
-# does not affect the OVMS build.
+# OV_TOKENIZERS_BRANCH tracks upstream and is safe to advance ahead of the
+# commit referenced by the genai patch's submodule bump: OVMS builds tokenizers
+# as a separate component (BUILD_TOKENIZERS=OFF in the genai cmake invocation),
+# so its pin does not affect the OVMS build.
 OV_SOURCE_BRANCH ?= 5b6997da03a7a0713fb4376f9109b4832383cc24
-OV_TOKENIZERS_BRANCH ?= a8d763dee39cb18e33edd01eca1995a07c8b247d
+OV_TOKENIZERS_BRANCH ?= 183c6f25cda2a469cba5eff8b72022d2d51ba0ca
 OV_GENAI_BRANCH ?= c637ed85efebf1a44d5f0433845849a2d80b353c
 
 # Source repository organizations
@@ -42,11 +39,11 @@ OV_GENAI_ORG ?= openvinotoolkit
 OV_TOKENIZERS_ORG ?= openvinotoolkit
 
 # Binary package URLs for each supported platform.
-DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.0.0rc1/openvino_genai_ubuntu24_2026.3.0.0rc1_x86_64.tar.gz
-DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.0.0rc1/openvino_genai_ubuntu22_2026.3.0.0rc1_x86_64.tar.gz
-DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.0.0rc1/openvino_genai_rhel8_2026.3.0.0rc1_x86_64.tar.gz
-GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.0.0rc1/openvino_genai_windows_2026.3.0.0rc1_x86_64.zip
+DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.0.0rc2/openvino_genai_ubuntu24_2026.3.0.0rc2_x86_64.tar.gz
+DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.0.0rc2/openvino_genai_ubuntu22_2026.3.0.0rc2_x86_64.tar.gz
+DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.0.0rc2/openvino_genai_rhel8_2026.3.0.0rc2_x86_64.tar.gz
+GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.0.0rc2/openvino_genai_windows_2026.3.0.0rc2_x86_64.zip
 
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.13.0
-CURL_VERSION ?= 8.20.0_2
+CURL_VERSION ?= 8.21.0_4

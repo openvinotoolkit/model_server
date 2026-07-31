@@ -28,6 +28,7 @@
 #include "src/http_payload.hpp"
 #include "src/json_parser.hpp"
 #include "src/logging.hpp"
+#include "src/ov_utils.hpp"
 #include "src/stringutils.hpp"
 
 namespace ovms {
@@ -42,18 +43,24 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
     } else {
         parsedModelsPath = fsModelsPath;
     }
+    std::string device = nodeOptions.target_device();
+    if (device.empty()) {
+        device = recommendTargetDevice();
+        SPDLOG_INFO("No device specified for STT model, using recommended device: {}", device);
+    }
     ov::AnyMap config;
     auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), config);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
         throw std::runtime_error("Error during plugin_config option parsing");
     }
+    applyGlobalCacheDirFallback(config);
     enableWordTimestamps = nodeOptions.enable_word_timestamps();
-    if (enableWordTimestamps && nodeOptions.target_device() == "NPU") {
+    if (enableWordTimestamps && device == "NPU") {
         config["STATIC_PIPELINE"] = true;
     }
     config["word_timestamps"] = enableWordTimestamps;
-    sttPipeline = std::make_shared<ov::genai::ASRPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
+    sttPipeline = std::make_shared<ov::genai::ASRPipeline>(parsedModelsPath.string(), device, config);
 
     streamingExecutor = std::make_unique<SttExecutorWrapper>(sttPipeline, sttPipelineMutex);
 }

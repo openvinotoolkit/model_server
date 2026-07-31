@@ -30,6 +30,7 @@
 #include "optimum_export.hpp"
 #include "curl_downloader.hpp"
 #include "gguf_downloader.hpp"
+#include "hf_env_vars.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "../logging.hpp"
 #include "../module_names.hpp"
@@ -293,11 +294,11 @@ const std::string HfPullModelModule::GetProxy() const {
 }
 
 const std::string HfPullModelModule::GetHfToken() const {
-    return getEnvReturnOrDefaultIfNotSet("HF_TOKEN");
+    return getEnvReturnOrDefaultIfNotSet(HF_TOKEN_ENV_VAR);
 }
 
 const std::string HfPullModelModule::GetHfEndpoint() const {
-    std::string hfEndpoint = getEnvReturnOrDefaultIfNotSet("HF_ENDPOINT", "https://huggingface.co");
+    std::string hfEndpoint = getEnvReturnOrDefaultIfNotSet(HF_ENDPOINT_ENV_VAR, DEFAULT_HF_ENDPOINT);
     if (!endsWith(hfEndpoint, "/")) {
         hfEndpoint.append("/");
     }

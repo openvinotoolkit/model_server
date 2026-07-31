@@ -33,6 +33,7 @@ const std::vector<std::string>& getSupportedToolParserNames() {
         "lfm2",
         "gemma4",
         "onyx",
+        "minicpm5",
     };
     return names;
 }
@@ -43,6 +44,8 @@ const std::vector<std::string>& getSupportedReasoningParserNames() {
         "gemma4",
         "gptoss",
         "onyx",
+        "minicpm5",
+        "lfm2",
     };
     return names;
 }

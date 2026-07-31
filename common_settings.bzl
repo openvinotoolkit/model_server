@@ -20,7 +20,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-load("//:distro.bzl", "distro_flag", "espeak_flag")
+load("//:distro.bzl", "distro_flag")
 
 # cc_library rule wrapper that will accept the same arguments but if user will not provide
 # copts, linkopts, local_defines it will set them to the defaults
@@ -58,7 +58,6 @@ def ovms_cc_library(**kwargs):
 
 def create_config_settings():
     distro_flag()
-    espeak_flag()
     native.config_setting(
         name = "disable_mediapipe",
         define_values = {

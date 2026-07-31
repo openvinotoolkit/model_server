@@ -347,3 +347,64 @@ TEST(OVUtils, ApplyDefaultCpuPropertiesDoesNotOverrideExistingValues) {
     EXPECT_EQ(properties[ov::hint::enable_cpu_pinning.name()].as<bool>(), true);
 }
 #endif
+
+TEST(RecommendTargetDevice, NoGpuDevicesReturnsCpu) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices;
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "CPU");
+}
+
+TEST(RecommendTargetDevice, SingleDiscreteGpuReturnsIt) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU", /*isDiscrete=*/true, /*freeMemBytes=*/8000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU");
+}
+
+TEST(RecommendTargetDevice, SingleIntegratedGpuReturnsIt) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU", /*isDiscrete=*/false, /*freeMemBytes=*/2000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU");
+}
+
+TEST(RecommendTargetDevice, MultipleDiscreteGpusReturnsMostFreeVram) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/true, /*freeMemBytes=*/4000000000},
+        {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/8000000000},
+        {"GPU.2", /*isDiscrete=*/true, /*freeMemBytes=*/6000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.1");
+}
+
+TEST(RecommendTargetDevice, DiscretePreferredOverIntegrated) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/false, /*freeMemBytes=*/2000000000},
+        {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/8000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.1");
+}
+
+TEST(RecommendTargetDevice, MultipleIntegratedGpusReturnsFirst) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/false, /*freeMemBytes=*/2000000000},
+        {"GPU.1", /*isDiscrete=*/false, /*freeMemBytes=*/4000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.0");
+}
+
+TEST(RecommendTargetDevice, MultipleDiscreteGpusWithEqualVramReturnsFirst) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/true, /*freeMemBytes=*/8000000000},
+        {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/8000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.0");
+}
+
+TEST(RecommendTargetDevice, MultipleDiscreteGpusWithZeroVramReturnsFirst) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/true, /*freeMemBytes=*/0},
+        {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/0}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.0");
+}
+
+TEST(RecommendTargetDevice, MixedDiscreteAndIntegratedPrefersDiscrete) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/false, /*freeMemBytes=*/16000000000},
+        {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/1000000000}};
+    // Even though integrated has more free memory, discrete is preferred
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.1");
+}

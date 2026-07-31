@@ -25,13 +25,16 @@ struct ChatTemplateCaps {
     // Some templates require tool_call arguments to be a dict/object rather than a stringified JSON.
     bool requiresObjectArguments = false;
 
+    std::string missnamedReasoningField = "";
+
     bool needsWorkarounds() const {
-        return requiresObjectArguments;
+        return requiresObjectArguments || !missnamedReasoningField.empty();
     }
 
     std::string toString() const {
         return std::string("supportsToolCalls=") + (supportsToolCalls ? "true" : "false") +
-               ", requiresObjectArguments=" + (requiresObjectArguments ? "true" : "false");
+               ", requiresObjectArguments=" + (requiresObjectArguments ? "true" : "false") +
+               ", missnamedReasoningField=" + missnamedReasoningField;
     }
 };
 

@@ -35,10 +35,10 @@ IF "%~2"=="--with_python" (
 
 IF "%~3"=="--with_tests" (
     echo Building model server with tests
-    set "buildTargets=//src:ovms //src:ovms_test"
+    set "buildTargets=//src:ovms //src:ovms_test //third_party:espeak_ng //third_party:espeak_ng_data"
 ) ELSE (
     echo Building model server without tests
-    set "buildTargets=//src:ovms"
+    set "buildTargets=//src:ovms //third_party:espeak_ng //third_party:espeak_ng_data"
 )
 
 IF "%~4"=="--integrity" (
@@ -49,18 +49,10 @@ IF "%~4"=="--integrity" (
     set "buildWithIntegrity="
 )
 
-:: Allow disabling espeak-ng (built from source via Bazel) by setting
-:: ESPEAK=0 before invoking this script. Defaults to on.
-IF "%ESPEAK%"=="0" (
-    set "espeakArg=--//:espeak=off"
-) ELSE (
-    set "espeakArg=--//:espeak=on"
-)
-
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 
-set "buildCommand=bazel %bazelStartupCmd% build  %buildWithIntegrity% %bazelBuildArgs% %espeakArg% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
+set "buildCommand=bazel %bazelStartupCmd% build  %buildWithIntegrity% %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
 set "setOvmsVersionCmd=python windows_set_ovms_version.py"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
