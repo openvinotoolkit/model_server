@@ -253,6 +253,13 @@ OnyxToolParser::OnyxToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchem
     BaseOutputParser(tokenizer),
     toolSchemas(toolSchemas),
     streamParser(this->toolsParametersTypes) {
+    // Build dynamic start tags: "<atem:function_calls>" (the ATEM block itself) plus
+    // "to=<name>" for each tool in the schema — so the streaming framework can detect the
+    // harmony envelope prefix and route to this parser instead of leaking it as content.
+    parsingStartTags.push_back(TOOL_START_TAG);
+    for (const auto& [name, _] : toolSchemas) {
+        parsingStartTags.push_back("to=" + name);
+    }
 }
 
 void OnyxToolParser::lazyFillInitToolParametersTypesMap() {

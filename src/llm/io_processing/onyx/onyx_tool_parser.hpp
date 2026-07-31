@@ -141,6 +141,7 @@ private:
     int toolCallIndex{-1};
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
+    std::vector<std::string> parsingStartTags;
 
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& functionName);
     std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
@@ -153,8 +154,7 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> startTags{TOOL_START_TAG};
-        return startTags;
+        return parsingStartTags;
     }
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
         static const std::vector<std::string> specialParsingStartTags{};

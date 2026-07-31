@@ -50,7 +50,7 @@ using namespace ovms;
 //     (the "functions." prefix only appears if the tool itself is namespaced). The
 //     authoritative function name is therefore read from `<atem:invoke name="...">`,
 //     not from the `to=` recipient.
-//   - Arguments are an ATEM XML block (Anthropic-style), essentially qwen3coder with
+//   - Arguments are an ATEM XML block, essentially qwen3coder with
 //     `atem:` tags -- NOT a single raw JSON blob. Parameter values are rendered
 //     UNQUOTED (e.g. <atem:parameter name="gps">37.7749,-122.4194</atem:parameter>),
 //     so arguments must be typed via the tool JSON schema exactly like
@@ -335,10 +335,10 @@ TEST_F(OnyxOutputParserTest, ReasoningAndToolCallAndContentIsolated) {
     ParsedOutput parsedOutput = generateParsedOutput(
         " to=self<|message|>I need the weather first.<|eom|>" +
         onyxToolTurn("get_weather", {{"location", "Paris"}}) +
-        "<|start|>assistant to=user<|message|>Here is the result.<|eot|>");
+        "<|start|>assistant to=user<|message|>I will provide result when I have tool call result.<|eot|>");
 
     EXPECT_EQ(parsedOutput.reasoning, "I need the weather first.");
-    EXPECT_EQ(parsedOutput.content, "Here is the result.");
+    EXPECT_EQ(parsedOutput.content, "I will provide result when I have tool call result.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"location":"Paris"})");
@@ -565,6 +565,82 @@ if __name__ == "__main__":
                                   }()
                                                    : "NO_DOC");
             FAIL() << "Mismatch between expectedDelta and doc for chunk[" << i << "]: " << chunk;
+        }
+    }
+}
+
+// =============================================================================
+// Streaming reasoning followed by a tool call. Verifies that:
+// - reasoning_content deltas are emitted for reasoning body chunks
+// - framing tags (to=self, <|message|>, <|eom|>) are swallowed (nullopt)
+// - after reasoning ends, the tool call streams normally with name + args deltas
+// - no reasoning leaks into content or tool_calls deltas
+// =============================================================================
+TEST_F(OnyxOutputParserTest, StreamingReasoningThenToolCall) {
+    int i = -1;
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        // Reasoning start tag -- framework detects "to=self", enters REASONING phase.
+        // OnyxReasoningParser::parseChunk sees the tag and returns nullopt (swallows framing).
+        {"to=self", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // <|message|> separator -- also swallowed by the reasoning parser.
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Actual reasoning body chunks -- emitted as reasoning_content deltas.
+        {"Let me think", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"Let me think"}})"},
+        {" about the weather.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" about the weather."}})"},
+        // Reasoning end tag -- swallowed, framework transitions back to UNKNOWN.
+        {"<|eom|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Tool call envelope (harmony prefix) -- must be swallowed, not leaked as content.
+        // BUG: framework transitions from REASONING→UNKNOWN after <|eom|>, and in UNKNOWN the
+        // envelope doesn't match any start tag ("to=self" for reasoning, "<atem:function_calls>"
+        // for tools), so it's flushed as content. Gptoss avoids this because its tool start tag
+        // IS the envelope prefix ("<|channel|>commentary to="). Onyx needs equivalent handling.
+        {" to=get_weather<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // ATEM start tag -- enters TOOL_CALLS phase.
+        {"<atem:function_calls>\n<atem:invoke name=\"get_weather\">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"get_weather"}}]}})"},
+        // Parameter.
+        {"<atem:parameter name=\"location\">Paris</atem:parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Close tool call.
+        {"</atem:invoke>\n</atem:function_calls>", ov::genai::GenerationFinishReason::STOP, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"location\":\"Paris\"}"}}]}})"},
+    };
+
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+        i++;
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            std::string expected = expectedDelta.value();
+            // Normalize tool call IDs (same approach as StreamingSimpleToolCall).
+            const std::string idKey = "\"id\":\"";
+            auto docIdPos = docStr.find(idKey);
+            auto expectedIdPos = expected.find(idKey);
+            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                auto docIdStart = docIdPos + idKey.size();
+                auto docIdEnd = docStr.find("\"", docIdStart);
+                auto expectedIdStart = expectedIdPos + idKey.size();
+                auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                std::string docStrNoId = docStr;
+                std::string expectedNoId = expected;
+                docStrNoId.replace(docIdStart, docIdEnd - docIdStart, std::string(docIdEnd - docIdStart, '*'));
+                expectedNoId.replace(expectedIdStart, expectedIdEnd - expectedIdStart, std::string(expectedIdEnd - expectedIdStart, '*'));
+                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk[" << i << "]: " << chunk;
+            } else {
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk[" << i << "]: " << chunk;
+            }
+        } else {
+            EXPECT_TRUE(false) << "Mismatch for chunk[" << i << "]: " << chunk
+                               << "\nexpectedDelta: " << (expectedDelta.has_value() ? expectedDelta.value() : "nullopt")
+                               << "\nGot doc: " << (doc.has_value() ? [&]() {
+                                      rapidjson::StringBuffer b;
+                                      rapidjson::Writer<rapidjson::StringBuffer> w(b);
+                                      doc->Accept(w);
+                                      return std::string(b.GetString());
+                                  }() : "nullopt");
         }
     }
 }
