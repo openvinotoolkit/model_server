@@ -1,4 +1,4 @@
-# text generation {#ovms_text_generation}
+# Text generation demos {#ovms_text_generation}
 
 ```{toctree}
 ---

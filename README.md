@@ -118,13 +118,12 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 
 ### Classic Models & Pipelines
 - TensorFlow, ONNX, PaddlePaddle, OpenVINO IR model formats
-- [DAG pipelines](https://docs.openvino.ai/2026/model-server/ovms_docs_dag.html) with [custom nodes](https://docs.openvino.ai/2026/model-server/ovms_docs_custom_node_development.html)
 - [MediaPipe graphs](https://docs.openvino.ai/2026/model-server/ovms_docs_mediapipe.html)
 - [Python execution nodes](https://docs.openvino.ai/2026/model-server/ovms_docs_python_support_reference.html)
 - [Dynamic input shapes](https://docs.openvino.ai/2026/model-server/ovms_docs_shape_batch_size_and_layout.html)
 
 ### Deployment & Integration
-- Docker, bare metal (Linux & Windows), Kubernetes / OpenShift
+- [Docker](docs/deploying_server_docker.md), [bare metal (Linux & Windows)](docs/deploying_server_baremetal.md), [Kubernetes / OpenShift](docs/deploying_server_kubernetes.md)
 - [Model repository](https://docs.openvino.ai/2026/model-server/ovms_docs_models_repository.html): local storage, S3, GCS, Azure Blob, HuggingFace Hub
 - [Model versioning](https://docs.openvino.ai/2026/model-server/ovms_docs_model_version_policy.html) and [hot-reload](https://docs.openvino.ai/2026/model-server/ovms_docs_online_config_changes.html)
 - [Prometheus-compatible metrics](https://docs.openvino.ai/2026/model-server/ovms_docs_metrics.html)
