@@ -5,112 +5,88 @@
 maxdepth: 1
 hidden:
 ---
-ovms_demos_continuous_batching
-ovms_demos_integration_with_open_webui
-ovms_demos_code_completion_vsc
-ovms_demos_audio
-ovms_demos_rerank
-ovms_demos_embeddings
-ovms_demos_continuous_batching_vlm
-ovms_demos_image_generation
-ovms_demo_clip_image_classification
-ovms_demo_age_gender_guide
-ovms_demo_horizontal_text_detection
-ovms_demo_optical_character_recognition
-ovms_demo_face_detection
-ovms_demo_face_blur_pipeline
-ovms_demo_capi_inference_demo
-ovms_demo_single_face_analysis_pipeline
-ovms_demo_multi_faces_analysis_pipeline
-ovms_docs_demo_ensemble
-ovms_docs_demo_mediapipe_image_classification
-ovms_docs_demo_mediapipe_multi_model
-ovms_docs_demo_mediapipe_object_detection
-ovms_docs_demo_mediapipe_holistic
-ovms_docs_demo_mediapipe_iris
-ovms_docs_image_classification
-ovms_demo_using_onnx_model
-ovms_demo_tf_classification
-ovms_demo_person_vehicle_bike_detection
-ovms_demo_vehicle_analysis_pipeline
-ovms_demo_real_time_stream_analysis
-ovms_demo_using_paddlepaddle_model
-ovms_demo_bert
-ovms_demo_universal-sentence-encoder
-ovms_string_output_model_demo
-ovms_demos_gguf
 
+Text generation <ovms_text_generation>
+Image generation <ovms_demos_image_generation>
+Audio <ovms_demos_audio>
+Text Embeddings <ovms_demos_embeddings>
+Text Reranking <ovms_demos_rerank>
+Classic models <ovms_demos_classic_models>
+MediaPipe <ovms_demos_mediapipe>
+Python Node <ovms_demos_python_node>
+Integrations <ovms_demos_integrations>
 ```
 
-OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities.
-### Check Out New Generative AI Demos
+OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate its capabilities.
+
+## Text Generation
 | Demo | Description |
 |---|---|
-|[AI Agents with MCP servers and serving language models](./continuous_batching/agentic_ai/README.md)|OpenAI agents with MCP servers and serving LLM models|
-|[Integration with Open WebUI](integration_with_OpenWebUI/README.md)|Using OpenWeb UI with OVMS as inference provider. Shows text and image generation as well as usage with RAG and tools|
-|[LLM Text Generation with continuous batching](continuous_batching/README.md)|Generate text with LLM models and continuous batching pipeline|
-|[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline|
-|[OpenAI API text embeddings ](embeddings/README.md)|Get text embeddings via endpoint compatible with OpenAI API|
-|[Reranking with Cohere API](rerank/README.md)| Rerank documents via endpoint compatible with Cohere|
-|[RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)| Example how to use RAG with model server endpoints|
-|[LLM on NPU](./llm_npu/README.md)| Generate text with LLM models and NPU acceleration|
-|[VLM on NPU](./vlm_npu/README.md)| Generate text with VLM models and NPU acceleration|
-|[Long context LLMs](./continuous_batching/long_context/README.md)| Recommendations for handling very long context in LLM models|
-|[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension to Visual Studio Code with local OVMS serving|
-|[Image Generation](image_generation/README.md)|Generate images|
-|[GGUF models support](gguf/README.md)|Serve GGUF models with OVMS|
+|[LLM Text Generation with continuous batching](continuous_batching/README.md)|Generate text with LLM models and continuous batching pipeline.|
+|[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline.|
+|[AI Agents with MCP servers](./continuous_batching/agentic_ai/README.md)|OpenAI agents with MCP servers and serving LLM models.|
+|[RAG with OpenAI API endpoint and langchain](continuous_batching/rag/README.md)|Example how to use RAG with model server endpoints.|
+|[Long context LLMs](./continuous_batching/long_context/README.md)|Recommendations for handling very long context in LLM models.|
+|[Structured output](./continuous_batching/structured_output/README.md)|Generate structured (JSON) output from LLM models.|
+|[Speculative decoding](./continuous_batching/speculative_decoding/README.md)|Speed up LLM inference with speculative decoding.|
+|[LLM on NPU](./llm_npu/README.md)|Generate text with LLM models and NPU acceleration.|
+|[Scaling on multi CPU and GPU](./continuous_batching/scaling/README.md)|Scale LLM serving across multiple CPUs and GPUs.|
+|[Loading models in GGUF](gguf/README.md)|Serve GGUF models with OVMS.|
 
 
-Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
+## Image Generation
+| Demo | Description |
+|---|---|
+|[Image Generation](image_generation/README.md)|Generate images with diffusion models.|
 
-## With Traditional Models
+## Audio
+| Demo | Description |
+|---|---|
+|[Audio demos](audio/README.md)|Text-to-speech and automatic speech recognition demos.|
+
+## Text Embeddings
+| Demo | Description |
+|---|---|
+|[OpenAI API text embeddings](embeddings/README.md)|Get text embeddings via endpoint compatible with OpenAI API.|
+
+## Text Reranking
+| Demo | Description |
+|---|---|
+|[Reranking with Cohere API](rerank/README.md)|Rerank documents via endpoint compatible with Cohere.|
+
+## Classic Models
 | Demo | Description |
 |---|---|
 |[Image Classification](image_classification/python/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
-|[Using ONNX Model](using_onnx_model/python/README.md)|Run prediction on a JPEG image using image classification ONNX model via gRPC API in two preprocessing variants. This demo uses [pipeline](../docs/dag_scheduler.md) with [image_transformation custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation). |
-|[Using TensorFlow Model](image_classification_using_tf_model/python/README.md)|Run image classification using directly imported TensorFlow model. |
-|[Age gender recognition](age_gender_recognition/python/README.md) | Run prediction on a JPEG image using age gender recognition model via gRPC API.|
+|[Using ONNX Model](using_onnx_model/python/README.md)|Run prediction on a JPEG image using image classification ONNX model via gRPC API in two preprocessing variants. This demo uses [pipeline](../docs/dag_scheduler.md) with [image_transformation custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation).|
+|[Using TensorFlow Model](image_classification_using_tf_model/python/README.md)|Run image classification using directly imported TensorFlow model.|
+|[Classification with PaddlePaddle](classification_using_paddlepaddle_model/python/README.md)|Perform classification on an image with a PaddlePaddle model.|
+|[Age gender recognition](age_gender_recognition/python/README.md)|Run prediction on a JPEG image using age gender recognition model via gRPC API.|
 |[Face Detection](face_detection/python/README.md)|Run prediction on a JPEG image using face detection model via gRPC API.|
-|[Classification with PaddlePaddle](classification_using_paddlepaddle_model/python/README.md)| Perform classification on an image with a PaddlePaddle model. |
-|[Natural Language Processing with BERT](bert_question_answering/python/README.md)|Provide a knowledge source and a query and use BERT model for question answering use case via gRPC API. This demo uses dynamic shape feature. |
-|[Using inputs data in string format with universal-sentence-encoder model](universal-sentence-encoder/README.md)| Handling AI model with text as the model input. |
 |[Person, Vehicle, Bike Detection](person_vehicle_bike_detection/python/README.md)|Run prediction on a video file or camera stream using person, vehicle, bike detection model via gRPC API.|
+|[Using input strings](universal-sentence-encoder/README.md)|Handling AI model with text as the model input.|
+|[Using output strings](image_classification_with_string_output/README.md)|Handling AI model with string output.|
+|[Natural Language Processing with BERT](bert_question_answering/python/README.md)|Provide a knowledge source and a query and use BERT model for question answering via gRPC API. This demo uses dynamic shape feature.|
 |[Benchmark App](benchmark/python/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
 
-## With Python Nodes
+## MediaPipe
 | Demo | Description |
 |---|---|
-|[CLIP image classification](python_demos/clip_image_classification/README.md) | Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
+|[Object Detection](./mediapipe/object_detection/README.md)|A pipeline implementing object detection.|
+|[Iris](./mediapipe/iris_tracking/README.md)|A pipeline implementing iris detection.|
+|[Holistic](./mediapipe/holistic_tracking/README.md)|A complex pipeline linking several image analytical models and image transformations.|
+|[Realtime Stream Analysis](real_time_stream_analysis/python/README.md)|Analyze RTSP video stream in real time with generic application template for custom pre and post processing routines.|
+|[Image classification](./mediapipe/image_classification/README.md)|Basic example with a single inference node.|
+|[Chain of models](./mediapipe/multi_model_graph/README.md)|A chain of models in a graph.|
+|[CLIP image classification](python_demos/clip_image_classification/README.md)|Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
 
-## With MediaPipe Graphs
+## Python Node
 | Demo | Description |
 |---|---|
-|[Real Time Stream Analysis](real_time_stream_analysis/python/README.md)| Analyze RTSP video stream in real time with generic application template for custom pre and post processing routines as well as simple results visualizer for displaying predictions in the browser. |
-|[Image classification](./mediapipe/image_classification/README.md)| Basic example with a single inference node. |
-|[Chain of models](./mediapipe/image_classification/README.md)| A chain of models in a graph. |
-|[Object detection](./mediapipe/object_detection/README.md)| A pipeline implementing object detection |
-|[Iris demo](./mediapipe/object_detection/README.md)| A pipeline implementing iris detection |
-|[Holistic demo](./mediapipe/holistic_tracking/README.md)| A complex pipeline linking several image analytical models and image transformations |
+|[OpenClip with python execution](./python_demos/clip_image_classification/README.md)|A pipeline implementing OpenClip classification in Python Node.|
 
-## With DAG Pipelines
+## Integrations
 | Demo | Description |
 |---|---|
-|[Horizontal Text Detection in Real-Time](horizontal_text_detection/python/README.md) | Run prediction on camera stream using a horizontal text detection model via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [horizontal_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/horizontal_ocr) and [demultiplexer](../docs/demultiplexing.md). |
-|[Optical Character Recognition Pipeline](optical_character_recognition/python/README.md) | Run prediction on a JPEG image using a pipeline of text recognition and text detection models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [east_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/east_ocr) and [demultiplexer](../docs/demultiplexing.md). |
-|[Single Face Analysis Pipeline](single_face_analysis_pipeline/python/README.md)|Run prediction on a JPEG image using a simple pipeline of age-gender recognition and emotion recognition models via gRPC API to analyze image with a single face. This demo uses [pipeline](../docs/dag_scheduler.md) |
-|[Multi Faces Analysis Pipeline](multi_faces_analysis_pipeline/python/README.md)|Run prediction on a JPEG image using a pipeline of age-gender recognition and emotion recognition models via gRPC API to extract multiple faces from the image and analyze all of them. This demo uses [pipeline](../docs/dag_scheduler.md) with [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection) and [demultiplexer](../docs/demultiplexing.md) |
-|[Model Ensemble Pipeline](model_ensemble/python/README.md)|Combine multiple image classification models into one [pipeline](../docs/dag_scheduler.md) and aggregate results to improve classification accuracy. |
-|[Face Blur Pipeline](face_blur/python/README.md)|Detect faces and blur image using a pipeline of object detection models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [face_blur custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/face_blur). |
-|[Vehicle Analysis Pipeline](vehicle_analysis_pipeline/python/README.md)|Detect vehicles and recognize their attributes using a pipeline of vehicle detection and vehicle attributes recognition models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection). |
-
-## With C++ Client
-| Demo | Description |
-|---|---|
-|[C API applications](c_api_minimal_app/README.md)|How to use C API from the OpenVINO Model Server to create C and C++ application.|
-
-## With Go Client
-| Demo | Description |
-|---|---|
-|[Image Classification](image_classification/go/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
-
-
+|[Integration with Open WebUI](integration_with_OpenWebUI/README.md)|Using Open WebUI with OVMS as inference provider. Shows text and image generation as well as usage with RAG and tools.|
+|[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue or Cline extension to Visual Studio Code with local OVMS serving.|
