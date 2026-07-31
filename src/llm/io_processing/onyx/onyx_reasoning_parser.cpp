@@ -33,41 +33,47 @@ void OnyxReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<in
     size_t selfPos = parsedOutput.content.find(selfRecipientTag);
     if (selfPos != std::string::npos) {
         size_t messagePos = parsedOutput.content.find(messageTag, selfPos);
-        if (messagePos != std::string::npos) {
-            size_t bodyStart = messagePos + messageTag.length();
-            size_t endPos = parsedOutput.content.find(continuationEndTag, bodyStart);
-            std::string body = (endPos != std::string::npos)
-                                    ? parsedOutput.content.substr(bodyStart, endPos - bodyStart)
-                                    : parsedOutput.content.substr(bodyStart);
-            parsedOutput.reasoning = body;
-            // Drop the leading " " before "to=" (rendered by the chat template) too, if present.
-            size_t segmentStart = (selfPos > 0 && parsedOutput.content[selfPos - 1] == ' ') ? selfPos - 1 : selfPos;
-            parsedOutput.content.erase(segmentStart);
+        if (messagePos == std::string::npos) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Found '{}' without a following '{}', leaving content untouched", selfRecipientTag, messageTag);
             return;
         }
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Found '{}' without a following '{}', leaving content untouched", selfRecipientTag, messageTag);
-        return;
+        size_t bodyStart = messagePos + messageTag.length();
+        size_t endPos = parsedOutput.content.find(continuationEndTag, bodyStart);
+        parsedOutput.reasoning = (endPos != std::string::npos)
+                                     ? parsedOutput.content.substr(bodyStart, endPos - bodyStart)
+                                     : parsedOutput.content.substr(bodyStart);
+        // Erase ONLY the reasoning segment (through its "<|eom|>" terminator), including the
+        // leading " " the template renders before "to=". With eos suppressed the model may
+        // continue into a tool-call / final-answer turn after reasoning; that turn must survive
+        // for the envelope strip below (and OnyxToolParser) to process.
+        size_t segmentStart = (selfPos > 0 && parsedOutput.content[selfPos - 1] == ' ') ? selfPos - 1 : selfPos;
+        size_t eraseEnd = (endPos != std::string::npos) ? endPos + continuationEndTag.length() : parsedOutput.content.length();
+        parsedOutput.content.erase(segmentStart, eraseEnd - segmentStart);
+        // fall through to strip the envelope of any following (tool-call / final-answer) turn
     }
 
-    // Case 2: tool-call turn (recipient="functions.<name>") -> leave untouched, OnyxToolParser
-    // (which runs after this parser, see OutputParser::parse()) is responsible for it.
-    if (parsedOutput.content.find(functionsRecipientTag) != std::string::npos) {
-        return;
-    }
-
-    // Case 3: plain final answer (recipient="user" or absent) -> strip the generic
-    // " to=user"? + "<|message|>" + "<|eot|>" envelope, leaving just the clean text.
+    // Case 2: any other turn -- a tool-call turn (recipient="<tool>", e.g. "get_weather", now
+    // a BARE name after the new drop's chat template, not "functions.<name>") or a plain final
+    // answer (recipient="user" or absent). Strip the generic harmony routing prefix
+    // ("[ to=<recipient>]" + "<|message|>") and a single trailing turn terminator
+    // ("<|eom|>" or "<|eot|>"), leaving just the body. For a tool-call turn the body is the ATEM
+    // block, which OnyxToolParser (running next, see OutputParser::parse()) then extracts,
+    // leaving content empty; for a final answer the body is the clean text.
     size_t messagePos = parsedOutput.content.find(messageTag);
     if (messagePos == std::string::npos) {
         // No framing found at all -- unexpected/malformed output, leave content as-is.
         return;
     }
-    size_t bodyStart = messagePos + messageTag.length();
-    size_t endPos = parsedOutput.content.find(turnFinalEndTag, bodyStart);
-    std::string body = (endPos != std::string::npos)
-                            ? parsedOutput.content.substr(bodyStart, endPos - bodyStart)
-                            : parsedOutput.content.substr(bodyStart);
-    parsedOutput.content = body;
+    // Drop everything up to and including the first "<|message|>" (the routing prefix).
+    parsedOutput.content.erase(0, messagePos + messageTag.length());
+    // Drop a single trailing terminator if the turn ends with one.
+    for (const auto& term : {continuationEndTag, turnFinalEndTag}) {
+        if (parsedOutput.content.size() >= term.size() &&
+            parsedOutput.content.compare(parsedOutput.content.size() - term.size(), term.size(), term) == 0) {
+            parsedOutput.content.erase(parsedOutput.content.size() - term.size());
+            break;
+        }
+    }
 }
 
 std::optional<rapidjson::Document> OnyxReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason /*finishReason*/) {

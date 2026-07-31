@@ -199,7 +199,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
     } else if (toolParserName == "onyx") {
-        toolParser = std::make_unique<OnyxToolParser>(tokenizer);
+        toolParser = std::make_unique<OnyxToolParser>(tokenizer, toolNameSchemaMap);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: \"" + toolParserName +
                                  "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());

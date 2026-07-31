@@ -22,6 +22,7 @@
 #include <optional>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "src/llm/io_processing/base_output_parser.hpp"
@@ -32,13 +33,47 @@
 
 using namespace ovms;
 
+// =============================================================================
+// NEW Onyx tool-call format (ATEM), captured live from the running model
+// (muse/onyx_live_withargs_1000_raw.txt, muse/onyx_live_nargs_1500_raw.txt) and
+// matching `render_atem` in muse/onyx-ov-int4-v2/chat_template.jinja:
+//
+//    to=<name><|message|><atem:function_calls>
+//   <atem:invoke name="<name>">
+//   <atem:parameter name="<key>"><value></atem:parameter>
+//   ...
+//   </atem:invoke>
+//   </atem:function_calls>{<|eom|>|<|eot|>}
+//
+// Key differences from the previous Onyx drop (which these tests used to cover):
+//   - The recipient is the BARE tool name `to=get_weather`, NOT `to=functions.get_weather`
+//     (the "functions." prefix only appears if the tool itself is namespaced). The
+//     authoritative function name is therefore read from `<atem:invoke name="...">`,
+//     not from the `to=` recipient.
+//   - Arguments are an ATEM XML block (Anthropic-style), essentially qwen3coder with
+//     `atem:` tags -- NOT a single raw JSON blob. Parameter values are rendered
+//     UNQUOTED (e.g. <atem:parameter name="gps">37.7749,-122.4194</atem:parameter>),
+//     so arguments must be typed via the tool JSON schema exactly like
+//     Qwen3CoderToolParser (string->quoted, integer/number->numeric,
+//     bool/array/object->parsed, fall back to string). The toolsSchemas fixture below
+//     is therefore load-bearing now.
+//
+// Reasoning framing is UNCHANGED (" to=self<|message|>...<|eom|>") -- those tests are
+// carried over verbatim.
+//
+// These tests define the TARGET contract; the parser implementation
+// (src/llm/io_processing/onyx/*) is rewritten later against them. Until then the
+// tool-call tests are expected to FAIL (the current parser still looks for the old
+// "to=functions."/raw-JSON framing) while the reasoning tests still pass.
+// =============================================================================
+
 // Onyx does not ship a converted HF tokenizer in this early preview, and none of the
-// segments the parser looks for ("to=functions.", "<|message|>", "<|eom|>", "<|eot|>",
-// "to=self") are real special tokens of the model this parser is designed for -- they are
-// plain text sequences that must round-trip losslessly through encode()+decode() on ANY
-// tokenizer. facebook/opt-125m is already used the same way for chat-template testing
-// (see ChatTemplateEndToEndMinjaTest), so it is reused here to avoid pulling in a new
-// model fixture.
+// segments the parser looks for ("<atem:function_calls>", "<atem:invoke name=", "to=self",
+// "<|message|>", "<|eom|>", "<|eot|>") are real special tokens of the model this parser is
+// designed for -- they are plain text sequences that must round-trip losslessly through
+// encode()+decode() on ANY tokenizer. facebook/opt-125m is already used the same way for
+// chat-template testing (see ChatTemplateEndToEndMinjaTest), so it is reused here to avoid
+// pulling in a new model fixture.
 // TODO @atobiszei replace when tokenizer is available
 #ifdef _WIN32
 const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\facebook\\opt-125m";
@@ -48,10 +83,9 @@ const std::string tokenizerPath = "/ovms/src/test/llm_testing/facebook/opt-125m"
 
 static std::unique_ptr<ov::genai::Tokenizer> opt125mTokenizer;
 
-// Onyx never consults tool schemas (arguments are forwarded as a raw JSON blob verbatim,
-// no per-parameter type coercion like Qwen3CoderToolParser) -- these mirror
-// Qwen3CoderOutputParserTest's toolSchemasInput/toolsSchemas setup purely so the test
-// fixture shape matches, and so a real schema is on hand if that ever changes.
+// Tool schemas drive argument typing (string vs integer vs object) exactly like
+// Qwen3CoderOutputParserTest -- Onyx's ATEM parameter values are untyped raw text, so the
+// parser must consult these to decide how to serialize each value into the JSON args blob.
 static std::map<std::string, std::string> toolSchemasInput = {
     {"get_weather", R"({"properties":{"location":{"type":"string","description":"City name."},"unit":{"type":"string","description":"Temperature unit."}},"required":["location"]})"},
     {"get_time", R"({"properties":{"city":{"type":"string","description":"City name."}},"required":["city"]})"},
@@ -78,6 +112,43 @@ static ToolsSchemas_t convertStringToolSchemasStringToToolsSchemas(
 }
 
 static ovms::ToolsSchemas_t toolsSchemas = convertStringToolSchemasStringToToolsSchemas(toolSchemasInput);
+
+// -----------------------------------------------------------------------------
+// ATEM block builders -- keep tool-call test inputs readable. A single tool call
+// renders (mirroring the served template's render_atem, newlines included) as:
+//   <atem:function_calls>\n<atem:invoke name="NAME">\n
+//   <atem:parameter name="K">V</atem:parameter>\n   (repeated)
+//   </atem:invoke>\n</atem:function_calls>
+// The full generated turn wraps that in the harmony envelope
+// " to=NAME<|message|>...{<|eom|>|<|eot|>}".
+// -----------------------------------------------------------------------------
+using AtemParams = std::vector<std::pair<std::string, std::string>>;
+
+static std::string atemBlock(const std::string& name, const AtemParams& params) {
+    std::string s = "<atem:function_calls>\n<atem:invoke name=\"" + name + "\">\n";
+    for (const auto& [k, v] : params) {
+        s += "<atem:parameter name=\"" + k + "\">" + v + "</atem:parameter>\n";
+    }
+    s += "</atem:invoke>\n</atem:function_calls>";
+    return s;
+}
+
+// A full assistant tool-call turn as the model emits it: the leading " to=<name>" recipient,
+// "<|message|>", the ATEM block, then the turn terminator.
+static std::string onyxToolTurn(const std::string& name, const AtemParams& params, const std::string& terminator = "<|eom|>") {
+    return " to=" + name + "<|message|>" + atemBlock(name, params) + terminator;
+}
+
+// Pre-parsed parameter-type map for the direct-impl parametrized test below (mirrors
+// Qwen3CoderOutputParserTest's toolsParametersTypeMap) -- drives schema-based typing of the
+// otherwise-untyped ATEM parameter values.
+static ovms::ToolsParameterTypeMap_t onyxToolsParametersTypeMap = {
+    {"string_tool", {{"arg1", ovms::ParameterType::STRING}}},
+    {"int_tool", {{"arg1", ovms::ParameterType::NUMBER}}},
+    {"float_tool", {{"arg1", ovms::ParameterType::NUMBER}}},
+    {"bool_tool", {{"arg1", ovms::ParameterType::BOOLEAN}}},
+    {"object_tool", {{"arg1", ovms::ParameterType::OBJECT}}},
+    {"list_tool", {{"arg1", ovms::ParameterType::ARRAY}}}};
 
 class OnyxOutputParserTest : public ::testing::Test {
 protected:
@@ -106,11 +177,6 @@ protected:
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         return outputParser->parse(generatedTokens, toolsAvailable);
     }
-
-    // Shared by streaming tests: compares a parseChunk() delta against the expected JSON,
-    // masking the randomly generated tool call id (kept as one helper rather than the same
-    // id-masking block duplicated per test, mirroring Qwen3CoderOutputParserTest usage).
-    static void assertDeltaMatches(const std::optional<rapidjson::Document>& doc, const std::optional<std::string>& expectedDelta, const std::string& chunk);
 
     // Wraps a raw (unescaped) string value into a JSON object {"arg1":"<escaped>"},
     // using rapidjson's serializer to handle all escaping. This lets us write raw PLC/Python
@@ -153,9 +219,11 @@ protected:
     }
 };
 
+// =============================================================================
+// Reasoning / final-answer framing (UNCHANGED by the new drop).
 // A single generate() call stops at the first "<|eom|>"/"<|eot|>" (both are configured as
-// eos tokens for Onyx), so only one of these three segment shapes is ever produced at a time.
-
+// eos tokens for Onyx), so only one of these segment shapes is ever produced at a time.
+// =============================================================================
 TEST_F(OnyxOutputParserTest, FinalAnswerWithExplicitUserRecipient) {
     ParsedOutput parsedOutput = generateParsedOutput(" to=user<|message|>It's 65F in SF.<|eot|>");
 
@@ -182,27 +250,89 @@ TEST_F(OnyxOutputParserTest, PrivateReasoningOnly) {
     EXPECT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
-TEST_F(OnyxOutputParserTest, ToolCallWithRawJsonArguments) {
-    ParsedOutput parsedOutput = generateParsedOutput(" to=functions.get_weather<|message|>{\"location\":\"Paris\",\"unit\":\"celsius\"}<|eom|>");
+// =============================================================================
+// Unary tool-call parsing (ATEM). Arguments are typed via the tool schema.
+// =============================================================================
+TEST_F(OnyxOutputParserTest, ToolCallWithAtemArguments) {
+    // Live-model shape: " to=<name><|message|><atem:function_calls>...</atem:function_calls><|eom|>".
+    // Both params are strings per get_weather's schema, so both stay quoted.
+    ParsedOutput parsedOutput = generateParsedOutput(
+        onyxToolTurn("get_weather", {{"location", "Paris"}, {"unit", "celsius"}}));
 
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
-    // Onyx passes arguments through verbatim -- no schema-driven reformatting like qwen3coder.
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"location\":\"Paris\",\"unit\":\"celsius\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"location":"Paris","unit":"celsius"})");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 
+TEST_F(OnyxOutputParserTest, ToolCallWithNoArguments) {
+    // No-argument call, exactly as captured live (get_location_gps/get_current_time).
+    ParsedOutput parsedOutput = generateParsedOutput(onyxToolTurn("get_current_location", {}));
+
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_current_location");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{}");
+}
+
+TEST_F(OnyxOutputParserTest, ToolCallWithSchemaTypedIntegerArgument) {
+    // arg2 is declared integer in the schema, so the untyped ATEM value "3141522" must be
+    // serialized as a JSON number (not a quoted string), while arg1 stays a quoted string.
+    ParsedOutput parsedOutput = generateParsedOutput(
+        onyxToolTurn("string_int_tool", {{"arg1", "hello"}, {"arg2", "3141522"}}));
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_int_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"arg1":"hello","arg2":3141522})");
+}
+
+TEST_F(OnyxOutputParserTest, PrivateReasoningThenToolCall) {
+    // Realistic live shape (see chat_with_tools.py): in a SINGLE generation the model first emits
+    // a private reasoning turn ("to=self...<|eom|>") and then a tool-call turn. The reasoning
+    // parser must lift the reasoning out AND strip the following turn's harmony envelope, leaving
+    // only the ATEM block for the tool parser to consume -- so content ends up empty. This is the
+    // path the eos-token fix unblocked (previously "<|eom|>" was an eos token and generation
+    // stopped after the reasoning turn, so the tool call was never produced).
+    ParsedOutput parsedOutput = generateParsedOutput(
+        " to=self<|message|>Let me check the location first.<|eom|>" +
+        onyxToolTurn("get_current_location", {}, "<|eot|>"));
+
+    EXPECT_EQ(parsedOutput.reasoning, "Let me check the location first.");
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_current_location");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{}");
+}
+
+TEST_F(OnyxOutputParserTest, PrivateReasoningThenToolCallWithArgs) {
+    // Same combined reasoning+tool-call turn, but the tool call carries schema-typed arguments.
+    ParsedOutput parsedOutput = generateParsedOutput(
+        " to=self<|message|>I should look up Paris weather.<|eom|>" +
+        onyxToolTurn("get_weather", {{"location", "Paris"}, {"unit", "celsius"}}, "<|eot|>"));
+
+    EXPECT_EQ(parsedOutput.reasoning, "I should look up Paris weather.");
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"location":"Paris","unit":"celsius"})");
+}
+
 TEST_F(OnyxOutputParserTest, ToolCallNotParsedWhenToolsUnavailable) {
-    // OutputParser::parse() only invokes the tool parser when toolsAvailable is true.
-    ParsedOutput parsedOutput = generateParsedOutput(" to=functions.get_weather<|message|>{\"location\":\"Paris\"}<|eom|>", /*toolsAvailable=*/false);
+    // OutputParser::parse() only invokes the tool parser when toolsAvailable is true, so the
+    // ATEM block is never extracted and remains (verbatim) somewhere in content.
+    std::string turn = onyxToolTurn("get_weather", {{"location", "Paris"}});
+    ParsedOutput parsedOutput = generateParsedOutput(turn, /*toolsAvailable=*/false);
 
     EXPECT_EQ(parsedOutput.toolCalls.size(), 0);
-    // Known current limitation: the reasoning parser (which always runs) intentionally
-    // leaves "to=functions." segments untouched so the tool parser can claim them -- but
-    // if the tool parser never runs, the raw wrapped segment is surfaced as-is in content.
-    EXPECT_EQ(parsedOutput.content, " to=functions.get_weather<|message|>{\"location\":\"Paris\"}<|eom|>");
+    // Known current limitation mirrored from the previous drop: with the tool parser
+    // disabled, the raw ATEM block is surfaced as-is in content. Use a substring check so
+    // the test does not over-constrain how much of the " to=..."/"<|message|>" envelope the
+    // reasoning parser strips around it.
+    EXPECT_NE(parsedOutput.content.find(atemBlock("get_weather", {{"location", "Paris"}})), std::string::npos)
+        << parsedOutput.content;
 }
 
 TEST_F(OnyxOutputParserTest, MalformedOutputWithoutMessageTagLeftUntouched) {
@@ -214,75 +344,30 @@ TEST_F(OnyxOutputParserTest, MalformedOutputWithoutMessageTagLeftUntouched) {
 }
 
 // =============================================================================
-// Streaming is implemented on top of OnyxToolParserImpl, a pure state machine that
-// accumulates raw text and hands back a fully assembled tool call once its "<|eom|>"
-// end tag is seen (mirroring Qwen3CoderToolParserImpl) -- unary parse() below drives
-// that same impl with the whole content as a single chunk, so it is the single-shot
-// degenerate case of streaming, not a parallel implementation of the tag walk.
+// Streaming. Implemented on top of OnyxToolParserImpl, a state machine that
+// accumulates raw text and hands back a fully assembled tool call once its ATEM end
+// tag ("</atem:function_calls>") is seen -- mirroring Qwen3CoderToolParserImpl. Unary
+// parse() above drives that same impl with the whole content as one chunk, so it is the
+// single-shot degenerate case of streaming, not a parallel implementation of the tag walk.
 //
-// Because Onyx's arguments are already a complete raw JSON blob needing no per-parameter
-// schema coercion, they are still sent to the client as a single delta once the tool call
-// closes (matching Qwen3CoderToolParser's sendFullDelta) rather than streamed incrementally
-// as raw text arrives -- only the function name streams as its own delta once known.
+// Like qwen3coder, the function name streams as its own first delta once
+// "<atem:invoke name=...>" closes, and the fully-typed arguments blob is sent as a single
+// delta once the tool call closes (there is no per-parameter incremental streaming).
 //
-// Chunk boundaries below are deliberately awkward (splitting the function name and the
-// JSON arguments mid-token) to exercise the Content/InsideName/InsideArguments state
-// machine, mirroring Qwen3CoderOutputParserTest.StreamingSimpleToolCall.
+// Chunk boundaries below are deliberately awkward (splitting tags and values mid-token) to
+// exercise the Content/InsideToolCall/InsideFunctionName/InsideFunction/InsideParameter*/
+// AfterFunction state machine, mirroring Qwen3CoderOutputParserTest.StreamingSimpleToolCall.
+//
+// NOTE on the harmony envelope: the leading " to=<name><|message|>" that precedes the ATEM
+// block in real output is treated as generic content by the shared OutputParser streaming
+// framework (the tool parser's start tag is "<atem:function_calls>"). Streaming-mode
+// stripping of that envelope is a separate, not-yet-designed concern (see the TODO in
+// OnyxReasoningParser::parseChunk), so it is intentionally out of scope here -- this test
+// focuses on the ATEM tool-call state machine itself, exactly as qwen3coder's does.
 // =============================================================================
-void OnyxOutputParserTest::assertDeltaMatches(const std::optional<rapidjson::Document>& doc, const std::optional<std::string>& expectedDelta, const std::string& chunk) {
-    if (!expectedDelta.has_value()) {
-        EXPECT_FALSE(doc.has_value()) << "Expected nullopt for chunk: " << chunk;
-        return;
-    }
-    ASSERT_TRUE(doc.has_value()) << "Expected a delta for chunk: " << chunk;
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc->Accept(writer);
-    std::string docStr = buffer.GetString();
-    std::string expected = expectedDelta.value();
-    // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
-    const std::string idKey = "\"id\":\"";
-    auto docIdPos = docStr.find(idKey);
-    auto expectedIdPos = expected.find(idKey);
-    if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
-        auto docIdStart = docIdPos + idKey.size();
-        auto docIdEnd = docStr.find("\"", docIdStart);
-        auto expectedIdStart = expectedIdPos + idKey.size();
-        auto expectedIdEnd = expected.find("\"", expectedIdStart);
-        ASSERT_NE(docIdEnd, std::string::npos);
-        ASSERT_NE(expectedIdEnd, std::string::npos);
-        std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
-        std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
-        EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
-        EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
-        docStr.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
-        expected.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
-    }
-    EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
-}
-
 TEST_F(OnyxOutputParserTest, StreamingSimpleToolCall) {
-    // Mirrors Qwen3CoderOutputParserTest.StreamingSimpleToolCall's rigor: adversarial
-    // chunk boundaries, content before/between tool calls, complex argument values
-    // (PLC structured text, Python with triple-quotes/f-strings/escape sequences),
-    // adapted to Onyx's "to=functions.<name><|message|><json_args><|eom|>" format.
-    //
-    // Unlike qwen3coder there is no per-parameter incremental streaming to test
-    // (qwen3coder's <parameter=...> tags) since Onyx's arguments are a single raw JSON blob.
-    // However, content before/between tool calls IS tested because the OutputParser
-    // streaming framework handles that generically (UNKNOWN -> CONTENT transition when no
-    // start tag is found).
-    //
-    // Key structural differences from qwen3coder:
-    //  - Start tag is "to=functions." (not "<tool_call>")
-    //  - Name delimiter is "<|message|>" (not ">")
-    //  - End tag is "<|eom|>" (not "</tool_call>")
-    //  - Arguments are a single raw JSON blob (not per-parameter XML tags)
-    //  - PLC/Python code must be JSON-escaped within the arguments blob
-
-    // Raw PLC structured text code (mirrors qwen3coder's FC_CreateJsonPayload).
-    // Written as a raw string literal so it's human-readable; wrapRawCodeAsToolArgs()
-    // handles all the JSON escaping at runtime.
+    // Raw PLC structured text code (mirrors qwen3coder's FC_CreateJsonPayload). Written as a
+    // raw string literal so it's human-readable; wrapRawCodeAsToolArgs() handles JSON escaping.
     const std::string plcCode = R"(FUNCTION FC_CreateJsonPayload : STRING
 VAR_INPUT
     Value1 : REAL;
@@ -306,8 +391,7 @@ END_VAR
 
 END_FUNCTION)";
 
-    // Raw Python code with triple-quotes, f-strings, escape sequences (mirrors
-    // qwen3coder's last test case).
+    // Raw Python code with triple-quotes, f-strings, escape sequences (mirrors qwen3coder).
     const std::string pythonCode = R"(
 if __name__ == "__main__":
     addresses = {}
@@ -320,85 +404,66 @@ if __name__ == "__main__":
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         // Content before any tool call -- OutputParser sees no start tag match, emits content.
         {"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG"}})"},
-        // Start tag "to=functions." split across several arbitrarily small chunks.
-        // Note: leading space before "to=" is just normal content/separator; the start
-        // tag the framework looks for is "to=functions." without the space.
-        {" to", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"=fun", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"ctions.", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // Function name streams in across several small chunks -- still no delta
-        // (OnyxToolParserImpl is in InsideName state, accumulating).
-        {"get", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"_", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // ATEM start tag "<atem:function_calls>" split across several arbitrarily small chunks.
+        {"<atem:func", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"tion_calls>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // "<atem:invoke name=\"get_weather\">" split mid-tag and mid-name -- name delta emitted
+        // once the full opening tag (up to the closing "\">") lands.
+        {"<atem:invoke na", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"me=\"get_", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"weath", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"er", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // "<|message|>" itself split mid-tag -- name delta emitted once the full tag lands.
-        {"<|mess", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"age|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"get_weather"}}]}})"},
-        // Raw JSON argument text (with a nested object) split at awkward byte boundaries.
-        {"{\"locat", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"ion\":\"Pa", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"ris\",\"opt", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"ions\":{\"unit", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\":\"cel", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"sius\"}}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // "<|eom|>" split mid-tag -- closes the tool call once complete.
-        {"<|e", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"om|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"location\":\"Paris\",\"options\":{\"unit\":\"celsius\"}}"}}]}})"},
-        // Content between tool calls (mirrors qwen3coder's "POTENTIALLY EXISINT CONTENT").
-        // In TOOL_CALLS_WAITING_FOR_TOOL phase, text without start tag match waits for more.
-        {"POTENTIALLY EXISINT CONTENT", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // Second tool call -- start tag + name + <|message|> split across tiny chunks.
-        {" to", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"=functi", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"ons.str", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"ing_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|messa", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"ge|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"string_tool"}}]}})"},
-        // Arguments split across chunks.
-        {"{\"arg1\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\"STRI", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"NG_VALUE\"}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|eo", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"m|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\":\"STRING_VALUE\"}"}}]}})"},
-        // More content between tool calls (mirrors "CONTENT_AFTER_TOOL_CALL").
-        {"CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // Third tool call -- string_int_tool with two parameters in JSON (integer stays
-        // numeric). Start tag + name + <|message|> split differently from previous calls.
-        {" to=func", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"tions.strin", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"g_int_tool<|", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"message|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":2,"function":{"name":"string_int_tool"}}]}})"},
-        // Arguments with a leading \n in the string value (matches qwen3coder's
-        // "\nANOTHER_STRING_VALUE" pattern) and an integer parameter.
-        {"{\"arg1\":\"\\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"ANOTHER_STRING_VALUE\",\"ar", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"g2\":314", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"1522}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|eom|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"{\"arg1\":\"\\nANOTHER_STRING_VALUE\",\"arg2\":3141522}"}}]}})"},
-        // "NOTHING IMPORTANT HERE" content between calls (mirrors qwen3coder).
-        {"NOTHING IMPORTANT HERE", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // A "bfcl draft" style call -- cd tool. Start tag arrives with some preceding
-        // text just like qwen3coder's "part of bfcl 'draft'.\n\n<function=cd>\n" pattern.
-        {"part of bfcl 'draft'.\n\n to=functions.cd<|message|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":3,"function":{"name":"cd"}}]}})"},
-        {"{\"folder\":\"ResearchDocs\"}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|eom|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":3,"function":{"arguments":"{\"folder\":\"ResearchDocs\"}"}}]}})"},
-        // PLC structured text code as a tool argument (mirrors qwen3coder's
-        // FC_CreateJsonPayload test). Raw code is defined above as plcCode; the helper
-        // wrapRawCodeAsToolArgs() handles all JSON escaping via rapidjson so we don't
-        // need to manually count backslashes. Sent as a single chunk since the interesting
-        // escaping complexity is in the content, not in chunk-boundary splitting.
-        {" to=functions.string_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|message|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":4,"function":{"name":"string_tool"}}]}})"},
-        {wrapRawCodeAsToolArgs(plcCode), ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|eom|>", ov::genai::GenerationFinishReason::NONE, expectedArgsDelta(4, plcCode)},
-        // Python code with triple-quotes, f-strings, escape sequences (mirrors
-        // qwen3coder's last test case). Also sent as a single chunk -- the chunk-boundary
-        // adversarial testing is covered by the earlier tool calls above.
-        {" to=functions.string_tool<|mess", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"age|>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":5,"function":{"name":"string_tool"}}]}})"},
-        {wrapRawCodeAsToolArgs(pythonCode), ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<|eom|>", ov::genai::GenerationFinishReason::STOP, expectedArgsDelta(5, pythonCode)},
+        {"er\">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"get_weather"}}]}})"},
+        // Parameter "location" -> "Paris" (string per schema, stays quoted). Split awkwardly.
+        {"<atem:parameter na", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"me=\"location\">Pa", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ris</atem:param", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"eter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Parameter "unit" -> "celsius".
+        {"<atem:parameter name=\"unit\">celsius</atem:parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // "</atem:invoke>" then "</atem:function_calls>" split mid-tag -- closes the tool call,
+        // full typed args delta emitted once the end tag completes.
+        {"</atem:inv", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"oke>\n</atem:func", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"tion_calls>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]}})"},
+        // Harmony envelope + content between tool calls -- swallowed while waiting for the next
+        // "<atem:function_calls>" (mirrors qwen3coder's "POTENTIALLY EXISINT CONTENT").
+        {"<|eom|><|start|>assistant to=string_tool<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Second tool call -- start tag + invoke name split across tiny chunks.
+        {"<atem:function_calls>\n<atem:invoke na", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"me=\"string_tool\">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"string_tool"}}]}})"},
+        // arg1 (string) split across chunks.
+        {"<atem:parameter name=\"arg1\">STRI", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"NG_VALUE</atem:parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</atem:invoke>\n</atem:func", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"tion_calls>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\":\"STRING_VALUE\"}"}}]}})"},
+        // More envelope/content between tool calls.
+        {"<|eom|><|start|>assistant to=string_int_tool<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Third tool call -- string_int_tool: arg1 string (with a leading escaped newline in
+        // the value) + arg2 integer (stays numeric per schema).
+        {"<atem:function_calls>\n<atem:invoke name=\"string_int_tool\">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":2,"function":{"name":"string_int_tool"}}]}})"},
+        {"<atem:parameter name=\"arg1\">\\nANOTHER_STRING_VALUE</atem:parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<atem:parameter name=\"arg2\">314", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"1522</atem:parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // arg1's value is a literal backslash-n (C++ "\\n"), a STRING param. It round-trips
+        // through two JSON layers: value -> arguments string ("\\n") -> delta string ("\\\\n").
+        {"</atem:invoke>\n</atem:function_calls>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"{\"arg1\":\"\\\\nANOTHER_STRING_VALUE\",\"arg2\":3141522}"}}]}})"},
+        // Envelope/content before a "bfcl draft" style call -- cd tool, arriving with preceding
+        // text like qwen3coder's "part of bfcl 'draft'." pattern.
+        {"<|eom|><|start|>assistant to=cd<|message|>part of bfcl draft.\n\n<atem:function_calls>\n<atem:invoke name=\"cd\">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":3,"function":{"name":"cd"}}]}})"},
+        {"<atem:parameter name=\"folder\">ResearchDocs</atem:parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</atem:invoke>\n</atem:function_calls>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":3,"function":{"arguments":"{\"folder\":\"ResearchDocs\"}"}}]}})"},
+        // PLC structured text code as a string tool argument (mirrors qwen3coder's
+        // FC_CreateJsonPayload test). Raw code defined above; wrapRawCodeAsToolArgs() /
+        // expectedArgsDelta() handle JSON escaping. Sent as a single chunk -- the interesting
+        // complexity here is the value escaping, not chunk-boundary splitting.
+        {"<|eom|><|start|>assistant to=string_tool<|message|><atem:function_calls>\n<atem:invoke name=\"string_tool\">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":4,"function":{"name":"string_tool"}}]}})"},
+        {"<atem:parameter name=\"arg1\">" + plcCode + "</atem:parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</atem:invoke>\n</atem:function_calls>", ov::genai::GenerationFinishReason::NONE, expectedArgsDelta(4, plcCode)},
+        // Python code with triple-quotes, f-strings, escape sequences (mirrors qwen3coder's
+        // last case). Also single-chunk value; finishes generation with STOP.
+        {"<|eom|><|start|>assistant to=string_tool<|message|><atem:function_calls>\n<atem:invoke name=\"string_tool\">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":5,"function":{"name":"string_tool"}}]}})"},
+        {"<atem:parameter name=\"arg1\">" + pythonCode + "</atem:parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</atem:invoke>\n</atem:function_calls>", ov::genai::GenerationFinishReason::STOP, expectedArgsDelta(5, pythonCode)},
     };
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
@@ -475,37 +540,44 @@ if __name__ == "__main__":
 
 // =============================================================================
 // Proves the "unary is an edge case of streaming" property holds structurally, not
-// just by coincidence: OnyxToolParser::parse() literally drives the same
-// OnyxToolParserImpl used by parseChunk() (see onyx_tool_parser.cpp), so this is
-// really just re-checking that the unary entry point wires into the same state
-// machine already covered above.
+// just by coincidence: OnyxToolParser::parse() drives the same OnyxToolParserImpl used
+// by parseChunk() (see onyx_tool_parser.cpp), so this re-checks that the unary entry
+// point wires into the same state machine covered above.
 // =============================================================================
 TEST_F(OnyxOutputParserTest, UnaryToolCallMatchesStreamingReuse) {
-    ParsedOutput parsedOutput = generateParsedOutput(" to=functions.get_weather<|message|>{\"location\":\"Paris\",\"unit\":\"celsius\"}<|eom|>");
+    ParsedOutput parsedOutput = generateParsedOutput(
+        onyxToolTurn("get_weather", {{"location", "Paris"}, {"unit", "celsius"}}));
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"location\":\"Paris\",\"unit\":\"celsius\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"location":"Paris","unit":"celsius"})");
 }
 
 TEST_F(OnyxOutputParserTest, UnaryTwoSequentialToolCalls) {
+    // Two tool-call turns back to back, as the model emits them with ignore_eos (each turn is
+    // re-introduced by "<|start|>assistant to=<name><|message|>"). Both take a single string arg.
     ParsedOutput parsedOutput = generateParsedOutput(
-        " to=functions.get_weather<|message|>{\"city\":\"SF\"}<|eom|> to=functions.get_time<|message|>{\"city\":\"SF\"}<|eom|>");
+        onyxToolTurn("get_weather", {{"location", "SF"}}) +
+        "<|start|>assistant" + onyxToolTurn("get_time", {{"city", "SF"}}));
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\":\"SF\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"location":"SF"})");
     EXPECT_EQ(parsedOutput.toolCalls[1].name, "get_time");
-    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"city\":\"SF\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, R"({"city":"SF"})");
 }
 
 // =============================================================================
-// Direct OnyxToolParserImpl unit tests -- mirrors Qwen3CoderOutputParserTest's
-// TestJustParserImplUnary*/TestJustParserImplStreamStep* layer (which exercises the
-// state machine directly, below OutputParser/OnyxToolParser), previously untested here.
+// Direct OnyxToolParserImpl unit tests -- exercise the state machine directly, below
+// OutputParser/OnyxToolParser (mirrors Qwen3CoderOutputParserTest's TestJustParserImpl*
+// layer). These use plain-string parameter values whose correct JSON serialization does
+// not depend on schema typing, so they can drive the impl through its current public API
+// (parseChunk / getCurrentFunctionName / removeToolCallsFromContentIfNeeded) directly.
+// NOTE: when the impl is made schema-driven like qwen3coder (its ctor then taking a
+// ToolsParameterTypeMap_t), these direct constructions will need that argument.
 // =============================================================================
 TEST_F(OnyxOutputParserTest, TestJustParserImplUnaryToolCall) {
-    const std::string input = " to=functions.get_weather<|message|>{\"location\":\"Paris\"}<|eom|>";
+    const std::string input = onyxToolTurn("get_weather", {{"location", "Paris"}});
     auto content = input;
     ovms::OnyxToolParserImpl parser;
     auto callsOpt = parser.parseChunk(content);
@@ -515,8 +587,7 @@ TEST_F(OnyxOutputParserTest, TestJustParserImplUnaryToolCall) {
     EXPECT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(calls.size(), 1) << input;
     EXPECT_EQ(calls[0].name, "get_weather");
-    EXPECT_EQ(calls[0].arguments, "{\"location\":\"Paris\"}");
-    EXPECT_EQ(content, "");
+    EXPECT_EQ(calls[0].arguments, R"({"location":"Paris"})");
 }
 
 TEST_F(OnyxOutputParserTest, TestJustParserImplUnaryWithNoToolCall) {
@@ -531,20 +602,40 @@ TEST_F(OnyxOutputParserTest, TestJustParserImplUnaryWithNoToolCall) {
 }
 
 TEST_F(OnyxOutputParserTest, TestJustParserImplUnaryWithTwoToolCalls) {
-    const std::string input = " to=functions.get_weather<|message|>{\"city\":\"SF\"}<|eom|> to=functions.get_time<|message|>{\"city\":\"SF\"}<|eom|>";
+    const std::string input =
+        onyxToolTurn("get_weather", {{"location", "SF"}}) +
+        "<|start|>assistant" + onyxToolTurn("get_time", {{"city", "SF"}});
     auto content = input;
     ovms::OnyxToolParserImpl parser;
     auto callsOpt = parser.parseChunk(content);
     ASSERT_TRUE(callsOpt.has_value());
     ToolCalls_t& calls = callsOpt.value();
-    auto status = parser.removeToolCallsFromContentIfNeeded(content);
-    EXPECT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(calls.size(), 2) << input;
     EXPECT_EQ(calls[0].name, "get_weather");
-    EXPECT_EQ(calls[0].arguments, "{\"city\":\"SF\"}");
+    EXPECT_EQ(calls[0].arguments, R"({"location":"SF"})");
     EXPECT_EQ(calls[1].name, "get_time");
-    EXPECT_EQ(calls[1].arguments, "{\"city\":\"SF\"}");
-    EXPECT_EQ(content, "");
+    EXPECT_EQ(calls[1].arguments, R"({"city":"SF"})");
+}
+
+TEST_F(OnyxOutputParserTest, TestJustParserImplUnaryToolCallThenTruncatedOpen) {
+    // A completed tool call followed by a second call truncated before "</atem:function_calls>"
+    // (generation cut off mid-arguments). The completed call is still extracted, and content
+    // removal must drop BOTH the completed block and the dangling open block -- not bail out and
+    // leave every block in content (the pre-fix behavior on a begin/end tag-count mismatch).
+    const std::string input =
+        onyxToolTurn("get_weather", {{"location", "SF"}}) +
+        " to=get_time<|message|><atem:function_calls>\n<atem:invoke name=\"get_time\">\n<atem:parameter name=\"city\">S";
+    auto content = input;
+    ovms::OnyxToolParserImpl parser;
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ASSERT_EQ(callsOpt.value().size(), 1) << input;
+    EXPECT_EQ(callsOpt.value()[0].name, "get_weather");
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    // Both ATEM blocks are gone (the impl strips only the blocks, not the surrounding harmony
+    // envelope -- that is the reasoning parser's job at the OutputParser level).
+    EXPECT_EQ(content.find("<atem:"), std::string::npos) << content;
 }
 
 TEST_F(OnyxOutputParserTest, TestJustParserImplStreamStepWithNoStateChange) {
@@ -556,7 +647,9 @@ TEST_F(OnyxOutputParserTest, TestJustParserImplStreamStepWithNoStateChange) {
 }
 
 TEST_F(OnyxOutputParserTest, TestJustParserImplStreamStepWithPartialToolCall) {
-    const std::string input = " to=functions.get_weather<|message|>{\"location\":";
+    // Function name is known once "<atem:invoke name=\"get_weather\">" is seen, even though the
+    // tool call has not closed yet (no "</atem:function_calls>").
+    const std::string input = " to=get_weather<|message|><atem:function_calls>\n<atem:invoke name=\"get_weather\">\n<atem:parameter name=\"location\">";
     auto content = input;
     ovms::OnyxToolParserImpl parser;
     auto stepResult = parser.parseChunk(content);
@@ -566,7 +659,7 @@ TEST_F(OnyxOutputParserTest, TestJustParserImplStreamStepWithPartialToolCall) {
 }
 
 TEST_F(OnyxOutputParserTest, TestJustParserImplStreamStepWithToolCallNoArgs) {
-    const std::string input = " to=functions.get_current_location<|message|>{}<|eom|>";
+    const std::string input = onyxToolTurn("get_current_location", {});
     auto content = input;
     ovms::OnyxToolParserImpl parser;
     auto stepResult = parser.parseChunk(content);
@@ -578,42 +671,57 @@ TEST_F(OnyxOutputParserTest, TestJustParserImplStreamStepWithToolCallNoArgs) {
 }
 
 // =============================================================================
-// Qwen3CoderOutputParserTest test cases, for reference/parity comparison (this file
-// intentionally does not have a 1:1 test for every one of these -- see inline notes
-// on why some don't apply to Onyx's simpler, non-schema-driven, single-JSON-blob
-// argument format):
-//   Parse1ToolCall1Function1ArgumentTagsNewline
-//   Parse1ToolCall1Function1ArgumentNoProperBeginTag
-//   Parse1ToolCallNestedXmlNotFromSchema
-//   ParseTwoToolCalls1Function1ArgumentTagsNoNewline
-//   Parse1ToolCall1Function1ArgumentTagsNoNewline
-//   Parse1ToolCall1Function1ArgumentMultilineValue
-//   TestJustParserImplUnaryToolCall                         -- covered above
-//   TestJustParserImplUnaryWithNoToolCall                   -- covered above
-//   TestJustParserImplUnaryWithContent                      -- N/A: Onyx's grammar never
-//       has plain content before/after a tool-call tag within the same generated turn
-//   TestJustParserImplUnaryWithThreeParameters               -- N/A: no per-parameter
-//       schema-driven typing; arguments are always a single opaque JSON blob
-//   TestJustParserImplUnaryWithEnforcementOfStringParameter  -- N/A, same reason
-//   TestJustParserImplUnaryWithNotPresentToolSchema          -- N/A, same reason (Onyx
-//       never even looks at tool schemas -- see ToolCallWithRawJsonArguments above)
-//   TestJustParserImplUnaryWithJsonObjectArgument            -- covered by nested-object
-//       case in StreamingSimpleToolCall above
-//   TestJustParserImplUnaryWithTwoToolCalls                  -- covered above
-//   TestJustParserImplUnaryToolCallNoMatchingToolParameterTypeMapEntry -- N/A, same reason
-//   TestJustParserImplUnaryToolCallWithRepeatedArgument      -- N/A, same reason (no
-//       per-parameter parsing to have a "repeated argument" concept at all)
-//   TestJustParserImplStreamStepWithMoreThan1StateChange     -- covered by
-//       TestJustParserImplUnaryWithTwoToolCalls above (both calls resolve in one parseChunk)
-//   TestJustParserImplStreamStepWithNoStateChange            -- covered above
-//   TestJustParserImplStreamStepWithPartialToolCall          -- covered above
-//   TestJustParserImplStreamStepWithTwoToolCalls             -- covered by
-//       TestJustParserImplUnaryWithTwoToolCalls above
-//   TestJustParserImplStreamStepWithToolCallNoArgs           -- covered above
-//   Qwen3CoderOutputParserParametrizedTest.TestJustParserImplWithVariousArgumentTypes -- N/A:
-//       parametrized over per-parameter type coercion (string/int/float/bool/object/list),
-//       which does not exist for Onyx (raw JSON passthrough only)
-//   StreamingSimpleToolCall                                  -- covered above (adapted;
-//       see comment on that test for what was intentionally omitted/adjusted)
+// Parametrized readability test for schema-driven argument typing -- direct analogue of
+// Qwen3CoderOutputParserParametrizedTest.TestJustParserImplWithVariousArgumentTypes, adapted
+// to the ATEM block. A single <atem:parameter> value is typed according to the tool schema:
+// string->quoted, integer/number->numeric, boolean->true/false (also normalizing Python-style
+// True/False), object/array->parsed JSON. Feeds a bare ATEM block (no harmony envelope) so
+// removeToolCallsFromContentIfNeeded() leaves content empty, mirroring qwen3coder feeding a
+// bare <tool_call> block.
 // =============================================================================
+class OnyxOutputParserParametrizedTest : public OnyxOutputParserTest, public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string, std::string>> {
+};
 
+TEST_P(OnyxOutputParserParametrizedTest, TestJustParserImplWithVariousArgumentTypes) {
+    const std::string& toolName = std::get<0>(GetParam());
+    const std::string& argName = std::get<1>(GetParam());
+    const std::string& paramValue = std::get<2>(GetParam());
+    const std::string& expectedArguments = std::get<3>(GetParam());
+
+    const std::string input = atemBlock(toolName, {{argName, paramValue}});
+    auto content = input;
+    ovms::OnyxToolParserImpl parser(onyxToolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value()) << input;
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, toolName);
+    EXPECT_EQ(calls[0].arguments, expectedArguments) << input;
+    EXPECT_EQ(parser.getCurrentState(), ovms::OnyxToolParserImpl::State::Content) << input;
+    EXPECT_EQ(content, "") << input;
+}
+
+const std::vector<std::tuple<std::string, std::string, std::string, std::string>> onyxParamValueAndExpectedArgumentsVec = {
+    {"string_tool", "arg1", "value1", R"({"arg1":"value1"})"},
+    {"int_tool", "arg1", "42", R"({"arg1":42})"},
+    {"float_tool", "arg1", "52.32", R"({"arg1":52.32})"},
+    {"bool_tool", "arg1", "true", R"({"arg1":true})"},
+    {"bool_tool", "arg1", "false", R"({"arg1":false})"},
+    {"bool_tool", "arg1", "True", R"({"arg1":true})"},
+    {"bool_tool", "arg1", "False", R"({"arg1":false})"},
+    {"object_tool", "arg1", R"({"a":1,"b":{"c":"asd"}})", R"({"arg1":{"a":1,"b":{"c":"asd"}}})"},
+    {"list_tool", "arg1", "[1, 2, 3]", R"({"arg1":[1,2,3]})"},
+    {"list_tool", "arg1", R"(["a","b","c"])", R"({"arg1":["a","b","c"]})"},
+    {"object_tool", "arg1", R"([{"a":1},{"b":2}])", R"({"arg1":[{"a":1},{"b":2}]})"}};
+
+INSTANTIATE_TEST_SUITE_P(
+    OnyxOutputParserParametrizedTestInstance,
+    OnyxOutputParserParametrizedTest,
+    ::testing::ValuesIn(onyxParamValueAndExpectedArgumentsVec),
+    [](const ::testing::TestParamInfo<OnyxOutputParserParametrizedTest::ParamType>& info) {
+        std::string name = std::get<0>(info.param) + "_" + std::get<2>(info.param);
+        std::replace_if(name.begin(), name.end(), [](char c) { return !std::isalnum(c); }, '_');
+        return name;
+    });

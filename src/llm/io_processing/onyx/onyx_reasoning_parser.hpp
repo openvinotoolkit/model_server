@@ -47,8 +47,6 @@ class OnyxReasoningParser : public BaseOutputParser {
 protected:
     // Marks a private chain-of-thought turn (recipient="self").
     const std::string selfRecipientTag = "to=self";
-    // Marks a tool-call turn (recipient="functions.<name>") -- left untouched here.
-    const std::string functionsRecipientTag = "to=functions.";
     // Separates the routing prefix from the turn's body.
     const std::string messageTag = "<|message|>";
     // Terminator for continuation turns (reasoning and tool calls).

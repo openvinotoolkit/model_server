@@ -360,10 +360,12 @@ ovms_cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_document",
+        "//src/utils:rapidjson_utils",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         ":io_processing_utils",
         ":io_processing_base_output_parser",
+        ":apis_tool_schema_wrapper",
         "//third_party:genai",
     ],
     visibility = ["//visibility:public"],
