@@ -46,6 +46,22 @@
 
 namespace ovms {
 
+void LegacyServable::logPerfMetrics(ov::genai::PerfMetrics& perfMetrics) {
+    const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
+    const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();
+    const double ttftMs = perfMetrics.get_ttft().mean;
+    const double prefillSpeedTps = calculatePrefillSpeed(inputTokenCount, ttftMs);
+
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "Request processing metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f}",
+        inputTokenCount,
+        outputTokenCount,
+        inputTokenCount + outputTokenCount,
+        ttftMs,
+        prefillSpeedTps);
+}
+
 absl::Status LegacyServable::validateInputComplianceWithProperties(const ov::Tensor& inputIds) const {
     if (properties->device == "NPU") {
         int64_t inputLength = inputIds.get_size();
@@ -188,6 +204,9 @@ absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServab
         return absl::CancelledError();
     }
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
+    if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+        logPerfMetrics(legacyExecutionContext->results.perf_metrics);
+    }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
@@ -275,6 +294,9 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+            logPerfMetrics(legacyExecutionContext->results.perf_metrics);
+        }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }
