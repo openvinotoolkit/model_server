@@ -16,10 +16,15 @@
 #include "ovms_text_streamer.hpp"
 
 #include <algorithm>
+#include <cstdlib>
+#include <limits>
 #include <string>
 #include <utility>
 
 #include <rapidjson/document.h>
+
+#include "../logging.hpp"
+#include "../stringutils.hpp"
 
 namespace {
 // Matches GenAI's is_incomplete() in text_streamer.cpp.
@@ -28,6 +33,24 @@ namespace {
 bool is_incomplete(const std::string& text) {
     constexpr char replacement[] = "\xef\xbf\xbd";
     return text.size() >= 3 && text.compare(text.size() - 3, 3, replacement) == 0;
+}
+
+// Resolves the token lookahead delay from the OVMS_LLM_DELAY_N_TOKENS environment
+// variable. Falls back to ovms::OVMSTextStreamer::kDefaultDelayNTokens when the
+// variable is unset, empty, not a valid number, or zero (zero would cause an
+// out-of-bounds access in the delay-buffer logic).
+size_t getDelayNTokensFromEnv() {
+    const char* env = std::getenv("OVMS_LLM_DELAY_N_TOKENS");
+    if (env && *env) {
+        auto parsed = ovms::stou64(env);
+        if (parsed.has_value() &&
+            parsed.value() > 0 &&
+            parsed.value() <= static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+            return static_cast<size_t>(parsed.value());
+        }
+        SPDLOG_LOGGER_WARN(ovms::llm_calculator_logger, "Invalid OVMS_LLM_DELAY_N_TOKENS value: '{}'. Using default: {}", env, ovms::OVMSTextStreamer::kDefaultDelayNTokens);
+    }
+    return ovms::OVMSTextStreamer::kDefaultDelayNTokens;
 }
 }  // namespace
 
@@ -49,7 +72,8 @@ OVMSTextStreamer::OVMSTextStreamer(
     ov::genai::TextStreamer(tokenizer, noop_string_callback, decode_params),
     m_output_parser(output_parser),
     m_tools_available(tools_available),
-    m_callback(std::move(callback)) {}
+    m_callback(std::move(callback)),
+    m_delay_n_tokens(getDelayNTokensFromEnv()) {}
 
 // -----------------------------------------------------------------------------
 // write(int64_t) — owned decode loop (does NOT delegate to TextStreamer::write)
@@ -57,7 +81,7 @@ OVMSTextStreamer::OVMSTextStreamer(
 // Replicates TextStreamer's flush heuristics:
 //   1. Newline flush: emit immediately when text ends with '\n'.
 //   2. Incomplete UTF-8 guard: if text ends with U+FFFD replacement char, mark as -1.
-//   3. Delay buffer: hold back the last DELAY_N_TOKENS positions before flushing.
+//   3. Delay buffer: hold back the last m_delay_n_tokens positions before flushing.
 //
 // Operates directly on the protected members inherited from TextStreamer:
 //   m_tokens_cache, m_decoded_lengths, m_printed_len,
@@ -85,14 +109,14 @@ ov::genai::StreamingStatus OVMSTextStreamer::write(int64_t token) {
         return ov::genai::StreamingStatus::RUNNING;
     }
 
-    // 3. Delay buffer: need at least DELAY_N_TOKENS entries before flushing.
+    // 3. Delay buffer: need at least m_delay_n_tokens entries before flushing.
     const size_t n = m_decoded_lengths.size();
-    if (n < DELAY_N_TOKENS) {
+    if (n < m_delay_n_tokens) {
         return ov::genai::StreamingStatus::RUNNING;
     }
 
-    // Flush up to the decoded length DELAY_N_TOKENS positions from the end.
-    const int64_t print_until_len = m_decoded_lengths[n - DELAY_N_TOKENS];
+    // Flush up to the decoded length m_delay_n_tokens positions from the end.
+    const int64_t print_until_len = m_decoded_lengths[n - m_delay_n_tokens];
     if (print_until_len <= 0 || static_cast<size_t>(print_until_len) <= m_printed_len) {
         return ov::genai::StreamingStatus::RUNNING;
     }
@@ -114,7 +138,7 @@ ov::genai::StreamingStatus OVMSTextStreamer::write(const std::vector<int64_t>& t
 
 // -----------------------------------------------------------------------------
 //
-// Decodes the remaining token cache (up to DELAY_N_TOKENS - 1 tokens that
+// Decodes the remaining token cache (up to m_delay_n_tokens - 1 tokens that
 // write() deliberately held back) and flushes with GenerationFinishReason::STOP.
 //
 // Does NOT call TextStreamer::end() — the base would fire its no-op callback

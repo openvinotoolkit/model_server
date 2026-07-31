@@ -58,6 +58,14 @@ public:
     // completion signal are observed atomically (no separate signalComplete() needed).
     using Callback = std::function<ov::genai::StreamingStatus(rapidjson::Document, bool /*isLast*/)>;
 
+    // Default number of tokens the streamer withholds before flushing a decoded chunk.
+    // Matches the file-scope constexpr in openvino/genai text_streamer.cpp. Overridable
+    // at runtime via the OVMS_LLM_DELAY_N_TOKENS environment variable (see
+    // getDelayNTokensFromEnv() in ovms_text_streamer.cpp). Larger values give the
+    // tokenizer more lookahead before a chunk is flushed, at the cost of higher
+    // time-to-first-token (TTFT) and inter-token latency.
+    static constexpr size_t kDefaultDelayNTokens = 3;
+
     // outputParser may be nullptr (e.g. for the unary VLM path).
     // TODO(phase3): rework ownership — OVMSTextStreamer should not need to keep
     // the parser alive; it will be restructured in the next refactor phase.
@@ -83,10 +91,7 @@ private:
     std::shared_ptr<OutputParser> m_output_parser;
     bool m_tools_available;
     Callback m_callback;
-
-    // Must match the file-scope constexpr in openvino/genai text_streamer.cpp.
-    // Named here so a future GenAI change is a single update point.
-    static constexpr size_t DELAY_N_TOKENS = 3;
+    const size_t m_delay_n_tokens;
 
     // Flush text[m_printed_len : print_until] with the corresponding token slice.
     ov::genai::StreamingStatus flush_chunk(

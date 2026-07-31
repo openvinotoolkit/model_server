@@ -110,6 +110,9 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false];
 -    `optional SparseAttentionConfig sparse_attention_config` - Sparse attention configuration. Disabled if not specified.
 
+### Streaming settings
+The number of tokens the streaming response withholds before flushing a decoded chunk to the client can be tuned with the `OVMS_LLM_DELAY_N_TOKENS` environment variable (default: 3). This lookahead buffer lets the tokenizer resolve multi-token sequences (e.g. incomplete UTF-8 characters or parser markers) correctly before emitting a chunk. Increasing the value can improve output correctness for some models/parsers, but increases time to first token (TTFT) and inter-token latency. The value must be a positive integer; invalid, empty, or zero values fall back to the default.
+
 ### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
 You can track the actual usage of the cache in the server logs. You can observe in the logs output like below:
