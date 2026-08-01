@@ -1,6 +1,6 @@
 # Long context optimizations for LLM models {#ovms_demo_long_context}
 
-Using LLM models with very long context and prompts might be particularly challenging. The key goals are to get maximum throughput, minimal latency and reasonable memory consumption.
+Using LLM models with very long context and prompts might be challenging. The key goals are to get maximum throughput, minimal latency and reasonable memory consumption.
 It is very common for applications using RAG chains, document summarization, question answering, and many more. 
 The optimizations below can significantly boost performance:
 
@@ -28,12 +28,12 @@ Because NPU uses static memory allocation for prompt processing, a dedicated par
 **Cache interval multiplier**
 This parameter is dedicated for models with linear attention and prefix caching enabled. It adjusts the allocation size for state blocks internally in openvino.genai backend. For processing long inputs with low memory footprint, it is recommended to increase this parameter from default value 8 to higher like 64.  
 
-**Max number batched tokens**
+**Max number of batched tokens**
 This parameter influences the behavior of the continuous batching algorithm and the size of chunked prompts. The default value of 256 tokens is efficient when concurrent processing is expected. When typically only one client connects to the local model (especially with long prompts), increasing this value can improve first token latency.
 
 ## Deployment
 
-Let's demonstrate all the optimizations combined and test it with the real life scenario of sending multiple various questions in the same context. It will illustrate the gain from the prefix caching on the first token latency, improved second token latency thanks to prompt lookup and moderate memory consumption despite very long prompts and parallel execution.
+Let's demonstrate all the optimizations combined and test it with the real-life scenario of sending multiple various questions in the same context. It will illustrate the gain from the prefix caching on the first token latency, improved second token latency thanks to prompt lookup and moderate memory consumption despite very long prompts and parallel execution.
 
 Prepare models directory:
 ```bash
@@ -62,7 +62,7 @@ The `vllm` benchmark tool can measure model performance with various context len
 - **TTFT (Time To First Token)**: Latency from sending a request to receiving the first output token (in milliseconds)
 - **TPOT (Time Per Output Token)**: Average time to generate each subsequent token after the first (in milliseconds)
 
-The command below generates synthetic load with a configurable cached prompt length (5000) and new tokens length (10): 
+The command below generates synthetic load with a configurable prefix-repetition-prefix-len (5000) and prefix-repetition-output-len (20): 
 ```text
 pip install vllm --extra-index-url https://wheels.vllm.ai/nightly/cpu
 vllm bench serve --backend  openai --base-url http://localhost:8000/v3 --endpoint /completions --model  OpenVINO/gpt-oss-20b-int4-ov --tokenizer openai/gpt-oss-20b --prefix-repetition-prefix-len 50000 --prefix-repetition-suffix-len 10 --prefix-repetition-output-len 20 --prefix-repetition-num-prefixes 1  --num-prompts 1 --max_concurrency 1 --dataset-name prefix_repetition --num-warmups 1 --seed 1
@@ -94,7 +94,7 @@ Those results confirm gain from prefix caching for repeated tokens and demonstra
 | 4,000         | 6 505       |     76.75        | 2 509       |     77.37        |
 | 8,000         | 15 432      |     76.74	     | 3 285       |     77.51        |
 
-This table shows the gain from prefix caching on NPU device and flat latency for whole range to prompt length.
+This table shows the gain from prefix caching on NPU device and flat latency for whole range of prompt length.
 
 
 ## KV Cache Precision
@@ -112,7 +112,7 @@ Lower precision in KV Cache reduces the memory consumption and can also improve 
 
 Parameter `--max_prompt_len` has impact on the latency. It should be adjusted for expected input length to optimize performance.
 
-|     Max prompt length     |     1k input TTFT (ms)    |     TPOT (ms)     |
+|     Max prompt length     |     1k input TTFT (ms)    |   1k input TPOT (ms)     |
 |---------------------------|------------------|-------------------|
 |           8K             |       1 637      |       55.88       |
 |           1K             |       1 436      |       52.19       |
@@ -144,9 +144,9 @@ Parameter `--max_prompt_len` has impact on the latency. It should be adjusted fo
 ### Low-Concurrency / Long-Context Scenarios
 - Increase `--max_num_batched_tokens` to 4096 or even the model's max context length
 - This improves TTFT, especially for long inputs
-- Trade-off: may increase memory usage under higher concurrency
+- Trade-off: impact on interactive usage under higher concurrency
 
 ### Concurrency Control
 To limit concurrent requests on the server:
 - `--rest_workers`: Controls number of simultaneous connections (default: number of CPU cores)
-- `--max_num_seqs`: Limits concurrency at the model level for finer control
+- `--max_num_seqs`: Controls maximum concurrent sequences in scheduling at the model level for finer control
