@@ -44,6 +44,9 @@ ovms.exe --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path c:\mod
 ```
 
 **Query the model:**
+```console
+pip install openai
+```
 ```python
 from openai import OpenAI
 
@@ -65,13 +68,13 @@ for chunk in stream:
 ### Serve a Classic Model with KServe API
 
 **Download the model:**
-```text
+```console
 curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -O
 curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -O
 ```
 
 **On Linux (Docker):**
-```text
+```bash
 docker run --rm -d -u $(id -u) -v ${PWD}:/models -p 9000:9000 \
   openvino/model_server:latest \
   --model_name resnet --model_path /models/resnet50.xml \
@@ -81,12 +84,16 @@ docker run --rm -d -u $(id -u) -v ${PWD}:/models -p 9000:9000 \
 > For GPU acceleration, use the `latest-gpu` image tag and pass `--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)` to expose the Intel GPU device.
 
 **Windows (binary package):**
-```text
+```bat
 ovms --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
 ```
 
 Run inference with a sample client
-```text
+```console
+pip install numpy tritonclient[grpc]
+curl -o image.jpeg https://github.com/openvinotoolkit/model_server/blob/main/demos/common/static/images/bee.jpeg?raw=true
+```
+```python
 import numpy as np
 import tritonclient.grpc as grpcclient
 with open("image.jpeg", "rb") as f:
