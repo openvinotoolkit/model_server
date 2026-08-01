@@ -29,7 +29,7 @@ Start the server in debug mode with `--log_level DEBUG`. This exposes additional
     Continuous batching variants are the defaults: `LM_CB`, `VLM_CB`, and `OMNI_CB`.
     If the model loads only after changing the pipeline type, the issue is usually a pipeline-model compatibility mismatch rather than a corrupted model.
     NPU device can't use continuous batching pipeline.
-
+    
 - An out-of-resources error during loading usually indicates insufficient RAM or VRAM for the selected model, precision, or cache configuration.
     In that case, try one of the following:
     - use a smaller model
