@@ -14,8 +14,8 @@ There are several important considerations for tuning LLM serving via the OpenAI
       Static cache sizing is safer when you need hard memory limits for KV cache usage. It can improve prompt reuse under steady load, while requests that do not fit may be preempted.
 
 - The `--max_num_batched_tokens` parameter influences how prompts are divided and grouped in the prefill phase.
-      The default value `256` is efficient for short contexts and high concurrency memory management.
-      Increasing this value to `4096`, `8192`, or even the model context limit can improve first-token latency, but may increase KV cache memory consumption.
+      The default value `256` is efficient for short contexts and high concurrency.
+      Increasing this value to `4096`, `8192`, or even the model context limit can improve first-token latency.
 
 - On multi-socket systems, text generation is typically scoped to a single NUMA node.
       Disabling virtual NUMA nodes can improve locality in some deployments (for example, one NUMA node per CPU socket), but this is workload- and platform-dependent.
@@ -26,7 +26,7 @@ There are several important considerations for tuning LLM serving via the OpenAI
       Lower values can improve prefix-caching efficiency by using smaller chunks, but also increase memory consumption.
       Allowed range: `8-256`.
 
-- Set `enable_prefix_cache: true` (default) in the graph configuration to reuse KV cache for sequential requests with repeated prompt tokens (for example, chat history). This avoids duplicated prompt evaluation.
+- Set `--enable_prefix_cache: true` (default) in the graph configuration to reuse KV cache for sequential requests with repeated prompt tokens (for example, chat history). This avoids duplicated prompt evaluation.
 
 - Use lower precision via model quantization and KV cache precision settings to improve throughput and reduce memory usage.
 
