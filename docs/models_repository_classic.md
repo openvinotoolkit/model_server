@@ -9,7 +9,7 @@ ovms_docs_cloud_storage
 
 ```
 
-Classic models perform data analysis in a single inference operation. They can be served using the KServe API or TensorFlow API. 
+Classic models perform data analysis in a single inference operation. They can be served using the KServe API. 
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the five formats:
 - [OpenVINO IR](https://docs.openvino.ai/2026/documentation/openvino-ir-format.html), where the graph is represented in .bin and .xml files
