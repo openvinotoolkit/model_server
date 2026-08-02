@@ -3189,4 +3189,21 @@ TEST_F(OvmsConfigDeathTest, negativeConfigureModeRequiresTaskWhenCannotInfer) {
         "Could not infer model task");
 }
 
+TEST_F(OvmsConfigDeathTest, negativeConfigureModeCannotBeUsedWithModelName) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--configure",
+        (char*)"--model_path",
+        (char*)"/non/existing/model/path",
+        (char*)"--task",
+        (char*)"embeddings",
+        (char*)"--model_name",
+        (char*)"some_name",
+    };
+    int arg_count = 8;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv),
+        ::testing::ExitedWithCode(OVMS_EX_USAGE),
+        "--model_name cannot be used with --configure");
+}
+
 #pragma GCC diagnostic pop

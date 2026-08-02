@@ -39,6 +39,7 @@ const std::string expectedOneSettingPluginGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -76,6 +77,7 @@ const std::string expectedFullPluginGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -113,6 +115,7 @@ const std::string expectedGraphContentsWithResponseParser = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -152,6 +155,7 @@ const std::string expectedDefaultGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -188,6 +192,7 @@ const std::string expectedDraftAndFuseGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -227,6 +232,7 @@ const std::string expectedGGUFGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -263,6 +269,7 @@ const std::string expectedGGUFGraphContents2 = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -294,7 +301,7 @@ const std::string expectedRerankGraphContentsNonDefault = R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
-    name: "myModel",
+    name: "RerankExecutor"
     calculator: "RerankCalculatorOV"
     input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -314,7 +321,7 @@ const std::string expectedRerankGraphContentsDefault = R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
-    name: "",
+    name: "RerankExecutor"
     calculator: "RerankCalculatorOV"
     input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -333,7 +340,7 @@ const std::string expectedEmbeddingsGraphContents = R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
-    name: "myModel",
+    name: "EmbeddingsExecutor"
     calculator: "EmbeddingsCalculatorOV"
     input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -355,7 +362,7 @@ const std::string expectedEmbeddingsGraphContentsDefault = R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
-    name: "",
+    name: "EmbeddingsExecutor"
     calculator: "EmbeddingsCalculatorOV"
     input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -375,7 +382,7 @@ const std::string expectedTextToSpeechGraphContents = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: "myModel"
+    name: "T2sExecutor"
     calculator: "T2sCalculator"
     input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -394,7 +401,7 @@ const std::string expectedTextToSpeechGraphContentsDefault = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: ""
+    name: "T2sExecutor"
     calculator: "T2sCalculator"
     input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -411,7 +418,7 @@ const std::string expectedTextToSpeechGraphContentsKokoro = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: "myModel"
+    name: "T2sExecutor"
     calculator: "T2sCalculator"
     input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -428,7 +435,7 @@ const std::string expectedSpeechToTextGraphContents = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: "myModel"
+    name: "S2tExecutor"
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
     input_stream: "LOOPBACK:loopback"
@@ -463,7 +470,7 @@ const std::string expectedSpeechToTextGraphContentsDefault = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: ""
+    name: "S2tExecutor"
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
     input_stream: "LOOPBACK:loopback"
@@ -704,7 +711,7 @@ TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
     hfSettings.task = ovms::RERANK_GRAPH;
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
     exportSettings.targetDevice = "GPU";
-    exportSettings.modelName = "myModel\"";
+    exportSettings.modelPath = "/model/path\"";
     exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
@@ -746,7 +753,7 @@ TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
     hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
     hfSettings.exportSettings.targetDevice = "GPU";
-    hfSettings.exportSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.modelPath = "/model/path\"";
     hfSettings.exportSettings.pluginConfig.numStreams = 2;
     embeddingsGraphSettings.normalize = "true";
     embeddingsGraphSettings.pooling = "CLS";
@@ -824,7 +831,7 @@ TEST_F(GraphCreationTest, textToSpeechCreatedPbtxtInvalid) {
     hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
     ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
     hfSettings.exportSettings.targetDevice = "GPU";
-    hfSettings.exportSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.modelPath = "/model/path\"";
     hfSettings.exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -861,7 +868,7 @@ TEST_F(GraphCreationTest, speechToTextCreatedPbtxtInvalid) {
     hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
     hfSettings.exportSettings.targetDevice = "GPU";
-    hfSettings.exportSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.modelPath = "/model/path\"";
     hfSettings.exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(speechToTextGraphSettings);
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
