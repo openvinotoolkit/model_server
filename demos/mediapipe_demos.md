@@ -11,9 +11,4 @@ Holistic <ovms_docs_demo_mediapipe_holistic>
 Realtime Stream Analysis <ovms_demo_real_time_stream_analysis>
 ```
 
-- [MediaPipe Object Detection Demo](mediapipe/object_detection/README.md)
-- [Iris](mediapipe/iris_tracking/README.md)
-- [Holistic](mediapipe/holistic_tracking/README.md)
-- [Realtime Stream Analysis](real_time_stream_analysis/python/README.md)
-
 
