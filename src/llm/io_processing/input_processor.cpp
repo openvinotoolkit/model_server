@@ -43,7 +43,7 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
     if (isChatPath) {
         // Normalize empty content arrays to null before any content-aware processor runs.
         processors.emplace_back(std::make_unique<EmptyContentArrayNormalizationProcessor>());
-        
+
         // Remove empty tool_calls arrays to avoid adding empty tool calls to the input prompt.
         processors.emplace_back(std::make_unique<EmptyToolCallsArrayRemovingProcessor>());
 
