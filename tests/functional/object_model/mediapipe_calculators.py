@@ -560,7 +560,7 @@ class LLMCalculator(PythonCalculator):
         max_tokens_limit_str = (
             f"\nmax_tokens_limit: {self.max_tokens_limit}," if self.max_tokens_limit is not None else ""
         )
-        device = f'device: "{self.device}",' if self.device is not None else ""
+        device = f'device: "{self.device if self.device is not None else TargetDevice.CPU}",'
         content = f"""{header}
 node: {{
     name: "{self.node_name}"
@@ -705,7 +705,7 @@ class HttpLLMCalculator(LLMCalculator):
         if self.model.enable_tool_guided_generation and self.enable_tool_guided_generation:
             tool_guided_str = "enable_tool_guided_generation: true"
 
-        device = f'device: "{self.device}",' if self.device is not None else ""
+        device = f'device: "{self.device if self.device is not None else TargetDevice.CPU}",'
 
         content = f"""{header}
 node: {{
@@ -772,7 +772,7 @@ class ImageGenCalculator(LLMCalculator):
 
     def create_node_content(self, header, input_streams, output_streams):
         resolution = f'resolution: "{self.resolution}"' if self.resolution is not None else ""
-        device = f'device: "{self.device}",' if self.device is not None else ""
+        device = f'device: "{self.device if self.device is not None else TargetDevice.CPU}",'
 
         content = f"""{header}
 node: {{
@@ -829,7 +829,7 @@ class EmbeddingsCalculatorOV(LLMCalculator):
         if model_obj is not None and getattr(model_obj, "pooling", None) is not None:
             pooling_str = f'pooling: {model_obj.pooling},'
 
-        target_device_str = f'target_device: "{self.device}",' if self.device is not None else ""
+        target_device_str = f'target_device: "{self.device if self.device is not None else TargetDevice.CPU}",'
         num_streams = 2 if get_base_device(self.device) == TargetDevice.GPU else 1
         plugin_config_str = f'plugin_config: \'{{ "NUM_STREAMS": "{num_streams}" }}\','
 
@@ -879,7 +879,7 @@ class RerankCalculatorOV(LLMCalculator):
         self.output_streams = 'output_stream: "RESPONSE_PAYLOAD:output"'
 
     def create_node_content(self, header, input_streams, output_streams):
-        target_device_str = f'target_device: "{self.device}",' if self.device is not None else ""
+        target_device_str = f'target_device: "{self.device if self.device is not None else TargetDevice.CPU}",'
         num_streams = 2 if get_base_device(self.device) == TargetDevice.GPU else 1
         plugin_config_str = f'plugin_config: \'{{ "NUM_STREAMS": "{num_streams}" }}\','
         content = f"""{header}
@@ -924,7 +924,7 @@ class S2tCalculator(LLMCalculator):
         self.output_streams = 'output_stream: "HTTP_RESPONSE_PAYLOAD:output"'
 
     def create_node_content(self, header, input_streams, output_streams):
-        target_device_str = f'target_device: "{self.device}",' if self.device is not None else ""
+        target_device_str = f'target_device: "{self.device if self.device is not None else TargetDevice.CPU}",'
         num_streams = 2 if get_base_device(self.device) == TargetDevice.GPU else 1
         plugin_config_str = f'plugin_config: \'{{ "NUM_STREAMS": "{num_streams}" }}\','
         content = f"""{header}
@@ -984,7 +984,7 @@ class T2sCalculator(LLMCalculator):
         self.output_streams = 'output_stream: "HTTP_RESPONSE_PAYLOAD:output"'
 
     def create_node_content(self, header, input_streams, output_streams):
-        target_device_str = f'target_device: "{self.device}",' if self.device is not None else ""
+        target_device_str = f'target_device: "{self.device if self.device is not None else TargetDevice.CPU}",'
         num_streams = 2 if get_base_device(self.device) == TargetDevice.GPU else 1
         plugin_config_str = f'plugin_config: \'{{ "NUM_STREAMS": "{num_streams}" }}\','
         content = f"""{header}

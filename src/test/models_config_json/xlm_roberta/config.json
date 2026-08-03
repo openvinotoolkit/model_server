@@ -1,0 +1,6 @@
+{
+  "architectures": ["XLMRobertaForSequenceClassification"],
+  "model_type": "xlm-roberta",
+  "hidden_size": 768,
+  "num_labels": 2
+}

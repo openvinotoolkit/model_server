@@ -86,6 +86,10 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
     } else {
         return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v[13]/chat/completions, /v[13]/completions, /v[13]/responses, /v[13]/tokenize");
     }
+    auto endpointStatus = validateEndpoint(executionContext->endpoint);
+    if (!endpointStatus.ok()) {
+        return endpointStatus;
+    }
     executionContext->payload = payload;
     return absl::OkStatus();
 }

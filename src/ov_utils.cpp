@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "logging.hpp"
+#include "config.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "systeminfo.hpp"
@@ -41,6 +42,16 @@ Status createSharedTensor(ov::Tensor& destinationTensor, ov::element::Type_t pre
     OV_LOGGER("ov::Tensor(precision, shape)");
     destinationTensor = ov::Tensor(precision, shape);
     return StatusCode::OK;
+}
+
+void applyGlobalCacheDirFallback(ov::AnyMap& properties) {
+    const std::string& globalCacheDir = Config::instance().cacheDir();
+    if (globalCacheDir.empty()) {
+        return;
+    }
+    if (properties.find(ov::cache_dir.name()) == properties.end()) {
+        properties[ov::cache_dir.name()] = globalCacheDir;
+    }
 }
 
 std::string getTensorMapString(const std::map<std::string, std::shared_ptr<const TensorInfo>>& inputsInfo) {

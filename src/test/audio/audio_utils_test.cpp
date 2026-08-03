@@ -30,6 +30,8 @@
 #include "../../audio/audio_utils.hpp"
 #include "../../utils/env_guard.hpp"
 
+using namespace ovms::audio_utils;
+
 namespace {
 
 // Builds an in-memory PCM16 mono WAV file with an attacker-controlled sample rate

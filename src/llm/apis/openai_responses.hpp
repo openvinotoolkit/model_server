@@ -89,6 +89,9 @@ class OpenAIResponsesHandler : public OpenAIApiHandler {
     std::string serializeFunctionCallArgumentsDoneEvent(const ToolCall& toolCall, uint64_t outputIndex);
     std::string serializeFunctionCallOutputItemDoneEvent(const ToolCall& toolCall, ov::genai::GenerationFinishReason finishReason, uint64_t outputIndex);
 
+    // Audio streaming event serializers
+    std::string serializeAudioDeltaEvent(const std::string& audioB64);
+
 public:
     using OpenAIApiHandler::OpenAIApiHandler;  // Inherit constructors
 

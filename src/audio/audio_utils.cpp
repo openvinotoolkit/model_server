@@ -29,9 +29,8 @@
 #include <random>
 #include <algorithm>
 #pragma warning(push)
-#define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
 
-using namespace ovms;
+namespace ovms::audio_utils {
 
 static void validateAudioFileSizeAgainstMaxValue(size_t fileSize);
 
@@ -80,7 +79,7 @@ enum : unsigned int {
     TIMER_END
 };
 static const size_t AUDIO_BUFFER_SIZE_LIMIT = std::numeric_limits<size_t>::max() / sizeof(float);
-std::vector<float> readWav(const std::string_view& wavData) {
+std::vector<float> readWav(const std::string_view& wavData, uint32_t targetSampleRate) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
     drwav wav;
@@ -100,14 +99,16 @@ std::vector<float> readWav(const std::string_view& wavData) {
         throw std::runtime_error("WAV file has unsupported bits per sample");
     }
 
-    const uint64_t blockAlign = wav.channels * (wav.bitsPerSample / 8);
+    const uint64_t blockAlign = static_cast<uint64_t>(wav.channels) * (wav.bitsPerSample / 8);
     const uint64_t maxPossibleFrames = blockAlign ? (wavData.size() / blockAlign) : 0;
     if (wav.totalPCMFrameCount > maxPossibleFrames) {
         drwav_uninit(&wav);
         throw std::runtime_error("WAV file header claims more frames than possible from data chunk size");
     }
     // Validate decoded buffer size before resampling (float32 mono output)
-    validateAudioFileSize(wav.totalPCMFrameCount, wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, /*will be downmixed to mono*/ 1, sizeof(float));
+    if (targetSampleRate > 0) {
+        validateAudioFileSize(wav.totalPCMFrameCount, wav.sampleRate, targetSampleRate, /*will be downmixed to mono*/ 1, sizeof(float));
+    }
 
     const uint64_t n = wav.totalPCMFrameCount;
     std::vector<int16_t> pcm16;
@@ -134,14 +135,14 @@ std::vector<float> readWav(const std::string_view& wavData) {
     timer.stop(TENSOR_PREPARATION);
     auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
-    if (wav.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
+    if (targetSampleRate == 0 || wav.sampleRate == targetSampleRate) {
         return pcmf32;
     }
 
     timer.start(RESAMPLING);
-    size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / wav.sampleRate);
+    size_t outputLength = (size_t)(pcmf32.size() * targetSampleRate / wav.sampleRate);
     std::vector<float> output(outputLength);
-    resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, output);
+    resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, targetSampleRate, output);
     timer.stop(RESAMPLING);
     auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
     SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Resampling time: {} ms", resamplingTime);
@@ -149,7 +150,7 @@ std::vector<float> readWav(const std::string_view& wavData) {
 }
 #pragma warning(push)
 #pragma warning(disable : 6262)
-std::vector<float> readMp3(const std::string_view& mp3Data) {
+std::vector<float> readMp3(const std::string_view& mp3Data, uint32_t targetSampleRate) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
     drmp3 mp3;
@@ -167,7 +168,9 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     // In that case skip metadata-based validation; post-decode validation will guard against OOM.
     if (mp3.totalPCMFrameCount != std::numeric_limits<uint64_t>::max()) {
         try {
-            validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, mp3.channels, sizeof(float));
+            if (targetSampleRate > 0) {
+                validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, targetSampleRate, mp3.channels, sizeof(float));
+            }
         } catch (...) {
             drmp3_uninit(&mp3);
             throw;
@@ -199,17 +202,17 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
     timer.stop(TENSOR_PREPARATION);
     auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
-    if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
+    if (targetSampleRate == 0 || mp3.sampleRate == targetSampleRate) {
         return pcmf32;
     }
     timer.start(RESAMPLING);
-    size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / mp3.sampleRate);
+    size_t outputLength = (size_t)(pcmf32.size() * targetSampleRate / mp3.sampleRate);
     if (outputLength > AUDIO_BUFFER_SIZE_LIMIT) {
         throw std::overflow_error("Decoded audio buffer size overflow");
     }
     validateAudioFileSizeAgainstMaxValue(outputLength * sizeof(float));
     std::vector<float> output(outputLength);
-    resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, output);
+    resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, targetSampleRate, output);
     timer.stop(RESAMPLING);
     auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
     SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "Resampling time: {} ms", resamplingTime);
@@ -257,7 +260,7 @@ static void validateAudioFileSizeAgainstMaxValue(size_t fileSize) {
     size_t maxFileSize = DEFAULT_MAX_FILE_SIZE;
     const char* env = std::getenv("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
     if (env && *env) {
-        auto parsed = ovms::stou64(env);
+        auto parsed = stou64(env);
         if (parsed.has_value() && parsed.value() > 0) {
             maxFileSize = parsed.value();
         }
@@ -300,3 +303,15 @@ void validateAudioFileSize(
     expectedSize *= bytesPerSample;
     validateAudioFileSizeAgainstMaxValue(expectedSize);
 }
+
+std::vector<float> readWithoutResample(const std::string_view& audioData, const std::string& format) {
+    if (format == "wav") {
+        return readWav(audioData, DISABLED_RESAMPLING_SAMPLE_RATE);
+    } else if (format == "mp3") {
+        return readMp3(audioData, DISABLED_RESAMPLING_SAMPLE_RATE);
+    } else {
+        throw std::runtime_error("Unsupported audio format: " + format);
+    }
+}
+
+}  // namespace ovms::audio_utils

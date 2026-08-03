@@ -36,6 +36,7 @@ ESPEAK_DATA_SRC=$(find /ovms/bazel-out/k8-*/bin/external/espeak_ng -type d -name
 if [ -n "$ESPEAK_DATA_SRC" ] && [ -d "$ESPEAK_DATA_SRC" ] ; then
     mkdir -p /ovms_release/share
     cp -rL "$ESPEAK_DATA_SRC" /ovms_release/share/ ;
+    chmod -R u+w /ovms_release/share/espeak-ng-data 2>/dev/null || true ;
 fi
 # Resolve the packaged eSpeak shared object dynamically so version bumps
 # do not require touching this script.
@@ -93,8 +94,8 @@ if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/pyt
 if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer ; \
    chmod +x /ovms_release/bin/convert_tokenizer ; fi
-if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2026.3.dist-info ; \
-	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.3\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.3.0' > /ovms_release/lib/python/openvino_genai-2026.3.dist-info/METADATA; fi
+if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2026.4.dist-info ; \
+	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.4\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.4.0' > /ovms_release/lib/python/openvino_genai-2026.4.dist-info/METADATA; fi
 
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -vP {} /ovms_release/lib/ \;

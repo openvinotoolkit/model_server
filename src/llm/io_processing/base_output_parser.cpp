@@ -28,6 +28,50 @@
 
 namespace ovms {
 
+ParametersTypeMap_t parseToolSchema(const rapidjson::Value& schema) {
+    // Map each declared parameter name to its ParameterType from the tool's JSON schema.
+    ParametersTypeMap_t result;
+    if (!schema.IsObject()) {
+        return result;
+    }
+    if (!schema.HasMember("properties") || !schema["properties"].IsObject()) {
+        return result;
+    }
+    const rapidjson::Value& properties = schema["properties"];
+    for (auto it = properties.MemberBegin(); it != properties.MemberEnd(); ++it) {
+        if (!it->value.IsObject()) {
+            continue;
+        }
+        if (!it->value.HasMember("type") || !it->value["type"].IsString()) {
+            continue;
+        }
+        std::string paramName = it->name.GetString();
+        std::string typeStr = it->value["type"].GetString();
+        ParameterType type = ParameterType::UNKNOWN;
+        if (typeStr == "string") {
+            type = ParameterType::STRING;
+        } else if (typeStr == "number" || typeStr == "integer") {
+            type = ParameterType::NUMBER;
+        } else if (typeStr == "boolean") {
+            type = ParameterType::BOOLEAN;
+        } else if (typeStr == "array") {
+            type = ParameterType::ARRAY;
+        } else if (typeStr == "object") {
+            type = ParameterType::OBJECT;
+        }
+        result.emplace(paramName, type);
+    }
+    return result;
+}
+
+ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas) {
+    ToolsParameterTypeMap_t toolsParametersTypes;
+    for (const auto& [toolName, toolSchemaWrapper] : toolsSchemas) {
+        toolsParametersTypes.emplace(toolName, parseToolSchema(*toolSchemaWrapper.rapidjsonRepr));
+    }
+    return toolsParametersTypes;
+}
+
 rapidjson::Document BaseOutputParser::wrapFirstDelta(const std::string& functionName, int toolCallIndex) {
     rapidjson::Document wrappedDelta;
     wrappedDelta.SetObject();

@@ -1,0 +1,4 @@
+{
+  "architectures": ["Qwen3ForCausalLM"],
+  "model_type": "qwen3"
+}

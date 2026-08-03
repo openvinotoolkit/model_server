@@ -231,6 +231,8 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
 
+    applyGlobalCacheDir(properties);
+
     if (properties->device == "CPU") {
         status = applyDefaultCpuProperties(properties->pluginConfig);
         if (!status.ok()) {

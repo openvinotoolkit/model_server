@@ -630,3 +630,38 @@ What's the weather in Paris?<|im_end|>
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
+
+// =============================================================================
+// MiniCPM5 uses <function name="..."><param name="...">...</param></function> format.
+// Template uses from_json filter which is supported by Jinja.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndJinjaTest, MiniCPM5_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_minicpm5.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "minicpm5");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "minicpm5");
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
+
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<function name="get_weather"><param name="location">Paris</param><param name="unit">celsius</param></function><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}

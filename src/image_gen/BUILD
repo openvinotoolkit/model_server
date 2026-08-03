@@ -39,6 +39,7 @@ ovms_cc_library(
     deps = [
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
+        "//src:libovms_ov_utils",
         "//src/filesystem:libovmsfilesystem",
         "//src:libovmsstring_utils",
         "imagegenutils",

@@ -35,6 +35,7 @@ enum class PipelineType {
     VLM,     // Multimodal (text and image), text generation based on LLMPipeline
     LM_CB,   // Single modality (text only), text generation based on ContinuousBatchingPipeline
     VLM_CB,  // Multimodal (text and image), text generation based on ContinuousBatchingPipeline
+    OMNI,    // Omni model (text, image, audio input; text + speech output) based on OmniPipeline
 
     // Note that *_CB pipelines do not support execution on NPU
 };
@@ -48,6 +49,11 @@ class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
     static void loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    // Propagates the global --cache_dir (ServerSettings) into the pipeline plugin config
+    // when the node did not set an explicit CACHE_DIR. Shared by every GenAI initializer
+    // (continuous batching and legacy, LM and VLM) since they all construct GenAI pipelines
+    // directly and would otherwise never apply the server-level cache_dir.
+    static void applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties);
 #if (PYTHON_DISABLE == 0)
     // Use Python Jinja module for template processing
     static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo);
