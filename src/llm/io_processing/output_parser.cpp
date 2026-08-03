@@ -217,8 +217,6 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<OnyxToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "minicpm5") {
         toolParser = std::make_unique<Minicpm5ToolParser>(tokenizer, toolNameSchemaMap);
-    } else if (toolParserName == "onyx") {
-        toolParser = std::make_unique<OnyxToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: \"" + toolParserName +
                                  "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
