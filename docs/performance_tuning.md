@@ -26,7 +26,7 @@ There are several important considerations for tuning LLM serving via the OpenAI
       Lower values can improve prefix-caching efficiency by using smaller chunks, but also increase memory consumption.
       Allowed range: `8-256`.
 
-- Set `--enable_prefix_cache: true` (default) in the graph configuration to reuse KV cache for sequential requests with repeated prompt tokens (for example, chat history). This avoids duplicated prompt evaluation.
+- Set `--enable_prefix_cache true` (default) in the graph configuration to reuse KV cache for sequential requests with repeated prompt tokens (for example, chat history). This avoids duplicated prompt evaluation.
 
 - Use lower precision via model quantization and KV cache precision settings to improve throughput and reduce memory usage.
 
