@@ -26,48 +26,81 @@
 namespace ovms {
 
 void OnyxReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    // TODO @atobiszei overcomplicated I think? We just need t find recipient self & them <eom> cut that part out.
-    // Case 1: private chain-of-thought turn (recipient="self") -> extract reasoning,
-    // consume the whole segment (nothing meaningful is expected to follow it within the
-    // same generate() call, see class comment).
-    size_t selfPos = parsedOutput.content.find(selfRecipientTag);
-    if (selfPos != std::string::npos) {
+    // With EOS suppression the model may produce multiple interleaved turns in one
+    // generation (reasoning → tool call → reasoning → tool call → ... → answer).
+    // We must extract ALL reasoning segments and strip ALL turn boundaries/envelopes.
+
+    // Step 1: Extract and remove ALL "to=self<|message|>...<|eom|>" reasoning segments.
+    for (;;) {
+        size_t selfPos = parsedOutput.content.find(selfRecipientTag);
+        if (selfPos == std::string::npos)
+            break;
         size_t messagePos = parsedOutput.content.find(messageTag, selfPos);
-        if (messagePos != std::string::npos) {
-            size_t bodyStart = messagePos + messageTag.length();
-            size_t endPos = parsedOutput.content.find(continuationEndTag, bodyStart);
-            std::string body = (endPos != std::string::npos)
+        if (messagePos == std::string::npos) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Found '{}' without a following '{}', leaving content untouched", selfRecipientTag, messageTag);
+            break;
+        }
+        size_t bodyStart = messagePos + messageTag.length();
+        size_t endPos = parsedOutput.content.find(continuationEndTag, bodyStart);
+        std::string reasoning = (endPos != std::string::npos)
                                     ? parsedOutput.content.substr(bodyStart, endPos - bodyStart)
                                     : parsedOutput.content.substr(bodyStart);
-            parsedOutput.reasoning = body;
-            // Drop the leading " " before "to=" (rendered by the chat template) too, if present.
-            size_t segmentStart = (selfPos > 0 && parsedOutput.content[selfPos - 1] == ' ') ? selfPos - 1 : selfPos;
-            parsedOutput.content.erase(segmentStart);
-            return;
+        if (!parsedOutput.reasoning.empty())
+            parsedOutput.reasoning += '\n';
+        parsedOutput.reasoning += reasoning;
+        // Erase the segment including the leading space before "to=" if present.
+        size_t segmentStart = (selfPos > 0 && parsedOutput.content[selfPos - 1] == ' ') ? selfPos - 1 : selfPos;
+        size_t eraseEnd = (endPos != std::string::npos) ? endPos + continuationEndTag.length() : parsedOutput.content.length();
+        parsedOutput.content.erase(segmentStart, eraseEnd - segmentStart);
+    }
+
+    // Step 2: Remove all "<|start|>assistant" turn boundary markers (with optional trailing space).
+    static const std::string turnBoundary = "<|start|>assistant";
+    for (;;) {
+        size_t pos = parsedOutput.content.find(turnBoundary);
+        if (pos == std::string::npos)
+            break;
+        size_t eraseLen = turnBoundary.length();
+        // Also consume one trailing space if present (before "to=").
+        if (pos + eraseLen < parsedOutput.content.length() && parsedOutput.content[pos + eraseLen] == ' ')
+            ++eraseLen;
+        parsedOutput.content.erase(pos, eraseLen);
+    }
+
+    // Step 3: Strip envelope framing from remaining turns. Each non-self turn has
+    // " to=<recipient><|message|>" before its body. Find each "<|message|>" tag, look
+    // backwards for the closest "to=" prefix, and erase the envelope (including a
+    // leading space if present). This preserves content between tool-call turns.
+    static const std::string toPrefix = "to=";
+    // The envelope (" to=<name><|message|>") is never longer than this.
+    static constexpr size_t maxEnvelopeLen = 128;
+    for (;;) {
+        size_t messagePos = parsedOutput.content.find(messageTag);
+        if (messagePos == std::string::npos)
+            break;
+        // Bound the backwards search to avoid matching "to=" in body content.
+        size_t searchFrom = (messagePos > maxEnvelopeLen) ? messagePos - maxEnvelopeLen : 0;
+        size_t toPos = parsedOutput.content.rfind(toPrefix, messagePos);
+        size_t eraseStart;
+        if (toPos != std::string::npos && toPos >= searchFrom && parsedOutput.content.find(messageTag, toPos) == messagePos) {
+            // Include the leading space before "to=" if present.
+            eraseStart = (toPos > 0 && parsedOutput.content[toPos - 1] == ' ') ? toPos - 1 : toPos;
+        } else {
+            // No "to=" found within the envelope window; erase just the tag itself.
+            eraseStart = messagePos;
         }
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Found '{}' without a following '{}', leaving content untouched", selfRecipientTag, messageTag);
-        return;
+        parsedOutput.content.erase(eraseStart, messagePos + messageTag.length() - eraseStart);
     }
 
-    // Case 2: tool-call turn (recipient="functions.<name>") -> leave untouched, OnyxToolParser
-    // (which runs after this parser, see OutputParser::parse()) is responsible for it.
-    if (parsedOutput.content.find(functionsRecipientTag) != std::string::npos) {
-        return;
+    // Step 4: Remove all remaining terminators.
+    for (const auto& term : {continuationEndTag, turnFinalEndTag}) {
+        for (;;) {
+            size_t pos = parsedOutput.content.find(term);
+            if (pos == std::string::npos)
+                break;
+            parsedOutput.content.erase(pos, term.length());
+        }
     }
-
-    // Case 3: plain final answer (recipient="user" or absent) -> strip the generic
-    // " to=user"? + "<|message|>" + "<|eot|>" envelope, leaving just the clean text.
-    size_t messagePos = parsedOutput.content.find(messageTag);
-    if (messagePos == std::string::npos) {
-        // No framing found at all -- unexpected/malformed output, leave content as-is.
-        return;
-    }
-    size_t bodyStart = messagePos + messageTag.length();
-    size_t endPos = parsedOutput.content.find(turnFinalEndTag, bodyStart);
-    std::string body = (endPos != std::string::npos)
-                            ? parsedOutput.content.substr(bodyStart, endPos - bodyStart)
-                            : parsedOutput.content.substr(bodyStart);
-    parsedOutput.content = body;
 }
 
 std::optional<rapidjson::Document> OnyxReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason /*finishReason*/) {

@@ -15,55 +15,183 @@
 //*****************************************************************************
 
 #include <openvino/genai/tokenizer.hpp>
+#include <algorithm>
+#include <stack>
 #include <string>
 #include <vector>
 
+#include "rapidjson/error/en.h"
+
 #include "src/port/rapidjson_document.hpp"
 
-#include "src/logging.hpp"
 #include "src/llm/io_processing/utils.hpp"
+#include "src/logging.hpp"
+#include "src/utils/rapidjson_utils.hpp"
 #include "src/llm/io_processing/onyx/onyx_tool_parser.hpp"
 
 namespace ovms {
 
-const std::string OnyxToolParserImpl::FUNCTIONS_RECIPIENT_TAG = "to=functions.";
-const std::string OnyxToolParserImpl::MESSAGE_TAG = "<|message|>";
-const std::string OnyxToolParserImpl::END_TAG = "<|eom|>";
+const std::string OnyxToolParser::TOOL_START_TAG = "<atem:function_calls>";
+const std::string OnyxToolParser::TOOL_END_TAG = "</atem:function_calls>";
+const std::string OnyxToolParser::FUNCTION_NAME_TAG = "<atem:invoke name=\"";
+const std::string OnyxToolParser::FUNCTION_END_TAG = "</atem:invoke>";
+const std::string OnyxToolParser::PARAMETER_NAME_TAG = "<atem:parameter name=\"";
+const std::string OnyxToolParser::PARAMETER_END_TAG = "</atem:parameter>";
+const std::string OnyxToolParser::NAME_ATTR_END_TAG = "\">";
 
-#define DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(TAG)                    \
-    auto pos = this->streamContent.find(TAG, this->lastProcessedPosition); \
-    if (pos == std::string::npos) {                                       \
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Did not find: {}", TAG); \
-        break;                                                             \
+// Static empty map the default-constructed impl binds its const-ref member to (used by the
+// direct-impl unit tests, which pass plain-string values that need no schema typing).
+static const ToolsParameterTypeMap_t EMPTY_TOOLS_PARAMETER_TYPE_MAP{};
+
+OnyxToolParserImpl::OnyxToolParserImpl() :
+    toolsParametersTypeMap(EMPTY_TOOLS_PARAMETER_TYPE_MAP) {}
+
+OnyxToolParserImpl::OnyxToolParserImpl(const ToolsParameterTypeMap_t& toolsParametersTypeMap) :
+    toolsParametersTypeMap(toolsParametersTypeMap) {}
+
+// parseToolSchema / createToolsParametersTypesMap now live in base_output_parser
+// (shared with Qwen3CoderToolParser, Minicpm5ToolParser, ...); trimNewline,
+// jsonTypeOf and enforceStringValue come from io_processing/utils. This parser
+// reuses them instead of keeping its own copies.
+
+void OnyxToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameterValueAsString) {
+    if (this->removeNewlineAroundParameters)
+        trimNewline(parameterValueAsString);
+    // Serialize the untyped ATEM value into JSON using the tool schema to decide the type.
+    auto paramIt = this->toolsParametersTypeMap.find(this->currentFunction.name);
+    auto& currentFunctionArgsDoc = this->currentFunction.argumentsAsDocument;
+    auto& allocator = currentFunctionArgsDoc.GetAllocator();
+    auto& key = this->currentParameterName;
+    rapidjson::Value keyVal(key.c_str(), allocator);
+    rapidjson::Document temp;
+    if (paramIt != this->toolsParametersTypeMap.end()) {
+        auto paramJt = paramIt->second.find(currentParameterName);
+        if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::BOOLEAN)) {
+            if (parameterValueAsString == "True" || parameterValueAsString == "TRUE") {
+                parameterValueAsString = "true";
+            } else if (parameterValueAsString == "False" || parameterValueAsString == "FALSE") {
+                parameterValueAsString = "false";
+            }
+        }
+    }
+    temp.Parse(parameterValueAsString.c_str());
+    if (temp.HasParseError()) {
+        // Not valid JSON -> insert as a string value.
+        rapidjson::ParseErrorCode errorCode = temp.GetParseError();
+        size_t errorOffset = temp.GetErrorOffset();
+        SPDLOG_TRACE("RapidJSON can not parse parameter: {} with value: {}; error at offset: {}; code: {}; falling back to inserting value as string", this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
+        rapidjson::Value v;
+        v.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);
+        if (!currentFunctionArgsDoc.HasMember(keyVal)) {
+            currentFunctionArgsDoc.AddMember(keyVal, v, allocator);
+        } else {
+            SPDLOG_DEBUG("Parameter: {} already exists in document", key);
+        }
+    } else {
+        rapidjson::Value valueCopy;
+        valueCopy.CopyFrom(temp, allocator);
+        if (paramIt != this->toolsParametersTypeMap.end()) {
+            auto paramJt = paramIt->second.find(currentParameterName);
+            if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::STRING)) {
+                enforceStringValue(valueCopy, allocator);
+            }
+        }
+        if (!currentFunctionArgsDoc.HasMember(keyVal)) {
+            SPDLOG_TRACE("Will add key:{} val:{} type:{}", key, parameterValueAsString, jsonTypeOf(valueCopy));
+            currentFunctionArgsDoc.AddMember(keyVal, valueCopy, allocator);
+        } else {
+            SPDLOG_DEBUG("Parameter: {} already exists in document.", key);
+        }
+    }
+}
+
+#define DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(TAG)                         \
+    auto pos = this->streamContent.find(TAG, this->getLastProcessedPosition()); \
+    if (pos == std::string::npos) {                                             \
+        SPDLOG_TRACE("Did not find: {}", TAG);                                  \
+        break;                                                                  \
     }
 
 bool OnyxToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
+    SPDLOG_TRACE("State: {}", this->currentState);
     auto previousState = this->currentState;
     switch (this->currentState) {
     case State::Content: {
-        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(FUNCTIONS_RECIPIENT_TAG);
-        this->toolCallPositions.begin.push(pos);
-        this->lastProcessedPosition = pos + FUNCTIONS_RECIPIENT_TAG.length();
-        this->currentState = State::InsideName;
+        // Normally "<atem:function_calls>" precedes "<atem:invoke name=", but tolerate a
+        // missing wrapper (mirrors qwen3coder's <tool_call>/<function=> handling).
+        auto posTool = this->streamContent.find(OnyxToolParser::TOOL_START_TAG, this->getLastProcessedPosition());
+        auto posFunc = this->streamContent.find(OnyxToolParser::FUNCTION_NAME_TAG, this->getLastProcessedPosition());
+        if (posFunc == std::string::npos && posTool == std::string::npos) {
+            SPDLOG_TRACE("Did not find: {} or {}", OnyxToolParser::TOOL_START_TAG, OnyxToolParser::FUNCTION_NAME_TAG);
+        } else if (posTool < posFunc) {
+            this->lastProcessedPosition = posTool + OnyxToolParser::TOOL_START_TAG.length();
+            this->currentState = State::InsideToolCall;
+            this->toolCallPositions.begin.push(posTool);
+        } else {
+            SPDLOG_DEBUG("Did not find: {}, assuming it should exist", OnyxToolParser::TOOL_START_TAG);
+            this->lastProcessedPosition = posFunc + OnyxToolParser::FUNCTION_NAME_TAG.length();
+            this->currentState = State::InsideFunctionName;
+            this->toolCallPositions.begin.push(posFunc);
+        }
         break;
     }
-    case State::InsideName: {
-        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(MESSAGE_TAG);
-        this->currentFunctionName = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
-        this->lastProcessedPosition = pos + MESSAGE_TAG.length();
-        this->currentState = State::InsideArguments;
+    case State::InsideToolCall: {
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(OnyxToolParser::FUNCTION_NAME_TAG);
+        this->lastProcessedPosition = pos + OnyxToolParser::FUNCTION_NAME_TAG.length();
+        this->currentState = State::InsideFunctionName;
         break;
     }
-    case State::InsideArguments: {
-        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(END_TAG);
-        std::string argumentsPart = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
-        this->lastProcessedPosition = pos + END_TAG.length();
+    case State::InsideFunctionName: {
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(OnyxToolParser::NAME_ATTR_END_TAG);
+        this->currentFunction.name = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
+        this->lastProcessedPosition = pos + OnyxToolParser::NAME_ATTR_END_TAG.length();
+        this->currentState = State::InsideFunction;
+        break;
+    }
+    case State::InsideFunction: {
+        auto funcEnd = streamContent.find(OnyxToolParser::FUNCTION_END_TAG, this->lastProcessedPosition);
+        auto paramStart = streamContent.find(OnyxToolParser::PARAMETER_NAME_TAG, this->lastProcessedPosition);
+        if (funcEnd == std::string::npos && paramStart == std::string::npos) {
+        } else if (paramStart < funcEnd) {  // next parameter
+            this->lastProcessedPosition = paramStart + OnyxToolParser::PARAMETER_NAME_TAG.length();
+            this->currentState = State::InsideParameterName;
+        } else {  // end of function
+            this->lastProcessedPosition = funcEnd + OnyxToolParser::FUNCTION_END_TAG.length();
+            this->currentState = State::AfterFunction;
+        }
+        break;
+    }
+    case State::InsideParameterName: {
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(OnyxToolParser::NAME_ATTR_END_TAG);
+        this->currentParameterName = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
+        this->lastProcessedPosition = pos + OnyxToolParser::NAME_ATTR_END_TAG.length();
+        this->currentState = State::InsideParameter;
+        break;
+    }
+    case State::InsideParameter: {
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(OnyxToolParser::PARAMETER_END_TAG);
+        std::string parameterValueAsString(streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition));
+        addParameterToCurrentFunctionDoc(parameterValueAsString);
+        this->lastProcessedPosition = pos + OnyxToolParser::PARAMETER_END_TAG.length();
+        this->currentState = State::InsideFunction;
+        break;
+    }
+    case State::AfterFunction: {
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(OnyxToolParser::TOOL_END_TAG);
+        this->lastProcessedPosition = pos + OnyxToolParser::TOOL_END_TAG.length();
         this->currentState = State::Content;
-        this->toolCallPositions.end.push(this->lastProcessedPosition);
-        ToolCall toolCall{generateRandomId(), this->currentFunctionName, argumentsPart};
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Adding tool call: id={}, name={}, arguments={}", toolCall.id, toolCall.name, toolCall.arguments);
+        std::string argumentsAsString;
+        {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            this->currentFunction.argumentsAsDocument.Accept(writer);
+            argumentsAsString = buffer.GetString();
+        }
+        ToolCall toolCall{generateRandomId(), this->currentFunction.name, argumentsAsString};
+        SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
         toolCalls.emplace_back(std::move(toolCall));
-        this->currentFunctionName.clear();
+        this->currentFunction.clear();
+        this->toolCallPositions.end.push(this->lastProcessedPosition);
         break;
     }
     }
@@ -85,27 +213,35 @@ std::optional<ToolCalls_t> OnyxToolParserImpl::parseChunk(const std::string& chu
 }
 
 std::optional<std::string> OnyxToolParserImpl::getCurrentFunctionName() const {
-    if (this->currentFunctionName.empty()) {
+    if (this->currentFunction.name.empty()) {
         return std::nullopt;
     }
-    return this->currentFunctionName;
+    return this->currentFunction.name;
 }
 
 Status OnyxToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
+    // Generation can be truncated mid-tool-call (max_tokens hit, or eos suppressed) so an opening
+    // "<atem:function_calls>" is recorded with no matching "</atem:function_calls>" close. That
+    // leaves begin with more entries than end. The unterminated call is always the most recent one
+    // (top of the begin stack), so drop it -- erasing from its start to end-of-content -- rather
+    // than bailing and leaving every (including completed) block in the content returned to the user.
+    while (toolCallPositions.begin.size() > toolCallPositions.end.size()) {
+        auto posBegin = toolCallPositions.begin.top();
+        toolCallPositions.begin.pop();
+        if (posBegin <= outContent.size()) {
+            SPDLOG_TRACE("Removing unterminated tool call from outContent begin:{} to end, removing:{}", posBegin, outContent.substr(posBegin));
+            outContent.erase(posBegin);
+        }
+    }
     if (toolCallPositions.begin.size() != toolCallPositions.end.size()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Mismatched tool tags, begin: {}, end: {}", toolCallPositions.begin.size(), toolCallPositions.end.size());
+        // Unexpected shape (more closes than opens) -- leave content untouched to avoid corrupting it.
+        SPDLOG_DEBUG("Mismatched tool tags, begin: {}, end: {}", toolCallPositions.begin.size(), toolCallPositions.end.size());
         return Status(StatusCode::INTERNAL_ERROR, "Mismatched tool tags");
     }
     while (!toolCallPositions.begin.empty() && !toolCallPositions.end.empty()) {
         auto posBegin = toolCallPositions.begin.top();
         auto posEnd = toolCallPositions.end.top();
-        // Also consume the leading " " the chat template renders before "to=" (a single
-        // generate() call only ever produces one such segment, see OnyxReasoningParser's
-        // class comment for why this can't collide with anything preceding it).
-        if (posBegin > 0 && outContent[posBegin - 1] == ' ') {
-            posBegin -= 1;
-        }
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Removing tool call from outContent begin:{}, end:{}, removing:{}", posBegin, posEnd, outContent.substr(posBegin, posEnd - posBegin));
+        SPDLOG_TRACE("Removing tool call from outContent begin:{}, end:{}, removing:{}", posBegin, posEnd, outContent.substr(posBegin, posEnd - posBegin));
         outContent.erase(posBegin, posEnd - posBegin);
         toolCallPositions.begin.pop();
         toolCallPositions.end.pop();
@@ -113,45 +249,65 @@ Status OnyxToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outCo
     return StatusCode::OK;
 }
 
+OnyxToolParser::OnyxToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
+    BaseOutputParser(tokenizer),
+    toolSchemas(toolSchemas),
+    streamParser(this->toolsParametersTypes) {
+    // Build dynamic start tags: "<atem:function_calls>" (the ATEM block itself) plus
+    // "to=<name>" for each tool in the schema — so the streaming framework can detect the
+    // harmony envelope prefix and route to this parser instead of leaking it as content.
+    parsingStartTags.push_back(TOOL_START_TAG);
+    for (const auto& [name, _] : toolSchemas) {
+        parsingStartTags.push_back("to=" + name);
+    }
+}
+
+void OnyxToolParser::lazyFillInitToolParametersTypesMap() {
+    if (this->filledParametersTypesMap) {
+        return;
+    }
+    this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
+    this->filledParametersTypesMap = true;
+    SPDLOG_DEBUG("OnyxToolParser created with {} tools", this->toolsParametersTypes.size());
+}
+
 void OnyxToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    // <|start|>assistant to=functions.<name><|message|>{raw JSON args}<|eom|>
-    //
-    // Mirrors Qwen3CoderToolParser::parse(): drive the same streamParser used for
-    // streaming with the whole content as a single chunk, and reuse whatever it
-    // assembled -- unary is a single-shot edge case of streaming, not a parallel
-    // reimplementation of the tag walk.
+    // Unary is the single-shot edge case of streaming: drive the same streamParser with the
+    // whole content as one chunk (mirrors Qwen3CoderToolParser::parse()).
+    this->lazyFillInitToolParametersTypesMap();
     auto toolCallsOpt = this->streamParser.parseChunk(parsedOutput.content);
     if (!toolCallsOpt.has_value()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing ended, no tool calls found");
+        SPDLOG_DEBUG("Parsing ended, no tool calls found");
         return;
     }
     parsedOutput.toolCalls = std::move(toolCallsOpt.value());
     for (const auto& toolCall : parsedOutput.toolCalls) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | Onyx Tool | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
+        SPDLOG_DEBUG("Unary | Onyx Tool | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
     }
     auto status = this->streamParser.removeToolCallsFromContentIfNeeded(parsedOutput.content);
     if (!status.ok()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to remove tool calls from content: {}", status.string());
+        SPDLOG_DEBUG("Failed to remove tool calls from content: {}", status.string());
     }
 }
 
 std::optional<rapidjson::Document> OnyxToolParser::sendFirstDeltaIfNeeded(const std::string& functionName) {
     if (this->returnedFirstDeltas.size() == (this->returnedCompleteDeltas.size() + 1)) {
         // already sent the first delta for the function currently being read
+        SPDLOG_TRACE("Skipping first delta, already sent for current function, returnedFirstDeltas.size(): {} returnedCompleteDeltas.size(): {}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
         return std::nullopt;
     }
     int currentToolCallIndex = ++this->toolCallIndex;
     rapidjson::Document doc = wrapFirstDelta(functionName, currentToolCallIndex);
     this->returnedFirstDeltas.insert(currentToolCallIndex);
+    SPDLOG_DEBUG("First delta doc: {}", documentToString(doc));
     return doc;
 }
 
 std::optional<rapidjson::Document> OnyxToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
-    // ASSUMPTION: mirroring Qwen3CoderToolParser, in streaming we only ever complete one
-    // tool call per parseChunk() call -- there is no way to send multiple tool calls to
-    // the client in a single streaming delta.
+    // ASSUMPTION (mirrors Qwen3CoderToolParser): in streaming we only ever complete one tool
+    // call per parseChunk() -- there is no way to send multiple tool calls in one delta.
     if (toolCalls.size() != 1) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "For streaming we expected one tool call, got: {}", toolCalls.size());
+        SPDLOG_ERROR("For streaming we expected one tool call, got: {}", toolCalls.size());
         throw std::runtime_error("For streaming we expected one tool call");
     }
     const auto& toolCall = toolCalls[0];
@@ -159,13 +315,18 @@ std::optional<rapidjson::Document> OnyxToolParser::sendFullDelta(const ToolCalls
     rapidjson::Document argumentsWrapper;
     argumentsWrapper.SetObject();
     rapidjson::Value argumentsValue(toolCall.arguments.c_str(), static_cast<rapidjson::SizeType>(toolCall.arguments.size()), argumentsWrapper.GetAllocator());
+    SPDLOG_TRACE("Tool call arguments string: {}", toolCall.arguments);
     argumentsWrapper.AddMember("arguments", argumentsValue, argumentsWrapper.GetAllocator());
-    return wrapDelta(argumentsWrapper, this->toolCallIndex);
+    auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
+    SPDLOG_DEBUG("Full delta doc: {}", documentToString(currentDelta));
+    return currentDelta;
 }
 
-std::optional<rapidjson::Document> OnyxToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason /*finishReason*/) {
-    // streamParser returns assembled toolCalls once a call closes ("<|eom|>" seen); until
-    // then, if the function name is already known, send the first delta for it once.
+std::optional<rapidjson::Document> OnyxToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+    // streamParser returns assembled toolCalls once a call closes ("</atem:function_calls>");
+    // until then, if the function name is already known, send its first delta once.
+    SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));
+    this->lazyFillInitToolParametersTypesMap();
     if (newChunk.empty()) {
         return std::nullopt;
     }
@@ -180,4 +341,3 @@ std::optional<rapidjson::Document> OnyxToolParser::parseChunk(const std::string&
     return std::nullopt;
 }
 }  // namespace ovms
-

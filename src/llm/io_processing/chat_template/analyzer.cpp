@@ -57,6 +57,7 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         contains(templateSource, "<|eom|>") && contains(templateSource, "<|eot|>")) {
         result.detectedToolParser = "onyx";
         result.detectedReasoningParser = "onyx";
+        result.caps.supportsToolCalls = true;
         return result;
     }
 

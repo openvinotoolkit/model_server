@@ -1,3 +1,8 @@
+{#-
+  Modifications:
+    * Adding support for arguments as string so that minja does not detect the need to apply polyfills. This is dead path for OVMS as it always converts arguments to dict anyway.
+#}
+
 {%- macro render_content(content) -%}
   {%- if content is string -%}
     {{- content -}}

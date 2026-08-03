@@ -75,6 +75,21 @@ protected:
         return rendered;
     }
 
+    // Onyx's ATEM tool calls carry untyped parameter values, so (like qwen3coder) the parser
+    // needs the tool JSON schema to serialize each value with the right JSON type. get_weather
+    // takes a single string param "city" here.
+    static ToolsSchemas_t makeToolsSchemas() {
+        static std::unique_ptr<rapidjson::Document> getWeatherSchema = [] {
+            auto doc = std::make_unique<rapidjson::Document>();
+            doc->Parse(R"({"properties":{"city":{"type":"string","description":"City name."}},"required":["city"]})");
+            return doc;
+        }();
+        static const std::string getWeatherSchemaStr = R"({"properties":{"city":{"type":"string","description":"City name."}},"required":["city"]})";
+        ToolsSchemas_t schemas;
+        schemas["get_weather"] = {getWeatherSchema.get(), getWeatherSchemaStr};
+        return schemas;
+    }
+
     // Simulates generation: appends modelContinuation to the rendered prompt (for
     // documentation / sanity only) and runs OutputParser on modelContinuation alone,
     // matching what OVMS actually hands the parser.
@@ -83,8 +98,8 @@ protected:
         auto generatedTensor = tokenizer.encode(modelContinuation, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
 
-        static ToolsSchemas_t emptyToolsSchema{};  // Onyx tool parser is not schema-driven, see onyx_tool_parser.hpp
-        OutputParser outputParser(tokenizer, "onyx", "onyx", emptyToolsSchema);
+        ToolsSchemas_t toolsSchemas = makeToolsSchemas();
+        OutputParser outputParser(tokenizer, "onyx", "onyx", toolsSchemas);
         return outputParser.parse(generatedTokens, toolsAvailable);
     }
 };
@@ -103,15 +118,22 @@ TEST_F(OnyxChatTemplateAndParserRoundtripTest, UserQuestion_ModelEmitsToolCall) 
     std::string prompt = renderPrompt(chatHistory);
     EXPECT_NE(prompt.find("You can call get_weather(city)."), std::string::npos) << prompt;
 
-    // Model continuation for a tool call, exactly as documented in muse/README.md.
-    std::string modelContinuation = R"( to=functions.get_weather<|message|>{"city": "SF"}<|eom|>)";
+    // Model continuation for a tool call in the NEW ATEM format (bare recipient "to=get_weather",
+    // ATEM XML body), as captured live (muse/onyx_live_withargs_1000_raw.txt). "city" is a string
+    // per the schema, so it is serialized as a quoted JSON string.
+    std::string modelContinuation =
+        " to=get_weather<|message|><atem:function_calls>\n"
+        "<atem:invoke name=\"get_weather\">\n"
+        "<atem:parameter name=\"city\">SF</atem:parameter>\n"
+        "</atem:invoke>\n"
+        "</atem:function_calls><|eom|>";
     ParsedOutput parsedOutput = parseModelContinuation(modelContinuation);
 
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"city": "SF"})");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"city":"SF"})");
 }
 
 // =============================================================================
@@ -131,23 +153,22 @@ TEST_F(OnyxChatTemplateAndParserRoundtripTest, ToolResultFedBack_ModelEmitsFinal
         R"({"role":"tool","name":"functions.get_weather","content":"<tool_output name=\"functions.get_weather\">{\"temp\": 65}</tool_output>"})"));
 
     std::string prompt = renderPrompt(chatHistory);
+    // Assistant tool-call history uses the recipient/content path (not `tool_calls`), which the
+    // new template still renders via the plain "to=<recipient><|message|>...<|eom|>" envelope.
     EXPECT_NE(prompt.find(R"(<|start|>assistant to=functions.get_weather<|message|>{"city": "SF"}<|eom|>)"), std::string::npos) << prompt;
-    // NOTE (important, non-obvious): OpenVINO GenAI's own minja-path history
-    // preprocessing -- independent of the raw Jinja template's `elif role ==
-    // 'tool'` branch -- rewrites role="tool" messages into role="user" with a
-    // generic wrapped "tool_response" JSON object whenever it determines the
-    // template lacks native tool-call support (the same probe underlying
-    // caps.supportsToolCalls == false, see chat_template_end_to_end_minja_test.cpp's
-    // Onyx tests). So Onyx's own `elif role == 'tool'` template branch is
-    // effectively DEAD CODE on the minja path today -- it never actually fires.
-    EXPECT_NE(prompt.find(R"(<|start|>user<|message|>{
-  "tool_response": {
-    "tool": "functions.get_weather",
-    "content": "<tool_output name=\"functions.get_weather\">{\"temp\": 65}</tool_output>"
-  }
-}<|eot|>)"),
-        std::string::npos)
-        << prompt;
+    // NOTE (verified against the new template's actual minja render): OpenVINO GenAI STILL
+    // rewrites role="tool" into a role="user" message wrapping a "tool_response" JSON object
+    // (caps.supportsToolCalls == false), even though the new template DOES read `tools`/render
+    // tool defs -- so Onyx's own `elif role == 'tool'` template branch remains DEAD CODE on the
+    // minja path. What changed vs the previous drop: the wrapper no longer carries a "tool"
+    // field (only "content"). The tool output content appears with backslash-escaped quotes
+    // inside that JSON string, e.g.:
+    //   <|start|>user<|message|>{
+    //     "tool_response": {
+    //       "content": "<tool_output name=\"functions.get_weather\">{\"temp\": 65}</tool_output>"
+    //   }<|eot|>
+    EXPECT_NE(prompt.find(R"("tool_response")"), std::string::npos) << prompt;
+    EXPECT_NE(prompt.find(R"(<tool_output name=\"functions.get_weather\">{\"temp\": 65}</tool_output>)"), std::string::npos) << prompt;
 
     std::string modelContinuation = R"( to=user<|message|>It's 65F in SF.<|eot|>)";
     ParsedOutput parsedOutput = parseModelContinuation(modelContinuation);
