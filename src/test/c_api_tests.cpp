@@ -274,6 +274,39 @@ TEST(CAPIStartTest, InitializingMultipleServers) {
     OVMS_ServerDelete(srv1);
 }
 
+TEST(CAPIStartTest, RestartAfterDelete) {
+    auto startServer = [](int grpcPort, int restPort) -> OVMS_Server* {
+        OVMS_Server* srv = nullptr;
+        OVMS_ServerSettings* serverSettings = nullptr;
+        OVMS_ModelsSettings* modelsSettings = nullptr;
+        OVMS_ServerNew(&srv);
+        OVMS_ServerSettingsNew(&serverSettings);
+        OVMS_ModelsSettingsNew(&modelsSettings);
+        OVMS_ServerSettingsSetGrpcPort(serverSettings, grpcPort);
+        OVMS_ServerSettingsSetRestPort(serverSettings, restPort);
+        OVMS_ModelsSettingsSetConfigPath(modelsSettings,
+            getGenericFullPathForSrcTest("/ovms/src/test/configs/config.json").c_str());
+        auto status = OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings);
+        OVMS_ModelsSettingsDelete(modelsSettings);
+        OVMS_ServerSettingsDelete(serverSettings);
+        if (status) {
+            OVMS_StatusDelete(status);
+            OVMS_ServerDelete(srv);
+            return nullptr;
+        }
+        return srv;
+    };
+
+    OVMS_Server* srv = startServer(5555, 5556);
+    ASSERT_NE(srv, nullptr) << "First start failed";
+    OVMS_ServerDelete(srv);
+
+    // This is what the fuzzer does on the second iteration:
+    srv = startServer(5555, 5556);
+    ASSERT_NE(srv, nullptr) << "Second start after delete failed - Drogon singleton bug";
+    OVMS_ServerDelete(srv);
+}
+
 TEST(CAPIStartTest, StartFlow) {
     OVMS_Server* srv = nullptr;
     OVMS_ServerSettings* serverSettings = nullptr;
