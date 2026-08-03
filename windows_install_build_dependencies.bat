@@ -256,6 +256,10 @@ cd %BAZEL_SHORT_PATH%\openvino_src
 git fetch origin
 git checkout %OV_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
+for %%P in (0001 0002 0003 0004 0005) do (
+    git apply "%BACK_CWD%\patches\openvino\%%P-openvino.patch"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 git submodule update --init --recursive
 if !errorlevel! neq 0 exit /b !errorlevel!
 git pull --recurse-submodules
@@ -303,6 +307,8 @@ IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
 cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
 git checkout %OV_GENAI_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+git apply "%BACK_CWD%\patches\openvino.genai\0001-openvino.genai.patch"
 if !errorlevel! neq 0 exit /b !errorlevel!
 git pull --recurse-submodules
 IF /I NOT EXIST build (
