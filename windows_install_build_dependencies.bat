@@ -280,7 +280,7 @@ IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_tokenizers_src (
 )
 cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 git fetch origin
-git checkout %OV_TOKENIZERS_BRANCH%
+git checkout master
 if !errorlevel! neq 0 exit /b !errorlevel!
 git pull --recurse-submodules
 IF /I NOT EXIST build (
