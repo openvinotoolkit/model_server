@@ -254,7 +254,7 @@ IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (
 set "BACK_CWD=%cd%"
 cd %BAZEL_SHORT_PATH%\openvino_src
 git fetch origin
-git checkout muse_onyx
+git checkout %OV_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git submodule update --init --recursive
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -264,7 +264,7 @@ IF /I NOT EXIST build (
 )
 cd build
 set "TBB_DIR="
-cmake -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DPython3_EXECUTABLE=%PYTHONHOME%\python.exe ..
+cmake -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -280,7 +280,7 @@ IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_tokenizers_src (
 )
 cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 git fetch origin
-git checkout master
+git checkout %OV_TOKENIZERS_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git pull --recurse-submodules
 IF /I NOT EXIST build (
@@ -302,7 +302,7 @@ IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
 )
 cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
-git checkout muse_onyx
+git checkout %OV_GENAI_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git pull --recurse-submodules
 IF /I NOT EXIST build (

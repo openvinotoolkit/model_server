@@ -19,9 +19,9 @@
 # Any variable can be overridden by the environment or command-line.
 
 # Source repository git commits / branches (used for source builds)
-OV_SOURCE_BRANCH ?= 8a17657b995fd3b4a52f8484acfcf2bb61214623
-OV_TOKENIZERS_BRANCH ?= 183c6f25cda2a469cba5eff8b72022d2d51ba0ca
-OV_GENAI_BRANCH ?= bd8d6542e3ca1ac30042d5d8d4202ce00b5f4af0
+OV_SOURCE_BRANCH ?= muse_onyx
+OV_TOKENIZERS_BRANCH ?= master
+OV_GENAI_BRANCH ?= muse_onyx
 
 # Source repository organizations
 OV_SOURCE_ORG ?= openvinotoolkit
