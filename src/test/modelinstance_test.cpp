@@ -325,6 +325,25 @@ protected:
     }
 };
 
+class MockModelInstanceCapturingModelPath : public ovms::ModelInstance {
+public:
+    explicit MockModelInstanceCapturingModelPath(ov::Core& ieCore) :
+        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
+
+    const std::string& getCapturedModelPath() const {
+        return capturedModelPath;
+    }
+
+protected:
+    std::shared_ptr<ov::Model> loadOVModelPtr(const std::string& modelFile) override {
+        capturedModelPath = modelFile;
+        throw std::runtime_error("stop after capturing model path");
+    }
+
+private:
+    std::string capturedModelPath;
+};
+
 TEST_F(TestLoadModel, CheckIfOVNonExistingXMLFileErrorIsCatched) {
     // Check if handling file removal after file existence was checked
     MockModelInstanceThrowingFileNotFoundForLoadingCNN mockModelInstance(*ieCore);
@@ -531,6 +550,41 @@ TEST_F(TestLoadModel, CheckSavedModelHandling) {
     EXPECT_EQ(model_files.front(), directoryPath + "/test_saved_model\\1\\");
 #elif __linux__
     EXPECT_EQ(model_files.front(), directoryPath + "/test_saved_model/1/");
+#endif
+}
+
+TEST_F(TestLoadModel, SavedModelDirectoryIsResolvedToSavedModelPbBeforeOVRead) {
+    MockModelInstanceCapturingModelPath modelInstance(*ieCore);
+
+    const std::string modelPath = directoryPath + "/test_saved_model_repro";
+    std::filesystem::create_directories(modelPath);
+    ovms::model_version_t version = 1;
+    const std::string versionDirectoryPath = modelPath + "/" + std::to_string(version);
+    if (!std::filesystem::exists(versionDirectoryPath)) {
+        ASSERT_TRUE(std::filesystem::create_directories(versionDirectoryPath));
+    }
+    {
+        std::ofstream savedModelFile{versionDirectoryPath + "/saved_model.pb"};
+        savedModelFile << "NOT_NEEDED_CONTENT" << std::endl;
+    }
+
+    const ovms::ModelConfig config{
+        "saved-model",
+        modelPath,  // base path
+        "CPU",      // target device
+        "1",        // batchsize
+        1,          // NIREQ
+        "",         // cache dir
+        version,    // version
+        modelPath,  // local path
+    };
+
+    auto status = modelInstance.loadModel(config);
+    EXPECT_EQ(status, ovms::StatusCode::INTERNAL_ERROR) << status.string();
+#ifdef _WIN32
+    EXPECT_EQ(modelInstance.getCapturedModelPath(), directoryPath + "/test_saved_model_repro\\1\\saved_model.pb");
+#elif __linux__
+    EXPECT_EQ(modelInstance.getCapturedModelPath(), directoryPath + "/test_saved_model_repro/1/saved_model.pb");
 #endif
 }
 

@@ -907,7 +907,18 @@ std::shared_ptr<ov::Model> ModelInstance::loadOVModelPtr(const std::string& mode
 }
 
 Status ModelInstance::loadOVModel() {
-    auto& modelFile = modelFiles[0];
+    auto modelFile = modelFiles[0];
+
+    std::error_code ec;
+    if (FileSystem::isLocalFilesystem(modelFile) && std::filesystem::is_directory(modelFile, ec)) {
+        const auto savedModelPath = std::filesystem::path(modelFile) / "saved_model.pb";
+        if (!std::filesystem::is_regular_file(savedModelPath, ec)) {
+            SPDLOG_ERROR("Error loading model. Expected saved_model.pb in directory: {}", modelFile);
+            return StatusCode::FILE_INVALID;
+        }
+        modelFile = savedModelPath.string();
+    }
+
     SPDLOG_DEBUG("Try reading model file: {}", modelFile);
     try {
         this->model = loadOVModelPtr(modelFile);
