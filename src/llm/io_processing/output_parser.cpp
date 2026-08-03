@@ -39,6 +39,8 @@
 #include "onyx/onyx_reasoning_parser.hpp"
 #include "minicpm5/minicpm5_tool_parser.hpp"
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
+#include "onyx/onyx_tool_parser.hpp"
+#include "onyx/onyx_reasoning_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -215,6 +217,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<OnyxToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "minicpm5") {
         toolParser = std::make_unique<Minicpm5ToolParser>(tokenizer, toolNameSchemaMap);
+    } else if (toolParserName == "onyx") {
+        toolParser = std::make_unique<OnyxToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: \"" + toolParserName +
                                  "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
@@ -233,6 +237,9 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Minicpm5ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "lfm2") {
         reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "onyx") {
+        reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
+        decodeWithSpecialTokens = true;
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
