@@ -197,8 +197,7 @@ class ModelInfo:
             if value is not None:
                 config[field_name] = value
 
-        if self.target_device is not None:
-            config["target_device"] = self.target_device
+        config["target_device"] = self.target_device if self.target_device is not None else TargetDevice.CPU
 
         if self.custom_loader is not None:
             config.update(self.custom_loader.model_options)

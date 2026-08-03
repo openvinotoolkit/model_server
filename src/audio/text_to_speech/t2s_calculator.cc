@@ -171,7 +171,7 @@ public:
                 void* ppData;
                 size_t pDataSize;
                 uint16_t bitsPerSample = static_cast<uint16_t>(generatedSpeech.speeches[0].get_element_type().bitwidth());
-                prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, bitsPerSample, speechSize, cpuTensor.data<const float>());
+                ovms::audio_utils::prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, bitsPerSample, speechSize, cpuTensor.data<const float>());
                 output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
                 drwav_free(ppData, NULL);
             } else {

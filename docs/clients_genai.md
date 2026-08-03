@@ -9,6 +9,7 @@ hidden:
 Chat completion API <ovms_docs_rest_api_chat>
 Completions API <ovms_docs_rest_api_completion>
 Embeddings API <ovms_docs_rest_api_embeddings>
+Tokenize API <ovms_docs_rest_api_tokenize>
 Reranking API <ovms_docs_rest_api_rerank>
 Image generation API <ovms_docs_rest_api_image_generation>
 Image generation API <ovms_docs_rest_api_image_edit>
@@ -29,6 +30,7 @@ OpenAI compatible endpoints:
 - [audio/translations](./model_server_rest_api_speech_to_text.md#translation)
 - [audio/speech](./model_server_rest_api_text_to_speech.md)
 - [images/edit](./model_server_rest_api_image_edit.md)
+- [tokenize](./model_server_rest_api_tokenizer.md)
 - /models
 - /models/{model}
 
@@ -463,8 +465,8 @@ speech_file_path = Path(__file__).parent / "speech.wav"
 client = OpenAI(base_url=url, api_key="not_used")
 
 with client.audio.speech.with_streaming_response.create(
-  model="microsoft/speecht5_tts",
-  voice="unused",
+  model="Kokoro-82M-OpenVINO-FP16-OVMS",
+  voice="af_alloy",
   input=prompt
 ) as response:
   response.stream_to_file(speech_file_path)
@@ -475,7 +477,7 @@ with client.audio.speech.with_streaming_response.create(
 ```text
 curl http://localhost:8000/v3/audio/speech \
   -H "Content-Type: application/json" \
-  -d "{\"model\": \"microsoft/speecht5_tts\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" \
+  -d "{\"model\": \"Kokoro-82M-OpenVINO-FP16-OVMS\", \"voice\": \"af_alloy\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" \
   -o speech.wav
 ```
 :::
