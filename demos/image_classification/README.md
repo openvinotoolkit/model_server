@@ -14,8 +14,3 @@ ovms_demo_image_classification_go
 | Demo | Description |
 |---|---|
 |[Image Classification](python/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
-
-## Go
-| Demo | Description |
-|---|---|
-|[Image Classification](go/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|

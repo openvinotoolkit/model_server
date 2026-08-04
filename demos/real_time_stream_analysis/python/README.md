@@ -185,7 +185,6 @@ The helper class `StreamClient` supports using unary gRPC calls. In that case it
 It sends the frames to the model server asynchronously but each of them is stateless and each request can be processed independently.
 The key advantage of that mode is easier load balancing and scalability, because each request could be routed to a different instance of the model server or a different compute node.
 
-Such use case with the unary calls with a horizontal text analysis can be followed based on [this document](../../horizontal_text_detection/python/README.md).
 
 
 > **Note** Depending on the output format, there might be needed a custom postprocessing function implementation.
