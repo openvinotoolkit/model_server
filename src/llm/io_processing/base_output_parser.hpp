@@ -134,5 +134,14 @@ public:
         static const std::vector<std::string> emptyVector;
         return emptyVector;
     }
+
+    // Get the vector of tags that should be erased from the content before parsing.
+    // This is useful for cleaning up the content from tags that are necessary for parsing
+    // but should not be present in the final output.
+    // This is temporary solution until we have a content parser for that kind of scenarios.
+    virtual const std::vector<std::string>& getTagSequenceToErase() const {
+        static const std::vector<std::string> emptyVector;
+        return emptyVector;
+    }
 };
 }  // namespace ovms

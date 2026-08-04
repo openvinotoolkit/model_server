@@ -116,16 +116,27 @@ const std::string& OutputParser::StreamOutputCache::getBuffer() const {
     return buffer;
 }
 
+static void eraseTagsFromContent(std::string& content, const std::vector<std::string>& tags) {
+    for (const auto& tag : tags) {
+        size_t pos = 0;
+        while ((pos = content.find(tag, pos)) != std::string::npos) {
+            content.erase(pos, tag.length());
+        }
+    }
+}
+
 std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
     std::string chunkContent = streamOutputCache.getBuffer();
     if (toolParser != nullptr) {
+        auto secquenceToErase = toolParser->getTagSequenceToErase();
+        auto lookupResult = streamOutputCache.lookupTags(secquenceToErase);
+        if (lookupResult == TagLookupStatus::FOUND_COMPLETE) {
+            eraseTagsFromContent(chunkContent, secquenceToErase);
+        } else if (lookupResult == TagLookupStatus::FOUND_INCOMPLETE) {
+            return std::nullopt;
+        } 
         auto& specialTagsToErase = toolParser->getSpecialTagsToErase();
-        for (const auto& tag : specialTagsToErase) {
-            size_t pos = 0;
-            while ((pos = chunkContent.find(tag, pos)) != std::string::npos) {
-                chunkContent.erase(pos, tag.length());
-            }
-        }
+        eraseTagsFromContent(chunkContent, specialTagsToErase);
     }
 
     if (chunkContent.empty() || chunkContent == "") {
