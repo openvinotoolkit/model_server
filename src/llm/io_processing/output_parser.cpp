@@ -39,8 +39,6 @@
 #include "onyx/onyx_reasoning_parser.hpp"
 #include "minicpm5/minicpm5_tool_parser.hpp"
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
-#include "onyx/onyx_tool_parser.hpp"
-#include "onyx/onyx_reasoning_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
