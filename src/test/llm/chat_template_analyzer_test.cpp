@@ -71,9 +71,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsOnyx) {
     EXPECT_EQ(result.detectedToolParser.value(), "onyx");
     ASSERT_TRUE(result.detectedReasoningParser.has_value());
     EXPECT_EQ(result.detectedReasoningParser.value(), "onyx");
-    // Onyx's template never reads the OpenAI "tool_calls" array, so unlike every
-    // other detected family, supportsToolCalls stays false -- see analyzer.cpp.
-    EXPECT_FALSE(result.caps.supportsToolCalls);
+    EXPECT_TRUE(result.caps.supportsToolCalls);
 }
 
 // --- Gemma4 ---
