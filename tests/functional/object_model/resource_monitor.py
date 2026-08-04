@@ -34,6 +34,7 @@ class ResourceMonitor(threading.Thread, ABC):
     def __init__(self):
         threading.Thread.__init__(self)
         self._stop_event = threading.Event()
+        self.stop_reason = None
 
     def stop(self):
         self._stop_event.set()
@@ -44,6 +45,7 @@ class ResourceMonitor(threading.Thread, ABC):
             try:
                 self.check_resources()
             except StopIteration as e:
+                self.stop_reason = str(e)
                 self._stop_event.set()
                 break
         self.save_data()
@@ -162,6 +164,17 @@ class DockerResourceMonitor(ResourceMonitor):
         'networks' = {dict: 1} {'eth0': {'rx_bytes': 90, 'rx_packets': 1, 'rx_errors': 0, ...
         """
         stats = self.container.stats(stream=False, decode=False)
+        # Prevent reading zeroes from stopped container
+        pids = int(stats.get("pids_stats", {}).get("current", 0) or 0)
+        usage = float(stats.get("memory_stats", {}).get("usage", 0) or 0)
+        if pids <= 0 or usage <= 0:
+            reason = (
+                f"container {self.container.name} reports no live process "
+                f"(pids_stats.current={pids}, memory_stats.usage={usage} bytes) - the container "
+                f"stopped, crashed or was removed while the test was still sampling"
+            )
+            logger.warning(f"Stopping Docker resource monitor: {reason}")
+            raise StopIteration(reason)
         return stats
 
     def get_stats_by_field(self, field):
@@ -202,14 +215,13 @@ class DockerResourceMonitor(ResourceMonitor):
 class WindowsResourceMonitor(ResourceMonitor):
     WORKING_SET_SIZE = "WORKING_SET_SIZE"
     PRIVATE_BYTES = "PRIVATE_BYTES"
-    PAGE_FILE_USAGE = "PAGE_FILE_USAGE"
     PAGE_FAULTS = "PAGE_FAULTS"
 
     MEMORY_USAGE = WORKING_SET_SIZE
 
-    FIELDS = ["DATE", WORKING_SET_SIZE, PRIVATE_BYTES, PAGE_FILE_USAGE, PAGE_FAULTS]
-    VALIDATED_FIELDS = [WORKING_SET_SIZE, PRIVATE_BYTES]
-    LOGGED_MEMORY_FIELDS = [PAGE_FILE_USAGE]
+    FIELDS = ["DATE", WORKING_SET_SIZE, PRIVATE_BYTES, PAGE_FAULTS]
+    VALIDATED_FIELDS = [PRIVATE_BYTES]
+    LOGGED_MEMORY_FIELDS = [WORKING_SET_SIZE]
     COUNTER_FIELDS = [PAGE_FAULTS]
     LOGGED_FIELDS = LOGGED_MEMORY_FIELDS + COUNTER_FIELDS
     SAMPLE_INTERVAL_SEC = 1.0
@@ -233,13 +245,13 @@ class WindowsResourceMonitor(ResourceMonitor):
         try:
             info = self._process.memory_info()
         except psutil.Error as error:
-            logger.warning(f"Stopping Windows resource monitor for pid {self.ovms_pid}: {error}")
-            raise StopIteration(str(error)) from error
-        # wset/private/pagefile are the Win32 counters .NET exposes as
-        # WorkingSet64/PrivateMemorySize64/PagedMemorySize64.
+            reason = (f"OVMS process pid={self.ovms_pid} is no longer readable ({error}) - it "
+                      f"exited, crashed or was killed while the test was still sampling")
+            logger.warning(f"Stopping Windows resource monitor: {reason}")
+            raise StopIteration(reason) from error
+        # wset/private are the Win32 counters .NET exposes as WorkingSet64/PrivateMemorySize64.
         stats[self.WORKING_SET_SIZE] = float(info.wset) / (1024 * 1024)
         stats[self.PRIVATE_BYTES] = float(info.private) / (1024 * 1024)
-        stats[self.PAGE_FILE_USAGE] = float(info.pagefile) / (1024 * 1024)
         stats[self.PAGE_FAULTS] = int(info.num_page_faults)
         return stats
 
@@ -263,7 +275,7 @@ class WindowsResourceMonitor(ResourceMonitor):
         result = self._get_resource_data()
         self._stats_data_raw.append(result)
         value = result[field]
-        if field in (self.WORKING_SET_SIZE, self.PRIVATE_BYTES, self.PAGE_FILE_USAGE):
+        if field in (self.WORKING_SET_SIZE, self.PRIVATE_BYTES):
             return f"{value:.2f}M"
         return str(value)
 
