@@ -86,7 +86,7 @@ Example for pulling `Echo9Zulu/phi-4-int4_asym-awq-ov`:
 ovms --pull --source_model Echo9Zulu/phi-4-int4_asym-awq-ov --model_repository_path /models --model_name phi-4-int4_asym-awq-ov --target_device CPU --task text_generation
 ```
 
-> **Note:** These models are tested by OpenVINO team, and their accuracy or performance is not guaranteed.
+> **Note:** These models are NOT tested by OpenVINO team, and their accuracy or performance is not guaranteed.
 
 Check [parameters page](./parameters.md) for detailed descriptions of configuration options and parameter usage.
 
