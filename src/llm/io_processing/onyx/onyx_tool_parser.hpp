@@ -132,12 +132,8 @@ public:
     static const std::string PARAMETER_NAME_TAG;  // "<atem:parameter name=\""
     static const std::string PARAMETER_END_TAG;   // "</atem:parameter>"
     static const std::string NAME_ATTR_END_TAG;   // "\">" -- closes an invoke/parameter name
-    static const std::string startAssistantTurnTagChunk1;  // "<|start|>"
-    static const std::string startAssistantTurnTagChunk2;  // "assistant"
-    static const std::string userRecipientTagChunk1;  // " to"
-    static const std::string userRecipientTagChunk2;  // "=user"
-    static const std::string messageTag;  // "<|message|>"
-    static const std::string endOfToolTag;  // "<|eot|>"
+    static const std::string CONTENT_START_INDICATOR;  // "<|start|>assistant to=user<|message|>"
+    static const std::string END_OF_TURN_TAG;  // "<|eot|>"
 
 private:
     const ToolsSchemas_t& toolSchemas;  // filled outside; kept as reference (may change)
@@ -172,12 +168,8 @@ public:
     bool requiresStreamingWithSpecialTokens() const override {
         return true;
     }
-    const std::vector<std::string>& getTagSequenceToErase() const override {
-        static const std::vector<std::string> tagSequenceToErase{startAssistantTurnTagChunk1, startAssistantTurnTagChunk2, userRecipientTagChunk1, userRecipientTagChunk2, messageTag};
-        return tagSequenceToErase;
-    }
     const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> specialTagsToErase{endOfToolTag};
+        static const std::vector<std::string> specialTagsToErase{CONTENT_START_INDICATOR, END_OF_TURN_TAG};
         return specialTagsToErase;
     }
 };

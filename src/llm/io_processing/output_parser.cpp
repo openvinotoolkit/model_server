@@ -128,15 +128,13 @@ static void eraseTagsFromContent(std::string& content, const std::vector<std::st
 std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
     std::string chunkContent = streamOutputCache.getBuffer();
     if (toolParser != nullptr) {
-        auto secquenceToErase = toolParser->getTagSequenceToErase();
+        auto secquenceToErase = toolParser->getSpecialTagsToErase();
         auto lookupResult = streamOutputCache.lookupTags(secquenceToErase);
         if (lookupResult == TagLookupStatus::FOUND_COMPLETE) {
             eraseTagsFromContent(chunkContent, secquenceToErase);
         } else if (lookupResult == TagLookupStatus::FOUND_INCOMPLETE) {
             return std::nullopt;
-        } 
-        auto& specialTagsToErase = toolParser->getSpecialTagsToErase();
-        eraseTagsFromContent(chunkContent, specialTagsToErase);
+        }
     }
 
     if (chunkContent.empty() || chunkContent == "") {

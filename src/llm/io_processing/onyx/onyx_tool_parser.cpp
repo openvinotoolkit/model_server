@@ -38,12 +38,8 @@ const std::string OnyxToolParser::FUNCTION_END_TAG = "</atem:invoke>";
 const std::string OnyxToolParser::PARAMETER_NAME_TAG = "<atem:parameter name=\"";
 const std::string OnyxToolParser::PARAMETER_END_TAG = "</atem:parameter>";
 const std::string OnyxToolParser::NAME_ATTR_END_TAG = "\">";
-const std::string OnyxToolParser::startAssistantTurnTagChunk1 = "<|start|>";
-const std::string OnyxToolParser::startAssistantTurnTagChunk2 = "assistant ";
-const std::string OnyxToolParser::userRecipientTagChunk1 = "to";
-const std::string OnyxToolParser::userRecipientTagChunk2 = "=user";
-const std::string OnyxToolParser::messageTag = "<|message|>";
-const std::string OnyxToolParser::endOfToolTag = "<|eot|>";
+const std::string OnyxToolParser::CONTENT_START_INDICATOR = "<|start|>assistant to=user<|message|>";
+const std::string OnyxToolParser::END_OF_TURN_TAG = "<|eot|>";
 
 // Static empty map the default-constructed impl binds its const-ref member to (used by the
 // direct-impl unit tests, which pass plain-string values that need no schema typing).
