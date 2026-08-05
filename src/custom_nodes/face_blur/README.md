@@ -18,8 +18,6 @@ All [OpenVINO Model Zoo](https://github.com/openvinotoolkit/open_model_zoo/tree/
 - vehicle-license-plate-detection
 - pedestrian-and-vehicle-detector
 
-**NOTE** Exemplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/releases/2026/3/demos/face_blur/python/config.json) is available in [face_blur demo](https://github.com/openvinotoolkit/model_server/blob/releases/2026/3/demos/face_blur/python/).
-
 # Building custom node library
 
 You can build the shared library of the custom node simply by running command in the context of custom node examples directory:
