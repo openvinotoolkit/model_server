@@ -1,27 +1,27 @@
 # OVMS Pull mode {#ovms_docs_pull}
 
-This document describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models. When pulling from [Hugging Face Hub](https://huggingface.co/) or when pulling GGUF model, no additional steps are required. However, when pulling models in Pytorch format, you have to install additional python dependencies when using baremetal execution so that optimum-cli is available for ovms executable or rely on the docker image `openvino/model_server:latest-py`. In summary you have 3 options:
+This document describes how to use the OpenVINO Model Server (OVMS) pull feature to automate deployment configuration for Generative AI models. When pulling models from [Hugging Face Hub](https://huggingface.co/) in IR or GGUF format, no additional setup is required. However, when pulling models in PyTorch format, you need additional Python dependencies on a bare-metal host so that `optimum-cli` is available to the OVMS executable. Docker image. In summary, you have three options:
 
-- pulling pre-configured models in IR format (described below)
-- pulling GGUF models from Hugging Face
-- pulling models with automatic conversion and quantization via optimum-cli. Described in the [pulling with conversion](https://github.com/openvinotoolkit/model_server/blob/releases/2026/3/docs/pull_optimum_cli.md)
+- pull pre-configured models in IR format (recommended)
+- pull GGUF models from Hugging Face
+- pull models with automatic conversion and quantization via `optimum-cli` (described in [pulling with conversion](./pull_optimum_cli.md))
 
-> **Note:** Models in IR format must be exported using `optimum-cli` including tokenizer and detokenizer files also in IR format, if applicable. If missing, tokenizer and detokenizer should be added using `convert_tokenizer --with-detokenizer` tool.
+> **Note:** Models in IR format must be exported using `optimum-cli`, including tokenizer and detokenizer files (also in IR format), if applicable. If they are missing, add them with `convert_tokenizer --with-detokenizer`.
 
 ## Pulling pre-configured models
 
-There is a special OVMS mode to pull the model from Hugging Face without starting the service. It is triggered by `--pull` parameter. The application quits after the model is downloaded. Without `--pull` option, the model will be deployed and server started.
+There is a special OVMS mode that pulls a model from Hugging Face without starting the service. It is triggered by the `--pull` parameter. The application exits after the model is downloaded. Without `--pull`, the model is deployed and the server starts.
 
 ::::{tab-set}
 :::{tab-item} With Docker
 :sync: docker
 **Required:** Docker Engine installed
 ```text
-docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:weekly --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> [--gguf_filename SPECIFIC_QUANTIZATION_FILENAME.gguf] --task <task> [TASK_SPECIFIC_PARAMETERS]
+docker run --user $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:2026.3-gpu --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> [--gguf_filename SPECIFIC_QUANTIZATION_FILENAME.gguf] --task <task> [TASK_SPECIFIC_PARAMETERS]
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
@@ -31,7 +31,7 @@ ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_rep
 :::
 ::::
 
-*Note:* GGUF format model is only supported with `--task text_generation`. For list of supported models check [blog](https://blog.openvino.ai/blog-posts/openvino-genai-supports-gguf-models).
+> **Note:** GGUF models are supported only with `--task text_generation`. For a list of supported models, see the [blog](https://blog.openvino.ai/blog-posts/openvino-genai-supports-gguf-models).
 
 Example for pulling `OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov`:
 
@@ -41,11 +41,11 @@ Example for pulling `OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov`:
 **Required:** Docker Engine installed
 
 ```text
-docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation
+docker run --user $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest-gpu --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
@@ -55,7 +55,7 @@ ovms --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_r
 :::
 ::::
 
-Example for pulling GGUF model `unsloth/Llama-3.2-1B-Instruct-GGUF` with Q4_K_M quantization on baremetal host:
+Example for pulling the GGUF model `unsloth/Llama-3.2-1B-Instruct-GGUF` with Q4_K_M quantization:
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -63,11 +63,11 @@ Example for pulling GGUF model `unsloth/Llama-3.2-1B-Instruct-GGUF` with Q4_K_M 
 **Required:** Docker Engine installed
 
 ```text
-docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:weekly --pull --source_model "unsloth/Llama-3.2-1B-Instruct-GGUF" --model_repository_path /models --model_name unsloth/Llama-3.2-1B-Instruct-GGUF --task text_generation --gguf_filename Llama-3.2-1B-Instruct-Q4_K_M.gguf
+docker run --user $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest --pull --source_model "unsloth/Llama-3.2-1B-Instruct-GGUF" --model_repository_path /models --model_name unsloth/Llama-3.2-1B-Instruct-GGUF --task text_generation --gguf_filename Llama-3.2-1B-Instruct-Q4_K_M.gguf
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 ```text
@@ -78,21 +78,21 @@ ovms --pull --source_model "unsloth/Llama-3.2-1B-Instruct-GGUF" --model_reposito
 
 ## Pulling models outside OpenVINO organization
 
-It is possible to pull models outside of OpenVINO organization. 
+It is possible to pull models outside the OpenVINO organization.
 
 Example for pulling `Echo9Zulu/phi-4-int4_asym-awq-ov`:
 
 ```text
-ovms --pull --source_model Echo9Zulu/phi-4-int4_asym-awq-ov --model_repository_path /models --model_name phi-4-int4_asym-awq-ov --target_device CPU --task text_generation 
+ovms --pull --source_model Echo9Zulu/phi-4-int4_asym-awq-ov --model_repository_path /models --model_name phi-4-int4_asym-awq-ov --target_device CPU --task text_generation
 ```
 
-> **Note:** These models aren't tested properly and their accuracy or performance may be low.
+> **Note:** These models are NOT tested by OpenVINO team, and their accuracy or performance is not guaranteed.
 
 Check [parameters page](./parameters.md) for detailed descriptions of configuration options and parameter usage.
 
-In case you want to setup model and start server in one step, follow [instructions](./starting_server.md).
+If you want to set up a model and start the server in one step, follow the [instructions](./starting_server.md).
 
-> **Note:**  When using pull mode you need both read and write access rights to models repository.
+> **Note:** When using pull mode, you need both read and write permissions for the model repository.
 
 ## Pulling Image Generation Models with LoRA Adapters
 
@@ -107,7 +107,7 @@ ovms --rest_port 8000 \
 ```
 
 The `--source_loras` format is a comma-separated list of `alias=source[:alpha]` entries. Supported source types:
-- HuggingFace repository: `alias=org/repo` or `alias=org/repo@filename.safetensors`
+- Hugging Face repository: `alias=org/repo` or `alias=org/repo@filename.safetensors`
 - Direct URL: `alias=https://url/to/file.safetensors`
 - Local file (Linux): `alias=/path/to/file.safetensors`
 - Local file (Windows): `alias=C:\path\to\file.safetensors`
@@ -170,3 +170,14 @@ On startup OVMS logs the resolved configuration, e.g.:
 ```
 
 > **Note:** Resume relies on the remote server honoring HTTP `Range` requests. Hugging Face Hub supports this by default; private mirrors must allow ranged GETs for resume to work.
+
+
+## Updating model runtime parameters
+
+When pulling a model from Hugging Face, a special configuration file, `graph.pbtxt`, is created with runtime parameters and pipeline configuration.
+You can update it with OVMS CLI in two ways:
+- Re-run the same pull command. This updates `graph.pbtxt` and keeps the remaining model files.
+- Use the `--configure` option:
+```text
+ovms --configure --model_path /models/model1 --task text_generation --target_device GPU --cache_size 5 --cache_dir .ov_cache
+```
