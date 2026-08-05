@@ -23,7 +23,7 @@ Requirements:
 
 There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
-This demo can be followed without changes on Panther Lake host with 64GB RAM and VRAM allocation to GPU extended using Intel Graphics Software. That way all the mentioned models can be loaded simultaneously. It's also possible to use [llama-swap](https://github.com/openvinotoolkit/model_server/blob/main/extras/llama_swap/README.md) integration to reload the models automatically. On hosts with less VRAM available, use a subset of the models, apply other models or configure different target device like CPU or NPU. Check this list of [preconfigured OpenVINO models](https://huggingface.co/OpenVINO).
+This demo can be followed without changes on Panther Lake host with 64GB RAM and VRAM allocation to GPU extended using Intel Graphics Software. That way all the mentioned models can be loaded simultaneously. It's also possible to use [llama-swap](https://github.com/openvinotoolkit/model_server/tree/releases/2026/3/extras/llama_swap/README.md) integration to reload the models automatically. On hosts with less VRAM available, use a subset of the models, apply other models or configure different target device like CPU or NPU. Check this list of [preconfigured OpenVINO models](https://huggingface.co/OpenVINO).
 
 ## Step 1: Pull model and start the OVMS server
 ::::{tab-set}
@@ -99,7 +99,7 @@ Click **New Chat** and select the model to start chatting
 
 ### (optional) Step 3: Set request parameters
 
-There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accessible in [chat api documentation](https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api_chat.md#request).
+There are multiple configurable parameters in OVMS, all of them for `/v3/chat/completions` endpoint are accessible in [chat api documentation](https://github.com/openvinotoolkit/model_server/tree/releases/2026/3/docs/model_server_rest_api_chat.md#request).
 
 To configure them in *OpenWebUI* with an example of turning off reasoning:
 1. Go to **Admin Panel** -> **Settings** -> **Models** ([http://localhost:8080/admin/settings/models](http://localhost:8080/admin/settings/models))

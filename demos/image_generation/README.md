@@ -413,8 +413,8 @@ Inpainting replaces a masked region in an image based on the prompt. The `mask` 
 
 Download sample images:
 ```console
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/cat.png
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/cat_mask.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/3/demos/image_generation/cat.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/3/demos/image_generation/cat_mask.png
 ```
 
 ![cat](./cat.png) ![cat_mask](./cat_mask.png)
@@ -490,8 +490,8 @@ Outpainting extends an image beyond its original borders. Prepare two images:
 
 Download sample images:
 ```console
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/outpaint_input.png
-curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/image_generation/outpaint_mask.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/3/demos/image_generation/outpaint_input.png
+curl -O https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/3/demos/image_generation/outpaint_mask.png
 ```
 
 ![outpaint_input](./outpaint_input.png) ![outpaint_mask](./outpaint_mask.png)

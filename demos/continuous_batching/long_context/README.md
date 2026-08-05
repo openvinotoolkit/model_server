@@ -59,7 +59,7 @@ docker run --user $(id -u):$(id -g) -d --rm -v $(pwd)/models:/models:rw -p 8000:
 Using `vllm` benchmark it's possible to check performance of the model with desired context length. It's also possible to set prefix parameters to check the performance benefit from prefix caching.
 The command below can generate synthetic load with configurable cached prompt length (5000) and new tokens length (10). 
 ```text
-pip install vllm --extra-index-url https://wheels.vllm.ai/nightly/cpu
+pip install vllm --extra-index-url https://wheels.vllm.ai/releases/2026/3/cpu
 vllm bench serve --backend  openai --base-url http://localhost:8000/v3 --endpoint /completions --model  OpenVINO/gpt-oss-20b-int4-ov --tokenizer openai/gpt-oss-20b --prefix-repetition-prefix-len 50000 --prefix-repetition-suffix-len 10 --prefix-repetition-output-len 20 --prefix-repetition-num-prefixes 1  --num-prompts 1 --max_concurrency 1 --dataset-name prefix_repetition --num-warmups 1 --seed 1
 ```
 
