@@ -17,8 +17,6 @@ Python Node <ovms_demos_python_node>
 Integrations <ovms_demos_integrations>
 ```
 
-OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate its capabilities.
-
 ## Text Generation
 | Demo | Description |
 |---|---|

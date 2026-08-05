@@ -23,7 +23,7 @@ ovms_docs_troubleshooting
 
 ## What is OVMS?
 
-OpenVINO Model Server (OVMS) is a production-grade, C++ inference server that exposes ML models over standard network APIs. It serves both **Generative AI** workloads (LLMs, VLMs, image generation, audio) and **classic deep learning** models (object detection, classification, OCR, and more).
+OpenVINO Model Server (OVMS) is a production-grade, C++ inference server that exposes ML models over standard network APIs. It serves both **Generative AI**, **Agentic** workloads (LLMs, VLMs, image generation, audio) and **classic deep learning** models (object detection, classification, OCR, and more).
 
 - **OpenAI-compatible API** for text generation, embeddings, image generation, and audio
 - **KServe** APIs for classic model inference
@@ -166,7 +166,7 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 ## Get the Server
 
 **Docker images** (recommended):
-```bash
+```text
 docker pull openvino/model_server:latest        # Intel CPU
 docker pull openvino/model_server:latest-gpu    # Intel CPU,GPU,NPU
 ```
