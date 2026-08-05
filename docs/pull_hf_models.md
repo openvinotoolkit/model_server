@@ -17,7 +17,7 @@ There is a special OVMS mode that pulls a model from Hugging Face without starti
 :sync: docker
 **Required:** Docker Engine installed
 ```text
-docker run --user $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest-gpu --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> [--gguf_filename SPECIFIC_QUANTIZATION_FILENAME.gguf] --task <task> [TASK_SPECIFIC_PARAMETERS]
+docker run --user $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:2026.3-gpu --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> [--gguf_filename SPECIFIC_QUANTIZATION_FILENAME.gguf] --task <task> [TASK_SPECIFIC_PARAMETERS]
 ```
 :::
 

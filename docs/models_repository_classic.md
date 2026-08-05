@@ -92,7 +92,6 @@ ovms --remove_from_config --config_path config.json --model_name model1
 ```
 
 All models can be started with the following command:
-```
 ovms --config_path config.json --rest_port 8000 --port 9000
 ```
 
