@@ -259,13 +259,13 @@ std::string toLower(const std::string& input) {
     return result;
 }
 
-bool stringsOverlap(const std::string& lhs, const std::string& rhs) {
+bool stringsOverlap(const std::string& lhs, const std::string& rhs, size_t minOverlap) {
     if (lhs.empty() && rhs.empty()) {
         return true;
     }
 
     size_t minLength = std::min(lhs.size(), rhs.size());
-    for (size_t len = 1; len <= minLength; ++len) {
+    for (size_t len = minOverlap; len <= minLength; ++len) {
         if (lhs.compare(lhs.size() - len, len, rhs, 0, len) == 0) {
             return true;
         }

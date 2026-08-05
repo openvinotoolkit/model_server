@@ -715,8 +715,8 @@ TEST_F(OnyxOutputParserTest, StreamingContentOnly) {
         {"to=user", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"Your ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"Your "}})"},
-        {"tweet", ov::genai::GenerationFinishReason::NONE, std::nullopt}, // it starts with t, that means this chunk overlaps with the to=user
-        {" has", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"tweet has"}})"},
+        {"tweet", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"tweet"}})"}, // it starts with t, that means this chunk overlaps with the to=user
+        {" has", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" has"}})"},
         {" been", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" been"}})"},
         {" posted.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" posted."}})"},
         {" Let me know", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" Let me know"}})"},
@@ -752,6 +752,43 @@ TEST_F(OnyxOutputParserTest, StreamingContentOnly) {
                                   }() : "nullopt");
         }
     }
+}
+
+// =============================================================================
+// Regression test for an agentic-streaming bug: OutputParser/OnyxToolParser is often
+// constructed BEFORE the request's tools are known (toolSchemas is a reference to a map
+// that starts empty and is filled in by the caller afterwards -- see the constructor
+// comment on OnyxToolParser::toolSchemas). getParsingStartTags() must lazily rebuild its
+// "to=<name>" tags from whatever toolSchemas holds at call time (not just what it held at
+// construction time), otherwise the harmony envelope preceding a real tool call is never
+// recognized as a start tag and leaks into content as raw " to=<name><|message|>" text.
+// =============================================================================
+TEST_F(OnyxOutputParserTest, StreamingToolEnvelopeNotLeakedWhenSchemasFilledAfterConstruction) {
+    ToolsSchemas_t lateSchemas;  // empty when OutputParser/OnyxToolParser are constructed
+    OutputParser parser(*opt125mTokenizer, "onyx", "onyx", lateSchemas);
+
+    // Populate the SAME map object only now -- OnyxToolParser keeps a reference to it, so
+    // this mirrors production code filling request.toolNameSchemaMap after construction.
+    lateSchemas = toolsSchemas;
+
+    // Harmony envelope for a tool call, split the way a real generation streams it. If
+    // getParsingStartTags() were still frozen at the empty set captured at construction
+    // time, none of these chunks would match a start tag and they would be flushed as content.
+    auto doc = parser.parseChunk(" to=get_weather", {}, /*toolsAvailable=*/true, ov::genai::GenerationFinishReason::NONE);
+    EXPECT_FALSE(doc.has_value()) << "envelope prefix must not be flushed as content";
+
+    doc = parser.parseChunk("<|message|>", {}, /*toolsAvailable=*/true, ov::genai::GenerationFinishReason::NONE);
+    EXPECT_FALSE(doc.has_value()) << "\"<|message|>\" separator must not be flushed as content";
+
+    doc = parser.parseChunk("<atem:function_calls>\n<atem:invoke name=\"get_weather\">\n", {}, /*toolsAvailable=*/true, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(doc.has_value());
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc->Accept(writer);
+    std::string docStr = buffer.GetString();
+    EXPECT_NE(docStr.find(R"("tool_calls")"), std::string::npos) << docStr;
+    EXPECT_NE(docStr.find(R"("name":"get_weather")"), std::string::npos) << docStr;
+    EXPECT_EQ(docStr.find(R"("content")"), std::string::npos) << "envelope leaked into content: " << docStr;
 }
 
 // =============================================================================

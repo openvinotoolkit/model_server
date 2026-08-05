@@ -127,7 +127,7 @@ bool isValidUtf8(const std::string& text);
 
 std::string toLower(const std::string& input);
 
-bool stringsOverlap(const std::string& lhs, const std::string& rhs);
+bool stringsOverlap(const std::string& lhs, const std::string& rhs, size_t minOverlap = 1);
 
 void escapeSpecialCharacters(std::string& text);
 

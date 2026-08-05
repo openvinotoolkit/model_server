@@ -144,11 +144,18 @@ private:
     int toolCallIndex{-1};
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
-    std::vector<std::string> parsingStartTags;
+    // Mutable because it is lazily (re)built from toolSchemas inside the const getParsingStartTags()
+    // getter below. toolSchemas is a reference that is empty at construction time and only filled in
+    // by the caller afterwards (once the request's tools are known), so building this list once in the
+    // constructor would permanently miss every "to=<name>" entry. Rebuilding it from scratch on every
+    // call keeps it in sync with whatever tools the current request declares, without hardcoding any
+    // tool name.
+    mutable std::vector<std::string> parsingStartTags;
 
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& functionName);
     std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
     void lazyFillInitToolParametersTypesMap();
+    void lazyFillParsingStartTags() const;
 
 public:
     OnyxToolParser() = delete;
@@ -157,6 +164,7 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
+        lazyFillParsingStartTags();
         return parsingStartTags;
     }
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
