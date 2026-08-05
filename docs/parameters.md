@@ -17,7 +17,7 @@
 | `"model_version_policy"` | `json/string` | Optional. The model version policy lets you decide which versions of a model that the OpenVINO Model Server is to serve. By default, the server serves the latest version. One reason to use this argument is to control the server memory consumption.The accepted format is in json or string. Examples: <br> `{"latest": { "num_versions":2 }` <br> `{"specific": { "versions":[1, 3] } }` <br> `{"all": {} }` |
 | `"plugin_config"` | `json/string`  |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvino.ai/2026/documentation/compatibility-and-support/supported-devices.html) and [performance tuning guide](./performance_tuning.md). Example: <br> `{"PERFORMANCE_HINT": "LATENCY"}`  |
 | `"nireq"` | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.|
-| `"target_device"` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"` |
+| `"target_device"` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`. |
 | `"metrics_enable"` | `bool` | Flag enabling [metrics](metrics.md) endpoint on rest_port. |
 | `"metrics_list"` | `string` | Comma separated list of [metrics](metrics.md). If unset, only default metrics will be enabled.|
 
@@ -75,15 +75,15 @@ Configuration options for the config management mode, which is used to manage co
 
 ## Configure mode options
 
-Configure mode creates or updates `graph.pbtxt` for a local model without starting the server. It requires `--model_path` and `--task` parameters along with task-specific options.
+Configure mode creates or updates `graph.pbtxt` for a local model without starting the server.
 
 | Option                  | Value format | Description                                                                                                                                         |
 |-------------------------|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
 | `--configure`           | `NA`         | Runs in configure mode to create or update `graph.pbtxt` for a local model. Does not start the server.                                              |
 | `--model_path`          | `string`     | Path to the local model directory where `graph.pbtxt` will be created.                                                                              |
 | `--model_name`          | `string`     | Optional. Name of the model as exposed by the server.                                                                                               |
-| `--task`                | `string`     | Task type for the model (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`).                               |
-| `--target_device`       | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"NPU"/"MULTI"/"HETERO"`.                  |
+| `--task`                | `string`     | Task type for the model (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). If not specified, automatically inferred from model metadata. |
+| `--target_device`       | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"NPU"/"MULTI"/"HETERO"`. If not specified, auto-detected based on available devices. |
 
 Task-specific options (e.g., `--max_num_seqs`, `--cache_size`, `--num_streams`) are the same as documented in the [pull mode task options](#text-generation) below.
 
@@ -104,8 +104,8 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                           |
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
-| `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
-| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). |
+| `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`. If not specified, auto-detected based on available devices. |
+| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). If not specified, automatically inferred from model metadata. |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
 | `--gguf_filename`           | `string`     | Filename of the wanted quantization type from Hugging Face GGUF repository.                                        |
 
@@ -197,4 +197,32 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
 
 
+## Automatic task detection
 
+When `--task` is not provided, the server automatically infers the generative task from model metadata. Detection is performed by a chain of detectors with the following priority:
+
+1. **Speech2Text** – architectures: `WhisperForConditionalGeneration`, `Qwen3ASRForConditionalGeneration`, or starting with `SeamlessM4T`.
+2. **Text2Speech** – architectures: `ParlerTTSForConditionalGeneration`, `SpeechT5ForTextToSpeech`, or ending with `ForTextToSpeech`; also models with null architectures and `n_mels` field (e.g., Kokoro TTS).
+3. **Rerank** – modules.json containing types with `LogitScore` or `CrossEncoder`; architectures ending with `ForSequenceClassification`; or ambiguous architecture `Qwen3ForCausalLM` with model identifier containing `rerank` keyword (when modules.json absent).
+4. **ImageGeneration** – architectures: `CLIPTextModel`, `UNet2DConditionModel`, `AutoencoderKL`, or ending with `Transformer2DModel`; also `model_index.json` with `_class_name` containing `StableDiffusion` or `Flux`.
+5. **Embeddings** – modules.json containing type with `Pooling`; architectures: exact matches (`BertModel`, `JinaBertModel`, `MPNetModel`, `Qwen2Model`, `RobertaModel`, `T5EncoderModel`, `XLMRobertaModel`) or ending with `EncoderModel`/`Model`, excluding known non-embedding architectures; ambiguous architecture `Qwen3ForCausalLM` with identifier containing `embed` keyword (when modules.json absent).
+6. **TextGeneration** – architectures ending with `ForCausalLM` or `ForConditionalGeneration`, or `InternVLChatModel`.
+
+Detection uses:
+- `config.json` `architectures` array,
+- `modules.json` module types,
+- model identifier keywords (`embed`, `rerank`),
+- `model_index.json` `_class_name` for Diffusers pipelines.
+
+If detection fails, the server requires explicit `--task`.
+
+## Automatic target device detection
+
+The `--target_device` option defaults to auto-detected based on available devices. When not specified or empty, server follows detection logic:
+
+- If no GPU devices are available, recommends `CPU`.
+- Discrete GPUs are preferred over integrated GPUs.
+- If a single discrete GPU is found, it is recommended.
+- If multiple discrete GPUs are found, the one with the most free VRAM is recommended.
+- If no discrete GPUs but integrated GPUs exist, the first integrated GPU is recommended.
+- Falls back to `CPU` if no suitable GPU is found.
