@@ -709,6 +709,51 @@ TEST_F(OnyxOutputParserTest, StreamingReasoningThenContent) {
     }
 }
 
+TEST_F(OnyxOutputParserTest, StreamingContentOnly) {
+    int i = -1;
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"to=user", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"Your ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"Your "}})"},
+        {"tweet", ov::genai::GenerationFinishReason::NONE, std::nullopt}, // it starts with t, that means this chunk overlaps with the to=user
+        {" has", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"tweet has"}})"},
+        {" been", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" been"}})"},
+        {" posted.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" posted."}})"},
+        {" Let me know", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" Let me know"}})"},
+        {" if you need", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" if you need"}})"},
+        {" I can do", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" I can do"}})"},
+        {" anything ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" anything "}})"},
+        {"to ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"to "}})"},
+        {"help.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"help."}})"},
+        {"<|eot|>", ov::genai::GenerationFinishReason::STOP, std::nullopt},
+    };
+
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+        i++;
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            std::string expected = expectedDelta.value();
+            EXPECT_EQ(docStr, expected) << "Mismatch for chunk[" << i << "]: " << chunk;
+        } else {
+            EXPECT_TRUE(false) << "Mismatch for chunk[" << i << "]: " << chunk
+                               << "\nexpectedDelta: " << (expectedDelta.has_value() ? expectedDelta.value() : "nullopt")
+                               << "\nGot doc: " << (doc.has_value() ? [&]() {
+                                      rapidjson::StringBuffer b;
+                                      rapidjson::Writer<rapidjson::StringBuffer> w(b);
+                                      doc->Accept(w);
+                                      return std::string(b.GetString());
+                                  }() : "nullopt");
+        }
+    }
+}
+
 // =============================================================================
 // Proves the "unary is an edge case of streaming" property holds structurally, not
 // just by coincidence: OnyxToolParser::parse() drives the same OnyxToolParserImpl used

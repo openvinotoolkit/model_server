@@ -38,7 +38,8 @@ const std::string OnyxToolParser::FUNCTION_END_TAG = "</atem:invoke>";
 const std::string OnyxToolParser::PARAMETER_NAME_TAG = "<atem:parameter name=\"";
 const std::string OnyxToolParser::PARAMETER_END_TAG = "</atem:parameter>";
 const std::string OnyxToolParser::NAME_ATTR_END_TAG = "\">";
-const std::string OnyxToolParser::CONTENT_START_INDICATOR = "<|start|>assistant to=user<|message|>";
+const std::string OnyxToolParser::ASSISTANT_PREFIX = "<|start|>assistant ";
+const std::string OnyxToolParser::CONTENT_START_INDICATOR = "to=user<|message|>";
 const std::string OnyxToolParser::END_OF_TURN_TAG = "<|eot|>";
 
 // Static empty map the default-constructed impl binds its const-ref member to (used by the

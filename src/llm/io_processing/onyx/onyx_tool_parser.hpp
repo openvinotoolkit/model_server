@@ -132,7 +132,8 @@ public:
     static const std::string PARAMETER_NAME_TAG;  // "<atem:parameter name=\""
     static const std::string PARAMETER_END_TAG;   // "</atem:parameter>"
     static const std::string NAME_ATTR_END_TAG;   // "\">" -- closes an invoke/parameter name
-    static const std::string CONTENT_START_INDICATOR;  // "<|start|>assistant to=user<|message|>"
+    static const std::string ASSISTANT_PREFIX;        // "<|start|>assistant "
+    static const std::string CONTENT_START_INDICATOR;  // "to=...<|message|>"
     static const std::string END_OF_TURN_TAG;  // "<|eot|>"
 
 private:
@@ -169,7 +170,7 @@ public:
         return true;
     }
     const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> specialTagsToErase{CONTENT_START_INDICATOR, END_OF_TURN_TAG};
+        static const std::vector<std::string> specialTagsToErase{ASSISTANT_PREFIX, CONTENT_START_INDICATOR, END_OF_TURN_TAG};
         return specialTagsToErase;
     }
 };
