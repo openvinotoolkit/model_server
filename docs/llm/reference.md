@@ -22,7 +22,7 @@ The servable types are:
 - Visual Language Model Stateful,
 - Omni Model Stateful
 
-First part - Language Model / Visual Language Model / Omni Model - determines whether servable accepts only text, both text and images on the input or operate on multiple modalities on both input and output.
+First part - Language Model / Visual Language Model / Omni Model - determines whether servable accepts only text, both text and images on the input or operates on multiple modalities on both input and output.
 Second part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only with the Stateful servable type.
 
 The Omni servable support is currently limited to stateful only. See the [Omni model documentation](../omni.md) for configuration and usage details.
@@ -450,11 +450,13 @@ Some servable types introduce additional limitations:
 ### Visual Language servable limitations
 - works only on `/chat/completions` endpoint,
 - user-supplied `<ov_genai_image_N>` placeholder strings in message content are rejected — these are reserved for internal image injection by the server,
-- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected.
+- **[NPU only]** requests MUST include one and only one image in the messages context. Other requests will be rejected.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
 - [Completions API](../model_server_rest_api_completions.md)
+- [Responses API](../model_server_rest_api_responses.md)
+- [Tokenizer API](../model_server_rest_api_tokenizer.md)
 - Demos on [CPU/GPU](../../demos/continuous_batching/README.md) and [NPU](../../demos/llm_npu/README.md)
 - VLM Demos on [CPU/GPU](../../demos/continuous_batching/vlm/README.md) and [NPU](../../demos/vlm_npu/README.md)
 - [Omni Demo](../../demos/omni/README.md)

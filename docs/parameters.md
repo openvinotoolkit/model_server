@@ -82,8 +82,8 @@ Configure mode creates or updates `graph.pbtxt` for a local model without starti
 | `--configure`           | `NA`         | Runs in configure mode to create or update `graph.pbtxt` for a local model. Does not start the server.                                              |
 | `--model_path`          | `string`     | Path to the local model directory where `graph.pbtxt` will be created.                                                                              |
 | `--model_name`          | `string`     | Optional. Name of the model as exposed by the server.                                                                                               |
-| `--task`                | `string`     | Task type for the model (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). If not specified, automatically inferred from model metadata. |
-| `--target_device`       | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"NPU"/"MULTI"/"HETERO"`. If not specified, auto-detected based on available devices. |
+| `--task`                | `string`     | Task type for the model (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). If not specified, automatically inferred from model metadata. See [Automatic task detection](#automatic-task-detection). |
+| `--target_device`       | `string`     | Device name to be used to execute inference operations. For `--task text_generation`, accepted values include `CPU`/`GPU`/`NPU`/`AUTO`, `GPU.<index>`, and `HETERO:<...>`/`AUTO:<...>` (for example `HETERO:GPU,CPU`). If not specified, it is auto-detected using available GPU devices, with fallback to `CPU` (NPU must be selected explicitly). See [Automatic target device detection](#automatic-target-device-detection). |
 
 Task-specific options (e.g., `--max_num_seqs`, `--cache_size`, `--num_streams`) are the same as documented in the [pull mode task options](#text-generation) below.
 
@@ -104,8 +104,8 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                           |
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
-| `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`. If not specified, auto-detected based on available devices. |
-| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). If not specified, automatically inferred from model metadata. |
+| `--target_device`           | `string`     | Device name to be used to execute inference operations. For `--task text_generation`, accepted values include `CPU`/`GPU`/`NPU`/`AUTO`, `GPU.<index>`, and `HETERO:<...>`/`AUTO:<...>` (for example `AUTO:GPU,CPU`). If not specified, it is auto-detected using available GPU devices, with fallback to `CPU` (NPU must be selected explicitly). See [Automatic target device detection](#automatic-target-device-detection). |
+| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). If not specified, automatically inferred from model metadata. See [Automatic task detection](#automatic-task-detection). |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
 | `--gguf_filename`           | `string`     | Filename of the wanted quantization type from Hugging Face GGUF repository.                                        |
 
@@ -199,26 +199,20 @@ Task specific parameters for different tasks (text generation/image generation/e
 
 ## Automatic task detection
 
-When `--task` is not provided, the server automatically infers the generative task from model metadata. Detection is performed by a chain of detectors with the following priority:
+When `--task` is not provided, the server tries to infer it from model metadata.
 
-1. **Speech2Text** – architectures: `WhisperForConditionalGeneration`, `Qwen3ASRForConditionalGeneration`, or starting with `SeamlessM4T`.
-2. **Text2Speech** – architectures: `ParlerTTSForConditionalGeneration`, `SpeechT5ForTextToSpeech`, or ending with `ForTextToSpeech`; also models with null architectures and `n_mels` field (e.g., Kokoro TTS).
-3. **Rerank** – modules.json containing types with `LogitScore` or `CrossEncoder`; architectures ending with `ForSequenceClassification`; or ambiguous architecture `Qwen3ForCausalLM` with model identifier containing `rerank` keyword (when modules.json absent).
-4. **ImageGeneration** – architectures: `CLIPTextModel`, `UNet2DConditionModel`, `AutoencoderKL`, or ending with `Transformer2DModel`; also `model_index.json` with `_class_name` containing `StableDiffusion` or `Flux`.
-5. **Embeddings** – modules.json containing type with `Pooling`; architectures: exact matches (`BertModel`, `JinaBertModel`, `MPNetModel`, `Qwen2Model`, `RobertaModel`, `T5EncoderModel`, `XLMRobertaModel`) or ending with `EncoderModel`/`Model`, excluding known non-embedding architectures; ambiguous architecture `Qwen3ForCausalLM` with identifier containing `embed` keyword (when modules.json absent).
-6. **TextGeneration** – architectures ending with `ForCausalLM` or `ForConditionalGeneration`, or `InternVLChatModel`.
+The inference uses metadata files available in the model directory/repository:
+- `config.json` (especially the `architectures` field),
+- `modules.json` (for sentence-transformers style metadata),
+- `model_index.json` (Diffusers pipelines).
 
-Detection uses:
-- `config.json` `architectures` array,
-- `modules.json` module types,
-- model identifier keywords (`embed`, `rerank`),
-- `model_index.json` `_class_name` for Diffusers pipelines.
+The detection checks task families in priority order to resolve ambiguous architectures: `speech2text` -> `text2speech` -> `rerank` -> `image_generation` -> `embeddings` -> `text_generation`.
 
-If detection fails, the server requires explicit `--task`.
+If no detector matches, OVMS cannot infer the task and `--task` must be set explicitly.
 
 ## Automatic target device detection
 
-The `--target_device` option defaults to auto-detected based on available devices. When not specified or empty, server follows detection logic:
+The `--target_device` option defaults to auto-detected based on available GPU devices. When not specified or empty, server follows detection logic:
 
 - If no GPU devices are available, recommends `CPU`.
 - Discrete GPUs are preferred over integrated GPUs.
@@ -226,3 +220,5 @@ The `--target_device` option defaults to auto-detected based on available device
 - If multiple discrete GPUs are found, the one with the most free VRAM is recommended.
 - If no discrete GPUs but integrated GPUs exist, the first integrated GPU is recommended.
 - Falls back to `CPU` if no suitable GPU is found.
+
+> **Note:** Auto-detection does not select `NPU`. To use NPU, set `--target_device NPU` explicitly.
