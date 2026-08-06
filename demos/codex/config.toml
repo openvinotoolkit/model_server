@@ -1,0 +1,25 @@
+# Default local provider used with `codex --oss`
+oss_provider = "local_server"
+model = "ovms-model"
+model_provider = "local_server"
+
+# this is required because ovms does not support tools outside of "function." scope
+web_search = "disabled"
+
+approval_policy = "never"
+
+[model_providers.local_server]
+name                  = "ovms"
+base_url              = "http://localhost:11340/v1"
+wire_api              = "responses"
+requires_openai_auth  = false
+
+[features]
+# this is required because ovms does not support tools outside of "function." scope
+multi_agent = false
+
+[tui.model_availability_nux]
+"gpt-5.6-sol" = 4
+
+[projects."/home/dkal/codex"]
+trust_level = "trusted"
