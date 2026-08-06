@@ -340,7 +340,7 @@ pipeline {
                       sh "pwd"
                       def pwd = sh(returnStdout:true, script: "pwd").strip()
                       def ovms_c_repo_path = sh(returnStdout:true, script: "cd .. && pwd").strip()
-                      def test_doc_files_str = test_doc_files_linux.split('\n').collect { '-' + it }.join(' or ')
+                      def test_doc_files_str = test_doc_files_linux.split('\n').collect { 'U-' + it }.join(' or ')
                       sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
                       def cmd_venv_activate = ". .venv/bin/activate"
                       def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_LOGGING_LEVEL_OVMS=DEBUG && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500 && export CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}"
@@ -403,7 +403,7 @@ pipeline {
                   script {
                     dir ('documentation_tests') {
                       checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
-                      def test_doc_files_str = test_doc_files_windows.split('\n').collect { '-' + it }.join(' or ')
+                      def test_doc_files_str = test_doc_files_windows.split('\n').collect { 'U-' + it }.join(' or ')
                       def current_path = bat(returnStdout: true, script: 'cd').trim().split('\n').last().trim()
                       def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
                       def cmd_link_ovms = "(if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional) && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
