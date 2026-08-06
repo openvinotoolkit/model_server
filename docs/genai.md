@@ -62,4 +62,8 @@ It supports Kokoro speech generation models, for example `Kokoro-82M-OpenVINO-FP
 Check also the demo of [speech generation](../demos/audio/README.md#speech-generation).
 
 
+## Omni models (multimodal with speech)
 
+Omni models combine a Visual Language Model with a speech synthesis component, accepting text, images, and audio as input and producing both text and speech as output. The same [chat/completions](./model_server_rest_api_chat.md) and [responses](./model_server_rest_api_responses.md) endpoints are used with additional `modalities` and `audio` parameters to control speech output.
+
+Learn more about the [Omni pipeline configuration](./omni.md) and check the [demo](../demos/omni/README.md).
