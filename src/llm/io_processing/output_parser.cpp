@@ -53,7 +53,7 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
         They do overlap, we assume that tag may appear in the future, so we return FOUND_INCOMPLETE
         otherwise we return NOT_FOUND
         */
-        if (stringsOverlap(buffer, tag, MIN_OVERLAP)) {
+        if (stringsOverlap(buffer, tag, std::min(buffer.size(), MIN_OVERLAP))) {
             return TagLookupStatus::FOUND_INCOMPLETE;
         } else {
             return TagLookupStatus::NOT_FOUND;
@@ -130,10 +130,10 @@ static void eraseTagsFromContent(std::string& content, const std::vector<std::st
 std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
     std::string chunkContent = streamOutputCache.getBuffer();
     if (toolParser != nullptr) {
-        auto secquenceToErase = toolParser->getSpecialTagsToErase();
-        auto lookupResult = streamOutputCache.lookupTags(secquenceToErase);
+        auto tagsToErase = toolParser->getSpecialTagsToErase();
+        auto lookupResult = streamOutputCache.lookupTags(tagsToErase);
         if (lookupResult == TagLookupStatus::FOUND_COMPLETE) {
-            eraseTagsFromContent(chunkContent, secquenceToErase);
+            eraseTagsFromContent(chunkContent, tagsToErase);
         } else if (lookupResult == TagLookupStatus::FOUND_INCOMPLETE) {
             return std::nullopt;
         }
