@@ -9,7 +9,7 @@ ovms_docs_cloud_storage
 
 ```
 
-Traditional AI models perform data analysis in a single inference operation. They can be used over KServe API or TensorFlow API. 
+Classic models perform data analysis in a single inference operation. They can be served using the KServe API. 
 
 The AI models served by OpenVINO&trade; Model Server must be in either of the five formats:
 - [OpenVINO IR](https://docs.openvino.ai/2026/documentation/openvino-ir-format.html), where the graph is represented in .bin and .xml files
@@ -22,8 +22,7 @@ To use models trained in other formats you need to convert them first. To do so,
 OpenVINO’s [conversion tool](https://docs.openvino.ai/2026/openvino-workflow/model-preparation/convert-model-to-ir.html) for IR, or different
 [converters](https://onnx.ai/supported-tools.html) for ONNX.
 
-The models need to be placed and mounted in a particular directory structure and according to the following rules:
-When the models are hosted on the cloud storage, they should be frozen to be imported successfully.
+The models need to be placed and mounted in a particular directory structure according to the following rules:
 
 ```
 tree models/
@@ -66,8 +65,7 @@ the version number in parameters, by default, the latest version is served.
 - Every version folder _must_ include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name can be arbitrary.
 - Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map.
 - Prediction results can be read from the response output map. By default, OpenVINO™ Model Server uses model tensor names as input and output names in prediction requests and responses. The client passes the input values to the request and reads the results by referring to the corresponding output names.
-- It is possible to adjust this behavior by adding an optional .json file named `mapping_config.json`.
-It can map the input and output keys to the appropriate tensors. This extra mapping can be used to enable user-friendly names for models with difficult tensor names. Here is an example of `mapping_config.json`:
+- You can optionally add a `mapping_config.json` file to customize input and output names. This file maps tensor names to user-friendly keys, which is particularly useful for models with complex tensor naming. Here is an example:
 ```json
 {
        "inputs":{
@@ -80,7 +78,23 @@ It can map the input and output keys to the appropriate tensors. This extra mapp
 }
 ```
 
-For more information on how to use cloud hosted models, refer to the [article](./using_cloud_storage.md).
+## Serving multiple models
 
-Learn also how to [start the model server](./starting_server.md) 
+Serving many models at the same time requires preparing a `config.json` file with a list of models to be deployed. This can be done using the OVMS CLI
+
+```text
+ovms --add_to_config --config_path config.json --model_name model1 --target_device GPU --batch_size 1 --model_path models/model1
+```
+
+Models can also be removed from the configuration file:
+```text
+ovms --remove_from_config --config_path config.json --model_name model1
+```
+
+All models can be started with the following command:
+```
+
+For more information on how to use cloud-hosted models, refer to the [cloud storage guide](./using_cloud_storage.md).
+
+For additional information, see how to [start the model server](./starting_server.md).
 
