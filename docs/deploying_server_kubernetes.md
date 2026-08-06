@@ -5,11 +5,11 @@ The recommended deployment method in Kubernetes is via Kserve operator for Kuber
 ## ServingRuntime configuration:
 
 ```
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/extras/kserve/kserve-openvino.yaml -O
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/3/extras/kserve/kserve-openvino.yaml -O
 sed -i 's/openvino\/model_server:replace/openvino\/model_server:weekly/' kserve-openvino.yaml
 kubectl apply -f kserve-openvino.yaml
 ```
-Note: Alternatively use the official image tag `2026.2` to deploy smaller image with support for CPU only or `2026.2-gpu` with support for GPU and CPU.
+Note: Alternatively use the official image tag `2026.3` to deploy smaller image with support for CPU only or `2026.3-gpu` with support for GPU and CPU.
 
 ## Deploying inference service with a generative model from HuggingFace
 

@@ -15,14 +15,8 @@ ovms_demos_continuous_batching_vlm
 ovms_demos_image_generation
 ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
-ovms_demo_horizontal_text_detection
-ovms_demo_optical_character_recognition
 ovms_demo_face_detection
-ovms_demo_face_blur_pipeline
 ovms_demo_capi_inference_demo
-ovms_demo_single_face_analysis_pipeline
-ovms_demo_multi_faces_analysis_pipeline
-ovms_docs_demo_ensemble
 ovms_docs_demo_mediapipe_image_classification
 ovms_docs_demo_mediapipe_multi_model
 ovms_docs_demo_mediapipe_object_detection
@@ -32,7 +26,6 @@ ovms_docs_image_classification
 ovms_demo_using_onnx_model
 ovms_demo_tf_classification
 ovms_demo_person_vehicle_bike_detection
-ovms_demo_vehicle_analysis_pipeline
 ovms_demo_real_time_stream_analysis
 ovms_demo_using_paddlepaddle_model
 ovms_demo_bert
@@ -52,7 +45,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 |[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline|
 |[OpenAI API text embeddings ](embeddings/README.md)|Get text embeddings via endpoint compatible with OpenAI API|
 |[Reranking with Cohere API](rerank/README.md)| Rerank documents via endpoint compatible with Cohere|
-|[RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)| Example how to use RAG with model server endpoints|
+|[RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/releases/2026/3/demos/continuous_batching/rag/rag_demo.ipynb)| Example how to use RAG with model server endpoints|
 |[LLM on NPU](./llm_npu/README.md)| Generate text with LLM models and NPU acceleration|
 |[VLM on NPU](./vlm_npu/README.md)| Generate text with VLM models and NPU acceleration|
 |[Long context LLMs](./continuous_batching/long_context/README.md)| Recommendations for handling very long context in LLM models|
@@ -67,7 +60,7 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 | Demo | Description |
 |---|---|
 |[Image Classification](image_classification/python/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
-|[Using ONNX Model](using_onnx_model/python/README.md)|Run prediction on a JPEG image using image classification ONNX model via gRPC API in two preprocessing variants. This demo uses [pipeline](../docs/dag_scheduler.md) with [image_transformation custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation). |
+|[Using ONNX Model](using_onnx_model/python/README.md)|Run prediction on a JPEG image using image classification ONNX model via gRPC API in two preprocessing variants. This demo uses [pipeline](../docs/dag_scheduler.md) with [image_transformation custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2026/3/src/custom_nodes/image_transformation). |
 |[Using TensorFlow Model](image_classification_using_tf_model/python/README.md)|Run image classification using directly imported TensorFlow model. |
 |[Age gender recognition](age_gender_recognition/python/README.md) | Run prediction on a JPEG image using age gender recognition model via gRPC API.|
 |[Face Detection](face_detection/python/README.md)|Run prediction on a JPEG image using face detection model via gRPC API.|
@@ -92,25 +85,8 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 |[Iris demo](./mediapipe/object_detection/README.md)| A pipeline implementing iris detection |
 |[Holistic demo](./mediapipe/holistic_tracking/README.md)| A complex pipeline linking several image analytical models and image transformations |
 
-## With DAG Pipelines
-| Demo | Description |
-|---|---|
-|[Horizontal Text Detection in Real-Time](horizontal_text_detection/python/README.md) | Run prediction on camera stream using a horizontal text detection model via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [horizontal_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/horizontal_ocr) and [demultiplexer](../docs/demultiplexing.md). |
-|[Optical Character Recognition Pipeline](optical_character_recognition/python/README.md) | Run prediction on a JPEG image using a pipeline of text recognition and text detection models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [east_ocr custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/east_ocr) and [demultiplexer](../docs/demultiplexing.md). |
-|[Single Face Analysis Pipeline](single_face_analysis_pipeline/python/README.md)|Run prediction on a JPEG image using a simple pipeline of age-gender recognition and emotion recognition models via gRPC API to analyze image with a single face. This demo uses [pipeline](../docs/dag_scheduler.md) |
-|[Multi Faces Analysis Pipeline](multi_faces_analysis_pipeline/python/README.md)|Run prediction on a JPEG image using a pipeline of age-gender recognition and emotion recognition models via gRPC API to extract multiple faces from the image and analyze all of them. This demo uses [pipeline](../docs/dag_scheduler.md) with [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection) and [demultiplexer](../docs/demultiplexing.md) |
-|[Model Ensemble Pipeline](model_ensemble/python/README.md)|Combine multiple image classification models into one [pipeline](../docs/dag_scheduler.md) and aggregate results to improve classification accuracy. |
-|[Face Blur Pipeline](face_blur/python/README.md)|Detect faces and blur image using a pipeline of object detection models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [face_blur custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/face_blur). |
-|[Vehicle Analysis Pipeline](vehicle_analysis_pipeline/python/README.md)|Detect vehicles and recognize their attributes using a pipeline of vehicle detection and vehicle attributes recognition models with a custom node for intermediate results processing via gRPC API. This demo uses [pipeline](../docs/dag_scheduler.md) with [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection). |
-
 ## With C++ Client
 | Demo | Description |
 |---|---|
 |[C API applications](c_api_minimal_app/README.md)|How to use C API from the OpenVINO Model Server to create C and C++ application.|
-
-## With Go Client
-| Demo | Description |
-|---|---|
-|[Image Classification](image_classification/go/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
-
 
