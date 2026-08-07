@@ -218,9 +218,10 @@ class GenerativeAIValidationUtils:
             else:
                 if not allow_empty_response:
                     if kwargs['model_instance'].allows_reasoning:
-                        assert len(choice.message.reasoning_content) > 0, \
-                            f"Empty reasoning content: {choice}"
-                        logger.info(f"Reasoning content: {choice.message.reasoning_content}")
+                        reasoning = getattr(choice.message, "reasoning_content", None)
+                        if reasoning is None and hasattr(choice.message, "model_extra"):
+                            reasoning = choice.message.model_extra.get("reasoning_content")
+                        assert reasoning is not None and len(reasoning) > 0, f"Empty reasoning content: {choice}"
                     else:
                         assert len(choice.message.content) > 0, f"Empty response content: {choice.message.content}"
 
