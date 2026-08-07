@@ -799,3 +799,39 @@ time curl -X POST http://localhost:${OVMS_REST_PORT}/v3/chat/completions \
 ```
 
 Compare the `real` time between CPU and GPU runs.
+
+---
+
+# Troubleshooting
+
+## GPT-OSS Temporary Workaround
+
+### Issue
+
+GPT-OSS models exposed through an OpenAI-compatible endpoint may not be recognized by OpenHands as a supported model. OpenHands may treat the model as an unrecognized OpenAI-compatible model, which can trigger a compatibility fallback for tool handling. This configuration may result in errors such as `empty content array` during agent execution.
+
+### Workaround
+
+As a temporary testing workaround, configure the deployment to present `gpt-4o` as the model identifier to OpenHands, regardless of the actual model being served.
+
+Set the local name when running the deployment script:
+
+```bash
+LOCAL_NAME=gpt-4o ./scripts/deploy_model_ovms.sh <model_id>
+```
+
+Then configure OpenHands to use:
+
+```text
+openai/gpt-4o
+```
+
+### Important Notes
+
+This workaround **does not** change the actual model running inside OVMS. It only changes the identifier presented to OpenHands so that it follows the standard GPT-4o request flow.
+
+The backend model served by OVMS remains your GPT-OSS model. The `LOCAL_NAME` variable simply controls the model name that OVMS advertises and that OpenHands uses in its requests.
+
+This is intended as a **temporary testing workaround**, not the recommended long-term configuration. Once OpenHands properly supports GPT-OSS/OpenAI-compatible mappings, users should revert to using the actual model name.
+
+This workaround is intended only for current OpenHands compatibility and can be removed once GPT-OSS models are supported natively.
