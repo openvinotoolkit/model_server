@@ -42,6 +42,23 @@
 
 namespace ovms {
 
+void ContinuousBatchingServable::logPerfMetrics(ov::genai::PerfMetrics& perfMetrics) {
+    const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
+    const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();
+    // GenerationHandle metrics are scoped to this request; TTFT contains one sample.
+    const double ttftMs = perfMetrics.get_ttft().mean;
+    const double prefillSpeedTps = calculatePrefillSpeed(inputTokenCount, ttftMs);
+
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "Request processing metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f}",
+        inputTokenCount,
+        outputTokenCount,
+        inputTokenCount + outputTokenCount,
+        ttftMs,
+        prefillSpeedTps);
+}
+
 void ContinuousBatchingServable::notifyExecutorThread() {
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Notifying executor thread");
     if (properties->llmExecutorWrapper == nullptr) {
@@ -142,6 +159,28 @@ absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared
         }
     }
     return absl::OkStatus();
+}
+
+absl::Status ContinuousBatchingServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto status = GenAiServable::prepareCompleteResponse(executionContext);
+    if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
+        auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
+        auto perfMetrics = cbExecutionContext->generationHandle->get_perf_metrics();
+        logPerfMetrics(perfMetrics);
+    }
+    return status;
+}
+
+absl::Status ContinuousBatchingServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto status = GenAiServable::preparePartialResponse(executionContext);
+    if (status.ok() &&
+        !executionContext->sendLoopbackSignal &&
+        llm_calculator_logger->should_log(spdlog::level::debug)) {
+        auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
+        auto perfMetrics = cbExecutionContext->generationHandle->get_perf_metrics();
+        logPerfMetrics(perfMetrics);
+    }
+    return status;
 }
 
 }  // namespace ovms
