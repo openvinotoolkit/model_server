@@ -285,6 +285,8 @@ The deployment script sets the published OpenHands port (default: 3000).
 
    ![OpenHands LLM Configuration](screenshots/Pasted%20image.png)
 
+> **Known workaround for GPT-OSS models:** Some GPT-OSS models exposed through an OpenAI-compatible endpoint may not yet work correctly with OpenHands, resulting in errors such as `empty content array` during agent execution. As a temporary workaround, set `LOCAL_NAME=gpt-4o` when deploying OVMS and configure OpenHands to use `openai/gpt-4o`. This only changes the model identifier exposed to OpenHands; the backend model served by OVMS remains unchanged. See the Advanced Deployment guide for additional details.
+
 3. **Create an agent task:**
    ```
    Create a Python function that calculates the factorial of a number.
