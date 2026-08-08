@@ -692,7 +692,7 @@ curl -s http://localhost:${OVMS_REST_PORT}/v1/config | grep AVAILABLE
 
 Should return output containing `AVAILABLE`.
 
-## Troubleshooting
+# Troubleshooting
 
 ### GPU Not Detected
 
@@ -745,6 +745,23 @@ ModuleNotFoundError: No module named 'openvino'
 
 This means the OpenVINO Python package is not installed in the active Python environment, or the correct virtual environment is not activated. Install OpenVINO or activate the appropriate environment before running the verification commands.
 
+### Large-Model GPU Allocation Failure under WSL2
+
+GPU inference under WSL2 works for smaller models, but larger OpenVINO models can fail during GPU initialization with a USM Host allocation error. In our testing:
+
+- `OpenVINO/Qwen3-8b-int8-ov` → worked with GPU under WSL2.
+- `OpenVINO/Qwen3-14b-int8-ov` → failed with GPU under WSL2 with a USM allocation error.
+- `OpenVINO/Qwen3-Coder-30B-A3B-Instruct-int4-ov` → failed with GPU under WSL2 with a USM allocation error.
+
+The representative error was:
+
+[CL ext] Can not allocate ... bytes for USM Host
+
+This is not simply a system-RAM exhaustion issue. During testing, WSL had approximately 27 GiB of available memory, and the same Qwen3-Coder-30B-A3B-Instruct-int4-ov model successfully loaded and served through OVMS on native Windows using `--target_device GPU`.
+
+CPU inference remains functional under WSL2. Native Windows OVMS was also successfully tested with Qwen3-Coder-30B-A3B-Instruct-int4-ov on GPU. For larger GPU models that encounter this WSL2 allocation failure, the recommended environment is a native Linux machine. WSL2 remains suitable for CPU inference and for GPU models that have been validated to work within the available memory and runtime constraints.
+
+Native Linux uses a Linux → Intel GPU runtime → OpenVINO GPU path, while WSL2 uses a Windows → WSL2 GPU layer → Linux/OpenVINO GPU runtime path. The issue occurs in the WSL2 GPU execution path during large-model initialization.
 
 ## Performance Verification
 
@@ -801,8 +818,6 @@ time curl -X POST http://localhost:${OVMS_REST_PORT}/v3/chat/completions \
 Compare the `real` time between CPU and GPU runs.
 
 ---
-
-# Troubleshooting
 
 ## GPT-OSS Temporary Workaround
 
