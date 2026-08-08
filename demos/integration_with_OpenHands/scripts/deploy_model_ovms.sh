@@ -53,6 +53,7 @@
 #
 # The script exports environment variables consumed by docker-compose.yml:
 #   MODEL_ID, LOCAL_NAME, TARGET_DEVICE, TOOL_PARSER, REASONING_PARSER, MODEL_CACHE_DIR, GPU_DEVICE, WSL_LIBS
+#   HOST_UID, HOST_GID, RENDER_GID
 #   OVMS_REST_PORT, OVMS_GRPC_PORT, OPENHANDS_PORT
 #   http_proxy, https_proxy, HTTP_PROXY, HTTPS_PROXY, no_proxy, NO_PROXY
 
@@ -356,23 +357,35 @@ export_runtime_configuration() {
     # Select OVMS Docker image based on target device
     case "$TARGET_DEVICE" in
         GPU)
-            export OVMS_IMAGE="openvino/model_server:latest-gpu"
+            export OVMS_IMAGE="openvino/model_server:weekly"
             ;;
         *)
             export OVMS_IMAGE="openvino/model_server:latest"
             ;;
     esac
 
-    # Detect and export GPU device for docker-compose.yml devices mapping
+    # Detect and export GPU device for docker-compose.yml
     export GPU_DEVICE
     GPU_DEVICE="$(detect_gpu_device)"
-
+    
+    # Native Linux GPU access requires the render group.
+    export RENDER_GID=""
+    if [[ "$TARGET_DEVICE" == "GPU" && -e /dev/dri/renderD128 ]]; then
+        RENDER_GID="$(stat -c "%g" /dev/dri/renderD128)"
+    fi
+    
+    # Run OVMS with the host user's UID/GID.
+    export HOST_UID="$(id -u)"
+    export HOST_GID="$(id -g devcloud)"
+    export RENDER_GID
+    
     # WSL library dependencies (only needed for WSL2 GPU passthrough)
     if [[ "$GPU_DEVICE" == *"/dev/dxg"* ]]; then
         export WSL_LIBS="/usr/lib/wsl:/usr/lib/wsl:ro"
     else
         export WSL_LIBS=""
     fi
+    
 
     echo "Runtime configuration:"
     echo "  MODEL_ID:          $MODEL_ID"
@@ -408,6 +421,9 @@ REASONING_PARSER=${REASONING_PARSER}
 OVMS_IMAGE=${OVMS_IMAGE}
 GPU_DEVICE=${GPU_DEVICE}
 MODEL_CACHE_DIR=${MODEL_CACHE_DIR}
+HOST_UID=${HOST_UID}
+HOST_GID=${HOST_GID}
+RENDER_GID=${RENDER_GID}
 OVMS_REST_PORT=${OVMS_REST_PORT}
 OVMS_GRPC_PORT=${OVMS_GRPC_PORT}
 OPENHANDS_PORT=${OPENHANDS_PORT}
@@ -445,6 +461,9 @@ compare_deployment_fingerprint() {
         export CURRENT_OVMS_IMAGE="$OVMS_IMAGE"
         export CURRENT_GPU_DEVICE="$GPU_DEVICE"
         export CURRENT_MODEL_CACHE_DIR="$MODEL_CACHE_DIR"
+        export CURRENT_HOST_UID="$HOST_UID"
+        export CURRENT_HOST_GID="$HOST_GID"
+        export CURRENT_RENDER_GID="$RENDER_GID"
         export CURRENT_OVMS_REST_PORT="$OVMS_REST_PORT"
         export CURRENT_OVMS_GRPC_PORT="$OVMS_GRPC_PORT"
         export CURRENT_OPENHANDS_PORT="$OPENHANDS_PORT"
@@ -473,6 +492,9 @@ compare_deployment_fingerprint() {
         [[ "$OVMS_IMAGE" == "$CURRENT_OVMS_IMAGE" ]] || exit 1
         [[ "$GPU_DEVICE" == "$CURRENT_GPU_DEVICE" ]] || exit 1
         [[ "$MODEL_CACHE_DIR" == "$CURRENT_MODEL_CACHE_DIR" ]] || exit 1
+        [[ "$HOST_UID" == "$CURRENT_HOST_UID" ]] || exit 1
+        [[ "$HOST_GID" == "$CURRENT_HOST_GID" ]] || exit 1
+        [[ "$RENDER_GID" == "$CURRENT_RENDER_GID" ]] || exit 1
         [[ "$OVMS_REST_PORT" == "$CURRENT_OVMS_REST_PORT" ]] || exit 1
         [[ "$OVMS_GRPC_PORT" == "$CURRENT_OVMS_GRPC_PORT" ]] || exit 1
         [[ "$OPENHANDS_PORT" == "$CURRENT_OPENHANDS_PORT" ]] || exit 1
@@ -513,7 +535,7 @@ generate_compose_from_template() {
     # Substitute ALL deployment-managed variables to generate a complete, self-contained
     # runtime compose file. The generated docker-compose.yml contains concrete values,
     # not placeholders.
-    envsubst '$MODEL_ID $LOCAL_NAME $TARGET_DEVICE $TOOL_PARSER $REASONING_PARSER $MODEL_CACHE_DIR $HF_TOKEN $OVMS_IMAGE $GPU_DEVICE $WSL_LIBS $OVMS_REST_PORT $OVMS_GRPC_PORT $OPENHANDS_PORT $http_proxy $https_proxy $HTTP_PROXY $HTTPS_PROXY $no_proxy $NO_PROXY' < "$template_file" > "$output_file"
+    envsubst '$MODEL_ID $LOCAL_NAME $TARGET_DEVICE $TOOL_PARSER $REASONING_PARSER $MODEL_CACHE_DIR $HF_TOKEN $OVMS_IMAGE $GPU_DEVICE $WSL_LIBS $HOST_UID $HOST_GID $RENDER_GID $OVMS_REST_PORT $OVMS_GRPC_PORT $OPENHANDS_PORT $http_proxy $https_proxy $HTTP_PROXY $HTTPS_PROXY $no_proxy $NO_PROXY' < "$template_file" > "$output_file"
     echo "  Generated: $output_file"
 }
 
@@ -571,7 +593,7 @@ deploy_ovms() {
 
 wait_for_health() {
     local max_retries=60  # 60 * 5s = 5 minutes total polling
-    local retry_interval=5
+    local retry_interval=30
 
     echo "Waiting for OVMS LLM graph to initialize"
 
