@@ -223,18 +223,8 @@ std::string recommendTargetDevice() {
         }
 
         try {
-            uint64_t totalMem = core.get_property(device, "GPU_DEVICE_TOTAL_MEM_SIZE").as<uint64_t>();
-            uint64_t usedMem = 0;
-            try {
-                auto memStats = core.get_property(device, "GPU_MEMORY_STATISTICS").as<std::map<std::string, uint64_t>>();
-                auto it = memStats.find("usm_device");
-                if (it != memStats.end()) {
-                    usedMem = it->second;
-                }
-            } catch (...) {
-                // Memory statistics may not be available before any model is loaded
-            }
-            info.freeMemBytes = static_cast<int64_t>(totalMem) - static_cast<int64_t>(usedMem);
+            // AVAILABLE_DEVICE_MEM_SIZE accounts for all processes consuming GPU memory
+            info.freeMemBytes = core.get_property(device, ov::intel_gpu::available_device_mem);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Failed to get memory info for {}: {}", device, e.what());
             info.freeMemBytes = 0;

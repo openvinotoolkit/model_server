@@ -28,6 +28,7 @@
 #include <openvino/core/shape.hpp>
 #include <openvino/core/type/element_type.hpp>
 #include <openvino/runtime/core.hpp>
+#include <openvino/runtime/intel_gpu/properties.hpp>
 #include <openvino/runtime/properties.hpp>
 #include <openvino/runtime/tensor.hpp>
 
