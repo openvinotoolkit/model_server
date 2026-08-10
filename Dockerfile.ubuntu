@@ -53,11 +53,9 @@ WORKDIR /
 ####### Azure SDK (modern azure-sdk-for-cpp: azure-core, azure-storage-blobs, azure-storage-files-shares)
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 WORKDIR /azure-sdk-for-cpp
-RUN git clone --depth 1 --branch azure-storage-blobs_12.18.0 https://github.com/Azure/azure-sdk-for-cpp.git .
-# Create a minimal toolchain file so AzureVcpkg.cmake skips vcpkg auto-fetch
-# (it only activates vcpkg when CMAKE_TOOLCHAIN_FILE is unset)
-RUN echo "# no-op: use system libcurl and openssl" > /azure-sdk-toolchain.cmake
-RUN cmake -S sdk/core/azure-core -B build/azure-core \
+RUN git clone --depth 1 --branch azure-storage-blobs_12.18.0 https://github.com/Azure/azure-sdk-for-cpp.git . && \
+    echo "# no-op: use system libcurl and openssl" > /azure-sdk-toolchain.cmake && \
+    cmake -S sdk/core/azure-core -B build/azure-core \
         -DCMAKE_TOOLCHAIN_FILE=/azure-sdk-toolchain.cmake \
         -DCMAKE_CXX_FLAGS="${SDL_OPS}" \
         -DCMAKE_BUILD_TYPE=Release \
@@ -66,8 +64,8 @@ RUN cmake -S sdk/core/azure-core -B build/azure-core \
         -DDISABLE_AZURE_CORE_OPENTELEMETRY=ON \
         -DBUILD_TRANSPORT_CURL=ON && \
     cmake --build build/azure-core --parallel ${JOBS} && \
-    cmake --install build/azure-core --prefix /azure-sdk-install
-RUN cmake -S sdk/storage/azure-storage-common -B build/azure-storage-common \
+    cmake --install build/azure-core --prefix /azure-sdk-install && \
+    cmake -S sdk/storage/azure-storage-common -B build/azure-storage-common \
         -DCMAKE_TOOLCHAIN_FILE=/azure-sdk-toolchain.cmake \
         -DCMAKE_CXX_FLAGS="${SDL_OPS}" \
         -DCMAKE_BUILD_TYPE=Release \
@@ -75,8 +73,8 @@ RUN cmake -S sdk/storage/azure-storage-common -B build/azure-storage-common \
         -DBUILD_TESTING=OFF \
         -DCMAKE_PREFIX_PATH=/azure-sdk-install && \
     cmake --build build/azure-storage-common --parallel ${JOBS} && \
-    cmake --install build/azure-storage-common --prefix /azure-sdk-install
-RUN cmake -S sdk/storage/azure-storage-blobs -B build/azure-storage-blobs \
+    cmake --install build/azure-storage-common --prefix /azure-sdk-install && \
+    cmake -S sdk/storage/azure-storage-blobs -B build/azure-storage-blobs \
         -DCMAKE_TOOLCHAIN_FILE=/azure-sdk-toolchain.cmake \
         -DCMAKE_CXX_FLAGS="${SDL_OPS}" \
         -DCMAKE_BUILD_TYPE=Release \
@@ -84,8 +82,8 @@ RUN cmake -S sdk/storage/azure-storage-blobs -B build/azure-storage-blobs \
         -DBUILD_TESTING=OFF \
         -DCMAKE_PREFIX_PATH=/azure-sdk-install && \
     cmake --build build/azure-storage-blobs --parallel ${JOBS} && \
-    cmake --install build/azure-storage-blobs --prefix /azure-sdk-install
-RUN cmake -S sdk/storage/azure-storage-files-shares -B build/azure-storage-files-shares \
+    cmake --install build/azure-storage-blobs --prefix /azure-sdk-install && \
+    cmake -S sdk/storage/azure-storage-files-shares -B build/azure-storage-files-shares \
         -DCMAKE_TOOLCHAIN_FILE=/azure-sdk-toolchain.cmake \
         -DCMAKE_CXX_FLAGS="${SDL_OPS}" \
         -DCMAKE_BUILD_TYPE=Release \

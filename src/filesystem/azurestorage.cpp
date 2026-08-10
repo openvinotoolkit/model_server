@@ -582,7 +582,8 @@ static asfiles::ShareDirectoryClient getDeepestExistingDirectory(
     auto dir_client = share.GetRootDirectoryClient();
     std::string tmp_dir = "";
     for (const auto& segment : subdirs) {
-        if (segment.empty()) continue;
+        if (segment.empty())
+            continue;
         tmp_dir = tmp_dir.empty() ? segment : (tmp_dir + "/" + segment);
         try {
             auto sub = share.GetRootDirectoryClient().GetSubdirectoryClient(tmp_dir);
@@ -636,7 +637,8 @@ StatusCode AzureStorageFile::isDirectory(bool* is_directory) {
 
         std::string tmp_dir = "";
         for (const auto& segment : subdirs_) {
-            if (segment.empty()) continue;
+            if (segment.empty())
+                continue;
             tmp_dir = tmp_dir.empty() ? segment : (tmp_dir + "/" + segment);
             try {
                 auto sub = as_share_.GetRootDirectoryClient().GetSubdirectoryClient(tmp_dir);
