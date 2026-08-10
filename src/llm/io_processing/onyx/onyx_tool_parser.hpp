@@ -132,6 +132,9 @@ public:
     static const std::string PARAMETER_NAME_TAG;  // "<atem:parameter name=\""
     static const std::string PARAMETER_END_TAG;   // "</atem:parameter>"
     static const std::string NAME_ATTR_END_TAG;   // "\">" -- closes an invoke/parameter name
+    static const std::string ASSISTANT_PREFIX;        // "<|start|>assistant "
+    static const std::string CONTENT_START_INDICATOR;  // "to=...<|message|>"
+    static const std::string END_OF_TURN_TAG;  // "<|eot|>"
 
 private:
     const ToolsSchemas_t& toolSchemas;  // filled outside; kept as reference (may change)
@@ -141,11 +144,18 @@ private:
     int toolCallIndex{-1};
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
-    std::vector<std::string> parsingStartTags;
+    // Mutable because it is lazily (re)built from toolSchemas inside the const getParsingStartTags()
+    // getter below. toolSchemas is a reference that is empty at construction time and only filled in
+    // by the caller afterwards (once the request's tools are known), so building this list once in the
+    // constructor would permanently miss every "to=<name>" entry. Rebuilding it from scratch on every
+    // call keeps it in sync with whatever tools the current request declares, without hardcoding any
+    // tool name.
+    mutable std::vector<std::string> parsingStartTags;
 
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& functionName);
     std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
     void lazyFillInitToolParametersTypesMap();
+    void lazyFillParsingStartTags() const;
 
 public:
     OnyxToolParser() = delete;
@@ -154,6 +164,7 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
     const std::vector<std::string>& getParsingStartTags() const override {
+        lazyFillParsingStartTags();
         return parsingStartTags;
     }
     const std::vector<std::string>& getSpecialParsingStartTags() const override {
@@ -165,6 +176,10 @@ public:
     }
     bool requiresStreamingWithSpecialTokens() const override {
         return true;
+    }
+    const std::vector<std::string>& getSpecialTagsToErase() const override {
+        static const std::vector<std::string> specialTagsToErase{ASSISTANT_PREFIX, CONTENT_START_INDICATOR, END_OF_TURN_TAG};
+        return specialTagsToErase;
     }
 };
 }  // namespace ovms

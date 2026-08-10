@@ -45,13 +45,15 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
     if (tag.empty()) {
         return TagLookupStatus::NOT_FOUND;
     }
+    // Require at least 2-char overlap to avoid false positives from single-character coincidences
+    static constexpr size_t MIN_OVERLAP = 2;
     if (tag.size() > buffer.size()) {
         /* 
         If the tag is longer than the buffer, we check if the buffer and tag overlap (either partially or fully for exact match)
         They do overlap, we assume that tag may appear in the future, so we return FOUND_INCOMPLETE
         otherwise we return NOT_FOUND
         */
-        if (stringsOverlap(buffer, tag)) {
+        if (stringsOverlap(buffer, tag, std::min(buffer.size(), MIN_OVERLAP))) {
             return TagLookupStatus::FOUND_INCOMPLETE;
         } else {
             return TagLookupStatus::NOT_FOUND;
@@ -66,7 +68,7 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
         */
         if (buffer.find(tag) != std::string::npos) {
             return TagLookupStatus::FOUND_COMPLETE;
-        } else if (stringsOverlap(buffer, tag)) {
+        } else if (stringsOverlap(buffer, tag, MIN_OVERLAP)) {
             return TagLookupStatus::FOUND_INCOMPLETE;
         } else {
             return TagLookupStatus::NOT_FOUND;
@@ -81,7 +83,7 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
         */
         if (buffer == tag) {
             return TagLookupStatus::FOUND_COMPLETE;
-        } else if (stringsOverlap(buffer, tag)) {
+        } else if (stringsOverlap(buffer, tag, MIN_OVERLAP)) {
             return TagLookupStatus::FOUND_INCOMPLETE;
         } else {
             return TagLookupStatus::NOT_FOUND;
@@ -116,15 +118,24 @@ const std::string& OutputParser::StreamOutputCache::getBuffer() const {
     return buffer;
 }
 
+static void eraseTagsFromContent(std::string& content, const std::vector<std::string>& tags) {
+    for (const auto& tag : tags) {
+        size_t pos = 0;
+        while ((pos = content.find(tag, pos)) != std::string::npos) {
+            content.erase(pos, tag.length());
+        }
+    }
+}
+
 std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
     std::string chunkContent = streamOutputCache.getBuffer();
     if (toolParser != nullptr) {
-        auto& specialTagsToErase = toolParser->getSpecialTagsToErase();
-        for (const auto& tag : specialTagsToErase) {
-            size_t pos = 0;
-            while ((pos = chunkContent.find(tag, pos)) != std::string::npos) {
-                chunkContent.erase(pos, tag.length());
-            }
+        auto tagsToErase = toolParser->getSpecialTagsToErase();
+        auto lookupResult = streamOutputCache.lookupTags(tagsToErase);
+        if (lookupResult == TagLookupStatus::FOUND_COMPLETE) {
+            eraseTagsFromContent(chunkContent, tagsToErase);
+        } else if (lookupResult == TagLookupStatus::FOUND_INCOMPLETE) {
+            return std::nullopt;
         }
     }
 

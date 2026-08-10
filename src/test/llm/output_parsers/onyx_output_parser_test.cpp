@@ -434,8 +434,15 @@ if __name__ == "__main__":
     int i = -1;
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         // Content before any tool call -- OutputParser sees no start tag match, emits content.
+        {"<|start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"assistant ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"to", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=user", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG"}})"},
-        // ATEM start tag "<atem:function_calls>" split across several arbitrarily small chunks.
+        {"to=", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"get_weather", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"<atem:func", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"tion_calls>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         // "<atem:invoke name=\"get_weather\">" split mid-tag and mid-name -- name delta emitted
@@ -643,6 +650,145 @@ TEST_F(OnyxOutputParserTest, StreamingReasoningThenToolCall) {
                                   }() : "nullopt");
         }
     }
+}
+
+// =============================================================================
+// Streaming reasoning followed by content (final answer). Verifies that:
+// - reasoning_content deltas are emitted for reasoning body chunks
+// - framing tags (to=self, <|message|>, <|eom|>) are swallowed (nullopt)
+// - after reasoning ends, the content streams normally as content deltas
+// - no reasoning leaks into content deltas
+// =============================================================================
+TEST_F(OnyxOutputParserTest, StreamingReasoningThenContent) {
+    int i = -1;
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        // Reasoning start tag -- swallowed.
+        {"to=self", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // <|message|> separator -- swallowed.
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Reasoning body chunks -- emitted as reasoning_content deltas.
+        {"Let me think", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":"Let me think"}})"},
+        {" carefully.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"reasoning_content":" carefully."}})"},
+        // Reasoning end tag -- swallowed.
+        {"<|eom|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Content envelope -- swallowed (harmony framing before the actual answer).
+        {"<|start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"assistant ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"to", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=user", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Content body chunks -- emitted as content deltas.
+        {"The weather in", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"The weather in"}})"},
+        {" Paris is sunny.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" Paris is sunny."}})"},
+        {"<|eot|>", ov::genai::GenerationFinishReason::STOP, std::nullopt},
+    };
+
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+        i++;
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            std::string expected = expectedDelta.value();
+            EXPECT_EQ(docStr, expected) << "Mismatch for chunk[" << i << "]: " << chunk;
+        } else {
+            EXPECT_TRUE(false) << "Mismatch for chunk[" << i << "]: " << chunk
+                               << "\nexpectedDelta: " << (expectedDelta.has_value() ? expectedDelta.value() : "nullopt")
+                               << "\nGot doc: " << (doc.has_value() ? [&]() {
+                                      rapidjson::StringBuffer b;
+                                      rapidjson::Writer<rapidjson::StringBuffer> w(b);
+                                      doc->Accept(w);
+                                      return std::string(b.GetString());
+                                  }() : "nullopt");
+        }
+    }
+}
+
+TEST_F(OnyxOutputParserTest, StreamingContentOnly) {
+    int i = -1;
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"to=user", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"Your ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"Your "}})"},
+        {"tweet", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"tweet"}})"}, // it starts with t, that means this chunk overlaps with the to=user
+        {" has", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" has"}})"},
+        {" been", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" been"}})"},
+        {" posted.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" posted."}})"},
+        {" Let me know", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" Let me know"}})"},
+        {" if you need", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" if you need"}})"},
+        {" I can do", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" I can do"}})"},
+        {" anything ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" anything "}})"},
+        {"to ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"to "}})"},
+        {"help.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"help."}})"},
+        {"<|eot|>", ov::genai::GenerationFinishReason::STOP, std::nullopt},
+    };
+
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+        i++;
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            std::string expected = expectedDelta.value();
+            EXPECT_EQ(docStr, expected) << "Mismatch for chunk[" << i << "]: " << chunk;
+        } else {
+            EXPECT_TRUE(false) << "Mismatch for chunk[" << i << "]: " << chunk
+                               << "\nexpectedDelta: " << (expectedDelta.has_value() ? expectedDelta.value() : "nullopt")
+                               << "\nGot doc: " << (doc.has_value() ? [&]() {
+                                      rapidjson::StringBuffer b;
+                                      rapidjson::Writer<rapidjson::StringBuffer> w(b);
+                                      doc->Accept(w);
+                                      return std::string(b.GetString());
+                                  }() : "nullopt");
+        }
+    }
+}
+
+// =============================================================================
+// Regression test for an agentic-streaming bug: OutputParser/OnyxToolParser is often
+// constructed BEFORE the request's tools are known (toolSchemas is a reference to a map
+// that starts empty and is filled in by the caller afterwards -- see the constructor
+// comment on OnyxToolParser::toolSchemas). getParsingStartTags() must lazily rebuild its
+// "to=<name>" tags from whatever toolSchemas holds at call time (not just what it held at
+// construction time), otherwise the harmony envelope preceding a real tool call is never
+// recognized as a start tag and leaks into content as raw " to=<name><|message|>" text.
+// =============================================================================
+TEST_F(OnyxOutputParserTest, StreamingToolEnvelopeNotLeakedWhenSchemasFilledAfterConstruction) {
+    ToolsSchemas_t lateSchemas;  // empty when OutputParser/OnyxToolParser are constructed
+    OutputParser parser(*opt125mTokenizer, "onyx", "onyx", lateSchemas);
+
+    // Populate the SAME map object only now -- OnyxToolParser keeps a reference to it, so
+    // this mirrors production code filling request.toolNameSchemaMap after construction.
+    lateSchemas = toolsSchemas;
+
+    // Harmony envelope for a tool call, split the way a real generation streams it. If
+    // getParsingStartTags() were still frozen at the empty set captured at construction
+    // time, none of these chunks would match a start tag and they would be flushed as content.
+    auto doc = parser.parseChunk(" to=get_weather", {}, /*toolsAvailable=*/true, ov::genai::GenerationFinishReason::NONE);
+    EXPECT_FALSE(doc.has_value()) << "envelope prefix must not be flushed as content";
+
+    doc = parser.parseChunk("<|message|>", {}, /*toolsAvailable=*/true, ov::genai::GenerationFinishReason::NONE);
+    EXPECT_FALSE(doc.has_value()) << "\"<|message|>\" separator must not be flushed as content";
+
+    doc = parser.parseChunk("<atem:function_calls>\n<atem:invoke name=\"get_weather\">\n", {}, /*toolsAvailable=*/true, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(doc.has_value());
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc->Accept(writer);
+    std::string docStr = buffer.GetString();
+    EXPECT_NE(docStr.find(R"("tool_calls")"), std::string::npos) << docStr;
+    EXPECT_NE(docStr.find(R"("name":"get_weather")"), std::string::npos) << docStr;
+    EXPECT_EQ(docStr.find(R"("content")"), std::string::npos) << "envelope leaked into content: " << docStr;
 }
 
 // =============================================================================
