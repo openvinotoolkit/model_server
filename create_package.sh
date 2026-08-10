@@ -21,7 +21,6 @@ set -e
 env
 mkdir -vp /ovms_release/bin
 mkdir -vp /ovms_release/lib
-mkdir -vp /ovms_release/lib/custom_nodes
 
 # Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
 if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
