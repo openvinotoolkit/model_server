@@ -19,6 +19,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
@@ -34,6 +35,21 @@
 #endif
 
 namespace ovms {
+
+// CB stepping thread writes base perf metrics in _free_non_running_requests() slightly
+// after pushing the final output; get_vlm_perf_metrics() calls get_perf_metrics() internally.
+// Yield briefly to close the race window.
+// TODO: remove once GenAI's get_perf_metrics() blocks instead of asserting (fix in generation_stream.hpp)
+static std::optional<ov::genai::VLMPerfMetrics> tryGetVlmPerfMetrics(const ov::genai::GenerationHandle& handle) {
+    for (int i = 0; i < 1000; ++i) {
+        try {
+            return handle->get_vlm_perf_metrics();
+        } catch (const ov::Exception&) {
+            std::this_thread::yield();
+        }
+    }
+    return std::nullopt;
+}
 
 void VisualLanguageModelServable::logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics) {
     const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
@@ -84,8 +100,9 @@ absl::Status VisualLanguageModelServable::prepareCompleteResponse(std::shared_pt
     auto status = GenAiServable::prepareCompleteResponse(executionContext);
     if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-        auto perfMetrics = vlmExecutionContext->generationHandle->get_vlm_perf_metrics();
-        logPerfMetrics(perfMetrics);
+        auto perfMetrics = tryGetVlmPerfMetrics(vlmExecutionContext->generationHandle);
+        if (perfMetrics)
+            logPerfMetrics(*perfMetrics);
     }
     return status;
 }
@@ -96,8 +113,9 @@ absl::Status VisualLanguageModelServable::preparePartialResponse(std::shared_ptr
         !executionContext->sendLoopbackSignal &&
         llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-        auto perfMetrics = vlmExecutionContext->generationHandle->get_vlm_perf_metrics();
-        logPerfMetrics(perfMetrics);
+        auto perfMetrics = tryGetVlmPerfMetrics(vlmExecutionContext->generationHandle);
+        if (perfMetrics)
+            logPerfMetrics(*perfMetrics);
     }
     return status;
 }
