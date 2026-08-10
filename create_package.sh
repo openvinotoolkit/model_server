@@ -25,7 +25,12 @@ mkdir -vp /ovms_release/lib
 # Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
 if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
-find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -path "*test_python_binding*" ! -name "*libpython*" -exec cp -vP {} /ovms_release/lib/ \;
+find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -name "libcustom_node*" ! -name "libazure-*" ! -path "*/_solib_k8/*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -vP {} /ovms_release/lib/ \;
+
+# Copy Azure SDK libs directly from the CMake install prefix so that the
+# unversioned .so files are local relative symlinks (not absolute Bazel cache
+# paths), avoiding duplicate regular-file copies of the same content.
+find /azure-sdk-install/lib -maxdepth 1 -name 'libazure-*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 
 
 # Bundle espeak-ng data files when espeak was enabled in the Bazel build.
