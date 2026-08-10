@@ -674,7 +674,7 @@ TEST_F(OnyxOutputParserTest, StreamingContentOnly) {
         {"to=user", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"Your ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"Your "}})"},
-        {"tweet", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"tweet"}})"}, // it starts with t, that means this chunk overlaps with the to=user
+        {"tweet", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"tweet"}})"},
         {" has", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" has"}})"},
         {" been", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" been"}})"},
         {" posted.", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":" posted."}})"},
