@@ -73,7 +73,6 @@ cc_shared_library(
         "@fmtlib//:__subpackages__",
         "@com_github_jarro2783_cxxopts//:__subpackages__",
         "@aws-sdk-cpp//:__subpackages__",
-        "@boost//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
         "//third_party:curl//:__subpackages__",
         "@com_github_google_crc32c//:__subpackages__",
@@ -108,7 +107,6 @@ cc_shared_library(
         "@flatbuffers//:__subpackages__",
         "@ruy//:__subpackages__",
         "@azure//:__subpackages__",
-        "@cpprest//:__subpackages__",
         "//third_party:opencv//:__subpackages__",
     ] + select({
         "//:not_disable_mediapipe": [
@@ -2054,7 +2052,13 @@ cc_binary(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
-    ],
+    ] + select({
+        "//conditions:default": [
+            "-Wl,-rpath,$$ORIGIN/capi_benchmark.runfiles/ovms/external/azure/lib",
+            "-Wl,-rpath,$$ORIGIN/capi_benchmark.runfiles/azure/lib",
+        ],
+        "//src:windows": [],
+    }),
     copts = [
     ],
     deps = [
@@ -2082,19 +2086,19 @@ cc_binary(
     ] + select({
         "//conditions:default": [],
         "//src:windows" : ["main_windows.hpp", "main_windows.cpp",],}),
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//conditions:default": [
+            "-Wl,-rpath,$$ORIGIN/ovms.runfiles/ovms/external/azure/lib",
+            "-Wl,-rpath,$$ORIGIN/ovms.runfiles/azure/lib",
+        ],
+        "//src:windows": [],
+    }),
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",]
     + select({
-            "//conditions:default": [
-                "//src:libcustom_node_east_ocr.so",
-                "//src:libcustom_node_face_blur.so",
-                "//src:libcustom_node_horizontal_ocr.so",
-                "//src:libcustom_node_model_zoo_intel_object_detection.so",
-                "//src:libcustom_node_image_transformation.so",
-            ],
+            "//conditions:default": [],
             "//src:windows" : ["@winreg//:winreg"],
         })
      + select({
@@ -3006,7 +3010,6 @@ filegroup(
   name = "static_analysis",
   srcs = [
     "//src:ovms",
-    "//src:release_custom_nodes",
     "//src:capi_benchmark",
     "//src:capi_cpp_example"
   ]
