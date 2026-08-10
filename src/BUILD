@@ -41,18 +41,6 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-cc_library(
-    name = "custom_nodes_common_buffersqueue",
-    linkstatic = 1,
-    hdrs = ["custom_nodes/common/buffersqueue.hpp"],
-    srcs = [
-        "custom_nodes/common/buffersqueue.hpp",
-        "custom_nodes/common/buffersqueue.cpp",
-    ],
-    deps = ["libovms_queue"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
 ovms_cc_library(
     name = "executor_base",
     hdrs = ["executor_base.hpp"],
@@ -1155,115 +1143,6 @@ cc_binary(
     linkshared = 1,
 )
 
-cc_binary(
-    name = "libcustom_node_east_ocr.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/east_ocr/east_ocr.cpp",
-        "custom_nodes/east_ocr/nms.hpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-        "opencv_dep",
-    ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
-cc_binary(
-    name = "libcustom_node_face_blur.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/face_blur/face_blur.cpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-        "opencv_dep",
-    ],
-    linkshared = 1,
-    copts =COMMON_STATIC_LIBS_COPTS,
-)
-
-cc_binary(
-    name = "libcustom_node_add_one.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "custom_nodes/add_one/add_one.cpp",
-        "custom_node_interface.h",
-        "custom_nodes/add_one/add_one_internal_manager.hpp"
-    ],
-    deps = [
-        "custom_nodes_common_buffersqueue",
-        "libovms_queue",
-    ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
-ovms_cc_library(
-    name = "opencv_dep",
-    srcs = [
-        "deps/opencv.hpp",
-    ],
-    deps = [
-        "//third_party:opencv",
-    ],
-    visibility = ["//visibility:public",],
-)
-
-cc_binary(
-    name = "libcustom_node_model_zoo_intel_object_detection.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-        "custom_nodes_common_buffersqueue",
-        "opencv_dep",
-        "libovms_queue",
-    ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
-cc_binary(
-    name = "libcustom_node_image_transformation.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/image_transformation/image_transformation.cpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-        "opencv_dep",
-    ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
-cc_binary(
-    name = "libcustom_node_horizontal_ocr.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/horizontal_ocr/horizontal_ocr.cpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-        "opencv_dep",
-    ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
 # POC which can start OVMS with C-API built by bazel
 # Standalone example for building outside of bazel (with bare g++ is inside MakefileCapi)
 cc_binary(
@@ -2124,8 +2003,6 @@ cc_test(
         "test/c_api_tests.cpp",
         "test/capi_predict_validation_test.cpp",
         #"test/custom_loader_test.cpp", # TODO remove?
-        "test/custom_node_buffersqueue_test.cpp",
-        "test/custom_node_output_allocator_test.cpp",
         "test/demultiplexer_node_test.cpp",
         "test/deserialization_tests.cpp",
         "test/ensemble_config_change_stress.cpp",
@@ -2347,12 +2224,6 @@ cc_test(
         "//src:lib_node_dynamic_demultiplex.so",
         "//src:lib_node_perform_different_operations.so",
         "//src:lib_node_choose_maximum.so",
-        "//src:libcustom_node_east_ocr.so",
-        "//src:libcustom_node_face_blur.so",
-        "//src:libcustom_node_model_zoo_intel_object_detection.so",
-        "//src:libcustom_node_image_transformation.so",
-        "//src:libcustom_node_add_one.so",
-        "//src:libcustom_node_horizontal_ocr.so",
     ] + glob(["test/models_config_json/**"]),
     deps = [
             "optimum-cli",
@@ -2370,7 +2241,6 @@ cc_test(
             ":test_gguf_environment",
             ":libtest_pythonenvironment",
             ":network_utils_test",
-            "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ":libgit2_test",
             ":pull_hf_model_test",
@@ -2860,17 +2730,6 @@ cc_library(
     copts = COPTS_TESTS,
 )
 
-filegroup(
-  name = "release_custom_nodes",
-  srcs = [
-    "//src:libcustom_node_add_one.so",
-    "//src:libcustom_node_east_ocr.so",
-    "//src:libcustom_node_face_blur.so",
-    "//src:libcustom_node_horizontal_ocr.so",
-    "//src:libcustom_node_model_zoo_intel_object_detection.so",
-    "//src:libcustom_node_image_transformation.so",
-  ]
-)
 cc_library(
     name = "openvino_tests",
     linkstatic = 1,
