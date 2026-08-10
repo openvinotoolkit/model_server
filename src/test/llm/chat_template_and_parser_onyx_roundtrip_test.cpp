@@ -147,19 +147,12 @@ TEST_F(OnyxChatTemplateAndParserRoundtripTest, ToolResultFedBack_ModelEmitsFinal
     // Assistant tool-call history uses the recipient/content path (not `tool_calls`), which the
     // new template still renders via the plain "to=<recipient><|message|>...<|eom|>" envelope.
     EXPECT_NE(prompt.find(R"(<|start|>assistant to=functions.get_weather<|message|>{"city": "SF"}<|eom|>)"), std::string::npos) << prompt;
-    // NOTE (verified against the new template's actual minja render): OpenVINO GenAI STILL
-    // rewrites role="tool" into a role="user" message wrapping a "tool_response" JSON object
-    // (caps.supportsToolCalls == false), even though the new template DOES read `tools`/render
-    // tool defs -- so Onyx's own `elif role == 'tool'` template branch remains DEAD CODE on the
-    // minja path. What changed vs the previous drop: the wrapper no longer carries a "tool"
-    // field (only "content"). The tool output content appears with backslash-escaped quotes
-    // inside that JSON string, e.g.:
-    //   <|start|>user<|message|>{
-    //     "tool_response": {
-    //       "content": "<tool_output name=\"functions.get_weather\">{\"temp\": 65}</tool_output>"
-    //   }<|eot|>
-    EXPECT_NE(prompt.find(R"("tool_response")"), std::string::npos) << prompt;
-    EXPECT_NE(prompt.find(R"(<tool_output name=\"functions.get_weather\">{\"temp\": 65}</tool_output>)"), std::string::npos) << prompt;
+    // NOTE: the Onyx template's `elif role == 'tool'` branch IS active on the minja path
+    // (caps.supportsToolCalls == true for this template), so the tool response is rendered as:
+    //   <|start|>tool functions.get_weather<|message|><tool_output name="functions.get_weather">
+    //   ...content...<|eot|>
+    EXPECT_NE(prompt.find(R"(<|start|>tool functions.get_weather<|message|>)"), std::string::npos) << prompt;
+    EXPECT_NE(prompt.find(R"({"temp": 65})"), std::string::npos) << prompt;
 
     std::string modelContinuation = R"( to=user<|message|>It's 65F in SF.<|eot|>)";
     ParsedOutput parsedOutput = parseModelContinuation(modelContinuation);
