@@ -152,7 +152,7 @@ with client.responses.stream(
             # Play or save audio_bytes (pcm16 @ 24kHz mono)
 ```
 
-More clients are available in `demos/omni/` (see [README](demos/omni/README.md)).
+More clients are available in `demos/omni/` (see [README](../demos/omni/README.md)).
 
 ## Available Voices
 
@@ -182,4 +182,4 @@ When `voice` is omitted, the model's default speaker is used.
 
 ## Demo Clients
 
-Example clients are in `demos/omni/` (see [README](demos/omni/README.md)).
+Example clients are in `demos/omni/` (see [README](../demos/omni/README.md)).

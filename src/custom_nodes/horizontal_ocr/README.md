@@ -6,10 +6,6 @@ Each image in the output will be resized to the predefined target size to fit th
 DAG pipeline.
 Additionally to the detected text boxes, in the two additional outputs are returned their coordinates and confidence levels.  
 
-This custom node can be used to process video frames via [camera example](../../../demos/horizontal_text_detection/python/README.md).
-
-**NOTE** Exemplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/main/demos/horizontal_text_detection/python/config.json) is available in [demo with camera](https://github.com/openvinotoolkit/model_server/blob/main/demos/horizontal_text_detection/python/).
-
 # Building custom node library
 
 You can build the shared library of the custom node simply by running command in the context of custom node examples directory:
