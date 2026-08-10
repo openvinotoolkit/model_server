@@ -687,7 +687,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Onyx_FullMultiTurnToolCallRoundTrip) {
     EXPECT_TRUE(caps.supportsToolCalls);
 
     std::string expectedOutput =
-R"(# Valid recipients: "self", "user".<|eot|><|start|>user<|message|>What's the weather in Paris?<|eot|><|start|>assistant to=functions.get_weather<|message|>{"location":"Paris","unit":"celsius"}<|eom|><|start|>tool get_weather<|message|><tool_output name="get_weather">
+        R"(# Valid recipients: "self", "user".<|eot|><|start|>user<|message|>What's the weather in Paris?<|eot|><|start|>assistant to=functions.get_weather<|message|>{"location":"Paris","unit":"celsius"}<|eom|><|start|>tool get_weather<|message|><tool_output name="get_weather">
 {"temperature":15,"unit":"celsius"}
 </tool_output><|eot|><|start|>assistant to=user<|message|>It's 15C in Paris.<|eot|><|start|>assistant)";
     EXPECT_NE(appliedOutput.find(expectedOutput), std::string::npos) << appliedOutput;

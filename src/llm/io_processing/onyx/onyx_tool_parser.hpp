@@ -125,16 +125,16 @@ private:
 
 class OnyxToolParser : public BaseOutputParser {
 public:
-    static const std::string TOOL_START_TAG;      // "<atem:function_calls>"
-    static const std::string TOOL_END_TAG;        // "</atem:function_calls>"
-    static const std::string FUNCTION_NAME_TAG;   // "<atem:invoke name=\""
-    static const std::string FUNCTION_END_TAG;    // "</atem:invoke>"
-    static const std::string PARAMETER_NAME_TAG;  // "<atem:parameter name=\""
-    static const std::string PARAMETER_END_TAG;   // "</atem:parameter>"
-    static const std::string NAME_ATTR_END_TAG;   // "\">" -- closes an invoke/parameter name
-    static const std::string ASSISTANT_PREFIX;        // "<|start|>assistant "
+    static const std::string TOOL_START_TAG;           // "<atem:function_calls>"
+    static const std::string TOOL_END_TAG;             // "</atem:function_calls>"
+    static const std::string FUNCTION_NAME_TAG;        // "<atem:invoke name=\""
+    static const std::string FUNCTION_END_TAG;         // "</atem:invoke>"
+    static const std::string PARAMETER_NAME_TAG;       // "<atem:parameter name=\""
+    static const std::string PARAMETER_END_TAG;        // "</atem:parameter>"
+    static const std::string NAME_ATTR_END_TAG;        // "\">" -- closes an invoke/parameter name
+    static const std::string ASSISTANT_PREFIX;         // "<|start|>assistant "
     static const std::string CONTENT_START_INDICATOR;  // "to=...<|message|>"
-    static const std::string END_OF_TURN_TAG;  // "<|eot|>"
+    static const std::string END_OF_TURN_TAG;          // "<|eot|>"
 
 private:
     const ToolsSchemas_t& toolSchemas;  // filled outside; kept as reference (may change)

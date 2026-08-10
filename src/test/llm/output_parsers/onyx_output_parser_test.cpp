@@ -606,7 +606,8 @@ TEST_F(OnyxOutputParserTest, StreamingReasoningThenToolCall) {
                                       rapidjson::Writer<rapidjson::StringBuffer> w(b);
                                       doc->Accept(w);
                                       return std::string(b.GetString());
-                                  }() : "nullopt");
+                                  }()
+                                                                    : "nullopt");
         }
     }
 }
@@ -663,7 +664,8 @@ TEST_F(OnyxOutputParserTest, StreamingReasoningThenContent) {
                                       rapidjson::Writer<rapidjson::StringBuffer> w(b);
                                       doc->Accept(w);
                                       return std::string(b.GetString());
-                                  }() : "nullopt");
+                                  }()
+                                                                    : "nullopt");
         }
     }
 }
@@ -708,7 +710,8 @@ TEST_F(OnyxOutputParserTest, StreamingContentOnly) {
                                       rapidjson::Writer<rapidjson::StringBuffer> w(b);
                                       doc->Accept(w);
                                       return std::string(b.GetString());
-                                  }() : "nullopt");
+                                  }()
+                                                                    : "nullopt");
         }
     }
 }

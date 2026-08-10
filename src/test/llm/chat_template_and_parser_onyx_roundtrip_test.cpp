@@ -70,7 +70,7 @@ protected:
         std::string rendered = tokenizer.apply_chat_template(chatHistory, /*add_generation_prompt=*/true);
         static const std::string generationPromptTail = "<|start|>assistant";
         EXPECT_TRUE(rendered.size() >= generationPromptTail.size() &&
-            rendered.compare(rendered.size() - generationPromptTail.size(), generationPromptTail.size(), generationPromptTail) == 0)
+                    rendered.compare(rendered.size() - generationPromptTail.size(), generationPromptTail.size(), generationPromptTail) == 0)
             << "Generation prompt tail changed, Onyx parser assumptions may be stale: " << rendered;
         return rendered;
     }
@@ -103,7 +103,6 @@ protected:
         return outputParser.parse(generatedTokens, toolsAvailable);
     }
 };
-
 
 TEST_F(OnyxChatTemplateAndParserRoundtripTest, UserQuestion_ModelEmitsToolCall) {
     ov::genai::ChatHistory chatHistory;
