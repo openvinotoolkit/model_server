@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <stack>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "rapidjson/error/en.h"
