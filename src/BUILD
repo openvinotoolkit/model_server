@@ -1047,6 +1047,16 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "opencv_dep",
+    srcs = [
+        "deps/opencv.hpp",
+    ],
+    deps = [
+        "//third_party:opencv",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "tensor_conversion_common",
     hdrs = ["tensor_conversion_common.hpp"],
     srcs = ["tensor_conversion_common.cpp",],
