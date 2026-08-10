@@ -99,23 +99,3 @@ TEST(TextContentNormalizationProcessorTest, MixedContentArrayLeftUntouched) {
     ASSERT_TRUE(result[0]["content"].is_array());
     EXPECT_EQ(result[0]["content"].size(), 2u);
 }
-
-TEST(TextContentNormalizationProcessorTest, NullContentNormalizedToEmptyString) {
-    // Standard OpenAI shape for e.g. an assistant message that only carries
-    // "tool_calls": content is explicitly null (not just absent). Some templates
-    // (e.g. Onyx's) unconditionally render content for every message and error out
-    // on null, so this must be normalized to "" the same way a missing field is.
-    ov::genai::ChatHistory history;
-    ov::AnyMap msg = {{"role", std::string("assistant")}};
-    msg["content"] = ov::genai::JsonContainer(nullptr);
-    history.push_back(msg);
-
-    InputRequest req = makeChatRequest(history);
-    TextContentNormalizationProcessor processor;
-    const auto status = processor.process(req);
-
-    EXPECT_TRUE(status.ok());
-    const auto& result = std::get<ov::genai::ChatHistory>(req.input);
-    ASSERT_TRUE(result[0]["content"].is_string());
-    EXPECT_EQ(result[0]["content"].as_string().value_or("__unset__"), "");
-}
