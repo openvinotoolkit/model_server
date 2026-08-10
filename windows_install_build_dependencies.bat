@@ -139,7 +139,7 @@ IF /I EXIST %bash_path% (
 
 :: Set default OV_USE_BINARY if not set
 if "%OV_USE_BINARY%"=="" (
-    set "OV_USE_BINARY=0"
+    set "OV_USE_BINARY=1"
 )
 
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
@@ -248,7 +248,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
 )
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (
-    git clone https://github.com/intel-sandbox/openvino.private %BAZEL_SHORT_PATH%\openvino_src
+    git clone https://github.com/%OV_SOURCE_ORG%/openvino %BAZEL_SHORT_PATH%\openvino_src
 )
 
 set "BACK_CWD=%cd%"
@@ -298,7 +298,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 ::::::::::::::::::::::: OpenVINO GenAI
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
-    git clone https://github.com/intel-sandbox/openvino.genai.private %BAZEL_SHORT_PATH%\openvino_genai_src
+    git clone https://github.com/%OV_GENAI_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
 )
 cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin

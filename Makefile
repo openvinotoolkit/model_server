@@ -133,14 +133,7 @@ endif
 
 ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   TARGET_DISTRO_PARAMS = " --//:distro=ubuntu"
-  # ubuntu24 defaults to building OpenVINO/GenAI from source (see versions.mk)
-  # so that the onyx-support patches in ./patches can be applied. Other ubuntu
-  # flavors keep using the prebuilt binary package by default.
-  ifeq ($(BASE_OS),ubuntu24)
-    OV_USE_BINARY ?= 0
-  else
-    OV_USE_BINARY ?= 1
-  endif
+  OV_USE_BINARY ?= 1
   ifeq ($(findstring ubuntu22,$(BASE_OS)),ubuntu22)
 	ifeq ($(OV_USE_BINARY),0)
   		$(error OV_USE_BINARY = 0 not supported on Ubuntu22 OS)
