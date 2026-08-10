@@ -33,47 +33,6 @@
 
 using namespace ovms;
 
-// =============================================================================
-// NEW Onyx tool-call format (ATEM), captured live from the running model
-// (muse/onyx_live_withargs_1000_raw.txt, muse/onyx_live_nargs_1500_raw.txt) and
-// matching `render_atem` in muse/onyx-ov-int4-v2/chat_template.jinja:
-//
-//    to=<name><|message|><atem:function_calls>
-//   <atem:invoke name="<name>">
-//   <atem:parameter name="<key>"><value></atem:parameter>
-//   ...
-//   </atem:invoke>
-//   </atem:function_calls>{<|eom|>|<|eot|>}
-//
-// Key differences from the previous Onyx drop (which these tests used to cover):
-//   - The recipient is the BARE tool name `to=get_weather`, NOT `to=functions.get_weather`
-//     (the "functions." prefix only appears if the tool itself is namespaced). The
-//     authoritative function name is therefore read from `<atem:invoke name="...">`,
-//     not from the `to=` recipient.
-//   - Arguments are an ATEM XML block, essentially qwen3coder with
-//     `atem:` tags -- NOT a single raw JSON blob. Parameter values are rendered
-//     UNQUOTED (e.g. <atem:parameter name="gps">37.7749,-122.4194</atem:parameter>),
-//     so arguments must be typed via the tool JSON schema exactly like
-//     Qwen3CoderToolParser (string->quoted, integer/number->numeric,
-//     bool/array/object->parsed, fall back to string). The toolsSchemas fixture below
-//     is therefore load-bearing now.
-//
-// Reasoning framing is UNCHANGED (" to=self<|message|>...<|eom|>") -- those tests are
-// carried over verbatim.
-//
-// These tests define the TARGET contract; the parser implementation
-// (src/llm/io_processing/onyx/*) is rewritten later against them. Until then the
-// tool-call tests are expected to FAIL (the current parser still looks for the old
-// "to=functions."/raw-JSON framing) while the reasoning tests still pass.
-// =============================================================================
-
-// Onyx does not ship a converted HF tokenizer in this early preview, and none of the
-// segments the parser looks for ("<atem:function_calls>", "<atem:invoke name=", "to=self",
-// "<|message|>", "<|eom|>", "<|eot|>") are real special tokens of the model this parser is
-// designed for -- they are plain text sequences that must round-trip losslessly through
-// encode()+decode() on ANY tokenizer. facebook/opt-125m is already used the same way for
-// chat-template testing (see ChatTemplateEndToEndMinjaTest), so it is reused here to avoid
-// pulling in a new model fixture.
 // TODO @atobiszei replace when tokenizer is available
 #ifdef _WIN32
 const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\facebook\\opt-125m";

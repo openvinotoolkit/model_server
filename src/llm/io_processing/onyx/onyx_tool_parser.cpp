@@ -52,11 +52,6 @@ OnyxToolParserImpl::OnyxToolParserImpl() :
 OnyxToolParserImpl::OnyxToolParserImpl(const ToolsParameterTypeMap_t& toolsParametersTypeMap) :
     toolsParametersTypeMap(toolsParametersTypeMap) {}
 
-// parseToolSchema / createToolsParametersTypesMap now live in base_output_parser
-// (shared with Qwen3CoderToolParser, Minicpm5ToolParser, ...); trimNewline,
-// jsonTypeOf and enforceStringValue come from io_processing/utils. This parser
-// reuses them instead of keeping its own copies.
-
 void OnyxToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameterValueAsString) {
     if (this->removeNewlineAroundParameters)
         trimNewline(parameterValueAsString);
@@ -70,11 +65,7 @@ void OnyxToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameter
     if (paramIt != this->toolsParametersTypeMap.end()) {
         auto paramJt = paramIt->second.find(currentParameterName);
         if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::BOOLEAN)) {
-            if (parameterValueAsString == "True" || parameterValueAsString == "TRUE") {
-                parameterValueAsString = "true";
-            } else if (parameterValueAsString == "False" || parameterValueAsString == "FALSE") {
-                parameterValueAsString = "false";
-            }
+            std::transform(parameterValueAsString.begin(), parameterValueAsString.end(), parameterValueAsString.begin(), ::tolower);
         }
     }
     temp.Parse(parameterValueAsString.c_str());
@@ -88,7 +79,7 @@ void OnyxToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameter
         if (!currentFunctionArgsDoc.HasMember(keyVal)) {
             currentFunctionArgsDoc.AddMember(keyVal, v, allocator);
         } else {
-            SPDLOG_DEBUG("Parameter: {} already exists in document", key);
+            SPDLOG_TRACE("Parameter: {} already exists in document", key);
         }
     } else {
         rapidjson::Value valueCopy;
@@ -103,7 +94,7 @@ void OnyxToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameter
             SPDLOG_TRACE("Will add key:{} val:{} type:{}", key, parameterValueAsString, jsonTypeOf(valueCopy));
             currentFunctionArgsDoc.AddMember(keyVal, valueCopy, allocator);
         } else {
-            SPDLOG_DEBUG("Parameter: {} already exists in document.", key);
+            SPDLOG_TRACE("Parameter: {} already exists in document.", key);
         }
     }
 }

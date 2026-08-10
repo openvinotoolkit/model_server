@@ -27,22 +27,6 @@
 
 namespace ovms {
 
-// Onyx (early preview model) framing:
-// TODO @atobiszei simplify comment. tag naming convention. no need to define all tags here
-//   <|start|>assistant[ to=<recipient>]<|message|>{content}{<|eom|>|<|eot|>}
-// The chat template never emits a "<think>"-style dedicated reasoning tag: private
-// chain-of-thought is just an assistant turn routed with recipient="self", ending in
-// the continuation marker "<|eom|>" (never "<|eot|>", which is reserved for turns that
-// end the whole assistant turn -- i.e. the final answer).
-//
-// Because generation stops at the first "<|eom|>"/"<|eot|>"/"<|end_of_text|>" (see
-// generation_config.json's eos_token_id list in the Onyx HF conversion script), a single
-// generate() call only ever produces ONE such framed segment. This parser is therefore
-// also responsible for stripping the generic " to=<recipient>"+"<|message|>"+terminator
-// envelope from plain final-answer turns (recipient="user" or absent) -- this class runs
-// before the tool parser (see OutputParser::parse()), so it must NOT touch content when
-// the envelope routes to a function call (recipient="functions.<name>"); it leaves that
-// segment untouched so OnyxToolParser can find and parse it afterwards.
 class OnyxReasoningParser : public BaseOutputParser {
 protected:
     // Marks a private chain-of-thought turn (recipient="self").

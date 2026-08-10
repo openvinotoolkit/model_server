@@ -104,10 +104,7 @@ protected:
     }
 };
 
-// =============================================================================
-// Turn 1 of the muse/README.md "get_weather" example: user asks a question, the
-// prompt is rendered, and the model's tool-call continuation is parsed.
-// =============================================================================
+
 TEST_F(OnyxChatTemplateAndParserRoundtripTest, UserQuestion_ModelEmitsToolCall) {
     ov::genai::ChatHistory chatHistory;
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
@@ -136,11 +133,6 @@ TEST_F(OnyxChatTemplateAndParserRoundtripTest, UserQuestion_ModelEmitsToolCall) 
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"city":"SF"})");
 }
 
-// =============================================================================
-// Turn 2 of the same example: tool result fed back into history (Onyx's own
-// "name" + role="tool" shape, NOT OpenAI's tool_call_id), then the model's final
-// answer continuation is parsed.
-// =============================================================================
 TEST_F(OnyxChatTemplateAndParserRoundtripTest, ToolResultFedBack_ModelEmitsFinalAnswer) {
     ov::genai::ChatHistory chatHistory;
     chatHistory.push_back(ov::genai::JsonContainer::from_json_string(

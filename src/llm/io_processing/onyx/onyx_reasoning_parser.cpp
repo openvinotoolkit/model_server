@@ -26,10 +26,6 @@
 namespace ovms {
 
 void OnyxReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    // With EOS suppression the model may produce multiple interleaved turns in one
-    // generation (reasoning → tool call → reasoning → tool call → ... → answer).
-    // We must extract ALL reasoning segments and strip ALL turn boundaries/envelopes.
-
     // Step 1: Extract and remove ALL "to=self<|message|>...<|eom|>" reasoning segments.
     for (;;) {
         size_t selfPos = parsedOutput.content.find(selfRecipientTag);

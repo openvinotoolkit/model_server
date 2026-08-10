@@ -118,6 +118,8 @@ const std::string& OutputParser::StreamOutputCache::getBuffer() const {
     return buffer;
 }
 
+// TODO: @przepeck We should consider moving this and
+// similar workarounds to a content parser class
 static void eraseTagsFromContent(std::string& content, const std::vector<std::string>& tags) {
     for (const auto& tag : tags) {
         size_t pos = 0;
@@ -130,7 +132,7 @@ static void eraseTagsFromContent(std::string& content, const std::vector<std::st
 std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
     std::string chunkContent = streamOutputCache.getBuffer();
     if (toolParser != nullptr) {
-        auto tagsToErase = toolParser->getSpecialTagsToErase();
+        auto& tagsToErase = toolParser->getSpecialTagsToErase();
         auto lookupResult = streamOutputCache.lookupTags(tagsToErase);
         if (lookupResult == TagLookupStatus::FOUND_COMPLETE) {
             eraseTagsFromContent(chunkContent, tagsToErase);
