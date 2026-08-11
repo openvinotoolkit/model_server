@@ -17,6 +17,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "../../../logging.hpp"
@@ -57,6 +58,20 @@ void ContinuousBatchingServable::logPerfMetrics(ov::genai::PerfMetrics& perfMetr
         inputTokenCount + outputTokenCount,
         ttftMs,
         prefillSpeedTps);
+}
+
+// CB stepping thread writes metrics in _free_non_running_requests() slightly after
+// pushing the final output. Yield briefly to close the race window.
+// TODO: remove once GenAI's get_perf_metrics() blocks instead of asserting (fix in generation_stream.hpp)
+static std::optional<ov::genai::PerfMetrics> tryGetPerfMetrics(const ov::genai::GenerationHandle& handle) {
+    for (int i = 0; i < 1000; ++i) {
+        try {
+            return handle->get_perf_metrics();
+        } catch (const ov::Exception&) {
+            std::this_thread::yield();
+        }
+    }
+    return std::nullopt;
 }
 
 void ContinuousBatchingServable::notifyExecutorThread() {
@@ -165,8 +180,9 @@ absl::Status ContinuousBatchingServable::prepareCompleteResponse(std::shared_ptr
     auto status = GenAiServable::prepareCompleteResponse(executionContext);
     if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
-        auto perfMetrics = cbExecutionContext->generationHandle->get_perf_metrics();
-        logPerfMetrics(perfMetrics);
+        auto perfMetrics = tryGetPerfMetrics(cbExecutionContext->generationHandle);
+        if (perfMetrics)
+            logPerfMetrics(*perfMetrics);
     }
     return status;
 }
@@ -177,8 +193,9 @@ absl::Status ContinuousBatchingServable::preparePartialResponse(std::shared_ptr<
         !executionContext->sendLoopbackSignal &&
         llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
-        auto perfMetrics = cbExecutionContext->generationHandle->get_perf_metrics();
-        logPerfMetrics(perfMetrics);
+        auto perfMetrics = tryGetPerfMetrics(cbExecutionContext->generationHandle);
+        if (perfMetrics)
+            logPerfMetrics(*perfMetrics);
     }
     return status;
 }
