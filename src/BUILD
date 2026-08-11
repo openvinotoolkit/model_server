@@ -2298,7 +2298,13 @@ cc_test(
         }),
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//conditions:default": [
+            "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/ovms/external/azure/lib",
+            "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/azure/lib",
+        ],
+        "//src:windows": [],
+    }),
 )
 
 cc_library(
