@@ -83,6 +83,14 @@ public:
 
     absl::Status Open(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "T2sCalculator  [Node: {}] Open start", cc->NodeName());
+        const auto& calcOptions = cc->Options<T2sCalculatorOptions>();
+        const float speedMin = calcOptions.speed_min();
+        const float speedMax = calcOptions.speed_max();
+        // !(speedMin <= speedMax) is true for inverted ranges and for any NaN bound.
+        if (!(speedMin <= speedMax)) {
+            return absl::InternalError(
+                absl::StrCat("Invalid T2sCalculatorOptions: speed_min (", speedMin, ") must be <= speed_max (", speedMax, ")"));
+        }
         return absl::OkStatus();
     }
 
@@ -143,7 +151,9 @@ public:
                 const auto& calcOptions = cc->Options<T2sCalculatorOptions>();
                 const float speedMin = calcOptions.speed_min();
                 const float speedMax = calcOptions.speed_max();
-                if (speed < speedMin || speed > speedMax) {
+                // Use positive-range predicate: NaN speed makes both comparisons
+                // false, so the negation correctly rejects it.
+                if (!(speedMin <= speed && speed <= speedMax)) {
                     return absl::InvalidArgumentError(
                         absl::StrCat("speed must be between speed_min (", speedMin, ") and speed_max (", speedMax, ")"));
                 }

@@ -253,10 +253,15 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, u
         throw std::runtime_error("Failed to write all frames");
     }
     drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, totalSamples, waveformPtr);
+    // Finalize the WAV container before any cleanup path; drwav_uninit is safe
+    // to call even when fewer frames than expected were written.
+    drwav_uninit(&wav);
     if (framesWritten != totalSamples) {
+        drwav_free(*ppData, nullptr);
+        *ppData = nullptr;
+        pDataSize = 0;
         throw std::runtime_error("Failed to write all frames");
     }
-    drwav_uninit(&wav);
     // Validate the actual WAV container size (includes RIFF/fmt/fact/data header
     // overhead that the pre-write check did not account for).
     try {
