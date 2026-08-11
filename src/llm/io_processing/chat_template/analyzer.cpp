@@ -37,22 +37,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
-    // Onyx detection — Harmony-family framing ("<|start|>{role}[ to=<recipient>]<|message|>
-    // {content}<|eom|>/<|eot|>") without gpt-oss's "<|channel|>" marker (already handled
-    // above). This combination of literal tokens is not used by any other template in
-    // this codebase (verified against every fixture under src/test/llm/chat_templates/).
-    // There is no separate reasoning-specific token: Onyx routes both tool calls
-    // (recipient="functions.<name>") and private reasoning (recipient="self") through the
-    // exact same "<|message|>...<|eom|>" framing, so both parsers are tied together here,
-    // like gptoss/gemma4.
-    // NOTE: unlike every other branch below, this deliberately does NOT set
-    // caps.supportsToolCalls -- that flag means "the template natively re-serializes an
-    // incoming OpenAI-shaped `tool_calls` array back into the model's own format", which
-    // Onyx's template does not do at all (it only ever reads message['recipient']/
-    // message['content'], never message['tool_calls'] -- see the Onyx_ToolCallWithStringArgs
-    // tests in chat_template_end_to_end_{jinja,minja}_test.cpp). detectedToolParser/
-    // detectedReasoningParser only affect how OVMS parses the model's *output*, which is
-    // unrelated to (and unaffected by) whether input history round-trips correctly.
     if (contains(templateSource, "<|start|>") && contains(templateSource, "<|message|>") &&
         contains(templateSource, "<|eom|>") && contains(templateSource, "<|eot|>")) {
         result.detectedToolParser = "onyx";
