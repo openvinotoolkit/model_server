@@ -61,6 +61,19 @@ TEST_F(ChatTemplateAnalyzerTest, detectsGptOss) {
     EXPECT_TRUE(result.caps.supportsToolCalls);
 }
 
+// --- Onyx ---
+
+TEST_F(ChatTemplateAnalyzerTest, detectsOnyx) {
+    std::string tmpl = loadTemplate("chat_template_onyx.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "onyx");
+    ASSERT_TRUE(result.detectedReasoningParser.has_value());
+    EXPECT_EQ(result.detectedReasoningParser.value(), "onyx");
+    EXPECT_TRUE(result.caps.supportsToolCalls);
+}
+
 // --- Gemma4 ---
 
 TEST_F(ChatTemplateAnalyzerTest, detectsGemma4) {
