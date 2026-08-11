@@ -260,6 +260,10 @@ void OnyxToolParser::lazyFillParsingStartTags() const {
     parsingStartTags.clear();
     parsingStartTags.push_back(TOOL_START_TAG);
     for (const auto& [name, _] : toolSchemas) {
+        if (name == "user" || name == "self") {
+            SPDLOG_DEBUG("Skipping tool name: {} for parsingStartTags", name);
+            continue;
+        }
         parsingStartTags.push_back("to=" + name);
     }
 }
