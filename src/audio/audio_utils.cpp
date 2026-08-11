@@ -257,6 +257,16 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, u
         throw std::runtime_error("Failed to write all frames");
     }
     drwav_uninit(&wav);
+    // Validate the actual WAV container size (includes RIFF/fmt/fact/data header
+    // overhead that the pre-write check did not account for).
+    try {
+        validateAudioFileSizeAgainstMaxValue(pDataSize);
+    } catch (...) {
+        drwav_free(*ppData, nullptr);
+        *ppData = nullptr;
+        pDataSize = 0;
+        throw;
+    }
     timer.stop(OUTPUT_PREPARATION);
     auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);

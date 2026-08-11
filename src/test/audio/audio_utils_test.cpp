@@ -497,6 +497,26 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputAcceptsSmallSpeech) {
     }
 }
 
+TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsWhenHeaderPushesOverLimit) {
+    // The cap is set to exactly the raw PCM byte count.  The WAV container adds
+    // RIFF/fmt/fact/data header overhead on top of that, so the final pDataSize
+    // returned by drwav must exceed the limit and be rejected — even though the
+    // raw PCM payload alone would have been accepted.
+    constexpr uint32_t sampleRate = 24000;
+    constexpr uint16_t bitsPerSample = 32;
+    constexpr size_t speechSize = 100;
+    constexpr size_t rawPcmBytes = speechSize * (bitsPerSample / 8);  // 400 bytes
+    // Cap == raw PCM size; the WAV container will be larger, so it must be rejected.
+    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(rawPcmBytes).c_str());
+    std::vector<float> waveform(speechSize, 0.0f);
+    void* ppData = nullptr;
+    size_t pDataSize = 0;
+    EXPECT_THROW(
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, speechSize, waveform.data()),
+        std::runtime_error);
+    UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+}
+
 TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsZeroBitsPerSample) {
     // bitsPerSample == 0 means bytesPerSample == 0 which would cause a divide-
     // by-zero or meaningless size check — must be rejected.

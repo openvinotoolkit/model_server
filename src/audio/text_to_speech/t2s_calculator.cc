@@ -138,13 +138,14 @@ public:
                         return absl::InvalidArgumentError("speed field is not a number");
                     }
                     speed = speedIt->value.GetFloat();
-                    const auto& calcOptions = cc->Options<T2sCalculatorOptions>();
-                    const float speedMin = calcOptions.speed_min();
-                    const float speedMax = calcOptions.speed_max();
-                    if (speed < speedMin || speed > speedMax) {
-                        return absl::InvalidArgumentError(
-                            absl::StrCat("speed must be between ", speedMin, " and ", speedMax));
-                    }
+                }
+                // Validate speed bounds regardless of whether it came from request or default
+                const auto& calcOptions = cc->Options<T2sCalculatorOptions>();
+                const float speedMin = calcOptions.speed_min();
+                const float speedMax = calcOptions.speed_max();
+                if (speed < speedMin || speed > speedMax) {
+                    return absl::InvalidArgumentError(
+                        absl::StrCat("speed must be between speed_min (", speedMin, ") and speed_max (", speedMax, ")"));
                 }
                 ov::genai::Text2SpeechDecodedResults generatedSpeech;
                 std::unique_lock lock(pipe->ttsPipelineMutex);
