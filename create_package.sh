@@ -25,7 +25,9 @@ mkdir -vp /ovms_release/lib
 # Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
 if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
-find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -name "libcustom_node*" ! -name "libazure-*" ! -path "*/_solib_k8/*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -vP {} /ovms_release/lib/ \;
+find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -name "libazure-*" ! -name "pyovms.so" ! -path "*/_solib_k8/*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -vP {} /ovms_release/lib/ \;
+# Copy pyovms.so directly as a file (not symlink) to avoid broken Bazel cache paths
+find /ovms/bazel-out/k8-*/bin/src/python/binding -name 'pyovms.so' -type f -exec cp -v {} /ovms_release/lib/ \;
 
 # Copy Azure SDK libs directly from the CMake install prefix so that the
 # unversioned .so files are local relative symlinks (not absolute Bazel cache
