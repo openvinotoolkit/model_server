@@ -226,6 +226,13 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, u
     if (waveformPtr == nullptr && speechSize > 0) {
         throw std::runtime_error("Audio waveform pointer is null");
     }
+    // Guard against oversized synthesized audio buffers — mirrors the decode paths
+    // (readWav / readMp3) which both call validateAudioFileSizeAgainstMaxValue.
+    const size_t bytesPerSample = bitsPerSample / 8;
+    if (bytesPerSample == 0 || speechSize > std::numeric_limits<size_t>::max() / bytesPerSample) {
+        throw std::runtime_error("Synthesized audio buffer size overflows maximum representable value");
+    }
+    validateAudioFileSizeAgainstMaxValue(speechSize * bytesPerSample);
     enum : unsigned int {
         OUTPUT_PREPARATION,
         TIMER_END
