@@ -1247,6 +1247,51 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsO
     ASSERT_NE(serialized.find("\"text\":"), std::string::npos) << serialized;
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesEchoesTextFormat) {
+        std::string json = R"({
+        "model": "llama",
+        "input": "Say hello world",
+        "max_output_tokens": 10,
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "IntBox",
+                "strict": true,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "value": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": ["value"]
+                }
+            }
+        }
+    })";
+        doc.Parse(json.c_str());
+        ASSERT_FALSE(doc.HasParseError());
+
+        auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+        ov::genai::EncodedResults results;
+        ov::Tensor outputIds = tokenizer->encode("{\"value\":1}", ov::genai::add_special_tokens(false)).input_ids;
+        ASSERT_EQ(outputIds.get_shape().size(), 2);
+        ASSERT_EQ(outputIds.get_shape()[0], 1);
+        ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
+        int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
+        results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+
+        std::string serialized = apiHandler->serializeUnaryResponse(results);
+        ASSERT_NE(serialized.find("\"text\":{\"format\":{\"type\":\"json_schema\""), std::string::npos) << serialized;
+        ASSERT_NE(serialized.find("\"name\":\"IntBox\""), std::string::npos) << serialized;
+        ASSERT_NE(serialized.find("\"strict\":true"), std::string::npos) << serialized;
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsReasoningOutputItem) {
     std::string json = R"({
     "model": "llama",
@@ -2637,6 +2682,91 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesNUnaryIsAccepted) {
     std::optional<uint32_t> maxModelLength;
     std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesTextFormatJsonSchemaSetsResponseFormat) {
+        std::string json = R"({
+        "model": "llama",
+        "input": "valid prompt",
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "IntBox",
+                "strict": true,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "value": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": ["value"]
+                }
+            }
+        }
+    })";
+        doc.Parse(json.c_str());
+        ASSERT_FALSE(doc.HasParseError());
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+        ASSERT_TRUE(apiHandler->getResponseFormat().has_value());
+
+        std::string expectedResponseFormat = R"({"type":"structural_tag","format":{"type":"json_schema","json_schema":{"name":"IntBox","strict":true,"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}}})";
+        rapidjson::Document expectedDoc;
+        expectedDoc.Parse(expectedResponseFormat.c_str());
+        ASSERT_FALSE(expectedDoc.HasParseError());
+
+        rapidjson::Document actualDoc;
+        actualDoc.Parse(apiHandler->getResponseFormat().value().c_str());
+        ASSERT_FALSE(actualDoc.HasParseError());
+        EXPECT_TRUE(expectedDoc == actualDoc);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesTextFormatAndResponseFormatConflictFails) {
+        std::string json = R"({
+        "model": "llama",
+        "input": "valid prompt",
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "a": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["a"]
+                }
+            }
+        },
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "IntBox",
+                "strict": true,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "value": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": ["value"]
+                }
+            }
+        }
+    })";
+        doc.Parse(json.c_str());
+        ASSERT_FALSE(doc.HasParseError());
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("Provide only one of response_format or text.format"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesFlatFunctionToolsSucceeds) {
