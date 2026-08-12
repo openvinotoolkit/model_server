@@ -400,5 +400,3 @@ TEST_F(StressCapiConfigChanges, AddModelDuringGetModelStatusLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
-
-
