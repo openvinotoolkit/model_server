@@ -28,6 +28,10 @@ namespace ovms {
 
 struct RerankServable : SidepacketServable {
     bool addBosToken = true;
+    bool isStatic() const {
+        return modelIsStatic;
+    }
+
     RerankServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) :
         SidepacketServable(modelDir, targetDevice, pluginConfig, graphPath) {
         std::filesystem::path tokenizerConfigPath = (parsedModelsPath / "tokenizer_config.json");
@@ -50,6 +54,12 @@ struct RerankServable : SidepacketServable {
             addBosToken = false;
         }
     }
+
+protected:
+    std::shared_ptr<ov::Model> applyPrePostProcessing(ov::Core& core, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) override;
+
+private:
+    bool modelIsStatic = false;
 };
 
 using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<RerankServable>>;

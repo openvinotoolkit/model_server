@@ -40,6 +40,7 @@
 #include "src/rerank/rerank_calculator_ov.pb.h"
 #include "src/rerank/rerank_utils.hpp"
 #include "rerank_servable.hpp"
+#include "../genai_npu_common.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../executingstreamidguard.hpp"
 #include "../tokenize/tokenize_parser.hpp"
@@ -146,6 +147,10 @@ public:
         return std::vector<int64_t>(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
     }
 
+    std::pair<ov::Tensor, ov::Tensor> PadInputsToStaticLength(const ov::Tensor& input_ids, const ov::Tensor& attention_mask) const {
+        return ovms::padInputIdsAndMaskToStaticLength(input_ids, attention_mask, this->max_position_embeddings, this->pad_token);
+    }
+
     std::pair<ov::Tensor, ov::Tensor> PrepareInputsForRerankModel(const RerankHandler& handler, std::vector<size_t>& chunk_mapping) const {
         // Validate batch size before tokenizing
         if (handler.getDocumentsList().size() > this->max_allowed_chunks)
@@ -166,6 +171,9 @@ public:
                 std::ostringstream msg;
                 msg << "The requests length of " << tokens.input_ids.get_shape()[1] << " tokens exceeds the model context of " << max_position_embeddings;
                 throw std::runtime_error(msg.str());
+            }
+            if (rerank_session->isStatic()) {
+                return PadInputsToStaticLength(tokens.input_ids, tokens.attention_mask);
             }
             return std::make_pair(tokens.input_ids, tokens.attention_mask);
         }
@@ -244,10 +252,64 @@ public:
             std::fill(attention_mask_data, attention_mask_data + 1 + query_tokens.size() + 2 + pad_token_index + 1, int64_t(1));
         }
 
+        if (rerank_session->isStatic()) {
+            return PadInputsToStaticLength(input_ids, attention_mask);
+        }
         return std::make_pair(input_ids, attention_mask);
     }
 
     std::vector<float> ComputeScoresUsingRerankModel(ov::Tensor input_ids, ov::Tensor attention_mask, std::optional<ov::Tensor> typeIds, const std::vector<size_t>& chunkMapping, size_t actual_batch_size) const {
+        if (rerank_session->isStatic() && input_ids.get_shape()[0] > 1) {
+            std::vector<float> scores;
+            scores.resize(actual_batch_size, 0);
+            const size_t seqLen = input_ids.get_shape()[1];
+            const size_t typeIdsSeqLen = typeIds.has_value() ? typeIds->get_shape()[1] : 0;
+
+            for (size_t i = 0; i < input_ids.get_shape()[0]; ++i) {
+                ModelMetricReporter tmp(nullptr, nullptr, "example_pipeline_name", 1);
+                auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(rerank_session->getInferRequestsQueue(), tmp);
+                ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
+
+                std::vector<uint64_t> begin{static_cast<uint64_t>(i), 0};
+                std::vector<uint64_t> end{static_cast<uint64_t>(i + 1), static_cast<uint64_t>(seqLen)};
+
+                ov::Tensor oneBatchInputIds = ov::Tensor(input_ids, begin, end);
+                ov::Tensor oneBatchAttentionMask = ov::Tensor(attention_mask, begin, end);
+
+                inferRequest.set_tensor(RERANK_MODEL_INPUT_IDS_NAME, oneBatchInputIds);
+                inferRequest.set_tensor(RERANK_MODEL_ATTENTION_MASK_NAME, oneBatchAttentionMask);
+
+                if (typeIds.has_value()) {
+                    std::vector<uint64_t> typeIdsEnd{static_cast<uint64_t>(i + 1), static_cast<uint64_t>(typeIdsSeqLen)};
+                    ov::Tensor oneBatchTypeIds = ov::Tensor(typeIds.value(), begin, typeIdsEnd);
+                    inferRequest.set_tensor(RERANK_MODEL_TOKEN_TYPE_IDS_NAME, oneBatchTypeIds);
+                }
+
+                inferRequest.start_async();
+                inferRequest.wait();
+
+                auto logits = inferRequest.get_tensor("logits");
+                if (logits.get_shape().size() != 2) {
+                    throw std::runtime_error("Logits should be 2D tensor");
+                }
+                if (logits.get_shape()[0] != 1) {
+                    throw std::runtime_error("Batch size mismatch in static rerank path");
+                }
+
+                size_t score_index = chunkMapping[i];
+                if (score_index >= actual_batch_size) {
+                    throw std::runtime_error("score_index out of bounds");
+                }
+
+                size_t logits_dim = logits.get_shape()[1];
+                float logit = logits_dim > 1 ? reinterpret_cast<float*>(logits.data())[1] : reinterpret_cast<float*>(logits.data())[0];
+                float score = 1 / (1 + std::exp(-logit));
+                scores[score_index] = std::max(scores[score_index], score);
+            }
+
+            return scores;
+        }
+
         ModelMetricReporter tmp(nullptr, nullptr, "example_pipeline_name", 1);
         auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(rerank_session->getInferRequestsQueue(), tmp);
         ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();

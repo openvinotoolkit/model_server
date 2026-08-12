@@ -20,7 +20,10 @@ load("//:common_settings.bzl", "ovms_cc_library")
 ovms_cc_library(
     name = "rerank_servable",
     hdrs = ["rerank_servable.hpp"],
+    srcs = ["rerank_servable.cpp"],
     deps = ["//src:sidepacket_servable",
+        "//src:genai_npu_common",
+        "//src:libovmslogging",
             "//src/port:rapidjson_document",
             "//src/port:rapidjson_istreamwrapper",
             "//src/port:rapidjson_error",],
@@ -53,6 +56,7 @@ ovms_cc_library(
         "rerank_calculator_ov_cc_proto",
         ":rerank_api_handler",
         ":rerank_servable",
+        "//src:genai_npu_common",
         "//src:model_metric_reporter",
         "//src:executingstreamidguard",
         "//src:libovms_execution_context",

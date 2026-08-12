@@ -37,6 +37,7 @@
 #include "../executingstreamidguard.hpp"
 #include "../model_metric_reporter.hpp"
 #include "embeddings_api.hpp"
+#include "../genai_npu_common.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
 #include "embeddings_servable.hpp"
 
@@ -249,6 +250,20 @@ public:
                     typeIds = ov::Tensor{ov::element::i64, ov::Shape{receivedBatchSize, tokenCountOfLongestDocument}};
                     int64_t* tokenTypeIidsStart = reinterpret_cast<int64_t*>(typeIds.data());
                     std::fill(tokenTypeIidsStart, tokenTypeIidsStart + receivedBatchSize * tokenCountOfLongestDocument, 1);
+                }
+
+                if (embeddings_session->isStatic()) {
+                    auto padded = ovms::padInputIdsAndMaskToStaticLength(
+                        tokens.input_ids,
+                        tokens.attention_mask,
+                        maxContextLength,
+                        embeddings_session->getPadToken().value_or(0));
+                    tokens.input_ids = std::move(padded.first);
+                    tokens.attention_mask = std::move(padded.second);
+                    if (embeddings_session->getNumberOfModelInputs() == 3) {
+                        typeIds = ov::Tensor{ov::element::i64, tokens.input_ids.get_shape()};
+                        std::fill_n(typeIds.data<int64_t>(), typeIds.get_size(), 1);
+                    }
                 }
             } else {
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings input is of not supported type");

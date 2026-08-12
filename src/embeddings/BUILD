@@ -38,6 +38,7 @@ ovms_cc_library(
     deps = [
         "//src:libovmslogging",
         "//src:sidepacket_servable",
+        "//src:genai_npu_common",
         "//third_party:openvino",
         "//src/port:rapidjson_istreamwrapper",
         "//src/port:rapidjson_error",
@@ -84,6 +85,7 @@ ovms_cc_library(
         "embeddings_calculator_ov_cc_proto",
         ":embeddings_servable",
         "//src:sidepacket_servable",
+        "//src:genai_npu_common",
         "//src:model_metric_reporter",
         "//src:executingstreamidguard",
         "//src:libovms_execution_context",

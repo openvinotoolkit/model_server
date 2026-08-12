@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "embeddings_servable.hpp"
 
+#include "../genai_npu_common.hpp"
+
 #include <limits>
 #include <map>
 #include <utility>
@@ -319,16 +321,6 @@ static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> 
     return std::make_shared<op::v8::Gather>(last_hidden_state_node, subtract, axis_1, 1);
 }
 
-template <typename T>
-bool hasTokenTypeIdsInput(const T& inputs) {
-    for (const auto& input : inputs) {
-        if (input.get_any_name() == "token_type_ids") {
-            return true;
-        }
-    }
-    return false;
-}
-
 void reshapeModel(std::shared_ptr<Model>& model,
     const TextEmbeddingPipeline::Config& config,
     std::optional<size_t> max_position_embeddings) {
@@ -356,13 +348,7 @@ void reshapeModel(std::shared_ptr<Model>& model,
         }
     }
 
-    std::map<std::string, ov::PartialShape> input_name_to_shape;
-    input_name_to_shape["input_ids"] = target_shape;
-    input_name_to_shape["attention_mask"] = target_shape;
-
-    if (hasTokenTypeIdsInput(model->inputs())) {
-        input_name_to_shape["token_type_ids"] = target_shape;
-    }
+    auto input_name_to_shape = ovms::buildTextInputShapeMap(model->inputs(), target_shape);
 
     model->reshape(input_name_to_shape);
 }

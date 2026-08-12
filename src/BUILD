@@ -3032,3 +3032,11 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
+
+ovms_cc_library(
+    name = "genai_npu_common",
+    hdrs = ["genai_npu_common.hpp"],
+    deps = ["//third_party:openvino"],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
