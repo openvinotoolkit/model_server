@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package mediapipe;
+
+import "mediapipe/framework/calculator.proto";
+
+message OVYoloXTensorsToDetectionsCalculatorOptions {
+  extend .mediapipe.CalculatorOptions {
+    optional OVYoloXTensorsToDetectionsCalculatorOptions ext = 211376658;
+  }
+
+  // Minimum confidence required for a detection.
+  optional float conf_thresh = 1 [default = 0.10];
+
+  // Input resolution of the YOLOX model.
+  optional float input_size = 3 [default = 416.0];
+}
