@@ -66,7 +66,7 @@ void OnyxToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameter
     if (paramIt != this->toolsParametersTypeMap.end()) {
         auto paramJt = paramIt->second.find(currentParameterName);
         if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::BOOLEAN)) {
-            std::transform(parameterValueAsString.begin(), parameterValueAsString.end(), parameterValueAsString.begin(), ::tolower);
+            normalizeBooleanString(parameterValueAsString);
         }
     }
     temp.Parse(parameterValueAsString.c_str());

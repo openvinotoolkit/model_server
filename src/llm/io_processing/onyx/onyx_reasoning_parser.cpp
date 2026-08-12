@@ -100,12 +100,6 @@ void OnyxReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<in
 }
 
 std::optional<rapidjson::Document> OnyxReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason /*finishReason*/) {
-    // TODO @atobiszei we need to stream between recipient=self & <eom>
-    // TODO: streaming support is a first draft. It only forwards the chunk as
-    // reasoning_content once we've seen the "to=self" start tag; stripping the
-    // generic final-answer envelope (Case 3 above) in streaming mode is not
-    // implemented yet and needs its own design (the envelope prefix/suffix can
-    // straddle multiple chunks).
     if (chunk.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for OnyxReasoningParser");
         return std::nullopt;
