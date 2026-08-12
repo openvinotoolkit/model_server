@@ -250,7 +250,7 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, u
 
     auto status = drwav_init_memory_write(&wav, ppData, &pDataSize, &format, nullptr);
     if (status == DRWAV_FALSE) {
-        throw std::runtime_error("Failed to write all frames");
+        throw std::runtime_error("Failed to initialize WAV memory writer");
     }
     drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, totalSamples, waveformPtr);
     // Finalize the WAV container before any cleanup path; drwav_uninit is safe

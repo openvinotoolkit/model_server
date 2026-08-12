@@ -88,7 +88,7 @@ public:
         const float speedMax = calcOptions.speed_max();
         // !(speedMin <= speedMax) is true for inverted ranges and for any NaN bound.
         if (!(speedMin <= speedMax)) {
-            return absl::InternalError(
+            return absl::InvalidArgumentError(
                 absl::StrCat("Invalid T2sCalculatorOptions: speed_min (", speedMin, ") must be <= speed_max (", speedMax, ")"));
         }
         return absl::OkStatus();

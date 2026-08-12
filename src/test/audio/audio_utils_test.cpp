@@ -507,7 +507,7 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsWhenHeaderPushesOverLi
     constexpr size_t speechSize = 100;
     constexpr size_t rawPcmBytes = speechSize * (bitsPerSample / 8);  // 400 bytes
     // Cap == raw PCM size; the WAV container will be larger, so it must be rejected.
-    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(rawPcmBytes).c_str());
+    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(rawPcmBytes));
     std::vector<float> waveform(speechSize, 0.0f);
     void* ppData = nullptr;
     size_t pDataSize = 0;

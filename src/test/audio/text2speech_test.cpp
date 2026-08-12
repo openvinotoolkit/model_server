@@ -190,6 +190,60 @@ TEST_F(Text2SpeechHttpTest, speedAtDefaultUpperBoundAccepted) {
         ovms::StatusCode::OK);
 }
 
+class Text2SpeechHttpCustomBoundsTest : public V3HttpTest {
+protected:
+    std::string modelName = "text2speech";
+    std::string endpoint = "/v1/audio/speech";
+    static std::unique_ptr<std::thread> t;
+
+public:
+    static void SetUpTestSuite() {
+        std::string port = "9174";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/audio/config_tts_custom_speed_bounds.json");
+        SetUpSuite(port, configPath, t);
+    }
+
+    void SetUp() {
+        V3HttpTest::SetUp();
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
+    }
+};
+std::unique_ptr<std::thread> Text2SpeechHttpCustomBoundsTest::t;
+
+TEST_F(Text2SpeechHttpCustomBoundsTest, speedBelowCustomMinRejected) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "hello world",
+            "voice": "af_alloy",
+            "speed": 0.25
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(Text2SpeechHttpCustomBoundsTest, speedAtCustomLowerBoundAccepted) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "hello world",
+            "voice": "af_alloy",
+            "speed": 0.5
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
 class Text2SpeechConfigTest : public ::testing::Test {};
 
 namespace {
@@ -433,7 +487,7 @@ TEST_F(Text2SpeechConfigTest, InvertedSpeedBoundsRejected) {
     }
     )";
 
-    ASSERT_NE(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::OK);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 TEST_F(Text2SpeechConfigTest, EqualSpeedBoundsAccepted) {
