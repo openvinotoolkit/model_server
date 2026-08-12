@@ -45,6 +45,110 @@ namespace ovms {
 static constexpr const char* OUTPUT_ITEM_ID = "msg-0";
 static constexpr const char* REASONING_ITEM_ID = "rs-0";
 
+rapidjson::Document buildResponsesTextFormatForEcho(const rapidjson::Document& doc) {
+    rapidjson::Document formatDoc;
+    formatDoc.SetObject();
+    auto& alloc = formatDoc.GetAllocator();
+
+    auto textIt = doc.FindMember("text");
+    if (textIt != doc.MemberEnd() && textIt->value.IsObject()) {
+        auto formatIt = textIt->value.GetObject().FindMember("format");
+        if (formatIt != textIt->value.GetObject().MemberEnd() && formatIt->value.IsObject()) {
+            formatDoc.CopyFrom(formatIt->value, alloc);
+            return formatDoc;
+        }
+    }
+
+    auto responseFormatIt = doc.FindMember("response_format");
+    if (responseFormatIt != doc.MemberEnd() && responseFormatIt->value.IsObject()) {
+        const auto& responseFormat = responseFormatIt->value.GetObject();
+        auto typeIt = responseFormat.FindMember("type");
+        if (typeIt != responseFormat.MemberEnd() && typeIt->value.IsString()) {
+            const std::string responseFormatType = typeIt->value.GetString();
+            if (responseFormatType == "json_schema") {
+                formatDoc.AddMember("type", rapidjson::Value("json_schema", alloc), alloc);
+                auto jsonSchemaIt = responseFormat.FindMember("json_schema");
+                if (jsonSchemaIt != responseFormat.MemberEnd() && jsonSchemaIt->value.IsObject()) {
+                    for (auto it = jsonSchemaIt->value.MemberBegin(); it != jsonSchemaIt->value.MemberEnd(); ++it) {
+                        rapidjson::Value key(it->name, alloc);
+                        rapidjson::Value value(it->value, alloc);
+                        formatDoc.AddMember(key, value, alloc);
+                    }
+                    return formatDoc;
+                }
+            }
+        }
+        formatDoc.CopyFrom(responseFormatIt->value, alloc);
+        return formatDoc;
+    }
+
+    formatDoc.AddMember("type", rapidjson::Value("text", alloc), alloc);
+    return formatDoc;
+}
+
+absl::Status injectResponseFormatFromResponsesTextFormat(rapidjson::Document& doc) {
+    auto responseFormatIt = doc.FindMember("response_format");
+    const bool responseFormatProvided =
+        responseFormatIt != doc.MemberEnd() && !responseFormatIt->value.IsNull();
+
+    auto textIt = doc.FindMember("text");
+    if (textIt == doc.MemberEnd() || textIt->value.IsNull()) {
+        return absl::OkStatus();
+    }
+    if (!textIt->value.IsObject()) {
+        return absl::InvalidArgumentError("text is not an object");
+    }
+    const auto textObj = textIt->value.GetObject();
+    auto formatIt = textObj.FindMember("format");
+    if (formatIt == textObj.MemberEnd() || formatIt->value.IsNull()) {
+        return absl::OkStatus();
+    }
+    if (!formatIt->value.IsObject()) {
+        return absl::InvalidArgumentError("text.format is not an object");
+    }
+    if (responseFormatProvided) {
+        return absl::InvalidArgumentError("Provide only one of response_format or text.format");
+    }
+
+    const auto formatObj = formatIt->value.GetObject();
+    auto typeIt = formatObj.FindMember("type");
+    if (typeIt == formatObj.MemberEnd() || !typeIt->value.IsString()) {
+        return absl::InvalidArgumentError("text.format.type is not a valid string");
+    }
+
+    const std::string formatType = typeIt->value.GetString();
+    if (formatType == "text") {
+        return absl::OkStatus();
+    }
+
+    rapidjson::Value normalizedFormat(rapidjson::kObjectType);
+    auto& allocator = doc.GetAllocator();
+
+    if (formatType == "json_schema" && !formatObj.HasMember("json_schema")) {
+        normalizedFormat.AddMember("type", rapidjson::Value("json_schema", allocator), allocator);
+        rapidjson::Value jsonSchema(rapidjson::kObjectType);
+        for (auto it = formatObj.MemberBegin(); it != formatObj.MemberEnd(); ++it) {
+            if (!it->name.IsString() || std::string(it->name.GetString()) == "type") {
+                continue;
+            }
+            rapidjson::Value key(it->name, allocator);
+            rapidjson::Value value(it->value, allocator);
+            jsonSchema.AddMember(key, value, allocator);
+        }
+        normalizedFormat.AddMember("json_schema", jsonSchema, allocator);
+    } else {
+        normalizedFormat.CopyFrom(formatIt->value, allocator);
+    }
+
+    if (responseFormatIt != doc.MemberEnd()) {
+        responseFormatIt->value.CopyFrom(normalizedFormat, allocator);
+    } else {
+        rapidjson::Value key("response_format", allocator);
+        doc.AddMember(key, normalizedFormat, allocator);
+    }
+    return absl::OkStatus();
+}
+
 static std::string joinServerSideEvents(const std::vector<std::string>& events) {
     if (events.empty()) {
         return "";
@@ -761,6 +865,11 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         return absl::InvalidArgumentError("max_output_tokens value should be greater than 0");
     }
 
+    auto textFormatStatus = injectResponseFormatFromResponsesTextFormat(doc);
+    if (!textFormatStatus.ok()) {
+        return textFormatStatus;
+    }
+
     return parseResponseFormat();
 }
 
@@ -846,13 +955,12 @@ void OpenAIResponsesHandler::serializeCommonResponseParameters(Writer<StringBuff
         writer.String("temperature");
         writer.Double(static_cast<double>(request.temperature.value()));
     }
+
+    rapidjson::Document textFormat = buildResponsesTextFormatForEcho(doc);
     writer.String("text");
     writer.StartObject();
     writer.String("format");
-    writer.StartObject();
-    writer.String("type");
-    writer.String("text");
-    writer.EndObject();
+    textFormat.Accept(writer);
     writer.EndObject();
     serializeToolChoice(writer);
     serializeTools(writer);
