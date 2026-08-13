@@ -16,6 +16,7 @@
 #include "kfs_utils.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <map>
 #include <memory>
@@ -323,11 +324,28 @@ Status buildShapeFromStringTensorRequest(const ::KFSRequest::InferInputTensor& s
 
 Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
     std::vector<uint32_t> stringSizes;
-    uint32_t totalStringsLength = 0;
-    while (totalStringsLength + stringSizes.size() * sizeof(uint32_t) + sizeof(uint32_t) <= buffer->size()) {
-        uint32_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + totalStringsLength + stringSizes.size() * sizeof(uint32_t)));
+    size_t totalStringsLength = 0;
+    while (true) {
+        const size_t headersLength = stringSizes.size() * sizeof(uint32_t);
+        if (headersLength > buffer->size()) {
+            break;
+        }
+        if (totalStringsLength > buffer->size() - headersLength) {
+            break;
+        }
+        const size_t currentOffset = totalStringsLength + headersLength;
+        if (buffer->size() - currentOffset < sizeof(uint32_t)) {
+            break;
+        }
+        uint32_t inputSize = 0;
+        std::memcpy(&inputSize, buffer->data() + currentOffset, sizeof(inputSize));
+        const size_t remainingStringBytes = buffer->size() - currentOffset - sizeof(uint32_t);
+        if (static_cast<size_t>(inputSize) > remainingStringBytes) {
+            SPDLOG_DEBUG("Input string format conversion failed");
+            return StatusCode::INVALID_STRING_INPUT;
+        }
         stringSizes.push_back(inputSize);
-        totalStringsLength += inputSize;
+        totalStringsLength += static_cast<size_t>(inputSize);
     }
     size_t batchSize = stringSizes.size();
     if ((totalStringsLength + batchSize * sizeof(uint32_t)) != buffer->size()) {
@@ -343,7 +361,12 @@ Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest
     std::string* data = tensor.data<std::string>();
     size_t tensorStringsOffset = 0;
     for (size_t i = 0; i < stringSizes.size(); i++) {
-        data[i].assign(reinterpret_cast<const char*>(buffer->data() + (i + 1) * sizeof(uint32_t) + tensorStringsOffset), stringSizes[i]);
+        const size_t sourceOffset = (i + 1) * sizeof(uint32_t) + tensorStringsOffset;
+        if (sourceOffset > buffer->size() || static_cast<size_t>(stringSizes[i]) > buffer->size() - sourceOffset) {
+            SPDLOG_DEBUG("Input string format conversion failed");
+            return StatusCode::INVALID_STRING_INPUT;
+        }
+        data[i].assign(reinterpret_cast<const char*>(buffer->data() + sourceOffset), stringSizes[i]);
         tensorStringsOffset += stringSizes[i];
     }
     return StatusCode::OK;

@@ -72,13 +72,24 @@ shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const TensorInfo&
 
 ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
+    if (images.empty()) {
+        return ov::Tensor();
+    }
     ov::Shape shape = getShapeFromImages(images, tensorInfo);
     ov::element::Type precision = tensorInfo.getOvPrecision();
     ov::Tensor tensor(precision, shape);
     char* ptr = (char*)tensor.data();
+    const size_t firstImageSizeBytes = images[0].total() * images[0].elemSize();
     for (cv::Mat image : images) {
-        memcpy(ptr, (char*)image.data, image.total() * image.elemSize());
-        ptr += (image.total() * image.elemSize());
+        const size_t imageSizeBytes = image.total() * image.elemSize();
+        if (imageSizeBytes != firstImageSizeBytes) {
+            SPDLOG_DEBUG("Image conversion failed due to inconsistent image size in one batch. Expected bytes: {} current bytes: {}",
+                firstImageSizeBytes,
+                imageSizeBytes);
+            return ov::Tensor();
+        }
+        memcpy(ptr, (char*)image.data, imageSizeBytes);
+        ptr += imageSizeBytes;
     }
     return tensor;
 }

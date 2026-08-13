@@ -181,6 +181,30 @@ TYPED_TEST(NativeFileInputConversionTest, positive_batch_size_2) {
     }
 }
 
+TYPED_TEST(NativeFileInputConversionTest, negative_mixed_channels_with_ranged_channel_dimension) {
+    TypeParam mixedChannelsRequestTensor;
+
+    size_t rgbFilesize;
+    std::unique_ptr<char[]> rgbImageBytes;
+    readRgbJpg(rgbFilesize, rgbImageBytes);
+
+    std::ifstream grayscaleDataFile;
+    grayscaleDataFile.open(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/grayscale.jpg"), std::ios::binary);
+    grayscaleDataFile.seekg(0, std::ios::end);
+    size_t grayscaleFilesize = grayscaleDataFile.tellg();
+    grayscaleDataFile.seekg(0);
+    std::unique_ptr<char[]> grayscaleImageBytes(new char[grayscaleFilesize]);
+    grayscaleDataFile.read(grayscaleImageBytes.get(), grayscaleFilesize);
+
+    mixedChannelsRequestTensor.mutable_contents()->add_bytes_contents(rgbImageBytes.get(), rgbFilesize);
+    mixedChannelsRequestTensor.mutable_contents()->add_bytes_contents(grayscaleImageBytes.get(), grayscaleFilesize);
+
+    ov::Tensor tensor;
+    auto tensorInfo = std::make_shared<const TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, {1, 3}}, Layout{"NHWC"});
+
+    ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(mixedChannelsRequestTensor, tensor, *tensorInfo, nullptr), ovms::StatusCode::INVALID_NO_OF_CHANNELS);
+}
+
 TYPED_TEST(NativeFileInputConversionTest, positive_precision_changed) {
     uint8_t rgb_precision_changed_expected_tensor[] = {0x24, 0x00, 0x00, 0x00, 0x1b, 0x00, 0x00, 0x00, 0xed, 0x00, 0x00, 0x00};
 
@@ -594,6 +618,28 @@ TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_invalidFormat
     ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, *tensorInfo, &this->buffer), ovms::StatusCode::INVALID_BATCH_SIZE);
 }
 
+TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_mixedChannelsWithRangedChannelDimension) {
+    this->requestTensor.mutable_shape()->Clear();
+    this->requestTensor.mutable_shape()->Add(2);
+
+    std::ifstream grayscaleDataFile;
+    grayscaleDataFile.open(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/grayscale.jpg"), std::ios::binary);
+    grayscaleDataFile.seekg(0, std::ios::end);
+    size_t grayscaleFilesize = grayscaleDataFile.tellg();
+    grayscaleDataFile.seekg(0);
+    std::unique_ptr<char[]> grayscaleImageBytes(new char[grayscaleFilesize]);
+    grayscaleDataFile.read(grayscaleImageBytes.get(), grayscaleFilesize);
+
+    uint32_t grayscaleSize = static_cast<uint32_t>(grayscaleFilesize);
+    this->buffer.append(reinterpret_cast<const char*>(&grayscaleSize), sizeof(grayscaleSize));
+    this->buffer.append(grayscaleImageBytes.get(), grayscaleFilesize);
+
+    ov::Tensor tensor;
+    auto tensorInfo = std::make_shared<const TensorInfo>("", ovms::Precision::U8, ovms::Shape{2, 1, 1, {1, 3}}, Layout{"NHWC"});
+
+    ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, *tensorInfo, &this->buffer), ovms::StatusCode::INVALID_NO_OF_CHANNELS);
+}
+
 template <typename TensorType>
 class StringInputsConversionTest : public ::testing::Test {
 public:
@@ -803,6 +849,30 @@ TEST(StringInputsConversionKFSTest, rawInputContents_native_ov_string_shape_mism
         std::memcpy(rawInputContents.data() + offset, s.data(), s.size());
         offset += s.size();
     }
+    ov::Tensor tensor;
+    ASSERT_EQ(convertStringRequestToOVTensor(requestTensor, tensor, &rawInputContents), ovms::StatusCode::INVALID_STRING_INPUT);
+}
+
+TEST(StringInputsConversionKFSTest, rawInputContents_native_ov_string_overflowed_length_prefixes_invalid) {
+    // Malformed 20-byte BYTES payload where a wrapped length accumulator could pass
+    // consistency checks and produce an out-of-bounds read during string assignment.
+    ::KFSRequest::InferInputTensor requestTensor;
+    requestTensor.set_datatype("BYTES");
+
+    std::string rawInputContents;
+    rawInputContents.resize(5 * sizeof(uint32_t));
+    uint32_t words[] = {
+        0x00000000u,
+        0x00000008u,
+        0x00000000u,
+        0x00000004u,
+        0xFFFFFFF8u};
+    size_t offset = 0;
+    for (uint32_t word : words) {
+        std::memcpy(rawInputContents.data() + offset, &word, sizeof(word));
+        offset += sizeof(word);
+    }
+
     ov::Tensor tensor;
     ASSERT_EQ(convertStringRequestToOVTensor(requestTensor, tensor, &rawInputContents), ovms::StatusCode::INVALID_STRING_INPUT);
 }

@@ -121,6 +121,14 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
             image = std::move(imageResized);
         }
 
+        if (firstImage != nullptr && image.channels() != firstImage->channels()) {
+            SPDLOG_DEBUG("Binary data sent to input: {} has mixed channel count within one batch. First image channels: {} current image channels: {}",
+                tensorInfo.getMappedName(),
+                firstImage->channels(),
+                image.channels());
+            return StatusCode::INVALID_NO_OF_CHANNELS;
+        }
+
         // if (i == 0 && src.contents().bytes_contents_size() > 1) {
         //     // Multiply src.string_val_size() * image resolution * precision size
         // }
