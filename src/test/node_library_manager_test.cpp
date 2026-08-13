@@ -16,6 +16,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <array>
+#include <vector>
+
 #include "../dags/custom_node_library_manager.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
@@ -107,6 +110,82 @@ TEST(NodeLibraryManagerTest, ErrorWhenLibraryPathNotEscaped) {
     CustomNodeLibraryManager manager;
     auto status = manager.loadLibrary("random_name", "/tmp/../my_dir/non_existing_library_file");
     EXPECT_EQ(status, StatusCode::PATH_INVALID);
+}
+
+TEST(NodeLibraryManagerTest, ModelZooObjectDetectionCapsAllOutputsToMaxOutputBatch) {
+    CustomNodeLibraryManager manager;
+    NodeLibrary library;
+    auto status = manager.loadLibrary("model_zoo_object_detection", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/libcustom_node_model_zoo_intel_object_detection.so"));
+    ASSERT_EQ(status, StatusCode::OK);
+    ASSERT_EQ(manager.getLibrary("model_zoo_object_detection", library), StatusCode::OK);
+
+    std::array<CustomNodeParam, 7> params = {{{"original_image_height", "4"},
+        {"original_image_width", "4"},
+        {"target_image_height", "2"},
+        {"target_image_width", "2"},
+        {"confidence_threshold", "0.5"},
+        {"max_output_batch", "2"},
+        {"buffer_queue_size", "2"}}};
+
+    void* customNodeLibraryInternalManager = nullptr;
+    ASSERT_EQ(library.initialize(&customNodeLibraryInternalManager, params.data(), params.size()), 0);
+
+    std::vector<float> imageData(1 * 3 * 4 * 4, 1.0f);
+    std::vector<uint64_t> imageDims{1, 3, 4, 4};
+    CustomNodeTensor imageTensor{
+        "image",
+        reinterpret_cast<uint8_t*>(imageData.data()),
+        static_cast<uint64_t>(imageData.size() * sizeof(float)),
+        imageDims.data(),
+        imageDims.size(),
+        FP32};
+
+    const uint64_t detectionsCount = 5;
+    const uint64_t featuresCount = 7;
+    std::vector<float> detectionData(detectionsCount * featuresCount, 0.0f);
+    for (size_t i = 0; i < detectionsCount; ++i) {
+        auto* detection = detectionData.data() + i * featuresCount;
+        detection[0] = 0.0f;   // image_id
+        detection[1] = 1.0f;   // label_id
+        detection[2] = 0.99f;  // confidence
+        detection[3] = 0.1f;
+        detection[4] = 0.1f;
+        detection[5] = 0.9f;
+        detection[6] = 0.9f;
+    }
+    std::vector<uint64_t> detectionDims{1, 1, detectionsCount, featuresCount};
+    CustomNodeTensor detectionTensor{
+        "detection",
+        reinterpret_cast<uint8_t*>(detectionData.data()),
+        static_cast<uint64_t>(detectionData.size() * sizeof(float)),
+        detectionDims.data(),
+        detectionDims.size(),
+        FP32};
+
+    std::array<CustomNodeTensor, 2> inputs{imageTensor, detectionTensor};
+    CustomNodeTensor* outputs = nullptr;
+    int outputsCount = 0;
+
+    ASSERT_EQ(library.execute(inputs.data(), inputs.size(), &outputs, &outputsCount, params.data(), params.size(), customNodeLibraryInternalManager), 0);
+    ASSERT_NE(outputs, nullptr);
+    ASSERT_EQ(outputsCount, 4);
+
+    constexpr uint64_t maxOutputBatch = 2;
+    for (int i = 0; i < outputsCount; ++i) {
+        ASSERT_NE(outputs[i].dims, nullptr);
+        ASSERT_GT(outputs[i].dimsCount, 0);
+        EXPECT_EQ(outputs[i].dims[0], maxOutputBatch);
+    }
+    EXPECT_EQ(outputs[1].dataBytes, sizeof(int32_t) * 4 * maxOutputBatch);  // coordinates
+    EXPECT_EQ(outputs[2].dataBytes, sizeof(float) * maxOutputBatch);         // confidences
+    EXPECT_EQ(outputs[3].dataBytes, sizeof(int32_t) * maxOutputBatch);       // label_ids
+
+    for (int i = 0; i < outputsCount; ++i) {
+        library.release(outputs[i].data, customNodeLibraryInternalManager);
+        library.release(outputs[i].dims, customNodeLibraryInternalManager);
+    }
+    library.release(outputs, customNodeLibraryInternalManager);
+    EXPECT_EQ(library.deinitialize(customNodeLibraryInternalManager), 0);
 }
 
 class ModelManagerNodeLibraryTest : public TestWithTempDir {};

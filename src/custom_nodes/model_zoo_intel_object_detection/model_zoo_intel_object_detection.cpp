@@ -355,7 +355,9 @@ DLL_PUBLIC int execute(const struct CustomNodeTensor* inputs, int inputsCount, s
     NODE_ASSERT(boxes.size() == confidences.size(), "boxes and confidences are not equal length");
     if (boxes.size() > maxOutputBatch) {
         boxes.resize(maxOutputBatch);
+        detections.resize(maxOutputBatch);
         confidences.resize(maxOutputBatch);
+        labelIds.resize(maxOutputBatch);
     }
 
     CustomNodeLibraryInternalManager* internalManager = static_cast<CustomNodeLibraryInternalManager*>(customNodeLibraryInternalManager);
