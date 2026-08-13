@@ -124,15 +124,18 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         object = sm[4];
 
         config.endpointOverride = Aws::String(host_name + ":" + host_port);
-        config.scheme = Aws::Http::Scheme::HTTP;
+        config.scheme = Aws::Http::Scheme::HTTPS;
     }
     if (s3_endpoint != nullptr) {
         std::string endpoint(s3_endpoint);
-        if (endpoint.rfind("http://") != std::string::npos) {
+        config.scheme = Aws::Http::Scheme::HTTPS;
+        if (endpoint.rfind("http://", 0) == 0) {
             endpoint = endpoint.substr(7);
+            config.scheme = Aws::Http::Scheme::HTTP;
+        } else if (endpoint.rfind("https://", 0) == 0) {
+            endpoint = endpoint.substr(8);
         }
         config.endpointOverride = Aws::String(endpoint.c_str());
-        config.scheme = Aws::Http::Scheme::HTTP;
     }
 
     if (!default_proxy.empty()) {
