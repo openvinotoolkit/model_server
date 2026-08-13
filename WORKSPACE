@@ -89,7 +89,7 @@ http_archive(
     build_file = "@mediapipe//third_party:zlib.BUILD",
     sha256 = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
     strip_prefix = "zlib-1.3.2",
-    url = "http://zlib.net/fossils/zlib-1.3.2.tar.gz",
+    url = "https://github.com/madler/zlib/archive/refs/tags/v1.3.2.tar.gz",
 )
 
 # RapidJSON
