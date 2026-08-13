@@ -1,8 +1,8 @@
 {
     "model_config_list": [
         {"config": {
-            "name": "yoloxt_float32",
-            "base_path": "yolox_tiny_float32"
+            "name": "yolox_tiny-fp16-ov",
+            "base_path": "yolox_tiny-fp16-ov"
     }
     }
     ],

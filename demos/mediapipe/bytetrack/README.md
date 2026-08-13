@@ -1,107 +1,121 @@
 # ByteTrack Demo Setup
 
-## 1. Download the YOLOX Tiny ONNX Model
-
-Download the YOLOX Tiny ONNX model from the official release:
-
-https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_tiny.onnx
+End-to-end demo: video source (webcam / file / RTSP) → OpenVINO Model Server (YOLOX Tiny+ ByteTrack) → output (screen / file / RTSP).
 
 ---
 
-## 2. Convert the ONNX Model to TensorFlow Lite
+## 1. Model Preparation
 
-Open a Google Colab notebook and:
+The detector stage of the pipeline runs on [OpenVINO](https://github.com/openvinotoolkit/openvino)-optimized YOLOX models. The following FP16 variants are currently supported:
 
-1. Install `onnx2tf`.
-2. Upload `yolox_tiny.onnx` to the notebook.
-3. Run:
+| Model | HuggingFace Repo |
+|---|---|
+| YOLOX-Tiny (fp16 precision)| `OpenVINO/yolox_tiny-fp16-ov` |
+| YOLOX-Tiny (int8 precision)| `OpenVINO/yolox_tiny-int8-ov` |
+
+`yolox_tiny-fp16-ov` is the default used in this demo.
+
+### Install requirements
 
 ```bash
-!onnx2tf -i yolox_tiny.onnx -o yolox_tiny
+pip install -r requirements.txt
 ```
 
-This generates the TensorFlow Lite model.
-
----
-
-## 3. Download COCO Class Labels
-
-Download the COCO 80-class label file:
-
-https://raw.githubusercontent.com/openvinotoolkit/open_model_zoo/master/data/dataset_classes/coco_80cl.txt
-
----
-
-# Running the Demo
-
-## 1. Start the OpenVINO Model Server
+### Download a model
 
 ```bash
-docker run -d \
-    -v $PWD:/demo \
-    -p 9000:9000 \
-    openvino/model_server:latest \
-    --config_path /demo/config.json \
-    --port 9000
+python download_models.py --model OpenVINO/yolox_tiny-fp16-ov
 ```
 
+> Swap `--model` for any of the four repo IDs listed above to use a different YOLOX size. The script also downloads the COCO class list used for labeling detections.
+
+This populates the local model directory that `config.json` (used by the OpenVINO Model Server in step 3) points to, and that ByteTrack consumes downstream for tracking.
+
 ---
 
-## 2. Create an RTSP Input Stream
+## 2. Start an RTSP relay server
 
-Use FFmpeg to publish your webcam as an RTSP stream.
+If you don't already have one running, start MediaMTX (or an equivalent RTSP server) so the streams below have somewhere to publish to:
 
 ```bash
-ffmpeg -f dshow -video_size 1280x720 \
--i video="HP True Vision FHD Camera" \
--f rtsp -rtsp_transport tcp \
-rtsp://localhost:8554/channel1
+docker run --rm -d -p 8554:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
 ```
 
-> **Work in Progress:** The following H.264-based streaming command is still being evaluated and may not work correctly in all setups.
+> Only needed if you plan to use RTSP input and/or output (see Demo 3 below). It isn't required for the local webcam→screen or video-file→mp4 demos.
+
+---
+
+## 3. Start the OpenVINO Model Server
 
 ```bash
-ffmpeg -f dshow \
--video_size 1280x720 \
--framerate 30 \
--i video="HP True Vision FHD Camera" \
--c:v libx264 \
--crf 18 \
--preset veryfast \
--f rtsp \
--rtsp_transport tcp \
-rtsp://localhost:8554/channel1
+docker run -d -v $PWD:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
 ```
 
 ---
 
-## 3. Run the Real-Time Stream Analysis Client
+## 4. Run the Demo
+
+The `client.py` script (from `real_time_stream_analysis`) supports several combinations of input and output, so the same server can be exercised in different ways depending on what you have available.
+
+### Demo A — Local webcam → screen
+
+Reads directly from a local camera and renders the tracked output in a window.
 
 ```bash
-python client.py \
-    --grpc_address localhost:9000 \
-    --input_stream rtsp://localhost:8554/channel1 \
-    --output_stream rtsp://localhost:8554/channel2 \
-    --model_name ByteTrack \
-    --input_name input_video
+python client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
+```
+
+- `--input_stream 0` — camera device ID `0` (use `1`, `2`, etc. for additional cameras).
+- `--output_stream screen` — opens a live preview window instead of writing to a file or stream.
+
+### Demo B — Video file → video file
+
+Reads from an encoded video file and writes the annotated result to a new video file.
+
+```bash
+curl -L "https://raw.githubusercontent.com/FoundationVision/ByteTrack/main/videos/palace.mp4" -o video.mp4
+python client.py --grpc_address localhost:9000 --input_stream video.mp4 --output_stream output.mp4
+```
+
+- `--input_stream video.mp4` — path to the source video.
+- `--output_stream output.mp4` — path where the tracked/annotated video is saved.
+
+### Demo C — RTSP → RTSP
+
+Full end-to-end streaming demo: publish a webcam feed to an RTSP endpoint, run detection + tracking on it, and publish the annotated result to a second RTSP endpoint.
+
+**1. Publish your webcam as an RTSP input stream**
+
+```bash
+ffmpeg -f dshow -video_size 1280x720 -i video="HP True Vision FHD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8554/channel1
+```
+
+**2. Run the client against the RTSP input/output**
+
+```bash
+python client.py --grpc_address localhost:9000 --input_stream rtsp://localhost:8554/channel1 --output_stream rtsp://localhost:8554/channel2 --model_name ByteTrack --input_name input_video
+```
+
+**3. View the output stream**
+
+Option 1 (recommended):
+
+```bash
+ffplay -rtsp_transport tcp -vf "scale=704:704,format=yuv420p" rtsp://localhost:8554/channel2
+```
+
+Option 2 (verbose logging):
+
+```bash
+ffplay -loglevel verbose -rtsp_transport tcp rtsp://localhost:8554/channel2
 ```
 
 ---
 
-## 4. View the Output Stream
+## Summary of I/O Options
 
-**Option 1 (recommended):**
-
-```bash
-ffplay -rtsp_transport tcp \
--vf "scale=704:704,format=yuv420p" \
-rtsp://localhost:8554/channel2
-```
-
-**Option 2 (verbose logging):**
-
-```bash
-ffplay -loglevel verbose \
--rtsp_transport tcp \
-rtsp://localhost:8554/channel2
-```
+| Demo | Input | Output | RTSP server required? |
+|---|---|---|---|
+| A | Local webcam (`0`) | `screen` | No |
+| B | Video file (`video.mp4`) | Video file (`output.mp4`) | No |
+| C | RTSP stream | RTSP stream | Yes |

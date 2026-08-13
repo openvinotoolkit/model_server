@@ -35,7 +35,7 @@ class OVYoloXTensorsToDetectionsCalculator : public CalculatorBase {
     float confidenceThreshold_ = 0.1f;
     float inputSize_ = 416.0f;
 
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());

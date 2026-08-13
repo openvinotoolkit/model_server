@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package mediapipe;
+
+import "mediapipe/framework/calculator.proto";
+
+message DetectionColorByIdCalculatorOptions{
+    // hue is calculated using track_id* 137.508f % 360, In order to get unique color for bbox based on id
+    extend CalculatorOptions {
+        optional DetectionColorByIdCalculatorOptions ext = 259397841;
+    }
+    optional float saturation = 1 [default = 0.85];
+    optional float value = 2 [default = 0.95]; 
+    optional float thickness = 3 [default = 5.0];   
+}

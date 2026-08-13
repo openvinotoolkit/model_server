@@ -26,15 +26,13 @@ node {
     }
   }
 }
-# Runs a TensorFlow Lite model on CPU that takes an image tensor and outputs a
-# vector of tensors representing, for instance, detection boxes/keypoints and
-# scores.
+
 node {
   calculator: "OpenVINOModelServerSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
     [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "yoloxt_float32"  # servable name inside OVMS
+      servable_name: "yolox_tiny-fp16-ov"  # servable name inside OVMS
       servable_version: "1"
     }
   }
