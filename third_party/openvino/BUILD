@@ -50,8 +50,12 @@ cc_library(
 
 cc_library(
     name = "openvino",
+    # OpenVINO places its runtime libs under lib/intel64 on x86_64 and lib/aarch64
+    # on ARM. glob ignores patterns that match nothing, so exactly one resolves per
+    # architecture and the link finds libopenvino.so on both.
     srcs = glob([
-        "lib/intel64/libopenvino.so"
+        "lib/intel64/libopenvino.so",
+        "lib/aarch64/libopenvino.so",
     ]),
     strip_include_prefix = "include/ie",
     visibility = ["//visibility:public"],
