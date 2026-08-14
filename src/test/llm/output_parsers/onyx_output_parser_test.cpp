@@ -673,6 +673,8 @@ TEST_F(OnyxOutputParserTest, StreamingReasoningThenContent) {
 TEST_F(OnyxOutputParserTest, StreamingContentOnly) {
     int i = -1;
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<|start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"assistant ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"to=user", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"Your ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"Your "}})"},
