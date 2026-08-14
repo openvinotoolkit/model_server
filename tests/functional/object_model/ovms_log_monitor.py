@@ -15,6 +15,7 @@
 #
 
 import datetime
+import os
 import re
 import time
 
@@ -362,6 +363,7 @@ class BinaryOvmsLogMonitor(OvmsLogMonitor):
     def __init__(self, ovms_process, **kwargs):
         super().__init__(**kwargs)
         self._proc = ovms_process
+        self._mirror_offset = 0
 
     def is_ovms_running(self):
         status = get_pid_status(self._proc._proc.pid)
@@ -371,13 +373,30 @@ class BinaryOvmsLogMonitor(OvmsLogMonitor):
             return True
         return True
 
+    def _read_mirror_tail(self, mirror_path):
+        with open(mirror_path, "rb") as fd:
+            fd.seek(self._mirror_offset)
+            chunk = fd.read()
+        # A trailing partial line would be torn in half between two reads.
+        complete, newline, _partial = chunk.rpartition(b"\n")
+        if not newline:
+            return []
+        self._mirror_offset += len(complete) + len(newline)
+        return complete.decode("utf-8", "ignore").splitlines()
+
     def get_all_logs(self):
         stdout, stderr = self._proc.get_output()
         if stderr:
             logger.error(
                 f"Detect non-empty stderr! It is recommended to redirect stderr to stdout: 2>&1. STDERR: {stderr}"
             )
-        self._read_lines += stdout.splitlines()
+        mirror_path = self._proc.get_stdout_mirror_path()
+        if mirror_path and os.path.exists(mirror_path):
+            # pop() drains the queue shared by every monitor of this process, so the lines one
+            # monitor takes would be missing from the others and from the saved log.
+            self._read_lines += self._read_mirror_tail(mirror_path)
+        else:
+            self._read_lines += stdout.splitlines()
         return self._read_lines
 
 
