@@ -41,7 +41,7 @@ docker run --rm -v ${HOME}/ovms-openhands/models:/models \
     --target_device CPU
 ```
 
-This command downloads the model from Hugging Face, converts to OpenVINO IR format if needed, generates the MediaPipe LLM graph, and stores artifacts in the specified model repository.
+This command downloads the model from Hugging Face and stores the model artifacts in the specified model repository. When using the latest-py image, it converts the model to OpenVINO IR format if needed.
 
 ---
 
@@ -148,7 +148,7 @@ docker run -d \
     --tool_parser "$TOOL_PARSER"
 ```
 
-This command downloads the model from Hugging Face (if not cached), converts to OpenVINO IR format (if needed), generates the MediaPipe LLM graph, and starts the OVMS server with the OpenAI-compatible REST API.
+This command downloads the OpenVINO model from Hugging Face (if not cached), generates the MediaPipe LLM graph, and starts the OVMS server with the OpenAI-compatible REST API.
 
 ### Step 4: Deploy OpenHands
 
