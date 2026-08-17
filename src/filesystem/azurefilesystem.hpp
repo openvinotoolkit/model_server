@@ -15,8 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#define _TURN_OFF_PLATFORM_STRING
-
 #include <regex>
 #include <string>
 #include <vector>
@@ -26,8 +24,6 @@
 #include "src/status.hpp"
 
 namespace ovms {
-
-namespace as = azure::storage;
 
 class AzureFileSystem : public FileSystem {
 public:
@@ -156,7 +152,7 @@ private:
    * @brief
    *
    */
-    as::cloud_storage_account account_;
+    std::string connection_string_;
 };
 
 }  // namespace ovms
