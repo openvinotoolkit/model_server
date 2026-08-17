@@ -55,6 +55,7 @@ struct VisualLanguageModelLegacyServableProperties : public GenAiServablePropert
 
 class VisualLanguageModelLegacyServable : public GenAiServable {
     std::shared_ptr<VisualLanguageModelLegacyServableProperties> properties;
+    void logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics);
 
 protected:
     void notifyExecutorThread();

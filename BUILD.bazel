@@ -48,8 +48,6 @@ cc_library(
                 "@aws-sdk-cpp//:aws-sdk-cpp",
                 "@aws-sdk-cpp//:aws-sdk-cpp_cmake",
                 "@azure//:storage",
-                "@cpprest//:sdk",
-                "@boost//:boost",
                 "@google_cloud_cpp//:storage",],
             "//:disable_cloud": []
             })

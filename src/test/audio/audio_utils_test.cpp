@@ -445,4 +445,90 @@ TEST_F(AudioUtilsSampleRateTest, wavOneByteOverLimitThrows) {
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
 
+// ---- prepareAudioOutput size-cap tests ----------------------------------------
+
+TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsOversizedSpeech) {
+    // Simulate what a tiny speed value (e.g. 1e-9) would produce: a speechSize
+    // that exceeds the 1 GB default cap.  The function must throw before any
+    // allocation attempt.
+    constexpr uint32_t sampleRate = 24000;
+    constexpr uint16_t bitsPerSample = 32;  // float32
+    // 512 Mi samples × 4 bytes = 2 GiB → exceeds DEFAULT_MAX_FILE_SIZE (1 GB)
+    constexpr size_t oversizedSpeech = 512ull * 1024 * 1024;
+    // A non-null dummy pointer is enough; prepareAudioOutput throws before
+    // it dereferences waveformPtr.
+    const float dummyWaveform = 0.0f;
+    void* ppData = nullptr;
+    size_t pDataSize = 0;
+    EXPECT_THROW(
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, oversizedSpeech, &dummyWaveform),
+        std::runtime_error);
+}
+
+TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsOversizedSpeechWithCustomEnvVar) {
+    // Honour OVMS_AUDIO_MAX_FILE_SIZE_BYTES for the synthesis path too.
+    constexpr uint32_t sampleRate = 24000;
+    constexpr uint16_t bitsPerSample = 32;
+    // 100 samples × 4 bytes = 400 bytes — normally fine, but tiny cap rejects it.
+    constexpr size_t speechSize = 100;
+    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", "100");
+    const float dummyWaveform = 0.0f;
+    void* ppData = nullptr;
+    size_t pDataSize = 0;
+    EXPECT_THROW(
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, speechSize, &dummyWaveform),
+        std::runtime_error);
+    UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+}
+
+TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputAcceptsSmallSpeech) {
+    // A small, realistic synthesis output must pass the cap check.
+    constexpr uint32_t sampleRate = 24000;
+    constexpr uint16_t bitsPerSample = 32;
+    // 1000 samples × 4 bytes = 4000 bytes — well under the 1 GB default.
+    constexpr size_t speechSize = 1000;
+    std::vector<float> waveform(speechSize, 0.0f);
+    void* ppData = nullptr;
+    size_t pDataSize = 0;
+    EXPECT_NO_THROW(
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, speechSize, waveform.data()));
+    if (ppData) {
+        free(ppData);  // drwav allocates via DRWAV_MALLOC
+    }
+}
+
+TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsWhenHeaderPushesOverLimit) {
+    // The cap is set to exactly the raw PCM byte count.  The WAV container adds
+    // RIFF/fmt/fact/data header overhead on top of that, so the final pDataSize
+    // returned by drwav must exceed the limit and be rejected — even though the
+    // raw PCM payload alone would have been accepted.
+    constexpr uint32_t sampleRate = 24000;
+    constexpr uint16_t bitsPerSample = 32;
+    constexpr size_t speechSize = 100;
+    constexpr size_t rawPcmBytes = speechSize * (bitsPerSample / 8);  // 400 bytes
+    // Cap == raw PCM size; the WAV container will be larger, so it must be rejected.
+    SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(rawPcmBytes));
+    std::vector<float> waveform(speechSize, 0.0f);
+    void* ppData = nullptr;
+    size_t pDataSize = 0;
+    EXPECT_THROW(
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, speechSize, waveform.data()),
+        std::runtime_error);
+    UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+}
+
+TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsZeroBitsPerSample) {
+    // bitsPerSample == 0 means bytesPerSample == 0 which would cause a divide-
+    // by-zero or meaningless size check — must be rejected.
+    constexpr uint32_t sampleRate = 24000;
+    constexpr uint16_t bitsPerSample = 0;
+    constexpr size_t speechSize = 100;
+    const float dummyWaveform = 0.0f;
+    void* ppData = nullptr;
+    size_t pDataSize = 0;
+    EXPECT_THROW(
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, speechSize, &dummyWaveform),
+        std::runtime_error);
+}
+
 }  // namespace

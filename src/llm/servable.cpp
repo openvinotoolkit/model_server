@@ -45,6 +45,10 @@
 
 namespace ovms {
 
+double calculatePrefillSpeed(size_t inputTokenCount, double ttftMs) {
+    return ttftMs > 0.0 ? (1000.0 * inputTokenCount) / ttftMs : 0.0;
+}
+
 void GenAiServable::determineDecodingMethod() {
     getProperties()->decodingMethod = DecodingMethod::STANDARD;
     auto& pluginConfig = getProperties()->pluginConfig;
