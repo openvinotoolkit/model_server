@@ -54,10 +54,10 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
         }
 
         auto graphHelper = std::make_shared<GraphHelper>(std::move(observers));
-        for (const auto& [nodeName, _] : sidePacketMaps->genAiServableMap) {
+        for (const auto& [nodeName, _] : this->sidePacketMaps->genAiServableMap) {
             graphHelper->genAiExecutionContextMap[nodeName] = std::make_shared<GenAiExecutionContextHolder>();
         }
-        auto absStatus = graphHelper->initialize(config, *sidePacketMaps);
+        auto absStatus = graphHelper->initialize(config, *(this->sidePacketMaps));
         if (!absStatus.ok()) {
             SPDLOG_ERROR("Graph queue initialization failed: {}", absStatus.ToString());
             throw std::runtime_error(absStatus.ToString());

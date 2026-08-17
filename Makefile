@@ -196,7 +196,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2026.3.0"
+PRODUCT_VERSION ?= "2026.4.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -210,8 +210,6 @@ PYTHON_CLIENT_TEST_REST_PORT ?= 9280
 PYTHON_CLIENT_TEST_CONTAINER_NAME ?= python-client-test$(shell date +%Y-%m-%d-%H.%M.%S)
 
 TEST_PATH ?= tests/functional/
-
-BUILD_CUSTOM_NODES ?= false
 
 VERBOSE_LOGS ?= OFF
 
@@ -361,10 +359,6 @@ ifeq ($(NO_DOCKER_CACHE),true)
   endif
 endif
 
-ifeq ($(BUILD_CUSTOM_NODES),true)
-	@echo "Building custom nodes"
-	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
-endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace

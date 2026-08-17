@@ -149,6 +149,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -247,8 +248,7 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
-    name: ")"
-    << exportSettings.modelName << R"(",
+    name: "RerankExecutor"
     calculator: "RerankCalculatorOV"
     input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -294,8 +294,7 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
-    name: ")"
-    << exportSettings.modelName << R"(",
+    name: "EmbeddingsExecutor"
     calculator: "EmbeddingsCalculatorOV"
     input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -347,8 +346,7 @@ static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, 
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: ")"
-    << exportSettings.modelName << R"("
+    name: "T2sExecutor"
     calculator: "T2sCalculator"
     input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -405,8 +403,7 @@ static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, 
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: ")"
-    << exportSettings.modelName << R"("
+    name: "S2tExecutor"
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
     input_stream: "LOOPBACK:loopback"

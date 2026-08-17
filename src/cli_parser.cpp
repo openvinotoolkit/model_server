@@ -481,6 +481,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ss << "error parsing options - --configure cannot be used with --pull" << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
+        if (result->count("configure") && result->count("model_name")) {
+            ss << "error parsing options - --model_name cannot be used with --configure" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
+        }
         if (result->count("add_to_config") && result->count("list_models")) {
             ss << "error parsing options - --list_models cannot be used with --add_to_config" << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());

@@ -198,6 +198,7 @@ ovms_cc_library(
         "//src/metrics:libovmsmetrics",
         "//src:libovms_ov_utils",
         "//src:libovmsstring_utils",
+        "//src:libovms_systeminfo",
         "//src:libovms_servable_name_checker",
         "//src/metrics:libovms_metric_provider",
         "//src/filesystem:libovmsfilesystem",

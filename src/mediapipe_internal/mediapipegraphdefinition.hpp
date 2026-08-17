@@ -105,6 +105,7 @@ protected:
 
     virtual Status validateForConfigFileExistence();
     Status resolveGraphQueueSize();
+    int resolveAutoQueueSize();
     Status validateForConfigLoadableness();
     Status validateReferencedNodesRegistered();
 

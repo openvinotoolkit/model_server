@@ -11,11 +11,9 @@ ovms_demos_vlm_npu
 This demo shows how to deploy Vision Language Models in the OpenVINO Model Server.
 Text generation use case is exposed via OpenAI API `chat/completions` and `responses` endpoints.
 
-> **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Core Ultra Series on Ubuntu24, RedHat9 and Windows11.
+> **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ Xe2 GPU platforms on Ubuntu24 and Windows11. At least 22GB VRAM is needed to deploy model Qwen3.6-35B-A3B used in the demo. On platforms with less memory, use smaller model like [OpenVINO/Qwen3.5-4B-int4-ov](https://huggingface.co/OpenVINO/Qwen3.5-4B-int4-ov).
 
 ## Prerequisites
-
-**Model preparation**: Python 3.10 or higher with pip and HuggingFace account
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
@@ -24,28 +22,16 @@ Text generation use case is exposed via OpenAI API `chat/completions` and `respo
 
 ## Fast deployment with OpenVINO models pulled directly from HuggingFace Hub
 VLM models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/OpenVINO)
-For other models go to the model preparation step and deployment for converted models.
-Here is an example of `Qwen3-VL-8B-Instruct-int4` deployment:
+Here is an example of `Qwen3.6-35B-A3B-int4` deployment:
 
 :::{dropdown} **Deploying with Docker**
 
-Select deployment option depending on how you prepared models in the previous step.
-
-**CPU**
-
-Running this command starts the container with CPU only target device:
+Running this command starts the container:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_repository_path /models --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
-```
-**GPU**
-
-In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
-to `docker run` command, use the image with GPU support.
-It can be applied using the commands below:
-```bash
-mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_repository_path /models --task text_generation --target_device GPU --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
+# in case GPU is available
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path /models --allowed_media_domains raw.githubusercontent.com
 ```
 :::
 
@@ -54,27 +40,24 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-a
 If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-mkdir models
-ovms --rest_port 8000 --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_repository_path models --task text_generation --pipeline_type VLM_CB --target_device CPU --allowed_media_domains raw.githubusercontent.com
+mkdir c:\models
+ovms --rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path c:\models --allowed_media_domains raw.githubusercontent.com
 ```
-or
-```bat
-ovms --rest_port 8000 --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_repository_path models --task text_generation --pipeline_type VLM_CB --target_device GPU --allowed_media_domains raw.githubusercontent.com
-```
+
 :::
 
 ## Readiness Check
 
 Wait for the model to load. You can check the status with a simple command:
 ```console
-curl http://localhost:8000/v3/models
+curl http://localhost:8000/v1/models
 ```
 ```json
 {
   "object": "list",
   "data": [
     {
-      "id": "OpenVINO/Qwen3-VL-8B-Instruct-int4-ov",
+      "id": "OpenVINO/Qwen3.6-35B-A3B-int4-ov",
       "object": "model",
       "created": 1772928358,
       "owned_by": "OVMS"
@@ -92,7 +75,7 @@ Let's send a request with text an image in the messages context.
 **Note**: using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
 
 ```bash
-curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/Qwen3-VL-8B-Instruct-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+curl http://localhost:8000/v1/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/Qwen3.6-35B-A3B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is on the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 ```json
 {
@@ -108,7 +91,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
     }
   ],
   "created": 1741731554,
-  "model": "OpenVINO/Qwen3-VL-8B-Instruct-int4-ov",
+  "model": "OpenVINO/Qwen3.6-35B-A3B-int4-ov",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 19,
@@ -123,10 +106,10 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 **Note**: Using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
 
 ```bash
-curl http://localhost:8000/v3/responses \
+curl http://localhost:8000/v1/responses \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "OpenVINO/Qwen3-VL-8B-Instruct-int4-ov",
+    "model": "OpenVINO/Qwen3.6-35B-A3B-int4-ov",
     "input": [
       {
         "role": "user",
@@ -137,7 +120,7 @@ curl http://localhost:8000/v3/responses \
           },
           {
             "type": "input_image",
-            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/2/demos/common/static/images/zebra.jpeg"
+            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
           }
         ]
       }
@@ -150,7 +133,7 @@ curl http://localhost:8000/v3/responses \
   "id": "resp-1741731554",
   "object": "response",
   "created_at": 1741731554,
-  "model": "OpenVINO/Qwen3-VL-8B-Instruct-int4-ov",
+  "model": "OpenVINO/Qwen3.6-35B-A3B-int4-ov",
   "status": "completed",
   "output": [
     {
@@ -186,21 +169,20 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/m
 ```python
 import requests
 import base64
-base_url='http://127.0.0.1:8000/v3'
-model_name = "OpenVINO/Qwen3-VL-8B-Instruct-int4-ov"
+base_url='http://127.0.0.1:8000/v1'
+model_name = "OpenVINO/Qwen3.6-35B-A3B-int4-ov"
 
 def convert_image(Image):
     with open(Image,'rb' ) as file:
         base64_image = base64.b64encode(file.read()).decode("utf-8")
     return base64_image
 
-import requests
-payload = {"model": "OpenVINO/Qwen3-VL-8B-Instruct-int4-ov",
+payload = {"model": model_name,
     "messages": [
         {
             "role": "user",
             "content": [
-              {"type": "text", "text": "Describe what is one the picture."},
+              {"type": "text", "text": "Describe what is on the picture."},
               {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{convert_image('zebra.jpeg')}"}}
             ]
         }
@@ -225,7 +207,7 @@ print(response.text)
     }
   ],
   "created": 1741731554,
-  "model": "OpenVINO/Qwen3-VL-8B-Instruct-int4-ov",
+  "model": "OpenVINO/Qwen3.6-35B-A3B-int4-ov",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 19,
@@ -246,8 +228,8 @@ pip3 install openai
 ```python
 from openai import OpenAI
 import base64
-base_url='http://localhost:8080/v3'
-model_name = "OpenVINO/Qwen3-VL-8B-Instruct-int4-ov"
+base_url='http://localhost:8000/v1'
+model_name = "OpenVINO/Qwen3.6-35B-A3B-int4-ov"
 
 client = OpenAI(api_key='unused', base_url=base_url)
 
@@ -262,7 +244,7 @@ stream = client.chat.completions.create(
         {
             "role": "user",
             "content": [
-              {"type": "text", "text": "Describe what is one the picture."},
+              {"type": "text", "text": "Describe what is on the picture."},
               {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{convert_image('zebra.jpeg')}"}}
             ]
         }
@@ -289,8 +271,8 @@ pip3 install openai
 ```python
 from openai import OpenAI
 import base64
-base_url='http://localhost:8080/v3'
-model_name = "OpenVINO/Qwen3-VL-8B-Instruct-int4-ov"
+base_url='http://localhost:8000/v1'
+model_name = "OpenVINO/Qwen3.6-35B-A3B-int4-ov"
 
 client = OpenAI(api_key='unused', base_url=base_url)
 
@@ -328,14 +310,12 @@ The picture features a zebra standing in a grassy area. The zebra is characteriz
 
 Check the [guide of using lm-evaluation-harness](../accuracy/README.md)
 
-## VLM models deployment with NPU acceleration
-
-Check [VLM usage with NPU acceleration](../../vlm_npu/README.md)
 
 
 ## References
-- [Export models to OpenVINO format](../../../demos/common/export_models/README.md)
+- [Official OpenVINO LLM models in HuggingFace](https://huggingface.co/collections/OpenVINO/llm)
 - [Supported VLM models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms)
+- [Export models to OpenVINO format](../../../demos/common/export_models/README.md)
 - [Chat Completions API](../../../docs/model_server_rest_api_chat.md)
 - [Responses API](../../../docs/model_server_rest_api_responses.md)
 - [Writing client code](../../../docs/clients_genai.md)

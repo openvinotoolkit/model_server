@@ -118,7 +118,6 @@ When pulling models outside of OpenVINO organization the optimum-cli api is used
 |------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
 | `--extra_quantization_params`| `string`     | Add advanced quantization parameters. Check [optimum-intel](https://github.com/huggingface/optimum-intel) documentation. Example: `--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2`  |
 | `--weight-format`            | `string`     | Model precision used in optimum-cli export with conversion. Default `int8`.                |
-| `--vocoder`                  | `string`     | The vocoder model to use for text2speech. For example `microsoft/speecht5_hifigan`.        |
 
 There are also additional environment variables that may change the behavior of pulling:
 
@@ -153,8 +152,8 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
 | `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).            |
 | `--model_distribution_policy`         | `string`     | TENSOR_PARALLEL distributes tensor to multiple sockets/devices and processes it in parallel. PIPELINE_PARALLEL distributes different tensors to process by each device. Accepted values: `TENSOR_PARALLEL`, `PIPELINE_PARALLEL` or empty (default). |
-| `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [qwen3, gptoss, lfm2, gemma4]                     |
-| `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4]            |
+| `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [qwen3, gptoss, lfm2, gemma4, onyx]                     |
+| `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4, onyx]            |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
 | `--cache_interval_multiplier`         | `integer`    | Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: adaptive for the model.                  |
 
@@ -190,8 +189,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | option                    | Value format | Description                                                                    |
 |---------------------------|--------------|--------------------------------------------------------------------------------|
 | `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
-| `--model_type`            | `string`     | Type of the source TTS model: `speecht5` (default) or `kokoro`.                |
-| `--vocoder`               | `string`     | The vocoder model to use for text2speech. For example `microsoft/speecht5_hifigan`. |
+| `--model_type`            | `string`     | Type of the source TTS model. Supported values: `kokoro` (default, recommended) and `speecht5` (legacy). |
 
 ### Speech to text
 | option                    | Value format | Description                                                                    |

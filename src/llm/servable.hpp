@@ -49,6 +49,8 @@ namespace ovms {
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
 
+double calculatePrefillSpeed(size_t inputTokenCount, double ttftMs);
+
 /*
 GenAiServable support.
 

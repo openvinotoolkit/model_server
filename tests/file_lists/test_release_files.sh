@@ -56,18 +56,6 @@ else
     fi
 fi
 
-# /ovms/lib/custom_nodes
-input_file="/test/lib_custom_nodes_files.txt"
-test_path="/ovms/lib/custom_nodes"
-output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
-if [[ -n $output ]]
-then
-    printf -- "ERROR: $test_path against $input_file- File list mismatch: \n%s\n" "$output"
-    errors=$((errors+1))
-else
-    printf -- "SUCCESS: $test_path Files list match.\n"
-fi
-
 # check for errors
 if [ "$errors" -ne "0" ]; then
    printf -- "$errors error[s] in files list check. Please verify release image contents.\n"

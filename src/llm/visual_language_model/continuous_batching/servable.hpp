@@ -35,6 +35,8 @@ struct VisualLanguageModelServableExecutionContext : public ContinuousBatchingSe
 };
 
 class VisualLanguageModelServable : public ContinuousBatchingServable {
+    void logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics);
+
 public:
     VisualLanguageModelServable() {
         properties = std::make_shared<VisualLanguageModelServableProperties>();
@@ -48,5 +50,7 @@ public:
     absl::Status validateEndpoint(Endpoint endpoint) const override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
+    absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
+    absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
 };
 }  // namespace ovms

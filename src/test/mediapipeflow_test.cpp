@@ -59,6 +59,7 @@
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
+#include "src/systeminfo.hpp"
 #include "src/tensorflow_type_utils.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "c_api_test_utils.hpp"
@@ -4183,7 +4184,13 @@ TEST(MediapipeGraphQueueSizeDirective, AutoValue) {
     ovms::ModelManager manager;
     auto status = def.validate(manager);
     ASSERT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_GT(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
+    int queueSize = def.getMediapipeGraphConfig().getInitialQueueSize();
+    EXPECT_GT(queueSize, 0);
+    // AUTO should not exceed getCoreCount() (accounts for Docker/cgroup limits)
+    uint32_t coreCount = static_cast<uint32_t>(ovms::getCoreCount());
+    if (coreCount > 0) {
+        EXPECT_LE(queueSize, static_cast<int>(coreCount));
+    }
 }
 
 TEST(MediapipeGraphQueueSizeDirective, ZeroDisablesQueue) {
@@ -4357,6 +4364,90 @@ TEST(MediapipeGraphQueueSizeDirective, EnvVarOVMS_GRAPH_QUEUE_OFF_NotSetDoesNotD
     auto status = def.validate(manager);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_GT(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, HttpLLMCalculatorWithoutExecutionContextDisablesQueue) {
+    // Old pbtxt files may have HttpLLMCalculator with queue enabled but missing
+    // LLM_NODE_EXECUTION_CONTEXTS side packet. This causes a crash when the queue
+    // reuses graph instances (Promise already satisfied). The fix should detect
+    // this and disable the queue with a warning instead of crashing at runtime.
+    EnvGuard guard;
+    guard.unset("OVMS_GRAPH_QUEUE_OFF");
+    static const char* LLM_WITHOUT_EXEC_CTX_PBTXT = R"(
+# OVMS_GRAPH_QUEUE_MAX_SIZE: 4
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node: {
+  name: "LLMExecutor"
+  calculator: "HttpLLMCalculator"
+  input_stream: "LOOPBACK:loopback"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "LLM_NODE_RESOURCES:llm"
+  output_stream: "LOOPBACK:loopback"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+  input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+        sync_set {
+          tag_index: "LOOPBACK:0"
+        }
+      }
+    }
+  }
+}
+)";
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, LLM_WITHOUT_EXEC_CTX_PBTXT);
+    ovms::ModelManager manager;
+    def.validate(manager);
+    // Queue should be disabled regardless of later validation stages
+    EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), 0);
+}
+
+TEST(MediapipeGraphQueueSizeDirective, HttpLLMCalculatorWithExecutionContextKeepsQueue) {
+    // When the pbtxt correctly has LLM_NODE_EXECUTION_CONTEXTS, queue should remain enabled.
+    EnvGuard guard;
+    guard.unset("OVMS_GRAPH_QUEUE_OFF");
+    static const char* LLM_WITH_EXEC_CTX_PBTXT = R"(
+# OVMS_GRAPH_QUEUE_MAX_SIZE: 4
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node: {
+  name: "LLMExecutor"
+  calculator: "HttpLLMCalculator"
+  input_stream: "LOOPBACK:loopback"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "LLM_NODE_RESOURCES:llm"
+  input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
+  output_stream: "LOOPBACK:loopback"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  input_stream_info: {
+    tag_index: 'LOOPBACK:0',
+    back_edge: true
+  }
+  input_stream_handler {
+    input_stream_handler: "SyncSetInputStreamHandler",
+    options {
+      [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+        sync_set {
+          tag_index: "LOOPBACK:0"
+        }
+      }
+    }
+  }
+}
+)";
+    ovms::MediapipeGraphConfig mgc;
+    DummyMediapipeGraphDefinition def("test", mgc, LLM_WITH_EXEC_CTX_PBTXT);
+    ovms::ModelManager manager;
+    def.validate(manager);
+    // Queue should remain enabled when execution context side packet is present
+    EXPECT_EQ(def.getMediapipeGraphConfig().getInitialQueueSize(), 4);
 }
 
 // --- Graph queue reinit guard tests ---
