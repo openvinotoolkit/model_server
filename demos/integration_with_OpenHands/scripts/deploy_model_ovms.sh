@@ -21,10 +21,10 @@
 #   ./scripts/deploy_model_ovms.sh <model_id> [OPTIONS]
 #
 # Arguments:
-#   model_id          Hugging Face model ID (e.g., "OpenVINO/qwen3-0.6b-int8-ov")
+#   model_id          Hugging Face model ID (e.g., "OpenVINO/qwen3-8b-int8-ov")
 #
 # Options:
-#   --device DEVICE           Target device: CPU or GPU (default: CPU)
+#   --device DEVICE           Target device: CPU or GPU (default: GPU if available)
 #   --parser PARSER           Tool parser: hermes3, qwen3coder, devstral, gemma4, gptoss, llama3, mistral, phi4, or none (default: auto-resolved)
 #   --reasoning-parser PARSER Reasoning parser: gemma4, gptoss, or none (default: auto-resolved)
 #   --cache-dir DIR           Model cache directory (default: ${HOME}/ovms-openhands/models)
