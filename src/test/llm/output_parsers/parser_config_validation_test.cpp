@@ -52,7 +52,7 @@ protected:
 TEST_F(ParserConfigValidationTest, RegistryHasExpectedToolParsers) {
     const auto& names = getSupportedToolParserNames();
     for (const auto& expected : {"llama3", "hermes3", "phi4", "mistral", "gptoss",
-             "qwen3coder", "devstral", "lfm2", "gemma4"}) {
+             "qwen3coder", "devstral", "lfm2", "gemma4", "onyx"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), expected), names.end())
             << "Expected tool parser '" << expected << "' missing from registry";
     }
@@ -73,7 +73,7 @@ TEST_F(ParserConfigValidationTest, NoneIsAcceptedAsDisabledParser) {
 
 TEST_F(ParserConfigValidationTest, RegistryHasExpectedReasoningParsers) {
     const auto& names = getSupportedReasoningParserNames();
-    for (const auto& expected : {"qwen3", "gemma4", "gptoss", "lfm2"}) {
+    for (const auto& expected : {"qwen3", "gemma4", "gptoss", "lfm2", "onyx"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), expected), names.end())
             << "Expected reasoning parser '" << expected << "' missing from registry";
     }

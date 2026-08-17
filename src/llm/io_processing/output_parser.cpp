@@ -17,8 +17,8 @@
 #include <algorithm>
 #include <unordered_set>
 
-#include "../../logging.hpp"
-#include "../../stringutils.hpp"
+#include "src/logging.hpp"
+#include "src/stringutils.hpp"
 #include "output_parser.hpp"
 #include "parser_config_validation.hpp"
 #include "llama3/tool_parser.hpp"
@@ -35,6 +35,8 @@
 #include "lfm2/lfm25_tool_parser.hpp"
 #include "lfm2/lfm25_reasoning_parser.hpp"
 #include "gemma4/gemma4_tool_parser.hpp"
+#include "onyx/onyx_tool_parser.hpp"
+#include "onyx/onyx_reasoning_parser.hpp"
 #include "minicpm5/minicpm5_tool_parser.hpp"
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
 
@@ -114,15 +116,26 @@ const std::string& OutputParser::StreamOutputCache::getBuffer() const {
     return buffer;
 }
 
+// TODO: @przepeck We should consider moving this and
+// similar workarounds to a content parser class
+static void eraseTagsFromContent(std::string& content, const std::vector<std::string>& tags) {
+    for (const auto& tag : tags) {
+        size_t pos = 0;
+        while ((pos = content.find(tag, pos)) != std::string::npos) {
+            content.erase(pos, tag.length());
+        }
+    }
+}
+
 std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
     std::string chunkContent = streamOutputCache.getBuffer();
     if (toolParser != nullptr) {
-        auto& specialTagsToErase = toolParser->getSpecialTagsToErase();
-        for (const auto& tag : specialTagsToErase) {
-            size_t pos = 0;
-            while ((pos = chunkContent.find(tag, pos)) != std::string::npos) {
-                chunkContent.erase(pos, tag.length());
-            }
+        auto& tagsToErase = toolParser->getSpecialTagsToErase();
+        auto lookupResult = streamOutputCache.lookupTags(tagsToErase);
+        if (lookupResult == TagLookupStatus::FOUND_COMPLETE) {
+            eraseTagsFromContent(chunkContent, tagsToErase);
+        } else if (lookupResult == TagLookupStatus::FOUND_INCOMPLETE) {
+            return std::nullopt;
         }
     }
 
@@ -209,6 +222,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         }
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
+    } else if (toolParserName == "onyx") {
+        toolParser = std::make_unique<OnyxToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "minicpm5") {
         toolParser = std::make_unique<Minicpm5ToolParser>(tokenizer, toolNameSchemaMap);
     } else if (!toolParserName.empty()) {
@@ -226,6 +241,9 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Minicpm5ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "lfm2") {
         reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "onyx") {
+        reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
+        decodeWithSpecialTokens = true;
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
@@ -291,7 +309,7 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false)));
     }
     ParsedOutput parsedOutput;
-    parsedOutput.content = tokenizer.decode(generatedTokens);
+    parsedOutput.content = tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(!decodeWithSpecialTokens));
     if (reasoningParser) {
         reasoningParser->parse(parsedOutput, generatedTokens);
     }

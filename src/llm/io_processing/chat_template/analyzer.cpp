@@ -37,6 +37,14 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
+    if (contains(templateSource, "<|start|>") && contains(templateSource, "<|message|>") &&
+        contains(templateSource, "<|eom|>") && contains(templateSource, "<|eot|>")) {
+        result.detectedToolParser = "onyx";
+        result.detectedReasoningParser = "onyx";
+        result.caps.supportsToolCalls = true;
+        return result;
+    }
+
     // Gemma4 detection
     if (contains(templateSource, "'<|tool_call>call:'") || contains(templateSource, "<|tool_call>call:")) {
         result.detectedToolParser = "gemma4";

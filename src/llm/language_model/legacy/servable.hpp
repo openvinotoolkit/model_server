@@ -52,6 +52,7 @@ struct LegacyServableProperties : public GenAiServableProperties {
 
 class LegacyServable : public GenAiServable {
     std::shared_ptr<LegacyServableProperties> properties;
+    void logPerfMetrics(ov::genai::PerfMetrics& perfMetrics);
 
 protected:
     void notifyExecutorThread();
