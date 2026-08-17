@@ -56,6 +56,11 @@ ovms.exe --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path c:\mod
 ```
 
 **Query the model:**
+
+```console
+pip install openai
+```
+
 ```python
 from openai import OpenAI
 
@@ -98,6 +103,12 @@ ovms --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.5
 ```
 
 Run inference with a sample python client
+
+```console
+pip install numpy tritonclient[grpc]
+curl -o image.jpeg https://github.com/openvinotoolkit/model_server/blob/main/demos/common/static/images/bee.jpeg?raw=true
+```
+
 ```python
 import numpy as np
 import tritonclient.grpc as grpcclient
