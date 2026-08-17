@@ -106,7 +106,7 @@ Run inference with a sample python client
 
 ```console
 pip install numpy tritonclient[grpc]
-curl -o image.jpeg https://github.com/openvinotoolkit/model_server/blob/main/demos/common/static/images/bee.jpeg?raw=true
+curl -L -o image.jpeg https://github.com/openvinotoolkit/model_server/blob/main/demos/common/static/images/bee.jpeg?raw=true
 ```
 
 ```python

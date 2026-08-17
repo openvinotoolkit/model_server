@@ -91,7 +91,7 @@ ovms --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.5
 Run inference with a sample client
 ```console
 pip install numpy tritonclient[grpc]
-curl -o image.jpeg https://github.com/openvinotoolkit/model_server/blob/main/demos/common/static/images/bee.jpeg?raw=true
+curl -L -o image.jpeg https://github.com/openvinotoolkit/model_server/blob/main/demos/common/static/images/bee.jpeg?raw=true
 ```
 ```python
 import numpy as np
