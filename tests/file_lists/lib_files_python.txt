@@ -1,10 +1,12 @@
 
-custom_nodes
-libazurestorage.so
-libazurestorage.so.7->libazurestorage.so
-libazurestorage.so.7.5->libazurestorage.so
-libcpprest.so
-libcpprest.so.2.10->libcpprest.so
+libazure-core.so->libazure-core.so.1.17.0-beta.1
+libazure-core.so.1.17.0-beta.1
+libazure-storage-blobs.so->libazure-storage-blobs.so.12.18.0
+libazure-storage-blobs.so.12.18.0
+libazure-storage-common.so->libazure-storage-common.so.12.14.0
+libazure-storage-common.so.12.14.0
+libazure-storage-files-shares.so->libazure-storage-files-shares.so.12.18.0
+libazure-storage-files-shares.so.12.18.0
 libespeak-ng.so->libespeak-ng.so.1
 libespeak-ng.so.1->libespeak-ng.so.1.52.0.1
 libespeak-ng.so.1.52.0.1
