@@ -17,7 +17,7 @@
 | `"model_version_policy"` | `json/string` | Optional. The model version policy lets you decide which versions of a model that the OpenVINO Model Server is to serve. By default, the server serves the latest version. One reason to use this argument is to control the server memory consumption.The accepted format is in json or string. Examples: <br> `{"latest": { "num_versions":2 }` <br> `{"specific": { "versions":[1, 3] } }` <br> `{"all": {} }` |
 | `"plugin_config"` | `json/string`  |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvino.ai/2026/documentation/compatibility-and-support/supported-devices.html) and [performance tuning guide](./performance_tuning.md). Example: <br> `{"PERFORMANCE_HINT": "LATENCY"}`  |
 | `"nireq"` | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.|
-| `"target_device"` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"` |
+| `"target_device"` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"NPU"/"HETERO"/"`. By default server selects the device with this priority: dGPU if present, iGPU if present, CPU. If several discrete GPUs are present, the one with most available VRAM will be selected. |
 | `"metrics_enable"` | `bool` | Flag enabling [metrics](metrics.md) endpoint on rest_port. |
 | `"metrics_list"` | `string` | Comma separated list of [metrics](metrics.md). If unset, only default metrics will be enabled.|
 
@@ -75,15 +75,15 @@ Configuration options for the config management mode, which is used to manage co
 
 ## Configure mode options
 
-Configure mode creates or updates `graph.pbtxt` for a local model without starting the server. It requires `--model_path` and `--task` parameters along with task-specific options.
+Configure mode creates or updates `graph.pbtxt` for a local model without starting the server.
 
 | Option                  | Value format | Description                                                                                                                                         |
 |-------------------------|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
 | `--configure`           | `NA`         | Runs in configure mode to create or update `graph.pbtxt` for a local model. Does not start the server.                                              |
 | `--model_path`          | `string`     | Path to the local model directory where `graph.pbtxt` will be created.                                                                              |
 | `--model_name`          | `string`     | Optional. Name of the model as exposed by the server.                                                                                               |
-| `--task`                | `string`     | Task type for the model (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`).                               |
-| `--target_device`       | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"NPU"/"MULTI"/"HETERO"`.                  |
+| `--task`                | `string`     | Task type for the model (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). If not specified, automatically inferred from model metadata. See [Automatic task detection](#automatic-task-detection). |
+| `--target_device`       | `string`     | Device name to be used to execute inference operations. For `--task text_generation`, accepted values include `CPU`/`GPU`/`NPU`/`AUTO`, `GPU.<index>`, and `HETERO:<...>`/`AUTO:<...>` (for example `HETERO:GPU,CPU`). If not specified, it is auto-detected using available GPU devices, with fallback to `CPU` (NPU must be selected explicitly). See [Automatic target device detection](#automatic-target-device-detection). |
 
 Task-specific options (e.g., `--max_num_seqs`, `--cache_size`, `--num_streams`) are the same as documented in the [pull mode task options](#text-generation) below.
 
@@ -104,8 +104,8 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                           |
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
-| `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
-| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). |
+| `--target_device`           | `string`     | Device name to be used to execute inference operations. For `--task text_generation`, accepted values include `CPU`/`GPU`/`NPU`/`AUTO`, `GPU.<index>`, and `HETERO:<...>`/`AUTO:<...>` (for example `AUTO:GPU,CPU`). If not specified, it is auto-detected using available GPU devices, with fallback to `CPU` (NPU must be selected explicitly). See [Automatic target device detection](#automatic-target-device-detection). |
+| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`, `text2speech`, `speech2text`). If not specified, automatically inferred from model metadata. See [Automatic task detection](#automatic-task-detection). |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
 | `--gguf_filename`           | `string`     | Filename of the wanted quantization type from Hugging Face GGUF repository.                                        |
 
@@ -197,4 +197,28 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
 
 
+## Automatic task detection
 
+When `--task` is not provided, the server tries to infer it from model metadata.
+
+The inference uses metadata files available in the model directory/repository:
+- `config.json` (especially the `architectures` field),
+- `modules.json` (for sentence-transformers style metadata),
+- `model_index.json` (Diffusers pipelines).
+
+The detection checks task families in priority order to resolve ambiguous architectures: `speech2text` -> `text2speech` -> `rerank` -> `image_generation` -> `embeddings` -> `text_generation`.
+
+If no detector matches, OVMS cannot infer the task and `--task` must be set explicitly.
+
+## Automatic target device detection
+
+The `--target_device` option defaults to auto-detected based on available GPU devices. When not specified or empty, server follows detection logic:
+
+- If no GPU devices are available, recommends `CPU`.
+- Discrete GPUs are preferred over integrated GPUs.
+- If a single discrete GPU is found, it is recommended.
+- If multiple discrete GPUs are found, the one with the most free VRAM is recommended.
+- If no discrete GPUs but integrated GPUs exist, the first integrated GPU is recommended.
+- Falls back to `CPU` if no suitable GPU is found.
+
+> **Note:** Auto-detection does not select `NPU`. To use NPU, set `--target_device NPU` explicitly.
