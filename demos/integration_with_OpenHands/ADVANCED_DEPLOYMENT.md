@@ -32,13 +32,15 @@ Unlike simple chat UIs, OpenHands has specific requirements:
 OVMS provides native model retrieval and preparation through the `--source_model` parameter:
 
 ```bash
-docker run --rm -v ${HOME}/ovms-openhands/models:/models \
-    openvino/model_server:latest \
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+
+docker run --rm ${GPU_ARGS} \
+    -v ${HOME}/ovms-openhands/models:/models \
+    openvino/model_server:latest-gpu \
     --source_model OpenVINO/Qwen3-8b-int8-ov \
     --model_repository_path /models \
     --model_name qwen3-8b-int8-ov \
-    --task text_generation \
-    --target_device CPU
+    --task text_generation
 ```
 
 This command downloads the model from Hugging Face and stores the model artifacts in the specified model repository. When using the latest-py image, it converts the model to OpenVINO IR format if needed.
@@ -258,7 +260,7 @@ The `docker-compose.template.yml` file documents the service architecture. See t
 
 ```yaml
 ovms-llm:
-  image: openvino/model_server:latest
+  image: openvino/model_server:latest-gpu
   container_name: ovms-llm
 ```
 
@@ -404,7 +406,7 @@ Checks for Docker and docker compose availability, warns if `HF_TOKEN` is not se
 basename "$MODEL_ID" | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
 ```
 
-**3. Resolves the tool parser**
+**3. Resolves the tool parser (OVMS automatically detects parser types since 2026.3)**
 
 Maps model family to parser (e.g., Qwen → `hermes3`, Llama3 → `llama3`, Mistral → `mistral`).
 
@@ -601,7 +603,7 @@ GPU inference is supported on the following platforms:
 | Platform                | Status         | Notes                                              |
 | ----------------------- | -------------- | -------------------------------------------------- |
 | Native Linux            | ✅ Supported   | Requires Intel GPU runtime and device access      |
-| WSL2 + Docker Desktop   | ✅ Supported   | Requires WSL2 GPU support and `/dev/dxg`          |
+| WSL2 + Docker Desktop   | ✅ Supported   | Requires WSL2 GPU support and `/dev/dxg` (limited to 8b parameter models like the qwen3-8b family)         |
 | Native Windows          | ❌ Not supported | Use WSL2 for Docker-based deployment              |
 
 

@@ -10,24 +10,16 @@ This README covers the recommended deployment workflow. For manual Docker deploy
 
 ## Architecture
 
-```
-User
-  |
-  v
-OpenHands Container
-  | (creates runtime sandbox containers for code execution)
-  |
-  | OpenAI-compatible HTTP requests
-  | POST /v3/chat/completions
-  | LLM_BASE_URL=http://ovms-llm:8000/v3
-  | LLM_MODEL=openai/<served-model-name>
-  v
-OpenVINO Model Server
-  | (MediaPipe LLM graph + tool parser)
-  v
-OpenVINO model
+```mermaid
+flowchart TD
+    U[User] --> OH[OpenHands Container]
+    OH --> OVMS[OpenVINO Model Server]
+    OH --> S[Runtime Sandbox]
+    OVMS --> LLM[MediaPipe LLM Graph and Tool Parser]
+    LLM --> M[OpenVINO Model]
 ```
 
+Ensure the required ports are available on your host.
 OpenHands maintains conversation state and creates isolated Docker containers for code execution. It requires an OpenAI-compatible LLM endpoint with models that have sufficient context capacity and coding capability.
 
 OVMS serves generative models through an OpenAI-compatible REST API, handling model retrieval, OpenVINO conversion, and graph generation. It applies model-specific tool parsers for structured output and runs on CPU or GPU with OpenVINO optimization.
@@ -95,7 +87,7 @@ OpenHands requires models with instruction-following capability, coding proficie
 
 > **Note:** Examples use `OpenVINO/Qwen3-8b-int8-ov`. Other compatible models may also be used.
 
-### Tool Parser Selection
+### Tool Parser Selection (Since 2026.3 OVMS supports automatic parser detection)
 
 Tool parsers enable structured output for function calling. When OpenHands executes a tool (running code, reading files), it expects the LLM to return structured JSON specifying the tool name and arguments. The tool parser converts model outputs into this format.
 
