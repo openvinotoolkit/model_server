@@ -198,7 +198,7 @@ The deployment uses three files with distinct responsibilities:
 
 ### docker-compose.template.yml
 
-Committed to Git, this file serves as the canonical template for deployment structure. It documents the service architecture and contains environment variable placeholders that the deployment script substitutes with runtime values.
+Serves as the canonical template for deployment structure. It documents the service architecture and contains environment variable placeholders that the deployment script substitutes with runtime values.
 
 The template uses placeholders like `${MODEL_ID}`, `${LOCAL_NAME}`, `${TARGET_DEVICE}`, and others. The deployment script uses `envsubst` to replace these placeholders with actual values when generating the runtime compose file.
 
