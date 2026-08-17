@@ -286,12 +286,14 @@ __Tool parsers:__
 - `qwen3coder`
 - `lfm2`
 - `gemma4`
+- `onyx`
 
 __Reasoning parsers:__
 - `qwen3`
 - `gptoss`
 - `lfm2`
 - `gemma4`
+- `onyx`
 
 #### Automatic parser detection
 

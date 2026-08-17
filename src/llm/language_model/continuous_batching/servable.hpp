@@ -40,6 +40,7 @@ class ContinuousBatchingServable : public GenAiServable {
 protected:
     std::shared_ptr<ContinuousBatchingServableProperties> properties;
     void notifyExecutorThread();
+    void logPerfMetrics(ov::genai::PerfMetrics& perfMetrics);
 
 public:
     ContinuousBatchingServable() {
@@ -56,5 +57,7 @@ public:
     absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
+    absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
+    absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
 };
 }  // namespace ovms

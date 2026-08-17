@@ -157,6 +157,7 @@ ovms_cc_library(
             "io_processing/input_processors/chat_template_adapter.hpp",
             "io_processing/chat_template/caps.hpp",
             "io_processing/input_processors/empty_content_array_normalization_processor.hpp",
+            "io_processing/input_processors/empty_tool_calls_array_removing_processor.hpp",
             "io_processing/input_processors/raw_prompt_extractor.hpp",
             "io_processing/input_processors/text_content_normalization_processor.hpp",
             "io_processing/input_processors/tokenization_processor.hpp"],
@@ -165,6 +166,7 @@ ovms_cc_library(
             "io_processing/input_processors/chat_template_processor.cpp",
             "io_processing/input_processors/chat_template_adapter.cpp",
             "io_processing/input_processors/empty_content_array_normalization_processor.cpp",
+            "io_processing/input_processors/empty_tool_calls_array_removing_processor.cpp",
             "io_processing/input_processors/text_content_normalization_processor.cpp",
             "io_processing/input_processors/tokenization_processor.cpp"],
     deps = [
@@ -404,6 +406,38 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "io_processing_onyx_tool_parser",
+    hdrs = ["io_processing/onyx/onyx_tool_parser.hpp"],
+    srcs = ["io_processing/onyx/onyx_tool_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src/utils:rapidjson_utils",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        ":apis_tool_schema_wrapper",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_onyx_reasoning_parser",
+    hdrs = ["io_processing/onyx/onyx_reasoning_parser.hpp"],
+    srcs = ["io_processing/onyx/onyx_reasoning_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        "//src:libovmslogging",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "io_processing_lfm25_reasoning_parser",
     hdrs = ["io_processing/lfm2/lfm25_reasoning_parser.hpp"],
     srcs = ["io_processing/lfm2/lfm25_reasoning_parser.cpp"],
@@ -458,6 +492,8 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":io_processing_gemma4_tool_parser",
         ":io_processing_minicpm5_tool_parser",
         ":io_processing_qwen3_reasoning_parser",
+        ":io_processing_onyx_tool_parser",
+        ":io_processing_onyx_reasoning_parser",
         ":io_processing_lfm25_reasoning_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",

@@ -211,8 +211,6 @@ PYTHON_CLIENT_TEST_CONTAINER_NAME ?= python-client-test$(shell date +%Y-%m-%d-%H
 
 TEST_PATH ?= tests/functional/
 
-BUILD_CUSTOM_NODES ?= false
-
 VERBOSE_LOGS ?= OFF
 
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
@@ -361,10 +359,6 @@ ifeq ($(NO_DOCKER_CACHE),true)
   endif
 endif
 
-ifeq ($(BUILD_CUSTOM_NODES),true)
-	@echo "Building custom nodes"
-	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
-endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace
