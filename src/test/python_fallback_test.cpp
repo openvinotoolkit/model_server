@@ -44,13 +44,13 @@ TEST_F(PythonRuntimeFallbackTest, PythonStatusCodesExist) {
     Status pythonInitFailed(StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED);
     EXPECT_FALSE(pythonInitFailed.ok());
     EXPECT_STREQ(pythonInitFailed.string().c_str(),
-        "Failed to initialize Python interpreter. Check that libpython.so is installed");
+        "Failed to initialize Python interpreter.");
 
     // Python backend creation failure
     Status pythonBackendFailed(StatusCode::PYTHON_BACKEND_CREATION_FAILED);
     EXPECT_FALSE(pythonBackendFailed.ok());
     EXPECT_STREQ(pythonBackendFailed.string().c_str(),
-        "Failed to create Python backend. Check that pyovms module is available in PYTHONPATH");
+        "Failed to create Python backend.");
 }
 
 /**
