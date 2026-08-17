@@ -113,8 +113,9 @@ if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
 		echo "Missing Python runtime/plugin shared libraries in bazel outputs. Ensure //src/python:libovmspython and //src/python:libpython_calculators are built."
 		exit 1
 	fi
-	cp -v "$OVMS_PY_RUNTIME_LIB" /ovms_release/lib/
-	cp -v "$OVMS_PY_CALCULATORS_LIB" /ovms_release/lib/
+	# --remove-destination overwrites any prior symlink staged by the generic *.so find above.
+	cp -vLf --remove-destination "$OVMS_PY_RUNTIME_LIB" /ovms_release/lib/
+	cp -vLf --remove-destination "$OVMS_PY_CALCULATORS_LIB" /ovms_release/lib/
 	# Verify the copies landed in the staging directory.
 	if [ ! -f /ovms_release/lib/libovmspython.so ] || [ ! -f /ovms_release/lib/libpython_calculators.so ]; then
 		echo "Missing libovmspython.so or libpython_calculators.so in package staging after cp."
@@ -129,7 +130,8 @@ if ! [[ $debug_bazel_flags == *"mp_off"* ]]; then
 		echo "Missing OVMS MediaPipe runtime library in bazel outputs. Ensure //src:ovms_mediapipe_runtime_shared is built."
 		exit 1
 	fi
-	cp -v "$OVMS_MP_RUNTIME_LIB" /ovms_release/lib/
+	# --remove-destination overwrites any prior symlink staged by the generic *.so find above.
+	cp -vLf --remove-destination "$OVMS_MP_RUNTIME_LIB" /ovms_release/lib/
 	# Verify the copy landed in the staging directory.
 	if [ ! -f /ovms_release/lib/libovms_mediapipe_runtime_shared.so ]; then
 		echo "Missing libovms_mediapipe_runtime_shared.so in package staging after cp."
