@@ -681,7 +681,7 @@ docker logs ovms-llm | grep -i "available devices"
 Expected output:
 
 ```text
-Available devices for Open VINO: CPU, GPU
+Available devices for OpenVINO: CPU, GPU
 ```
 
 Verify the model reaches `AVAILABLE` status:
