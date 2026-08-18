@@ -171,7 +171,6 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& re
         ov::genai::StructuredOutputConfig structuredOutputConfig;
         structuredOutputConfig.structural_tags_config = request.responseFormat.value();
         config.structured_output_config = structuredOutputConfig;
-        config.stop_strings.insert("#");
     }
 }
 }  // namespace ovms

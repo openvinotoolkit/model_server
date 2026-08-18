@@ -453,13 +453,13 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM2_ToolCallWithStringArgs) {
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
-<|im_end|>
+<|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
 <|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
@@ -629,6 +629,53 @@ What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+TEST_F(ChatTemplateEndToEndJinjaTest, Onyx_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_onyx.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "onyx");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "onyx");
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+
+    std::string expectedOutput = R"(<|start|>user<|message|>What's the weather in Paris?<|eot|><|start|>assistant to=get_weather<|message|><atem:function_calls>
+<atem:invoke name="get_weather">
+<atem:parameter name="location">Paris</atem:parameter>
+<atem:parameter name="unit">celsius</atem:parameter>
+</atem:invoke>
+</atem:function_calls><|eot|><|start|>assistant)";
+    EXPECT_NE(appliedOutput.find(expectedOutput), std::string::npos) << appliedOutput;
+}
+
+TEST_F(ChatTemplateEndToEndJinjaTest, Onyx_ToolCallWithRecipientField) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_onyx.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","recipient":"functions.get_weather","content":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    std::string expectedOutput = R"(<|start|>user<|message|>What's the weather in Paris?<|eot|><|start|>assistant to=functions.get_weather<|message|>{"location":"Paris","unit":"celsius"}<|eom|><|start|>assistant)";
+    EXPECT_NE(appliedOutput.find(expectedOutput), std::string::npos) << appliedOutput;
 }
 
 // =============================================================================

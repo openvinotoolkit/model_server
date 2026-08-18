@@ -81,7 +81,8 @@ class Endpoints(enum.Enum):
     RELOAD_CONFIG = "/v1/config/reload"
 
 
-def send_request_to_endpoint(port, address=None, endpoint=None, expected_code=None, retry=1, timeout=60):
+def send_request_to_endpoint(port, address=None, endpoint=None, expected_code=None, retry=1, timeout=60,
+                             retry_delay=1, retry_backoff=1, retry_max_delay=None):
     address = TestEnvironment.get_server_address() if address is None else address
     url_with_endpoint = f"http://{address}:{port}{endpoint}"
     logger.info(f"Try to send request to endpoint: {url_with_endpoint}")
@@ -93,7 +94,8 @@ def send_request_to_endpoint(port, address=None, endpoint=None, expected_code=No
     else:
         msg = f"Not supported endpoint: {endpoint}"
         raise ValueError(msg)
-    retry_setup = {"tries": int(retry), "delay": 1}
+    retry_setup = {"tries": int(retry), "delay": retry_delay, "backoff": retry_backoff,
+                   "max_delay": retry_max_delay}
     kwargs = {"url": url_with_endpoint, "params": {}, "timeout": timeout}
     ret = retry_call(func, fkwargs=kwargs, **retry_setup)
     if expected_code is None:
@@ -114,10 +116,13 @@ def send_request_to_endpoint(port, address=None, endpoint=None, expected_code=No
     return ret
 
 
-def send_reload_request(port, address=None, expected_code=None, retry=1, timeout=60):
+def send_reload_request(port, address=None, expected_code=None, retry=1, timeout=60,
+                        retry_delay=1, retry_backoff=1, retry_max_delay=None):
     address = TestEnvironment.get_server_address() if address is None else address
     endpoint = Endpoints.RELOAD_CONFIG.value
-    return send_request_to_endpoint(port, address, endpoint, expected_code, retry, timeout=timeout)
+    return send_request_to_endpoint(port, address, endpoint, expected_code, retry, timeout=timeout,
+                                    retry_delay=retry_delay, retry_backoff=retry_backoff,
+                                    retry_max_delay=retry_max_delay)
 
 
 def get_config_request(port, address=None, expected_code=None, retry=1):

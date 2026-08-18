@@ -1,4 +1,33 @@
 {{- bos_token -}}
+
+{%- macro format_arg_value(arg_value) -%}
+    {%- if arg_value is string -%}
+        {{- "'" + arg_value + "'" -}}
+    {%- elif arg_value is mapping -%}
+        {{- arg_value | tojson -}}
+    {%- else -%}
+        {{- arg_value | string -}}
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- macro render_tool_calls(tool_calls) -%}
+    {%- set tool_calls_ns = namespace(tool_calls=[]) -%}
+    {%- for tool_call in tool_calls -%}
+        {%- set func_name = tool_call["function"]["name"] -%}
+        {%- set func_args = tool_call["function"]["arguments"] -%}
+        {%- if func_args is string -%}
+            {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + func_args + ")"] -%}
+        {%- else -%}
+            {%- set args_ns = namespace(arg_strings=[]) -%}
+            {%- for arg_name, arg_value in func_args.items() -%}
+                {%- set args_ns.arg_strings = args_ns.arg_strings + [arg_name + "=" + format_arg_value(arg_value)] -%}
+            {%- endfor -%}
+            {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + (args_ns.arg_strings | join(", ")) + ")"] -%}
+        {%- endif -%}
+    {%- endfor -%}
+    {{- "<|tool_call_start|>[" + (tool_calls_ns.tool_calls | join(", ")) + "]<|tool_call_end|>" -}}
+{%- endmacro -%}
+
 {%- set keep_past_thinking = keep_past_thinking | default(false) -%}
 {%- set ns = namespace(system_prompt="") -%}
 {%- if messages[0]["role"] == "system" -%}
@@ -51,6 +80,9 @@
             {%- endif -%}
         {%- endfor -%}
         {%- set content = ns.content -%}
+    {%- endif -%}
+    {%- if message["tool_calls"] is defined -%}
+        {{- render_tool_calls(message["tool_calls"]) -}}
     {%- endif -%}
     {%- if message["role"] == "assistant" and not keep_past_thinking and loop.index0 != ns.last_assistant_index -%}
         {%- if "</think>" in content -%}
