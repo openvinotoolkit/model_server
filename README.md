@@ -159,16 +159,21 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 
 ## Get the Server
 
-**Docker images** (recommended):
-```bash
+**Docker images**:
+```text
 docker pull openvino/model_server:latest        # Intel CPU
 docker pull openvino/model_server:latest-gpu    # Intel CPU,GPU,NPU
+
+docker pull openvino/model_server:weekly        # pre-production version with all accelerators enabled
 ```
 
 - [Docker Hub](https://hub.docker.com/r/openvino/model_server)
 - [Red Hat Ecosystem Catalog](https://catalog.redhat.com/software/containers/intel/openvino-model-server/607833052937385fc98515de)
 
-**Binary packages** (Linux & Windows): [GitHub Releases](https://github.com/openvinotoolkit/model_server/releases)
+**Binary official packages** (Linux & Windows): [GitHub Releases](https://github.com/openvinotoolkit/model_server/releases)
+
+
+Binary pre-production packages (Linux & Windows): [storage.openvinotoolkit.org](https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/)
 
 ---
 
