@@ -26,7 +26,7 @@ cd model_server/demos/using_onnx_model/python
 
 Prepare environment
 ```bash
-curl --fail -L --create-dirs https://github.com/onnx/models/raw/main/validated/vision/classification/resnet/model/resnet50-caffe2-v1-9.onnx -o workspace/resnet50-onnx/1/resnet50-caffe2-v1-9.onnx
+curl --fail -L --create-dirs https://github.com/onnx/models/raw/releases/2026/3/validated/vision/classification/resnet/model/resnet50-caffe2-v1-9.onnx -o workspace/resnet50-onnx/1/resnet50-caffe2-v1-9.onnx
 ```
 
 Start the OVMS container with additional preprocessing options:

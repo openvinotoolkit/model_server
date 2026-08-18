@@ -67,7 +67,7 @@ Let's send a request with text an image in the messages context.
 **Note**: using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
 
 ```bash
-curl http://localhost:8000/v1/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/Qwen3.6-35B-A3B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is on the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+curl http://localhost:8000/v1/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/Qwen3.6-35B-A3B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is on the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 ```json
 {
@@ -112,7 +112,7 @@ curl http://localhost:8000/v1/responses \
           },
           {
             "type": "input_image",
-            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
+            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/3/demos/common/static/images/zebra.jpeg"
           }
         ]
       }
@@ -156,7 +156,7 @@ curl http://localhost:8000/v1/responses \
 
 ```console
 pip3 install requests
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/3/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
 ```python
 import requests

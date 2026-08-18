@@ -20,8 +20,8 @@ Integrations <ovms_demos_integrations>
 ## Text Generation
 | Demo | Description |
 |---|---|
-|[LLM Text Generation with continuous batching](continuous_batching/README.md)|Generate text with LLM models and continuous batching pipeline.|
-|[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline.|
+|[LLM Text Generation](continuous_batching/README.md)|Generate text with LLM models and continuous batching pipeline.|
+|[VLM Text Generation](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline.|
 |[AI Agents with MCP servers](./continuous_batching/agentic_ai/README.md)|OpenAI agents with MCP servers and serving LLM models.|
 |[RAG with OpenAI API endpoint and langchain](continuous_batching/rag/README.md)|Example how to use RAG with model server endpoints.|
 |[Long context LLMs](./continuous_batching/long_context/README.md)|Recommendations for handling very long context in LLM models.|

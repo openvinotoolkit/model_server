@@ -44,7 +44,7 @@ There are two special kinds of nodes - Request and Response node. Both of them a
 ### Custom node type
 
 * custom - that node can be used to implement all operations on the data which can not be handled by the neural network model. It is represented by
-a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_node_interface.h). Custom nodes can run the data
+a C++ dynamic library implementing OVMS API defined in [custom_node_interface.h](https://github.com/openvinotoolkit/model_server/blob/releases/2026/3/src/custom_node_interface.h). Custom nodes can run the data
 processing using OpenCV, which is included in OVMS, or include other third-party components. Custom node libraries are loaded into OVMS
  by adding their definition to the pipeline configuration. The configuration includes a path to the compiled binary with the `.so` extension.
 Custom nodes are not versioned, meaning one custom node library is bound to one name. To load another version, another name needs to be used.
@@ -205,19 +205,8 @@ and [REST Model Ready](model_server_rest_api_kfs.md)
 The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines,
 the version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
 
-## Pipelines Examples
-
-[Single face analysis with combined models](../demos/single_face_analysis_pipeline/python/README.md)
-
-[Multiple vehicles analysis using demultiplexer with model_zoo_object_detection example custom node](../demos/vehicle_analysis_pipeline/python/README.md)
-
-[Optical Character Recognition pipeline with east_ocr example custom node](../demos/optical_character_recognition/python/README.md)
-
-[Horizontal Text Detection pipeline with horizontal_ocr example custom node](../demos/horizontal_text_detection/python/README.md)
-
 ## Current limitations
 
-- Models with "auto" [batch size](dynamic_bs_auto_reload.md) or [shape](dynamic_shape_auto_reload.md) cannot be referenced in pipeline
 - Connected inputs and output for subsequent node models need to match each other in terms of data shape, precision and layout -
 there is no automatic conversion between input/output model precisions or layouts. This limitation can be addressed with `--shape` and `--layout` model configuration or with a custom node to transform the data as required to match the expected data format.
 - REST requests with no named format (JSON body with one unnamed input) are not supported
