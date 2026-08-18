@@ -19,6 +19,7 @@
     {%- for tool_call in tool_calls -%}
         {%- set func_name = tool_call["function"]["name"] -%}
         {%- set func_args = tool_call["function"]["arguments"] -%}
+        {#- Modified: handle both string and mapping tool call arguments -#}
         {%- if func_args is string -%}
             {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + func_args + ")"] -%}
         {%- else -%}
