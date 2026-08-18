@@ -95,8 +95,6 @@ whitelisted_dynamic_libraries = {
 # Libraries located in /ovms/lib/
 libraries = {
     OvmsBaseType.COMMON: {
-        'libazurestorage.so',
-        'libcpprest.so',
         'libespeak-ng.so',
         'libgit2.so',
         'libOpenCL.so',
@@ -129,6 +127,10 @@ libraries = {
         'libtbb.so',
     },
     OvmsBaseType.UBUNTU: {
+        'libazure-core.so',
+        'libazure-storage-blobs.so',
+        'libazure-storage-common.so',
+        'libazure-storage-files-shares.so',
         'libopenvino_intel_npu_compiler.so',
         'libopenvino_intel_npu_compiler_loader.so',
         'libopenvino_intel_npu_plugin.so',
@@ -139,7 +141,10 @@ libraries = {
     OvmsBaseType.UBUNTU20_PYTHON: set(),
     OvmsBaseType.UBUNTU22_PYTHON: set(),
     OvmsBaseType.UBUNTU24_PYTHON: set(),
-    OvmsBaseType.REDHAT: set(),
+    OvmsBaseType.REDHAT: {
+        'libazurestorage.so',
+        'libcpprest.so',
+    },
     OvmsBaseType.REDHAT_PYTHON: set(),
     OvmsBaseType.WINDOWS: {
         'espeak-ng.dll',
