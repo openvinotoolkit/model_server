@@ -453,13 +453,13 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM2_ToolCallWithStringArgs) {
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
     EXPECT_TRUE(caps.supportsToolCalls);
-    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
-<|im_end|>
+<|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
 <|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
