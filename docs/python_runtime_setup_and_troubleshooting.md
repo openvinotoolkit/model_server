@@ -43,25 +43,25 @@ Behavior:
 
 - Ensure `LD_LIBRARY_PATH` points to package libraries:
 
-```bash
+```text
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 ```
 
 - Ensure `PYTHONPATH` points to OVMS Python package:
 
-```bash
+```text
 export PYTHONPATH=${PWD}/ovms/lib/python
 ```
 
 - Install template dependencies:
 
-```bash
+```text
 pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 
 - If using Python nodes with OpenVINO/OpenVINO GenAI, install NumPy:
 
-```bash
+```text
 pip3 install numpy
 ```
 
@@ -71,13 +71,13 @@ Do not install `openvino`, `openvino-tokenizers`, or `openvino-genai` via pip fo
 
 Run setup in the same shell before starting OVMS:
 
-```bat
+```text
 .\ovms\setupvars.bat
 ```
 
 or in PowerShell:
 
-```powershell
+```text
 .\ovms\setupvars.ps1
 ```
 
@@ -85,13 +85,13 @@ Optional explicit `PYTHONPATH`:
 
 Command Prompt:
 
-```bat
+```text
 set PYTHONPATH=%CD%\ovms\lib\python
 ```
 
 PowerShell:
 
-```powershell
+```text
 $env:PYTHONPATH = "$PWD\ovms\lib\python"
 ```
 
@@ -109,7 +109,7 @@ Fix:
 
 Check:
 
-```bash
+```text
 find /usr -name "libpython*" -type f
 ```
 
@@ -121,13 +121,13 @@ Cause:
 
 Fix:
 
-```bash
+```text
 export PYTHONPATH=${PWD}/ovms/lib/python
 ```
 
 Check:
 
-```bash
+```text
 python3 -c "import pyovms; print(pyovms.__file__)"
 ```
 
