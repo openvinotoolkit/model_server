@@ -772,7 +772,9 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
                 writer.String("error");
                 writer.String(status.string().c_str());
                 writer.EndObject();
-                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
+                const auto httpStatus = status.getCode() == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE ?
+                    HTTPStatusCode::NOT_FOUND : HTTPStatusCode::BAD_REQUEST;
+                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), httpStatus);
                 return;
             }
 
@@ -786,7 +788,9 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
                 writer.String("error");
                 writer.String(status.string().c_str());
                 writer.EndObject();
-                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
+                const auto httpStatus = status.getCode() == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE ?
+                    HTTPStatusCode::NOT_FOUND : HTTPStatusCode::BAD_REQUEST;
+                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), httpStatus);
             }
         });
         return StatusCode::PARTIAL_END;
