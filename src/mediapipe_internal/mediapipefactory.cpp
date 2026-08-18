@@ -35,6 +35,7 @@
 #include "mediapipe/framework/deps/registration.h"
 #pragma warning(pop)
 #include "mediapipegraphdefinition.hpp"
+#include "mediapipegraphexecutor.hpp"
 
 namespace ovms {
 
@@ -142,6 +143,17 @@ Status MediapipeFactory::create(std::unique_ptr<MediapipeGraphExecutor>& pipelin
     }
     auto& definition = *it->second;
     return definition.create(pipeline);
+}
+
+Status MediapipeFactory::createHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& pipeline,
+    const std::string& name) const {
+    std::unique_ptr<MediapipeGraphExecutor> concretePipeline;
+    auto status = create(concretePipeline, name);
+    if (!status.ok()) {
+        return status;
+    }
+    pipeline.reset(concretePipeline.release());
+    return StatusCode::OK;
 }
 
 void MediapipeFactory::retireOtherThan(std::set<std::string>&& graphsInConfigFile) {

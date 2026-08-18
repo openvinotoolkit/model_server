@@ -32,11 +32,13 @@
 #include <stdlib.h>
 
 #ifdef __linux__
+#include <dlfcn.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sysexits.h>
 #elif _WIN32
 #include <csignal>
+#include <system_error>
 #include <cstdio>
 #include <io.h>
 
@@ -53,7 +55,6 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
-#include "graph_export/graph_export.hpp"
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
@@ -65,15 +66,16 @@
 #include "profiler.hpp"
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "python/python_runtime_loader.hpp"
+#include "python/python_runtime_module_api.hpp"
+#endif
+#include "mediapipe_runtime_api.hpp"
 #include "servablemanagermodule.hpp"
 #include "shutdown_state.hpp"
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
-
-#if (PYTHON_DISABLE == 0)
-#include "python/pythoninterpretermodule.hpp"
-#endif
 
 using grpc::ServerBuilder;
 
@@ -341,8 +343,13 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
 #if (PYTHON_DISABLE == 0)
-    if (name == PYTHON_INTERPRETER_MODULE_NAME)
-        return std::make_unique<PythonInterpreterModule>();
+    if (name == PYTHON_INTERPRETER_MODULE_NAME) {
+        auto pythonModule = ensurePythonRuntimeLoaded();
+        if (pythonModule == nullptr) {
+            return nullptr;
+        }
+        return std::unique_ptr<Module>(pythonModule);
+    }
 #endif
     if (name == METRICS_MODULE_NAME)
         return std::make_unique<MetricModule>();
@@ -411,11 +418,11 @@ Status Server::startModules(ovms::Config& config) {
         return status;
     }
     if (config.getServerSettings().serverMode == CONFIGURE_MODE) {
-        GraphExport graphExporter;
+        MediapipeRuntimeApi runtimeApi(nullptr);
         HFSettingsImpl hfSettings = config.getServerSettings().hfSettings;
         std::string modelPath = config.modelPath();
         hfSettings.exportSettings.modelPath = ".";
-        status = graphExporter.createServableConfig(modelPath, hfSettings, true);
+        status = runtimeApi.createServableConfig(modelPath, hfSettings);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to create graph config: {}", status.string());
             return status;
@@ -426,8 +433,22 @@ Status Server::startModules(ovms::Config& config) {
 
 #if (PYTHON_DISABLE == 0)
     if (config.getServerSettings().withPython) {
-        INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
-        START_MODULE(it);
+        auto pythonModule = this->createModule(PYTHON_INTERPRETER_MODULE_NAME);
+        if (pythonModule == nullptr) {
+            SPDLOG_WARN("Python requested in configuration, but runtime library could not be loaded. Continuing with Python features disabled.");
+        } else {
+            // Try to start Python support first; if runtime is not operational,
+            // continue without Python-dependent features instead of failing server startup.
+            status = pythonModule->start(config);
+            if (!status.ok()) {
+                SPDLOG_WARN("Python runtime is not operational ({}). Continuing with Python features disabled.", status.string());
+            } else {
+                std::unique_lock lock(modulesMtx);
+                std::tie(it, inserted) = this->modules.emplace(PYTHON_INTERPRETER_MODULE_NAME, std::move(pythonModule));
+                if (!inserted)
+                    return Status(StatusCode::MODULE_ALREADY_INSERTED, PYTHON_INTERPRETER_MODULE_NAME);
+            }
+        }
     }
 #endif
 #if MTR_ENABLED
@@ -461,26 +482,28 @@ Status Server::startModules(ovms::Config& config) {
     }
     if (config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
         // --task with --model_path: create graph in memory without HF download
-        GraphExport graphExporter;
-        HFSettingsImpl hfSettings = config.getServerSettings().hfSettings;
-        hfSettings.exportSettings.modelPath = ".";
-        status = graphExporter.createServableConfig(config.modelPath(), hfSettings, false);
+        MediapipeRuntimeApi runtimeApi(nullptr);
+        const auto& hfSettings = config.getServerSettings().hfSettings;
+        std::string pbtxt;
+        status = runtimeApi.createServableConfigInMemory(config.modelPath(), hfSettings, pbtxt);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to create in-memory graph config: {}", status.string());
             return status;
         }
+        config.setInMemoryGraphPbtxt(std::move(pbtxt));
         SPDLOG_INFO("Graph config created in memory from model_path: {}", config.modelPath());
     }
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
 #if (PYTHON_DISABLE == 0)
     if (config.getServerSettings().withPython) {
-        GET_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
-        auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
-        if (pythonModule->ownsPythonInterpreter()) {
+        std::shared_lock lock(modulesMtx);
+        auto pythonModuleIt = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
+        auto* pythonRuntimeApi = (pythonModuleIt != modules.end() && pythonModuleIt->second != nullptr) ? dynamic_cast<PythonRuntimeModuleApi*>(pythonModuleIt->second.get()) : nullptr;
+        if (pythonRuntimeApi != nullptr && pythonRuntimeApi->ownsPythonInterpreter()) {
             // Natively GIL is held by the thread that initialized interpreter, so we only need to release it, if we own the interpreter.
             // If it was initialized externally, then the external thread shall release the GIL before launching that module.
-            pythonModule->releaseGILFromThisThread();
+            pythonRuntimeApi->releaseGILFromThisThread();
         }
     }
 #endif
@@ -536,11 +559,14 @@ void Server::shutdownModules() {
         ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
     }
 #endif
-    GraphExport::clearInMemoryGraphContent();
+    ovms::Config::instance().setInMemoryGraphPbtxt(std::nullopt);
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     std::shared_lock lock(modulesMtx);
     modules.clear();
+#if (PYTHON_DISABLE == 0)
+    ovms::unloadPythonRuntime();
+#endif
 }
 
 static int statusToExitCode(const Status& status) {

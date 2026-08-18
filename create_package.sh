@@ -25,15 +25,25 @@ mkdir -vp /ovms_release/lib
 # Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
 if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
-find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -name "libazure-*" ! -name "pyovms.so" ! -path "*/_solib_k8/*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -vP {} /ovms_release/lib/ \;
-# Copy pyovms.so directly as a file (not symlink) to avoid broken Bazel cache paths
+# Narrow python filter to versioned interpreter SONAMEs only, so libovmspython.so and libpython_calculators.so are still copied.
+find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d \
+    ! -name "libgtest.so" ! -name "*gtest*" ! -name "*googletest*" \
+    ! -name "*params" ! -name "*.hana.*" ! -name "*runfiles_manifest*" \
+    ! -name "py_generate_pipeline.cpython*" ! -name "lib_node_*" \
+    ! -name "libazure-*" ! -name "pyovms.so" \
+    ! -path "*/_solib_k8/*" ! -path "*test_python_binding*" \
+    ! -name "libpython[0-9]*.so*" \
+    -exec cp -vP {} /ovms_release/lib/ \;
+
+# Copy pyovms.so directly as a file (not symlink) to avoid broken Bazel cache paths.
 find /ovms/bazel-out/k8-*/bin/src/python/binding -name 'pyovms.so' -type f -exec cp -v {} /ovms_release/lib/ \;
 
 # Copy Azure SDK libs directly from the CMake install prefix so that the
-# unversioned .so files are local relative symlinks (not absolute Bazel cache
-# paths), avoiding duplicate regular-file copies of the same content.
+# unversioned .so files are local relative symlinks (not absolute Bazel cache paths).
 find /azure-sdk-install/lib -maxdepth 1 -name 'libazure-*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 
+# Defensive cleanup: keep Bazel runfiles metadata out of release payloads.
+rm -f /ovms_release/lib/*.runfiles_manifest
 
 # Bundle espeak-ng data files when espeak was enabled in the Bazel build.
 # rules_foreign_cc places the cmake install tree under copy_<rule>/espeak-ng/
@@ -94,6 +104,41 @@ if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then \
 fi
 
 # Add Python bindings for pyovms, openvino, openvino_tokenizers and openvino_genai, so they are all available for OVMS Python servables
+if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
+	# Keep explicit copies for Python runtime/plugin artifacts so release staging
+	# remains stable even if the generic .so copy filter changes.
+	OVMS_PY_RUNTIME_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libovmspython.so' | head -n 1 || true)
+	OVMS_PY_CALCULATORS_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libpython_calculators.so' | head -n 1 || true)
+	if [ -z "$OVMS_PY_RUNTIME_LIB" ] || [ -z "$OVMS_PY_CALCULATORS_LIB" ]; then
+		echo "Missing Python runtime/plugin shared libraries in bazel outputs. Ensure //src/python:libovmspython and //src/python:libpython_calculators are built."
+		exit 1
+	fi
+	# --remove-destination overwrites any prior symlink staged by the generic *.so find above.
+	cp -vLf --remove-destination "$OVMS_PY_RUNTIME_LIB" /ovms_release/lib/
+	cp -vLf --remove-destination "$OVMS_PY_CALCULATORS_LIB" /ovms_release/lib/
+	# Verify the copies landed in the staging directory.
+	if [ ! -f /ovms_release/lib/libovmspython.so ] || [ ! -f /ovms_release/lib/libpython_calculators.so ]; then
+		echo "Missing libovmspython.so or libpython_calculators.so in package staging after cp."
+		exit 1
+	fi
+fi
+
+if ! [[ $debug_bazel_flags == *"mp_off"* ]]; then
+	# Keep explicit copy for the OVMS MediaPipe runtime library.
+	OVMS_MP_RUNTIME_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libovms_mediapipe_runtime_shared.so' | head -n 1 || true)
+	if [ -z "$OVMS_MP_RUNTIME_LIB" ]; then
+		echo "Missing OVMS MediaPipe runtime library in bazel outputs. Ensure //src:ovms_mediapipe_runtime_shared is built."
+		exit 1
+	fi
+	# --remove-destination overwrites any prior symlink staged by the generic *.so find above.
+	cp -vLf --remove-destination "$OVMS_MP_RUNTIME_LIB" /ovms_release/lib/
+	# Verify the copy landed in the staging directory.
+	if [ ! -f /ovms_release/lib/libovms_mediapipe_runtime_shared.so ]; then
+		echo "Missing libovms_mediapipe_runtime_shared.so in package staging after cp."
+		exit 1
+	fi
+fi
+
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/python /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer ; \
@@ -143,7 +188,7 @@ ls -lahR /ovms_release/
 
 # removing 29MB of cpython packages for unsupported python versions
 rls_python=cpython-"$(python3 --version 2>&1 | awk '{gsub(/\./, "", $2); print $2}' | cut -c1-3)"
-find /ovms_release/ovms/lib/python/openvino -name *cpython* | grep -vZ $rls_python | xargs rm -rf --
+find /ovms_release/lib/python/openvino -name *cpython* | grep -vZ $rls_python | xargs rm -rf --
 
 mkdir -p /ovms_pkg/${BASE_OS}
 cd /ovms_pkg/${BASE_OS}

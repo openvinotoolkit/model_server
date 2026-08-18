@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdint>
+#include <cstdio>
 #include <exception>
 #include <iterator>
 #include <memory>

@@ -34,6 +34,10 @@
 #include "servable_name_checker.hpp"
 #include "status.hpp"
 
+#if (MEDIAPIPE_DISABLE == 0)
+#include "mediapipe_runtime_api.hpp"
+#endif
+
 namespace ov {
 class Core;
 }  // namespace ov
@@ -50,12 +54,13 @@ class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricConfig;
 class MetricRegistry;
+class MediapipeGraphExecutorInterface;
 class Model;
 class ModelConfig;
 class FileSystem;
-class MediapipeFactory;
 class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
+class MediapipeRuntimeApi;
 class ModelInstance;
 class ServableDefinition;
 class ModelInstanceUnloadGuard;
@@ -87,7 +92,7 @@ protected:
 
     std::unique_ptr<PipelineFactory> pipelineFactory;
 #if (MEDIAPIPE_DISABLE == 0)
-    std::unique_ptr<MediapipeFactory> mediapipeFactory;
+    std::unique_ptr<MediapipeRuntimeApi> mediapipeFactory;
 #endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
@@ -109,7 +114,7 @@ private:
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed);
 
 #if (MEDIAPIPE_DISABLE == 0)
-    Status processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory);
+    Status processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeRuntimeApi& factory);
     Status loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
     Status loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
         std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
@@ -311,7 +316,8 @@ public:
     const PipelineFactory& getPipelineFactory() const;
 
 #if (MEDIAPIPE_DISABLE == 0)
-    const MediapipeFactory& getMediapipeFactory() const {
+    const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
+    const MediapipeRuntimeApi& getMediapipeFactory() const {
         return *mediapipeFactory;
     }
 #endif
@@ -356,8 +362,13 @@ public:
     Status getModelOutputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const override;
     Status hasAutoModelParameters(const std::string& name, model_version_t version, bool& batchAuto, bool& shapeAuto) const override;
 
+#if (MEDIAPIPE_DISABLE == 0)
     Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
         const std::string& name);
+    Status createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
+        const std::string& name);
+    MediapipeRuntimeApi* getMediapipeRuntimeApi() const;
+#endif
 
     /**
      * @brief Starts model manager using provided config file

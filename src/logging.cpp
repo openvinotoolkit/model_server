@@ -15,12 +15,9 @@
 //*****************************************************************************
 #include "logging.hpp"
 
+#include <mutex>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
-
-#if (MEDIAPIPE_DISABLE == 0)
-#include <glog/logging.h>
-#endif
 #include <vector>
 
 #include "src/utils/env_guard.hpp"
@@ -129,6 +126,48 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     spdlog::set_default_logger(serving_logger);
 }
 
+static void adopt_default_logger_settings(std::shared_ptr<spdlog::logger> logger,
+    const std::shared_ptr<spdlog::logger>& defaultLogger) {
+    if (logger == nullptr || defaultLogger == nullptr) {
+        return;
+    }
+
+    if (logger->sinks().empty()) {
+        logger->sinks() = defaultLogger->sinks();
+    }
+    logger->set_pattern(default_pattern);
+    logger->set_level(defaultLogger->level());
+}
+
+void initialize_named_loggers_from_default() {
+    static std::once_flag initNamedLoggersFlag;
+    std::call_once(initNamedLoggersFlag, []() {
+        auto defaultLogger = spdlog::default_logger();
+        if (defaultLogger == nullptr || defaultLogger->sinks().empty()) {
+            return;
+        }
+
+        adopt_default_logger_settings(gcs_logger, defaultLogger);
+        adopt_default_logger_settings(azurestorage_logger, defaultLogger);
+        adopt_default_logger_settings(s3_logger, defaultLogger);
+        adopt_default_logger_settings(modelmanager_logger, defaultLogger);
+        adopt_default_logger_settings(dag_executor_logger, defaultLogger);
+        adopt_default_logger_settings(capi_logger, defaultLogger);
+#if (MEDIAPIPE_DISABLE == 0)
+        adopt_default_logger_settings(mediapipe_logger, defaultLogger);
+        adopt_default_logger_settings(llm_executor_logger, defaultLogger);
+        adopt_default_logger_settings(llm_calculator_logger, defaultLogger);
+        adopt_default_logger_settings(s2t_calculator_logger, defaultLogger);
+        adopt_default_logger_settings(t2s_calculator_logger, defaultLogger);
+        adopt_default_logger_settings(embeddings_calculator_logger, defaultLogger);
+        adopt_default_logger_settings(rerank_calculator_logger, defaultLogger);
+#endif
+#if (OV_TRACE == 1)
+        adopt_default_logger_settings(ov_logger, defaultLogger);
+#endif
+    });
+}
+
 void configure_logger(const std::string& log_level, const std::string& log_path) {
     static bool wasRun = false;
     if (wasRun) {
@@ -144,23 +183,14 @@ void configure_logger(const std::string& log_level, const std::string& log_path)
     register_loggers(log_level, sinks);
     const int OVMS_SPDLOG_FLUSH_EVERY_SECONDS = 1;
     spdlog::flush_every(std::chrono::seconds(OVMS_SPDLOG_FLUSH_EVERY_SECONDS));
-#if (MEDIAPIPE_DISABLE == 0)
-#ifdef __linux__
-    if (log_level == "DEBUG" || log_level == "TRACE")
-        FLAGS_minloglevel = google::INFO;
-    else if (log_level == "WARNING")
-        FLAGS_minloglevel = google::WARNING;
-    else  // ERROR, FATAL
-        FLAGS_minloglevel = google::ERROR;
-#elif _WIN32
-    if (log_level == "DEBUG" || log_level == "TRACE")
-        FLAGS_minloglevel = google::GLOG_INFO;
-    else if (log_level == "WARNING")
-        FLAGS_minloglevel = google::GLOG_WARNING;
-    else  // ERROR, FATAL
-        FLAGS_minloglevel = google::GLOG_ERROR;
-#endif
-#endif
+    // Keep glog-based dependencies aligned with OVMS log level without direct glog API usage.
+    if (log_level == "DEBUG" || log_level == "TRACE") {
+        SetEnvironmentVar("GLOG_minloglevel", "0");
+    } else if (log_level == "WARNING") {
+        SetEnvironmentVar("GLOG_minloglevel", "1");
+    } else {
+        SetEnvironmentVar("GLOG_minloglevel", "2");
+    }
     if (log_level == "DEBUG" || log_level == "TRACE") {
         SetEnvironmentVar("OPENVINO_LOG_LEVEL", "4");
     }

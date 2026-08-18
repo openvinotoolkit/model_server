@@ -243,6 +243,8 @@ Use MCP server, with additional image of Gdańsk old town. VLM model deduces loc
 python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
+> **Troubleshooting**: If you get `Given url does not match any allowed domain from allowed_media_domains`, download the image locally and pass a local path to `--image` (for example `/tmp/photo.jpeg`) instead of a remote URL.
+
 Exemplary output:
 ```text
 The current weather in Gdańsk is overcast with a temperature of 8.8°C (feels like 4.2°C). The relative humidity is 52%, and the wind is blowing from the SSW at 17.0 km/h with gusts up to 36.7 km/h. The atmospheric pressure is 1010.7 hPa with 84% cloud cover. The UV index is moderate at 3.5, and visibility is 40.9 km.
@@ -391,6 +393,8 @@ Use MCP server, with additional image of Gdańsk old town. VLM model deduces loc
 ```bash
 python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
+
+> **Troubleshooting**: If you get `Given url does not match any allowed domain from allowed_media_domains`, download the image locally and pass a local path to `--image` (for example `/tmp/photo.jpeg`) instead of a remote URL.
 
 Exemplary output:
 ```text

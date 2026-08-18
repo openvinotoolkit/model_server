@@ -14,11 +14,15 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <atomic>
+#include <filesystem>
 #include <string>
 
 #include <gtest/gtest.h>
 
 #include "../ovms.h"  // NOLINT
+#include "light_test_utils.hpp"
+#include "platform_utils.hpp"
 #include "test_utils.hpp"
 
 #define THROW_ON_ERROR_CAPI(C_API_CALL)                                        \
@@ -109,22 +113,60 @@ struct ServerSettingsGuard {
     }
     OVMS_ServerSettings* settings{nullptr};
 };
+
 struct ModelsSettingsGuard {
     ModelsSettingsGuard(const std::string& configPath) {
         THROW_ON_ERROR_CAPI(OVMS_ModelsSettingsNew(&settings));
-        THROW_ON_ERROR_CAPI(OVMS_ModelsSettingsSetConfigPath(settings, configPath.c_str()));
+        resolvedConfigPath = materializeConfigForCurrentPlatform(configPath);
+        ownsResolvedConfigPath = resolvedConfigPath != configPath;
+        THROW_ON_ERROR_CAPI(OVMS_ModelsSettingsSetConfigPath(settings, resolvedConfigPath.c_str()));
     }
     ~ModelsSettingsGuard() {
         if (settings)
             OVMS_ModelsSettingsDelete(settings);
+        if (ownsResolvedConfigPath) {
+            std::error_code errorCode;
+            std::filesystem::remove(resolvedConfigPath, errorCode);
+        }
     }
     OVMS_ModelsSettings* settings{nullptr};
+
+    std::string resolvedConfigPath;
+    bool ownsResolvedConfigPath{false};
+
+private:
+    // Prepares a config file suitable for the current platform and returns its path.
+    // On Windows, rewrites the JSON to adjust paths for the target platform and writes
+    // it to a new temporary file whose lifetime is owned by this guard instance (see
+    // ownsResolvedConfigPath) and removed in the destructor. On other platforms it
+    // returns the input path unchanged and the guard takes no ownership of it.
+    // Kept private so callers cannot bypass the guard's cleanup - always create a
+    // ModelsSettingsGuard when materialization is needed.
+    static std::string materializeConfigForCurrentPlatform(const std::string& configPath) {
+#ifdef _WIN32
+        if (!std::filesystem::exists(configPath)) {
+            return configPath;
+        }
+        if (std::filesystem::path(configPath).extension() != ".json") {
+            return configPath;
+        }
+        std::string configContents = GetFileContents(configPath);
+        adjustConfigForTargetPlatform(configContents);
+        static std::atomic<uint64_t> counter{0};
+        const auto generatedPath = std::filesystem::temp_directory_path() /
+                                   ("ovms_capi_config_" + std::to_string(counter.fetch_add(1)) + ".json");
+        createConfigFileWithContent(configContents, generatedPath.string());
+        return generatedPath.string();
+#else
+        return configPath;
+#endif
+    }
 };
 
 struct ServerGuard {
-    ServerGuard(const std::string configPath, bool startGrpc = false) {
-        ServerSettingsGuard serverSettingsGuard(startGrpc);
-        ModelsSettingsGuard modelsSettingsGuard(configPath);
+    ServerGuard(const std::string& configPath, bool startGrpc = false) :
+        serverSettingsGuard(startGrpc),
+        modelsSettingsGuard(configPath) {
         THROW_ON_ERROR_CAPI(OVMS_ServerNew(&server));
         THROW_ON_ERROR_CAPI(OVMS_ServerStartFromConfigurationFile(server, serverSettingsGuard.settings, modelsSettingsGuard.settings));
     }
@@ -133,6 +175,10 @@ struct ServerGuard {
             OVMS_ServerDelete(server);
     }
     OVMS_Server* server{nullptr};
+
+private:
+    ServerSettingsGuard serverSettingsGuard;
+    ModelsSettingsGuard modelsSettingsGuard;
 };
 struct CallbackUnblockingStruct {
     std::promise<uint32_t> signal;

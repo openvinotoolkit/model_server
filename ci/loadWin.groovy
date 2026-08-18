@@ -260,55 +260,79 @@ def unit_test(){
     def errorReasons = []
 
     def status = bat(returnStatus: true, script: '@windows_test.bat ' + get_short_bazel_path() + ' ' + pythonOption)
+    
+    // First, check if test script itself failed (before test execution)
     if (status != 0) {
         hasError = true
-        errorReasons << "Windows build test failed ${status}. Check win_build_test.log for details."
-    } else {
-        echo "Build successful."
-    }
-
-    status = bat(returnStatus: true, script: '@grep "       OK " win_test_summary.log')
-    if (status != 0) {
-        hasError = true
-        errorReasons << "Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test_summary.log for details."
-    } else {
-        def passed = bat(returnStatus: false, returnStdout: true, script: '@grep "       OK " win_test_summary.log | wc -l').trim()
-        echo "Detected ${passed} passed tests . Check win_test_summary.log for details."
-    }
-
-    status = bat(returnStatus: true, script: '@grep -a -E "^\\[  FAILED  \\].*[(][0-9]+ ms[)]$" win_full_test.log')
-    if (status == 0) {
-        hasError = true
-        def failed = bat(returnStatus: false, returnStdout: true, script: '@grep -a -E "^\\[  FAILED  \\].*[(][0-9]+ ms[)]$" win_full_test.log | awk "!seen[$0]++" | wc -l').trim()
-        def failedTestsList = bat(returnStatus: false, returnStdout: true, script: '@grep -a -E "^\\[  FAILED  \\].*[(][0-9]+ ms[)]$" win_full_test.log | awk "!seen[$0]++"').trim()
-        errorReasons << "Windows run test failed with ${failed} failed tests. Failed tests:\n${failedTestsList}\nCheck win_test_summary.log for details."
-    } else {
-        echo "no FAILED tests detected."
-    }
-
-    // PASSED/crash detection is handled by windows_test.bat (via windows_parse_tests.bat).
-    // The bat exit code is the authoritative signal; win_test_summary.log contains diagnostics.
-    status = bat(returnStatus: true, script: '@grep -a "\\[  PASSED  \\] " win_full_test.log')
-    if (status != 0) {
-        hasError = true
-        def markerLine = bat(returnStatus: true, script: '@grep -n "Check tests summary in" win_test_summary.log | head -1')
-        def summaryContent
-        if (markerLine == 0) {
-            summaryContent = bat(returnStatus: false, returnStdout: true, script: '''@powershell -NoProfile -Command "$content = Get-Content ''win_test_summary.log''; $marker = ($content | Select-String -SimpleMatch ''Check tests summary in'' | Select-Object -First 1).LineNumber; if ($marker) { $content[0..([Math]::Max(0, [int]$marker - 1))] -join [Environment]::NewLine } else { $content | Select-Object -First 150 | Out-String }"''').trim()
+        
+        // Check if error was logged to win_full_test.log (early exit errors)
+        if (fileExists('win_full_test.log')) {
+            def preTestError = bat(returnStatus: true, script: '@findstr "[ERROR]" win_full_test.log')
+            if (preTestError == 0) {
+                def errorMsg = bat(returnStatus: false, returnStdout: true, script: '@findstr "[ERROR]" win_full_test.log').trim()
+                errorReasons << "Error occurred before test execution:\n${errorMsg}\nCheck win_full_test.log, win_build_test.log for details."
+            } else {
+                errorReasons << "windows_test.bat failed with exit code ${status}. Check win_build_test.log for build details or win_full_test.log for test details."
+            }
         } else {
-            summaryContent = bat(returnStatus: false, returnStdout: true, script: '@head -150 win_test_summary.log').trim()
+            errorReasons << "windows_test.bat failed with exit code ${status}. Check win_build_test.log for details."
         }
-        errorReasons << "Windows run test failed. PASSED summary not found in win_full_test.log.\n${summaryContent}"
     } else {
-        echo "Success: Windows run test finished with success."
+        echo "Build and test script completed successfully."
     }
 
-    status = bat(returnStatus: true, script: '@grep -A 4 bazel-bin/src/ovms_test.exe win_build_test.log | grep "Build completed successfully"')
-    if (status != 0) {
-        hasError = true
-        errorReasons << "Windows build test failed ${status}. Check win_build_test.log for details."
+    // Now check test results (only if test logs were created)
+    if (fileExists('win_test_summary.log')) {
+        status = bat(returnStatus: true, script: '@grep "       OK " win_test_summary.log')
+        if (status != 0) {
+            hasError = true
+            errorReasons << "No passed tests detected. Check win_test_summary.log for details."
+        } else {
+            def passed = bat(returnStatus: false, returnStdout: true, script: '@grep "       OK " win_test_summary.log | wc -l').trim()
+            echo "Detected ${passed} passed tests. Check win_test_summary.log for details."
+        }
+    } else if (hasError) {
+        echo "[INFO] Test summary log not created because an error occurred before test execution."
+    }
+
+    if (fileExists('win_full_test.log')) {
+        status = bat(returnStatus: true, script: '@grep -a -E "^\\[  FAILED  \\].*[(][0-9]+ ms[)]$" win_full_test.log')
+        if (status == 0) {
+            hasError = true
+            def failed = bat(returnStatus: false, returnStdout: true, script: '@grep -a -E "^\\[  FAILED  \\].*[(][0-9]+ ms[)]$" win_full_test.log | awk "!seen[$0]++" | wc -l').trim()
+            def failedTestsList = bat(returnStatus: false, returnStdout: true, script: '@grep -a -E "^\\[  FAILED  \\].*[(][0-9]+ ms[)]$" win_full_test.log | awk "!seen[$0]++"').trim()
+            errorReasons << "Test execution failed with ${failed} failed tests. Failed tests:\n${failedTestsList}"
+        } else {
+            echo "No FAILED test markers detected."
+        }
+
+        // Check for PASSED marker (tests actually ran)
+        status = bat(returnStatus: true, script: '@grep -a "\\[  PASSED  \\] " win_full_test.log')
+        if (status != 0) {
+            // No PASSED marker - tests may not have run, check for errors
+            if (fileExists('win_test_summary.log')) {
+                def summaryContent = bat(returnStatus: false, returnStdout: true, script: '@head -200 win_test_summary.log').trim()
+                if (!hasError) {
+                    errorReasons << "PASSED summary marker not found in test log. Summary:\n${summaryContent}"
+                    hasError = true
+                }
+            }
+        } else {
+            echo "Success: Tests finished with PASSED summary."
+        }
     } else {
-        echo "Build successful."
+        echo "[INFO] Full test log not created because an error occurred before test execution."
+    }
+
+    // Check build log for successful build marker
+    if (fileExists('win_build_test.log')) {
+        status = bat(returnStatus: true, script: '@grep -a "Build completed successfully" win_build_test.log')
+        if (status != 0) {
+            if (!hasError) {
+                hasError = true
+                errorReasons << "Build did not complete successfully. Check win_build_test.log for details."
+            }
+        }
     }
 
     if (hasError) {

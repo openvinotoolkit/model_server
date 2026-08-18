@@ -107,6 +107,7 @@ protected:
     Status resolveGraphQueueSize();
     int resolveAutoQueueSize();
     Status validateForConfigLoadableness();
+    Status validateReferencedNodesRegistered();
 
     Status setStreamTypes();
     Status dryInitializeTest();

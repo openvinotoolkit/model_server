@@ -32,9 +32,18 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 
 namespace ovms {
+
+Status MediapipeGraphExecutor::infer(const HttpPayload* request, std::string* response, const ExecutionContext& executionContext) {
+    return this->infer<HttpPayload, std::string>(request, response, executionContext);
+}
+
+Status MediapipeGraphExecutor::inferStream(const HttpPayload& firstRequest, HttpAsyncWriter& serverReaderWriter, const ExecutionContext& executionContext) {
+    return this->inferStream<HttpPayload, HttpAsyncWriter>(firstRequest, serverReaderWriter, executionContext);
+}
 
 static const std::string UNUSED_REQUEST_ID = "";
 

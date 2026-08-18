@@ -74,9 +74,16 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         }
     }
     if (nodeOptions.has_chat_template_mode()) {
+#if (PYTHON_DISABLE == 0)
         properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
                                            ? ChatTemplateMode::JINJA
                                            : ChatTemplateMode::MINJA;
+#else
+        if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA) {
+            SPDLOG_WARN("chat_template_mode=JINJA is not supported in Python-disabled builds. Falling back to MINJA.");
+        }
+        properties->chatTemplateMode = ChatTemplateMode::MINJA;
+#endif
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();

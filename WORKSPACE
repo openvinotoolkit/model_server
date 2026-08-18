@@ -143,13 +143,13 @@ new_local_repository(
 cc_import(
     name = "curl_lib",
     hdrs = [],
+    interface_library = "bin/libcurl-x64.lib",
     shared_library = "bin/libcurl-x64.dll",
     visibility = ["//visibility:public"],
 )
 cc_library(
     name = "curl",
     hdrs = glob(["include/curl/curl.h"]),
-    srcs = glob(["lib/libcurl.dll.a"]),
     includes = ["include/"],
     visibility = ["//visibility:public"],
     deps = [":curl_lib"],
@@ -174,17 +174,17 @@ http_archive(
 
 ################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
-git_repository(
-    name = "mediapipe",
-    remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "12e8d511cfbc5f471c498278a65a02dd250963e8", # top of mediapipe main branch as of 26.11.2025
-)
-
-# DEV mediapipe 1 source - adjust local repository path for build
 #local_repository(
 #    name = "mediapipe",
 #    path = "C:\\git\\mediapipe",
 #)
+
+# Remote fallback for non-local development:
+git_repository(
+     name = "mediapipe",
+     remote = "https://github.com/openvinotoolkit/mediapipe",
+     commit = "ec9f5b3e5e765097f8fd9622f2e5d0c037351173", # Fix capi ovms handle ownership - code review1
+)
 
 # Protobuf for Node dependencies
 http_archive(
@@ -246,6 +246,16 @@ http_archive(
     urls = [
         "https://github.com/google/glog/archive/3a0d4d22c5ae0b9a2216988411cfa6bf860cc372.zip",
     ],
+)
+
+http_archive(
+    name = "com_github_glog_glog_no_gflags",
+    strip_prefix = "glog-3a0d4d22c5ae0b9a2216988411cfa6bf860cc372",
+    sha256 = "170d08f80210b82d95563f4723a15095eff1aad1863000e8eeb569c96a98fefb",
+    urls = [
+        "https://github.com/google/glog/archive/3a0d4d22c5ae0b9a2216988411cfa6bf860cc372.zip",
+    ],
+    build_file = "@mediapipe//third_party:glog_no_gflags.BUILD",
 )
 
 load("@mediapipe//third_party:external_files.bzl", "external_files")

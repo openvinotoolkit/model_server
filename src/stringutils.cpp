@@ -273,6 +273,10 @@ bool stringsOverlap(const std::string& lhs, const std::string& rhs) {
     return false;
 }
 
+bool containsEmbeddedNull(const std::string& value) {
+    return value.find('\0') != std::string::npos;
+}
+
 void escapeSpecialCharacters(std::string& text) {
     // Escape all double quotes, backslashes, and control characters in the text
     std::string escaped;

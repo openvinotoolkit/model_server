@@ -634,6 +634,12 @@ exit /b 0
 :exit_dependencies_error
 echo [ERROR] Some dependencies not installed
 exit /b 1
+
+:exit_build_error
+echo [ERROR] Build dependencies setup failed.
+endlocal
+exit /b 1
+
 endlocal
 
 :: Set VAR to VALUE only if VAR is not already defined in the environment.

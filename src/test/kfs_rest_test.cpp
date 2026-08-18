@@ -202,7 +202,13 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    auto dispatchStatus = handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser);
+    if (dispatchStatus != ovms::StatusCode::OK) {
+        std::cerr << "dispatchToProcessor failed with status code: " << static_cast<int>(dispatchStatus.getCode()) << std::endl;
+        std::cerr << "dispatchToProcessor status details: " << dispatchStatus.string() << std::endl;
+        std::cerr << "dispatchToProcessor response payload: " << response << std::endl;
+    }
+    ASSERT_EQ(dispatchStatus, ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());

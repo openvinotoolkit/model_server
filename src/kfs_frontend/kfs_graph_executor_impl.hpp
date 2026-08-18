@@ -20,21 +20,24 @@
 #include <string>
 
 #include "../mediapipe_internal/packettypes.hpp"
+#include "../status.hpp"
 #include "kfs_grpc_inference_service.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 6385 6386 6326 6011 4309 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/packet.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-namespace ovms {
+namespace mediapipe {
+class CalculatorGraph;
+class Timestamp;
+}  // namespace mediapipe
 
+namespace ovms {
 class PythonBackend;
-class Status;
 
 // Checks whether the request contains user-provided input side packets
 // (parameters other than the reserved OVMS_MP_TIMESTAMP).
@@ -121,10 +124,62 @@ Status sendErrorImpl(
     const std::string& message,
     KFSServerReaderWriter& serverReaderWriter);
 
+inline bool requestHasInputSidePackets(const KFSRequest& request) {
+    static const std::string timestampParam{"OVMS_MP_TIMESTAMP"};
+    for (const auto& parameter : request.parameters()) {
+        const auto& name = parameter.first;
+        if (name != timestampParam) {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline const std::string& getRequestId(
+    const KFSRequest& request) {
+    return request.id();
+}
+
+inline Status sendErrorImpl(
+    const std::string& message,
+    KFSServerReaderWriter& serverReaderWriter) {
+    ::inference::ModelStreamInferResponse resp;
+    *resp.mutable_error_message() = message;
+
+    if (serverReaderWriter.Write(resp)) {
+        return StatusCode::OK;
+    }
+
+    return Status(StatusCode::UNKNOWN_ERROR, "error during sending an error response");
+}
+
 // Imitation of stream.Read(...) in gRPC stream API
 // Required for inferStream only.
 bool waitForNewRequest(
     KFSServerReaderWriter& serverReaderWriter,
     KFSRequest& newRequest);
+
+inline Status validateSubsequentRequestImpl(
+    const KFSRequest& request,
+    const std::string& endpointName,
+    const std::string& endpointVersion,
+    stream_types_mapping_t& inputTypes) {
+    (void)inputTypes;
+    if (request.model_name() != endpointName) {
+        return StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME;
+    }
+    if (request.model_version() != endpointVersion &&
+        request.model_version() != "0" &&
+        !request.model_version().empty()) {
+        return StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION;
+    }
+    return StatusCode::OK;
+}
+
+inline bool waitForNewRequest(
+    KFSServerReaderWriter& serverReaderWriter,
+    KFSRequest& newRequest) {
+    return serverReaderWriter.Read(&newRequest);
+}
 
 }  // namespace ovms

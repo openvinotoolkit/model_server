@@ -20,6 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../kfs_python_tensor_bridge.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -33,6 +34,10 @@
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
 #include "test_utils.hpp"
+
+#ifdef __linux__
+extern "C" const ovms::KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
+#endif
 
 #if (PYTHON_DISABLE == 0)
 #include "../python/pythoninterpretermodule.hpp"
@@ -114,13 +119,26 @@ public:
         StreamingTest::SetUp();
         pythonModule = std::make_unique<PythonInterpreterModule>();
         pythonModule->start(ovms::Config::instance());
+        if (pythonModule->ownsPythonInterpreter()) {
+            // Release GIL on the setup thread so graph worker threads can acquire it.
+            pythonModule->releaseGILFromThisThread();
+        }
+#ifdef __linux__
+        if (getKfsPyTensorBridgeVTable() == nullptr && OVMS_getKfsPyTensorBridgeVTable != nullptr) {
+            if (auto* vtable = OVMS_getKfsPyTensorBridgeVTable(); vtable != nullptr) {
+                setKfsPyTensorBridgeVTable(vtable);
+            }
+        }
+#endif
         pythonBackend = pythonModule->getPythonBackend();
         manager = std::make_unique<ConstructorEnabledModelManager>("", pythonBackend);
     }
 
     void TearDown() {
         manager.reset();
-        pythonModule->reacquireGILForThisThread();
+        if (pythonModule->ownsPythonInterpreter()) {
+            pythonModule->reacquireGILForThisThread();
+        }
         pythonModule->shutdown();
         pythonModule.reset();
     }
@@ -511,7 +529,7 @@ TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSend
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli/subconfig").c_str(), "my_graph");
     const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
     ModelManager& manager = smm->getServableManager();
-    const MediapipeFactory& factory = manager.getMediapipeFactory();
+    const auto& factory = manager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(name);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -549,7 +567,7 @@ TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSep
     SetUpServer(configFilePath.c_str());
     const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
     ModelManager& manager = smm->getServableManager();
-    const MediapipeFactory& factory = manager.getMediapipeFactory();
+    const auto& factory = manager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(name);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);

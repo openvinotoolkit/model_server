@@ -31,19 +31,18 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/packet.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#if (PYTHON_DISABLE == 0)
-#include "../python/python_backend.hpp"
-#endif
+namespace mediapipe {
+class CalculatorGraph;
+class Timestamp;
+}  // namespace mediapipe
 
 #include "../http_async_writer_interface.hpp"
 
 namespace ovms {
-
 class PythonBackend;
 
 using HttpReaderWriter = HttpAsyncWriter;

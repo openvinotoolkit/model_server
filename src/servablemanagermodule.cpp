@@ -22,10 +22,8 @@
 #include "logging.hpp"
 #include "metrics/metric_module.hpp"
 #include "modelmanager.hpp"
+#include "python/python_runtime_module_api.hpp"
 #include "server.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "python/pythoninterpretermodule.hpp"
-#endif
 
 namespace ovms {
 class PythonBackend;
@@ -33,9 +31,10 @@ class PythonBackend;
 ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
     PythonBackend* pythonBackend = nullptr;
 #if (PYTHON_DISABLE == 0)
-    auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(ovmsServer.getModule(PYTHON_INTERPRETER_MODULE_NAME));
-    if (pythonModule != nullptr)
-        pythonBackend = pythonModule->getPythonBackend();
+    auto pythonModule = ovmsServer.getModule(PYTHON_INTERPRETER_MODULE_NAME);
+    if (auto pythonRuntimeApi = dynamic_cast<const PythonRuntimeModuleApi*>(pythonModule)) {
+        pythonBackend = pythonRuntimeApi->getPythonBackend();
+    }
 #endif
     if (auto metricsModule = dynamic_cast<const MetricModule*>(ovmsServer.getModule(METRICS_MODULE_NAME))) {
         this->servableManager = std::make_unique<ModelManager>("", &metricsModule->getRegistry(), pythonBackend);
