@@ -454,18 +454,17 @@ Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>&
         return status;
     }
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
-    std::shared_ptr<ServableDefinitionUnloadGuard> servableDefGuard(std::move(unloadGuard));
     if (this->queue) {
         GraphIdGuard graphIdGuard(this->queue);
         pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
             this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
             *this->sidePacketMaps,
-            this->pythonBackend, this->reporter.get(), std::move(graphIdGuard), std::move(servableDefGuard));
+            this->pythonBackend, this->reporter.get(), std::move(graphIdGuard));
     } else {
         pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
             this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
             *this->sidePacketMaps,
-            this->pythonBackend, this->reporter.get(), std::move(servableDefGuard));
+            this->pythonBackend, this->reporter.get());
     }
     SPDLOG_DEBUG("Created Mediapipe graph executor: {}", getName());
     return status;

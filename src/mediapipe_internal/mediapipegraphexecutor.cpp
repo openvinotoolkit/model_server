@@ -30,12 +30,9 @@
 #pragma warning(pop)
 
 #include "src/llm/execution_context_utils.hpp"
-#include "../servable_definition_unload_guard.hpp"
 
 namespace ovms {
 
-MediapipeGraphExecutor::~MediapipeGraphExecutor() = default;
-
 MediapipeGraphExecutor::MediapipeGraphExecutor(
     const std::string& name,
     const std::string& version,
@@ -47,8 +44,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     const GraphSidePackets& sidePacketMaps,
     PythonBackend* pythonBackend,
     MediapipeServableMetricReporter* mediapipeServableMetricReporter,
-    GraphIdGuard&& guard,
-    std::shared_ptr<ServableDefinitionUnloadGuard> servableDefGuard) :
+    GraphIdGuard&& guard) :
     name(name),
     version(version),
     config(config),
@@ -60,8 +56,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     pythonBackend(pythonBackend),
     currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter),
-    guard(std::move(guard)),
-    servableDefGuard(std::move(servableDefGuard)) {}
+    guard(std::move(guard)) {}
 MediapipeGraphExecutor::MediapipeGraphExecutor(
     const std::string& name,
     const std::string& version,
@@ -72,8 +67,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     std::vector<std::string> outputNames,
     const GraphSidePackets& sidePacketMaps,
     PythonBackend* pythonBackend,
-    MediapipeServableMetricReporter* mediapipeServableMetricReporter,
-    std::shared_ptr<ServableDefinitionUnloadGuard> servableDefGuard) :
+    MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
     name(name),
     version(version),
     config(config),
@@ -84,7 +78,6 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     sidePacketMaps(sidePacketMaps),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
-    mediapipeServableMetricReporter(mediapipeServableMetricReporter),
-    servableDefGuard(std::move(servableDefGuard)) {}
+    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
 
 }  // namespace ovms

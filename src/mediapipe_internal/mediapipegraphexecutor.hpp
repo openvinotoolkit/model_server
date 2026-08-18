@@ -142,11 +142,8 @@ private:
 
     MediapipeServableMetricReporter* mediapipeServableMetricReporter;
     std::optional<GraphIdGuard> guard;
-    std::shared_ptr<ServableDefinitionUnloadGuard> servableDefGuard;
 
 public:
-    ~MediapipeGraphExecutor();
-
     MediapipeGraphExecutor(const std::string& name,
         const std::string& version,
         const ::mediapipe::CalculatorGraphConfig& config,
@@ -155,8 +152,7 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const GraphSidePackets& sidePacketMaps,
         PythonBackend* pythonBackend,
-        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard,
-        std::shared_ptr<ServableDefinitionUnloadGuard> servableDefGuard = nullptr);
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard);
     // Constructor without graph queue (old path - graph created per-request)
     MediapipeGraphExecutor(const std::string& name,
         const std::string& version,
@@ -166,8 +162,7 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const GraphSidePackets& sidePacketMaps,
         PythonBackend* pythonBackend,
-        MediapipeServableMetricReporter* mediapipeServableMetricReporter,
-        std::shared_ptr<ServableDefinitionUnloadGuard> servableDefGuard = nullptr);
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter);
 
     Status infer(const inference::ModelInferRequest* request,
         inference::ModelInferResponse* response,
