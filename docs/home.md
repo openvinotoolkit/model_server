@@ -82,7 +82,7 @@ for chunk in stream:
 ### Serve a Classic Model with KServe API
 
 **Download the model:**
-```text
+```console
 curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -O
 curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -O
 ```
