@@ -198,9 +198,9 @@ bool Config::validate() {
             }
             const auto& exportSettings = this->serverSettings.hfSettings.exportSettings;
             auto textGenSettings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
-            std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "AUTO"};
+            std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "OMNI", "AUTO"};
             if (textGenSettings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), textGenSettings.pipelineType) == allowedPipelineTypes.end()) {
-                std::cerr << "pipeline_type: " << textGenSettings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
+                std::cerr << "pipeline_type: " << textGenSettings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, OMNI, AUTO" << std::endl;
                 return false;
             }
 

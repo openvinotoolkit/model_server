@@ -45,6 +45,10 @@
 
 namespace ovms {
 
+double calculatePrefillSpeed(size_t inputTokenCount, double ttftMs) {
+    return ttftMs > 0.0 ? (1000.0 * inputTokenCount) / ttftMs : 0.0;
+}
+
 void GenAiServable::determineDecodingMethod() {
     getProperties()->decodingMethod = DecodingMethod::STANDARD;
     auto& pluginConfig = getProperties()->pluginConfig;
@@ -85,6 +89,10 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
         executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
         return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v[13]/chat/completions, /v[13]/completions, /v[13]/responses, /v[13]/tokenize");
+    }
+    auto endpointStatus = validateEndpoint(executionContext->endpoint);
+    if (!endpointStatus.ok()) {
+        return endpointStatus;
     }
     executionContext->payload = payload;
     return absl::OkStatus();

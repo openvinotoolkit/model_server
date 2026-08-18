@@ -21,12 +21,19 @@ set -e
 env
 mkdir -vp /ovms_release/bin
 mkdir -vp /ovms_release/lib
-mkdir -vp /ovms_release/lib/custom_nodes
 
 # Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
 if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
-find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -v {} /ovms_release/lib/ \;
+find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -name "libazure-*" ! -name "pyovms.so" ! -path "*/_solib_k8/*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -vP {} /ovms_release/lib/ \;
+# Copy pyovms.so directly as a file (not symlink) to avoid broken Bazel cache paths
+find /ovms/bazel-out/k8-*/bin/src/python/binding -name 'pyovms.so' -type f -exec cp -v {} /ovms_release/lib/ \;
+
+# Copy Azure SDK libs directly from the CMake install prefix so that the
+# unversioned .so files are local relative symlinks (not absolute Bazel cache
+# paths), avoiding duplicate regular-file copies of the same content.
+find /azure-sdk-install/lib -maxdepth 1 -name 'libazure-*.so*' -exec cp -vP {} /ovms_release/lib/ \;
+
 
 # Bundle espeak-ng data files when espeak was enabled in the Bazel build.
 # rules_foreign_cc places the cmake install tree under copy_<rule>/espeak-ng/
@@ -52,10 +59,7 @@ if [ -n "$ESPEAK_REAL" ]; then
     ln -s libespeak-ng.so.1 libespeak-ng.so
     cd - >/dev/null
 fi
-if [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/; fi;
 cd /ovms_release/lib/ ; rm -f libcurl.so*
-cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
-cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
 
 # Remove GPU plugin for CPU images?
 # Remove OpenCL for CPU images?
@@ -94,8 +98,8 @@ if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/pyt
 if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer ; \
    chmod +x /ovms_release/bin/convert_tokenizer ; fi
-if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2026.3.dist-info ; \
-	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.3\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.3.0' > /ovms_release/lib/python/openvino_genai-2026.3.dist-info/METADATA; fi
+if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2026.4.dist-info ; \
+	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.4\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.4.0' > /ovms_release/lib/python/openvino_genai-2026.4.dist-info/METADATA; fi
 
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -vP {} /ovms_release/lib/ \;

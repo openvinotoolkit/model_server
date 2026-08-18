@@ -217,7 +217,14 @@ class GenerativeAIValidationUtils:
                         stream_content.append(choice.delta.content)
             else:
                 if not allow_empty_response:
-                    assert len(choice.message.content) > 0, f"Empty response content: {choice}"
+                    if kwargs['model_instance'].allows_reasoning:
+                        reasoning = getattr(choice.message, "reasoning_content", None)
+                        if reasoning is None and hasattr(choice.message, "model_extra"):
+                            reasoning = choice.message.model_extra.get("reasoning_content")
+                        assert reasoning is not None and len(reasoning) > 0, f"Empty reasoning content: {choice}"
+                    else:
+                        assert len(choice.message.content) > 0, f"Empty response content: {choice.message.content}"
+
                 if tools_enabled and validate_tools:
                     # When tools are enabled content might not be empty
                     assert choice.message.role == "assistant", f"Unexpected role: {choice.message.role}"

@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <stdexcept>
@@ -52,28 +53,32 @@
 
 namespace ovms {
 
-absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
-    // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
-    if (payload.parsedJson->HasParseError()) {
-        return absl::InvalidArgumentError("Non-json request received in text generation calculator");
+void VisualLanguageModelLegacyServable::logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics) {
+    const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
+    const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();
+    const double prepareEmbeddingsTimeMs = perfMetrics.get_prepare_embeddings_duration().mean;
+    const double ttftMs = perfMetrics.get_ttft().mean;
+    // Legacy VLM measures TTFT from the beginning of generate(), including embeddings preparation.
+    const double llmTtftMs = std::max(ttftMs - prepareEmbeddingsTimeMs, 0.0);
+    const double prefillSpeedTps = calculatePrefillSpeed(inputTokenCount, llmTtftMs);
+
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "Request processing metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | prepare_embeddings_time_ms: {:.3f} | llm_ttft_ms: {:.3f} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f} | image_slice_count: {}",
+        inputTokenCount,
+        outputTokenCount,
+        inputTokenCount + outputTokenCount,
+        prepareEmbeddingsTimeMs,
+        llmTtftMs,
+        ttftMs,
+        prefillSpeedTps,
+        perfMetrics.get_total_image_slice_count());
+}
+
+absl::Status VisualLanguageModelLegacyServable::validateEndpoint(Endpoint endpoint) const {
+    if (endpoint == Endpoint::COMPLETIONS) {
+        return absl::InvalidArgumentError("VLM Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
-    if (payload.uri.find("/v3/v1/") != std::string::npos) {
-        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Endpoint {} is deprecated. Use /v1/ prefix instead.", payload.uri);
-    }
-    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions" ||
-        payload.uri == "/v1/chat/completions") {
-        executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
-    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses" ||
-               payload.uri == "/v1/responses") {
-        executionContext->endpoint = Endpoint::RESPONSES;
-    } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
-        executionContext->endpoint = Endpoint::TOKENIZE;
-    } else {
-        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v[13]/chat/completions, /v[13]/responses, /v[13]/tokenize");
-    }
-    executionContext->payload = payload;
     return absl::OkStatus();
 }
 
@@ -229,6 +234,9 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
     const std::string& completeText = legacyExecutionContext->accumulatedUnaryText;
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
         legacyExecutionContext->results, completeText);
+    if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+        logPerfMetrics(legacyExecutionContext->results.perf_metrics);
+    }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
@@ -323,6 +331,9 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+            logPerfMetrics(legacyExecutionContext->results.perf_metrics);
+        }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }

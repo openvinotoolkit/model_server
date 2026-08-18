@@ -61,6 +61,17 @@ public:
             SPDLOG_ERROR("Failed to unpack calculator options");
             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
         }
+        const float speedMin = nodeOptions.speed_min();
+        const float speedMax = nodeOptions.speed_max();
+        // !(speedMin <= speedMax) is true for inverted ranges and any NaN bound.
+        if (!(speedMin <= speedMax)) {
+            SPDLOG_ERROR("TextToSpeech node name: {} invalid speed bounds in graph {}: speed_min ({}) must be <= speed_max ({}).",
+                nodeName,
+                graphName,
+                speedMin,
+                speedMax);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
         try {
             auto servable = std::make_shared<TtsServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.voices(), nodeOptions.plugin_config(), basePath);
             ttsServableMap.insert(std::pair<std::string, std::shared_ptr<TtsServable>>(nodeName, std::move(servable)));

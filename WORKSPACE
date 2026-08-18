@@ -89,7 +89,7 @@ http_archive(
     build_file = "@mediapipe//third_party:zlib.BUILD",
     sha256 = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
     strip_prefix = "zlib-1.3.2",
-    url = "http://zlib.net/fossils/zlib-1.3.2.tar.gz",
+    url = "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
 )
 
 # RapidJSON
@@ -483,26 +483,11 @@ drogon_cpp()
 load("@ovms//third_party/espeak_ng:espeak_ng.bzl", "espeak_ng")
 espeak_ng()
 
-# Azure Storage SDK
+# Azure SDK for C++ (azure-core, azure-storage-blobs, azure-storage-files-shares)
 new_local_repository(
     name = "azure",
     build_file = "@//third_party/azure:BUILD",
-    path = "/azure/azure-storage-cpp",
-)
-
-# Azure Storage SDK dependency - cpprest
-new_local_repository(
-    name = "cpprest",
-    build_file = "@//third_party/cpprest:BUILD",
-    path = "/azure/cpprestsdk",
-)
-
-# Boost (needed for Azure Storage SDK)
-
-new_local_repository(
-    name = "boost",
-    path = "/usr/local/lib/",
-    build_file = "@//third_party/boost:BUILD"
+    path = "/azure-sdk-install",
 )
 
 # Google Cloud SDK

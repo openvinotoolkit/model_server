@@ -83,6 +83,14 @@ public:
 
     absl::Status Open(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "T2sCalculator  [Node: {}] Open start", cc->NodeName());
+        const auto& calcOptions = cc->Options<T2sCalculatorOptions>();
+        const float speedMin = calcOptions.speed_min();
+        const float speedMax = calcOptions.speed_max();
+        // !(speedMin <= speedMax) is true for inverted ranges and for any NaN bound.
+        if (!(speedMin <= speedMax)) {
+            return absl::InvalidArgumentError(
+                absl::StrCat("Invalid T2sCalculatorOptions: speed_min (", speedMin, ") must be <= speed_max (", speedMax, ")"));
+        }
         return absl::OkStatus();
     }
 
@@ -139,6 +147,16 @@ public:
                     }
                     speed = speedIt->value.GetFloat();
                 }
+                // Validate speed bounds regardless of whether it came from request or default
+                const auto& calcOptions = cc->Options<T2sCalculatorOptions>();
+                const float speedMin = calcOptions.speed_min();
+                const float speedMax = calcOptions.speed_max();
+                // Use positive-range predicate: NaN speed makes both comparisons
+                // false, so the negation correctly rejects it.
+                if (!(speedMin <= speed && speed <= speedMax)) {
+                    return absl::InvalidArgumentError(
+                        absl::StrCat("speed must be between speed_min (", speedMin, ") and speed_max (", speedMax, ")"));
+                }
                 ov::genai::Text2SpeechDecodedResults generatedSpeech;
                 std::unique_lock lock(pipe->ttsPipelineMutex);
                 auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before generation");
@@ -171,7 +189,7 @@ public:
                 void* ppData;
                 size_t pDataSize;
                 uint16_t bitsPerSample = static_cast<uint16_t>(generatedSpeech.speeches[0].get_element_type().bitwidth());
-                prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, bitsPerSample, speechSize, cpuTensor.data<const float>());
+                ovms::audio_utils::prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, bitsPerSample, speechSize, cpuTensor.data<const float>());
                 output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
                 drwav_free(ppData, NULL);
             } else {
