@@ -46,7 +46,7 @@ docker run --rm -p 8000:8000 \
   --user $(id -u):$(id -g) -v ${HOME}/models:/models:rw \
   openvino/model_server:latest \
   --source_model OpenVINO/Qwen3-4B-int4-ov \
-  --model_repository_path /tmp/models \
+  --model_repository_path /models \
   --rest_port 8000
 ```
 > For GPU acceleration, use the `latest-gpu` image tag and pass `--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)` to expose the Intel GPU device.
