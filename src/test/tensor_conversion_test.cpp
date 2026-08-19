@@ -190,11 +190,14 @@ TYPED_TEST(NativeFileInputConversionTest, negative_mixed_channels_with_ranged_ch
 
     std::ifstream grayscaleDataFile;
     grayscaleDataFile.open(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/grayscale.jpg"), std::ios::binary);
+    ASSERT_TRUE(grayscaleDataFile.is_open());
     grayscaleDataFile.seekg(0, std::ios::end);
-    size_t grayscaleFilesize = grayscaleDataFile.tellg();
-    grayscaleDataFile.seekg(0);
+    std::streampos endPos = grayscaleDataFile.tellg();
+    ASSERT_NE(endPos, std::streampos(-1));
+    size_t grayscaleFilesize = static_cast<size_t>(endPos);
+    grayscaleDataFile.seekg(0, std::ios::beg);
     std::unique_ptr<char[]> grayscaleImageBytes(new char[grayscaleFilesize]);
-    grayscaleDataFile.read(grayscaleImageBytes.get(), grayscaleFilesize);
+    ASSERT_TRUE(grayscaleDataFile.read(grayscaleImageBytes.get(), grayscaleFilesize).good());
 
     mixedChannelsRequestTensor.mutable_contents()->add_bytes_contents(rgbImageBytes.get(), rgbFilesize);
     mixedChannelsRequestTensor.mutable_contents()->add_bytes_contents(grayscaleImageBytes.get(), grayscaleFilesize);
