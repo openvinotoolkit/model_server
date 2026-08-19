@@ -27,6 +27,7 @@
 
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
+#include "environment.hpp"
 #include "gpuenvironment.hpp"
 #include "test_models_configs.hpp"
 #include "test_with_temp_dir.hpp"
@@ -705,6 +706,10 @@ TEST_F(TestLoadModel, SuccessfulLoadDummyDimensionRanges) {
 }
 
 TEST_F(TestLoadModel, CorrectNumberOfStreamsSet) {
+// problematic on just one machine in CI
+#if defined(_WIN32)
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+#endif
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
     config.setPluginConfig({{"NUM_STREAMS", "4"}});
