@@ -3413,7 +3413,10 @@ protected:
         if (expectedStatus == ovms::StatusCode::OK) {
             ASSERT_EQ(response.outputs_size(), 1);
             ASSERT_EQ(response.raw_output_contents_size(), 1);
-            ASSERT_EQ(response.raw_output_contents()[0].size(), 10 * ovms::KFSDataTypeSize(request.inputs()[0].datatype()));
+            // BYTES has no fixed per-element size, so the exact-size check only applies to fixed-size datatypes.
+            if (request.inputs()[0].datatype() != "BYTES") {
+                ASSERT_EQ(response.raw_output_contents()[0].size(), 10 * ovms::KFSDataTypeSize(request.inputs()[0].datatype()));
+            }
         }
     }
 
@@ -3509,6 +3512,10 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
 
 typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, bool> InferInputTensorContentsTypesToTest;
 TYPED_TEST_SUITE(KFSGRPCContentFieldsSupportTest, InferInputTensorContentsTypesToTest);
+
+// Non-typed alias for the BYTES/Precision::STRING typed-contents test below, which does not vary by numeric TypeParam.
+using KFSGRPCContentFieldsSupportTestBytes = KFSGRPCContentFieldsSupportTest<uint8_t>;
+
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentOVTensor = R"(
         input_stream: "OVTENSOR:in"
@@ -3583,6 +3590,36 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorInvalidContentSize) {
         }
     )";
     this->performInvalidContentSizeTest(pbtxtContentPyTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+
+// Covers the Precision::STRING branch of serializeKfsTypedContentToRawBytes: bytes_contents
+// typed data with no raw_input_contents, routed through the OVMS_PY_TENSOR bridge.
+TEST_F(KFSGRPCContentFieldsSupportTestBytes, PyTensorBytesContentsCheckExpectedStatusCode) {
+    const std::string pbtxtContentPytensor = R"(
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        }
+    )";
+    this->CreateConfigAndPbtxt(pbtxtContentPytensor);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--config_path",
+        (char*)this->configFilePath.c_str(),
+        (char*)"--port",
+        (char*)this->port.c_str()};
+    int argc = 5;
+    this->server.setShutdownRequest(0);
+    this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
+        EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
+    });
+    // prepare bytes_contents typed data (no raw_input_contents) to exercise Precision::STRING
+    prepareInferStringRequest(this->request, "in", {"foo", "bar", "baz"}, /*putBufferInInputTensorContent=*/true);
+    const std::string servableName{"mediapipeDummy"};
+    this->request.mutable_model_name()->assign(servableName);
+    this->performInference(ovms::StatusCode::OK);
 }
 #endif
 

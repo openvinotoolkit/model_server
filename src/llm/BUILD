@@ -606,7 +606,7 @@ ovms_cc_library(
             "//:not_disable_python": [],
             "//:disable_python": []
         }) + [
-        ":genai_servable_interface",
+        ":servable_interface",
         "//src/mediapipe_internal:graph_side_packets",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -615,7 +615,7 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "genai_servable_interface",
+    name = "servable_interface",
     hdrs = ["servable.hpp"],
     deps = [
         "//third_party:openvino",

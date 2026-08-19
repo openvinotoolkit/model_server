@@ -27,7 +27,8 @@ class Status;
 class GraphExport {
 public:
     GraphExport();
-    // Writes graph.pbtxt into directoryPath (persistent HF pull / download flow).
+    // Writes graph.pbtxt into directoryPath. Used by the HF pull / download flow
+    // and by CONFIGURE_MODE (--configure --model_path --task, exits after writing).
     Status createServableConfig(const std::string& directoryPath, const HFSettingsImpl& graphSettings);
     // Returns the pbtxt content via outPbtxt without touching disk. Used by the
     // IN_MEMORY_GRAPH_MODE startup path (--task + --model_path, no HF download).

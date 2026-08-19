@@ -22,7 +22,7 @@
 #include <openvino/genai/tokenizer.hpp>
 
 #include "../base_input_processor.hpp"
-#include "../../runtime_chat_template.hpp"
+#include "src/llm/runtime_chat_template.hpp"
 
 namespace ovms {
 
