@@ -10,6 +10,7 @@ This README covers the recommended deployment workflow. For manual Docker deploy
 
 ## Architecture
 
+<<<<<<< HEAD
 ```mermaid
 flowchart TD
     U[User] --> OH[OpenHands Container]
@@ -17,12 +18,30 @@ flowchart TD
     OH --> S[Runtime Sandbox]
     OVMS --> LLM[MediaPipe LLM Graph and Tool Parser]
     LLM --> M[OpenVINO Model]
+=======
+```
+User
+  |
+  v
+OpenHands Container
+  | (creates runtime sandbox containers for code execution)
+  |
+  | OpenAI-compatible HTTP requests
+  | POST /v3/chat/completions
+  | LLM_BASE_URL=http://ovms-llm:8000/v3
+  | LLM_MODEL=openai/<served-model-name>
+  v
+OpenVINO Model Server
+   | (MediaPipe LLM graph + automatic tool parsing)
+  v
+OpenVINO model
+>>>>>>> db71a1c7 (removed tool parser logic)
 ```
 
 Ensure the required ports are available on your host.
 OpenHands maintains conversation state and creates isolated Docker containers for code execution. It requires an OpenAI-compatible LLM endpoint with models that have sufficient context capacity and coding capability.
 
-OVMS serves generative models through an OpenAI-compatible REST API, handling model retrieval, OpenVINO conversion, and graph generation. It applies model-specific tool parsers for structured output and runs on CPU or GPU with OpenVINO optimization.
+OVMS serves generative models through an OpenAI-compatible REST API, handling model retrieval, OpenVINO conversion, and graph generation. Newer OVMS releases automatically detect the appropriate tool parser for supported models and run on CPU or GPU with OpenVINO optimization.
 
 For detailed request flow and configuration requirements, see [ADVANCED_DEPLOYMENT.md](ADVANCED_DEPLOYMENT.md).
 
@@ -78,20 +97,17 @@ The deployment script automatically forwards these variables to the Docker conta
 
 OpenHands requires models with instruction-following capability, coding proficiency, sufficient context window (4096+ tokens), and tool calling support.
 
-| Model Family | Tool Parser | Notes                                  |
-|--------------|-------------|----------------------------------------|
-| Qwen 3 Coder | `qwen3coder`| Strong coding performance, various sizes |
-| Qwen 3       | `hermes3`   | General instruction following          |
-| Llama 3      | `llama3`    | Good general instruction following   |
-| Mistral      | `mistral`   | Efficient inference                  |
-
 > **Note:** Examples use `OpenVINO/Qwen3-8b-int8-ov`. Other compatible models may also be used.
 
+<<<<<<< HEAD
 ### Tool Parser Selection (Since 2026.3 OVMS supports automatic parser detection)
 
 Tool parsers enable structured output for function calling. When OpenHands executes a tool (running code, reading files), it expects the LLM to return structured JSON specifying the tool name and arguments. The tool parser converts model outputs into this format.
 
 Without the correct tool parser, the model does not generate tool calls in the expected format, causing tool call extraction to fail.
+=======
+OVMS now selects the tool parser automatically for supported models, so you do not need to configure it in the deployment script or compose file. If tool calls are not being extracted correctly, make sure you are running a recent OVMS release and that the model is supported by OpenHands.
+>>>>>>> db71a1c7 (removed tool parser logic)
 
 For details on OVMS model retrieval and workspace layout, see [ADVANCED_DEPLOYMENT.md](ADVANCED_DEPLOYMENT.md).
 
@@ -125,7 +141,7 @@ The deployment script uses the deployment fingerprint to determine whether to pr
 
 **Redeploying an identical deployment:** If the stored deployment fingerprint matches the requested deployment, the script preserves the existing `docker-compose.yml` and all local user modifications, then deploys using the existing compose.
 
-**Deploying a different configuration:** If the deployment fingerprint changes (model, device, parser, ports, proxy settings, cache directory, etc.), the script stops the existing deployment, removes the generated compose, regenerates it from the template, regenerates deployment metadata, and deploys the new configuration.
+**Deploying a different configuration:** If the deployment fingerprint changes (model, device, reasoning parser, ports, proxy settings, cache directory, etc.), the script stops the existing deployment, removes the generated compose, regenerates it from the template, regenerates deployment metadata, and deploys the new configuration.
 
 This design allows users to make local compose customizations (such as enabling TRACE logging) without having those changes discarded when redeploying the same configuration.
 
@@ -167,10 +183,10 @@ Before using GPU inference, ensure your host system exposes an OpenVINO-compatib
 
 **Optional parameters:**
 ```bash
-# Specify device, parser, or cache directory
+# Specify device, reasoning parser, or cache directory
 ./scripts/deploy_model_ovms.sh OpenVINO/Qwen3-8b-int8-ov \
     --device CPU \
-    --parser hermes3 \
+   --reasoning-parser qwen3 \
     --cache-dir ~/custom-models
 
 # Skip health check for faster feedback
@@ -220,7 +236,7 @@ Run `deploy_model_ovms.sh` when changing deployment configuration:
 
 - Deploying a different model
 - Switching between CPU and GPU
-- Changing tool parser or reasoning parser
+- Changing reasoning parser
 - Changing published ports
 - Changing proxy configuration
 - Regenerating the deployment
@@ -293,6 +309,7 @@ The deployment script sets the published OpenHands port (default: 3000).
 - API errors: Verify `LLM_BASE_URL` and `LLM_MODEL` match OVMS configuration
 - Slow responses: CPU inference is slower than GPU; consider `LLM_TIMEOUT` setting
 - Task failures: The model may lack coding capability; try a larger model
+- Tool-call failures: newer OVMS releases detect the tool parser automatically, so verify you are on a recent OVMS version and that the selected model is supported by OpenHands
 
 ---
 
@@ -343,7 +360,7 @@ docker compose down
 Check `curl -s http://localhost:8000/v1/config` (default port; override with `OVMS_REST_PORT`). Possible causes:
 - Model still downloading (wait longer for large models)
 - Out of memory (check host RAM; model may be too large)
-- Tool parser mismatch (verify `TOOL_PARSER` matches model family)
+- Older OVMS release in use; newer versions auto-detect the tool parser
 
 **Connection refused**
 

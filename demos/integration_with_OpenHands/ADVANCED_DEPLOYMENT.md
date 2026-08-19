@@ -77,7 +77,7 @@ You can deploy using Docker commands directly without the helper scripts. This a
 export MODEL_ID="OpenVINO/Qwen3-8b-int8-ov"
 export LOCAL_NAME="qwen3-8b-int8-ov"
 export TARGET_DEVICE="CPU"
-export TOOL_PARSER="hermes3"
+export REASONING_PARSER=""
 export MODEL_CACHE_DIR="${HOME}/ovms-openhands/models"
 export HF_TOKEN="${HF_TOKEN:-}"
 
@@ -146,8 +146,7 @@ docker run -d \
     --task text_generation \
     --target_device "$TARGET_DEVICE" \
     --port 9000 \
-    --rest_port 8000 \
-    --tool_parser "$TOOL_PARSER"
+    --rest_port 8000
 ```
 
 This command downloads the OpenVINO model from Hugging Face (if not cached), generates the MediaPipe LLM graph, and starts the OVMS server with the OpenAI-compatible REST API.
@@ -230,7 +229,7 @@ The deployment fingerprint includes all parameters that affect compose generatio
 
 - Model identifier and local name
 - Target device
-- Tool and reasoning parsers
+- Reasoning parser
 - OVMS image variant
 - GPU device mapping
 - Model cache directory
@@ -248,7 +247,7 @@ The deployment script uses the deployment fingerprint to determine whether to pr
 
 **Redeploying an identical deployment:** If the stored deployment fingerprint matches the requested deployment (all parameters identical), the script preserves the existing `docker-compose.yml` and all local user modifications, then deploys using the existing compose. This allows users to make local compose customizations without having those changes discarded.
 
-**Deploying a different configuration:** If any deployment fingerprint parameter changes (model, device, parser, ports, proxy settings, cache directory, etc.), the script stops the existing deployment, removes the generated compose, regenerates it from the template, regenerates deployment metadata, and deploys the new configuration. This resets local compose modifications because the deployment itself has changed.
+**Deploying a different configuration:** If any deployment fingerprint parameter changes (model, device, reasoning parser, ports, proxy settings, cache directory, etc.), the script stops the existing deployment, removes the generated compose, regenerates it from the template, regenerates deployment metadata, and deploys the new configuration. This resets local compose modifications because the deployment itself has changed.
 
 ---
 
@@ -309,10 +308,9 @@ command:
   - --target_device ${TARGET_DEVICE}
   - --port "9000"
   - --rest_port "8000"
-  - --tool_parser ${TOOL_PARSER}
 ```
 
-Configures OVMS to use `/models` as the repository, download from Hugging Face, serve under the local name, use the text-generation pipeline, run on the specified device, and enable tool parsing.
+Configures OVMS to use `/models` as the repository, download from Hugging Face, serve under the local name, use the text-generation pipeline, and run on the specified device. Newer OVMS releases detect the appropriate tool parser automatically.
 
 ### Service: openhands
 
@@ -406,20 +404,24 @@ Checks for Docker and docker compose availability, warns if `HF_TOKEN` is not se
 basename "$MODEL_ID" | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
 ```
 
+<<<<<<< HEAD
 **3. Resolves the tool parser (OVMS automatically detects parser types since 2026.3)**
 
 Maps model family to parser (e.g., Qwen → `hermes3`, Llama3 → `llama3`, Mistral → `mistral`).
 
 **4. Creates the model cache directory**
+=======
+**3. Creates the model cache directory**
+>>>>>>> db71a1c7 (removed tool parser logic)
 
 ```bash
 mkdir -p "$MODEL_CACHE_DIR"  # Defaults to ${HOME}/ovms-openhands/models
 ```
 
-**5. Exports runtime configuration**
+**4. Exports runtime configuration**
 
 ```bash
-export MODEL_ID LOCAL_NAME TARGET_DEVICE TOOL_PARSER REASONING_PARSER MODEL_CACHE_DIR HF_TOKEN
+export MODEL_ID LOCAL_NAME TARGET_DEVICE REASONING_PARSER MODEL_CACHE_DIR HF_TOKEN
 export OVMS_IMAGE GPU_DEVICE WSL_LIBS
 export OVMS_REST_PORT OVMS_GRPC_PORT OPENHANDS_PORT
 export http_proxy https_proxy HTTP_PROXY HTTPS_PROXY no_proxy NO_PROXY
@@ -455,7 +457,6 @@ The deployment fingerprint stored in `.ovms-deployment` includes all parameters 
 - `MODEL_ID` — Hugging Face model identifier
 - `TARGET_DEVICE` — CPU or GPU
 - `LOCAL_NAME` — Normalized model name
-- `TOOL_PARSER` — Tool parser for structured output
 - `REASONING_PARSER` — Reasoning parser for chain-of-thought
 - `OVMS_IMAGE` — CPU or GPU variant
 - `GPU_DEVICE` — Device mapping for GPU passthrough
@@ -476,7 +477,6 @@ When any of these parameters change between deployments, the script regenerates 
 
 **Options:**
 - `--device DEVICE`: Target device (`CPU` or `GPU`, default: `CPU`)
-- `--parser PARSER`: Override the automatically resolved tool parser
 - `--cache-dir DIR`: Model cache directory (default: `${HOME}/ovms-openhands/models`)
 - `--compose-file FILE`: Path to docker-compose.yml (default: generated from template)
 - `--skip-wait`: Skip health check and return immediately after deploy
@@ -486,7 +486,7 @@ When any of these parameters change between deployments, the script regenerates 
 - `LOCAL_NAME`: Override the auto-normalized model name
 - `MODEL_CACHE_DIR`: Override model cache directory
 - `TARGET_DEVICE`: Override target device
-- `TOOL_PARSER`: Override tool parser
+- `REASONING_PARSER`: Override reasoning parser
 
 ---
 
@@ -518,7 +518,6 @@ ovms \
   --task text_generation \
   --target_device CPU \
   --model_name qwen3-8b-int8-ov \
-  --tool_parser hermes3 \
   --log_level TRACE
 ```
 
@@ -528,7 +527,7 @@ TRACE logging provides detailed information helpful for diagnosing issues relate
 
 To enable TRACE logging for a compose-based deployment, edit the generated `docker-compose.yml` and modify the OVMS command to include the `--log_level` argument.
 
-The OVMS service in the generated compose uses a shell command to conditionally add parser arguments. Append the log level argument to the command array:
+The OVMS service in the generated compose uses a shell command to conditionally add reasoning parser arguments. Append the log level argument to the command array:
 
 ```yaml
 command:
@@ -544,9 +543,6 @@ command:
       --port "9000"
       --rest_port "8000"
     )
-    if [[ "$${TOOL_PARSER}" != "none" ]]; then
-      CMD_ARGS+=(--tool_parser "$${TOOL_PARSER}")
-    fi
     if [[ "$${REASONING_PARSER}" != "none" ]]; then
       CMD_ARGS+=(--reasoning_parser "$${REASONING_PARSER}")
     fi
