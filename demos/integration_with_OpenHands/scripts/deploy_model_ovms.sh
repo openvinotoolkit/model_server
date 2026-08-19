@@ -24,12 +24,7 @@
 #   model_id          Hugging Face model ID (e.g., "OpenVINO/qwen3-8b-int8-ov")
 #
 # Options:
-<<<<<<< HEAD
-#   --device DEVICE           Target device: CPU or GPU (default: GPU if available)
-#   --parser PARSER           Tool parser: hermes3, qwen3coder, devstral, gemma4, gptoss, llama3, mistral, phi4, or none (default: auto-resolved)
-=======
 #   --device DEVICE           Target device: CPU or GPU (default: CPU)
->>>>>>> db71a1c7 (removed tool parser logic)
 #   --reasoning-parser PARSER Reasoning parser: gemma4, gptoss, or none (default: auto-resolved)
 #   --cache-dir DIR           Model cache directory (default: ${HOME}/ovms-openhands/models)
 #   --compose-file FILE       Path to docker-compose.yml (default: <demo_root>/docker-compose.yml, generated from template)
