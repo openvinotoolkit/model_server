@@ -922,13 +922,6 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
     }
     SPDLOG_DEBUG("Tensor to deserialize:\"{}\"", name);
     OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), MediapipeGraphDefinition::VERSION));
-    if (!request->raw_input_contents().empty() && (request->raw_input_contents().size() != request->inputs().size())) {
-        std::stringstream ss;
-        ss << "Size of raw_input_contents: " << request->raw_input_contents().size() << " is different than number of inputs: " << request->inputs().size();
-        const std::string details = ss.str();
-        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", request->model_name(), request->model_version(), details);
-        return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
-    }
     std::unique_ptr<T> inputTensor;
     OVMS_RETURN_ON_FAIL(deserializeTensor(name, *request, inputTensor, pythonBackend));
     SPDLOG_TRACE("Current Timestamp before actual pushing:{}", timestamp.Value());

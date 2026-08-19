@@ -24,11 +24,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../logging.hpp"
-#include "../profiler.hpp"
-#include "../status.hpp"
-#include "../tensorinfo.hpp"
-#include "../tensor_conversion_common.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
+#include "src/status.hpp"
+#include "src/tensorinfo.hpp"
+#include "src/tensor_conversion_common.hpp"
 
 namespace ovms {
 Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
@@ -184,6 +184,13 @@ void setStringPrecision(KFSTensorOutputProto& proto) {
 
 Status validateRequestCoherencyKFS(const KFSRequest& request, const std::string servableName, model_version_t servableVersion) {
     if (!request.raw_input_contents().empty()) {
+        if (request.raw_input_contents().size() != request.inputs_size()) {
+            std::stringstream ss;
+            ss << "Size of raw_input_contents: " << request.raw_input_contents().size() << " is different than number of inputs: " << request.inputs_size();
+            const std::string details = ss.str();
+            SPDLOG_DEBUG("[servable name: {} version: {}] Invalid message structure - {}", servableName, servableVersion, details);
+            return Status(StatusCode::INVALID_MESSAGE_STRUCTURE, details);
+        }
         for (auto& input : request.inputs()) {
             if (input.has_contents()) {
                 std::stringstream ss;
