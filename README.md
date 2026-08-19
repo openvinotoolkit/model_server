@@ -28,8 +28,10 @@ OpenVINO Model Server (OVMS) is a production-grade, C++ inference server that ex
 
 **On Linux (Docker):**
 ```bash
-# Model is downloaded automatically from HuggingFace
+mkdir -p ${HOME}/models
+# Model is downloaded automatically from HuggingFace to models folder
 docker run --rm -p 8000:8000 \
+  --user $(id -u):$(id -g) -v ${HOME}/models:/models:rw \
   openvino/model_server:latest \
   --source_model OpenVINO/Qwen3-4B-int4-ov \
   --model_repository_path /tmp/models \
