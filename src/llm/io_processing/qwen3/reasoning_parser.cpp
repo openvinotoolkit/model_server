@@ -37,7 +37,7 @@ std::optional<rapidjson::Document> Qwen3ReasoningParser::parseChunk(const std::s
     // streamer flush as preceding reasoning text (FOUND_INCOMPLETE hold-back
     // accumulates e.g. "...ing</think>" in the cache).
     std::string text = chunk;
-    const std::string& endTag = getParsingEndTag();
+    const std::string& endTag = parsingConfig.endTag;
     const size_t endTagPos = text.rfind(endTag);
     if (endTagPos != std::string::npos) {
         text = text.substr(0, endTagPos);
@@ -50,7 +50,7 @@ std::optional<rapidjson::Document> Qwen3ReasoningParser::parseChunk(const std::s
     // After the first call, any <think> that appears in the stream is literal
     // reasoning content produced by the model and is emitted as-is.
     if (!phaseEntryTagConsumed_) {
-        const std::string& startTag = getParsingStartTags()[0];
+        const std::string& startTag = parsingConfig.startTags[0];
         const size_t startTagPos = text.find(startTag);
         if (startTagPos != std::string::npos) {
             text = text.substr(startTagPos + startTag.size());

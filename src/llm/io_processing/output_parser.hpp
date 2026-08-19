@@ -26,6 +26,34 @@
 
 namespace ovms {
 
+// OutputParser orchestrates the streaming parsing pipeline.
+//
+// Responsibilities of OutputParser (the orchestrator):
+//   - Phase lifecycle: detect phase transitions by looking for start/end tags declared
+//     in each parser's OutputParsingConfig; switch the active phase accordingly.
+//   - Buffer management: accumulate decoded text in StreamOutputCache, hold it while a
+//     tag is only partially matched, flush it to the active parser when a boundary is
+//     confirmed, and carry over any bytes that trail a phase-end tag so they seed the
+//     next phase without loss.
+//   - Routing: deliver each flush exclusively to the parser that owns the current phase.
+//     A specific parser's parseChunk() is only ever called with text that belongs to its
+//     active phase — the parser does not need to detect or handle phase transitions.
+//   - Coordination: manage the interplay between tool, reasoning, and content parsers
+//     across the full generation sequence.
+//
+// Responsibilities of BaseOutputParser subclasses (the specific parsers):
+//   - Declare phase boundaries by returning a correctly populated OutputParsingConfig
+//     (startTags, endTag, preambleStartTags, etc.).  This is the sole coupling point
+//     with the orchestrator — no knowledge of OutputParser internals is required.
+//   - Implement parseChunk() to process the text it receives during its active phase.
+//     The parser may maintain arbitrary internal state and buffers to satisfy its own
+//     format requirements; OutputParser does not inspect or constrain that state.
+//   - Return a JSON delta (OpenAI streaming format) or nullopt to signal "nothing to
+//     emit yet"; the orchestrator propagates that decision upstream unchanged.
+//
+// Design invariant: OutputParser must contain NO logic specific to any individual model
+// format.  All format-specific behaviour must be encapsulated in the parser subclasses
+// and expressed through their configuration and parseChunk() implementations.
 class OutputParser {
     // Public types and enums
 public:
@@ -56,12 +84,9 @@ public:
 
 private:
     ov::genai::Tokenizer tokenizer;
-    std::string toolParserName;
-    std::string reasoningParserName;
-    const ToolsSchemas_t& toolNameSchemaMap;                      // reference to OpenAIApiHandler::request.toolNameSchemaMap; always sees populated map
-    std::unique_ptr<BaseOutputParser> toolParser = nullptr;       // Tool parser for extracting tool calls
-    std::unique_ptr<BaseOutputParser> reasoningParser = nullptr;  // Reasoning parser for extracting reasoning content
-    bool decodeWithSpecialTokens = false;                         // Onyx parsers match on special token text (e.g. <|message|>, <|eom|>)
+    std::unique_ptr<BaseOutputParser> toolParser = nullptr;
+    std::unique_ptr<BaseOutputParser> reasoningParser = nullptr;
+    std::unique_ptr<BaseOutputParser> contentParser = nullptr;
 
     // Streaming related members
     ProcessingPhase processingPhase = UNKNOWN;
@@ -101,9 +126,29 @@ public:
     // Auto-detect and apply implicit reasoning start based on the prompt produced by the chat template.
     void detectAndSetImplicitReasoningStart(const std::string& renderedPrompt);
 
-    // Parse model output chunk in the steaming mode. Returns a JSON object containing the delta that conforms to OpenAI API
-    // or nullopt if no response can be produced.
-    // tokens holds the token IDs that produced chunkResponse (may be empty; currently informational for future use).
+    // Parse one decoded chunk in streaming mode.
+    //
+    // Contract:
+    //   - Returns a JSON delta conforming to the OpenAI streaming API, or nullopt when no
+    //     output can yet be produced (partial tag match, preamble stripping, etc.).
+    //   - Processes AT MOST ONE phase per call.  If a chunk spans a phase boundary (e.g. a
+    //     token whose text contains both an end tag and the start of the next phase), the bytes
+    //     after the end tag are preserved in the internal buffer and processed on the next call.
+    //     No content is ever discarded at a phase transition — "nothing properly parsed is lost".
+    //   - Correctness requires at least one subsequent call after every phase transition.
+    //     The caller must provide a final call with finishReason != NONE (typically an empty
+    //     chunk) so the buffer is fully drained.  If that call is missing, any buffered
+    //     remainder from the last transition will be silently dropped.
+    //   - Known limitation: if finishReason != NONE arrives while a start tag is only
+    //     partially matched (FOUND_INCOMPLETE), the partial text is flushed as content rather
+    //     than held for completion — this is unavoidable without more tokens.
+    //
+    // Implementation must be fully generic: no parser-specific logic or special-casing of
+    // individual model formats belongs here.  Behaviour must be driven entirely by the
+    // configuration exposed through BaseOutputParser::getParsingConfig().
+    //
+    // tokens holds the token IDs that produced chunkResponse (informational; used for
+    // token-ID-based phase-start detection in OVMSTextStreamer).
     std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason);
 
     // Decide decode mode dynamically based on parser phase and user preference.

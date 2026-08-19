@@ -36,9 +36,9 @@ namespace ovms {
 //                        These are alternative entry points that cannot appear mid-stream.
 //   endTag             — text-based end-boundary string (checked in TOOL_CALLS_PROCESSING_TOOL
 //                        and REASONING phases).
-//   contentTagsToErase — control tags removed from plain-content deltas produced by
-//                        OutputParser::parseContentChunk(). This keeps parser-specific
-//                        control tokens out of content without hardcoding parser names.
+//   stringsToErase     — strings stripped from this parser's output before emission
+//                        (e.g. BOS/EOS tokens that leak due to special-token decode mode,
+//                        or chat-template structural markers).
 //
 // Tokenizer decode mode flag (evaluated by OutputParser::needSpecialTokensForCurrentDecode):
 //   needsSpecialTokens — Decode with skip_special_tokens=false while this parser is in its
@@ -51,15 +51,24 @@ namespace ovms {
 //   synthesises the start-tag text without requiring special-token decode in the active phase.
 //
 //   Whether the content/unknown phase also needs special tokens is determined at the
-//   OutputParser level (defaultDecodingWithSpecialTokens), not in the per-parser config.
+//   OutputParser level via defaultDecodingWithSpecialTokens, not in the per-parser config.
+//
+// Content/unknown phase decode mode:
+//   defaultDecodingWithSpecialTokens — when true, decoding uses skip_special_tokens=false
+//                                      even in the content/unknown phase. Set by parsers
+//                                      whose model format emits structural special tokens
+//                                      before their own active phase begins (e.g. GptOss,
+//                                      devstral, minicpm5).
 struct OutputParsingConfig {
     std::vector<std::string> startTags;
     std::vector<std::string> tokenIdStartTags;
     std::vector<std::string> preambleStartTags;
     std::string endTag;
-    std::vector<std::string> contentTagsToErase;
+    std::vector<std::string> stringsToErase;
 
     bool needsSpecialTokens = false;
+    // See comment block above.
+    bool defaultDecodingWithSpecialTokens = false;
 };
 
 }  // namespace ovms

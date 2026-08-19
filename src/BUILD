@@ -2277,6 +2277,7 @@ cc_test(
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
                 ":test_llm_output_parser_tests",
+                ":test_llm_io_processing_utils_tests",
                 ":test_chat_template_workarounds",
                 ":test_llm_input_processing_tests",
                 ":test_llm_input_processing_integration_tests",
@@ -2798,6 +2799,19 @@ cc_library(
 
 
 cc_library(
+    name = "test_llm_io_processing_utils_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/llm/io_processing_utils_test.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest",
+        "//src/llm:io_processing_utils",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
     name = "test_llm_output_parser_tests",
     linkstatic = 1,
     alwayslink = True,
@@ -2816,6 +2830,7 @@ cc_library(
     name = "test_chat_template_workarounds",
     linkstatic = 1,
     alwayslink = True,
+    hdrs = ["test/llm/output_parsers/output_parser_test_utils.hpp"],
     srcs = [
         "test/llm/chat_template_analyzer_test.cpp",
         "test/llm/chat_template_adapter_test.cpp",
@@ -2828,6 +2843,7 @@ cc_library(
         "//src/llm:chat_template_probe",
         "//src/llm:io_processing_input_processors",
         "//src/llm:output_parsers",
+        "//src/llm:text_streamer",
         "//src/utils:env_guard",
         "//third_party:genai",
         ":test_platform_utils",

@@ -105,6 +105,8 @@ protected:
     OpenAIRequest request;
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
+    const std::string toolParserName;
+    const std::string reasoningParserName;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
     std::shared_ptr<OutputParser> outputParser = nullptr;
@@ -120,10 +122,15 @@ protected:
     std::vector<int64_t> verboseRawTokens;
     std::string verboseRawText;
 
+    // Endpoint-specific parsing; called by parseRequest().
+    virtual absl::Status parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+        std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) = 0;
+
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
     absl::Status parseResponseFormat();
     absl::Status ensureArgumentsInToolCalls(Value& messageObj);
+    void initOutputParser();
     // Assemble a ParsedOutput from a sequence of streaming delta Documents produced by OVMSTextStreamer.
     // Each document has the shape {"delta":{...}} as emitted by flush_chunk, or an empty object for
     // finish-only chunks.  Content, reasoning, and tool-call fragments are accumulated in order.
@@ -135,13 +142,9 @@ public:
         doc(doc),
         endpoint(endpoint),
         created(creationTime),
-        tokenizer(tokenizer) {
-        // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
-        // we pass it now, but it has to be populated first before first use
-        if (!toolParserName.empty() || !reasoningParserName.empty()) {
-            outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
-        }
-    }
+        tokenizer(tokenizer),
+        toolParserName(toolParserName),
+        reasoningParserName(reasoningParserName) {}
 
     virtual ~OpenAIApiHandler() = default;
 
@@ -151,9 +154,9 @@ public:
     OpenAIApiHandler(OpenAIApiHandler&&) = delete;
     OpenAIApiHandler& operator=(OpenAIApiHandler&&) = delete;
 
-    // Request parsing - pure virtual, each handler implements its own endpoint-specific dispatch
-    virtual absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
-        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) = 0;
+    // Request parsing: non-virtual wrapper; calls parseRequestImpl() then initOutputParser().
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
 
     // Shared parsing (non-virtual)
     absl::Status parseTools();

@@ -84,6 +84,16 @@ public:
         BaseOutputParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
 
+    void resetState() override {
+        lastJson.SetNull();
+        jsonBuilder.clear();
+        toolCallIndex = -1;
+        argumentsDelayWindow[0].clear();
+        argumentsDelayWindow[1].clear();
+        unprocessedBuffer.clear();
+        toolCallCompleted = false;
+    }
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };
 }  // namespace ovms

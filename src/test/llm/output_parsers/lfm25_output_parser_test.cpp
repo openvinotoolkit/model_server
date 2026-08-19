@@ -163,10 +163,8 @@ TEST_F(LFM25OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
 }
 
 TEST_F(LFM25OutputParserTest, ParseToolCallOutputWithSingleToolCall_ProductionMode) {
-    // Production mode: userWantsSpecialTokens=false (skip_special_tokens=true by default).
-    // The <|tool_call_start|> and <|tool_call_end|> tokens are special — without the
-    // proactive isPhaseStartToken() switch in OVMSTextStreamer::write they would decode
-    // to empty strings and tool-call detection would silently fail.
+    // Verifies the proactive token-ID phase-start switch works when the user has not
+    // requested special tokens; without it <|tool_call_start|> decodes to empty string.
     std::string input = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>";
     auto generatedTensor = lfm25Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());

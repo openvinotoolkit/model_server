@@ -52,7 +52,6 @@ public:
         cfg.startTags = {"<|tool_call_start|>"};
         cfg.tokenIdStartTags = {"<|tool_call_start|>"};
         cfg.endTag = "<|tool_call_end|>";
-        cfg.contentTagsToErase = {"<|im_end|>"};
         cfg.needsSpecialTokens = true;
         return cfg;
     }
@@ -61,6 +60,14 @@ public:
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
         BaseOutputParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    void resetState() override {
+        streamingContent.clear();
+        streamingPosition = 0;
+        currentState = Lfm2ParseState::Content;
+        toolCall = {};
+        toolCallIndex = -1;
+    }
 
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk,
         const std::vector<int64_t>& tokens,

@@ -245,55 +245,25 @@ Status OnyxToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outCo
     return StatusCode::OK;
 }
 
-OnyxToolParser::OnyxToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
-    BaseOutputParser(tokenizer),
+OnyxToolParser::OnyxToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
+    std::optional<OutputParsingConfig> configOverride) :
+    BaseOutputParser(tokenizer,
+        configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()),
     toolSchemas(toolSchemas),
+    toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
     streamParser(this->toolsParametersTypes) {
+    buildStartTags();
 }
 
-void OnyxToolParser::lazyFillParsingStartTags() const {
-    // toolSchemas is a reference that is empty when this object is constructed and only gets
-    // populated by the caller afterwards, once the current request's tools are known (and may
-    // hold a different tool set on every request if this parser instance is reused). Rebuild
-    // "to=<name>" start tags from whatever toolSchemas currently holds on every call instead of
-    // hardcoding tool names or building the list once too early in the constructor. The schema
-    // map is small, so recomputing this each time is cheap.
-    parsingStartTags.clear();
-    parsingStartTags.push_back(TOOL_START_TAG);
+void OnyxToolParser::buildStartTags() {
+    parsingConfig.startTags.clear();
+    parsingConfig.startTags.push_back(TOOL_START_TAG);
     for (const auto& [name, _] : toolSchemas) {
         if (name == "user" || name == "self") {
-            SPDLOG_DEBUG("Skipping tool name: {} for parsingStartTags", name);
+            SPDLOG_DEBUG("Skipping tool name: {} for start tags", name);
             continue;
         }
-        parsingStartTags.push_back("to=" + name);
-    }
-}
-
-void OnyxToolParser::lazyFillInitToolParametersTypesMap() {
-    if (this->filledParametersTypesMap) {
-        return;
-    }
-    this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
-    this->filledParametersTypesMap = true;
-    SPDLOG_DEBUG("OnyxToolParser created with {} tools", this->toolsParametersTypes.size());
-}
-
-void OnyxToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    // Unary is the single-shot edge case of streaming: drive the same streamParser with the
-    // whole content as one chunk (mirrors Qwen3CoderToolParser::parse()).
-    this->lazyFillInitToolParametersTypesMap();
-    auto toolCallsOpt = this->streamParser.parseChunk(parsedOutput.content);
-    if (!toolCallsOpt.has_value()) {
-        SPDLOG_DEBUG("Parsing ended, no tool calls found");
-        return;
-    }
-    parsedOutput.toolCalls = std::move(toolCallsOpt.value());
-    for (const auto& toolCall : parsedOutput.toolCalls) {
-        SPDLOG_DEBUG("Unary | Onyx Tool | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
-    }
-    auto status = this->streamParser.removeToolCallsFromContentIfNeeded(parsedOutput.content);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Failed to remove tool calls from content: {}", status.string());
+        parsingConfig.startTags.push_back("to=" + name);
     }
 }
 
@@ -333,7 +303,6 @@ std::optional<rapidjson::Document> OnyxToolParser::parseChunk(const std::string&
     // streamParser returns assembled toolCalls once a call closes ("</atem:function_calls>");
     // until then, if the function name is already known, send its first delta once.
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));
-    this->lazyFillInitToolParametersTypesMap();
     if (newChunk.empty()) {
         return std::nullopt;
     }

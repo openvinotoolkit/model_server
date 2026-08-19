@@ -3019,6 +3019,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, OutputParserInitializationDependsOnParserNa
 
     auto withParserNames = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
         doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "llama3", "");
+    ASSERT_EQ(withParserNames->parseRequest(/*maxTokensLimit=*/std::nullopt, /*bestOfLimit=*/0, /*maxModelLength=*/std::nullopt), absl::OkStatus());
     EXPECT_NE(withParserNames->getOutputParser(), nullptr);
 }
 

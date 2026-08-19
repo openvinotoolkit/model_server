@@ -108,10 +108,10 @@ protected:
 
     std::vector<int64_t> encodeInput(const std::string& input) {
         if (input == "<think>") {
-            return {Minicpm5ReasoningParser::reasoningStartTokenId};
+            return {int64_t{8}};  // <think> token ID in MiniCPM5
         }
         if (input == "</think>") {
-            return {Minicpm5ReasoningParser::reasoningEndTokenId};
+            return {int64_t{9}};  // </think> token ID in MiniCPM5
         }
         auto generatedTensor = minicpm5Tokenizer->encode(input, ov::genai::add_special_tokens(true)).input_ids;
         return std::vector<int64_t>(
@@ -128,9 +128,9 @@ protected:
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
             std::vector<int64_t> tokens = {};
             if (chunk == "<think>") {
-                tokens = {Minicpm5ReasoningParser::reasoningStartTokenId};
+                tokens = {int64_t{8}};  // <think>
             } else if (chunk == "</think>") {
-                tokens = {Minicpm5ReasoningParser::reasoningEndTokenId};
+                tokens = {int64_t{9}};  // </think>
             } else {
                 tokens = encodeInput(chunk);
             }
@@ -283,7 +283,7 @@ TEST_F(Minicpm5OutputParserTest, ParseReasoningWithoutStartingTag) {
         return std::vector<int64_t>(tensor.data<int64_t>(), tensor.data<int64_t>() + tensor.get_size());
     };
     std::vector<int64_t> generatedTokens = encode(*minicpm5Tokenizer, "This is my internal reasoning about what to call.");
-    generatedTokens.push_back(Minicpm5ReasoningParser::reasoningEndTokenId);  // </think>
+    generatedTokens.push_back(9);  // </think>
 
     ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*minicpm5Tokenizer, *scopedParser, generatedTokens, true, true);
 
@@ -293,8 +293,8 @@ TEST_F(Minicpm5OutputParserTest, ParseReasoningWithoutStartingTag) {
 }
 
 TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
-    constexpr int64_t thinkStartTokenId = Minicpm5ReasoningParser::reasoningStartTokenId;
-    constexpr int64_t thinkEndTokenId = Minicpm5ReasoningParser::reasoningEndTokenId;
+    constexpr int64_t thinkStartTokenId = 8;  // <think> token ID in MiniCPM5
+    constexpr int64_t thinkEndTokenId = 9;    // </think> token ID in MiniCPM5
 
     auto outputParserWithReasoning =
         std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);

@@ -33,8 +33,8 @@ class OpenAIChatCompletionsHandler : public OpenAIApiHandler {
 public:
     using OpenAIApiHandler::OpenAIApiHandler;  // Inherit constructors
 
-    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
-        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) override;
+    absl::Status parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+        std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) override;
     absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
 
     std::string serializeUnaryResponse(const std::vector<rapidjson::Document>& deltas, ov::genai::GenerationFinishReason finishReason) override;

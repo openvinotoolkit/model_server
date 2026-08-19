@@ -70,7 +70,7 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
     std::string chunk = newChunk;
     std::optional<rapidjson::Document> result;
 
-    for (const auto& parsingStartTag : getParsingStartTags()) {
+    for (const auto& parsingStartTag : parsingConfig.startTags) {
         if (chunk.find(parsingStartTag) != std::string::npos) {
             toolCallIndex++;  // starting with -1, first call will be 0
             return std::nullopt;

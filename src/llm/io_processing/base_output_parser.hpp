@@ -85,7 +85,7 @@ protected:
     bool implicitStart = false;
 
     // Resolve tokenIdStartTags → resolvedStartTokenToTag using the tokenizer.
-    // Called once from constructors that set parsingConfig.tokenIdStartTags.
+    // Called once from the constructor.
     void resolveSpecialTokenIds() {
         for (const auto& tag : parsingConfig.tokenIdStartTags) {
             if (tag.empty())
@@ -110,6 +110,8 @@ public:
 
     virtual ~BaseOutputParser() = default;
 
+    virtual void resetState() {}
+
     void setImplicitStart(bool value) { implicitStart = value; }
     bool isImplicitStart() const { return implicitStart; }
 
@@ -126,30 +128,6 @@ public:
 
     // --- Specialized output parsers interface ---
 
-    // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.
-    // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.
-    // tokens holds the token IDs that produced chunkResponse (may be empty; currently informational for future use).
     virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) = 0;
-
-    // Get the tags that marks the beginning of the segment that should be processed by the parser.
-    // Defaults to parsingConfig.startTags; sub-classes may override for dynamic or legacy behaviour.
-    virtual const std::vector<std::string>& getParsingStartTags() const {
-        return parsingConfig.startTags;
-    }
-
-    // Get additional tags checked only in the UNKNOWN phase.
-    virtual const std::vector<std::string>& getPreambleStartTags() const {
-        return parsingConfig.preambleStartTags;
-    }
-
-    // Get the tag that marks the end of the segment.
-    virtual const std::string& getParsingEndTag() const {
-        return parsingConfig.endTag;
-    }
-
-    // Get parser-specific control tags to remove from plain content deltas.
-    virtual const std::vector<std::string>& getSpecialTagsToErase() const {
-        return parsingConfig.contentTagsToErase;
-    }
 };
 }  // namespace ovms

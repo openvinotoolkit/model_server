@@ -303,8 +303,8 @@ void cutEOSFromContent(std::string& content) {
 // ---------------------------------------------------------------------------
 
 bool Lfm2ToolParser::parseNewContent() {
-    const std::string& startTag = getParsingStartTags()[0];
-    const std::string& endTag = getParsingEndTag();
+    const std::string& startTag = parsingConfig.startTags[0];
+    const std::string& endTag = parsingConfig.endTag;
     switch (this->currentState) {
     case Lfm2ParseState::Content:
         return parseInContentState(this->streamingContent, this->streamingPosition,
@@ -348,7 +348,7 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
             return wrapDeltaArgs(this->toolCall.arguments, this->toolCallIndex);
         }
         if (this->currentState == Lfm2ParseState::Content) {
-            const std::string& startTag = getParsingStartTags()[0];
+            const std::string& startTag = parsingConfig.startTags[0];
             size_t contentEnd = this->streamingContent.find(startTag, this->streamingPosition);
             std::string content = (contentEnd != std::string::npos)
                                       ? this->streamingContent.substr(this->streamingPosition, contentEnd - this->streamingPosition)

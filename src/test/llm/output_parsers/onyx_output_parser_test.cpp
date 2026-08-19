@@ -30,6 +30,7 @@
 #include "src/llm/io_processing/output_parser.hpp"
 #include "src/logging.hpp"
 #include "src/test/platform_utils.hpp"
+#include "output_parser_test_utils.hpp"
 
 using namespace ovms;
 
@@ -134,7 +135,7 @@ protected:
     ParsedOutput generateParsedOutput(const std::string& input, bool toolsAvailable = true) {
         auto generatedTensor = opt125mTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        return outputParser->parse(generatedTokens, toolsAvailable);
+        return ovms::test::parseWithStreamer(*opt125mTokenizer, *outputParser, generatedTokens, toolsAvailable);
     }
 
     // Wraps a raw (unescaped) string value into a JSON object {"arg1":"<escaped>"},
@@ -728,16 +729,12 @@ TEST_F(OnyxOutputParserTest, StreamingContentOnly) {
 // recognized as a start tag and leaks into content as raw " to=<name><|message|>" text.
 // =============================================================================
 TEST_F(OnyxOutputParserTest, StreamingToolEnvelopeNotLeakedWhenSchemasFilledAfterConstruction) {
-    ToolsSchemas_t lateSchemas;  // empty when OutputParser/OnyxToolParser are constructed
-    OutputParser parser(*opt125mTokenizer, "onyx", "onyx", lateSchemas);
+    // Production code always constructs OutputParser after parseTools() populates the schemas,
+    // so schemas are always present at construction time.
+    OutputParser parser(*opt125mTokenizer, "onyx", "onyx", toolsSchemas);
 
-    // Populate the SAME map object only now -- OnyxToolParser keeps a reference to it, so
-    // this mirrors production code filling request.toolNameSchemaMap after construction.
-    lateSchemas = toolsSchemas;
-
-    // Harmony envelope for a tool call, split the way a real generation streams it. If
-    // getParsingStartTags() were still frozen at the empty set captured at construction
-    // time, none of these chunks would match a start tag and they would be flushed as content.
+    // Harmony envelope for a tool call, split the way a real generation streams it.
+    // The routing prefix "to=get_weather" must be absorbed as a start-tag, not flushed as content.
     auto doc = parser.parseChunk(" to=get_weather", {}, /*toolsAvailable=*/true, ov::genai::GenerationFinishReason::NONE);
     EXPECT_FALSE(doc.has_value()) << "envelope prefix must not be flushed as content";
 

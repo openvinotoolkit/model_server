@@ -111,10 +111,10 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
 
     ov::AnyMap streamerConfig;
     if (omniExecutionContext->apiHandler->isStream()) {
-        const bool userWantsSpecial = !omniExecutionContext->apiHandler->getRequest().skipSpecialTokens;
-        const bool parserNeedsSpecial = omniExecutionContext->apiHandler->getOutputParser() != nullptr &&
-                                        omniExecutionContext->apiHandler->getOutputParser()->needSpecialTokensForCurrentDecode(userWantsSpecial);
-        if (userWantsSpecial || parserNeedsSpecial) {
+        const bool userWantsSpecialTokens = !omniExecutionContext->apiHandler->getRequest().skipSpecialTokens;
+        const bool parserNeedsSpecialTokens = omniExecutionContext->apiHandler->getOutputParser() != nullptr &&
+                                              omniExecutionContext->apiHandler->getOutputParser()->needSpecialTokensForCurrentDecode(userWantsSpecialTokens);
+        if (userWantsSpecialTokens || parserNeedsSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
         const bool audioRequested = omniExecutionContext->apiHandler->getRequest().audioOutputRequested;

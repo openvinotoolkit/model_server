@@ -37,7 +37,7 @@ std::optional<rapidjson::Document> Gemma4ReasoningParser::parseChunk(const std::
         return std::nullopt;
     }
 
-    if (chunk.find(getParsingStartTags()[0]) != std::string::npos || chunk.find(getParsingEndTag()) != std::string::npos) {
+    if (chunk.find(parsingConfig.startTags[0]) != std::string::npos || chunk.find(parsingConfig.endTag) != std::string::npos) {
         return std::nullopt;
     } else {
         rapidjson::StringBuffer buffer;

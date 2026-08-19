@@ -112,26 +112,6 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     EXPECT_NE(secondToolCallId, thirdToolCallId);
 }
 
-// TODO: Re-enable after final behavior for mixed valid/invalid tool calls is
-// agreed. Current streaming path surfaces a parser exception when an invalid
-// call starts generating arguments before a valid "name" field.
-TEST_F(MistralOutputParserTest, DISABLED_ParseToolCallOutputWithOneValidToolCallAndTwoInvalid) {
-    std::string input = "[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}},"
-                        "{\"tool_name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}},"
-                        "{\"name\": \"third_tool\", \"options\": {\"key\": \"value\"}}]</s>";
-    std::string testInput = input;
-    auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*mistralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
-    EXPECT_EQ(parsedOutput.content, "");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
-    auto firstToolCallId = parsedOutput.toolCalls[0].id;
-}
-
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = mistralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;

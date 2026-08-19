@@ -62,6 +62,7 @@ public:
         cfg.tokenIdStartTags = {"[TOOL_CALLS]"};
         cfg.endTag = "</s>";
         cfg.needsSpecialTokens = true;
+        cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;
     }
 
@@ -70,6 +71,14 @@ public:
         BaseOutputParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()),
         toolSchemas(toolSchemas) {}
+
+    void resetState() override {
+        internalState = AWAITING_START_TAG;
+        toolCallIndex = -1;
+        streamContent.clear();
+        toolName.clear();
+        argumentsEmitted = false;
+    }
 
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
     rapidjson::Document parseContentChunk();
