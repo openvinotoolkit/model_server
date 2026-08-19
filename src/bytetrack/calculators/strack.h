@@ -14,8 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 
-#ifndef MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_STRACK_H_
-#define MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_STRACK_H_
+#ifndef SRC_BYTETRACK_CALCULATORS_STRACK_H_
+#define SRC_BYTETRACK_CALCULATORS_STRACK_H_
 
 #include <vector>
 #include <string>
@@ -73,4 +73,4 @@ private:
 }  // namespace bytetrack
 }  // namespace mediapipe
 
-#endif
+#endif  // SRC_BYTETRACK_CALCULATORS_STRACK_H_

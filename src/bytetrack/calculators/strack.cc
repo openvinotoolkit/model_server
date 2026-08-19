@@ -16,6 +16,7 @@
 
 #include "src/bytetrack/calculators/basetrack.h"
 
+#include <cstddef>
 #include <utility>
 
 #include <Eigen/Dense>
@@ -100,7 +101,7 @@ void STrack::Update(const STrack& new_track, int frame_id) {
 }
 
 void STrack::MultiPredict(std::vector<STrack*>& tracks) {
-    long int n = tracks.size();
+    std::size_t n = tracks.size();
     if (n > 0) {
         MeanMatrix multi_mean(n, 8);
         for (int i = 0; i < n; i++) {

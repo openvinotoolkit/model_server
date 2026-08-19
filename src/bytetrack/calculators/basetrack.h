@@ -14,8 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 
-#ifndef MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_BASETRACK_H_
-#define MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_BASETRACK_H_
+#ifndef SRC_BYTETRACK_CALCULATORS_BASETRACK_H_
+#define SRC_BYTETRACK_CALCULATORS_BASETRACK_H_
 
 namespace mediapipe {
 namespace bytetrack {
@@ -55,4 +55,4 @@ protected:
 }  // namespace bytetrack
 }  // namespace mediapipe
 
-#endif
+#endif  // SRC_BYTETRACK_CALCULATORS_BASETRACK_H_

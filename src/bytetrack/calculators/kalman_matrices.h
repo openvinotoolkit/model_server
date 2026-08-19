@@ -14,8 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 // kalman_matrices.h
-#ifndef MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_KALMAN_MATRICES_H_
-#define MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_KALMAN_MATRICES_H_
+#ifndef SRC_BYTETRACK_CALCULATORS_KALMAN_MATRICES_H_
+#define SRC_BYTETRACK_CALCULATORS_KALMAN_MATRICES_H_
 
 #include <Eigen/Dense>
 
@@ -40,4 +40,4 @@ inline Eigen::Matrix<float, 4, 8> MakeUpdateMatrix() {
 }  // namespace bytetrack
 }  // namespace mediapipe
 
-#endif
+#endif  // SRC_BYTETRACK_CALCULATORS_KALMAN_MATRICES_H_

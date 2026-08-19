@@ -14,8 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 
-#ifndef MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_BYTETRACK_CALCULATOR_H_
-#define MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_BYTETRACK_CALCULATOR_H_
+#ifndef SRC_BYTETRACK_CALCULATORS_BYTETRACK_CALCULATOR_H_
+#define SRC_BYTETRACK_CALCULATORS_BYTETRACK_CALCULATOR_H_
+
+#include <utility>
+#include <vector>
 
 #include "src/bytetrack/calculators/bytetrack_calculator.pb.h"
 
@@ -66,4 +69,4 @@ private:
 };
 }  // namespace mediapipe
 
-#endif
+#endif  // SRC_BYTETRACK_CALCULATORS_BYTETRACK_CALCULATOR_H_

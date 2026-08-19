@@ -14,11 +14,12 @@
 // limitations under the License.
 //*****************************************************************************
 
-#ifndef MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_MATCHING_UTILS_H_
-#define MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_MATCHING_UTILS_H_
+#ifndef SRC_BYTETRACK_CALCULATORS_MATCHING_UTILS_H_
+#define SRC_BYTETRACK_CALCULATORS_MATCHING_UTILS_H_
 
 #include <algorithm>
 #include <numeric>
+#include <utility>
 #include <vector>
 
 #include <Eigen/Dense>
@@ -348,4 +349,4 @@ inline AssignmentResult LinearAssignment(const Eigen::MatrixXf& cost, float thre
 }  // namespace bytetrack
 }  // namespace mediapipe
 
-#endif
+#endif  // SRC_BYTETRACK_CALCULATORS_MATCHING_UTILS_H_

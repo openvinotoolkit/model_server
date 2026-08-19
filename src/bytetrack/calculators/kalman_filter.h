@@ -14,8 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 
-#ifndef MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_KALMAN_FILTER_H_
-#define MEDIAPIPE_GRAPHS_BYTETRACK_CALCULATORS_KALMAN_FILTER_H_
+#ifndef SRC_BYTETRACK_CALCULATORS_KALMAN_FILTER_H_
+#define SRC_BYTETRACK_CALCULATORS_KALMAN_FILTER_H_
+
+#include <utility>
 #include <vector>
 
 #include <Eigen/Dense>
@@ -47,4 +49,4 @@ private:
 }  // namespace bytetrack
 }  // namespace mediapipe
 
-#endif
+#endif  // SRC_BYTETRACK_CALCULATORS_KALMAN_FILTER_H_

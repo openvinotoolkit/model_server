@@ -14,11 +14,14 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "bytetrack_calculator.h"
+#include "src/bytetrack/calculators/bytetrack_calculator.h"
 #include "src/bytetrack/calculators/bytetrack_calculator.pb.h"
 
 #include <algorithm>
+#include <memory>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <Eigen/Dense>
 
@@ -409,7 +412,6 @@ std::vector<bytetrack::STrack*> ByteTrackCalculator::SubStracks(std::vector<byte
 //// WIP
 std::pair<std::vector<bytetrack::STrack*>, std::vector<bytetrack::STrack*>>
 ByteTrackCalculator::RemoveDuplicateStracks(std::vector<bytetrack::STrack*>& a, std::vector<bytetrack::STrack*>& b) {
-
     auto pdist = BuildIoUCostMatrix(a, b);
 
     std::vector<int> dupa, dupb;
