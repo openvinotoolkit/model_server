@@ -24,8 +24,12 @@
 #   model_id          Hugging Face model ID (e.g., "OpenVINO/qwen3-8b-int8-ov")
 #
 # Options:
+<<<<<<< HEAD
 #   --device DEVICE           Target device: CPU or GPU (default: GPU if available)
 #   --parser PARSER           Tool parser: hermes3, qwen3coder, devstral, gemma4, gptoss, llama3, mistral, phi4, or none (default: auto-resolved)
+=======
+#   --device DEVICE           Target device: CPU or GPU (default: CPU)
+>>>>>>> db71a1c7 (removed tool parser logic)
 #   --reasoning-parser PARSER Reasoning parser: gemma4, gptoss, or none (default: auto-resolved)
 #   --cache-dir DIR           Model cache directory (default: ${HOME}/ovms-openhands/models)
 #   --compose-file FILE       Path to docker-compose.yml (default: <demo_root>/docker-compose.yml, generated from template)
@@ -39,7 +43,6 @@
 #   LOCAL_NAME        Override the local model name (default: auto-normalized from model_id)
 #   MODEL_CACHE_DIR   Override model cache directory
 #   TARGET_DEVICE     Override target device
-#   TOOL_PARSER       Override tool parser
 #   REASONING_PARSER  Override reasoning parser
 #   OVMS_REST_PORT    OVMS REST API published port (default: 8000)
 #   OVMS_GRPC_PORT    OVMS gRPC API published port (default: 9000)
@@ -52,7 +55,7 @@
 #   NO_PROXY          No-proxy list (uppercase variant)
 #
 # The script exports environment variables consumed by docker-compose.yml:
-#   MODEL_ID, LOCAL_NAME, TARGET_DEVICE, TOOL_PARSER, REASONING_PARSER, MODEL_CACHE_DIR, GPU_DEVICE, WSL_LIBS
+#   MODEL_ID, LOCAL_NAME, TARGET_DEVICE, REASONING_PARSER, MODEL_CACHE_DIR, GPU_DEVICE, WSL_LIBS
 #   HOST_UID, HOST_GID, RENDER_GID
 #   OVMS_REST_PORT, OVMS_GRPC_PORT, OPENHANDS_PORT
 #   http_proxy, https_proxy, HTTP_PROXY, HTTPS_PROXY, no_proxy, NO_PROXY
@@ -77,28 +80,6 @@ DOCKER_NETWORK="ovms-net"
 OVMS_REST_PORT="${OVMS_REST_PORT:-8000}"
 OVMS_GRPC_PORT="${OVMS_GRPC_PORT:-9000}"
 OPENHANDS_PORT="${OPENHANDS_PORT:-3000}"
-
-# Tool parser mapping: model family patterns to parser names
-declare -A TOOL_PARSERS=(
-    ["Qwen3"]="hermes3"
-    ["qwen3"]="hermes3"
-    ["Qwen3-Coder"]="qwen3coder"
-    ["qwen3-coder"]="qwen3coder"
-    ["Llama3"]="llama3"
-    ["llama3"]="llama3"
-    ["Mistral"]="mistral"
-    ["mistral"]="mistral"
-    ["Phi4"]="phi4"
-    ["phi4"]="phi4"
-    ["Devstral"]="devstral"
-    ["devstral"]="devstral"
-    ["Gemma4"]="gemma4"
-    ["gemma4"]="gemma4"
-    ["Gemma-4"]="gemma4"
-    ["gemma-4"]="gemma4"
-    ["GPT-OSS"]="gptoss"
-    ["gpt-oss"]="gptoss"
-)
 
 # Reasoning parser mapping: model family patterns to parser names
 declare -A REASONING_PARSERS=(
@@ -149,7 +130,6 @@ parse_args() {
 
     # Initialize from environment or defaults
     TARGET_DEVICE="${TARGET_DEVICE:-CPU}"
-    TOOL_PARSER="${TOOL_PARSER:-}"
     REASONING_PARSER="${REASONING_PARSER:-}"
     MODEL_CACHE_DIR="${MODEL_CACHE_DIR:-${DEFAULT_MODEL_CACHE_DIR}}"
     COMPOSE_FILE="${DEFAULT_COMPOSE_FILE}"
@@ -159,10 +139,6 @@ parse_args() {
         case "$1" in
             --device)
                 TARGET_DEVICE="$2"
-                shift 2
-                ;;
-            --parser)
-                TOOL_PARSER="$2"
                 shift 2
                 ;;
             --reasoning-parser)
@@ -243,7 +219,7 @@ validate_device() {
 }
 
 ################################################################################
-# Model Name Normalization and Tool Parser Resolution
+# Model Name Normalization
 ################################################################################
 
 normalize_model_name() {
@@ -252,28 +228,6 @@ normalize_model_name() {
     # Convert Hugging Face model ID to filesystem-safe local name
     # e.g., "OpenVINO/qwen3-0.6b-int8-ov" → "qwen3-0.6b-int8-ov"
     basename "$model_id" | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
-}
-
-resolve_tool_parser() {
-    local model_id="$1"
-    local override="${2:-}"
-
-    # If override provided, use it
-    if [[ -n "$override" ]]; then
-        echo "$override"
-        return
-    fi
-
-    # Try to match against known model families
-    for pattern in "${!TOOL_PARSERS[@]}"; do
-        if [[ "$model_id" == *"$pattern"* ]]; then
-            echo "${TOOL_PARSERS[$pattern]}"
-            return
-        fi
-    done
-
-    # Default: no tool parser
-    echo "none"
 }
 
 resolve_reasoning_parser() {
@@ -324,7 +278,6 @@ export_runtime_configuration() {
     export MODEL_ID
     export LOCAL_NAME
     export TARGET_DEVICE
-    export TOOL_PARSER
     export REASONING_PARSER
     export MODEL_CACHE_DIR
     export HF_TOKEN="${HF_TOKEN:-}"
@@ -391,7 +344,6 @@ export_runtime_configuration() {
     echo "  MODEL_ID:          $MODEL_ID"
     echo "  LOCAL_NAME:         $LOCAL_NAME"
     echo "  TARGET_DEVICE:      $TARGET_DEVICE"
-    echo "  TOOL_PARSER:        $TOOL_PARSER"
     echo "  REASONING_PARSER:   $REASONING_PARSER"
     echo "  MODEL_CACHE_DIR:    $MODEL_CACHE_DIR"
     echo "  HF_TOKEN:           ${HF_TOKEN:+<set>}"
@@ -416,7 +368,6 @@ METADATA_VERSION=1
 MODEL_ID=${MODEL_ID}
 TARGET_DEVICE=${TARGET_DEVICE}
 LOCAL_NAME=${LOCAL_NAME}
-TOOL_PARSER=${TOOL_PARSER}
 REASONING_PARSER=${REASONING_PARSER}
 OVMS_IMAGE=${OVMS_IMAGE}
 GPU_DEVICE=${GPU_DEVICE}
@@ -456,7 +407,6 @@ compare_deployment_fingerprint() {
         export CURRENT_MODEL_ID="$MODEL_ID"
         export CURRENT_TARGET_DEVICE="$TARGET_DEVICE"
         export CURRENT_LOCAL_NAME="$LOCAL_NAME"
-        export CURRENT_TOOL_PARSER="$TOOL_PARSER"
         export CURRENT_REASONING_PARSER="$REASONING_PARSER"
         export CURRENT_OVMS_IMAGE="$OVMS_IMAGE"
         export CURRENT_GPU_DEVICE="$GPU_DEVICE"
@@ -487,7 +437,6 @@ compare_deployment_fingerprint() {
         [[ "$MODEL_ID" == "$CURRENT_MODEL_ID" ]] || exit 1
         [[ "$TARGET_DEVICE" == "$CURRENT_TARGET_DEVICE" ]] || exit 1
         [[ "$LOCAL_NAME" == "$CURRENT_LOCAL_NAME" ]] || exit 1
-        [[ "$TOOL_PARSER" == "$CURRENT_TOOL_PARSER" ]] || exit 1
         [[ "$REASONING_PARSER" == "$CURRENT_REASONING_PARSER" ]] || exit 1
         [[ "$OVMS_IMAGE" == "$CURRENT_OVMS_IMAGE" ]] || exit 1
         [[ "$GPU_DEVICE" == "$CURRENT_GPU_DEVICE" ]] || exit 1
@@ -535,7 +484,7 @@ generate_compose_from_template() {
     # Substitute ALL deployment-managed variables to generate a complete, self-contained
     # runtime compose file. The generated docker-compose.yml contains concrete values,
     # not placeholders.
-    envsubst '$MODEL_ID $LOCAL_NAME $TARGET_DEVICE $TOOL_PARSER $REASONING_PARSER $MODEL_CACHE_DIR $HF_TOKEN $OVMS_IMAGE $GPU_DEVICE $WSL_LIBS $HOST_UID $HOST_GID $RENDER_GID $OVMS_REST_PORT $OVMS_GRPC_PORT $OPENHANDS_PORT $http_proxy $https_proxy $HTTP_PROXY $HTTPS_PROXY $no_proxy $NO_PROXY' < "$template_file" > "$output_file"
+    envsubst '$MODEL_ID $LOCAL_NAME $TARGET_DEVICE $REASONING_PARSER $MODEL_CACHE_DIR $HF_TOKEN $OVMS_IMAGE $GPU_DEVICE $WSL_LIBS $HOST_UID $HOST_GID $RENDER_GID $OVMS_REST_PORT $OVMS_GRPC_PORT $OPENHANDS_PORT $http_proxy $https_proxy $HTTP_PROXY $HTTPS_PROXY $no_proxy $NO_PROXY' < "$template_file" > "$output_file"
     echo "  Generated: $output_file"
 }
 
@@ -634,7 +583,6 @@ print_manual_equivalent() {
     echo "  export MODEL_ID=\"$MODEL_ID\""
     echo "  export LOCAL_NAME=\"$LOCAL_NAME\""
     echo "  export TARGET_DEVICE=\"$TARGET_DEVICE\""
-    echo "  export TOOL_PARSER=\"$TOOL_PARSER\""
     echo "  export REASONING_PARSER=\"$REASONING_PARSER\""
     echo "  export MODEL_CACHE_DIR=\"$MODEL_CACHE_DIR"
     echo "  export HF_TOKEN=\"\${HF_TOKEN:-}\""
@@ -674,9 +622,6 @@ main() {
 
     # Normalize model name if not overridden
     LOCAL_NAME="${LOCAL_NAME:-$(normalize_model_name "$MODEL_ID")}"
-
-    # Resolve tool parser if not overridden
-    TOOL_PARSER="$(resolve_tool_parser "$MODEL_ID" "$TOOL_PARSER")"
 
     # Resolve reasoning parser if not overridden
     REASONING_PARSER="$(resolve_reasoning_parser "$MODEL_ID" "$REASONING_PARSER")"

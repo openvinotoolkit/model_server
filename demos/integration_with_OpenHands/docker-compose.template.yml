@@ -28,7 +28,6 @@ services:
       MODEL_ID: ${MODEL_ID}
       LOCAL_NAME: ${LOCAL_NAME}
       TARGET_DEVICE: ${TARGET_DEVICE}
-      TOOL_PARSER: ${TOOL_PARSER}
       REASONING_PARSER: ${REASONING_PARSER}
       # Proxy configuration (forwarded from host if set)
       http_proxy: ${http_proxy:-}
@@ -50,9 +49,6 @@ services:
           --port "9000"
           --rest_port "8000"
         )
-        if [[ "${TOOL_PARSER}" != "none" ]]; then
-          CMD_ARGS+=(--tool_parser "${TOOL_PARSER}")
-        fi
         if [[ "${REASONING_PARSER}" != "none" ]]; then
           CMD_ARGS+=(--reasoning_parser "${REASONING_PARSER}")
         fi
