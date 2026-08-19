@@ -19,14 +19,6 @@ mkdir models
 docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU
 ```
 :::
-:::{tab-item} With Docker on NPU
-**Required:** Docker Engine installed
-
-```bash
-mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device NPU
-```
-:::
 :::{tab-item} With Docker on CPU
 **Required:** Docker Engine installed
 
@@ -40,13 +32,6 @@ docker run --user $(id -u):$(id -g) -d --rm -p 8000:8000 -v $(pwd)/models:/model
 
 ```bat
 ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device GPU --task text_generation
-```
-:::
-:::{tab-item} On Baremetal Host and NPU
-**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
-
-```bat
-ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device NPU --task text_generation
 ```
 :::
 :::{tab-item} On Baremetal Host and CPU
