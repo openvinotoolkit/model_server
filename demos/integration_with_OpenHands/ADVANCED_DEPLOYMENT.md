@@ -404,15 +404,7 @@ Checks for Docker and docker compose availability, warns if `HF_TOKEN` is not se
 basename "$MODEL_ID" | tr '[:upper:]' '[:lower:]' | tr ' ' '-'
 ```
 
-<<<<<<< HEAD
-**3. Resolves the tool parser (OVMS automatically detects parser types since 2026.3)**
-
-Maps model family to parser (e.g., Qwen → `hermes3`, Llama3 → `llama3`, Mistral → `mistral`).
-
-**4. Creates the model cache directory**
-=======
 **3. Creates the model cache directory**
->>>>>>> db71a1c7 (removed tool parser logic)
 
 ```bash
 mkdir -p "$MODEL_CACHE_DIR"  # Defaults to ${HOME}/ovms-openhands/models

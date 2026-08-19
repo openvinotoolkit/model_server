@@ -10,7 +10,6 @@ This README covers the recommended deployment workflow. For manual Docker deploy
 
 ## Architecture
 
-<<<<<<< HEAD
 ```mermaid
 flowchart TD
     U[User] --> OH[OpenHands Container]
@@ -18,24 +17,6 @@ flowchart TD
     OH --> S[Runtime Sandbox]
     OVMS --> LLM[MediaPipe LLM Graph and Tool Parser]
     LLM --> M[OpenVINO Model]
-=======
-```
-User
-  |
-  v
-OpenHands Container
-  | (creates runtime sandbox containers for code execution)
-  |
-  | OpenAI-compatible HTTP requests
-  | POST /v3/chat/completions
-  | LLM_BASE_URL=http://ovms-llm:8000/v3
-  | LLM_MODEL=openai/<served-model-name>
-  v
-OpenVINO Model Server
-   | (MediaPipe LLM graph + automatic tool parsing)
-  v
-OpenVINO model
->>>>>>> db71a1c7 (removed tool parser logic)
 ```
 
 Ensure the required ports are available on your host.
@@ -99,15 +80,9 @@ OpenHands requires models with instruction-following capability, coding proficie
 
 > **Note:** Examples use `OpenVINO/Qwen3-8b-int8-ov`. Other compatible models may also be used.
 
-<<<<<<< HEAD
-### Tool Parser Selection (Since 2026.3 OVMS supports automatic parser detection)
+### Tool Parser Handling
 
-Tool parsers enable structured output for function calling. When OpenHands executes a tool (running code, reading files), it expects the LLM to return structured JSON specifying the tool name and arguments. The tool parser converts model outputs into this format.
-
-Without the correct tool parser, the model does not generate tool calls in the expected format, causing tool call extraction to fail.
-=======
-OVMS now selects the tool parser automatically for supported models, so you do not need to configure it in the deployment script or compose file. If tool calls are not being extracted correctly, make sure you are running a recent OVMS release and that the model is supported by OpenHands.
->>>>>>> db71a1c7 (removed tool parser logic)
+Newer OVMS releases automatically detect the appropriate tool parser for supported models, so you do not need to select or configure one in the deployment script or compose file. If tool calls are not being extracted correctly, make sure you are running a recent OVMS release and that the model is supported by OpenHands.
 
 For details on OVMS model retrieval and workspace layout, see [ADVANCED_DEPLOYMENT.md](ADVANCED_DEPLOYMENT.md).
 
