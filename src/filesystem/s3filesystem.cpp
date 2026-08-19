@@ -48,6 +48,21 @@ namespace ovms {
 namespace s3 = Aws::S3;
 namespace fs = std::filesystem;
 
+std::pair<std::string, Aws::Http::Scheme> S3FileSystem::parseEndpoint(const std::string& endpoint) {
+    std::string normalized = endpoint;
+    auto scheme = Aws::Http::Scheme::HTTP;
+
+    if (normalized.rfind("http://", 0) == 0) {
+        normalized = normalized.substr(7);
+        scheme = Aws::Http::Scheme::HTTP;
+    } else if (normalized.rfind("https://", 0) == 0) {
+        normalized = normalized.substr(8);
+        scheme = Aws::Http::Scheme::HTTPS;
+    }
+
+    return {normalized, scheme};
+}
+
 StatusCode S3FileSystem::parsePath(const std::string& path, std::string* bucket, std::string* object) {
     std::smatch sm;
 
@@ -124,18 +139,12 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
         object = sm[4];
 
         config.endpointOverride = Aws::String(host_name + ":" + host_port);
-        config.scheme = Aws::Http::Scheme::HTTPS;
+        config.scheme = Aws::Http::Scheme::HTTP;
     }
     if (s3_endpoint != nullptr) {
-        std::string endpoint(s3_endpoint);
-        config.scheme = Aws::Http::Scheme::HTTPS;
-        if (endpoint.rfind("http://", 0) == 0) {
-            endpoint = endpoint.substr(7);
-            config.scheme = Aws::Http::Scheme::HTTP;
-        } else if (endpoint.rfind("https://", 0) == 0) {
-            endpoint = endpoint.substr(8);
-        }
-        config.endpointOverride = Aws::String(endpoint.c_str());
+        auto parsed = S3FileSystem::parseEndpoint(s3_endpoint);
+        config.scheme = parsed.second;
+        config.endpointOverride = Aws::String(parsed.first.c_str());
     }
 
     if (!default_proxy.empty()) {
