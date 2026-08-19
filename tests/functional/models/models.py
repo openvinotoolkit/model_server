@@ -126,6 +126,7 @@ class ModelInfo:
     predict_timeout: Optional[int] = None
     copy_all_model_versions: bool = False
     cpu_extension: CpuExtension = None
+    is_dummy: bool = False
 
     def __post_init__(self):
         if self.use_relative_paths:

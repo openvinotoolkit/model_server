@@ -1045,6 +1045,7 @@ def run_llm_inference(
         ttr_reference=0.5,
         **kwargs,
 ):
+    validate_outputs_ttr = validate_outputs_ttr if model.calculators[0].model.precision_dir != "DUMMY" else False
     if api_type.type == REST:
         api_client = api_type(model=model, port=port)
         infer_request = kwargs.get("infer_request", None)
