@@ -6,12 +6,7 @@ services:
     container_name: ovms-llm
     entrypoint: []
     user: "${HOST_UID}:${HOST_GID}"
-    # GPU device access for hardware acceleration.
-    # For CPU-only deployments, this device mapping can be removed.
-    devices:
-      - ${GPU_DEVICE}
-    group_add:
-      - "${RENDER_GID}"
+${OVMS_GPU_CONFIG}
     ports:
       - "${OVMS_REST_PORT:-8000}:8000"  # REST API
       - "${OVMS_GRPC_PORT:-9000}:9000"  # gRPC API

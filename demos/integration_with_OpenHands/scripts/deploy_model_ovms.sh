@@ -268,6 +268,34 @@ prepare_model_workspace() {
 # Runtime Configuration Export
 ################################################################################
 
+build_ovms_gpu_config() {
+    local gpu_device="$1"
+    local render_gid="$2"
+
+    if [[ -z "$gpu_device" ]]; then
+        echo ""
+        return
+    fi
+
+    if [[ -n "$render_gid" ]]; then
+        cat <<EOF
+    # GPU device access for hardware acceleration.
+    # For CPU-only deployments, this block is omitted.
+    devices:
+      - ${gpu_device}
+    group_add:
+      - "${render_gid}"
+EOF
+    else
+        cat <<EOF
+    # GPU device access for hardware acceleration.
+    # For CPU-only deployments, this block is omitted.
+    devices:
+      - ${gpu_device}
+EOF
+    fi
+}
+
 export_runtime_configuration() {
     # Export all variables consumed by docker-compose.yml
     export MODEL_ID
@@ -315,17 +343,22 @@ export_runtime_configuration() {
     # Detect and export GPU device for docker-compose.yml
     export GPU_DEVICE
     GPU_DEVICE="$(detect_gpu_device)"
+
+    # Build the GPU-only compose fragment so CPU deployments omit device access.
+    export OVMS_GPU_CONFIG
     
     # Native Linux GPU access requires the render group.
     export RENDER_GID=""
     if [[ "$TARGET_DEVICE" == "GPU" && -e /dev/dri/renderD128 ]]; then
         RENDER_GID="$(stat -c "%g" /dev/dri/renderD128)"
     fi
+    OVMS_GPU_CONFIG="$(build_ovms_gpu_config "$GPU_DEVICE" "$RENDER_GID")"
     
     # Run OVMS with the host user's UID/GID.
     export HOST_UID="$(id -u)"
-    export HOST_GID="$(id -g devcloud)"
+    export HOST_GID="$(id -g )"
     export RENDER_GID
+    export OVMS_GPU_CONFIG
     
     # WSL library dependencies (only needed for WSL2 GPU passthrough)
     if [[ "$GPU_DEVICE" == *"/dev/dxg"* ]]; then
@@ -479,7 +512,7 @@ generate_compose_from_template() {
     # Substitute ALL deployment-managed variables to generate a complete, self-contained
     # runtime compose file. The generated docker-compose.yml contains concrete values,
     # not placeholders.
-    envsubst '$MODEL_ID $LOCAL_NAME $TARGET_DEVICE $REASONING_PARSER $MODEL_CACHE_DIR $HF_TOKEN $OVMS_IMAGE $GPU_DEVICE $WSL_LIBS $HOST_UID $HOST_GID $RENDER_GID $OVMS_REST_PORT $OVMS_GRPC_PORT $OPENHANDS_PORT $http_proxy $https_proxy $HTTP_PROXY $HTTPS_PROXY $no_proxy $NO_PROXY' < "$template_file" > "$output_file"
+    envsubst '$MODEL_ID $LOCAL_NAME $TARGET_DEVICE $REASONING_PARSER $MODEL_CACHE_DIR $HF_TOKEN $OVMS_IMAGE $GPU_DEVICE $WSL_LIBS $HOST_UID $HOST_GID $RENDER_GID $OVMS_GPU_CONFIG $OVMS_REST_PORT $OVMS_GRPC_PORT $OPENHANDS_PORT $http_proxy $https_proxy $HTTP_PROXY $HTTPS_PROXY $no_proxy $NO_PROXY' < "$template_file" > "$output_file"
     echo "  Generated: $output_file"
 }
 
