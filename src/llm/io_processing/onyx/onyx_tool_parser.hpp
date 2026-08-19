@@ -94,6 +94,14 @@ struct OnyxToolParserImpl {
     std::optional<ToolCalls_t> parseChunk(const std::string& chunk);
     std::optional<std::string> getCurrentFunctionName() const;
     Status removeToolCallsFromContentIfNeeded(std::string& outContent);
+    void reset() {
+        currentState = State::Content;
+        currentFunction.clear();
+        currentParameterName.clear();
+        streamContent.clear();
+        lastProcessedPosition = 0;
+        toolCallPositions = ToolCallPositions{};
+    }
     State getCurrentState() const {
         return this->currentState;
     }
@@ -138,49 +146,37 @@ public:
     static const std::string END_OF_TURN_TAG;          // "<|eot|>"
 
 private:
-    const ToolsSchemas_t& toolSchemas;  // filled outside; kept as reference (may change)
+    const ToolsSchemas_t& toolSchemas;
     ToolsParameterTypeMap_t toolsParametersTypes;
-    bool filledParametersTypesMap{false};
     OnyxToolParserImpl streamParser;
     int toolCallIndex{-1};
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
-    // Mutable because it is lazily (re)built from toolSchemas inside the const getParsingStartTags()
-    // getter below. toolSchemas is a reference that is empty at construction time and only filled in
-    // by the caller afterwards (once the request's tools are known), so building this list once in the
-    // constructor would permanently miss every "to=<name>" entry. Rebuilding it from scratch on every
-    // call keeps it in sync with whatever tools the current request declares, without hardcoding any
-    // tool name.
-    mutable std::vector<std::string> parsingStartTags;
 
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& functionName);
     std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
-    void lazyFillInitToolParametersTypesMap();
-    void lazyFillParsingStartTags() const;
+    void buildStartTags();
 
 public:
     OnyxToolParser() = delete;
-    explicit OnyxToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas);
+    explicit OnyxToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt);
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    void resetState() override {
+        streamParser.reset();
+        toolCallIndex = -1;
+        returnedFirstDeltas.clear();
+        returnedCompleteDeltas.clear();
+    }
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        lazyFillParsingStartTags();
-        return parsingStartTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags{};
-        return specialParsingStartTags;
-    }
-    const std::string& getParsingEndTag() const override {
-        return TOOL_END_TAG;
-    }
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
-    const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> specialTagsToErase{ASSISTANT_PREFIX, CONTENT_START_INDICATOR, MESSAGE_TAG, END_OF_TURN_TAG};
-        return specialTagsToErase;
+
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"<atem:function_calls>"};
+        cfg.endTag = "</atem:function_calls>";
+        cfg.needsSpecialTokens = true;
+        return cfg;
     }
 };
 }  // namespace ovms

@@ -88,6 +88,14 @@ C->ITC->IFN->IF->IPN->IP->AF->C
     std::optional<ToolCalls_t> parseChunk(const std::string& chunk);
     std::optional<std::string> getCurrentFunctionName() const;
     Status removeToolCallsFromContentIfNeeded(std::string& outContent);
+    void reset() {
+        currentState = State::Content;
+        currentFunction.clear();
+        currentParameterName.clear();
+        streamContent.clear();
+        lastProcessedPosition = 0;
+        toolCallPositions = ToolCallPositions{};
+    }
     State getCurrentState() const {
         return this->currentState;
     }
@@ -130,9 +138,8 @@ public:
     static const std::string XML_TAG_END;
 
 private:
-    const ToolsSchemas_t& toolSchemas;  // we need to keep reference as this is not filled in OpenAIApiHandler during ToolParser creation, NOTE that its const here but it can change outside
+    const ToolsSchemas_t& toolSchemas;
     ToolsParameterTypeMap_t toolsParametersTypes;
-    bool filledParametersTypesMap{false};
     // for streaming parsing we need to keep parser as a member
     Qwen3CoderToolParserImpl streamParser;
     int toolCallIndex{-1};
@@ -145,13 +152,18 @@ public:
     Qwen3CoderToolParser() = delete;
     explicit Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
         std::optional<OutputParsingConfig> configOverride = std::nullopt);
-
+    void resetState() override {
+        streamParser.reset();
+        toolCallIndex = -1;
+        currentJson.SetNull();
+        returnedFirstDeltas.clear();
+        returnedCompleteDeltas.clear();
+    }
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 
 private:
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
     std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
-    void lazyFillInitToolParametersTypesMap();
 };
 }  // namespace ovms
 template <>

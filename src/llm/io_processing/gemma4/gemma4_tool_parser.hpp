@@ -54,7 +54,6 @@ public:
         cfg.startTags = {"<|tool_call>"};
         cfg.tokenIdStartTags = {"<|tool_call>"};
         cfg.endTag = "<tool_call|>";
-        cfg.contentTagsToErase = {"<turn|>", "<|tool_response>"};
         cfg.needsSpecialTokens = true;
         return cfg;
     }
@@ -63,6 +62,14 @@ public:
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
         BaseOutputParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    void resetState() override {
+        streamingContent.clear();
+        streamingPosition = 0;
+        currentState = State::Content;
+        toolCall = {};
+        toolCallIndex = -1;
+    }
 
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 

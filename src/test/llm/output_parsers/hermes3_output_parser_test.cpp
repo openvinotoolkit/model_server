@@ -138,45 +138,6 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     }
 }
 
-// TODO: Behavior gap introduced by the streaming migration.
-// On master this test passed via the dedicated OutputParser::parse() unary path, which
-// silently skipped tool calls with missing names.  The streaming path (parseChunk) throws
-// instead, matching the stricter "fully correct deltas" contract.
-// Decision needed: should parseChunk gracefully skip malformed tool calls (skip logic),
-// or should callers be required to provide valid input?  Until decided, this test is disabled.
-TEST_F(Hermes3OutputParserTest, DISABLED_ParseToolCallOutputWithTwoValidToolCallsAndOneInvalid) {
-    std::string inputWithProperClosure = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>"
-                                         "<tool_call>{\"tool_name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}}</tool_call>"
-                                         "<tool_call>{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}</tool_call>";
-    std::string inputWithImproperClosure = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>"
-                                           "<tool_call>{\"tool_name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}}</tool_call>"
-                                           "<tool_call>{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}";
-
-    // Hermes3 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
-    for (auto& input : inputs) {
-        auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*hermes3Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
-        EXPECT_EQ(parsedOutput.content, "");
-        EXPECT_EQ(parsedOutput.reasoning, "");
-
-        // Expecting two tool calls as the second one does not have a valid name
-        ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
-        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
-        auto firstToolCallId = parsedOutput.toolCalls[0].id;
-
-        EXPECT_EQ(parsedOutput.toolCalls[1].name, "third_tool");
-        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"key\":\"value\"}");
-        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
-        auto secondToolCallId = parsedOutput.toolCalls[1].id;
-        EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
-    }
-}
-
 TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;

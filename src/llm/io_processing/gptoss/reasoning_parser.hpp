@@ -54,6 +54,7 @@ public:
             "<|start|>assistant<|channel|>final<|message|>"};
         cfg.endTag = "<|end|>";
         cfg.needsSpecialTokens = true;
+        cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;
     }
 
@@ -61,6 +62,8 @@ public:
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
         BaseOutputParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    void resetState() override { state = StreamState::UNKNOWN; }
 
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };

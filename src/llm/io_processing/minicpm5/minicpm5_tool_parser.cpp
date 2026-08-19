@@ -291,19 +291,11 @@ std::optional<std::string> Minicpm5ToolParserImpl::getCurrentFunctionName() cons
 
 // ---- Minicpm5ToolParser ----
 
-void Minicpm5ToolParser::lazyFillInitToolParametersTypesMap() {
-    if (this->filledParametersTypesMap)
-        return;
-    SPDLOG_DEBUG("Minicpm5ToolParser: filling tools parameters types map");
-    this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
-    this->filledParametersTypesMap = true;
-    SPDLOG_DEBUG("Minicpm5ToolParser: created with {} tools", this->toolsParametersTypes.size());
-}
-
 Minicpm5ToolParser::Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
     BaseOutputParser(tokenizer,
-        defaultParsingConfig(FUNCTION_START_TAG, SOS_TOKEN_STR, EOS_TOKEN_STR)),
+        defaultParsingConfig()),
     toolSchemas(toolSchemas),
+    toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
     streamParser(this->toolsParametersTypes) {}
 
 const std::vector<int64_t> Minicpm5ToolParser::removeReasoningTokens(const std::vector<int64_t>& generatedTokens) {
@@ -404,7 +396,6 @@ std::optional<rapidjson::Document> Minicpm5ToolParser::parseChunk(
     const std::vector<int64_t>& /*tokens*/,
     ov::genai::GenerationFinishReason /*finishReason*/) {
     SPDLOG_DEBUG("Minicpm5ToolParser: chunk: '{}'", newChunk);
-    this->lazyFillInitToolParametersTypesMap();
     if (newChunk.empty())
         return std::nullopt;
     auto toolCallsOpt = this->streamParser.parseChunk(newChunk);

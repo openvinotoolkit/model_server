@@ -353,7 +353,6 @@ ovms_cc_library(
     ],
     srcs = [
         "io_processing/minicpm5/minicpm5_tool_parser.cpp",
-        "io_processing/minicpm5/minicpm5_reasoning_parser.cpp",
     ],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -362,6 +361,7 @@ ovms_cc_library(
         "//src/utils:rapidjson_utils",
         ":io_processing_utils",
         ":io_processing_base_output_parser",
+        ":io_processing_qwen3_reasoning_parser",
         ":apis_tool_schema_wrapper",
         "//third_party:genai",
     ],
@@ -378,6 +378,35 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
         ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_default_content_parser",
+    hdrs = ["io_processing/default_content_parser.hpp"],
+    srcs = ["io_processing/default_content_parser.cpp"],
+    deps = [
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        "//src:libovmsstring_utils",
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_onyx_content_parser",
+    hdrs = ["io_processing/onyx/onyx_content_parser.hpp"],
+    srcs = ["io_processing/onyx/onyx_content_parser.cpp"],
+    deps = [
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
         ":io_processing_base_output_parser",
         "//third_party:genai",
     ],
@@ -419,7 +448,6 @@ ovms_cc_library(
 ovms_cc_library(
     name = "io_processing_lfm25_reasoning_parser",
     hdrs = ["io_processing/lfm2/lfm25_reasoning_parser.hpp"],
-    srcs = ["io_processing/lfm2/lfm25_reasoning_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_document",
@@ -427,6 +455,7 @@ ovms_cc_library(
         "//src:libovmsstring_utils",
         ":io_processing_utils",
         ":io_processing_base_output_parser",
+        ":io_processing_qwen3_reasoning_parser",
         "//third_party:genai",
     ],
     visibility = ["//visibility:public"],
@@ -472,6 +501,8 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":io_processing_qwen3_reasoning_parser",
         ":io_processing_onyx_tool_parser",
         ":io_processing_onyx_reasoning_parser",
+        ":io_processing_onyx_content_parser",
+        ":io_processing_default_content_parser",
         ":io_processing_lfm25_reasoning_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",

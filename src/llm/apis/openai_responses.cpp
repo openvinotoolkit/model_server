@@ -576,7 +576,7 @@ private:
 
 // --- Request parsing ---
 
-absl::Status OpenAIResponsesHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+absl::Status OpenAIResponsesHandler::parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
     std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
     if (status != absl::OkStatus())

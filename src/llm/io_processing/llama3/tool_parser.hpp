@@ -29,7 +29,7 @@
 namespace ovms {
 class Llama3ToolParser : public BaseOutputParser {
 protected:
-    // "" separator between tool calls
+    // ";" separator between tool calls
     std::string separator = ";";
 
     // Streaming required members
@@ -63,6 +63,16 @@ public:
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
         BaseOutputParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    void resetState() override {
+        lastJson.SetNull();
+        jsonBuilder.clear();
+        toolCallIndex = -1;
+        argumentsDelayWindow = {{"    ", ""}};
+        argumentsDelayWindow[0].clear();
+        argumentsDelayWindow[1].clear();
+        escapeLevel = 0;
+    }
 
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };

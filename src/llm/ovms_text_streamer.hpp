@@ -28,25 +28,39 @@
 
 namespace ovms {
 
-// OVMSTextStreamer inherits ov::genai::TextStreamer to reuse its protected
-// decode-loop state (m_tokenizer, m_tokens_cache, m_decoded_lengths,
-// m_printed_len, m_additional_detokenization_params). It overrides
-// write(int64_t) and end() completely — the no-op callback passed at
-// construction is never invoked.
+// OVMSTextStreamer is the bridge between the OpenVINO GenAI token generator and OutputParser.
+// It is responsible for decoding raw token IDs into text and delivering correctly framed
+// chunks to OutputParser::parseChunk().  Its behaviour is a precondition for OutputParser's
+// correctness guarantees (see output_parser.hpp).
 //
-// On every flush event the streamer:
-//   1. Computes the token slice that produced the current text chunk via the
-//      same upper_bound logic used by ov::genai::TextParserStreamer.
-//   2. Calls OutputParser::parseChunk(chunk, tokens, tools_available, finish_reason).
-//   3. If the result is non-nullopt (or this is the final flush), fires the
-//      registered Callback with the Document.
+// Guarantees provided by OVMSTextStreamer:
+//   - Ordered delivery: tokens are passed to OutputParser in the exact generation order,
+//     one logical chunk at a time.
+//   - Final flush: end() ALWAYS calls parseChunk("", [], finishReason=STOP) after all tokens
+//     have been processed.  This is the "at least one subsequent call after every phase
+//     transition" guarantee that OutputParser depends on to drain buffered remainders.
+//   - Phase-aware decode mode: after every write(), the streamer queries
+//     OutputParser::needSpecialTokensForCurrentDecode() and adjusts skip_special_tokens for
+//     the next decode pass.  This ensures structural special tokens (e.g. <|im_end|>) are
+//     visible as text during the phases whose parsers require them, and are suppressed
+//     (noise-free) in the content/unknown phase.
+//   - Token-ID phase detection: before decoding, write() checks
+//     OutputParser::getPhaseStartTagForToken() for the incoming token ID.  If a match is
+//     found, the delay buffer is flushed immediately, the start-tag text is injected directly
+//     (without BPE decoding), and the decode mode is updated for the new phase — providing
+//     zero-latency phase entry without waiting for BPE to confirm the tag string.
+//   - Delay buffer: the last DELAY_N_TOKENS tokens are held back to prevent emitting partial
+//     BPE-fused text mid-word.  Boundaries (phase starts, end()) force an immediate flush.
 //
-// The Callback accumulates Documents in pendingDeltas on the execution context.
-// preparePartialResponse drains pendingDeltas after each write()/end() cycle.
+// OVMSTextStreamer does NOT perform any parsing, phase detection, or content routing.
+// All of that is delegated to OutputParser.  The streamer's sole responsibility is to
+// ensure OutputParser receives correctly decoded, correctly ordered, and correctly framed
+// input — including the mandatory final call on end().
 //
-// When output_parser is nullptr (e.g. /v1/completions endpoint), the streamer
-// wraps the raw text in a trivial {"delta":{"content":"..."}} Document and
-// fires the callback unconditionally, preserving existing behavior.
+// Inherits ov::genai::TextStreamer to reuse its protected decode-loop state
+// (m_tokenizer, m_tokens_cache, m_decoded_lengths, m_printed_len,
+// m_additional_detokenization_params). write(int64_t) and end() are fully overridden;
+// the no-op callback passed at construction is never invoked.
 class OVMSTextStreamer : public ov::genai::TextStreamer {
 public:
     // Callback receives a Document and the isLast flag, and returns the streaming status.

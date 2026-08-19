@@ -39,10 +39,10 @@ std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::
 
     StreamState lastState = state;
 
-    if (startsWith(chunk, getParsingStartTags()[0])) {
+    if (startsWith(chunk, parsingConfig.startTags[0])) {
         // Final content
         state = StreamState::READING_REASONING;
-        chunk = chunk.substr(getParsingStartTags()[0].size());
+        chunk = chunk.substr(parsingConfig.startTags[0].size());
     } else if (startsWith(chunk, "<|start|>assistant<|channel|>final<|message|>")) {
         // Final content
         state = StreamState::READING_CONTENT;
@@ -55,10 +55,10 @@ std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::
         // Preamble
         state = StreamState::READING_CONTENT;
         chunk = chunk.substr(std::strlen("<|channel|>commentary<|message|>"));
-    } else if (endsWith(chunk, getParsingEndTag())) {
+    } else if (endsWith(chunk, parsingConfig.endTag)) {
         // End
         state = StreamState::UNKNOWN;
-        chunk = chunk.substr(0, chunk.size() - getParsingEndTag().size());
+        chunk = chunk.substr(0, chunk.size() - parsingConfig.endTag.size());
     } else if (endsWith(chunk, "<|return|>")) {
         // End
         state = StreamState::UNKNOWN;

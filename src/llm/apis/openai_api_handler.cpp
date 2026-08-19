@@ -257,6 +257,22 @@ absl::Status OpenAIApiHandler::parseTools() {
     return absl::OkStatus();
 }
 
+absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+    std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+    auto status = parseRequestImpl(maxTokensLimit, bestOfLimit, maxModelLength, allowedLocalMediaPath, allowedMediaDomains);
+    if (status.ok())
+        initOutputParser();
+    return status;
+}
+
+void OpenAIApiHandler::initOutputParser() {
+    if (!request.skipSpecialTokens)
+        return;
+    if (toolParserName.empty() && reasoningParserName.empty())
+        return;
+    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, request.toolNameSchemaMap);
+}
+
 absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseToolsToJsonContainer() {
     auto it = doc.FindMember("tools");
     if (it == doc.MemberEnd() || it->value.IsNull()) {
@@ -788,9 +804,6 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("skip_special_tokens is not a bool");
         request.skipSpecialTokens = it->value.GetBool();
-    }
-    if (!request.skipSpecialTokens && outputParser != nullptr) {
-        outputParser.reset();
     }
 
     request.maxModelLength = maxModelLength;

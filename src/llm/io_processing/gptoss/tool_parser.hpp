@@ -57,6 +57,7 @@ public:
             "<|channel|>analysis to="};
         cfg.endTag = "<|call|>";
         cfg.needsSpecialTokens = true;
+        cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;
     }
 
@@ -64,6 +65,12 @@ public:
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
         BaseOutputParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    void resetState() override {
+        streamState = StreamState::READING_CHANNEL;
+        toolCallIndex = -1;
+        clearState();
+    }
 
     // Unary
     // Streaming

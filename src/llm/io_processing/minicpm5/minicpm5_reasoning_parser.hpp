@@ -14,17 +14,17 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/qwen3/reasoning_parser.hpp"
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace ovms {
-class Minicpm5ReasoningParser : public BaseOutputParser {
-public:
-    static constexpr int64_t reasoningStartTokenId = 8;
-    static constexpr int64_t reasoningEndTokenId = 9;
-
+// MiniCPM5 reasoning uses the same <think>/<\think> grammar as Qwen3 but both delimiters
+// are registered special tokens, so tokenIdStartTags is set and needsSpecialTokens/
+// defaultDecodingWithSpecialTokens are both true.
+class Minicpm5ReasoningParser : public Qwen3ReasoningParser {
 public:
     Minicpm5ReasoningParser() = delete;
 
@@ -34,14 +34,13 @@ public:
         cfg.tokenIdStartTags = {"<think>"};
         cfg.endTag = "</think>";
         cfg.needsSpecialTokens = true;
+        cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;
     }
 
     explicit Minicpm5ReasoningParser(ov::genai::Tokenizer& tokenizer,
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
-        BaseOutputParser(tokenizer,
+        Qwen3ReasoningParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
-
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };
 }  // namespace ovms

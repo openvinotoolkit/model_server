@@ -36,6 +36,8 @@
 #include "gemma4/gemma4_tool_parser.hpp"
 #include "onyx/onyx_tool_parser.hpp"
 #include "onyx/onyx_reasoning_parser.hpp"
+#include "onyx/onyx_content_parser.hpp"
+#include "default_content_parser.hpp"
 #include "minicpm5/minicpm5_tool_parser.hpp"
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
 
@@ -115,53 +117,33 @@ const std::string& OutputParser::StreamOutputCache::getBuffer() const {
     return buffer;
 }
 
-// TODO: @przepeck We should consider moving this and
-// similar workarounds to a content parser class
-static void eraseTagsFromContent(std::string& content, const std::vector<std::string>& tags) {
-    for (const auto& tag : tags) {
-        size_t pos = 0;
-        while ((pos = content.find(tag, pos)) != std::string::npos) {
-            content.erase(pos, tag.length());
-        }
-    }
-}
-
 std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
-    std::string chunkContent = streamOutputCache.getBuffer();
-    if (toolParser != nullptr) {
-        auto& tagsToErase = toolParser->getSpecialTagsToErase();
-        auto lookupResult = streamOutputCache.lookupTags(tagsToErase);
-        if (lookupResult == TagLookupStatus::FOUND_COMPLETE) {
-            eraseTagsFromContent(chunkContent, tagsToErase);
-        } else if (lookupResult == TagLookupStatus::FOUND_INCOMPLETE) {
-            return std::nullopt;
-        }
-    }
-    if (chunkContent.empty() || chunkContent == "") {
-        streamOutputCache.clear();
-        processingPhase = newPhase;
-        return std::nullopt;
-    }
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    writer.StartObject();
-    writer.String("delta");
-    writer.StartObject();
-    writer.String("content");
-    writer.String(chunkContent.c_str());
-    writer.EndObject();
-    writer.EndObject();
-    rapidjson::Document doc;
-    doc.Parse(buffer.GetString());
+    auto result = contentParser->parseChunk(streamOutputCache.getBuffer(), {}, ov::genai::GenerationFinishReason::NONE);
+    if (!result.has_value())
+        return std::nullopt;  // hold — keep buffer
     streamOutputCache.clear();
     processingPhase = newPhase;
-    return doc;
+    const auto& deltaIt = result->FindMember("delta");
+    if (deltaIt != result->MemberEnd()) {
+        const auto& contentIt = deltaIt->value.FindMember("content");
+        if (contentIt != deltaIt->value.MemberEnd() && contentIt->value.GetStringLength() == 0)
+            return std::nullopt;  // consumed preamble, nothing to emit
+    }
+    return result;
 }
 
 std::optional<rapidjson::Document> OutputParser::parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
     if (!toolParser) {
         throw std::runtime_error("Tool parser is not available, cannot parse tool call chunk");
+    }
+    // Bytes after the end tag belong to the next phase — preserve them before clearing.
+    std::string remainder;
+    const std::string& endTag = toolParser->getParsingConfig().endTag;
+    if (!endTag.empty()) {
+        const std::string& buf = streamOutputCache.getBuffer();
+        const size_t pos = buf.find(endTag);
+        if (pos != std::string::npos)
+            remainder = buf.substr(pos + endTag.size());
     }
     std::optional<rapidjson::Document> result;
     try {
@@ -172,12 +154,23 @@ std::optional<rapidjson::Document> OutputParser::parseToolCallChunk(const std::v
     }
     streamOutputCache.clear();
     processingPhase = newPhase;
+    if (!remainder.empty())
+        streamOutputCache.add(remainder);
     return result;
 }
 
 std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
     if (!reasoningParser) {
         throw std::runtime_error("Reasoning parser is not available, cannot parse reasoning chunk");
+    }
+    // Bytes after the end tag belong to the next phase — preserve them before clearing.
+    std::string remainder;
+    const std::string& endTag = reasoningParser->getParsingConfig().endTag;
+    if (!endTag.empty()) {
+        const std::string& buf = streamOutputCache.getBuffer();
+        const size_t pos = buf.find(endTag);
+        if (pos != std::string::npos)
+            remainder = buf.substr(pos + endTag.size());
     }
     std::optional<rapidjson::Document> result;
     try {
@@ -188,14 +181,13 @@ std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(const std::
     }
     streamOutputCache.clear();
     processingPhase = newPhase;
+    if (!remainder.empty())
+        streamOutputCache.add(remainder);
     return result;
 }
 
 OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
-    tokenizer(tokenizer),
-    toolParserName(toolParserName),
-    reasoningParserName(reasoningParserName),
-    toolNameSchemaMap(toolNameSchemaMap) {
+    tokenizer(tokenizer) {
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
     } else if (toolParserName == "hermes3") {
@@ -235,7 +227,6 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "onyx") {
         reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
-        decodeWithSpecialTokens = true;
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
@@ -245,14 +236,21 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     // (e.g. GptOss uses <|channel|>... throughout the stream; devstral's [TOOL_CALLS] tag and
     // minicpm5's <s>/<|im_end|> must be visible before parser-owned phases begin). For all other
     // parser combinations the content phase decodes with skip_special_tokens=true (the default,
-    // lower noise).
+    // lower noise). Each parser that requires this sets defaultDecodingWithSpecialTokens in its config.
+    if (toolParserName == "onyx" || reasoningParserName == "onyx")
+        contentParser = std::make_unique<OnyxContentParser>(tokenizer);
+    else if (toolParserName == "gemma4")
+        contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<turn|>", "<|tool_response>"});
+    else if (toolParserName == "lfm2")
+        contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<|im_end|>"});
+    else if (toolParserName == "minicpm5")
+        contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<s>", "<|im_end|>"});
+    else
+        contentParser = std::make_unique<DefaultContentParser>(tokenizer);
+
     defaultDecodingWithSpecialTokens =
-        toolParserName == "gptoss" ||
-        toolParserName == "devstral" ||
-        toolParserName == "minicpm5" ||
-        reasoningParserName == "gptoss" ||
-        reasoningParserName == "lfm2" ||
-        reasoningParserName == "minicpm5";
+        (toolParser && toolParser->getParsingConfig().defaultDecodingWithSpecialTokens) ||
+        (reasoningParser && reasoningParser->getParsingConfig().defaultDecodingWithSpecialTokens);
 
     if (llm_calculator_logger->should_log(spdlog::level::debug)) {
         std::string toolParsingConfigStr = toolParser ? toolParser->buildParsingConfigStringRepresentation() : "N/A";
@@ -274,7 +272,7 @@ bool OutputParser::isReasoningParserAvailable() const {
 
 std::string OutputParser::getToolParserStartTag() const {
     if (toolParser) {
-        return toolParser->getParsingStartTags()[0];
+        return toolParser->getParsingConfig().startTags[0];
     } else {
         throw std::runtime_error("Tool parser is not available, cannot get start tag");
     }
@@ -283,44 +281,12 @@ std::string OutputParser::getToolParserStartTag() const {
 void OutputParser::resetStreamingState() {
     processingPhase = UNKNOWN;
     streamOutputCache.clear();
-
-    toolParser = nullptr;
-    reasoningParser = nullptr;
-
-    if (toolParserName == "llama3") {
-        toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
-    } else if (toolParserName == "hermes3") {
-        toolParser = std::make_unique<Hermes3ToolParser>(tokenizer);
-    } else if (toolParserName == "phi4") {
-        toolParser = std::make_unique<Phi4ToolParser>(tokenizer);
-    } else if (toolParserName == "mistral") {
-        toolParser = std::make_unique<MistralToolParser>(tokenizer);
-    } else if (toolParserName == "gptoss") {
-        toolParser = std::make_unique<GptOssToolParser>(tokenizer);
-    } else if (toolParserName == "qwen3coder") {
-        toolParser = std::make_unique<Qwen3CoderToolParser>(tokenizer, toolNameSchemaMap);
-    } else if (toolParserName == "devstral") {
-        toolParser = std::make_unique<DevstralToolParser>(tokenizer, toolNameSchemaMap);
-    } else if (toolParserName == "lfm2") {
-        toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
-    } else if (toolParserName == "minicpm5") {
-        toolParser = std::make_unique<Minicpm5ToolParser>(tokenizer, toolNameSchemaMap);
-    } else if (toolParserName == "gemma4") {
-        toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
-    }
-
-    if (reasoningParserName == "qwen3") {
-        reasoningParser = std::make_unique<Qwen3ReasoningParser>(tokenizer);
-    } else if (reasoningParserName == "gemma4") {
-        reasoningParser = std::make_unique<Gemma4ReasoningParser>(tokenizer);
-    } else if (reasoningParserName == "gptoss") {
-        reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
-    } else if (reasoningParserName == "minicpm5") {
-        reasoningParser = std::make_unique<Minicpm5ReasoningParser>(tokenizer);
-    } else if (reasoningParserName == "lfm2") {
-        reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
-    }
-
+    if (toolParser)
+        toolParser->resetState();
+    if (reasoningParser)
+        reasoningParser->resetState();
+    if (contentParser)
+        contentParser->resetState();
     if (implicitReasoningStart) {
         setImplicitReasoningStart(true);
     }
@@ -386,7 +352,7 @@ void OutputParser::detectAndSetImplicitReasoningStart(const std::string& rendere
     }
     std::string trimmed = renderedPrompt;
     rtrim(trimmed);
-    const auto& startTags = reasoningParser->getParsingStartTags();
+    const auto& startTags = reasoningParser->getParsingConfig().startTags;
     bool detected = std::any_of(startTags.begin(), startTags.end(),
         [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
     setImplicitReasoningStart(detected);
@@ -402,8 +368,8 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
     so only use those methods or return nullopt.
     */
 
-    bool reasoningParserExistsAndSupportsStreaming = reasoningParser && !reasoningParser->getParsingStartTags().empty() && !reasoningParser->getParsingEndTag().empty();
-    bool toolParserExistsAndSupportsStreaming = toolParser && !toolParser->getParsingStartTags().empty();
+    bool reasoningParserExistsAndSupportsStreaming = reasoningParser && !reasoningParser->getParsingConfig().startTags.empty() && !reasoningParser->getParsingConfig().endTag.empty();
+    bool toolParserExistsAndSupportsStreaming = toolParser && !toolParser->getParsingConfig().startTags.empty();
     bool applyToolParser = toolParserExistsAndSupportsStreaming && toolsAvailable;
 
     streamOutputCache.add(chunkResponse);
@@ -449,10 +415,10 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         TagLookupStatus anyStartTagStatus = TagLookupStatus::NOT_FOUND;
         if (reasoningParserExistsAndSupportsStreaming) {
             // Check if reasoning start tag has been received
-            TagLookupStatus reasoningStartTagStatus = streamOutputCache.lookupTags(reasoningParser->getParsingStartTags());
+            TagLookupStatus reasoningStartTagStatus = streamOutputCache.lookupTags(reasoningParser->getParsingConfig().startTags);
             if (reasoningStartTagStatus == TagLookupStatus::NOT_FOUND) {
                 // If reasoning start tag is not found, check if any of the special start tags are found
-                reasoningStartTagStatus = streamOutputCache.lookupTags(reasoningParser->getPreambleStartTags());
+                reasoningStartTagStatus = streamOutputCache.lookupTags(reasoningParser->getParsingConfig().preambleStartTags);
             }
             if (reasoningStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
                 return parseReasoningChunk(tokens, finishReason);
@@ -462,10 +428,10 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
 
         if (applyToolParser) {
             // Check if tool call start tag has been received
-            TagLookupStatus toolCallStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingStartTags());
+            TagLookupStatus toolCallStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingConfig().startTags);
             if (toolCallStartTagStatus == TagLookupStatus::NOT_FOUND) {
                 // If tool call start tag is not found, check if any of the special start tags are found
-                toolCallStartTagStatus = streamOutputCache.lookupTags(toolParser->getPreambleStartTags());
+                toolCallStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingConfig().preambleStartTags);
             }
             if (toolCallStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
                 return parseToolCallChunk(tokens, finishReason);
@@ -483,7 +449,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         return std::nullopt;
     } else if (processingPhase == REASONING) {
         // If we are in the REASONING phase, we check if parsing end tag is found and if so, switch to UNKNOWN phase.
-        TagLookupStatus endTagStatus = streamOutputCache.lookupTag(reasoningParser->getParsingEndTag());
+        TagLookupStatus endTagStatus = streamOutputCache.lookupTag(reasoningParser->getParsingConfig().endTag);
         if (endTagStatus == TagLookupStatus::FOUND_COMPLETE) {
             // Switch back to UNKNOWN phase (we can have either CONTENT or TOOL_CALLS next)
             return parseReasoningChunk(tokens, finishReason, UNKNOWN);
@@ -495,7 +461,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         // If we are in the CONTENT phase, we check if tool parser start tag is found and if so, switch to TOOL_CALLS phase.
         // TOOL_CALLS is the only phase that can be processed after CONTENT.
         if (applyToolParser) {
-            TagLookupStatus toolStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingStartTags());
+            TagLookupStatus toolStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingConfig().startTags);
             if (toolStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
                 return parseToolCallChunk(tokens, finishReason);
             } else if (toolStartTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
@@ -505,29 +471,37 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         }
         return parseContentChunk();
     } else if (processingPhase == TOOL_CALLS_PROCESSING_TOOL) {
-        // Processing TOOL_CALLS is the last phase, so we always return the result of tool parser.
-        TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingEndTag());
+        // Active tool call: accumulate until the end tag, then transition to WAITING_FOR_TOOL
+        // to determine whether another tool call or a content turn follows.
+        TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingConfig().endTag);
         if (toolEndTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
             return std::nullopt;  // Wait for more chunks to determine if end tag is complete
         }
         if (toolEndTagStatus == TagLookupStatus::FOUND_COMPLETE) {
-            // If tool call has finished, we switch to waiting for next tool call as tool calls in the last phase,
-            // so we either get next tool call or finish processing.
             return parseToolCallChunk(tokens, finishReason, TOOL_CALLS_WAITING_FOR_TOOL);
         }
         return parseToolCallChunk(tokens, finishReason);
     } else if (processingPhase == TOOL_CALLS_WAITING_FOR_TOOL) {
-        // In this phase we are waiting for next tool call or finish of generation.
-        // If we get next tool call start tag, we switch to TOOL_CALLS phase, otherwise if generation finishes we switch to CONTENT phase to flush any remaining content.
-        TagLookupStatus toolStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingStartTags());
-        if (toolStartTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
-            return std::nullopt;  // Wait for more chunks to determine if start tag is complete
-        }
+        TagLookupStatus toolStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingConfig().startTags);
         if (toolStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
-            // If tool call has started, we switch back to processing tool phase.
             return parseToolCallChunk(tokens, finishReason, TOOL_CALLS_PROCESSING_TOOL);
         }
-        return parseToolCallChunk(tokens, finishReason);
+        // Check for content-turn start signal or generation end.
+        const auto& contentTurnStartTags = contentParser->getParsingConfig().startTags;
+        if (!contentTurnStartTags.empty()) {
+            TagLookupStatus contentTurnStatus = streamOutputCache.lookupTags(contentTurnStartTags);
+            if (contentTurnStatus == TagLookupStatus::FOUND_COMPLETE) {
+                return parseContentChunk();
+            }
+            if (finishReason != ov::genai::GenerationFinishReason::NONE) {
+                return parseContentChunk();
+            }
+            return std::nullopt;
+        }
+        if (toolStartTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
+            return std::nullopt;
+        }
+        return parseToolCallChunk(tokens, finishReason, TOOL_CALLS_WAITING_FOR_TOOL);
     } else {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Unexpected processing phase: {}", static_cast<int>(processingPhase));
         throw std::runtime_error("Unexpected error during stream output parsing");

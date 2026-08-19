@@ -54,6 +54,8 @@ public:
         BaseOutputParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
 
+    void resetState() override { phaseEntryTagConsumed_ = false; }
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };
 }  // namespace ovms

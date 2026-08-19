@@ -17,6 +17,7 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <openvino/genai/tokenizer.hpp>
@@ -28,7 +29,6 @@
 namespace ovms {
 
 class OnyxReasoningParser : public BaseOutputParser {
-protected:
     // Marks a private chain-of-thought turn (recipient="self").
     const std::string selfRecipientTag = "to=self";
     // Separates the routing prefix from the turn's body.
@@ -40,24 +40,31 @@ protected:
 
 public:
     OnyxReasoningParser() = delete;
-    explicit OnyxReasoningParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"to=self"};
+        cfg.endTag = "<|eom|>";
+        cfg.needsSpecialTokens = true;
+        cfg.defaultDecodingWithSpecialTokens = true;
+        return cfg;
+    }
+
+    explicit OnyxReasoningParser(ov::genai::Tokenizer& tokenizer,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    void resetState() override {
+        headerConsumed = false;
+        headerBuffer.clear();
+    }
+
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags{selfRecipientTag};
-        return parsingStartTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags{};
-        return specialParsingStartTags;
-    }
-    const std::string& getParsingEndTag() const override {
-        return continuationEndTag;
-    }
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
+
+private:
+    // Accumulates content until <|message|> is fully consumed at the start of each turn.
+    bool headerConsumed = false;
+    std::string headerBuffer;
 };
 }  // namespace ovms

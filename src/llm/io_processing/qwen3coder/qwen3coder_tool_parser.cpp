@@ -213,16 +213,6 @@ std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::parseChunk(const std::strin
     return std::nullopt;
 }
 
-void Qwen3CoderToolParser::lazyFillInitToolParametersTypesMap() {
-    if (this->filledParametersTypesMap) {
-        return;
-    }
-    SPDLOG_DEBUG("Filling tools parameters types map");
-    this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
-    this->filledParametersTypesMap = true;
-    SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", this->toolsParametersTypes.size());
-}
-
 Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
     std::optional<OutputParsingConfig> configOverride) :
     BaseOutputParser(tokenizer, [&]() {
@@ -233,6 +223,7 @@ Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, cons
         return cfg;
     }()),
     toolSchemas(toolSchemas),
+    toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
     streamParser(this->toolsParametersTypes) {
 }
 
@@ -286,7 +277,6 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::s
     // if toolCalls is not returned, but we are insideFunction state, we need to return the first delta with function name once
     // otherwise nullopt
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));
-    this->lazyFillInitToolParametersTypesMap();
     if (newChunk.empty()) {
         return std::nullopt;
     }
