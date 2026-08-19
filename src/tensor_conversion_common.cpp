@@ -244,7 +244,7 @@ ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const Tensor
     ov::Tensor tensor(precision, shape);
     char* ptr = (char*)tensor.data();
     const size_t firstImageSizeBytes = images[0].total() * images[0].elemSize();
-    for (cv::Mat image : images) {
+    for (const auto& image : images) {
         const size_t imageSizeBytes = image.total() * image.elemSize();
         if (imageSizeBytes != firstImageSizeBytes) {
             SPDLOG_DEBUG("Image conversion failed due to inconsistent image size in one batch. Expected bytes: {} current bytes: {}",
