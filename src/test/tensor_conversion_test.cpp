@@ -627,11 +627,14 @@ TEST_F(NativeFileInputConversionTestKFSRawInputsContents, Negative_mixedChannels
 
     std::ifstream grayscaleDataFile;
     grayscaleDataFile.open(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/grayscale.jpg"), std::ios::binary);
+    ASSERT_TRUE(grayscaleDataFile.is_open());
     grayscaleDataFile.seekg(0, std::ios::end);
-    size_t grayscaleFilesize = grayscaleDataFile.tellg();
-    grayscaleDataFile.seekg(0);
+    std::streampos endPos = grayscaleDataFile.tellg();
+    ASSERT_NE(endPos, std::streampos(-1));
+    const size_t grayscaleFilesize = static_cast<size_t>(endPos);
+    grayscaleDataFile.seekg(0, std::ios::beg);
     std::unique_ptr<char[]> grayscaleImageBytes(new char[grayscaleFilesize]);
-    grayscaleDataFile.read(grayscaleImageBytes.get(), grayscaleFilesize);
+    ASSERT_TRUE(grayscaleDataFile.read(grayscaleImageBytes.get(), static_cast<std::streamsize>(grayscaleFilesize)).good());
 
     uint32_t grayscaleSize = static_cast<uint32_t>(grayscaleFilesize);
     this->buffer.append(reinterpret_cast<const char*>(&grayscaleSize), sizeof(grayscaleSize));
