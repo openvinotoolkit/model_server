@@ -91,9 +91,7 @@ Models can also be removed from the configuration file:
 ovms --remove_from_config --config_path config.json --model_name model1
 ```
 
-All models can be started with the following command:
-```
-
+All models can be started with the following command: `ovms --config_path config.json --port 9000 --rest_port 8000`
 For more information on how to use cloud-hosted models, refer to the [cloud storage guide](./using_cloud_storage.md).
 
 For additional information, see how to [start the model server](./starting_server.md).

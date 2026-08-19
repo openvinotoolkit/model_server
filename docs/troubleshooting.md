@@ -10,7 +10,7 @@ This document gives information about troubleshooting the following issues while
 * [Configuring S3 storage For Use With a Proxy](#configuring-s3-storage-for-use-with-a-proxy)
 * [Using GCS storage behind a proxy](#using-gcs-model-behind-a-proxy)
 * [Model Cache Issues](#model-cache-issues)
-* [Models from Hugging Face Hub](#models-from-hugging-face-hub)
+* [Pulling Models from Hugging Face Hub](#pulling-models-from-hugging-face-hub)
 
 
 ## Generative Models Troubleshooting

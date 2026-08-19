@@ -1,6 +1,6 @@
 # OVMS Pull mode {#ovms_docs_pull}
 
-This document describes how to use the OpenVINO Model Server (OVMS) pull feature to automate deployment configuration for Generative AI models. When pulling models from [Hugging Face Hub](https://huggingface.co/) in IR or GGUF format, no additional setup is required. However, when pulling models in PyTorch format, you need additional Python dependencies on a bare-metal host so that `optimum-cli` is available to the OVMS executable. Docker image. In summary, you have three options:
+This document describes how to use the OpenVINO Model Server (OVMS) pull feature to automate deployment configuration for Generative AI models. When pulling models from [Hugging Face Hub](https://huggingface.co/) in IR or GGUF format, no additional setup is required. However, when pulling models in PyTorch format, you need additional Python dependencies on a bare-metal host so that `optimum-cli` is available to the OVMS executable. In summary, you have three options:
 
 - pull pre-configured models in IR format (recommended)
 - pull GGUF models from Hugging Face
