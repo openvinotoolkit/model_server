@@ -177,8 +177,8 @@ TEST(NodeLibraryManagerTest, ModelZooObjectDetectionCapsAllOutputsToMaxOutputBat
         EXPECT_EQ(outputs[i].dims[0], maxOutputBatch);
     }
     EXPECT_EQ(outputs[1].dataBytes, sizeof(int32_t) * 4 * maxOutputBatch);  // coordinates
-    EXPECT_EQ(outputs[2].dataBytes, sizeof(float) * maxOutputBatch);         // confidences
-    EXPECT_EQ(outputs[3].dataBytes, sizeof(int32_t) * maxOutputBatch);       // label_ids
+    EXPECT_EQ(outputs[2].dataBytes, sizeof(float) * maxOutputBatch);        // confidences
+    EXPECT_EQ(outputs[3].dataBytes, sizeof(int32_t) * maxOutputBatch);      // label_ids
 
     for (int i = 0; i < outputsCount; ++i) {
         library.release(outputs[i].data, customNodeLibraryInternalManager);
