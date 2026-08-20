@@ -57,6 +57,7 @@ class MediapipeFactory;
 class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
 class ModelInstance;
+class ModelGroupManager;
 class ServableDefinition;
 class ModelInstanceUnloadGuard;
 class Pipeline;
@@ -127,6 +128,12 @@ private:
      * @brief Watcher thread for monitor changes in config
      */
     void watcher(std::future<void> exitSignal, bool watchConfigFile);
+
+    /**
+     * @brief Sweep mediapipe graph definitions and unload any that have been
+     *        idle past their configured idle_unload_timeout_seconds.
+     */
+    void unloadIdleGraphs();
 
     /**
      * @brief Cleaner thread for resources cleanup
@@ -231,6 +238,12 @@ private:
      */
     std::string rootDirectoryPath;
     bool startedWithConfigFile = false;
+
+    /**
+     * @brief Model group manager for idle load/unload
+     */
+    std::unique_ptr<ModelGroupManager> groupManager_;
+
     /**
      * @brief Set json config directory path
      *
@@ -301,6 +314,14 @@ public:
         return models;
     }
 
+    const std::unordered_map<std::string, ModelConfig>& getServedModelConfigs() const {
+        return servedModelConfigs;
+    }
+
+    ModelGroupManager* getGroupManager() const {
+        return groupManager_.get();
+    }
+
     const std::vector<std::string> getNamesOfAvailableModels() const;
 
     /**
@@ -312,6 +333,9 @@ public:
 
 #if (MEDIAPIPE_DISABLE == 0)
     const MediapipeFactory& getMediapipeFactory() const {
+        return *mediapipeFactory;
+    }
+    MediapipeFactory& getMediapipeFactory() {
         return *mediapipeFactory;
     }
 #endif

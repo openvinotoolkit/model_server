@@ -72,7 +72,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
     std::stringstream ss;
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
-        auto configOptions = std::make_unique<cxxopts::Options>("ovms --add_to_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME> --model_repository_path <MODEL_REPO_PATH> \n  ovms --add_to_config --config_path <CONFIG_PATH> --model_path <MODEL_PATH> --model_name <MODEL_NAME>  \n  ovms --remove_from_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
+        auto configOptions = std::make_unique<cxxopts::Options>("ovms --add_to_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME> --model_repository_path <MODEL_REPO_PATH> \n  ovms --add_to_config --config_path <CONFIG_PATH> --model_path <MODEL_PATH> --model_name <MODEL_NAME> --group_name <GROUP> \n  ovms --remove_from_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
         // Adding this option to parse unrecognised options in another parser
         options->allow_unrecognised_options();
 
@@ -137,6 +137,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
+            ("idle_unload_timeout_seconds",
+                "Idle timeout in seconds for model group unloading. When > 0, models not in the 'permanent' group are loaded on demand and unloaded after this idle period. Only effective with config.json multi-model setup. Default is 0 (disabled).",
+                cxxopts::value<uint32_t>()->default_value("0"),
+                "IDLE_UNLOAD_TIMEOUT_SECONDS")
             ("custom_node_resources_cleaner_interval_seconds",
                 "Time interval between two consecutive resources cleanup scans. Default is 300. Zero value disables resources cleaner.",
                 cxxopts::value<uint32_t>()->default_value("300"),
@@ -209,7 +213,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("remove_from_config",
                 "Directive to remove a model from configuration file. This parameter should be executed with --config_path and --model_name to specify which model to remove.",
                 cxxopts::value<bool>()->default_value("false"),
-                "REMOVE_FROM_CONFIG");
+                "REMOVE_FROM_CONFIG")
+            ("group_name",
+                "Optional group name for idle model group management. Used with --add_to_config.",
+                cxxopts::value<std::string>(),
+                "GROUP_NAME");
 
         // Set default value for model_repository_path from environment variable if it exists and is not empty
         std::string defaultModelRepoPath = "";
@@ -343,6 +351,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Name of the model",
                 cxxopts::value<std::string>(),
                 "MODEL_NAME")
+            ("group_name",
+                "Optional group name for idle model group management",
+                cxxopts::value<std::string>(),
+                "GROUP_NAME")
             ("config_path",
                 "Path to json configuration file",
                 cxxopts::value<std::string>()->default_value(defaultConfigPath),
@@ -569,6 +581,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
 
     serverSettings.resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
+    serverSettings.idleUnloadTimeoutSeconds = result->operator[]("idle_unload_timeout_seconds").as<uint32_t>();
     serverSettings.grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
     if (result->count("log_level"))
@@ -920,6 +933,10 @@ void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
         modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
     } else if (!result->operator[]("model_repository_path").as<std::string>().empty() && result->count("model_name")) {
         modelsSettings.modelPath = FileSystem::joinPath({result->operator[]("model_repository_path").as<std::string>(), modelsSettings.modelName});
+    }
+    if (result->count("group_name")) {
+        modelsSettings.groupName = result->operator[]("group_name").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("group_name");
     }
     std::string defaultConfigPath = "";
     const char* envModelRepoPath = std::getenv("OVMS_MODEL_REPOSITORY_PATH");

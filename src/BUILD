@@ -583,8 +583,8 @@ ovms_cc_library(
 )
 ovms_cc_library(
     name = "modelmanager",
-    hdrs = ["modelmanager.hpp"],
-    srcs = ["modelmanager.cpp"],
+    hdrs = ["modelmanager.hpp", "model_group_manager.hpp"],
+    srcs = ["modelmanager.cpp", "model_group_manager.cpp"],
     deps = select({
         "//conditions:default": [],
         "//:not_disable_mediapipe" : [
@@ -2032,6 +2032,7 @@ cc_test(
         "test/model_version_policy_test.cpp",
         "test/modelconfig_test.cpp",
         "test/modelinstance_test.cpp",
+        "test/model_group_manager_test.cpp",
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/node_library_manager_test.cpp",

@@ -141,7 +141,7 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
     static const std::vector<std::string> allowedForRemove = {"model_name", "config_path"};
     static const std::vector<std::string> allowedForAdd = {"model_name", "model_path", "config_path",
         "batch_size", "shape", "layout", "mean", "scale", "color_format", "precision",
-        "model_version_policy", "nireq", "target_device", "plugin_config"};
+        "model_version_policy", "nireq", "target_device", "plugin_config", "group_name"};
 
     const auto& allowedUserSettings = (exportType == ENABLE_MODEL) ? allowedForAdd : allowedForRemove;
     std::vector<std::string> usedButDisallowedUserSettings;
@@ -432,6 +432,7 @@ const std::string& Config::tracePath() const { return this->serverSettings.trace
 const std::string& Config::grpcChannelArguments() const { return this->serverSettings.grpcChannelArguments; }
 uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
 uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
+uint32_t Config::idleUnloadTimeoutSeconds() const { return this->serverSettings.idleUnloadTimeoutSeconds; }
 bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
 const std::string& Config::allowedOrigins() const { return this->serverSettings.allowedOrigins; }
 const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }
