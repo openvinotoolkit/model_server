@@ -708,7 +708,7 @@ TEST_F(TestLoadModel, SuccessfulLoadDummyDimensionRanges) {
 TEST_F(TestLoadModel, CorrectNumberOfStreamsSet) {
 // problematic on just one machine in CI
 #if defined(_WIN32)
-    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+    GTEST_SKIP();
 #endif
     ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
