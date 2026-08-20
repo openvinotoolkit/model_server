@@ -90,6 +90,11 @@ public:
     bool isIdleUnloadEnabled() const;
     bool shouldUnloadDueToIdle() const;
 
+    // Create definition in UNLOADED state without loading any resources.
+    // Used during initialization with idle group management to avoid loading
+    // non-permanent graphs that would be immediately unloaded.
+    void setAsUnloaded();
+
     // Test-only: backdate the last-activity timestamp by the given number of seconds
     // so idle-timeout behavior can be exercised deterministically without sleeping.
     void backdateLastActivityForTest(int64_t seconds) {

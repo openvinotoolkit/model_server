@@ -49,6 +49,10 @@ public:
         MetricProvider& metrics,
         const ServableNameChecker& checker);
 
+    Status createDefinitionAsUnloaded(const std::string& pipelineName,
+        const MediapipeGraphConfig& config,
+        MetricProvider& metrics);
+
     bool definitionExists(const std::string& name) const;
 
 public:

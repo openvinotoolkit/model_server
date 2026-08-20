@@ -594,6 +594,17 @@ bool MediapipeGraphDefinition::shouldUnloadDueToIdle() const {
     return (nowNs - lastActivity) >= timeoutNs;
 }
 
+void MediapipeGraphDefinition::setAsUnloaded() {
+    // Transition from BEGIN → AVAILABLE → UNLOADED without loading any resources.
+    // Used during initialization with idle group management to create definitions
+    // that exist in the factory but skip the expensive validate()/initializeNodes()
+    // path. wakeUpIfUnloaded() will later perform the full load on demand.
+    this->status.handle(ValidationPassedEvent());
+    this->status.handle(UnloadEvent());
+    SPDLOG_LOGGER_INFO(modelmanager_logger,
+        "Mediapipe graph {} created in UNLOADED state (idle group management)", getName());
+}
+
 Status MediapipeGraphDefinition::unload() {
     // Serialize against wakeUpIfUnloaded()/reload()/retire() using the SAME lock so
     // all lifecycle mutations are mutually exclusive. This prevents the watcher thread

@@ -4597,3 +4597,88 @@ TEST(MediapipeIdleUnloadGuard, UnloadSkipsWhenRequestsInFlight) {
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
     ASSERT_TRUE(def.sidePacketMapsEmptyForTest());
 }
+
+// ---------------------------------------------------------------------------
+// setAsUnloaded() — skip initial loading for idle group management
+// ---------------------------------------------------------------------------
+
+TEST(MediapipeIdleUnloadGuard, SetAsUnloadedTransitionsFromBeginToUnloaded) {
+    ovms::MediapipeGraphConfig mgc{"skipLoad", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+
+    def.setAsUnloaded();
+
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+}
+
+TEST(MediapipeIdleUnloadGuard, SetAsUnloadedDoesNotClearResources) {
+    ovms::MediapipeGraphConfig mgc{"skipLoad", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    // Insert a marker into side packet maps before setAsUnloaded.
+    def.insertSidePacketMarkerForTest("marker");
+    const void* mapsBefore = def.sidePacketMapsPtrForTest();
+
+    def.setAsUnloaded();
+
+    // setAsUnloaded only transitions the state machine — it does not clear resources
+    // (there are none to clear since validate() was never called).
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    ASSERT_TRUE(def.hasSidePacketMarkerForTest("marker"));
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);
+}
+
+TEST(MediapipeIdleUnloadGuard, SetAsUnloadedThenUnloadIsNoOp) {
+    ovms::MediapipeGraphConfig mgc{"skipLoad", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    def.setAsUnloaded();
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+
+    // A second unload() on an already-UNLOADED graph should be a no-op.
+    ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+}
+
+// ---------------------------------------------------------------------------
+// createDefinitionAsUnloaded() — factory-level test
+// ---------------------------------------------------------------------------
+
+namespace {
+class StubMetricProvider : public ovms::MetricProvider {
+public:
+    ovms::MetricRegistry* getMetricRegistry() const override { return nullptr; }
+    const ovms::MetricConfig& getMetricConfig() const override { return config_; }
+
+private:
+    ovms::MetricConfig config_;
+};
+}  // namespace
+
+TEST(MediapipeIdleUnloadGuard, CreateDefinitionAsUnloaded) {
+    ovms::MediapipeFactory factory(nullptr);
+    ovms::MediapipeGraphConfig mgc{"unloadedGraph", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    StubMetricProvider metrics;
+
+    auto status = factory.createDefinitionAsUnloaded("unloadedGraph", mgc, metrics);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    auto* def = factory.findDefinitionByName("unloadedGraph");
+    ASSERT_NE(def, nullptr);
+    ASSERT_EQ(def->getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+}
+
+TEST(MediapipeIdleUnloadGuard, CreateDefinitionAsUnloadedRejectsDuplicate) {
+    ovms::MediapipeFactory factory(nullptr);
+    ovms::MediapipeGraphConfig mgc{"dupGraph", "", ""};
+    StubMetricProvider metrics;
+
+    auto status1 = factory.createDefinitionAsUnloaded("dupGraph", mgc, metrics);
+    ASSERT_EQ(status1, ovms::StatusCode::OK);
+
+    auto status2 = factory.createDefinitionAsUnloaded("dupGraph", mgc, metrics);
+    ASSERT_EQ(status2, ovms::StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST);
+}

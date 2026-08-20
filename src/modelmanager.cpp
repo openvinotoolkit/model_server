@@ -465,6 +465,16 @@ Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, 
     mediapipesInConfigFile.insert(config.getGraphName());
     MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
     if (mediapipeGraphDefinition == nullptr) {
+        // When idle group management is enabled and the graph belongs to a non-permanent
+        // group, create it in UNLOADED state to avoid expensive validate()/initializeNodes()
+        // that would load LLM models into GPU only to immediately unload them.
+        if (groupManager_ && groupManager_->isEnabled() &&
+            !config.getGroupName().empty() && config.getGroupName() != "permanent") {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+                "Mediapipe graph:{} belongs to non-permanent group '{}'; creating as UNLOADED",
+                config.getGraphName(), config.getGroupName());
+            return factory.createDefinitionAsUnloaded(config.getGraphName(), config, *this);
+        }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
         auto status = factory.createDefinition(config.getGraphName(), config, *this, *this);
         return status;
@@ -967,7 +977,9 @@ Status ModelManager::loadConfig() {
     // Build model groups and unload non-permanent servables for on-demand loading
     if (groupManager_ && groupManager_->isEnabled()) {
         groupManager_->buildGroups(this->servedModelConfigs, *this);
-        // Unload all non-permanent servables so they are loaded on demand
+        // Unload all non-permanent models so they are loaded on demand.
+        // Mediapipe graphs in non-permanent groups are already created in UNLOADED
+        // state by processMediapipeConfig, so only models need retirement here.
         for (const auto& [groupName, groupInfo] : groupManager_->getGroups()) {
             if (groupInfo.isPermanent()) {
                 continue;
@@ -979,15 +991,6 @@ Status ModelManager::loadConfig() {
                     SPDLOG_INFO("Retired model '{}' (group '{}') for on-demand loading", modelName, groupName);
                 }
             }
-#if (MEDIAPIPE_DISABLE == 0)
-            for (const auto& graphName : groupInfo.mediapipeNames) {
-                MediapipeGraphDefinition* def = mediapipeFactory->findDefinitionByName(graphName);
-                if (def != nullptr) {
-                    def->unload();
-                    SPDLOG_INFO("Unloaded mediapipe graph '{}' (group '{}') for on-demand loading", graphName, groupName);
-                }
-            }
-#endif
         }
     }
 
