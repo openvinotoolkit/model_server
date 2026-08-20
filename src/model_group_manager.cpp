@@ -16,6 +16,7 @@
 #include "model_group_manager.hpp"
 
 #include <chrono>
+#include <memory>
 #include <thread>
 
 #include "logging.hpp"
