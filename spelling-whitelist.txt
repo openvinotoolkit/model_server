@@ -43,5 +43,6 @@ src/test/llm/output_parsers/qwen3_output_parser_test.cpp:697: thi ==> the, this
 extras/chat_template_examples/chat_template_onyx.jinja
 src/test/llm/chat_templates/chat_template_onyx.jinja
 src/mediapipe_internal/mediapipegraphdefinition.cpp
+src/mediapipe_internal/mediapipegraphdefinition.hpp
 src/model_group_manager.cpp
 src/test/llm/llmnode_test.cpp
