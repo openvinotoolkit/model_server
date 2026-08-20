@@ -141,7 +141,7 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
     static const std::vector<std::string> allowedForRemove = {"model_name", "config_path"};
     static const std::vector<std::string> allowedForAdd = {"model_name", "model_path", "config_path",
         "batch_size", "shape", "layout", "mean", "scale", "color_format", "precision",
-        "model_version_policy", "nireq", "target_device", "plugin_config"};
+        "model_version_policy", "nireq", "target_device", "plugin_config", "group_name"};
 
     const auto& allowedUserSettings = (exportType == ENABLE_MODEL) ? allowedForAdd : allowedForRemove;
     std::vector<std::string> usedButDisallowedUserSettings;

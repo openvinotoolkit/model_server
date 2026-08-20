@@ -5848,7 +5848,7 @@ protected:
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
                 models_path: ")" +
-                              modelsPath + R"("
+                                modelsPath + R"("
                 cache_size: 1
             }
         }

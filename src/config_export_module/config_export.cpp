@@ -56,6 +56,8 @@ static void addOptionalModelFields(rapidjson::Value& configObj, const ModelsSett
         configObj.AddMember("target_device", rapidjson::Value(modelSettings.targetDevice.c_str(), alloc), alloc);
     if (!modelSettings.pluginConfig.empty())
         addJsonOrStringMember(configObj, "plugin_config", modelSettings.pluginConfig, alloc);
+    if (modelSettings.groupName.has_value())
+        configObj.AddMember("group_name", rapidjson::Value(modelSettings.groupName.value().c_str(), alloc), alloc);
 }
 
 Status loadJsonConfig(const std::string& jsonFilename, rapidjson::Document& configJson) {

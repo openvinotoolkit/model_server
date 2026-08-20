@@ -57,6 +57,7 @@ class MediapipeFactory;
 class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
 class ModelInstance;
+class ModelGroupManager;
 class ServableDefinition;
 class ModelInstanceUnloadGuard;
 class Pipeline;
@@ -237,6 +238,12 @@ private:
      */
     std::string rootDirectoryPath;
     bool startedWithConfigFile = false;
+
+    /**
+     * @brief Model group manager for idle load/unload
+     */
+    std::unique_ptr<ModelGroupManager> groupManager_;
+
     /**
      * @brief Set json config directory path
      *
@@ -307,6 +314,14 @@ public:
         return models;
     }
 
+    const std::unordered_map<std::string, ModelConfig>& getServedModelConfigs() const {
+        return servedModelConfigs;
+    }
+
+    ModelGroupManager* getGroupManager() const {
+        return groupManager_.get();
+    }
+
     const std::vector<std::string> getNamesOfAvailableModels() const;
 
     /**
@@ -318,6 +333,9 @@ public:
 
 #if (MEDIAPIPE_DISABLE == 0)
     const MediapipeFactory& getMediapipeFactory() const {
+        return *mediapipeFactory;
+    }
+    MediapipeFactory& getMediapipeFactory() {
         return *mediapipeFactory;
     }
 #endif

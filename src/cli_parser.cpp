@@ -72,7 +72,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
     std::stringstream ss;
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
-        auto configOptions = std::make_unique<cxxopts::Options>("ovms --add_to_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME> --model_repository_path <MODEL_REPO_PATH> \n  ovms --add_to_config --config_path <CONFIG_PATH> --model_path <MODEL_PATH> --model_name <MODEL_NAME>  \n  ovms --remove_from_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
+        auto configOptions = std::make_unique<cxxopts::Options>("ovms --add_to_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME> --model_repository_path <MODEL_REPO_PATH> \n  ovms --add_to_config --config_path <CONFIG_PATH> --model_path <MODEL_PATH> --model_name <MODEL_NAME> --group_name <GROUP> \n  ovms --remove_from_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
         // Adding this option to parse unrecognised options in another parser
         options->allow_unrecognised_options();
 
@@ -213,7 +213,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("remove_from_config",
                 "Directive to remove a model from configuration file. This parameter should be executed with --config_path and --model_name to specify which model to remove.",
                 cxxopts::value<bool>()->default_value("false"),
-                "REMOVE_FROM_CONFIG");
+                "REMOVE_FROM_CONFIG")
+            ("group_name",
+                "Optional group name for idle model group management. Used with --add_to_config.",
+                cxxopts::value<std::string>(),
+                "GROUP_NAME");
 
         // Set default value for model_repository_path from environment variable if it exists and is not empty
         std::string defaultModelRepoPath = "";
@@ -347,6 +351,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Name of the model",
                 cxxopts::value<std::string>(),
                 "MODEL_NAME")
+            ("group_name",
+                "Optional group name for idle model group management",
+                cxxopts::value<std::string>(),
+                "GROUP_NAME")
             ("config_path",
                 "Path to json configuration file",
                 cxxopts::value<std::string>()->default_value(defaultConfigPath),
@@ -925,6 +933,10 @@ void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
         modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
     } else if (!result->operator[]("model_repository_path").as<std::string>().empty() && result->count("model_name")) {
         modelsSettings.modelPath = FileSystem::joinPath({result->operator[]("model_repository_path").as<std::string>(), modelsSettings.modelName});
+    }
+    if (result->count("group_name")) {
+        modelsSettings.groupName = result->operator[]("group_name").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("group_name");
     }
     std::string defaultConfigPath = "";
     const char* envModelRepoPath = std::getenv("OVMS_MODEL_REPOSITORY_PATH");
