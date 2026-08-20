@@ -148,7 +148,6 @@ private:
     Minicpm5ToolParserImpl streamParser;
     int toolCallIndex{-1};
     ToolCalls_t currentToolCalls;
-    rapidjson::Document currentJson;
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
 
@@ -173,13 +172,13 @@ public:
         returnedCompleteDeltas.clear();
     }
 
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 
 private:
     const std::vector<int64_t> removeReasoningTokens(const std::vector<int64_t>& generatedTokens);
-    std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
-    std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
-    rapidjson::Document wrapCombinedDelta(const ToolCall& toolCall);
+    std::optional<Delta> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
+    std::optional<Delta> sendFullDelta(const ToolCalls_t& toolCalls);
+    ToolCallDelta wrapCombinedDelta(const ToolCall& toolCall);
 };
 
 }  // namespace ovms

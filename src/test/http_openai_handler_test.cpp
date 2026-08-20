@@ -929,23 +929,16 @@ static std::string serializeStreamingChunkFromText(ovms::OpenAIApiHandler& handl
     const std::string& text,
     ov::genai::GenerationFinishReason finishReason) {
     const auto& outputParser = handler.getOutputParser();
-    rapidjson::Document delta;
     if (outputParser != nullptr) {
         auto parsed = outputParser->parseChunk(text, {}, handler.areToolsAvailable(), finishReason);
         if (!parsed.has_value()) {
             if (finishReason == ov::genai::GenerationFinishReason::NONE)
                 return "";
-            delta = rapidjson::Document{};
-        } else {
-            delta = std::move(*parsed);
+            return handler.serializeStreamingChunk(ovms::FinishDelta{}, finishReason);
         }
-    } else {
-        delta.SetObject();
-        rapidjson::Document::AllocatorType& alloc = delta.GetAllocator();
-        rapidjson::Value deltaObj(rapidjson::kObjectType);
-        deltaObj.AddMember("content", rapidjson::Value(text.c_str(), alloc), alloc);
-        delta.AddMember("delta", deltaObj, alloc);
+        return handler.serializeStreamingChunk(std::move(*parsed), finishReason);
     }
+    ovms::Delta delta = text.empty() ? ovms::Delta{ovms::FinishDelta{}} : ovms::Delta{ovms::ContentDelta{text}};
     return handler.serializeStreamingChunk(std::move(delta), finishReason);
 }
 
@@ -1077,10 +1070,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkAlwaysIncludesDeltaF
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
     // Simulate an empty Document (no "delta" member) with a finish reason — this
-    // is what flush_chunk produces when the parser absorbs the final token.
-    rapidjson::Document emptyDoc;
-    emptyDoc.SetObject();
-    std::string serialized = apiHandler->serializeStreamingChunk(std::move(emptyDoc), ov::genai::GenerationFinishReason::LENGTH);
+    std::string serialized = apiHandler->serializeStreamingChunk(ovms::FinishDelta{}, ov::genai::GenerationFinishReason::LENGTH);
 
     ASSERT_NE(serialized.find("\"delta\":{}"), std::string::npos) << "Expected empty delta object in: " << serialized;
     ASSERT_NE(serialized.find("\"finish_reason\":\"length\""), std::string::npos) << serialized;
@@ -1088,71 +1078,29 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkAlwaysIncludesDeltaF
 
 // ---- serializeUnaryResponse(deltas, finishReason) tests ----
 
-// Helper: build a content delta Document as OVMSTextStreamer produces it.
-static rapidjson::Document makeContentDelta(const std::string& text) {
-    rapidjson::Document doc;
-    doc.SetObject();
-    rapidjson::Document::AllocatorType& alloc = doc.GetAllocator();
-    rapidjson::Value deltaObj(rapidjson::kObjectType);
-    deltaObj.AddMember("content", rapidjson::Value(text.c_str(), alloc), alloc);
-    doc.AddMember("delta", deltaObj, alloc);
-    return doc;
+// Helper: build a content delta as OVMSTextStreamer produces it.
+static ovms::ContentDelta makeContentDelta(const std::string& text) {
+    return ovms::ContentDelta{text};
 }
 
-// Helper: build a reasoning delta Document.
-static rapidjson::Document makeReasoningDelta(const std::string& text) {
-    rapidjson::Document doc;
-    doc.SetObject();
-    rapidjson::Document::AllocatorType& alloc = doc.GetAllocator();
-    rapidjson::Value deltaObj(rapidjson::kObjectType);
-    deltaObj.AddMember("reasoning_content", rapidjson::Value(text.c_str(), alloc), alloc);
-    doc.AddMember("delta", deltaObj, alloc);
-    return doc;
+// Helper: build a reasoning delta.
+static ovms::ReasoningDelta makeReasoningDelta(const std::string& text) {
+    return ovms::ReasoningDelta{text};
 }
 
 // Helper: build a first tool-call delta (id + name, no arguments yet).
-static rapidjson::Document makeToolCallFirstDelta(const std::string& id, const std::string& name, int index = 0) {
-    rapidjson::Document doc;
-    doc.SetObject();
-    rapidjson::Document::AllocatorType& alloc = doc.GetAllocator();
-    rapidjson::Value tcObj(rapidjson::kObjectType);
-    tcObj.AddMember("id", rapidjson::Value(id.c_str(), alloc), alloc);
-    tcObj.AddMember("type", "function", alloc);
-    tcObj.AddMember("index", index, alloc);
-    rapidjson::Value fnObj(rapidjson::kObjectType);
-    fnObj.AddMember("name", rapidjson::Value(name.c_str(), alloc), alloc);
-    tcObj.AddMember("function", fnObj, alloc);
-    rapidjson::Value tcArr(rapidjson::kArrayType);
-    tcArr.PushBack(tcObj, alloc);
-    rapidjson::Value deltaObj(rapidjson::kObjectType);
-    deltaObj.AddMember("tool_calls", tcArr, alloc);
-    doc.AddMember("delta", deltaObj, alloc);
-    return doc;
+static ovms::ToolCallDelta makeToolCallFirstDelta(const std::string& id, const std::string& name, int index = 0) {
+    return ovms::ToolCallDelta{index, id, name, ""};
 }
 
 // Helper: build a tool-call arguments delta (arguments fragment, no id/name).
-static rapidjson::Document makeToolCallArgsDelta(const std::string& args, int index = 0) {
-    rapidjson::Document doc;
-    doc.SetObject();
-    rapidjson::Document::AllocatorType& alloc = doc.GetAllocator();
-    rapidjson::Value tcObj(rapidjson::kObjectType);
-    tcObj.AddMember("index", index, alloc);
-    rapidjson::Value fnObj(rapidjson::kObjectType);
-    fnObj.AddMember("arguments", rapidjson::Value(args.c_str(), alloc), alloc);
-    tcObj.AddMember("function", fnObj, alloc);
-    rapidjson::Value tcArr(rapidjson::kArrayType);
-    tcArr.PushBack(tcObj, alloc);
-    rapidjson::Value deltaObj(rapidjson::kObjectType);
-    deltaObj.AddMember("tool_calls", tcArr, alloc);
-    doc.AddMember("delta", deltaObj, alloc);
-    return doc;
+static ovms::ToolCallDelta makeToolCallArgsDelta(const std::string& args, int index = 0) {
+    return ovms::ToolCallDelta{index, std::nullopt, std::nullopt, args};
 }
 
-// Helper: build an empty finish-only chunk (no "delta" member).
-static rapidjson::Document makeFinishChunk() {
-    rapidjson::Document doc;
-    doc.SetObject();
-    return doc;
+// Helper: build a finish-only chunk.
+static ovms::FinishDelta makeFinishChunk() {
+    return ovms::FinishDelta{};
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseGenerationOutputReturnsToolCallsFinishReason) {
@@ -1177,7 +1125,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseGenerationOutputRetur
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeToolCallFirstDelta("tc-001", "example_tool"));
     deltas.push_back(makeToolCallArgsDelta("{\"arg1\":\"value1\"}"));
     deltas.push_back(makeFinishChunk());
@@ -1196,7 +1144,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasContentConcaten
         doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("Hello"));
     deltas.push_back(makeContentDelta(", "));
     deltas.push_back(makeContentDelta("world!"));
@@ -1207,6 +1155,27 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasContentConcaten
     ASSERT_NE(serialized.find("\"object\":\"chat.completion\""), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"finish_reason\":\"stop\""), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"content\":\"Hello, world!\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseIgnoresAudioDeltas) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":"Hi"}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+        doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+
+    std::vector<ovms::Delta> deltas;
+    deltas.push_back(makeContentDelta("Hello"));
+    deltas.push_back(ovms::AudioDelta{"aGVsbG8="});
+    deltas.push_back(makeContentDelta(" world"));
+    deltas.push_back(makeFinishChunk());
+
+    std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
+
+    ASSERT_NE(serialized.find("\"content\":\"Hello world\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"finish_reason\":\"stop\""), std::string::npos) << serialized;
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasToolCallFragmentsAssembled) {
@@ -1225,7 +1194,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasToolCallFragmen
         doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeToolCallFirstDelta("tc-001", "get_weather", 0));
     deltas.push_back(makeToolCallArgsDelta("{\"loc\":", 0));
     deltas.push_back(makeToolCallArgsDelta("\"Paris\"}", 0));
@@ -1249,7 +1218,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasReasoningConten
         doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeReasoningDelta("Let me think..."));
     deltas.push_back(makeReasoningDelta(" Done."));
     deltas.push_back(makeContentDelta("The answer is 42."));
@@ -1271,7 +1240,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasLengthFinishRea
         doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("Truncated"));
     deltas.push_back(makeFinishChunk());
 
@@ -1289,7 +1258,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasForResponsesHan
         doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("OpenVINO is a toolkit."));
     deltas.push_back(makeFinishChunk());
 
@@ -1348,7 +1317,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsO
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("OVMS"));
     deltas.push_back(makeFinishChunk());
     std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
@@ -1373,7 +1342,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsR
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeReasoningDelta("Let me reason about this"));
     deltas.push_back(makeContentDelta("The answer is 42"));
     deltas.push_back(makeFinishChunk());
@@ -1407,7 +1376,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesOmitsReas
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("OVMS is great"));
     deltas.push_back(makeFinishChunk());
     std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
@@ -1445,7 +1414,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesOmitsEmpt
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeToolCallFirstDelta("tc-001", "example_tool"));
     deltas.push_back(makeToolCallArgsDelta("{}"));
     deltas.push_back(makeFinishChunk());
@@ -1715,7 +1684,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkEmptyPrimingDoesNotP
 
     // Empty priming call: should emit only lifecycle events, never output_text.delta,
     // and must not move the parser past the reasoning start tag.
-    std::string primingChunk = apiHandler->serializeStreamingChunk(rapidjson::Document{}, ov::genai::GenerationFinishReason::NONE);
+    std::string primingChunk = apiHandler->serializeStreamingChunk(ovms::FinishDelta{}, ov::genai::GenerationFinishReason::NONE);
     ASSERT_NE(primingChunk.find("\"type\":\"response.created\""), std::string::npos) << primingChunk;
     ASSERT_NE(primingChunk.find("\"type\":\"response.in_progress\""), std::string::npos) << primingChunk;
     ASSERT_EQ(primingChunk.find("\"type\":\"response.output_text.delta\""), std::string::npos)
@@ -1992,7 +1961,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesIncomplet
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("OVMS"));
     deltas.push_back(makeFinishChunk());
     std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::LENGTH);
@@ -2028,7 +1997,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesCompleted
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("OVMS"));
     deltas.push_back(makeFinishChunk());
     std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
@@ -2064,7 +2033,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseCompletionsIncludesVe
     apiHandler->enableVerboseResponse("templated prompt");
     apiHandler->appendVerboseRawText("OVMS");
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("OVMS"));
     deltas.push_back(makeFinishChunk());
     rapidjson::Document parsed;
@@ -2094,7 +2063,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseCompletionsGeneration
     apiHandler->enableVerboseResponse("templated prompt");
     apiHandler->appendVerboseRawText("OVMS");
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("OVMS"));
     deltas.push_back(makeFinishChunk());
     rapidjson::Document parsed;
@@ -2634,7 +2603,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, SerializeResponsesUnaryResponseContainsFunc
     std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("Sunny"));
     deltas.push_back(makeFinishChunk());
     std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
@@ -2674,7 +2643,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, SerializeResponsesUnaryResponseContainsFunc
     std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("Sunny"));
     deltas.push_back(makeFinishChunk());
     std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
@@ -3062,7 +3031,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, SerializeUnaryResponseVLMDecodedResultsWith
 
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::vector<rapidjson::Document> deltas;
+    std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("I will call a tool."));
     deltas.push_back(makeToolCallFirstDelta("tc-001", "get_weather"));
     deltas.push_back(makeToolCallArgsDelta("{\"location\":\"Paris\"}"));

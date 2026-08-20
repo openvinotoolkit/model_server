@@ -249,15 +249,12 @@ TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
             std::string expected = expectedDelta.value();
             std::string idKey = "\"id\":\"";
@@ -286,10 +283,7 @@ TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
         } else {
             std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
             std::string docStr = doc.has_value() ? [&]() {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                return std::string(buffer.GetString());
+                return ovms::test::deltaToJson(*doc);
             }()
                                                  : "std::nullopt";
             FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
@@ -372,15 +366,12 @@ TEST_F(Qwen3OutputParserTest, StreamingToolWithComplexArguments) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
             std::string expected = expectedDelta.value();
             std::string idKey = "\"id\":\"";
@@ -409,10 +400,7 @@ TEST_F(Qwen3OutputParserTest, StreamingToolWithComplexArguments) {
         } else {
             std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
             std::string docStr = doc.has_value() ? [&]() {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                return std::string(buffer.GetString());
+                return ovms::test::deltaToJson(*doc);
             }()
                                                  : "std::nullopt";
             FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
@@ -457,15 +445,12 @@ TEST_F(Qwen3OutputParserTest, ToolCallsInsideReasoningStreaming) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             std::string expected = expectedDelta.value();
             EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
         } else {
@@ -546,11 +531,8 @@ TEST_F(Qwen3OutputParserTest, ToolCallsDataAfterToolCall) {
 
 // Helper that runs parseChunk over a sequence and collects emitted documents as strings.
 namespace {
-std::string docToString(const rapidjson::Document& doc) {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-    return buffer.GetString();
+std::string docToString(const ovms::Delta& delta) {
+    return ovms::test::deltaToJson(delta);
 }
 }  // namespace
 
@@ -705,7 +687,7 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingNoEndTagAllReasoning) {
 }
 
 TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingHandlesEndTagSplitAcrossChunks) {
-    // Incomplete </think> at end of chunk must be buffered until the rest arrives.
+    // Incomplete </think> at the end of the chunk must be buffered until the rest arrives.
     outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>\n");
     auto doc = outputParser->parseChunk("thinking", {}, false, ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(doc.has_value());

@@ -267,20 +267,18 @@ void OnyxToolParser::buildStartTags() {
     }
 }
 
-std::optional<rapidjson::Document> OnyxToolParser::sendFirstDeltaIfNeeded(const std::string& functionName) {
+std::optional<Delta> OnyxToolParser::sendFirstDeltaIfNeeded(const std::string& functionName) {
     if (this->returnedFirstDeltas.size() == (this->returnedCompleteDeltas.size() + 1)) {
-        // already sent the first delta for the function currently being read
         SPDLOG_TRACE("Skipping first delta, already sent for current function, returnedFirstDeltas.size(): {} returnedCompleteDeltas.size(): {}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
         return std::nullopt;
     }
     int currentToolCallIndex = ++this->toolCallIndex;
-    rapidjson::Document doc = wrapFirstDelta(functionName, currentToolCallIndex);
     this->returnedFirstDeltas.insert(currentToolCallIndex);
-    SPDLOG_DEBUG("First delta doc: {}", documentToString(doc));
-    return doc;
+    SPDLOG_DEBUG("First delta: name={} index={}", functionName, currentToolCallIndex);
+    return ToolCallDelta{currentToolCallIndex, generateRandomId(), functionName, ""};
 }
 
-std::optional<rapidjson::Document> OnyxToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
+std::optional<Delta> OnyxToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
     // ASSUMPTION (mirrors Qwen3CoderToolParser): in streaming we only ever complete one tool
     // call per parseChunk() -- there is no way to send multiple tool calls in one delta.
     if (toolCalls.size() != 1) {
@@ -289,17 +287,12 @@ std::optional<rapidjson::Document> OnyxToolParser::sendFullDelta(const ToolCalls
     }
     const auto& toolCall = toolCalls[0];
     this->returnedCompleteDeltas.insert(this->toolCallIndex);
-    rapidjson::Document argumentsWrapper;
-    argumentsWrapper.SetObject();
-    rapidjson::Value argumentsValue(toolCall.arguments.c_str(), static_cast<rapidjson::SizeType>(toolCall.arguments.size()), argumentsWrapper.GetAllocator());
     SPDLOG_TRACE("Tool call arguments string: {}", toolCall.arguments);
-    argumentsWrapper.AddMember("arguments", argumentsValue, argumentsWrapper.GetAllocator());
-    auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
-    SPDLOG_DEBUG("Full delta doc: {}", documentToString(currentDelta));
-    return currentDelta;
+    SPDLOG_DEBUG("Full delta: index={} arguments={}", this->toolCallIndex, toolCall.arguments);
+    return ToolCallDelta{this->toolCallIndex, std::nullopt, std::nullopt, toolCall.arguments};
 }
 
-std::optional<rapidjson::Document> OnyxToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> OnyxToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     // streamParser returns assembled toolCalls once a call closes ("</atem:function_calls>");
     // until then, if the function name is already known, send its first delta once.
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));

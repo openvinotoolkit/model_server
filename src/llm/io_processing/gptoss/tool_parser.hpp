@@ -44,7 +44,7 @@ class GptOssToolParser : public BaseOutputParser {
     int toolCallIndex = -1;
     std::string functionNameCache;
 
-    std::optional<rapidjson::Document> wrapDeltaIntoDocument(const std::string& chunk);
+    std::optional<Delta> wrapDeltaIntoDocument(const std::string& chunk);
 
     void clearState();
 
@@ -74,6 +74,6 @@ public:
 
     // Unary
     // Streaming
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };
 }  // namespace ovms

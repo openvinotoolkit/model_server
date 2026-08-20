@@ -321,7 +321,7 @@ const std::vector<int64_t> Minicpm5ToolParser::removeReasoningTokens(const std::
     return tokensWithoutReasoning;
 }
 
-std::optional<rapidjson::Document> Minicpm5ToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
+std::optional<Delta> Minicpm5ToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
     if (toolCalls.size() != 1) {
         SPDLOG_ERROR("Minicpm5ToolParser: for streaming expected one tool call, got: {}", toolCalls.size());
         throw std::runtime_error("Minicpm5ToolParser: for streaming expected one tool call");
@@ -337,61 +337,28 @@ std::optional<rapidjson::Document> Minicpm5ToolParser::sendFullDelta(const ToolC
         return wrapCombinedDelta(toolCall);
     }
     this->returnedCompleteDeltas.insert(this->toolCallIndex);
-    rapidjson::Document argumentsWrapper;
-    argumentsWrapper.SetObject();
-    rapidjson::Document::AllocatorType& allocator = argumentsWrapper.GetAllocator();
-    rapidjson::Value toolCallsString(rapidjson::kStringType);
-    toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
     SPDLOG_TRACE("Minicpm5ToolParser: tool call arguments string: {}", toolCall.arguments);
-    argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
-    auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
-    SPDLOG_DEBUG("Minicpm5ToolParser: full delta: {}", documentToString(currentDelta));
-    return currentDelta;
+    SPDLOG_DEBUG("Minicpm5ToolParser: full delta: index={} arguments={}", this->toolCallIndex, toolCall.arguments);
+    return ToolCallDelta{this->toolCallIndex, std::nullopt, std::nullopt, toolCall.arguments};
 }
 
-rapidjson::Document Minicpm5ToolParser::wrapCombinedDelta(const ToolCall& toolCall) {
-    rapidjson::Document wrappedDelta;
-    wrappedDelta.SetObject();
-    rapidjson::Document::AllocatorType& allocator = wrappedDelta.GetAllocator();
-
-    rapidjson::Value toolCalls(rapidjson::kArrayType);
-    rapidjson::Value toolCallObj(rapidjson::kObjectType);
-    rapidjson::Value idValue(generateRandomId().c_str(), allocator);
-    toolCallObj.AddMember("id", idValue, allocator);
-    toolCallObj.AddMember("type", "function", allocator);
-    toolCallObj.AddMember("index", this->toolCallIndex, allocator);
-
-    rapidjson::Value functionObj(rapidjson::kObjectType);
-    rapidjson::Value nameValue(toolCall.name.c_str(), allocator);
-    functionObj.AddMember("name", nameValue, allocator);
-
-    rapidjson::Value argumentsValue(rapidjson::kStringType);
-    argumentsValue.SetString(toolCall.arguments.c_str(), allocator);
-    functionObj.AddMember("arguments", argumentsValue, allocator);
-    toolCallObj.AddMember("function", functionObj, allocator);
-
-    toolCalls.PushBack(toolCallObj, allocator);
-    rapidjson::Value deltaWrapper(rapidjson::kObjectType);
-    deltaWrapper.AddMember("tool_calls", toolCalls, allocator);
-    wrappedDelta.AddMember("delta", deltaWrapper, allocator);
-    SPDLOG_DEBUG("Minicpm5ToolParser: combined delta: {}", documentToString(wrappedDelta));
-    return wrappedDelta;
+ToolCallDelta Minicpm5ToolParser::wrapCombinedDelta(const ToolCall& toolCall) {
+    SPDLOG_DEBUG("Minicpm5ToolParser: combined delta: index={} name={} args={}", this->toolCallIndex, toolCall.name, toolCall.arguments);
+    return ToolCallDelta{this->toolCallIndex, generateRandomId(), toolCall.name, toolCall.arguments};
 }
 
-std::optional<rapidjson::Document> Minicpm5ToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
+std::optional<Delta> Minicpm5ToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
     if (this->returnedFirstDeltas.size() == (this->returnedCompleteDeltas.size() + 1)) {
         SPDLOG_TRACE("Minicpm5ToolParser: skipping first delta, already sent for current function");
         return std::nullopt;
     }
     int toolCallId = ++this->toolCallIndex;
-    rapidjson::Document doc = wrapFirstDelta(toolCallName, toolCallId);
-    this->currentJson.CopyFrom(doc, this->currentJson.GetAllocator());
     this->returnedFirstDeltas.insert(toolCallId);
-    SPDLOG_DEBUG("Minicpm5ToolParser: first delta: {}", documentToString(doc));
-    return doc;
+    SPDLOG_DEBUG("Minicpm5ToolParser: first delta: name={} index={}", toolCallName, toolCallId);
+    return ToolCallDelta{toolCallId, generateRandomId(), toolCallName, ""};
 }
 
-std::optional<rapidjson::Document> Minicpm5ToolParser::parseChunk(
+std::optional<Delta> Minicpm5ToolParser::parseChunk(
     const std::string& newChunk,
     const std::vector<int64_t>& /*tokens*/,
     ov::genai::GenerationFinishReason /*finishReason*/) {

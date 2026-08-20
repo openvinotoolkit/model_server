@@ -16,8 +16,6 @@
 #include <utility>
 #include <vector>
 
-#include "src/port/rapidjson_stringbuffer.hpp"
-#include "src/port/rapidjson_writer.hpp"
 #include "src/stringutils.hpp"
 
 #include "default_content_parser.hpp"
@@ -32,7 +30,7 @@ DefaultContentParser::DefaultContentParser(ov::genai::Tokenizer& tokenizer,
         return cfg;
     }()) {}
 
-std::optional<rapidjson::Document> DefaultContentParser::parseChunk(
+std::optional<Delta> DefaultContentParser::parseChunk(
     const std::string& buf,
     const std::vector<int64_t>& /*tokens*/,
     ov::genai::GenerationFinishReason /*finishReason*/) {
@@ -58,18 +56,7 @@ std::optional<rapidjson::Document> DefaultContentParser::parseChunk(
         }
     }
 
-    rapidjson::StringBuffer sb;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-    writer.StartObject();
-    writer.String("delta");
-    writer.StartObject();
-    writer.String("content");
-    writer.String(content.c_str(), static_cast<rapidjson::SizeType>(content.size()));
-    writer.EndObject();
-    writer.EndObject();
-    rapidjson::Document doc;
-    doc.Parse(sb.GetString());
-    return doc;
+    return ContentDelta{std::move(content)};
 }
 
 }  // namespace ovms

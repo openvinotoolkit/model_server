@@ -46,12 +46,8 @@ using namespace rapidjson;
 
 namespace ovms {
 
-static bool hasToolCallsInStreamingDelta(const rapidjson::Document& delta) {
-    if (!delta.HasMember("delta") || !delta["delta"].IsObject()) {
-        return false;
-    }
-    const auto& deltaObj = delta["delta"];
-    return deltaObj.HasMember("tool_calls") && deltaObj["tool_calls"].IsArray();
+static bool hasToolCallsInStreamingDelta(const Delta& delta) {
+    return std::holds_alternative<ToolCallDelta>(delta);
 }
 
 // --- Request parsing ---
@@ -257,7 +253,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
 // --- Unary response serialization ---
 
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(
-    const std::vector<rapidjson::Document>& deltas,
+    const std::vector<Delta>& deltas,
     ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput = parsedOutputFromDeltas(deltas);
@@ -308,7 +304,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(
 }
 
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(
-    const std::vector<std::vector<rapidjson::Document>>& allDeltas,
+    const std::vector<std::vector<Delta>>& allDeltas,
     const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
     const std::vector<UnaryChoiceLogprobs>& logprobData) {
     OVMS_PROFILE_FUNCTION();
@@ -420,7 +416,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(
 
 // --- Streaming serialization ---
 
-std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(rapidjson::Document parsedDelta, ov::genai::GenerationFinishReason finishReason) {
+std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
 
     Document doc;
@@ -446,26 +442,49 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(rapidjson::Doc
     // TODO: logprobs: object/null; Log probability information for the choice.
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        // parsedDelta is a pre-parsed Document produced by OVMSTextStreamer::flush_chunk.
-        // Shape: {"delta":{...}} for content/reasoning/tool_calls, or an empty Document{}
-        // for finish-only chunks (generation ended on a swallowed token).
-        if (parsedDelta.HasMember("delta")) {
-            choice.AddMember("delta", Value(parsedDelta["delta"], allocator), allocator);
-            hasToolCalls = hasToolCallsInStreamingDelta(parsedDelta);
-            if (hasToolCalls) {
-                toolCallsDetectedInStream = true;
-            }
-        } else {
-            // No delta from the parser (e.g. generation ended on a swallowed token).
-            // The OpenAI API requires "delta" to always be present in each choice, so emit an empty object.
-            Value emptyDelta(kObjectType);
-            choice.AddMember("delta", emptyDelta, allocator);
-        }
+        // Build the delta JSON value from the typed Delta variant.
+        hasToolCalls = hasToolCallsInStreamingDelta(delta);
+        if (hasToolCalls)
+            toolCallsDetectedInStream = true;
+        Value deltaVal = std::visit(overloaded{
+                                        [&](const ContentDelta& d) -> Value {
+                                            Value v(kObjectType);
+                                            v.AddMember("content", Value(d.text.c_str(), allocator), allocator);
+                                            return v;
+                                        },
+                                        [&](const ReasoningDelta& d) -> Value {
+                                            Value v(kObjectType);
+                                            v.AddMember("reasoning_content", Value(d.text.c_str(), allocator), allocator);
+                                            return v;
+                                        },
+                                        [&](const ToolCallDelta& d) -> Value {
+                                            Value tcObj(kObjectType);
+                                            if (d.id) {
+                                                tcObj.AddMember("id", Value(d.id->c_str(), allocator), allocator);
+                                                tcObj.AddMember("type", Value("function", allocator), allocator);
+                                            }
+                                            tcObj.AddMember("index", d.index, allocator);
+                                            Value fn(kObjectType);
+                                            if (d.name)
+                                                fn.AddMember("name", Value(d.name->c_str(), allocator), allocator);
+                                            if (!d.arguments.empty())
+                                                fn.AddMember("arguments", Value(d.arguments.c_str(), allocator), allocator);
+                                            tcObj.AddMember("function", fn, allocator);
+                                            Value arr(kArrayType);
+                                            arr.PushBack(tcObj, allocator);
+                                            Value v(kObjectType);
+                                            v.AddMember("tool_calls", arr, allocator);
+                                            return v;
+                                        },
+                                        [&](const FinishDelta&) -> Value { return Value(kObjectType); },
+                                        [&](const AudioDelta&) -> Value { return Value(kObjectType); },
+                                    },
+            delta);
+        choice.AddMember("delta", deltaVal, allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        // For /v1/completions, extract the plain text from the content delta.
-        if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject() &&
-            parsedDelta["delta"].HasMember("content") && parsedDelta["delta"]["content"].IsString()) {
-            choice.AddMember("text", Value(parsedDelta["delta"]["content"].GetString(), allocator), allocator);
+        // For /v1/completions extract plain text from ContentDelta only.
+        if (const auto* cd = std::get_if<ContentDelta>(&delta)) {
+            choice.AddMember("text", Value(cd->text.c_str(), allocator), allocator);
         } else {
             choice.AddMember("text", Value("", allocator), allocator);
         }

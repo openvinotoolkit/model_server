@@ -118,7 +118,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
         const bool audioRequested = omniExecutionContext->apiHandler->getRequest().audioOutputRequested;
-        auto ovmsCallback = [& ctx = *omniExecutionContext, audioRequested](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
+        auto ovmsCallback = [& ctx = *omniExecutionContext, audioRequested](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 ctx.deltaChannel.signalComplete();
                 return ov::genai::StreamingStatus::CANCEL;
@@ -139,7 +139,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
         if (userWantsSpecial) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
-        auto unaryCallback = [& ctx = *omniExecutionContext](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
+        auto unaryCallback = [& ctx = *omniExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 return ov::genai::StreamingStatus::CANCEL;
             }
@@ -199,12 +199,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
             std::string b64 = absl::Base64Escape(
                 std::string_view(reinterpret_cast<const char*>(pcm16.data()), pcm16.size() * sizeof(int16_t)));
 
-            rapidjson::Document audioDoc;
-            audioDoc.SetObject();
-            audioDoc.AddMember("_audio_delta",
-                rapidjson::Value(b64.c_str(), audioDoc.GetAllocator()),
-                audioDoc.GetAllocator());
-            ctx.deltaChannel.push(std::move(audioDoc));
+            ctx.deltaChannel.push(AudioDelta{std::move(b64)});
             return ov::genai::StreamingStatus::RUNNING;
         };
     }
@@ -411,15 +406,15 @@ absl::Status OmniModelLegacyServable::preparePartialResponse(std::shared_ptr<Gen
     if (omniExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
-    std::vector<rapidjson::Document> deltas = executionContext->deltaChannel.drain();
+    std::vector<Delta> deltas = executionContext->deltaChannel.drain();
     const bool isFinishing = executionContext->deltaChannel.complete();
     if (!isFinishing) {
         if (deltas.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
             for (auto& delta : deltas) {
-                if (executionContext->apiHandler->isVerboseResponse() &&
-                    delta.HasMember("delta") && delta["delta"].IsObject() &&
-                    delta["delta"].HasMember("content") && delta["delta"]["content"].IsString()) {
-                    executionContext->apiHandler->appendVerboseRawText(delta["delta"]["content"].GetString());
+                if (executionContext->apiHandler->isVerboseResponse()) {
+                    if (const auto* cd = std::get_if<ContentDelta>(&delta)) {
+                        executionContext->apiHandler->appendVerboseRawText(cd->text);
+                    }
                 }
                 std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
                     std::move(delta), ov::genai::GenerationFinishReason::NONE);
@@ -431,7 +426,7 @@ absl::Status OmniModelLegacyServable::preparePartialResponse(std::shared_ptr<Gen
             if (deltas.empty()) {
                 if (!executionContext->lifecyclePrimed) {
                     std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
-                        rapidjson::Document{}, ov::genai::GenerationFinishReason::NONE);
+                        FinishDelta{}, ov::genai::GenerationFinishReason::NONE);
                     if (!serialized.empty()) {
                         executionContext->response = wrapTextInServerSideEventMessage(serialized);
                         executionContext->lifecyclePrimed = true;
@@ -458,10 +453,10 @@ absl::Status OmniModelLegacyServable::preparePartialResponse(std::shared_ptr<Gen
         if (!deltas.empty()) {
             for (size_t i = 0; i < deltas.size(); ++i) {
                 const bool isLast = (i == deltas.size() - 1);
-                if (executionContext->apiHandler->isVerboseResponse() &&
-                    deltas[i].HasMember("delta") && deltas[i]["delta"].IsObject() &&
-                    deltas[i]["delta"].HasMember("content") && deltas[i]["delta"]["content"].IsString()) {
-                    executionContext->apiHandler->appendVerboseRawText(deltas[i]["delta"]["content"].GetString());
+                if (executionContext->apiHandler->isVerboseResponse()) {
+                    if (const auto* cd = std::get_if<ContentDelta>(&deltas[i])) {
+                        executionContext->apiHandler->appendVerboseRawText(cd->text);
+                    }
                 }
                 std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
                     std::move(deltas[i]),
@@ -472,7 +467,7 @@ absl::Status OmniModelLegacyServable::preparePartialResponse(std::shared_ptr<Gen
             }
         } else {
             std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
-                rapidjson::Document{}, finishReason);
+                FinishDelta{}, finishReason);
             if (!serialized.empty()) {
                 executionContext->response += wrapTextInServerSideEventMessage(serialized);
             }

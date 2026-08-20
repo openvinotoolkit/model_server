@@ -344,32 +344,24 @@ bool Gemma4ToolParser::parseNewContent() {
     return false;
 }
 
-std::optional<rapidjson::Document> Gemma4ToolParser::wrapDeltaContent(const std::string& content) {
-    if (content.empty() || content == "") {
+std::optional<Delta> Gemma4ToolParser::wrapDeltaContent(const std::string& content) {
+    if (content.empty())
         return std::nullopt;
-    }
-    rapidjson::Document doc(rapidjson::kObjectType);
-    rapidjson::Value deltaObj(rapidjson::kObjectType);
-    deltaObj.AddMember("content", rapidjson::Value(content.c_str(), doc.GetAllocator()), doc.GetAllocator());
-    doc.AddMember("delta", deltaObj, doc.GetAllocator());
-    return doc;
+    return ContentDelta{content};
 }
 
-rapidjson::Document Gemma4ToolParser::wrapDeltaArgs(const std::string& argsStr, int toolCallIndex) {
-    rapidjson::Document doc(rapidjson::kObjectType);
-    doc.AddMember("arguments", rapidjson::Value(argsStr.c_str(), doc.GetAllocator()), doc.GetAllocator());
-
-    return BaseOutputParser::wrapDelta(doc, toolCallIndex);
+ToolCallDelta Gemma4ToolParser::wrapDeltaArgs(const std::string& argsStr, int toolCallIndex) {
+    return ToolCallDelta{toolCallIndex, std::nullopt, std::nullopt, argsStr};
 }
 
-std::optional<rapidjson::Document> Gemma4ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> Gemma4ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     if (!chunk.empty()) {
         this->streamingContent += chunk;
     }
 
     if (parseNewContent()) {
         if (this->currentState == State::ToolCallParameters) {
-            return BaseOutputParser::wrapFirstDelta(this->toolCall.name, toolCallIndex);
+            return ToolCallDelta{toolCallIndex, generateRandomId(), this->toolCall.name, ""};
         }
         if (this->currentState == State::ToolCallEnded) {
             return wrapDeltaArgs(this->toolCall.arguments, toolCallIndex);

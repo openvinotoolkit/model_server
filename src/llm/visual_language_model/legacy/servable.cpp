@@ -131,7 +131,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         if (!legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
-        auto ovmsCallback = [& ctx = *legacyExecutionContext](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
+        auto ovmsCallback = [& ctx = *legacyExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 ctx.deltaChannel.signalComplete();
                 return ov::genai::StreamingStatus::CANCEL;
@@ -205,14 +205,12 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
     const ov::genai::GenerationFinishReason finishReason =
         legacyExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : legacyExecutionContext->results.finish_reasons[0];
 
-    std::vector<rapidjson::Document> deltas = executionContext->deltaChannel.drain();
+    std::vector<Delta> deltas = executionContext->deltaChannel.drain();
 
     if (executionContext->apiHandler->isVerboseResponse()) {
         for (const auto& delta : deltas) {
-            if (delta.HasMember("delta") && delta["delta"].IsObject() &&
-                delta["delta"].HasMember("content") && delta["delta"]["content"].IsString()) {
-                executionContext->apiHandler->appendVerboseRawText(
-                    delta["delta"]["content"].GetString());
+            if (const auto* cd = std::get_if<ContentDelta>(&delta)) {
+                executionContext->apiHandler->appendVerboseRawText(cd->text);
             }
         }
     }

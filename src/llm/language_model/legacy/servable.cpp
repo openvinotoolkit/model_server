@@ -121,7 +121,7 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         if (!legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
-        auto ovmsCallback = [& ctx = *legacyExecutionContext](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
+        auto ovmsCallback = [& ctx = *legacyExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 ctx.deltaChannel.signalComplete();
                 return ov::genai::StreamingStatus::CANCEL;
@@ -209,7 +209,7 @@ absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServab
         executionContext->apiHandler->appendVerboseRawTokens(legacyExecutionContext->results.tokens[0]);
     }
 
-    std::vector<rapidjson::Document> deltas = executionContext->deltaChannel.drain();
+    std::vector<Delta> deltas = executionContext->deltaChannel.drain();
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(deltas, finishReason);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();

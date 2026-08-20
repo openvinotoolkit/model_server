@@ -116,7 +116,7 @@ void Hermes3ToolParser::clearState() {
     argumentsDelayWindow[1].clear();
 }
 
-std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> Hermes3ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     We first collect data until we have full function name - that's when we return the first delta.
     Every next delta contains next parts of the arguments. Hermes3 generates arguments as JSON, but OpenAI API expects them in a string format.
@@ -272,7 +272,6 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
         throw std::runtime_error("Generated tool call structure is not valid");
     }
 
-    rapidjson::Document doc;
     // Case 1: 'arguments' has just appeared in the current chunk. If so, we return first delta.
     if (newJson.HasMember("arguments") && !lastJson.HasMember("arguments")) {
         std::string functionName;
@@ -286,9 +285,8 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
             throw std::runtime_error("Tool call name is missing in generated output");
         }
         // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":{"name": <functionName>}}]}
-        doc = wrapFirstDelta(functionName, toolCallIndex);
         lastJson.CopyFrom(newJson, lastJson.GetAllocator());
-        return doc;
+        return ToolCallDelta{toolCallIndex, generateRandomId(), functionName, ""};
         // Case 2: 'arguments' already exists in the last JSON, we compute delta and return it.
     } else if (lastJson.HasMember("arguments")) {
         rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
@@ -302,9 +300,11 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
                 return std::nullopt;
             }
         }
-        // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":<delta>}]}
-        doc = wrapDelta(delta, toolCallIndex);
-        return doc;
+        // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":{"arguments":"..."}}]}
+        std::string argsStr;
+        if (delta.HasMember("arguments") && delta["arguments"].IsString())
+            argsStr = delta["arguments"].GetString();
+        return ToolCallDelta{toolCallIndex, std::nullopt, std::nullopt, argsStr};
         // Case 3: No 'arguments' exists or just appeared, so we keep building up until we have complete function name
     } else {
         lastJson.CopyFrom(newJson, lastJson.GetAllocator());

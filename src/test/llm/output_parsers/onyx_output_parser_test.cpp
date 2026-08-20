@@ -466,15 +466,12 @@ if __name__ == "__main__":
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
+        std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             std::string expected = expectedDelta.value();
             const std::string idKey = "\"id\":\"";
             auto docIdPos = docStr.find(idKey);
@@ -501,8 +498,9 @@ if __name__ == "__main__":
                 EXPECT_EQ(docStr, expected) << "Mismatch for chunk[" << i << "]: " << chunk;
                 // Validate that arguments fields are valid JSON
                 if (expected.find("arguments") != std::string::npos) {
-                    auto docJsonIt = doc->FindMember("delta");
-                    ASSERT_NE(docJsonIt, doc->MemberEnd());
+                    rapidjson::Document docJson = ovms::test::deltaToDocument(*doc);
+                    auto docJsonIt = docJson.FindMember("delta");
+                    ASSERT_NE(docJsonIt, docJson.MemberEnd());
                     auto toolCallsIt = docJsonIt->value.FindMember("tool_calls");
                     ASSERT_NE(toolCallsIt, docJsonIt->value.MemberEnd());
                     for (const auto& toolCall : toolCallsIt->value.GetArray()) {
@@ -525,10 +523,7 @@ if __name__ == "__main__":
                                << (expectedDelta.has_value() ? expectedDelta.value() : "EMPTY_DELTA")
                                << "\nGot doc:\n"
                                << (doc.has_value() ? [&]() {
-                                      rapidjson::StringBuffer buffer;
-                                      rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                                      doc->Accept(writer);
-                                      return std::string(buffer.GetString());
+                                      return ovms::test::deltaToJson(*doc);
                                   }()
                                                    : "NO_DOC");
             FAIL() << "Mismatch between expectedDelta and doc for chunk[" << i << "]: " << chunk;
@@ -572,15 +567,12 @@ TEST_F(OnyxOutputParserTest, StreamingReasoningThenToolCall) {
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
+        std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             std::string expected = expectedDelta.value();
             // Normalize tool call IDs (same approach as StreamingSimpleToolCall).
             const std::string idKey = "\"id\":\"";
@@ -602,13 +594,7 @@ TEST_F(OnyxOutputParserTest, StreamingReasoningThenToolCall) {
         } else {
             EXPECT_TRUE(false) << "Mismatch for chunk[" << i << "]: " << chunk
                                << "\nexpectedDelta: " << (expectedDelta.has_value() ? expectedDelta.value() : "nullopt")
-                               << "\nGot doc: " << (doc.has_value() ? [&]() {
-                                      rapidjson::StringBuffer b;
-                                      rapidjson::Writer<rapidjson::StringBuffer> w(b);
-                                      doc->Accept(w);
-                                      return std::string(b.GetString());
-                                  }()
-                                                                    : "nullopt");
+                               << "\nGot doc: " << (doc.has_value() ? ovms::test::deltaToJson(*doc) : "nullopt");
         }
     }
 }
@@ -646,27 +632,18 @@ TEST_F(OnyxOutputParserTest, StreamingReasoningThenContent) {
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
+        std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             std::string expected = expectedDelta.value();
             EXPECT_EQ(docStr, expected) << "Mismatch for chunk[" << i << "]: " << chunk;
         } else {
             EXPECT_TRUE(false) << "Mismatch for chunk[" << i << "]: " << chunk
                                << "\nexpectedDelta: " << (expectedDelta.has_value() ? expectedDelta.value() : "nullopt")
-                               << "\nGot doc: " << (doc.has_value() ? [&]() {
-                                      rapidjson::StringBuffer b;
-                                      rapidjson::Writer<rapidjson::StringBuffer> w(b);
-                                      doc->Accept(w);
-                                      return std::string(b.GetString());
-                                  }()
-                                                                    : "nullopt");
+                               << "\nGot doc: " << (doc.has_value() ? ovms::test::deltaToJson(*doc) : "nullopt");
         }
     }
 }
@@ -694,27 +671,18 @@ TEST_F(OnyxOutputParserTest, StreamingContentOnly) {
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
+        std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, /*toolsAvailable=*/true, finishReason);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             std::string expected = expectedDelta.value();
             EXPECT_EQ(docStr, expected) << "Mismatch for chunk[" << i << "]: " << chunk;
         } else {
             EXPECT_TRUE(false) << "Mismatch for chunk[" << i << "]: " << chunk
                                << "\nexpectedDelta: " << (expectedDelta.has_value() ? expectedDelta.value() : "nullopt")
-                               << "\nGot doc: " << (doc.has_value() ? [&]() {
-                                      rapidjson::StringBuffer b;
-                                      rapidjson::Writer<rapidjson::StringBuffer> w(b);
-                                      doc->Accept(w);
-                                      return std::string(b.GetString());
-                                  }()
-                                                                    : "nullopt");
+                               << "\nGot doc: " << (doc.has_value() ? ovms::test::deltaToJson(*doc) : "nullopt");
         }
     }
 }
@@ -743,10 +711,7 @@ TEST_F(OnyxOutputParserTest, StreamingToolEnvelopeNotLeakedWhenSchemasFilledAfte
 
     doc = parser.parseChunk("<atem:function_calls>\n<atem:invoke name=\"get_weather\">\n", {}, /*toolsAvailable=*/true, ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(doc.has_value());
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc->Accept(writer);
-    std::string docStr = buffer.GetString();
+    std::string docStr = ovms::test::deltaToJson(*doc);
     EXPECT_NE(docStr.find(R"("tool_calls")"), std::string::npos) << docStr;
     EXPECT_NE(docStr.find(R"("name":"get_weather")"), std::string::npos) << docStr;
     EXPECT_EQ(docStr.find(R"("content")"), std::string::npos) << "envelope leaked into content: " << docStr;

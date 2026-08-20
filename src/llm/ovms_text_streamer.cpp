@@ -19,8 +19,6 @@
 #include <string>
 #include <utility>
 
-#include <rapidjson/document.h>
-
 #include "../logging.hpp"
 
 namespace {
@@ -289,21 +287,12 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
 
     m_printed_len = print_until;
 
-    std::optional<rapidjson::Document> delta;
+    std::optional<Delta> delta;
     if (m_output_parser != nullptr) {
         delta = m_output_parser->parseChunk(chunk, tokens, m_tools_available, finish_reason);
     } else if (!chunk.empty()) {
-        // No parser: wrap raw text in a trivial {"delta":{"content":"..."}} document.
-        // Skip when chunk is empty (e.g. STOP flush after a newline-clearing write).
-        rapidjson::Document doc;
-        doc.SetObject();
-        rapidjson::Document::AllocatorType& alloc = doc.GetAllocator();
-        rapidjson::Value delta_obj(rapidjson::kObjectType);
-        delta_obj.AddMember("content",
-            rapidjson::Value(chunk.c_str(), alloc),
-            alloc);
-        doc.AddMember("delta", delta_obj, alloc);
-        delta = std::move(doc);
+        // No parser: pass raw text as a ContentDelta.
+        delta = ContentDelta{chunk};
     }
 
     const bool isLast = (finish_reason != ov::genai::GenerationFinishReason::NONE);
@@ -312,11 +301,9 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
     }
     if (isLast) {
         // Parser produced no delta for the final flush (e.g. generation ended on a
-        // special token the parser absorbed). Still fire the callback with an empty
-        // object Document so the caller can emit the finish_reason chunk.
-        rapidjson::Document empty;
-        empty.SetObject();
-        return m_callback(std::move(empty), true);
+        // special token the parser absorbed). Fire the callback with FinishDelta so
+        // the caller can emit the finish_reason chunk.
+        return m_callback(FinishDelta{}, true);
     }
     return ov::genai::StreamingStatus::RUNNING;
 }

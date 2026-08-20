@@ -271,15 +271,39 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "io_processing_delta",
+    hdrs = [
+        "io_processing/delta.hpp",
+    ],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "openai_delta_serializer",
+    hdrs = [
+        "apis/openai_idelta_serializer.hpp",
+        "apis/openai_rapidjson_delta_serializer.hpp",
+    ],
+    srcs = ["apis/openai_rapidjson_delta_serializer.cpp"],
+    deps = [
+        ":io_processing_delta",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "io_processing_base_output_parser",
     hdrs = ["io_processing/base_output_parser.hpp",
             "io_processing/output_parsing_config.hpp"],
     srcs = ["io_processing/base_output_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
-        "//src/port:rapidjson_stringbuffer",
-        "//src/port:rapidjson_writer",
         "//src/port:rapidjson_document",
+        ":io_processing_delta",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
         "//third_party:genai",
@@ -403,8 +427,6 @@ ovms_cc_library(
     hdrs = ["io_processing/onyx/onyx_content_parser.hpp"],
     srcs = ["io_processing/onyx/onyx_content_parser.cpp"],
     deps = [
-        "//src/port:rapidjson_stringbuffer",
-        "//src/port:rapidjson_writer",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
         ":io_processing_base_output_parser",
@@ -436,8 +458,6 @@ ovms_cc_library(
     hdrs = ["io_processing/onyx/onyx_reasoning_parser.hpp"],
     srcs = ["io_processing/onyx/onyx_reasoning_parser.cpp"],
     deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "//src/port:rapidjson_document",
         "//src:libovmslogging",
         ":io_processing_base_output_parser",
         "//third_party:genai",

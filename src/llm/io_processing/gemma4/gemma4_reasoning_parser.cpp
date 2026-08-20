@@ -18,11 +18,8 @@
 #include <string>
 #include <vector>
 
-#include "src/port/rapidjson_document.hpp"
-
 #include "../../../logging.hpp"
 #include "gemma4_reasoning_parser.hpp"
-#include "../utils.hpp"
 
 namespace ovms {
 void Gemma4ReasoningParser::skipToken(const std::vector<int64_t>& generatedTokens, size_t& pos, int64_t tokenId) {
@@ -31,7 +28,7 @@ void Gemma4ReasoningParser::skipToken(const std::vector<int64_t>& generatedToken
     }
 }
 
-std::optional<rapidjson::Document> Gemma4ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     if (chunk.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Gemma4ReasoningParser");
         return std::nullopt;
@@ -40,18 +37,7 @@ std::optional<rapidjson::Document> Gemma4ReasoningParser::parseChunk(const std::
     if (chunk.find(parsingConfig.startTags[0]) != std::string::npos || chunk.find(parsingConfig.endTag) != std::string::npos) {
         return std::nullopt;
     } else {
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        writer.StartObject();
-        writer.String("delta");
-        writer.StartObject();
-        writer.String("reasoning_content");
-        writer.String(chunk.c_str());
-        writer.EndObject();
-        writer.EndObject();
-        rapidjson::Document doc;
-        doc.Parse(buffer.GetString());
-        return doc;
+        return ReasoningDelta{chunk};
     }
     return std::nullopt;
 }

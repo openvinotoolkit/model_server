@@ -17,6 +17,10 @@
 #include <string>
 #include <vector>
 #include <utility>
+
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include "src/llm/io_processing/base_output_parser.hpp"
 
 namespace ovms {
@@ -71,7 +75,7 @@ public:
         toolCallIndex = -1;
     }
 
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 
     static std::string normalizeArgStr(const std::string& arg);
     static std::string parseArrayParameter(const std::string& argumentStr);
@@ -90,8 +94,8 @@ private:
     bool parseToolCallParametersState();
     bool parseInToolCallEndedState();
 
-    std::optional<rapidjson::Document> wrapDeltaContent(const std::string& content);
-    rapidjson::Document wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
+    std::optional<Delta> wrapDeltaContent(const std::string& content);
+    ToolCallDelta wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
 
     std::string streamingContent;
     size_t streamingPosition{0};

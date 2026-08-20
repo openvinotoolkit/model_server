@@ -399,57 +399,33 @@ void OpenAIApiHandler::incrementProcessedTokens(size_t numTokens) {
 }
 
 std::string OpenAIApiHandler::serializeUnaryResponse(
-    const std::vector<std::vector<rapidjson::Document>>& allDeltas,
+    const std::vector<std::vector<Delta>>& allDeltas,
     const std::vector<ov::genai::GenerationFinishReason>& finishReasons) {
     return serializeUnaryResponse(allDeltas, finishReasons, {});
 }
 
-ParsedOutput OpenAIApiHandler::parsedOutputFromDeltas(const std::vector<rapidjson::Document>& deltas) {
+ParsedOutput OpenAIApiHandler::parsedOutputFromDeltas(const std::vector<Delta>& deltas) {
     ParsedOutput output;
-    // tool calls keyed by index; index values are expected to be dense starting from 0
     std::vector<ToolCall> toolCalls;
-    for (const auto& doc : deltas) {
-        if (!doc.IsObject() || !doc.HasMember("delta")) {
-            continue;  // empty finish-only chunk
-        }
-        const auto& delta = doc["delta"];
-        if (!delta.IsObject()) {
-            continue;
-        }
-        if (delta.HasMember("content") && delta["content"].IsString()) {
-            output.content += delta["content"].GetString();
-        }
-        if (delta.HasMember("reasoning_content") && delta["reasoning_content"].IsString()) {
-            output.reasoning += delta["reasoning_content"].GetString();
-        }
-        if (delta.HasMember("tool_calls") && delta["tool_calls"].IsArray()) {
-            for (const auto& tcEntry : delta["tool_calls"].GetArray()) {
-                if (!tcEntry.IsObject() || !tcEntry.HasMember("index")) {
-                    continue;
-                }
-                const int rawIdx = tcEntry["index"].GetInt();
-                if (rawIdx < 0) {
-                    continue;
-                }
-                const auto idx = static_cast<size_t>(rawIdx);
-                if (idx >= toolCalls.size()) {
-                    toolCalls.resize(idx + 1);
-                }
-                ToolCall& tc = toolCalls[idx];
-                if (tcEntry.HasMember("id") && tcEntry["id"].IsString()) {
-                    tc.id = tcEntry["id"].GetString();
-                }
-                if (tcEntry.HasMember("function") && tcEntry["function"].IsObject()) {
-                    const auto& fn = tcEntry["function"];
-                    if (fn.HasMember("name") && fn["name"].IsString()) {
-                        tc.name = fn["name"].GetString();
-                    }
-                    if (fn.HasMember("arguments") && fn["arguments"].IsString()) {
-                        tc.arguments += fn["arguments"].GetString();
-                    }
-                }
-            }
-        }
+    for (const Delta& d : deltas) {
+        std::visit(overloaded{
+                       [&](const ContentDelta& x) { output.content += x.text; },
+                       [&](const ReasoningDelta& x) { output.reasoning += x.text; },
+                       [&](const ToolCallDelta& x) {
+                           const auto idx = static_cast<size_t>(x.index);
+                           if (idx >= toolCalls.size())
+                               toolCalls.resize(idx + 1);
+                           ToolCall& tc = toolCalls[idx];
+                           if (x.id)
+                               tc.id = *x.id;
+                           if (x.name)
+                               tc.name = *x.name;
+                           tc.arguments += x.arguments;
+                       },
+                       [&](const FinishDelta&) {},
+                       [&](const AudioDelta&) {},
+                   },
+            d);
     }
     output.toolCalls = std::move(toolCalls);
     return output;

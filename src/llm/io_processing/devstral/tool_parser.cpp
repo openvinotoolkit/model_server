@@ -19,7 +19,6 @@
 #include <vector>
 #include <regex>
 
-#include "src/port/rapidjson_document.hpp"
 #include "src/logging.hpp"
 #include "src/llm/io_processing/utils.hpp"
 #include "src/stringutils.hpp"
@@ -27,63 +26,21 @@
 
 namespace ovms {
 
-std::optional<rapidjson::Document> DevstralToolParser::sendFullDelta(ToolCall& toolCall) {
-    rapidjson::Document argsDelta;
-    argsDelta.Parse(toolCall.arguments.c_str());
-    rapidjson::Document argumentsWrapper;
-    argumentsWrapper.SetObject();
-    rapidjson::Document::AllocatorType& allocator = argumentsWrapper.GetAllocator();
-    // now we need to add string toolCall.arguments to argumentsWrapper under "arguments" key
-    rapidjson::Value toolCallsString(rapidjson::kStringType);
-    toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
-    argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
-    auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
-    return currentDelta;
+std::optional<Delta> DevstralToolParser::sendFullDelta(ToolCall& toolCall) {
+    return ToolCallDelta{this->toolCallIndex, std::nullopt, std::nullopt, toolCall.arguments};
 }
 
-rapidjson::Document DevstralToolParser::wrapCombinedDelta(ToolCall& toolCall) {
-    rapidjson::Document wrappedDelta;
-    wrappedDelta.SetObject();
-    rapidjson::Value toolCalls(rapidjson::kArrayType);
-    rapidjson::Value toolCallObj(rapidjson::kObjectType);
-    rapidjson::Value idValue(generateRandomId().c_str(), wrappedDelta.GetAllocator());
-    rapidjson::Value toolCallsString(rapidjson::kStringType);
-
-    toolCallObj.AddMember("id", idValue, wrappedDelta.GetAllocator());
-    toolCallObj.AddMember("type", "function", wrappedDelta.GetAllocator());
-    toolCallObj.AddMember("index", toolCallIndex, wrappedDelta.GetAllocator());
-    rapidjson::Value functionObj(rapidjson::kObjectType);
-    rapidjson::Value nameValue(toolCall.name.c_str(), wrappedDelta.GetAllocator());
-    functionObj.AddMember("name", nameValue, wrappedDelta.GetAllocator());
-    // now we need to add string toolCall.arguments to argumentsWrapper under "arguments" key
-
-    toolCallsString.SetString(toolCall.arguments.c_str(), wrappedDelta.GetAllocator());
-    functionObj.AddMember("arguments", toolCallsString, wrappedDelta.GetAllocator());
-    toolCallObj.AddMember("function", functionObj, wrappedDelta.GetAllocator());
-    toolCalls.PushBack(toolCallObj, wrappedDelta.GetAllocator());
-    rapidjson::Value deltaWrapper(rapidjson::kObjectType);
-    deltaWrapper.AddMember("tool_calls", toolCalls, wrappedDelta.GetAllocator());
-    wrappedDelta.AddMember("delta", deltaWrapper, wrappedDelta.GetAllocator());
-    return wrappedDelta;
+ToolCallDelta DevstralToolParser::wrapCombinedDelta(ToolCall& toolCall) {
+    return ToolCallDelta{this->toolCallIndex, generateRandomId(), toolCall.name, toolCall.arguments};
 }
 
-rapidjson::Document DevstralToolParser::parseContentChunk() {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    writer.StartObject();
-    writer.String("delta");
-    writer.StartObject();
-    writer.String("content");
-    writer.String(streamContent.c_str());
-    writer.EndObject();
-    writer.EndObject();
-    rapidjson::Document doc;
-    doc.Parse(buffer.GetString());
+ContentDelta DevstralToolParser::parseContentChunk() {
+    ContentDelta d{std::move(streamContent)};
     streamContent.clear();
-    return doc;
+    return d;
 }
 
-std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> DevstralToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     Devstral [TOOL_CALL]tool_name[ARGS]arguments[</s>]
     It does not support parallel tool calls, so tool calls are always in sequence.
@@ -165,7 +122,7 @@ std::optional<rapidjson::Document> DevstralToolParser::parseChunk(const std::str
                 this->streamContent = "";
                 return wrapCombinedDelta(toolCall);
             } else {
-                return wrapFirstDelta(this->toolName, this->toolCallIndex);
+                return ToolCallDelta{this->toolCallIndex, generateRandomId(), this->toolName, ""};
             }
         } else {
             return std::nullopt;

@@ -18,15 +18,12 @@
 #include <string>
 #include <vector>
 
-#include "src/port/rapidjson_document.hpp"
-
 #include "../../../logging.hpp"
 #include "reasoning_parser.hpp"
-#include "../utils.hpp"
 
 namespace ovms {
 
-std::optional<rapidjson::Document> Qwen3ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> Qwen3ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     if (chunk.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Qwen3ReasoningParser");
         return std::nullopt;
@@ -62,17 +59,6 @@ std::optional<rapidjson::Document> Qwen3ReasoningParser::parseChunk(const std::s
         return std::nullopt;
     }
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    writer.StartObject();
-    writer.String("delta");
-    writer.StartObject();
-    writer.String("reasoning_content");
-    writer.String(text.c_str());
-    writer.EndObject();
-    writer.EndObject();
-    rapidjson::Document doc;
-    doc.Parse(buffer.GetString());
-    return doc;
+    return ReasoningDelta{text};
 }
 }  // namespace ovms

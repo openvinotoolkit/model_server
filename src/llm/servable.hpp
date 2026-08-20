@@ -28,7 +28,7 @@
 #pragma warning(disable : 4251 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246 6313)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include <rapidjson/document.h>
+#include "io_processing/delta.hpp"
 #include "openvino/genai/text_streamer.hpp"
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
@@ -89,7 +89,7 @@ struct DeltaChannel {
     // Push a delta from any thread (streamer callback).
     // When isLast is true, also marks the channel complete atomically so consumers
     // always see the final document and the completion flag in the same observation.
-    void push(rapidjson::Document delta, bool isLast = false) {
+    void push(Delta delta, bool isLast = false) {
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_deltas.push_back(std::move(delta));
@@ -118,9 +118,9 @@ struct DeltaChannel {
     }
 
     // Move all pending deltas out atomically. Returns an empty vector if none pending.
-    std::vector<rapidjson::Document> drain() {
+    std::vector<Delta> drain() {
         std::lock_guard<std::mutex> lock(m_mutex);
-        std::vector<rapidjson::Document> result;
+        std::vector<Delta> result;
         result.swap(m_deltas);
         return result;
     }
@@ -134,7 +134,7 @@ struct DeltaChannel {
 private:
     mutable std::mutex m_mutex;
     std::condition_variable m_cv;
-    std::vector<rapidjson::Document> m_deltas;
+    std::vector<Delta> m_deltas;
     bool m_complete = false;
 };
 

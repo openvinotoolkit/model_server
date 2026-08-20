@@ -157,7 +157,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     }
 
     {
-        auto ovmsCallback = [& ctx = *executionContext](rapidjson::Document delta, bool isLast) -> ov::genai::StreamingStatus {
+        auto ovmsCallback = [& ctx = *executionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
             ctx.deltaChannel.push(std::move(delta), isLast);
             return ov::genai::StreamingStatus::RUNNING;
         };
@@ -265,7 +265,7 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
         streamerConfig.insert(ov::genai::skip_special_tokens(false));
     }
 
-    std::vector<std::vector<rapidjson::Document>> allDeltas;
+    std::vector<std::vector<Delta>> allDeltas;
     std::vector<ov::genai::GenerationFinishReason> finishReasons;
     std::vector<UnaryChoiceLogprobs> logprobData;
     allDeltas.reserve(numOutputs);
@@ -279,7 +279,7 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
         }
         executionContext->apiHandler->incrementProcessedTokens(output.generated_ids.size());
 
-        std::vector<rapidjson::Document> localDeltas;
+        std::vector<Delta> localDeltas;
         if (numOutputs == 1) {
             // Single sequence: reuse the OVMSTextStreamer and deltaChannel built in parseRequest.
             executionContext->textStreamer->write(output.generated_ids);
@@ -288,7 +288,7 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
         } else {
             // Multiple sequences: each beam requires its own independent stateful streamer
             // (hold-back buffer, parser state are per-sequence).
-            auto cb = [&localDeltas](rapidjson::Document delta, bool) -> ov::genai::StreamingStatus {
+            auto cb = [&localDeltas](Delta delta, bool) -> ov::genai::StreamingStatus {
                 localDeltas.push_back(std::move(delta));
                 return ov::genai::StreamingStatus::RUNNING;
             };
@@ -355,7 +355,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     }
 
     // Drain all deltas accumulated during this write()/end() cycle.
-    std::vector<rapidjson::Document> deltas = executionContext->deltaChannel.drain();
+    std::vector<Delta> deltas = executionContext->deltaChannel.drain();
     const size_t count = deltas.size();
 
     if (!isFinishing) {
@@ -378,7 +378,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
                 // for the RESPONSES endpoint before any content arrives.
                 if (!executionContext->lifecyclePrimed) {
                     std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
-                        rapidjson::Document{}, ov::genai::GenerationFinishReason::NONE);
+                        FinishDelta{}, ov::genai::GenerationFinishReason::NONE);
                     if (!serialized.empty()) {
                         executionContext->response += wrapTextInServerSideEventMessage(serialized);
                         executionContext->lifecyclePrimed = true;
@@ -408,7 +408,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
             // No delta produced (generation ended on a swallowed token).
             // Still emit a chunk carrying the finish_reason with an empty Document.
             std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
-                rapidjson::Document{}, finishReason);
+                FinishDelta{}, finishReason);
             if (!serialized.empty()) {
                 executionContext->response += wrapTextInServerSideEventMessage(serialized);
             }
@@ -432,7 +432,7 @@ absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecution
     if (legacyCtx->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
-    std::vector<rapidjson::Document> deltas = executionContext->deltaChannel.drain();
+    std::vector<Delta> deltas = executionContext->deltaChannel.drain();
     const bool isFinishing = executionContext->deltaChannel.complete();
 
     // Helper: accumulate verbose raw text from a delta's content field.
@@ -440,11 +440,10 @@ absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecution
     // text extraction, which is correct because OVMSTextStreamer is configured with
     // skip_special_tokens(false) in verbose mode, so delta content already includes
     // special tokens.
-    auto appendVerboseContent = [&](const rapidjson::Document& delta) {
-        if (executionContext->apiHandler->isVerboseResponse() &&
-            delta.HasMember("delta") && delta["delta"].IsObject() &&
-            delta["delta"].HasMember("content") && delta["delta"]["content"].IsString()) {
-            executionContext->apiHandler->appendVerboseRawText(delta["delta"]["content"].GetString());
+    auto appendVerboseContent = [&](const Delta& delta) {
+        if (executionContext->apiHandler->isVerboseResponse()) {
+            if (const auto* cd = std::get_if<ContentDelta>(&delta))
+                executionContext->apiHandler->appendVerboseRawText(cd->text);
         }
     };
 
@@ -465,7 +464,7 @@ absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecution
                 // No delta generated yet — emit lifecycle events for RESPONSES endpoint.
                 if (!executionContext->lifecyclePrimed) {
                     std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
-                        rapidjson::Document{}, ov::genai::GenerationFinishReason::NONE);
+                        FinishDelta{}, ov::genai::GenerationFinishReason::NONE);
                     if (!serialized.empty()) {
                         executionContext->response = wrapTextInServerSideEventMessage(serialized);
                         executionContext->lifecyclePrimed = true;
@@ -506,7 +505,7 @@ absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecution
         } else {
             // Parser produced no delta (generation ended on a swallowed token).
             std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
-                rapidjson::Document{}, finishReason);
+                FinishDelta{}, finishReason);
             if (!serialized.empty()) {
                 executionContext->response += wrapTextInServerSideEventMessage(serialized);
             }

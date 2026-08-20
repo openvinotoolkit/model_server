@@ -69,7 +69,7 @@ public:
         toolCallIndex = -1;
     }
 
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk,
+    std::optional<Delta> parseChunk(const std::string& chunk,
         const std::vector<int64_t>& tokens,
         ov::genai::GenerationFinishReason finishReason) override;
 

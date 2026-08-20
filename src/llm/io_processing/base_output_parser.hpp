@@ -25,10 +25,9 @@
 #include <utility>
 #include <vector>
 
-#include "src/port/rapidjson_document.hpp"
-#include "src/port/rapidjson_stringbuffer.hpp"
-#include "src/port/rapidjson_writer.hpp"
+#include "delta.hpp"
 #include "output_parsing_config.hpp"
+#include "src/port/rapidjson_document.hpp"
 
 #include "src/llm/apis/tool_schema_wrapper.hpp"
 
@@ -119,15 +118,9 @@ public:
     const std::unordered_map<int64_t, std::string>& getResolvedStartTokenToTag() const { return resolvedStartTokenToTag; }
 
     std::string buildParsingConfigStringRepresentation() const;
-    // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
-    // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
-    static rapidjson::Document wrapFirstDelta(const std::string& functionName, int toolCallIndex);
-    // Common function to wrap subsequent deltas in a JSON object that conforms to OpenAI API response format
-    // {"tool_calls":[{"index":0,"function":<delta>}]}
-    static rapidjson::Document wrapDelta(const rapidjson::Document& delta, int toolCallIndex);
 
     // --- Specialized output parsers interface ---
 
-    virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) = 0;
+    virtual std::optional<Delta> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) = 0;
 };
 }  // namespace ovms

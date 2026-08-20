@@ -19,10 +19,6 @@
 #include <optional>
 #include <vector>
 
-#include "src/port/rapidjson_document.hpp"
-#include "src/port/rapidjson_stringbuffer.hpp"
-#include "src/port/rapidjson_writer.hpp"
-
 #include "base_output_parser.hpp"
 #include "utils.hpp"
 
@@ -93,47 +89,6 @@ std::string BaseOutputParser::buildParsingConfigStringRepresentation() const {
     result += ", ImplicitStart: " + std::string(implicitStart ? "true" : "false");
     result += ", NeedsSpecialTokens: " + std::string(parsingConfig.needsSpecialTokens ? "true" : "false");
     return result;
-}
-
-rapidjson::Document BaseOutputParser::wrapFirstDelta(const std::string& functionName, int toolCallIndex) {
-    rapidjson::Document wrappedDelta;
-    wrappedDelta.SetObject();
-    rapidjson::Value toolCalls(rapidjson::kArrayType);
-    rapidjson::Value toolCallObj(rapidjson::kObjectType);
-    rapidjson::Value idValue(generateRandomId().c_str(), wrappedDelta.GetAllocator());
-    toolCallObj.AddMember("id", idValue, wrappedDelta.GetAllocator());
-    toolCallObj.AddMember("type", "function", wrappedDelta.GetAllocator());
-    toolCallObj.AddMember("index", toolCallIndex, wrappedDelta.GetAllocator());
-    rapidjson::Value functionObj(rapidjson::kObjectType);
-    rapidjson::Value nameValue(functionName.c_str(), wrappedDelta.GetAllocator());
-    functionObj.AddMember("name", nameValue, wrappedDelta.GetAllocator());
-
-    toolCallObj.AddMember("function", functionObj, wrappedDelta.GetAllocator());
-    toolCalls.PushBack(toolCallObj, wrappedDelta.GetAllocator());
-    rapidjson::Value deltaWrapper(rapidjson::kObjectType);
-    deltaWrapper.AddMember("tool_calls", toolCalls, wrappedDelta.GetAllocator());
-    wrappedDelta.AddMember("delta", deltaWrapper, wrappedDelta.GetAllocator());
-    return wrappedDelta;
-}
-
-rapidjson::Document BaseOutputParser::wrapDelta(const rapidjson::Document& delta, int toolCallIndex) {
-    rapidjson::Document wrappedDelta;
-    wrappedDelta.SetObject();
-    rapidjson::Value toolCalls(rapidjson::kArrayType);
-    rapidjson::Value toolCallObj(rapidjson::kObjectType);
-    toolCallObj.AddMember("index", toolCallIndex, wrappedDelta.GetAllocator());
-    rapidjson::Value functionObj(rapidjson::kObjectType);
-    for (auto it = delta.MemberBegin(); it != delta.MemberEnd(); ++it) {
-        rapidjson::Value key(it->name, wrappedDelta.GetAllocator());
-        rapidjson::Value value(it->value, wrappedDelta.GetAllocator());
-        functionObj.AddMember(key, value, wrappedDelta.GetAllocator());
-    }
-    toolCallObj.AddMember("function", functionObj, wrappedDelta.GetAllocator());
-    toolCalls.PushBack(toolCallObj, wrappedDelta.GetAllocator());
-    rapidjson::Value deltaWrapper(rapidjson::kObjectType);
-    deltaWrapper.AddMember("tool_calls", toolCalls, wrappedDelta.GetAllocator());
-    wrappedDelta.AddMember("delta", deltaWrapper, wrappedDelta.GetAllocator());
-    return wrappedDelta;
 }
 
 }  // namespace ovms

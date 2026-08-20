@@ -276,18 +276,12 @@ bool parseInToolCallEndedState(const std::string& streamingContent, size_t& stre
 // Delta-wrapping helpers
 // ---------------------------------------------------------------------------
 
-rapidjson::Document wrapDeltaContent(const std::string& content) {
-    rapidjson::Document doc(rapidjson::kObjectType);
-    rapidjson::Value deltaObj(rapidjson::kObjectType);
-    deltaObj.AddMember("content", rapidjson::Value(content.c_str(), doc.GetAllocator()), doc.GetAllocator());
-    doc.AddMember("delta", deltaObj, doc.GetAllocator());
-    return doc;
+ContentDelta wrapDeltaContent(const std::string& content) {
+    return ContentDelta{content};
 }
 
-rapidjson::Document wrapDeltaArgs(const std::string& argsStr, int toolCallIndex) {
-    rapidjson::Document doc(rapidjson::kObjectType);
-    doc.AddMember("arguments", rapidjson::Value(argsStr.c_str(), doc.GetAllocator()), doc.GetAllocator());
-    return BaseOutputParser::wrapDelta(doc, toolCallIndex);
+ToolCallDelta wrapDeltaArgs(const std::string& argsStr, int toolCallIndex) {
+    return ToolCallDelta{toolCallIndex, std::nullopt, std::nullopt, argsStr};
 }
 
 void cutEOSFromContent(std::string& content) {
@@ -328,7 +322,7 @@ bool Lfm2ToolParser::parseNewContent() {
     return false;
 }
 
-std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string& chunk,
+std::optional<Delta> Lfm2ToolParser::parseChunk(const std::string& chunk,
     const std::vector<int64_t>& /*tokens*/,
     ov::genai::GenerationFinishReason finishReason) {
     // Empty chunks may arrive from the two-step streamer end() (NONE + empty STOP).
@@ -342,7 +336,7 @@ std::optional<rapidjson::Document> Lfm2ToolParser::parseChunk(const std::string&
 
     if (parseNewContent()) {
         if (this->currentState == Lfm2ParseState::ToolCallParameters) {
-            return BaseOutputParser::wrapFirstDelta(this->toolCall.name, this->toolCallIndex);
+            return ToolCallDelta{this->toolCallIndex, generateRandomId(), this->toolCall.name, ""};
         }
         if (this->currentState == Lfm2ParseState::ToolCallEnded) {
             return wrapDeltaArgs(this->toolCall.arguments, this->toolCallIndex);
