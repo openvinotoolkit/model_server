@@ -78,6 +78,21 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     return stat;
 }
 
+Status MediapipeFactory::createDefinitionAsUnloaded(const std::string& pipelineName,
+    const MediapipeGraphConfig& config,
+    MetricProvider& metrics) {
+    if (definitionExists(pipelineName)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph definition: {} is already created", pipelineName);
+        return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
+    }
+    std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(
+        pipelineName, config, metrics.getMetricRegistry(), &metrics.getMetricConfig(), pythonBackend);
+    graphDefinition->setAsUnloaded();
+    std::unique_lock lock(definitionsMtx);
+    definitions.insert({pipelineName, std::move(graphDefinition)});
+    return StatusCode::OK;
+}
+
 bool MediapipeFactory::definitionExists(const std::string& name) const {
     std::shared_lock lock(definitionsMtx);
     if (this->definitions.find(name) != this->definitions.end()) {

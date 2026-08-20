@@ -120,6 +120,14 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             if (task.graphConfig.has_value()) {
                 const auto& config = task.graphConfig.value();
                 if (!def) {
+                    // Non-permanent idle groups: create as UNLOADED to skip expensive loading
+                    if (groupManager_ && groupManager_->isEnabled() &&
+                        !config.getGroupName().empty() && config.getGroupName() != "permanent") {
+                        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+                            "Mediapipe graph:{} belongs to non-permanent group '{}'; creating as UNLOADED",
+                            task.name, config.getGroupName());
+                        return mediapipeFactory->createDefinitionAsUnloaded(task.name, config, *this);
+                    }
                     return mediapipeFactory->createDefinition(task.name, config, *this, *this);
                 }
                 if (def->isReloadRequired(config)) {
@@ -1011,7 +1019,9 @@ Status ModelManager::loadConfig() {
     // Build model groups and unload non-permanent servables for on-demand loading
     if (groupManager_ && groupManager_->isEnabled()) {
         groupManager_->buildGroups(this->servedModelConfigs, *this);
-        // Unload all non-permanent servables so they are loaded on demand
+        // Unload all non-permanent models so they are loaded on demand.
+        // Mediapipe graphs in non-permanent groups are already created in UNLOADED
+        // state by processMediapipeConfig, so only models need retirement here.
         for (const auto& [groupName, groupInfo] : groupManager_->getGroups()) {
             if (groupInfo.isPermanent()) {
                 continue;
@@ -1023,15 +1033,6 @@ Status ModelManager::loadConfig() {
                     SPDLOG_INFO("Retired model '{}' (group '{}') for on-demand loading", modelName, groupName);
                 }
             }
-#if (MEDIAPIPE_DISABLE == 0)
-            for (const auto& graphName : groupInfo.mediapipeNames) {
-                MediapipeGraphDefinition* def = mediapipeFactory->findDefinitionByName(graphName);
-                if (def != nullptr) {
-                    def->unload();
-                    SPDLOG_INFO("Unloaded mediapipe graph '{}' (group '{}') for on-demand loading", graphName, groupName);
-                }
-            }
-#endif
         }
     }
 
