@@ -143,7 +143,7 @@ class GenerativeAIUtils:
         cls, context: Context, model_type, openai_rest_api_type, endpoint, log_level=logging_level_ovms,
             kv_cache_size=kv_cache_size_value, plugin_config=None, max_position_embeddings=None, env=None,
             allowed_local_media_path=None, allowed_media_domains=None, target_device=None, resolution=None,
-            apply_short_name=False, **request_params_kwargs,
+            apply_short_name=False, ovms_log_level=None, **request_params_kwargs,
     ):
         if plugin_config is None:
             plugin_config = {GenerativeAIPluginConfig.KV_CACHE_PRECISION: kv_cache_precision_value}
@@ -161,7 +161,8 @@ class GenerativeAIUtils:
         step("Start OVMS")
         result = start_ovms(
             context,
-            OvmsParams(models=[model], use_config=True, use_subconfig=model.use_subconfig, log_level=log_level,
+            OvmsParams(models=[model], use_config=True, use_subconfig=model.use_subconfig,
+                       log_level=ovms_log_level if ovms_log_level is not None else log_level,
                        allowed_local_media_path=allowed_local_media_path, allowed_media_domains=allowed_media_domains),
             timeout=model.model_timeout, environment=env,
         )

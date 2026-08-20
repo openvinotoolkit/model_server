@@ -40,7 +40,7 @@ class OvmsLogMonitor(LogMonitor):
         return []
 
     def _get_unexpected_messages(self):
-        return ["terminate called", "Exception caught in REST request handler"]
+        return ["terminate called", "Exception caught in REST request handler", "Response generation failed"]
 
     def ensure_contains_messages(
         self,
