@@ -550,7 +550,36 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseNoPar
     EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
 }
 
-TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensTrueWithToolParser) {
+// Requesting special tokens (skip_special_tokens=false) must only affect the CONTENT/UNKNOWN
+// decode mode. A tool parser whose format needs no special tokens (llama3) must keep ignoring
+// them once its own phase is active, regardless of what the caller asked for.
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, UserSpecialTokensPreferenceOnlyAppliesInContentPhase) {
+    std::string json = createRequestWithSkipSpecialTokensRawValue("false");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint(), "llama3");
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto outputParser = apiHandler->getOutputParser();
+    ASSERT_NE(outputParser, nullptr);
+
+    // Still in UNKNOWN phase: the caller's preference is honoured here.
+    EXPECT_TRUE(outputParser->needSpecialTokensForCurrentDecode(/*userWantsSpecialTokens=*/true));
+
+    // Drive the parser into the tool-call phase (llama3's start tag is consumed silently).
+    auto delta = outputParser->parseChunk("<|python_tag|>", {}, /*toolsAvailable=*/true, ov::genai::GenerationFinishReason::NONE);
+    EXPECT_FALSE(delta.has_value());
+
+    // llama3's tool body needs no special tokens: the phase must not inherit the user's preference.
+    EXPECT_FALSE(outputParser->needSpecialTokensForCurrentDecode(/*userWantsSpecialTokens=*/true));
+}
+
+// Symmetric case: a reasoning parser whose format DOES need special tokens (gemma4) must keep
+// requiring them once its own phase is active, even when the caller asked for the opposite.
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, ReasoningParserSpecialTokenNeedIgnoresUserPreference) {
     std::string json = createRequestWithSkipSpecialTokensRawValue("true");
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -558,56 +587,18 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensTrueWithTo
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
-    auto apiHandler = createHandler(endpoint(), "llama3");
+    auto apiHandler = createHandler(endpoint(), "", "gemma4");
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    auto outputParser = apiHandler->getOutputParser();
+    ASSERT_NE(outputParser, nullptr);
 
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    EXPECT_TRUE(apiHandler->getRequest().skipSpecialTokens);
-    EXPECT_NE(apiHandler->getOutputParser(), nullptr);
-}
+    // Drive the parser into the reasoning phase (gemma4's start tag is consumed silently).
+    auto delta = outputParser->parseChunk("<|channel>thought\n", {}, /*toolsAvailable=*/false, ov::genai::GenerationFinishReason::NONE);
+    EXPECT_FALSE(delta.has_value());
 
-TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithToolParserSilentlyDisablesParser) {
-    std::string json = createRequestWithSkipSpecialTokensRawValue("false");
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-
-    std::optional<uint32_t> maxTokensLimit;
-    uint32_t bestOfLimit = 0;
-    std::optional<uint32_t> maxModelLength;
-    auto apiHandler = createHandler(endpoint(), "llama3");
-
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
-    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
-}
-
-TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithReasoningParserSilentlyDisablesParser) {
-    std::string json = createRequestWithSkipSpecialTokensRawValue("false");
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-
-    std::optional<uint32_t> maxTokensLimit;
-    uint32_t bestOfLimit = 0;
-    std::optional<uint32_t> maxModelLength;
-    auto apiHandler = createHandler(endpoint(), "", "qwen3");
-
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
-    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
-}
-
-TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensFalseWithBothParsersSilentlyDisablesParsers) {
-    std::string json = createRequestWithSkipSpecialTokensRawValue("false");
-    doc.Parse(json.c_str());
-    ASSERT_FALSE(doc.HasParseError());
-
-    std::optional<uint32_t> maxTokensLimit;
-    uint32_t bestOfLimit = 0;
-    std::optional<uint32_t> maxModelLength;
-    auto apiHandler = createHandler(endpoint(), "llama3", "qwen3");
-
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    EXPECT_FALSE(apiHandler->getRequest().skipSpecialTokens);
-    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
+    // gemma4 reasoning needs special tokens visible: still required even though the caller
+    // asked for skip_special_tokens=true (userWantsSpecialTokens=false).
+    EXPECT_TRUE(outputParser->needSpecialTokensForCurrentDecode(/*userWantsSpecialTokens=*/false));
 }
 
 TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensNotBoolFails) {

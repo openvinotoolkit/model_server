@@ -206,8 +206,8 @@ public:
     virtual void incrementProcessedTokens(size_t numTokens = 1);
 
     // Serialization - pure virtual, each handler produces its own response format
-    // Phase 2: delta-based unary serialisation — assembles a complete response from streaming
-    // delta Documents collected via deltaChannel after OVMSTextStreamer finishes.
+    // Delta-based unary serialisation — assembles a complete response from streaming
+    // deltas collected via deltaChannel after OVMSTextStreamer finishes.
     // Single-choice variant (used by Legacy servables).
     virtual std::string serializeUnaryResponse(const std::vector<Delta>& deltas, ov::genai::GenerationFinishReason finishReason) = 0;
     // Multi-choice variant: N delta-vectors (one per sequence) + per-sequence finish reasons.

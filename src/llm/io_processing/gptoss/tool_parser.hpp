@@ -72,8 +72,6 @@ public:
         clearState();
     }
 
-    // Unary
-    // Streaming
     std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };
 }  // namespace ovms
