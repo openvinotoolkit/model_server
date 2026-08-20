@@ -89,7 +89,7 @@ http_archive(
     build_file = "@mediapipe//third_party:zlib.BUILD",
     sha256 = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
     strip_prefix = "zlib-1.3.2",
-    url = "http://zlib.net/fossils/zlib-1.3.2.tar.gz",
+    url = "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
 )
 
 # RapidJSON
@@ -138,7 +138,7 @@ cc_library(
 
 new_local_repository(
     name = "windows_curl",
-    path = "C:\\opt\\curl-8.20.0_2-win64-mingw",
+    path = "C:\\opt\\curl-8.21.0_4-win64-mingw",
     build_file_content = """
 cc_import(
     name = "curl_lib",
@@ -157,21 +157,6 @@ cc_library(
 """,
 )
 
-
-# Used for gRPC API protos only
-# Tensorflow serving
-git_repository(
-    name = "tensorflow_serving",
-    remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.18.0",
-    patch_args = ["-p1"],
-    patches = ["net_http.patch", "listen.patch", "partial_2.18.patch"]
-    #                             ^^^^^^^^^^^^
-    #                       make bind address configurable
-    #          ^^^^^^^^^^^^
-    #        allow all http methods                ^^^^^^^^^
-    #                                        implements partial responses
-)
 
 ########################################################### Mediapipe
 http_archive(
@@ -434,8 +419,6 @@ http_archive(
     repo_mapping = {"@curl" : "@curl"}
 )
 
-load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
-
 # Initialize TensorFlow's external dependencies.
 load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
 workspace()
@@ -473,7 +456,6 @@ workspace()
 load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
 workspace()
 
-tf_serving_workspace() #moved past TF
 # required after update to mp 0.10.18
 load(
     "@org_tensorflow//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
@@ -501,26 +483,11 @@ drogon_cpp()
 load("@ovms//third_party/espeak_ng:espeak_ng.bzl", "espeak_ng")
 espeak_ng()
 
-# Azure Storage SDK
+# Azure SDK for C++ (azure-core, azure-storage-blobs, azure-storage-files-shares)
 new_local_repository(
     name = "azure",
     build_file = "@//third_party/azure:BUILD",
-    path = "/azure/azure-storage-cpp",
-)
-
-# Azure Storage SDK dependency - cpprest
-new_local_repository(
-    name = "cpprest",
-    build_file = "@//third_party/cpprest:BUILD",
-    path = "/azure/cpprestsdk",
-)
-
-# Boost (needed for Azure Storage SDK)
-
-new_local_repository(
-    name = "boost",
-    path = "/usr/local/lib/",
-    build_file = "@//third_party/boost:BUILD"
+    path = "/azure-sdk-install",
 )
 
 # Google Cloud SDK

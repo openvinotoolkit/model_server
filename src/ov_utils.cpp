@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "logging.hpp"
+#include "config.hpp"
 #include "profiler.hpp"
 #include "status.hpp"
 #include "systeminfo.hpp"
@@ -41,6 +42,16 @@ Status createSharedTensor(ov::Tensor& destinationTensor, ov::element::Type_t pre
     OV_LOGGER("ov::Tensor(precision, shape)");
     destinationTensor = ov::Tensor(precision, shape);
     return StatusCode::OK;
+}
+
+void applyGlobalCacheDirFallback(ov::AnyMap& properties) {
+    const std::string& globalCacheDir = Config::instance().cacheDir();
+    if (globalCacheDir.empty()) {
+        return;
+    }
+    if (properties.find(ov::cache_dir.name()) == properties.end()) {
+        properties[ov::cache_dir.name()] = globalCacheDir;
+    }
 }
 
 std::string getTensorMapString(const std::map<std::string, std::shared_ptr<const TensorInfo>>& inputsInfo) {
@@ -150,47 +161,133 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
     return StatusCode::OK;
 }
 
+std::string recommendTargetDevice(const std::vector<GpuDeviceInfo>& gpuDevices) {
+    if (gpuDevices.empty()) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "No GPU devices found, recommending CPU");
+        return "CPU";
+    }
+
+    std::vector<GpuDeviceInfo> discreteGpus;
+    std::vector<GpuDeviceInfo> integratedGpus;
+    for (const auto& gpu : gpuDevices) {
+        if (gpu.isDiscrete) {
+            discreteGpus.push_back(gpu);
+        } else {
+            integratedGpus.push_back(gpu);
+        }
+    }
+
+    if (discreteGpus.size() == 1) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Single discrete GPU found, recommending: {}", discreteGpus[0].name);
+        return discreteGpus[0].name;
+    }
+
+    if (discreteGpus.size() > 1) {
+        auto best = std::max_element(discreteGpus.begin(), discreteGpus.end(),
+            [](const GpuDeviceInfo& a, const GpuDeviceInfo& b) {
+                return a.freeMemBytes < b.freeMemBytes;
+            });
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Multiple discrete GPUs found, recommending {} with {} bytes free VRAM", best->name, best->freeMemBytes);
+        return best->name;
+    }
+
+    if (!integratedGpus.empty()) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Integrated GPU found, recommending: {}", integratedGpus[0].name);
+        return integratedGpus[0].name;
+    }
+
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Falling back to CPU");
+    return "CPU";
+}
+
+std::string recommendTargetDevice() {
+    static ov::Core core;
+    auto availableDevices = core.get_available_devices();
+
+    std::vector<GpuDeviceInfo> gpuDevices;
+
+    for (const auto& device : availableDevices) {
+        if (device.find("GPU") != 0) {
+            continue;
+        }
+
+        GpuDeviceInfo info;
+        info.name = device;
+
+        try {
+            auto deviceType = core.get_property(device, ov::device::type);
+            info.isDiscrete = (deviceType == ov::device::Type::DISCRETE);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Failed to get DEVICE_TYPE for {}: {}; treating as integrated/unknown GPU", device, e.what());
+            info.isDiscrete = false;
+        }
+
+        try {
+            uint64_t totalMem = core.get_property(device, "GPU_DEVICE_TOTAL_MEM_SIZE").as<uint64_t>();
+            uint64_t usedMem = 0;
+            try {
+                auto memStats = core.get_property(device, "GPU_MEMORY_STATISTICS").as<std::map<std::string, uint64_t>>();
+                auto it = memStats.find("usm_device");
+                if (it != memStats.end()) {
+                    usedMem = it->second;
+                }
+            } catch (...) {
+                // Memory statistics may not be available before any model is loaded
+            }
+            info.freeMemBytes = static_cast<int64_t>(totalMem) - static_cast<int64_t>(usedMem);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Failed to get memory info for {}: {}", device, e.what());
+            info.freeMemBytes = 0;
+        }
+
+        gpuDevices.push_back(info);
+    }
+
+    return recommendTargetDevice(gpuDevices);
+}
+
+Status applyDefaultCpuProperties(ov::AnyMap& properties, uint16_t coreCount, uint16_t physicalCoresPerSocket, uint16_t socketsCount, uint16_t dockerCpuQuota) {
+    if (properties.find(ov::hint::enable_cpu_pinning.name()) == properties.end()) {
+        const bool cpuPinning = dockerCpuQuota <= 0;
+        properties[ov::hint::enable_cpu_pinning.name()] = cpuPinning;
+        SPDLOG_DEBUG("applyDefaultCpuProperties, DockerCPUQuota: {} - setting enable_cpu_pinning to {}", dockerCpuQuota, cpuPinning);
+    }
+
+    bool isThroughput = false;
+    const auto perfIt = properties.find(ov::hint::performance_mode.name());
+    if (perfIt != properties.end()) {
+        try {
+            isThroughput = (perfIt->second.as<ov::hint::PerformanceMode>() == ov::hint::PerformanceMode::THROUGHPUT);
+        } catch (...) {
+            try {
+                isThroughput = (perfIt->second.as<std::string>() == "THROUGHPUT");
+            } catch (...) {
+            }
+        }
+        if (isThroughput && properties.find(ov::num_streams.name()) == properties.end()) {
+            int numStreams = std::min(static_cast<int>(coreCount), static_cast<int>(physicalCoresPerSocket * socketsCount));
+            properties[ov::num_streams.name()] = numStreams;
+            SPDLOG_DEBUG("applyDefaultCpuProperties, CoreCount: {}, PhysicalCoresPerSocket: {}, SocketsCount: {} - setting num_streams to {} (THROUGHPUT hint active)", coreCount, physicalCoresPerSocket, socketsCount, numStreams);
+        }
+    }
+
+    if (properties.find(ov::inference_num_threads.name()) == properties.end()) {
+        if (coreCount <= physicalCoresPerSocket * socketsCount) {
+            int numThreads = static_cast<int>(coreCount);
+            properties[ov::inference_num_threads.name()] = numThreads;
+            SPDLOG_DEBUG("applyDefaultCpuProperties: CoreCount: {}, PhysicalCoresPerSocket: {}, SocketsCount: {}, setting inference_num_threads to {}", coreCount, physicalCoresPerSocket, socketsCount, numThreads);
+        }
+    }
+    return StatusCode::OK;
+}
+
 Status applyDefaultCpuProperties(ov::AnyMap& properties) {
 #ifdef __linux__
     try {
         if (!isRunningInDocker()) {
             return StatusCode::OK;
         }
-        const uint16_t coreCount = getCoreCount();
-
-        if (properties.find(ov::hint::enable_cpu_pinning.name()) == properties.end()) {
-            const bool cpuPinning = getDockerCpuQuota() <= 0;
-            properties[ov::hint::enable_cpu_pinning.name()] = cpuPinning;
-            SPDLOG_DEBUG("applyDefaultCpuProperties: setting enable_cpu_pinning to {}", cpuPinning);
-        }
-
-        bool isThroughput = false;
-        const auto perfIt = properties.find(ov::hint::performance_mode.name());
-        if (perfIt != properties.end()) {
-            try {
-                isThroughput = (perfIt->second.as<ov::hint::PerformanceMode>() == ov::hint::PerformanceMode::THROUGHPUT);
-            } catch (...) {
-                try {
-                    isThroughput = (perfIt->second.as<std::string>() == "THROUGHPUT");
-                } catch (...) {
-                }
-            }
-            if (isThroughput && properties.find(ov::num_streams.name()) == properties.end()) {
-                properties[ov::num_streams.name()] = static_cast<int>(coreCount);
-                SPDLOG_DEBUG("applyDefaultCpuProperties: setting num_streams to {} (THROUGHPUT hint active)", coreCount);
-            }
-        }
-
-        if (properties.find(ov::inference_num_threads.name()) == properties.end()) {
-            int numThreads;
-            if (isThroughput) {
-                numThreads = static_cast<int>(coreCount);
-            } else {
-                numThreads = std::min(static_cast<int>(coreCount), static_cast<int>(getPhysicalCoresPerSocket()));
-            }
-            properties[ov::inference_num_threads.name()] = numThreads;
-            SPDLOG_DEBUG("applyDefaultCpuProperties: setting inference_num_threads to {}", numThreads);
-        }
+        return applyDefaultCpuProperties(properties, getCoreCount(), getPhysicalCoresPerSocket(), getSocketsCount(), getDockerCpuQuota());
     } catch (const std::exception& ex) {
         SPDLOG_WARN("Exception while applying default CPU properties: {}", ex.what());
     } catch (...) {

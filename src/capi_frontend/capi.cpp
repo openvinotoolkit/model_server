@@ -33,7 +33,6 @@
 #include "../servable_definition_unload_guard.hpp"
 #include "../execution_context.hpp"
 #include "../version.hpp"
-#include "../model_service.hpp"
 #include "../modelinstance.hpp"
 #include "capi_request_utils.hpp"  // TODO @atobisze must be before executor
 #include "capi_utils.hpp"
@@ -44,7 +43,6 @@
 #include "../modelmanager.hpp"
 #include "../module_names.hpp"
 #include "../ovms.h"  // NOLINT
-#include "../prediction_service.hpp"
 #include "../profiler.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../servable_definition.hpp"

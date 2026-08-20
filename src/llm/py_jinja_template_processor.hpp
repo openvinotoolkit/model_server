@@ -36,6 +36,6 @@ public:
     std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
     std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
 
-    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, std::string modelsPath, const std::string& requestBody, std::string& output);
+    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output);
 };
 }  // namespace ovms

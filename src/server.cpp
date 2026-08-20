@@ -60,10 +60,8 @@
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "metrics/metric_module.hpp"
-#include "model_service.hpp"
 #include "modelmanager.hpp"
 #include "ovms_exit_codes.hpp"
-#include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
@@ -125,6 +123,10 @@ static void logConfig(const Config& config) {
     if (config.getServerSettings().serverMode == HF_PULL_MODE) {
         SPDLOG_DEBUG("source_model: {}", config.getServerSettings().hfSettings.sourceModel);
         SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
+        return;
+    }
+    if (config.getServerSettings().serverMode == CONFIGURE_MODE) {
+        SPDLOG_DEBUG("model_path: {}", config.modelPath());
         return;
     }
     if (config.configPath().empty()) {
@@ -408,6 +410,19 @@ Status Server::startModules(ovms::Config& config) {
         status = hfModule->clone();
         return status;
     }
+    if (config.getServerSettings().serverMode == CONFIGURE_MODE) {
+        GraphExport graphExporter;
+        HFSettingsImpl hfSettings = config.getServerSettings().hfSettings;
+        std::string modelPath = config.modelPath();
+        hfSettings.exportSettings.modelPath = ".";
+        status = graphExporter.createServableConfig(modelPath, hfSettings, true);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to create graph config: {}", status.string());
+            return status;
+        }
+        std::cout << "Graph: graph.pbtxt created in: " << modelPath << std::endl;
+        return status;
+    }
 
 #if (PYTHON_DISABLE == 0)
     if (config.getServerSettings().withPython) {
@@ -447,7 +462,8 @@ Status Server::startModules(ovms::Config& config) {
     if (config.getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
         // --task with --model_path: create graph in memory without HF download
         GraphExport graphExporter;
-        const auto& hfSettings = config.getServerSettings().hfSettings;
+        HFSettingsImpl hfSettings = config.getServerSettings().hfSettings;
+        hfSettings.exportSettings.modelPath = ".";
         status = graphExporter.createServableConfig(config.modelPath(), hfSettings, false);
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to create in-memory graph config: {}", status.string());

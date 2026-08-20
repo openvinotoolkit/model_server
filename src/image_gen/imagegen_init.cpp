@@ -27,6 +27,7 @@
 #include "src/image_gen/image_gen_calculator.pb.h"
 #include "src/json_parser.hpp"
 #include "src/logging.hpp"
+#include "src/ov_utils.hpp"
 #include "src/status.hpp"
 #include "src/stringutils.hpp"
 
@@ -285,6 +286,7 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             return status;
         }
     }
+    applyGlobalCacheDirFallback(args.pluginConfig);
     auto maxResOptOrStatus = getDimensionsConfig(nodeOptions.max_resolution());
     if (std::holds_alternative<Status>(maxResOptOrStatus)) {
         return std::get<Status>(maxResOptOrStatus);

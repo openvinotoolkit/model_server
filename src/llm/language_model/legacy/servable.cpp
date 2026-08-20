@@ -41,9 +41,26 @@
 #if (PYTHON_DISABLE == 0)
 #include "../../py_jinja_template_processor.hpp"
 #endif
+#include "../../io_processing/generation_config_builder.hpp"
 #include "servable.hpp"
 
 namespace ovms {
+
+void LegacyServable::logPerfMetrics(ov::genai::PerfMetrics& perfMetrics) {
+    const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
+    const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();
+    const double ttftMs = perfMetrics.get_ttft().mean;
+    const double prefillSpeedTps = calculatePrefillSpeed(inputTokenCount, ttftMs);
+
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "Request processing metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f}",
+        inputTokenCount,
+        outputTokenCount,
+        inputTokenCount + outputTokenCount,
+        ttftMs,
+        prefillSpeedTps);
+}
 
 absl::Status LegacyServable::validateInputComplianceWithProperties(const ov::Tensor& inputIds) const {
     if (properties->device == "NPU") {
@@ -130,18 +147,15 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
                 return ov::genai::StreamingStatus::RUNNING;
             });
     }
-    legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
+    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
         getProperties()->decodingMethod);
-    legacyExecutionContext->generationConfigBuilder->parseConfigFromRequest(legacyExecutionContext->apiHandler->getRequest());
-    legacyExecutionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
-    try {
-        legacyExecutionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
-    } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
-        legacyExecutionContext->generationConfigBuilder->unsetStructuredOutputConfig();
+    auto inputRequestResult = legacyExecutionContext->apiHandler->extractInputRequest(configBuilder);
+    if (!inputRequestResult.ok()) {
+        return inputRequestResult.status();
     }
+    legacyExecutionContext->inputRequest = std::move(*inputRequestResult);
     return absl::OkStatus();
 }
 
@@ -152,7 +166,7 @@ absl::Status LegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutio
         return status;
     }
     // Additional validation layer for NPU specific properties
-    status = validateInputComplianceWithProperties(executionContext->inputIds);
+    status = validateInputComplianceWithProperties(executionContext->inputRequest.inputIds);
     return status;
 }
 
@@ -190,6 +204,9 @@ absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServab
         return absl::CancelledError();
     }
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
+    if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+        logPerfMetrics(legacyExecutionContext->results.perf_metrics);
+    }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
@@ -277,6 +294,9 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+            logPerfMetrics(legacyExecutionContext->results.perf_metrics);
+        }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }

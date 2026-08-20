@@ -23,6 +23,10 @@ namespace ovms {
 const std::vector<std::string>& getSupportedToolParserNames();
 const std::vector<std::string>& getSupportedReasoningParserNames();
 
+// Value that explicitly disables a parser, preventing auto-detection.
+inline constexpr const char* PARSER_DISABLED_VALUE = "none";
+bool isParserDisabled(const std::string& name);
+
 bool isSupportedToolParserName(const std::string& name);
 bool isSupportedReasoningParserName(const std::string& name);
 

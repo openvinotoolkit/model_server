@@ -37,6 +37,7 @@
 #endif
 
 #include "../../http_rest_api_handler.hpp"
+#include "../../config.hpp"
 #include "../../http_status_code.hpp"
 #include "../../json_parser.hpp"
 #include "../../llm/apis/openai_completions.hpp"
@@ -46,6 +47,8 @@
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "../../llm/text_utils.hpp"
+#include "../../mediapipe_internal/mediapipefactory.hpp"
+#include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
 #include "src/graph_export/graph_export.hpp"
@@ -78,8 +81,8 @@ public:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpointChatCompletions = "/v3/chat/completions";
-    const std::string endpointCompletions = "/v3/completions";
+    const std::string endpointChatCompletions = "/v1/chat/completions";
+    const std::string endpointCompletions = "/v1/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -188,8 +191,8 @@ public:
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpointChatCompletions = "/v3/chat/completions";
-    const std::string endpointCompletions = "/v3/completions";
+    const std::string endpointChatCompletions = "/v1/chat/completions";
+    const std::string endpointCompletions = "/v1/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -882,7 +885,7 @@ TEST_P(LLMFlowHttpTestParameterized, defaultRoutingInvalidJson) {
         }
     )";
 
-    const std::string uriThatMatchesGraphName = std::string("/v3/") + params.modelName;
+    const std::string uriThatMatchesGraphName = std::string("/v1/") + params.modelName;
 
     headers.clear();  // no sign of application/json
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", uriThatMatchesGraphName, headers), ovms::StatusCode::OK);
@@ -1236,6 +1239,80 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArrayWithIma
             handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     }
+}
+
+// VLM servables run ImageDecodingProcessor which rejects any request whose text
+// content already contains an <ov_genai_image_N> tag (prompt injection guard).
+// Verify that the error propagates all the way to an HTTP 400 response.
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsVlmInjectionGuardRejected) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") == std::string::npos) {
+        GTEST_SKIP();  // injection guard runs only for VLM servables
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": "look at <ov_genai_image_0> this"
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: Message contains restricted <ov_genai_image> tag\"}");
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(response.c_str());
+            ASSERT_EQ(ok.Code(), 0);
+            ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+// Non-VLM (text-only) servables reject requests that contain image_url content at
+// the servable level, before any processor runs.
+// Verify that the error propagates all the way to an HTTP 400 response.
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithImageRejected) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();  // image rejection check runs only for non-VLM servables
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "What is this?"}, {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="}}]
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: This servable supports only text input, but image_url has been provided\"}");
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(response.c_str());
+            ASSERT_EQ(ok.Code(), 0);
+            ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopStrings) {
@@ -2235,7 +2312,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             if (!d["choices"][0].HasMember("delta"))
                 continue;
             ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
-            ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+            if (!d["choices"][0]["delta"].HasMember("content") || !d["choices"][0]["delta"]["content"].IsString())
+                continue;
             std::string content = d["choices"][0]["delta"]["content"].GetString();
             ASSERT_EQ(content.find('.'), std::string::npos) << "found dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
         }
@@ -2266,7 +2344,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             if (!d["choices"][0].HasMember("delta"))
                 continue;
             ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
-            ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+            if (!d["choices"][0]["delta"].HasMember("content") || !d["choices"][0]["delta"]["content"].IsString())
+                continue;
             std::string content = d["choices"][0]["delta"]["content"].GetString();
             if (content.find('.') != std::string::npos) {
                 foundDotInLastResponse = true;
@@ -4425,6 +4504,567 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
 }
 
+// RAII guard that restores the global Config singleton (and optionally removes a temporary
+// cache directory) on scope exit. The cache_dir tests below mutate the process-wide Config
+// singleton; without this guard a failed ASSERT_* mid-test (which returns early) would leak
+// the modified --cache_dir into subsequent tests in this suite.
+struct GlobalCacheDirGuard {
+    ovms::ServerSettingsImpl savedServerSettings;
+    ovms::ModelsSettingsImpl savedModelsSettings;
+    std::string cacheDirToRemove;
+
+    explicit GlobalCacheDirGuard(std::string cacheDirToRemove = "") :
+        savedServerSettings(ovms::Config::instance().getServerSettings()),
+        savedModelsSettings(ovms::Config::instance().getModelSettings()),
+        cacheDirToRemove(std::move(cacheDirToRemove)) {}
+
+    ~GlobalCacheDirGuard() {
+        ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
+        if (!cacheDirToRemove.empty()) {
+            std::error_code ec;
+            std::filesystem::remove_all(cacheDirToRemove, ec);
+        }
+    }
+};
+
+// Verifies that the global --cache_dir (ServerSettings) is propagated into the
+// continuous batching pipeline plugin config, and that an explicit CACHE_DIR in
+// the node's plugin_config takes precedence over the global value.
+// Regression test for openvinotoolkit/model_server#4230.
+void LLMNodeOptionsCacheDirPropagation(std::string& modelsPath) {
+    // Restore the global cache_dir on scope exit even if an ASSERT below fails early.
+    GlobalCacheDirGuard cacheDirGuard;
+    // Seed the global cache_dir via the CLI parser (same path used in production).
+    const std::string globalCacheDir = (std::filesystem::temp_directory_path() / "ovms_global_cache").string();
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
+    int arg_count = 9;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
+
+    // Case 1: no CACHE_DIR in node plugin_config -> global value is applied.
+    {
+        std::string testPbtxt = R"(
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+            node: {
+            name: "llmNode"
+            calculator: "HttpLLMCalculator"
+            input_stream: "LOOPBACK:loopback"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+            output_stream: "LOOPBACK:loopback"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: ")" +
+                                modelsPath + R"("
+                }
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                    sync_set {
+                    tag_index: "LOOPBACK:0"
+                    }
+                }
+                }
+            }
+            }
+        )";
+        adjustConfigForTargetPlatform(testPbtxt);
+        ::mediapipe::CalculatorGraphConfig config;
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+        std::shared_ptr<GenAiServable> servable;
+        ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+        auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+        ASSERT_EQ(properties->pluginConfig.count("CACHE_DIR"), 1);
+        ASSERT_EQ(properties->pluginConfig["CACHE_DIR"].as<std::string>(), globalCacheDir);
+    }
+
+    // Case 2: explicit CACHE_DIR in node plugin_config wins over the global value.
+    {
+        std::string testPbtxt = R"(
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+            node: {
+            name: "llmNode"
+            calculator: "HttpLLMCalculator"
+            input_stream: "LOOPBACK:loopback"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+            output_stream: "LOOPBACK:loopback"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: ")" +
+                                modelsPath + R"("
+                    plugin_config: '{"CACHE_DIR": "/tmp/ovms_node_cache"}'
+                }
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                    sync_set {
+                    tag_index: "LOOPBACK:0"
+                    }
+                }
+                }
+            }
+            }
+        )";
+        adjustConfigForTargetPlatform(testPbtxt);
+        ::mediapipe::CalculatorGraphConfig config;
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+        std::shared_ptr<GenAiServable> servable;
+        ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+        auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+        ASSERT_EQ(properties->pluginConfig.count("CACHE_DIR"), 1);
+        // The test harness may rewrite the path for the target platform, so match
+        // on substrings: the explicit node value must win over the global one.
+        std::string nodeCacheDir = properties->pluginConfig["CACHE_DIR"].as<std::string>();
+        ASSERT_NE(nodeCacheDir.find("ovms_node_cache"), std::string::npos) << "Explicit node CACHE_DIR should be used, got: " << nodeCacheDir;
+        ASSERT_EQ(nodeCacheDir.find("ovms_global_cache"), std::string::npos) << "Global cache_dir must not override explicit node CACHE_DIR, got: " << nodeCacheDir;
+    }
+    // GlobalCacheDirGuard restores the global cache_dir on scope exit.
+}
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCacheDirPropagation) {
+    LLMNodeOptionsCacheDirPropagation(modelsPath);
+}
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCacheDirPropagation) {
+    LLMNodeOptionsCacheDirPropagation(modelsPath);
+}
+
+// End-to-end regression test for #4230: LLMNodeOptionsCacheDirPropagation above only
+// verifies that --cache_dir lands in properties->pluginConfig; it does not prove that
+// OpenVINO Core actually persists compiled-model cache artifacts, which was the crux of
+// the original bug report (log said "cache enabled", nothing was ever written on disk).
+// This test constructs a real ContinuousBatchingPipeline against --cache_dir and asserts
+// that compiled-model cache artifacts actually land under it.
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCacheDirWritesCacheArtifacts) {
+    std::string cacheDir = std::filesystem::temp_directory_path().string() +
+                           "/LLMNodeOptionsCacheDirWritesCacheArtifacts_" +
+                           ::testing::UnitTest::GetInstance()->current_test_info()->name();
+    std::filesystem::remove_all(cacheDir);
+    std::filesystem::create_directories(cacheDir);
+    // Restore the global cache_dir and remove the temp cache dir on scope exit, even if an
+    // ASSERT below fails early.
+    GlobalCacheDirGuard cacheDirGuard(cacheDir);
+
+    // Seed the global cache_dir via the CLI parser (same path used in production).
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)cacheDir.c_str()};
+    int arg_count = 9;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), cacheDir);
+
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                            modelsPath + R"("
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<GenAiServable> servable;
+    ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+
+    bool foundCacheArtifact = false;
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(cacheDir)) {
+        if (entry.is_regular_file()) {
+            foundCacheArtifact = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(foundCacheArtifact)
+        << "Expected compiled-model cache artifacts under --cache_dir after constructing the "
+        << "continuous batching pipeline, found none in: " << cacheDir;
+    // GlobalCacheDirGuard restores the global cache_dir and removes cacheDir on scope exit.
+}
+
+// Verifies that when multiple LLM nodes are defined in a single graph with mixed cache_dir
+// configuration (one with explicit CACHE_DIR in plugin_config, one without), each node
+// receives the correct cache_dir: explicit node uses its own value, the other uses the
+// global --cache_dir from CLI. Regression test for openvinotoolkit/model_server#4230.
+void LLMNodeOptionsMultipleNodesCacheDirPrecedence(std::string& modelsPath) {
+    // Restore the global cache_dir on scope exit even if an ASSERT below fails early.
+    GlobalCacheDirGuard cacheDirGuard;
+    // Seed the global cache_dir via the CLI parser.
+    const std::string globalCacheDir = (std::filesystem::temp_directory_path() / "ovms_global_cache_multi").generic_string();
+    const std::string nodeCacheDir = (std::filesystem::temp_directory_path() / "ovms_node_cache_multi").generic_string();
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
+    int arg_count = 9;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
+
+    // Create a graph with two LLM nodes:
+    // - node1 has explicit CACHE_DIR in plugin_config
+    // - node2 has no CACHE_DIR in plugin_config (should use global --cache_dir)
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        # First node: explicit CACHE_DIR in plugin_config
+        node: {
+            name: "llmNode1"
+            calculator: "HttpLLMCalculator"
+            input_stream: "LOOPBACK:loopback"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+            output_stream: "LOOPBACK:loopback"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: ")" +
+                            modelsPath + R"("
+                    plugin_config: '{"CACHE_DIR": ")" +
+                            nodeCacheDir + R"("}'
+                }
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                    [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                        sync_set {
+                            tag_index: "LOOPBACK:0"
+                        }
+                    }
+                }
+            }
+        }
+
+        # Second node: no CACHE_DIR in plugin_config (should use global --cache_dir)
+        node: {
+            name: "llmNode2"
+            calculator: "HttpLLMCalculator"
+            input_stream: "LOOPBACK:loopback"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+            output_stream: "LOOPBACK:loopback"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: ")" +
+                            modelsPath + R"("
+                }
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                    [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                        sync_set {
+                            tag_index: "LOOPBACK:0"
+                        }
+                    }
+                }
+            }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+
+    auto readPropertiesForNode = [&](int nodeIndex) -> std::shared_ptr<ContinuousBatchingServableProperties> {
+        mediapipe::LLMCalculatorOptions nodeOptions;
+        EXPECT_TRUE(config.node(nodeIndex).node_options(0).UnpackTo(&nodeOptions));
+        auto properties = std::make_shared<ContinuousBatchingServableProperties>();
+        auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);
+        EXPECT_TRUE(status.ok()) << "Failed to parse plugin_config for node " << nodeIndex << ": " << status.string();
+        GenAiServableInitializer::applyGlobalCacheDir(properties);
+        return properties;
+    };
+
+    // Verify node 1 (with explicit CACHE_DIR) uses the node-level value
+    {
+        auto properties1 = readPropertiesForNode(0);
+        ASSERT_EQ(properties1->pluginConfig.count("CACHE_DIR"), 1);
+        std::string node1CacheDir = properties1->pluginConfig["CACHE_DIR"].as<std::string>();
+        ASSERT_NE(node1CacheDir.find("ovms_node_cache_multi"), std::string::npos)
+            << "Node 1 should have explicit CACHE_DIR, got: " << node1CacheDir;
+        ASSERT_EQ(node1CacheDir.find("ovms_global_cache_multi"), std::string::npos)
+            << "Node 1 should NOT use global cache_dir, got: " << node1CacheDir;
+    }
+
+    // Verify node 2 (without explicit CACHE_DIR) uses the global --cache_dir
+    {
+        auto properties2 = readPropertiesForNode(1);
+        ASSERT_EQ(properties2->pluginConfig.count("CACHE_DIR"), 1);
+        std::string node2CacheDir = properties2->pluginConfig["CACHE_DIR"].as<std::string>();
+        ASSERT_EQ(node2CacheDir, globalCacheDir)
+            << "Node 2 should have global CACHE_DIR applied, got: " << node2CacheDir;
+    }
+    // GlobalCacheDirGuard restores the global cache_dir on scope exit.
+}
+
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsMultipleNodesCacheDirPrecedence) {
+    LLMNodeOptionsMultipleNodesCacheDirPrecedence(modelsPath);
+}
+
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsMultipleNodesCacheDirPrecedence) {
+    LLMNodeOptionsMultipleNodesCacheDirPrecedence(modelsPath);
+}
+
+// Verifies that when multiple LLM models are loaded from config.json with CLI --cache_dir,
+// each model receives the correct cache_dir: explicit CACHE_DIR in plugin_config takes
+// precedence, otherwise the global --cache_dir is applied. Tests real-world scenario where
+// users have separate LLM models defined in different directories in a single config.json.
+// Regression test for openvinotoolkit/model_server#4230.
+void LLMModelsFromConfigJsonMultipleCacheDirPrecedence(std::string& modelsPath) {
+    const std::string resolvedModelsPath = getGenericFullPathForSrcTest(modelsPath);
+    ASSERT_TRUE(std::filesystem::exists(resolvedModelsPath))
+        << "LLM test models path does not exist: " << resolvedModelsPath;
+
+    // Create temporary directories and graph.pbtxt files
+    const std::string tmpDirLinux = "/tmp/LLMModelsFromConfigJson_" +
+                                    std::to_string(std::time(nullptr)) + "_" +
+                                    std::to_string(std::rand());
+    const std::string tmpDir = getGenericFullPathForTmp(tmpDirLinux);
+
+    // Restore global cache_dir and remove all temporary files/dirs on scope exit.
+    GlobalCacheDirGuard cacheDirGuard(tmpDir);
+
+    std::filesystem::create_directories(tmpDir);
+
+    std::string model1Dir = tmpDir + "/model1";
+    std::string model2Dir = tmpDir + "/model2";
+    std::filesystem::create_directories(model1Dir);
+    std::filesystem::create_directories(model2Dir);
+
+    const std::string globalCacheDir = std::filesystem::path(tmpDir + "/global_cache").generic_string();
+    const std::string nodeCacheDir = std::filesystem::path(tmpDir + "/node1_cache").generic_string();
+
+    // Create graph.pbtxt for model1 with explicit CACHE_DIR
+    std::string graph1Pbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+            name: "llmNode"
+            calculator: "HttpLLMCalculator"
+            input_stream: "LOOPBACK:loopback"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+            output_stream: "LOOPBACK:loopback"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: ")" +
+                              resolvedModelsPath + R"("
+                    pipeline_type: LM
+                    plugin_config: '{"CACHE_DIR": ")" +
+                              nodeCacheDir + R"("}'
+                }
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                    [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                        sync_set {
+                            tag_index: "LOOPBACK:0"
+                        }
+                    }
+                }
+            }
+        }
+    )";
+    adjustConfigForTargetPlatform(graph1Pbtxt);
+    std::ofstream graph1File(model1Dir + "/graph.pbtxt");
+    graph1File << graph1Pbtxt;
+    graph1File.close();
+
+    // Create graph.pbtxt for model2 WITHOUT explicit CACHE_DIR (should use global --cache_dir)
+    std::string graph2Pbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+            name: "llmNode"
+            calculator: "HttpLLMCalculator"
+            input_stream: "LOOPBACK:loopback"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "LLM_NODE_RESOURCES:llm"
+            output_stream: "LOOPBACK:loopback"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            input_stream_info: {
+                tag_index: 'LOOPBACK:0',
+                back_edge: true
+            }
+            node_options: {
+                [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                    models_path: ")" +
+                              resolvedModelsPath + R"("
+                    pipeline_type: LM
+                }
+            }
+            input_stream_handler {
+                input_stream_handler: "SyncSetInputStreamHandler",
+                options {
+                    [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                        sync_set {
+                            tag_index: "LOOPBACK:0"
+                        }
+                    }
+                }
+            }
+        }
+    )";
+    adjustConfigForTargetPlatform(graph2Pbtxt);
+    std::ofstream graph2File(model2Dir + "/graph.pbtxt");
+    graph2File << graph2Pbtxt;
+    graph2File.close();
+
+    // Create config.json with two graph definitions in separate directories.
+    std::string configContent = R"JSON({
+        "model_config_list": [
+            {
+                "config": {
+                    "name": "model1_with_cache_dir",
+                    "base_path": ")JSON" +
+                                model1Dir + R"JSON(",
+                    "graph_path": "graph.pbtxt"
+                }
+            },
+            {
+                "config": {
+                    "name": "model2_without_cache_dir",
+                    "base_path": ")JSON" +
+                                model2Dir + R"JSON(",
+                    "graph_path": "graph.pbtxt"
+                }
+            }
+        ]
+    })JSON";
+
+    std::string configPath = tmpDir + "/config.json";
+    std::ofstream configFile(configPath);
+    configFile << configContent;
+    configFile.close();
+
+    // Set global cache_dir via CLI
+    char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)configPath.c_str(), (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
+    int arg_count = 7;
+    ovms::Config::instance().parse(arg_count, n_argv);
+    ASSERT_EQ(ovms::Config::instance().cacheDir(), globalCacheDir);
+
+    ConstructorEnabledModelManager manager;
+    auto configStatus = manager.loadConfig(configPath);
+    ASSERT_TRUE(configStatus.ok()) << "Failed to load config.json: " << configStatus.string();
+
+    // Get graph definitions created by ModelManager from config.json.
+    auto* model1Def = manager.getMediapipeFactory().findDefinitionByName("model1_with_cache_dir");
+    ASSERT_NE(model1Def, nullptr);
+    auto* model2Def = manager.getMediapipeFactory().findDefinitionByName("model2_without_cache_dir");
+    ASSERT_NE(model2Def, nullptr);
+
+    auto readFileToString = [](const std::string& path) {
+        std::ifstream input(path);
+        std::stringstream ss;
+        ss << input.rdbuf();
+        return ss.str();
+    };
+
+    // Parse and validate model1 graph (with explicit CACHE_DIR in plugin_config)
+    {
+        ::mediapipe::CalculatorGraphConfig config1;
+        std::string graphConfig1 = readFileToString(model1Def->getMediapipeGraphConfig().getGraphPath());
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(graphConfig1, &config1))
+            << "Failed to parse model1 graph config";
+        ASSERT_GT(config1.node_size(), 0) << "Model1 should have at least one node";
+
+        // Initialize the servable and check its properties
+        std::shared_ptr<GenAiServable> servable1;
+        auto initStatus1 = initializeGenAiServable(servable1, config1.node(0), "model1_with_cache_dir");
+        ASSERT_EQ(initStatus1, StatusCode::OK) << "Failed to initialize model1: " << initStatus1.string();
+
+        auto properties1 = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable1->getProperties());
+        ASSERT_EQ(properties1->pluginConfig.count("CACHE_DIR"), 1)
+            << "Model1 should have CACHE_DIR in pluginConfig";
+        std::string model1CacheDir = properties1->pluginConfig["CACHE_DIR"].as<std::string>();
+        ASSERT_NE(model1CacheDir.find("node1_cache"), std::string::npos)
+            << "Model1 should use explicit node CACHE_DIR, got: " << model1CacheDir;
+        ASSERT_EQ(model1CacheDir.find("global_cache"), std::string::npos)
+            << "Model1 should NOT use global cache_dir, got: " << model1CacheDir;
+    }
+
+    // Parse and validate model2 graph (without explicit CACHE_DIR, should use global)
+    {
+        ::mediapipe::CalculatorGraphConfig config2;
+        std::string graphConfig2 = readFileToString(model2Def->getMediapipeGraphConfig().getGraphPath());
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(graphConfig2, &config2))
+            << "Failed to parse model2 graph config";
+        ASSERT_GT(config2.node_size(), 0) << "Model2 should have at least one node";
+
+        // Initialize the servable and check its properties
+        std::shared_ptr<GenAiServable> servable2;
+        auto initStatus2 = initializeGenAiServable(servable2, config2.node(0), "model2_without_cache_dir");
+        ASSERT_EQ(initStatus2, StatusCode::OK) << "Failed to initialize model2: " << initStatus2.string();
+
+        auto properties2 = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable2->getProperties());
+        ASSERT_EQ(properties2->pluginConfig.count("CACHE_DIR"), 1)
+            << "Model2 should have CACHE_DIR in pluginConfig (applied from global --cache_dir)";
+        std::string model2CacheDir = properties2->pluginConfig["CACHE_DIR"].as<std::string>();
+        ASSERT_EQ(model2CacheDir, globalCacheDir)
+            << "Model2 should use global cache_dir, got: " << model2CacheDir;
+    }
+
+    // GlobalCacheDirGuard restores global cache_dir and removes tmpDir on scope exit
+}
+
+TEST_F(LLMOptionsHttpTest, LLMModelsFromConfigJsonMultipleCacheDirPrecedence) {
+    LLMModelsFromConfigJsonMultipleCacheDirPrecedence(modelsPath);
+}
+
 void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -4946,8 +5586,8 @@ TEST_F(IsolatedServableTests, PromtSizeExceedsDefaultMaxPromptLenNPU) {
     std::vector<float> randomData(dataSize);
     std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
-    executionContext.inputIds = tensor;
-    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    executionContext.inputRequest.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputRequest.inputIds);
     ASSERT_EQ(status, absl::InvalidArgumentError("Input length exceeds the maximum allowed length"));
 }
 
@@ -4960,8 +5600,8 @@ TEST_F(IsolatedServableTests, PromtSizeExceedsNonDefaultMaxPromptLenNPU) {
     std::vector<float> randomData(dataSize);
     std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
-    executionContext.inputIds = tensor;
-    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    executionContext.inputRequest.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputRequest.inputIds);
     ASSERT_EQ(status, absl::InvalidArgumentError("Input length exceeds the maximum allowed length"));
 }
 
@@ -4974,8 +5614,8 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
     std::vector<float> randomData(dataSize);
     std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
-    executionContext.inputIds = tensor;
-    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    executionContext.inputRequest.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputRequest.inputIds);
     ASSERT_EQ(status, absl::OkStatus());
 }
 

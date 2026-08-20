@@ -21,14 +21,14 @@ from tests.functional.config import ovms_types
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.utils.inference.communication import GRPC, REST
 from tests.functional.utils.inference.inference_client_factory import InferenceClientFactory
-from tests.functional.utils.inference.serving import KFS, OPENAI, TFS, TRITON, COHERE
+from tests.functional.utils.inference.serving import KFS, OPENAI, TRITON, COHERE
 
 
 def api_type_non_fixture(serving, communication, ovms_type=None):
     return InferenceClientFactory.get_client(serving=serving, communication=communication, ovms_type=ovms_type)
 
 
-_possible_api_types = list(itertools.product([TFS, KFS], [GRPC, REST]))
+_possible_api_types = list(itertools.product([KFS], [GRPC, REST]))
 if OvmsType.CAPI in ovms_types:
     _possible_api_types += [OvmsType.CAPI]
 
@@ -41,18 +41,13 @@ def api_type(request):
         return api_type_non_fixture(*request.param, ovms_type=None)
 
 
-@pytest.fixture(scope="session", params=itertools.product([TFS], [GRPC, REST]), ids=lambda x: f":".join(x).upper())
-def tfs_api_type(request):
+@pytest.fixture(scope="session", params=itertools.product([KFS], [REST]), ids=lambda x: f":".join(x).upper())
+def rest_api_type(request):
     return api_type_non_fixture(*request.param)
 
 
-@pytest.fixture(scope="session", params=[(TFS, REST)], ids=lambda x: f":".join(x).upper())
-def tfs_rest_api_type(request):
-    return api_type_non_fixture(*request.param)
-
-
-@pytest.fixture(scope="session", params=[(TFS, GRPC)], ids=lambda x: f":".join(x).upper())
-def tfs_grpc_api_type(request):
+@pytest.fixture(scope="session", params=itertools.product([KFS], [GRPC]), ids=lambda x: f":".join(x).upper())
+def grpc_api_type(request):
     return api_type_non_fixture(*request.param)
 
 
@@ -93,14 +88,4 @@ def triton_grpc_api_type(request):
 
 @pytest.fixture(scope="session", params=[(TRITON, REST)], ids=lambda x: f":".join(x).upper())
 def triton_rest_api_type(request):
-    return api_type_non_fixture(*request.param)
-
-
-@pytest.fixture(scope="session", params=itertools.product([KFS, TFS], [REST]), ids=lambda x: f":".join(x).upper())
-def rest_api_type(request):
-    return api_type_non_fixture(*request.param)
-
-
-@pytest.fixture(scope="session", params=itertools.product([KFS, TFS], [GRPC]), ids=lambda x: f":".join(x).upper())
-def grpc_api_type(request):
     return api_type_non_fixture(*request.param)

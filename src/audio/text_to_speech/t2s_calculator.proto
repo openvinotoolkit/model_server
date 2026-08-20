@@ -40,4 +40,14 @@ message T2sCalculatorOptions {
       required string path = 2;
     }
     repeated SpeakerEmbeddings voices = 4;
+
+    // Minimum allowed value for the "speed" request parameter.
+    // Requests with speed < speed_min are rejected with HTTP 400.
+    // Default matches the OpenAI TTS API lower bound.
+    optional float speed_min = 5 [default = 0.25];
+
+    // Maximum allowed value for the "speed" request parameter.
+    // Requests with speed > speed_max are rejected with HTTP 400.
+    // Default matches the OpenAI TTS API upper bound.
+    optional float speed_max = 6 [default = 4.0];
 }

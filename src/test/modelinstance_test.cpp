@@ -14,8 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdio>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <thread>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -23,7 +25,6 @@
 #include <openvino/runtime/core.hpp>
 #include <stdlib.h>
 
-#include "../get_model_metadata_impl.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "gpuenvironment.hpp"
@@ -130,43 +131,27 @@ TEST_F(TestUnloadModel, NoNameOutput) {
 }
 
 TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
-    static std::thread thread;
-    static std::shared_ptr<ovms::ModelInstance> instance;
+    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ASSERT_EQ(modelInstance.loadModel(DUMMY_MODEL_CONFIG), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance.getStatus().getState());
 
-    class MockModelInstanceTriggeringUnload : public ovms::ModelInstance {
-    public:
-        MockModelInstanceTriggeringUnload(ov::Core& ieCore) :
-            ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
-        // This is to trigger model unloading in separate thread during GetModelMetadataImpl::buildResponse call.
-        const ovms::tensor_map_t& getInputsInfo() const override {
-            thread = std::thread([]() {
-                instance->retireModel();
-            });
-            // We need to wait for thread to start and trigger model unloading
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            return ovms::ModelInstance::getInputsInfo();
-        }
-    };
-    instance = std::make_shared<MockModelInstanceTriggeringUnload>(*ieCore);
-    ovms::Status status = instance->loadModel(DUMMY_MODEL_CONFIG);
-    ASSERT_EQ(status, ovms::StatusCode::OK);
-    ASSERT_EQ(ovms::ModelVersionState::AVAILABLE, instance->getStatus().getState());
-    tensorflow::serving::GetModelMetadataResponse response;
-    EXPECT_EQ(ovms::GetModelMetadataImpl::buildResponse(instance, &response), ovms::StatusCode::OK);
-    thread.join();
-    EXPECT_EQ(ovms::ModelVersionState::END, instance->getStatus().getState());
+    // Acquire unload guard — same mechanism KFS buildResponse uses internally
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> unloadGuard;
+    ASSERT_EQ(modelInstance.waitForLoaded(0, unloadGuard), ovms::StatusCode::OK);
+    ASSERT_NE(unloadGuard, nullptr);
 
-    // We expect unload to wait for response building by checking if packed data is correct.
-    // If unloadModel didn't wait for building to complete we would have empty input/output map.
-    tensorflow::serving::SignatureDefMap def;
-    response.metadata().at("signature_def").UnpackTo(&def);
-    const auto& inputs = ((*def.mutable_signature_def())["serving_default"]).inputs();
-    const auto& outputs = ((*def.mutable_signature_def())["serving_default"]).outputs();
-    EXPECT_EQ(inputs.size(), 1);
-    EXPECT_EQ(outputs.size(), 1);
-    EXPECT_EQ(inputs.begin()->second.name(), DUMMY_MODEL_INPUT_NAME);
-    EXPECT_EQ(outputs.begin()->second.name(), DUMMY_MODEL_OUTPUT_NAME);
-    instance.reset();
+    // retireModel must block while guard is held
+    std::thread retireThread([&modelInstance]() {
+        modelInstance.retireModel();
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    EXPECT_EQ(ovms::ModelVersionState::UNLOADING, modelInstance.getStatus().getState());
+
+    // Release guard — retire should now complete
+    unloadGuard.reset();
+    retireThread.join();
+    EXPECT_EQ(ovms::ModelVersionState::END, modelInstance.getStatus().getState());
 }
 
 TEST_F(TestUnloadModel, CheckIfCanUnload) {

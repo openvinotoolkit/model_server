@@ -52,7 +52,7 @@ protected:
 TEST_F(ParserConfigValidationTest, RegistryHasExpectedToolParsers) {
     const auto& names = getSupportedToolParserNames();
     for (const auto& expected : {"llama3", "hermes3", "phi4", "mistral", "gptoss",
-             "qwen3coder", "devstral", "lfm2", "gemma4"}) {
+             "qwen3coder", "devstral", "lfm2", "gemma4", "onyx"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), expected), names.end())
             << "Expected tool parser '" << expected << "' missing from registry";
     }
@@ -61,9 +61,19 @@ TEST_F(ParserConfigValidationTest, RegistryHasExpectedToolParsers) {
     EXPECT_FALSE(isSupportedToolParserName(""));
 }
 
+TEST_F(ParserConfigValidationTest, NoneIsAcceptedAsDisabledParser) {
+    EXPECT_TRUE(isParserDisabled("none"));
+    EXPECT_FALSE(isParserDisabled(""));
+    EXPECT_FALSE(isParserDisabled("hermes3"));
+    EXPECT_FALSE(isParserDisabled("None"));  // case-sensitive
+    // "none" passes validation (not rejected as unsupported)
+    EXPECT_TRUE(isSupportedToolParserName("none"));
+    EXPECT_TRUE(isSupportedReasoningParserName("none"));
+}
+
 TEST_F(ParserConfigValidationTest, RegistryHasExpectedReasoningParsers) {
     const auto& names = getSupportedReasoningParserNames();
-    for (const auto& expected : {"qwen3", "gemma4", "gptoss"}) {
+    for (const auto& expected : {"qwen3", "gemma4", "gptoss", "lfm2", "onyx"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), expected), names.end())
             << "Expected reasoning parser '" << expected << "' missing from registry";
     }
@@ -79,6 +89,7 @@ TEST_F(ParserConfigValidationTest, SupportedNamesStringContainsAllParsers) {
     const std::string reasoningNames = getSupportedReasoningParserNamesAsString();
     EXPECT_NE(reasoningNames.find("qwen3"), std::string::npos);
     EXPECT_NE(reasoningNames.find("gptoss"), std::string::npos);
+    EXPECT_NE(reasoningNames.find("lfm2"), std::string::npos);
 }
 
 TEST_F(ParserConfigValidationTest, OutputParserThrowsOnUnknownToolParser) {

@@ -40,5 +40,12 @@ uint16_t getDockerCpuQuota();
  * @return uint16_t Number of physical cores, or hardware_concurrency if detection fails
  */
 uint16_t getPhysicalCoresPerSocket();
+
+/**
+ * @brief Get number of CPU sockets
+ * @return uint16_t Number of CPU sockets, or 1 if detection fails
+ */
+uint16_t getSocketsCount();
+
 #endif
 }  // namespace ovms

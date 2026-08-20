@@ -1,0 +1,4 @@
+{
+  "architectures": ["Lfm2MoeForCausalLM"],
+  "model_type": "lfm2_moe"
+}

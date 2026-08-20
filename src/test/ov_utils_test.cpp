@@ -240,3 +240,171 @@ TEST(OVUtils, ValidatePluginConfigurationAllowEnableMmap) {
     auto model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml", {}, pluginConfig);
     auto compiledModel = ieCore.compile_model(model, "CPU", pluginConfig);
 }
+
+#ifdef __linux__
+// Tests using the testable overload with explicit system parameters
+
+TEST(OVUtils, ApplyDefaultCpuPropertiesLatencyConstrainedContainer) {
+    // Simulate: 8 cores available in docker, 24 physical cores per socket, 2 sockets
+    ov::AnyMap properties;
+    properties[ov::hint::performance_mode.name()] = "LATENCY";
+
+    auto status = ovms::applyDefaultCpuProperties(properties, /*coreCount=*/8, /*physicalCoresPerSocket=*/24, /*socketsCount=*/2, /*dockerCpuQuota=*/8);
+    ASSERT_TRUE(status.ok());
+
+    // coreCount(8) <= physicalCoresPerSocket(24) * socketsCount(2) = 48, so threads should be set
+    ASSERT_NE(properties.find(ov::inference_num_threads.name()), properties.end());
+    EXPECT_EQ(properties[ov::inference_num_threads.name()].as<int>(), 8);
+
+    // NUM_STREAMS should not be set for LATENCY mode
+    EXPECT_EQ(properties.find(ov::num_streams.name()), properties.end());
+
+    // CPU pinning: dockerCpuQuota > 0 → pinning disabled
+    ASSERT_NE(properties.find(ov::hint::enable_cpu_pinning.name()), properties.end());
+    EXPECT_EQ(properties[ov::hint::enable_cpu_pinning.name()].as<bool>(), false);
+}
+
+TEST(OVUtils, ApplyDefaultCpuPropertiesThroughputConstrainedContainer) {
+    // Simulate: 8 cores available in docker, 24 physical cores per socket, 2 sockets
+    ov::AnyMap properties;
+    properties[ov::hint::performance_mode.name()] = "THROUGHPUT";
+
+    auto status = ovms::applyDefaultCpuProperties(properties, /*coreCount=*/8, /*physicalCoresPerSocket=*/24, /*socketsCount=*/2, /*dockerCpuQuota=*/8);
+    ASSERT_TRUE(status.ok());
+
+    // num_streams = min(8, 24*2) = 8
+    ASSERT_NE(properties.find(ov::num_streams.name()), properties.end());
+    EXPECT_EQ(properties[ov::num_streams.name()].as<int>(), 8);
+
+    // inference_num_threads = 8 (coreCount <= totalPhysical)
+    ASSERT_NE(properties.find(ov::inference_num_threads.name()), properties.end());
+    EXPECT_EQ(properties[ov::inference_num_threads.name()].as<int>(), 8);
+}
+
+TEST(OVUtils, ApplyDefaultCpuPropertiesThroughputUnconstrainedContainer) {
+    // Simulate: 96 cores available, 24 physical cores per socket, 2 sockets (48 physical total)
+    // coreCount(96) > physicalCoresPerSocket(24) * socketsCount(2) = 48
+    ov::AnyMap properties;
+    properties[ov::hint::performance_mode.name()] = "THROUGHPUT";
+
+    auto status = ovms::applyDefaultCpuProperties(properties, /*coreCount=*/96, /*physicalCoresPerSocket=*/24, /*socketsCount=*/2, /*dockerCpuQuota=*/0);
+    ASSERT_TRUE(status.ok());
+
+    // num_streams = min(96, 48) = 48
+    ASSERT_NE(properties.find(ov::num_streams.name()), properties.end());
+    EXPECT_EQ(properties[ov::num_streams.name()].as<int>(), 48);
+
+    // inference_num_threads NOT set (coreCount > totalPhysical, let OV decide)
+    EXPECT_EQ(properties.find(ov::inference_num_threads.name()), properties.end());
+
+    // CPU pinning: dockerCpuQuota == 0 → pinning enabled
+    ASSERT_NE(properties.find(ov::hint::enable_cpu_pinning.name()), properties.end());
+    EXPECT_EQ(properties[ov::hint::enable_cpu_pinning.name()].as<bool>(), true);
+}
+
+TEST(OVUtils, ApplyDefaultCpuPropertiesLatencyUnconstrainedContainer) {
+    // Simulate: 96 cores (with HT), 24 physical cores per socket, 2 sockets
+    ov::AnyMap properties;
+    properties[ov::hint::performance_mode.name()] = "LATENCY";
+
+    auto status = ovms::applyDefaultCpuProperties(properties, /*coreCount=*/96, /*physicalCoresPerSocket=*/24, /*socketsCount=*/2, /*dockerCpuQuota=*/0);
+    ASSERT_TRUE(status.ok());
+
+    // coreCount(96) > 48, so inference_num_threads should NOT be set
+    EXPECT_EQ(properties.find(ov::inference_num_threads.name()), properties.end());
+    EXPECT_EQ(properties.find(ov::num_streams.name()), properties.end());
+}
+
+TEST(OVUtils, ApplyDefaultCpuPropertiesNoPerformanceHint) {
+    // No PERFORMANCE_HINT set - should only set pinning and threads
+    ov::AnyMap properties;
+
+    auto status = ovms::applyDefaultCpuProperties(properties, /*coreCount=*/16, /*physicalCoresPerSocket=*/24, /*socketsCount=*/1, /*dockerCpuQuota=*/16);
+    ASSERT_TRUE(status.ok());
+
+    // No num_streams (no throughput hint)
+    EXPECT_EQ(properties.find(ov::num_streams.name()), properties.end());
+
+    // inference_num_threads set (16 <= 24)
+    ASSERT_NE(properties.find(ov::inference_num_threads.name()), properties.end());
+    EXPECT_EQ(properties[ov::inference_num_threads.name()].as<int>(), 16);
+}
+
+TEST(OVUtils, ApplyDefaultCpuPropertiesDoesNotOverrideExistingValues) {
+    // Pre-set values should not be overwritten
+    ov::AnyMap properties;
+    properties[ov::hint::performance_mode.name()] = "THROUGHPUT";
+    properties[ov::num_streams.name()] = 4;
+    properties[ov::inference_num_threads.name()] = 12;
+    properties[ov::hint::enable_cpu_pinning.name()] = true;
+
+    auto status = ovms::applyDefaultCpuProperties(properties, /*coreCount=*/8, /*physicalCoresPerSocket=*/24, /*socketsCount=*/2, /*dockerCpuQuota=*/8);
+    ASSERT_TRUE(status.ok());
+
+    // All values should remain unchanged
+    EXPECT_EQ(properties[ov::num_streams.name()].as<int>(), 4);
+    EXPECT_EQ(properties[ov::inference_num_threads.name()].as<int>(), 12);
+    EXPECT_EQ(properties[ov::hint::enable_cpu_pinning.name()].as<bool>(), true);
+}
+#endif
+
+TEST(RecommendTargetDevice, NoGpuDevicesReturnsCpu) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices;
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "CPU");
+}
+
+TEST(RecommendTargetDevice, SingleDiscreteGpuReturnsIt) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU", /*isDiscrete=*/true, /*freeMemBytes=*/8000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU");
+}
+
+TEST(RecommendTargetDevice, SingleIntegratedGpuReturnsIt) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU", /*isDiscrete=*/false, /*freeMemBytes=*/2000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU");
+}
+
+TEST(RecommendTargetDevice, MultipleDiscreteGpusReturnsMostFreeVram) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/true, /*freeMemBytes=*/4000000000},
+        {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/8000000000},
+        {"GPU.2", /*isDiscrete=*/true, /*freeMemBytes=*/6000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.1");
+}
+
+TEST(RecommendTargetDevice, DiscretePreferredOverIntegrated) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/false, /*freeMemBytes=*/2000000000},
+        {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/8000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.1");
+}
+
+TEST(RecommendTargetDevice, MultipleIntegratedGpusReturnsFirst) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/false, /*freeMemBytes=*/2000000000},
+        {"GPU.1", /*isDiscrete=*/false, /*freeMemBytes=*/4000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.0");
+}
+
+TEST(RecommendTargetDevice, MultipleDiscreteGpusWithEqualVramReturnsFirst) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/true, /*freeMemBytes=*/8000000000},
+        {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/8000000000}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.0");
+}
+
+TEST(RecommendTargetDevice, MultipleDiscreteGpusWithZeroVramReturnsFirst) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/true, /*freeMemBytes=*/0},
+        {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/0}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.0");
+}
+
+TEST(RecommendTargetDevice, MixedDiscreteAndIntegratedPrefersDiscrete) {
+    std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", /*isDiscrete=*/false, /*freeMemBytes=*/16000000000},
+        {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/1000000000}};
+    // Even though integrated has more free memory, discrete is preferred
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.1");
+}

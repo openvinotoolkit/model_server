@@ -22,12 +22,13 @@
 #pragma warning(disable : 6386)
 #include "absl/status/status.h"
 #pragma warning(pop)
-#include "openvino/genai/whisper_pipeline.hpp"
+#include "openvino/genai/automatic_speech_recognition/pipeline.hpp"
 
 #include "src/audio/speech_to_text/s2t_calculator.pb.h"
 #include "src/http_payload.hpp"
 #include "src/json_parser.hpp"
 #include "src/logging.hpp"
+#include "src/ov_utils.hpp"
 #include "src/stringutils.hpp"
 
 namespace ovms {
@@ -42,18 +43,24 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
     } else {
         parsedModelsPath = fsModelsPath;
     }
+    std::string device = nodeOptions.target_device();
+    if (device.empty()) {
+        device = recommendTargetDevice();
+        SPDLOG_INFO("No device specified for STT model, using recommended device: {}", device);
+    }
     ov::AnyMap config;
     auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), config);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
         throw std::runtime_error("Error during plugin_config option parsing");
     }
+    applyGlobalCacheDirFallback(config);
     enableWordTimestamps = nodeOptions.enable_word_timestamps();
-    if (enableWordTimestamps && nodeOptions.target_device() == "NPU") {
+    if (enableWordTimestamps && device == "NPU") {
         config["STATIC_PIPELINE"] = true;
     }
     config["word_timestamps"] = enableWordTimestamps;
-    sttPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), nodeOptions.target_device(), config);
+    sttPipeline = std::make_shared<ov::genai::ASRPipeline>(parsedModelsPath.string(), device, config);
 
     streamingExecutor = std::make_unique<SttExecutorWrapper>(sttPipeline, sttPipelineMutex);
 }
@@ -65,7 +72,7 @@ void SttServable::addRequest(std::shared_ptr<SttServableExecutionContext> execut
     streamingExecutor->addRequest(std::move(executionContext));
 }
 
-absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai::WhisperGenerationConfig& config) {
+absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai::ASRGenerationConfig& config) {
     std::string temperatureStr = payload.multipartParser->getFieldByName("temperature");
     if (temperatureStr.size() > 0) {
         SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received temperature: {}", temperatureStr);
@@ -83,7 +90,7 @@ absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai
     return absl::OkStatus();
 }
 
-absl::Status SttServable::updateTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
+absl::Status SttServable::updateTranscriptionConfig(ov::genai::ASRGenerationConfig& config,
     const std::shared_ptr<SttServable>& servable, const HttpPayload& payload) {
     std::string language = payload.multipartParser->getFieldByName("language");
     if (language.size() > 0) {

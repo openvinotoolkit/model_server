@@ -1,0 +1,101 @@
+{#-
+  Modifications:
+    *  Adding rendering of executed tool calls to the model input. It improves accuracy in multiturn scenarios and adds support for Minja.
+#}
+{{- bos_token -}}
+
+{%- macro format_arg_value(arg_value) -%}
+    {%- if arg_value is string -%}
+        {{- "'" + arg_value + "'" -}}
+    {%- elif arg_value is mapping -%}
+        {{- arg_value | tojson -}}
+    {%- else -%}
+        {{- arg_value | string -}}
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- macro render_tool_calls(tool_calls) -%}
+    {%- set tool_calls_ns = namespace(tool_calls=[]) -%}
+    {%- for tool_call in tool_calls -%}
+        {%- set func_name = tool_call["function"]["name"] -%}
+        {%- set func_args = tool_call["function"]["arguments"] -%}
+        {#- Modified: handle both string and mapping tool call arguments -#}
+        {%- if func_args is string -%}
+            {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + func_args + ")"] -%}
+        {%- else -%}
+            {%- set args_ns = namespace(arg_strings=[]) -%}
+            {%- for arg_name, arg_value in func_args.items() -%}
+                {%- set args_ns.arg_strings = args_ns.arg_strings + [arg_name + "=" + format_arg_value(arg_value)] -%}
+            {%- endfor -%}
+            {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + (args_ns.arg_strings | join(", ")) + ")"] -%}
+        {%- endif -%}
+    {%- endfor -%}
+    {{- "<|tool_call_start|>[" + (tool_calls_ns.tool_calls | join(", ")) + "]<|tool_call_end|>" -}}
+{%- endmacro -%}
+
+{%- set keep_past_thinking = keep_past_thinking | default(false) -%}
+{%- set ns = namespace(system_prompt="") -%}
+{%- if messages[0]["role"] == "system" -%}
+    {%- set sys_content = messages[0]["content"] -%}
+    {%- if sys_content is not string -%}
+        {%- for item in sys_content -%}
+            {%- if item["type"] == "text" -%}
+                {%- set ns.system_prompt = ns.system_prompt + item["text"] -%}
+            {%- endif -%}
+        {%- endfor -%}
+    {%- else -%}
+        {%- set ns.system_prompt = sys_content -%}
+    {%- endif -%}
+    {%- set messages = messages[1:] -%}
+{%- endif -%}
+{%- if tools -%}
+    {%- set ns.system_prompt = ns.system_prompt + ("\n" if ns.system_prompt else "") + "List of tools: [" -%}
+    {%- for tool in tools -%}
+        {%- if tool is not string -%}
+            {%- set tool = tool | tojson -%}
+        {%- endif -%}
+        {%- set ns.system_prompt = ns.system_prompt + tool -%}
+        {%- if not loop.last -%}
+            {%- set ns.system_prompt = ns.system_prompt + ", " -%}
+        {%- endif -%}
+    {%- endfor -%}
+    {%- set ns.system_prompt = ns.system_prompt + "]" -%}
+{%- endif -%}
+{%- if ns.system_prompt -%}
+    {{- "<|im_start|>system\n" + ns.system_prompt + "<|im_end|>\n" -}}
+{%- endif -%}
+{%- set ns.last_assistant_index = -1 -%}
+{%- for message in messages -%}
+    {%- if message["role"] == "assistant" -%}
+        {%- set ns.last_assistant_index = loop.index0 -%}
+    {%- endif -%}
+{%- endfor -%}
+{%- for message in messages -%}
+    {{- "<|im_start|>" + message["role"] + "\n" -}}
+    {%- set content = message["content"] -%}
+    {%- if content is not string -%}
+        {%- set ns.content = "" -%}
+        {%- for item in content -%}
+            {%- if item["type"] == "image" -%}
+                {%- set ns.content = ns.content + "<image>" -%}
+            {%- elif item["type"] == "text" -%}
+                {%- set ns.content = ns.content + item["text"] -%}
+            {%- else -%}
+                {%- set ns.content = ns.content + item | tojson -%}
+            {%- endif -%}
+        {%- endfor -%}
+        {%- set content = ns.content -%}
+    {%- endif -%}
+    {%- if message["tool_calls"] is defined -%}
+        {{- render_tool_calls(message["tool_calls"]) -}}
+    {%- endif -%}
+    {%- if message["role"] == "assistant" and not keep_past_thinking and loop.index0 != ns.last_assistant_index -%}
+        {%- if "</think>" in content -%}
+            {%- set content = content.split("</think>")[-1] | trim -%}
+        {%- endif -%}
+    {%- endif -%}
+    {{- content + "<|im_end|>\n" -}}
+{%- endfor -%}
+{%- if add_generation_prompt -%}
+    {{- "<|im_start|>assistant\n" -}}
+{%- endif -%}

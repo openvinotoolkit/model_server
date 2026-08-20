@@ -17,6 +17,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "../../../logging.hpp"
@@ -42,6 +43,37 @@
 
 namespace ovms {
 
+void ContinuousBatchingServable::logPerfMetrics(ov::genai::PerfMetrics& perfMetrics) {
+    const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
+    const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();
+    // GenerationHandle metrics are scoped to this request; TTFT contains one sample.
+    const double ttftMs = perfMetrics.get_ttft().mean;
+    const double prefillSpeedTps = calculatePrefillSpeed(inputTokenCount, ttftMs);
+
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "Request processing metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f}",
+        inputTokenCount,
+        outputTokenCount,
+        inputTokenCount + outputTokenCount,
+        ttftMs,
+        prefillSpeedTps);
+}
+
+// CB stepping thread writes metrics in _free_non_running_requests() slightly after
+// pushing the final output. Yield briefly to close the race window.
+// TODO: remove once GenAI's get_perf_metrics() blocks instead of asserting (fix in generation_stream.hpp)
+static std::optional<ov::genai::PerfMetrics> tryGetPerfMetrics(const ov::genai::GenerationHandle& handle) {
+    for (int i = 0; i < 1000; ++i) {
+        try {
+            return handle->get_perf_metrics();
+        } catch (const ov::Exception&) {
+            std::this_thread::yield();
+        }
+    }
+    return std::nullopt;
+}
+
 void ContinuousBatchingServable::notifyExecutorThread() {
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Notifying executor thread");
     if (properties->llmExecutorWrapper == nullptr) {
@@ -53,15 +85,15 @@ void ContinuousBatchingServable::notifyExecutorThread() {
 
 absl::Status ContinuousBatchingServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     // Additional validation for big prompt and setting without dynamic split fuse (GenAI checks it during scheduling which is too late for us)
-    if (executionContext->inputIds.get_size() > properties->schedulerConfig.max_num_batched_tokens && properties->schedulerConfig.dynamic_split_fuse == false) {
+    if (executionContext->inputRequest.inputIds.get_size() > properties->schedulerConfig.max_num_batched_tokens && properties->schedulerConfig.dynamic_split_fuse == false) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received request with more tokens than max_num_batch_tokens {} > {}. Without dynamic split fuse on, such request is invalid",
-            executionContext->inputIds.get_size(), properties->schedulerConfig.max_num_batched_tokens);
-        return absl::InvalidArgumentError("Input length exceeds pipeline capabilities: " + std::to_string(executionContext->inputIds.get_size()) +
+            executionContext->inputRequest.inputIds.get_size(), properties->schedulerConfig.max_num_batched_tokens);
+        return absl::InvalidArgumentError("Input length exceeds pipeline capabilities: " + std::to_string(executionContext->inputRequest.inputIds.get_size()) +
                                           " > " + std::to_string(properties->schedulerConfig.max_num_batched_tokens));
     }
-    executionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
-        executionContext->inputIds,
-        executionContext->generationConfigBuilder->getConfig());
+    executionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,
+        executionContext->inputRequest.inputIds,
+        executionContext->inputRequest.generationConfig);
     return absl::OkStatus();
 }
 
@@ -142,6 +174,30 @@ absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared
         }
     }
     return absl::OkStatus();
+}
+
+absl::Status ContinuousBatchingServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto status = GenAiServable::prepareCompleteResponse(executionContext);
+    if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
+        auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
+        auto perfMetrics = tryGetPerfMetrics(cbExecutionContext->generationHandle);
+        if (perfMetrics)
+            logPerfMetrics(*perfMetrics);
+    }
+    return status;
+}
+
+absl::Status ContinuousBatchingServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto status = GenAiServable::preparePartialResponse(executionContext);
+    if (status.ok() &&
+        !executionContext->sendLoopbackSignal &&
+        llm_calculator_logger->should_log(spdlog::level::debug)) {
+        auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
+        auto perfMetrics = tryGetPerfMetrics(cbExecutionContext->generationHandle);
+        if (perfMetrics)
+            logPerfMetrics(*perfMetrics);
+    }
+    return status;
 }
 
 }  // namespace ovms

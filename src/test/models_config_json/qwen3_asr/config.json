@@ -1,0 +1,6 @@
+{
+  "architectures": ["Qwen3ASRForConditionalGeneration"],
+  "model_type": "qwen3_asr",
+  "return_dict": true,
+  "output_hidden_states": false
+}

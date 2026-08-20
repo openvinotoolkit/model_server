@@ -19,20 +19,10 @@
 #include <set>
 #include <string>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
-#include "rest_parser.hpp"
+#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 
 namespace ovms {
 class Status;
-Status makeJsonFromPredictResponse(
-    tensorflow::serving::PredictResponse& response_proto,
-    std::string* response_json,
-    Order order);
-
 Status makeJsonFromPredictResponse(
     const ::KFSResponse& response_proto,
     std::string* response_json,

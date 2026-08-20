@@ -29,7 +29,7 @@
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "../status.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
+#include "../tensorflow_type_utils.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6385 6386 6326 6011 6294 6201 4309 4005 4456 6246)

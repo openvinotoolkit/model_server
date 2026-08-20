@@ -24,6 +24,7 @@ from tests.functional.constants.metrics import MetricsPolicy
 from tests.functional.constants.ovms import Ovms, set_plugin_config_boolean_value
 from tests.functional.constants.ovms_openai import ImagesRequestParamsValues
 from tests.functional.constants.paths import Paths
+from tests.functional.utils.helpers import get_base_device
 
 logger = get_logger(__name__)
 
@@ -94,7 +95,7 @@ def create_ovms_command(
     else:
         plugin_config = parameters.get_plugin_config_from_regular_models()
         if enable_plugin_config_target_device:
-            plugin_config_target_device = Ovms.PLUGIN_CONFIG[parameters.target_device]
+            plugin_config_target_device = Ovms.PLUGIN_CONFIG[get_base_device(parameters.target_device)]
             plugin_config = (
                 {**plugin_config, **plugin_config_target_device}
                 if plugin_config is not None

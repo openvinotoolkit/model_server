@@ -17,10 +17,7 @@
 
 #include <optional>
 #include <string>
-#include <thread>
-#include <variant>
 
-#include <spdlog/spdlog.h>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -31,12 +28,6 @@ namespace ovms {
 extern const std::string DEFAULT_GRAPH_FILENAME;
 extern const std::string DEFAULT_SUBCONFIG_FILENAME;
 extern const std::string DEFAULT_MODELMESH_SUBCONFIG_FILENAME;
-
-struct GraphQueueAutoTag {
-    bool operator==(const GraphQueueAutoTag&) const { return true; }
-};
-
-using GraphQueueSizeValue = std::optional<std::variant<int, GraphQueueAutoTag>>;
 
 class Status;
 
@@ -69,11 +60,10 @@ private:
     /**
      * @brief Graph queue size configuration.
      *
-     * - std::nullopt              => user did not set this field
-     * - int                       => user explicitly set a numeric size
-     * - GraphQueueAutoTag         => user explicitly set "AUTO"
+     * - std::nullopt => queue disabled (not set or explicitly cleared)
+     * - int > 0      => queue enabled with this size (resolved from AUTO or explicit value)
      */
-    GraphQueueSizeValue graphQueueSize;
+    std::optional<int> graphQueueSize;
 
     /**
      * @brief Idle unload timeout in seconds.
@@ -163,9 +153,9 @@ public:
     /**
      * @brief Get the graph queue size setting.
      *
-     * @return const GraphQueueSizeValue& - nullopt if not set, int or GraphQueueAutoTag
+     * @return const std::optional<int>& - nullopt if disabled, positive int if enabled
      */
-    const GraphQueueSizeValue& getGraphQueueSize() const {
+    const std::optional<int>& getGraphQueueSize() const {
         return this->graphQueueSize;
     }
 
@@ -173,34 +163,19 @@ public:
         this->graphQueueSize = size;
     }
 
-    void setGraphQueueSizeAuto() {
-        this->graphQueueSize = GraphQueueAutoTag{};
+    void clearGraphQueueSize() {
+        this->graphQueueSize.reset();
     }
 
     /**
-     * @brief Resolve the graph queue size setting to a concrete integer.
+     * @brief Get the resolved graph queue size as a concrete integer.
      *
      * Returns:
-     *   0   => queue creation disabled (user set 0 or not set)
-     *   >0  => explicit size or resolved AUTO
-     *
-     * Negative values are rejected at parse time (resolveGraphQueueSize).
-     * When not set (nullopt): returns 0 (queue disabled).
-     * When AUTO: returns hardware_concurrency() or 16 as fallback.
+     *   0   => queue creation disabled (or not set)
+     *   >0  => queue enabled with this size
      */
     int getInitialQueueSize() const {
-        if (!this->graphQueueSize.has_value()) {
-            return 0;  // not set - queue disabled by default
-        }
-        if (std::holds_alternative<GraphQueueAutoTag>(*this->graphQueueSize)) {
-            unsigned int hwThreads = std::thread::hardware_concurrency();
-            if (hwThreads == 0) {
-                SPDLOG_WARN("std::thread::hardware_concurrency() returned 0 (unknown). Falling back to graph queue size 16.");
-                return 16;
-            }
-            return static_cast<int>(hwThreads);
-        }
-        return std::get<int>(*this->graphQueueSize);
+        return this->graphQueueSize.value_or(0);
     }
 
     int getIdleUnloadTimeoutSeconds() const {

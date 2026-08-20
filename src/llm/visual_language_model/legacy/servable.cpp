@@ -14,10 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <algorithm>
+#include <chrono>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -47,27 +48,37 @@
 #if (PYTHON_DISABLE == 0)
 #include "../../py_jinja_template_processor.hpp"
 #endif
+#include "../../io_processing/generation_config_builder.hpp"
 #include "servable.hpp"
 
 namespace ovms {
 
-absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
-    // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
-    if (payload.parsedJson->HasParseError()) {
-        return absl::InvalidArgumentError("Non-json request received in text generation calculator");
+void VisualLanguageModelLegacyServable::logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics) {
+    const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
+    const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();
+    const double prepareEmbeddingsTimeMs = perfMetrics.get_prepare_embeddings_duration().mean;
+    const double ttftMs = perfMetrics.get_ttft().mean;
+    // Legacy VLM measures TTFT from the beginning of generate(), including embeddings preparation.
+    const double llmTtftMs = std::max(ttftMs - prepareEmbeddingsTimeMs, 0.0);
+    const double prefillSpeedTps = calculatePrefillSpeed(inputTokenCount, llmTtftMs);
+
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "Request processing metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | prepare_embeddings_time_ms: {:.3f} | llm_ttft_ms: {:.3f} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f} | image_slice_count: {}",
+        inputTokenCount,
+        outputTokenCount,
+        inputTokenCount + outputTokenCount,
+        prepareEmbeddingsTimeMs,
+        llmTtftMs,
+        ttftMs,
+        prefillSpeedTps,
+        perfMetrics.get_total_image_slice_count());
+}
+
+absl::Status VisualLanguageModelLegacyServable::validateEndpoint(Endpoint endpoint) const {
+    if (endpoint == Endpoint::COMPLETIONS) {
+        return absl::InvalidArgumentError("VLM Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
-    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
-        executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
-    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses") {
-        executionContext->endpoint = Endpoint::RESPONSES;
-    } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
-        executionContext->endpoint = Endpoint::TOKENIZE;
-    } else {
-        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions, /v3/responses endpoint or /v3/tokenize");
-    }
-    executionContext->payload = payload;
     return absl::OkStatus();
 }
 
@@ -172,18 +183,15 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
             std::move(unaryCallback),
             streamerConfig);
     }
-    legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
+    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
         getProperties()->decodingMethod);
-    legacyExecutionContext->generationConfigBuilder->parseConfigFromRequest(legacyExecutionContext->apiHandler->getRequest());
-    legacyExecutionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
-    try {
-        legacyExecutionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
-    } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
-        legacyExecutionContext->generationConfigBuilder->unsetStructuredOutputConfig();
+    auto inputRequestResult = legacyExecutionContext->apiHandler->extractInputRequest(configBuilder);
+    if (!inputRequestResult.ok()) {
+        return inputRequestResult.status();
     }
+    legacyExecutionContext->inputRequest = std::move(*inputRequestResult);
     return absl::OkStatus();
 }
 
@@ -226,6 +234,9 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
     const std::string& completeText = legacyExecutionContext->accumulatedUnaryText;
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
         legacyExecutionContext->results, completeText);
+    if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+        logPerfMetrics(legacyExecutionContext->results.perf_metrics);
+    }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
@@ -320,117 +331,12 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+            logPerfMetrics(legacyExecutionContext->results.perf_metrics);
+        }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }
-    return absl::OkStatus();
-}
-
-absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
-    if (vlmExecutionContext->apiHandler == nullptr) {
-        return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
-    }
-    if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
-        ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
-
-        for (size_t i = 0; i < chatHistory.size(); i++) {
-            const auto& message = chatHistory[i];
-            if (message["content"].as_string().value_or("").find("<ov_genai_image_") != std::string::npos) {
-                return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
-            }
-        }
-
-        const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
-        size_t imageIndex = 0;
-        std::unordered_map<size_t, std::string> imageTags;
-        for (const auto& image : imageHistory) {
-            const auto& [chatTurnIndex, imageTensor] = image;
-            std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
-            vlmExecutionContext->inputImages.push_back(imageTensor);
-        }
-        for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
-            std::string messageContent = chatHistory[chatTurnIndex]["content"].as_string().value_or("");
-            chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
-        }
-
-#if (PYTHON_DISABLE == 0)
-        if (getProperties()->chatTemplateMode == ChatTemplateMode::JINJA) {
-            std::string jsonForTemplate;
-            if (vlmExecutionContext->apiHandler->getProcessedJson().size() > 0) {
-                jsonForTemplate = vlmExecutionContext->apiHandler->getProcessedJson();
-            } else {
-                jsonForTemplate = vlmExecutionContext->payload.body;
-            }
-            // Inject image tags into the JSON messages for Python Jinja template processing
-            if (!imageTags.empty()) {
-                rapidjson::Document jsonDoc;
-                jsonDoc.Parse(jsonForTemplate.c_str());
-                if (!jsonDoc.HasParseError() && jsonDoc.IsObject() && jsonDoc.HasMember("messages") && jsonDoc["messages"].IsArray()) {
-                    auto& messages = jsonDoc["messages"];
-                    for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
-                        if (chatTurnIndex < messages.Size()) {
-                            auto& msg = messages[chatTurnIndex];
-                            if (msg.IsObject() && msg.HasMember("content") && msg["content"].IsString()) {
-                                std::string newContent = imageTagString + msg["content"].GetString();
-                                msg["content"].SetString(newContent.c_str(), newContent.length(), jsonDoc.GetAllocator());
-                            }
-                        }
-                    }
-                    rapidjson::StringBuffer buffer;
-                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                    jsonDoc.Accept(writer);
-                    jsonForTemplate = buffer.GetString();
-                }
-            }
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "VLM Legacy: Applying chat template using Python Jinja processor");
-            bool success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, jsonForTemplate, vlmExecutionContext->inputText);
-            if (!success) {
-                return absl::Status(absl::StatusCode::kInvalidArgument, vlmExecutionContext->inputText);
-            }
-        } else  // NOLINT(readability/braces)
-#endif
-        {
-            constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
-            auto toolParsingResult = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
-            if (!toolParsingResult.ok()) {
-                return toolParsingResult.status();
-            }
-            const auto& tools = toolParsingResult.value();
-            auto chatTemplateKwargsParsingResult = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-            if (!chatTemplateKwargsParsingResult.ok()) {
-                return chatTemplateKwargsParsingResult.status();
-            }
-            const auto& chatTemplateKwargs = chatTemplateKwargsParsingResult.value();
-            try {
-                vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
-            } catch (const std::exception& e) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
-                return absl::Status(absl::StatusCode::kInvalidArgument, "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
-            }
-        }
-        if (vlmExecutionContext->inputText.empty()) {
-            return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
-        }
-        if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
-            vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
-        }
-    } else {
-        return absl::InvalidArgumentError("Unsupported endpoint");
-    }
-
-    if (Config::instance().getServerSettings().verboseResponse) {
-        vlmExecutionContext->apiHandler->enableVerboseResponse(vlmExecutionContext->inputText);
-    }
-
-    // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM input text: {}", vlmExecutionContext->inputText);
-    bool encodeAddSpecialTokens = false;  // assuming chat template application added special tokens
-    ov::Tensor inputTextIds = getProperties()->tokenizer.encode(vlmExecutionContext->inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
-    vlmExecutionContext->apiHandler->setPromptTokensUsage(inputTextIds.get_size());
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(inputTextIds));
-
     return absl::OkStatus();
 }
 

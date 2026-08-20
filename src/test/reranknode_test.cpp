@@ -32,7 +32,7 @@ using namespace ovms;
 
 class RerankHttpTest : public V3HttpTest {
 protected:
-    std::string endpoint = "/v3/rerank";
+    std::string endpoint = "/v1/rerank";
     std::string modelName = "rerank_ov";
     static std::unique_ptr<std::thread> t;
 
@@ -159,7 +159,7 @@ TEST_F(RerankHttpTest, positiveReturnDocuments) {
 
 class RerankWithParamsHttpTest : public V3HttpTest {
 protected:
-    std::string endpoint = "/v3/rerank";
+    std::string endpoint = "/v1/rerank";
     static std::unique_ptr<std::thread> t;
 
 public:
@@ -281,7 +281,7 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
 
 class RerankWithInvalidParamsHttpTest : public V3HttpTest {
 protected:
-    std::string endpoint = "/v3/rerank";
+    std::string endpoint = "/v1/rerank";
     static std::unique_ptr<std::thread> t;
 
 public:
@@ -345,7 +345,7 @@ protected:
     static std::unique_ptr<std::thread> t;
 
 public:
-    const std::string endpointTokenize = "/v3/tokenize";
+    const std::string endpointTokenize = "/v1/tokenize";
     static void SetUpTestSuite() {
         std::string port = "9173";
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/config.json");

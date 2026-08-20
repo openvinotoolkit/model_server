@@ -24,7 +24,7 @@ import numpy as np
 from tokens_bert import text_to_tokens, load_vocab_file, Token
 from html_reader import get_paragraphs
 import numpy as np
-import ovmsclient
+import tritonclient.grpc as grpcclient
 
 class ConcatenatedParagraph():
     def __init__(self, text="", tokens=[]):
@@ -99,7 +99,7 @@ def main():
     args = build_argparser().parse_args()
 
     # create grpc connection
-    client = ovmsclient.make_grpc_client("{}:{}".format(args.grpc_address,args.grpc_port))
+    client = grpcclient.InferenceServerClient(url="{}:{}".format(args.grpc_address,args.grpc_port))
 
     if args.colors:
         COLOR_RED = "\033[91m"
@@ -180,7 +180,16 @@ def main():
                 inputs[input_names[3]] = np.arange(input_ids_length, dtype=np.int64)[None,:]
 
             t_start = time.perf_counter()
-            res = client.predict(inputs, args.model_name, timeout=10.0)
+            infer_inputs = []
+            for inp_name in inputs:
+                t = inputs[inp_name]
+                infer_input = grpcclient.InferInput(inp_name, t.shape, "INT64")
+                infer_input.set_data_from_numpy(t)
+                infer_inputs.append(infer_input)
+            result = client.infer(args.model_name, infer_inputs)
+            res = {}
+            for out_name in output_names:
+                res[out_name] = result.as_numpy(out_name)
             t_end = time.perf_counter()
 
             t_count += 1

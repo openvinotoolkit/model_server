@@ -81,7 +81,6 @@ ovms_cc_library(
     ],
     deps = [
         "@azure//:storage",
-        "@cpprest//:sdk",
         "libovmsfilesystem",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",

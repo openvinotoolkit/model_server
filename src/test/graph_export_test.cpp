@@ -39,6 +39,7 @@ const std::string expectedOneSettingPluginGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -48,7 +49,6 @@ const std::string expectedOneSettingPluginGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
             models_path: "./",
             plugin_config: '{"KV_CACHE_PRECISION":"u8"}',
             enable_prefix_caching: true,
@@ -77,6 +77,7 @@ const std::string expectedFullPluginGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -86,7 +87,6 @@ const std::string expectedFullPluginGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
             models_path: "./",
             plugin_config: '{"KV_CACHE_PRECISION":"u8","MAX_PROMPT_LEN":123,"MODEL_DISTRIBUTION_POLICY":"PIPELINE_PARALLEL"}',
             enable_prefix_caching: true,
@@ -115,6 +115,7 @@ const std::string expectedGraphContentsWithResponseParser = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -124,7 +125,6 @@ const std::string expectedGraphContentsWithResponseParser = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
             cache_size: 10,
@@ -155,6 +155,7 @@ const std::string expectedDefaultGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -164,7 +165,6 @@ const std::string expectedDefaultGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
             cache_size: 10,
@@ -192,6 +192,7 @@ const std::string expectedDraftAndFuseGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -201,7 +202,6 @@ const std::string expectedDraftAndFuseGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
             cache_size: 10,
@@ -232,6 +232,7 @@ const std::string expectedGGUFGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -241,7 +242,6 @@ const std::string expectedGGUFGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
             models_path: "./PRETTY_GOOD_GGUF_MODEL.gguf",
             enable_prefix_caching: true,
             cache_size: 10,
@@ -269,6 +269,7 @@ const std::string expectedGGUFGraphContents2 = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -278,7 +279,6 @@ const std::string expectedGGUFGraphContents2 = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
             models_path: "./PRETTY_GOOD_GGUF_MODEL_Q8-00001-of-20000.gguf",
             enable_prefix_caching: true,
             cache_size: 10,
@@ -301,7 +301,7 @@ const std::string expectedRerankGraphContentsNonDefault = R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
-    name: "myModel",
+    name: "RerankExecutor"
     calculator: "RerankCalculatorOV"
     input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -321,7 +321,7 @@ const std::string expectedRerankGraphContentsDefault = R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
-    name: "",
+    name: "RerankExecutor"
     calculator: "RerankCalculatorOV"
     input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -330,7 +330,6 @@ node {
         [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
             models_path: "./",
             max_allowed_chunks: 10000,
-            target_device: "CPU",
             plugin_config: '{"NUM_STREAMS":"1"}',
         }
     }
@@ -341,7 +340,7 @@ const std::string expectedEmbeddingsGraphContents = R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
-    name: "myModel",
+    name: "EmbeddingsExecutor"
     calculator: "EmbeddingsCalculatorOV"
     input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -363,7 +362,7 @@ const std::string expectedEmbeddingsGraphContentsDefault = R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
 node {
-    name: "",
+    name: "EmbeddingsExecutor"
     calculator: "EmbeddingsCalculatorOV"
     input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
     input_stream: "REQUEST_PAYLOAD:input"
@@ -373,8 +372,6 @@ node {
             models_path: "./",
             normalize_embeddings: true,
             truncate: false,
-            pooling: CLS,
-            target_device: "CPU",
             plugin_config: '{"NUM_STREAMS":"1"}',
         }
     }
@@ -385,7 +382,7 @@ const std::string expectedTextToSpeechGraphContents = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: "myModel"
+    name: "T2sExecutor"
     calculator: "T2sCalculator"
     input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -404,7 +401,7 @@ const std::string expectedTextToSpeechGraphContentsDefault = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: ""
+    name: "T2sExecutor"
     calculator: "T2sCalculator"
     input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -412,7 +409,6 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: "./"
-            target_device: "CPU"
             }
     }
 }
@@ -422,7 +418,7 @@ const std::string expectedTextToSpeechGraphContentsKokoro = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: "myModel"
+    name: "T2sExecutor"
     calculator: "T2sCalculator"
     input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -430,11 +426,6 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
             models_path: "./"
-            target_device: "CPU"
-            voices: [
-                { name: "af_alloy", path: "./voices/af_alloy.bin" },
-                { name: "am_adam", path: "./voices/am_adam.bin" }
-            ]
             }
     }
 }
@@ -444,7 +435,7 @@ const std::string expectedSpeechToTextGraphContents = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: "myModel"
+    name: "S2tExecutor"
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
     input_stream: "LOOPBACK:loopback"
@@ -479,7 +470,7 @@ const std::string expectedSpeechToTextGraphContentsDefault = R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
 output_stream: "HTTP_RESPONSE_PAYLOAD:output"
 node {
-    name: ""
+    name: "S2tExecutor"
     calculator: "S2tCalculator"
     input_side_packet: "STT_NODE_RESOURCES:s2t_servable"
     input_stream: "LOOPBACK:loopback"
@@ -493,7 +484,6 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
             models_path: "./"
-            target_device: "CPU"
             }
     }
     input_stream_handler {
@@ -548,7 +538,6 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
-          device: "CPU"
       }
   }
 }
@@ -722,7 +711,7 @@ TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
     hfSettings.task = ovms::RERANK_GRAPH;
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
     exportSettings.targetDevice = "GPU";
-    exportSettings.modelName = "myModel\"";
+    exportSettings.modelPath = "/model/path\"";
     exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
@@ -764,7 +753,7 @@ TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
     hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
     hfSettings.exportSettings.targetDevice = "GPU";
-    hfSettings.exportSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.modelPath = "/model/path\"";
     hfSettings.exportSettings.pluginConfig.numStreams = 2;
     embeddingsGraphSettings.normalize = "true";
     embeddingsGraphSettings.pooling = "CLS";
@@ -822,12 +811,6 @@ TEST_F(GraphCreationTest, textToSpeechPositiveDefault) {
 }
 
 TEST_F(GraphCreationTest, textToSpeechPositiveKokoro) {
-    // Pre-create the voices/ directory that optimum-cli would have populated for kokoro.
-    std::filesystem::path voicesDir = std::filesystem::path(this->directoryPath) / "voices";
-    std::filesystem::create_directories(voicesDir);
-    { std::ofstream f(voicesDir / "af_alloy.bin"); }
-    { std::ofstream f(voicesDir / "am_adam.bin"); }
-
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
     hfSettings.exportSettings.modelName = "myModel";
@@ -848,7 +831,7 @@ TEST_F(GraphCreationTest, textToSpeechCreatedPbtxtInvalid) {
     hfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
     ovms::TextToSpeechGraphSettingsImpl textToSpeechGraphSettings;
     hfSettings.exportSettings.targetDevice = "GPU";
-    hfSettings.exportSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.modelPath = "/model/path\"";
     hfSettings.exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -885,7 +868,7 @@ TEST_F(GraphCreationTest, speechToTextCreatedPbtxtInvalid) {
     hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     ovms::SpeechToTextGraphSettingsImpl speechToTextGraphSettings;
     hfSettings.exportSettings.targetDevice = "GPU";
-    hfSettings.exportSettings.modelName = "myModel\"";
+    hfSettings.exportSettings.modelPath = "/model/path\"";
     hfSettings.exportSettings.pluginConfig.numStreams = 2;
     hfSettings.graphSettings = std::move(speechToTextGraphSettings);
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -1062,6 +1045,18 @@ TEST_F(GraphCreationTest, windowsBackslashesInGGUFModelPathAreNormalized) {
     std::string graphContents = GetFileContents(graphPath);
     EXPECT_NE(std::string::npos, graphContents.find("models_path: \"c:/models/Qwen3-35B/model.gguf\"")) << graphContents;
     EXPECT_EQ(std::string::npos, graphContents.find("models_path: \"c:\\models")) << "Backslashes must not appear in models_path";
+}
+
+TEST_F(GraphCreationTest, windowsBackslashesInCacheDirAreNormalizedInPluginConfig) {
+    ovms::ExportSettings exportSettings;
+    exportSettings.pluginConfig.cacheDir = "c:\\models\\cache";
+
+    auto res = ovms::GraphExport::createPluginString(exportSettings);
+    ASSERT_TRUE(std::holds_alternative<std::optional<std::string>>(res));
+    auto pluginConfig = std::get<std::optional<std::string>>(res);
+    ASSERT_TRUE(pluginConfig.has_value());
+    EXPECT_NE(std::string::npos, pluginConfig.value().find("\"CACHE_DIR\":\"c:/models/cache\""));
+    EXPECT_EQ(std::string::npos, pluginConfig.value().find("\\\\")) << pluginConfig.value();
 }
 #endif  // _WIN32
 TEST_F(GraphCreationTest, pluginConfigAsString) {

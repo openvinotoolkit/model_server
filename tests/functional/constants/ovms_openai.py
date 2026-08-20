@@ -79,6 +79,7 @@ class ImagesRequestParamsValues:
     SIZE_DEFAULT = "512x512"
     SIZE_EDITS_DEFAULT = "336x224"
     STRENGTH_DEFAULT = 0.7
+    STRENGTH_DEFAULT_NPU = 1.0
     MIXED_NPU_DEVICE = "NPU NPU GPU"
 
 

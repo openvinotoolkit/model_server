@@ -1,0 +1,6 @@
+{
+  "architectures": ["BertForSequenceClassification"],
+  "model_type": "bert",
+  "hidden_size": 768,
+  "num_labels": 2
+}

@@ -36,7 +36,7 @@ TextGenGraphSettingsImpl& GraphCLIParser::defaultGraphSettings() {
 }
 
 void GraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "--pull --task text_generation graph options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull --task text_generation [OPTIONS...]\n  ovms --configure --model_path <MODEL_PATH> --task text_generation [OPTIONS...]", "--task text_generation options");
     options->allow_unrecognised_options();
 
     // clang-format off
@@ -134,7 +134,7 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
 
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE) {
+        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE && serverMode != CONFIGURE_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {

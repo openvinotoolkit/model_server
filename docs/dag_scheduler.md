@@ -195,29 +195,18 @@ Pipelines can use the same API as the models. There are exactly the same calls f
 the predictions. The request format must match the pipeline definition inputs.
 
 
-The pipeline configuration can be queried using [gRPC GetModelMetadata](model_server_grpc_api_tfs.md) calls and
-[REST Metadata](model_server_rest_api_tfs.md).
+The pipeline configuration can be queried using [gRPC ModelMetadata](model_server_grpc_api_kfs.md) calls and
+[REST Metadata](model_server_rest_api_kfs.md).
 It returns the definition of the pipelines inputs and outputs.
 
-Similarly, pipelines can be queried for their state using the calls [GetModelStatus](model_server_grpc_api_tfs.md)
-and [REST Model Status](model_server_rest_api_tfs.md)
+Similarly, pipelines can be queried for their state using [KServe Model Ready](model_server_grpc_api_kfs.md)
+and [REST Model Ready](model_server_rest_api_kfs.md)
 
 The only difference in using the pipelines and individual models is in version management. In all calls to the pipelines,
 the version parameter is ignored. Pipelines are not versioned. Though, they can reference a particular version of the models in the graph.
 
-## Pipelines Examples
-
-[Single face analysis with combined models](../demos/single_face_analysis_pipeline/python/README.md)
-
-[Multiple vehicles analysis using demultiplexer with model_zoo_object_detection example custom node](../demos/vehicle_analysis_pipeline/python/README.md)
-
-[Optical Character Recognition pipeline with east_ocr example custom node](../demos/optical_character_recognition/python/README.md)
-
-[Horizontal Text Detection pipeline with horizontal_ocr example custom node](../demos/horizontal_text_detection/python/README.md)
-
 ## Current limitations
 
-- Models with "auto" [batch size](dynamic_bs_auto_reload.md) or [shape](dynamic_shape_auto_reload.md) cannot be referenced in pipeline
 - Connected inputs and output for subsequent node models need to match each other in terms of data shape, precision and layout -
 there is no automatic conversion between input/output model precisions or layouts. This limitation can be addressed with `--shape` and `--layout` model configuration or with a custom node to transform the data as required to match the expected data format.
 - REST requests with no named format (JSON body with one unnamed input) are not supported

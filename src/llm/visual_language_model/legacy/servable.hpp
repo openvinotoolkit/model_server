@@ -31,8 +31,6 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     ov::genai::VLMDecodedResults results;
     std::promise<void> readySignal;
     std::future<void> finished = readySignal.get_future();
-    std::vector<ov::Tensor> inputImages;
-    std::string inputText;
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
     bool success{true};
@@ -57,6 +55,7 @@ struct VisualLanguageModelLegacyServableProperties : public GenAiServablePropert
 
 class VisualLanguageModelLegacyServable : public GenAiServable {
     std::shared_ptr<VisualLanguageModelLegacyServableProperties> properties;
+    void logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics);
 
 protected:
     void notifyExecutorThread();
@@ -64,14 +63,11 @@ protected:
 public:
     VisualLanguageModelLegacyServable() {
         properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
-#if (PYTHON_DISABLE == 0)
-        // TODO(dkalinow): once we have server-side workaround, set default back to JINJA
-        properties->chatTemplateMode = ChatTemplateMode::MINJA;
-#endif
+        properties->inputProcessorContext.config.isVLM = true;
     }
 
     // Interface methods
-    absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const HttpPayload& payload);
+    absl::Status validateEndpoint(Endpoint endpoint) const override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
@@ -80,6 +76,5 @@ public:
     absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
-    absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
 };
 }  // namespace ovms

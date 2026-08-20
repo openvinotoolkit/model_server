@@ -31,9 +31,6 @@
 namespace inference {
 class ModelInferRequest;
 }
-namespace tensorflow::serving {
-class PredictRequest;
-}
 
 namespace ovms {
 
@@ -289,7 +286,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
     }
 template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename IteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, ShapeType>::validate() {
-    if ((std::is_same<RequestType, ::inference::ModelInferRequest>::value || std::is_same<RequestType, ::tensorflow::serving::PredictRequest>::value) && choice == ValidationChoice::OUTPUT) {
+    if (std::is_same<RequestType, ::inference::ModelInferRequest>::value && choice == ValidationChoice::OUTPUT) {
         return StatusCode::NOT_IMPLEMENTED;
     }
     Status finalStatus = StatusCode::OK;
@@ -326,6 +323,9 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
                     inputWidth = getStringInputWidth(*proto);
                 }
                 if (processingHint == TensorInfo::ProcessingHint::STRING_NATIVE) {
+                    // Guard against ov::Tensor memory amplification: N small strings in proto
+                    // allocate N*sizeof(std::string) objects even for empty content.
+                    RETURN_IF_ERR(validateAgainstMaxNativeStringElementCount(inputBatchSize));
                     // Pass through to normal validation
                 } else if (processingHint == TensorInfo::ProcessingHint::STRING_2D_U8) {
                     SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing 2D string input: name: {}",

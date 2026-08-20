@@ -104,6 +104,7 @@ from tests.functional.utils.marks import (
 from tests.functional.utils.ov_hf_downloader import OVHfDownloader
 from tests.functional.utils.process import PID_STATE_ZOMBIE, Process, get_pid_name, get_pid_status
 from tests.functional.utils.test_framework import change_dir_permissions, get_test_object_prefix, is_xdist_master
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.object_model.ovsa import OvsaCerts
 
 logger = get_logger(__name__)
@@ -309,9 +310,10 @@ def get_binary_artifacts(
             os.makedirs(binary_package_dst_path)
         shutil.copy(ovms_binary_src_path, os.path.join(binary_package_dst_path, ovms_binary_full_name))
     proc.run_and_check(f"tar -xf {ovms_binary_full_name}", cwd=binary_package_dst_path)
-    setupvars_script_dst = os.path.join(binary_package_dst_path, "ovms", "setupvars.bat")
-    if not os.path.exists(setupvars_script_dst):
-        shutil.copy2(config.setupvars_script_path, setupvars_script_dst)
+    if get_host_os() == OsType.Windows:
+        setupvars_script_dst = os.path.join(binary_package_dst_path, "ovms", "setupvars.bat")
+        if not os.path.exists(setupvars_script_dst):
+            shutil.copy2(config.setupvars_script_path, setupvars_script_dst)
 
 
 def run_docker_build_ovms_image(cmd, ovms_image_name, cwd, timeout=None):
@@ -507,7 +509,8 @@ def get_marker_args(metafunc, marker_name):
 
 def get_ids_with_target_device(parameter, func):
     # return id for target_device
-    if parameter in vars(TargetDevice).values():
+    if parameter in vars(TargetDevice).values() or (isinstance(parameter, str) and get_base_device(parameter)
+                                                    in vars(TargetDevice).values()):
         return CURRENT_TARGET_DEVICE_DICT.get(parameter, parameter)
     # return custom id
     return func(parameter)
@@ -520,7 +523,8 @@ def parametrize_model_type(metafunc):
         return
     if isinstance(args[0], dict):
         params_list = [
-            (device_type, result) for device_type in config.target_devices for result in args[0][device_type]
+            (device_type, result) for device_type in config.target_devices
+            for result in args[0][get_base_device(device_type)]
         ]
     else:
         params_list = [(device_type, result) for device_type in config.target_devices for result in args[0]]
@@ -544,7 +548,7 @@ def parametrize_model_aux_type(metafunc):
     if args is None:
         return
     if isinstance(args[0], dict):
-        params_list = [model for device_type in config.target_devices for model in args[0][device_type]]
+        params_list = [model for device_type in config.target_devices for model in args[0][get_base_device(device_type)]]
     else:
         params_list = list(args[0])
     ids_list = [model.__name__ for model in params_list]
@@ -560,7 +564,7 @@ def parametrize_all_models(metafunc):
     for device_type in config.target_devices:
         for _models in args[0]:
             if isinstance(_models, dict):
-                params_list.append((device_type, _models[device_type]))
+                params_list.append((device_type, _models[get_base_device(device_type)]))
             else:
                 params_list.append((device_type, _models))
     ids_list = lambda i: get_ids_with_target_device(
@@ -628,7 +632,8 @@ def parametrize_plugin_config(metafunc):
         parametrize_target_device(metafunc)
         return
     params_list = [
-        (device_type, plugin_config) for device_type in config.target_devices for plugin_config in args[0][device_type]
+        (device_type, plugin_config) for device_type in config.target_devices
+        for plugin_config in args[0][get_base_device(device_type)]
     ]
     ids_list = lambda i: get_ids_with_target_device(i, lambda x: "-".join(map(lambda y: "%s=%s" % y, x.items())))
     metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.PLUGIN_CONFIG}", params_list, ids=ids_list)
@@ -646,7 +651,7 @@ def validate_lock_files():
 
     locks = [value for key, value in vars(Paths).items() if "LOCK_FILE" in key]
     for target_device in config.target_devices:
-        n = MAX_WORKERS_PER_TARGET_DEVICE[target_device]
+        n = MAX_WORKERS_PER_TARGET_DEVICE[get_base_device(target_device)]
         locks += [Paths.get_target_device_lock_file(target_device, i) for i in range(n)]
     for lock_path in [Path(x) for x in locks]:
         if lock_path.exists():

@@ -58,47 +58,6 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     THROW_IF_NULL(family, "cannot create family");
 
     if (metricConfig->isFamilyEnabled(familyName)) {
-        // TFS
-        this->requestSuccessGrpcPredict = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
-            {"api", "TensorFlowServing"},
-            {"method", "Predict"},
-            {"interface", "gRPC"}});
-        THROW_IF_NULL(this->requestSuccessGrpcPredict, "cannot create metric");
-
-        this->requestSuccessGrpcGetModelMetadata = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
-            {"api", "TensorFlowServing"},
-            {"method", "GetModelMetadata"},
-            {"interface", "gRPC"}});
-        THROW_IF_NULL(this->requestSuccessGrpcGetModelMetadata, "cannot create metric");
-
-        this->requestSuccessGrpcGetModelStatus = family->addMetric({{"name", modelName},
-            {"api", "TensorFlowServing"},
-            {"method", "GetModelStatus"},
-            {"interface", "gRPC"}});
-        THROW_IF_NULL(this->requestSuccessGrpcGetModelStatus, "cannot create metric");
-
-        this->requestSuccessRestPredict = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
-            {"api", "TensorFlowServing"},
-            {"method", "Predict"},
-            {"interface", "REST"}});
-        THROW_IF_NULL(this->requestSuccessRestPredict, "cannot create metric");
-
-        this->requestSuccessRestGetModelMetadata = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
-            {"api", "TensorFlowServing"},
-            {"method", "GetModelMetadata"},
-            {"interface", "REST"}});
-        THROW_IF_NULL(this->requestSuccessRestGetModelMetadata, "cannot create metric");
-
-        this->requestSuccessRestGetModelStatus = family->addMetric({{"name", modelName},
-            {"api", "TensorFlowServing"},
-            {"method", "GetModelStatus"},
-            {"interface", "REST"}});
-        THROW_IF_NULL(this->requestSuccessRestGetModelStatus, "cannot create metric");
-
         // KFS
         this->requestSuccessGrpcModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},
@@ -147,47 +106,6 @@ ServableMetricReporter::ServableMetricReporter(const MetricConfig* metricConfig,
     THROW_IF_NULL(family, "cannot create family");
 
     if (metricConfig->isFamilyEnabled(familyName)) {
-        // TFS
-        this->requestFailGrpcPredict = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
-            {"api", "TensorFlowServing"},
-            {"method", "Predict"},
-            {"interface", "gRPC"}});
-        THROW_IF_NULL(this->requestFailGrpcPredict, "cannot create metric");
-
-        this->requestFailGrpcGetModelMetadata = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
-            {"api", "TensorFlowServing"},
-            {"method", "GetModelMetadata"},
-            {"interface", "gRPC"}});
-        THROW_IF_NULL(this->requestFailGrpcGetModelMetadata, "cannot create metric");
-
-        this->requestFailGrpcGetModelStatus = family->addMetric({{"name", modelName},
-            {"api", "TensorFlowServing"},
-            {"method", "GetModelStatus"},
-            {"interface", "gRPC"}});
-        THROW_IF_NULL(this->requestFailGrpcGetModelStatus, "cannot create metric");
-
-        this->requestFailRestPredict = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
-            {"api", "TensorFlowServing"},
-            {"method", "Predict"},
-            {"interface", "REST"}});
-        THROW_IF_NULL(this->requestFailRestPredict, "cannot create metric");
-
-        this->requestFailRestGetModelMetadata = family->addMetric({{"name", modelName},
-            {"version", std::to_string(modelVersion)},
-            {"api", "TensorFlowServing"},
-            {"method", "GetModelMetadata"},
-            {"interface", "REST"}});
-        THROW_IF_NULL(this->requestFailRestGetModelMetadata, "cannot create metric");
-
-        this->requestFailRestGetModelStatus = family->addMetric({{"name", modelName},
-            {"api", "TensorFlowServing"},
-            {"method", "GetModelStatus"},
-            {"interface", "REST"}});
-        THROW_IF_NULL(this->requestFailRestGetModelStatus, "cannot create metric");
-
         // KFS
         this->requestFailGrpcModelInfer = family->addMetric({{"name", modelName},
             {"version", std::to_string(modelVersion)},

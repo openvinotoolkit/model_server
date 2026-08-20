@@ -41,7 +41,7 @@ from tests.functional.utils.core import SelfDeletingFileLock
 from tests.functional.utils.core import get_children_from_module
 from tests.functional.utils.inference.communication import GRPC, REST
 from tests.functional.utils.logger import get_logger
-from tests.functional.constants.os_type import OsType
+from tests.functional.constants.os_type import OsType, get_host_os
 from tests.functional.utils.port_manager import PortManager
 from tests.functional.utils.process import Process
 from tests.functional.utils.test_framework import change_dir_permissions, is_single_threaded
@@ -60,12 +60,13 @@ from tests.functional.constants.ovms import Ovms
 from tests.functional.constants.ovms_messages import OvmsMessages
 from tests.functional.constants.paths import Paths
 from tests.functional.constants.pipelines import Pipeline
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.utils.log_monitor import LogMonitor
 from tests.functional.object_model.dmesg_log_monitor import DmesgLogMonitor, DummyLogMonitor
 from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator
 from tests.functional.object_model.ovms_config import OvmsConfig
 from tests.functional.object_model.package_manager import PackageManager
-from tests.functional.object_model.resource_monitor import DockerResourceMonitor
+from tests.functional.object_model.resource_monitor import DockerResourceMonitor, WindowsResourceMonitor
 from tests.functional.object_model.test_environment import TestEnvironment
 
 logger = get_logger(__name__)
@@ -475,7 +476,7 @@ class OvmsInstance(ABC):
     @staticmethod
     def acquire_target_device_lock(target_device):
         target_device = target_device.strip("'").split(" ")[0] if type(target_device) == str else target_device
-        max_locks = MAX_WORKERS_PER_TARGET_DEVICE[target_device]
+        max_locks = MAX_WORKERS_PER_TARGET_DEVICE[get_base_device(target_device)]
         if max_locks == 0:  # No lock required
             return None
         if max_locks == 1:
@@ -538,7 +539,13 @@ class OvmsRunContext:
     def attach_resource_monitor(self, context, start=True):
         if hasattr(self.ovms, "container"):
             self.resource_monitor = DockerResourceMonitor(self.ovms.container)
-            if start:
-                self.resource_monitor.start()
-            context.test_objects.append(self.resource_monitor)
-            return self.resource_monitor
+        elif get_host_os() == OsType.Windows or getattr(context, "base_os", None) == OsType.Windows:
+            ovms_pid = self.ovms._dmesg_log.ovms_pid
+            assert ovms_pid is not None, "Cannot attach Windows resource monitor: ovms_pid is not available"
+            self.resource_monitor = WindowsResourceMonitor(ovms_pid)
+        else:
+            return None
+        if start:
+            self.resource_monitor.start()
+        context.test_objects.append(self.resource_monitor)
+        return self.resource_monitor

@@ -60,35 +60,43 @@ docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_ser
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/client/python/tensorflow-serving-api/samples
-virtualenv .venv
+cd model_server/client/python/kserve-api/samples
+python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-python grpc_predict_binary_resnet.py --grpc_address localhost --model_name resnet --input_name input_tensor --output_name softmax_tensor:0 --grpc_port 9000 --images ../../resnet_input_images.txt
+python grpc_infer_binary_resnet.py --grpc_address localhost --model_name resnet --input_name input_tensor --output_name softmax_tensor:0 --grpc_port 9000 --images ../../resnet_input_images.txt
 
 Start processing:
         Model name: resnet
-        Images list file: ../../resnet_input_images.txt
-Batch: 0; Processing time: 17.62 ms; speed 56.76 fps
-         1 airliner 404 ; Correct match.
-Batch: 1; Processing time: 13.20 ms; speed 75.75 fps
-         2 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
-Batch: 2; Processing time: 11.60 ms; speed 86.19 fps
-         3 bee 309 ; Correct match.
-Batch: 3; Processing time: 10.48 ms; speed 95.37 fps
-         4 golden retriever 207 ; Correct match.
-Batch: 4; Processing time: 9.73 ms; speed 102.76 fps
-         5 gorilla, Gorilla gorilla 366 ; Correct match.
-Batch: 5; Processing time: 9.71 ms; speed 103.04 fps
-         6 magnetic compass 635 ; Correct match.
-Batch: 6; Processing time: 9.84 ms; speed 101.64 fps
-         7 peacock 84 ; Correct match.
-Batch: 7; Processing time: 9.60 ms; speed 104.16 fps
-         8 pelican 144 ; Correct match.
-Batch: 8; Processing time: 9.86 ms; speed 101.42 fps
-         9 snail 113 ; Correct match.
-Batch: 9; Processing time: 10.68 ms; speed 93.68 fps
-         10 zebra 340 ; Correct match.
-Overall accuracy= 100.0 %
-Average latency= 10.6 ms
+Iteration 0; Processing time: 14.48 ms; speed 69.05 fps
+imagenet top results in a single batch:
+         0 airliner 404 ; Correct match.
+Iteration 1; Processing time: 13.59 ms; speed 73.58 fps
+imagenet top results in a single batch:
+         0 Arctic fox, white fox, Alopex lagopus 279 ; Correct match.
+Iteration 2; Processing time: 12.07 ms; speed 82.84 fps
+imagenet top results in a single batch:
+         0 bee 309 ; Correct match.
+Iteration 3; Processing time: 11.68 ms; speed 85.62 fps
+imagenet top results in a single batch:
+         0 golden retriever 207 ; Correct match.
+Iteration 4; Processing time: 11.97 ms; speed 83.56 fps
+imagenet top results in a single batch:
+         0 gorilla, Gorilla gorilla 366 ; Correct match.
+Iteration 5; Processing time: 11.82 ms; speed 84.60 fps
+imagenet top results in a single batch:
+         0 magnetic compass 635 ; Correct match.
+Iteration 6; Processing time: 12.55 ms; speed 79.71 fps
+imagenet top results in a single batch:
+         0 peacock 84 ; Correct match.
+Iteration 7; Processing time: 12.14 ms; speed 82.36 fps
+imagenet top results in a single batch:
+         0 pelican 144 ; Correct match.
+Iteration 8; Processing time: 11.99 ms; speed 83.38 fps
+imagenet top results in a single batch:
+         0 snail 113 ; Correct match.
+Iteration 9; Processing time: 13.55 ms; speed 73.81 fps
+imagenet top results in a single batch:
+         0 zebra 340 ; Correct match.
+Classification accuracy: 100.00
 ```
