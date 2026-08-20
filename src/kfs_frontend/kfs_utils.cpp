@@ -23,8 +23,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
 #include "src/logging.hpp"
+
 #include "src/profiler.hpp"
 #include "src/status.hpp"
 #include "src/tensorinfo.hpp"
@@ -182,7 +182,7 @@ void setStringPrecision(KFSTensorOutputProto& proto) {
     proto.set_datatype("BYTES");
 }
 
-Status validateRequestCoherencyKFS(const KFSRequest& request, const std::string servableName, model_version_t servableVersion) {
+Status validateRequestCoherencyKFS(const KFSRequest& request, const std::string& servableName, model_version_t servableVersion) {
     if (!request.raw_input_contents().empty()) {
         if (request.raw_input_contents().size() != request.inputs_size()) {
             std::stringstream ss;
