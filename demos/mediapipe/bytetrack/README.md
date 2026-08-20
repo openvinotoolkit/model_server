@@ -1,12 +1,39 @@
 # ByteTrack Demo Setup
 
-End-to-end demo: video source (webcam / file / RTSP) → OpenVINO Model Server (YOLOX Tiny+ ByteTrack) → output (screen / file / RTSP).
+End-to-end demo: video source (webcam / file) → OpenVINO Model Server (YOLOX Tiny + ByteTrack) → output (screen / file).
 
 ---
 
-## 1. Model Preparation
+## Steps
 
-The detector stage of the pipeline runs on [OpenVINO](https://github.com/openvinotoolkit/openvino)-optimized YOLOX models. The following FP16 variants are currently supported:
+### 1. Clone the repository
+
+Clone the repository, switch to the `gsoc_bytetrack` branch, and move into the demo directory:
+
+```bash
+git clone https://github.com/Vishwa2684/model_server
+cd model_server
+git checkout gsoc_bytetrack
+cd demos/mediapipe/bytetrack
+```
+
+### 2. Install requirements
+
+Install all the Python dependencies needed by the client and the model download script. Run this from inside the `demos/mediapipe/bytetrack` directory:
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Download a model
+
+Download the detector model that the OpenVINO Model Server will use. This same command also fetches the COCO class list used for labeling detections:
+
+```bash
+python download_models.py --model OpenVINO/yolox_tiny-fp16-ov
+```
+
+> Swap `--model` for any of the repo IDs listed below to use a different YOLOX size.
 
 | Model | HuggingFace Repo |
 |---|---|
@@ -15,107 +42,29 @@ The detector stage of the pipeline runs on [OpenVINO](https://github.com/openvin
 
 `yolox_tiny-fp16-ov` is the default used in this demo.
 
-### Install requirements
+This step populates the local model directory that `config.json` (used by the OpenVINO Model Server in step 4) points to, and that ByteTrack consumes downstream for tracking.
 
-```bash
-pip install -r requirements.txt
-```
+### 4. Start the OpenVINO Model Server
 
-### Download a model
-
-```bash
-python download_models.py --model OpenVINO/yolox_tiny-fp16-ov
-```
-
-> Swap `--model` for any of the four repo IDs listed above to use a different YOLOX size. The script also downloads the COCO class list used for labeling detections.
-
-This populates the local model directory that `config.json` (used by the OpenVINO Model Server in step 3) points to, and that ByteTrack consumes downstream for tracking.
-
----
-
-## 2. Start an RTSP relay server
-
-If you don't already have one running, start MediaMTX (or an equivalent RTSP server) so the streams below have somewhere to publish to:
-
-```bash
-docker run --rm -d -p 8554:8554 -e RTSP_PROTOCOLS=tcp bluenviron/mediamtx:latest
-```
-
-> Only needed if you plan to use RTSP input and/or output (see Demo 3 below). It isn't required for the local webcam→screen or video-file→mp4 demos.
-
----
-
-## 3. Start the OpenVINO Model Server
+Bring up the OpenVINO Model Server as a Docker container. This mounts your current directory into the container so it can read `config.json`, and exposes port 9000 for the client to connect to:
 
 ```bash
 docker run -d -v $PWD:/demo -p 9000:9000 openvino/model_server:latest --config_path /demo/config.json --port 9000
 ```
 
----
+Leave this container running in the background — the client in the next step connects to it over gRPC.
 
-## 4. Run the Demo
+### 5. Run the demo — local webcam → screen
 
-The `client.py` script (from `real_time_stream_analysis`) supports several combinations of input and output, so the same server can be exercised in different ways depending on what you have available.
-
-### Demo A — Local webcam → screen
-
-Reads directly from a local camera and renders the tracked output in a window.
+With the model server running, run the client script. This reads directly from your local webcam, runs it through detection + ByteTrack tracking, and renders the annotated output live in a window on your screen:
 
 ```bash
-python client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
+cd ../../real_time_stream_analysis/python
+python client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen --model_name ByteTrack --input_name input_video
 ```
 
-- `--input_stream 0` — camera device ID `0` (use `1`, `2`, etc. for additional cameras).
+- `--grpc_address localhost:9000` — address of the OpenVINO Model Server started in step 4.
+- `--input_stream 0` — camera device ID `0` (use `1`, `2`, etc. if you have multiple cameras and want a different one).
 - `--output_stream screen` — opens a live preview window instead of writing to a file or stream.
 
-### Demo B — Video file → video file
-
-Reads from an encoded video file and writes the annotated result to a new video file.
-
-```bash
-curl -L "https://raw.githubusercontent.com/FoundationVision/ByteTrack/main/videos/palace.mp4" -o video.mp4
-python client.py --grpc_address localhost:9000 --input_stream video.mp4 --output_stream output.mp4
-```
-
-- `--input_stream video.mp4` — path to the source video.
-- `--output_stream output.mp4` — path where the tracked/annotated video is saved.
-
-### Demo C — RTSP → RTSP
-
-Full end-to-end streaming demo: publish a webcam feed to an RTSP endpoint, run detection + tracking on it, and publish the annotated result to a second RTSP endpoint.
-
-**1. Publish your webcam as an RTSP input stream**
-
-```bash
-ffmpeg -f dshow -video_size 1280x720 -i video="HP True Vision FHD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8554/channel1
-```
-
-**2. Run the client against the RTSP input/output**
-
-```bash
-python client.py --grpc_address localhost:9000 --input_stream rtsp://localhost:8554/channel1 --output_stream rtsp://localhost:8554/channel2 --model_name ByteTrack --input_name input_video
-```
-
-**3. View the output stream**
-
-Option 1 (recommended):
-
-```bash
-ffplay -rtsp_transport tcp -vf "scale=704:704,format=yuv420p" rtsp://localhost:8554/channel2
-```
-
-Option 2 (verbose logging):
-
-```bash
-ffplay -loglevel verbose -rtsp_transport tcp rtsp://localhost:8554/channel2
-```
-
----
-
-## Summary of I/O Options
-
-| Demo | Input | Output | RTSP server required? |
-|---|---|---|---|
-| A | Local webcam (`0`) | `screen` | No |
-| B | Video file (`video.mp4`) | Video file (`output.mp4`) | No |
-| C | RTSP stream | RTSP stream | Yes |
+A window should open showing your webcam feed with tracked bounding boxes drawn on it in real time. To use different input and output streams for real time. Read the documentation on [real time stream analysis](../../real_time_stream_analysis/python/README.md)

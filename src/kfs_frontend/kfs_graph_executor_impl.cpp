@@ -1027,16 +1027,15 @@ static inline Status checkTimestamp(const KFSRequest& request, const ::mediapipe
     return StatusCode::OK;
 }
 
-// this method
 static Status deserializeTimestampIfAvailable(
     const KFSRequest& request,
-    ::mediapipe::Timestamp& timestamp,
-    const ::mediapipe::Timestamp& lastPushedTimestamp) {  // pass in current stream state
+    ::mediapipe::Timestamp& timestamp) {
     auto timestampParamIt = request.parameters().find(TIMESTAMP_PARAMETER_NAME);
     if (timestampParamIt != request.parameters().end()) {
         SPDLOG_DEBUG("Found {} timestamp parameter in request for: {}", TIMESTAMP_PARAMETER_NAME, request.model_name());
         auto& parameterChoice = timestampParamIt->second;
         if (parameterChoice.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kInt64Param) {
+            // Cannot create with error checking since error check = abseil death test
             timestamp = ::mediapipe::Timestamp::CreateNoErrorChecking(parameterChoice.int64_param());
             if (!timestamp.IsRangeValue()) {
                 SPDLOG_DEBUG("Timestamp not in range: {}; for request to: {};", timestamp.DebugString(), request.model_name());
@@ -1048,17 +1047,8 @@ static Status deserializeTimestampIfAvailable(
             return status;
         }
     } else {
-        // steady_clock never jumps backward; system_clock can
-        auto now = std::chrono::steady_clock::now().time_since_epoch();
-        int64_t candidate = std::chrono::duration_cast<std::chrono::microseconds>(now).count();
-        timestamp = ::mediapipe::Timestamp::CreateNoErrorChecking(candidate);
-    }
-
-    // Enforce strict monotonicity regardless of source
-    if (lastPushedTimestamp != ::mediapipe::Timestamp::Unset() && timestamp <= lastPushedTimestamp) {
-        SPDLOG_DEBUG("Non-monotonic timestamp detected: new={} <= last={}; for request to: {}",
-            timestamp.DebugString(), lastPushedTimestamp.DebugString(), request.model_name());
-        return Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Timestamp did not increase relative to previous packet in stream");
+        auto now = std::chrono::system_clock::now();
+        timestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
     }
     return StatusCode::OK;
 }
@@ -1143,7 +1133,6 @@ Status onPacketReadySerializeImpl(
     return status;
 }
 
-// this method
 Status createAndPushPacketsImpl(
     std::shared_ptr<const KFSRequest> request,
     stream_types_mapping_t& inputTypes,
@@ -1152,8 +1141,7 @@ Status createAndPushPacketsImpl(
     ::mediapipe::Timestamp& currentTimestamp,
     size_t& numberOfPacketsCreated) {
 
-    const ::mediapipe::Timestamp lastPushedTimestamp = currentTimestamp;  // snapshot BEFORE overwrite
-    OVMS_RETURN_ON_FAIL(deserializeTimestampIfAvailable(*request, currentTimestamp, lastPushedTimestamp));
+    OVMS_RETURN_ON_FAIL(deserializeTimestampIfAvailable(*request, currentTimestamp));
     OVMS_RETURN_ON_FAIL(checkTimestamp(*request, currentTimestamp));
     OVMS_RETURN_ON_FAIL(validateRequestCoherencyKFS(*request, request->model_name(), MediapipeGraphDefinition::VERSION));
 
