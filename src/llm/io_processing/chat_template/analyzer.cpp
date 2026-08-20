@@ -37,6 +37,14 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
+    if (contains(templateSource, "<|start|>") && contains(templateSource, "<|message|>") &&
+        contains(templateSource, "<|eom|>") && contains(templateSource, "<|eot|>")) {
+        result.detectedToolParser = "onyx";
+        result.detectedReasoningParser = "onyx";
+        result.caps.supportsToolCalls = true;
+        return result;
+    }
+
     // Gemma4 detection
     if (contains(templateSource, "'<|tool_call>call:'") || contains(templateSource, "<|tool_call>call:")) {
         result.detectedToolParser = "gemma4";
@@ -56,13 +64,24 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
-    // TODO: It does not work for LFM2, but only for LFM2.5? Both use the same parsers
+    // MiniCPM5 detection — uses <param name="..."> XML style (distinct from qwen3coder's <parameter=...>)
+    if (contains(templateSource, "<param name=\"")) {
+        result.detectedToolParser = "minicpm5";
+        result.caps.supportsToolCalls = true;
+        result.detectedReasoningParser = "minicpm5";
+
+        return result;
+    }
+
     // LFM2 detection
-    if (contains(templateSource, "<|assistant_tool_call|>") || contains(templateSource, "<|tool_call_start|>")) {
+    if (contains(templateSource, "<|assistant_tool_call|>") || contains(templateSource, "<|tool_call_start|>") || contains(templateSource, "keep_past_thinking")) {
         result.detectedToolParser = "lfm2";
         result.caps.supportsToolCalls = true;
+        if (contains(templateSource, "message.thinking")) {
+            result.caps.missnamedReasoningField = "thinking";
+            result.detectedReasoningParser = "lfm2";
+        }
         return result;
-        // TODO: Support reasoning after Pawel adds reasoning parser for it
     }
 
     // Phi-4 detection — uses "functools[" marker for tool calls

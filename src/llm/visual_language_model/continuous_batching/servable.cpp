@@ -19,6 +19,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
@@ -35,6 +36,43 @@
 
 namespace ovms {
 
+// CB stepping thread writes base perf metrics in _free_non_running_requests() slightly
+// after pushing the final output; get_vlm_perf_metrics() calls get_perf_metrics() internally.
+// Yield briefly to close the race window.
+// TODO: remove once GenAI's get_perf_metrics() blocks instead of asserting (fix in generation_stream.hpp)
+static std::optional<ov::genai::VLMPerfMetrics> tryGetVlmPerfMetrics(const ov::genai::GenerationHandle& handle) {
+    for (int i = 0; i < 1000; ++i) {
+        try {
+            return handle->get_vlm_perf_metrics();
+        } catch (const ov::Exception&) {
+            std::this_thread::yield();
+        }
+    }
+    return std::nullopt;
+}
+
+void VisualLanguageModelServable::logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics) {
+    const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
+    const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();
+    const double prepareEmbeddingsTimeMs = perfMetrics.get_prepare_embeddings_duration().mean;
+    // Continuous batching starts request timing after embeddings preparation.
+    const double llmTtftMs = perfMetrics.get_ttft().mean;
+    const double ttftMs = llmTtftMs + prepareEmbeddingsTimeMs;
+    const double prefillSpeedTps = calculatePrefillSpeed(inputTokenCount, llmTtftMs);
+
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "Request processing metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | prepare_embeddings_time_ms: {:.3f} | llm_ttft_ms: {:.3f} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f} | image_slice_count: {}",
+        inputTokenCount,
+        outputTokenCount,
+        inputTokenCount + outputTokenCount,
+        prepareEmbeddingsTimeMs,
+        llmTtftMs,
+        ttftMs,
+        prefillSpeedTps,
+        perfMetrics.get_total_image_slice_count());
+}
+
 absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
     vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
@@ -43,23 +81,10 @@ absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<C
     return absl::OkStatus();
 }
 
-absl::Status VisualLanguageModelServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
-    // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
-    if (payload.parsedJson->HasParseError()) {
-        return absl::InvalidArgumentError("Non-json request received in text generation calculator");
+absl::Status VisualLanguageModelServable::validateEndpoint(Endpoint endpoint) const {
+    if (endpoint == Endpoint::COMPLETIONS) {
+        return absl::InvalidArgumentError("VLM Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
-    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
-        executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
-    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses") {
-        executionContext->endpoint = Endpoint::RESPONSES;
-    } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
-        executionContext->endpoint = Endpoint::TOKENIZE;
-    } else {
-        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions, /v3/responses endpoint or /v3/tokenize");
-    }
-    executionContext->payload = payload;
     return absl::OkStatus();
 }
 
@@ -69,6 +94,30 @@ std::shared_ptr<GenAiServableExecutionContext> VisualLanguageModelServable::crea
 
 std::shared_ptr<GenAiServableProperties> VisualLanguageModelServable::getProperties() {
     return properties;
+}
+
+absl::Status VisualLanguageModelServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto status = GenAiServable::prepareCompleteResponse(executionContext);
+    if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
+        auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
+        auto perfMetrics = tryGetVlmPerfMetrics(vlmExecutionContext->generationHandle);
+        if (perfMetrics)
+            logPerfMetrics(*perfMetrics);
+    }
+    return status;
+}
+
+absl::Status VisualLanguageModelServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto status = GenAiServable::preparePartialResponse(executionContext);
+    if (status.ok() &&
+        !executionContext->sendLoopbackSignal &&
+        llm_calculator_logger->should_log(spdlog::level::debug)) {
+        auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
+        auto perfMetrics = tryGetVlmPerfMetrics(vlmExecutionContext->generationHandle);
+        if (perfMetrics)
+            logPerfMetrics(*perfMetrics);
+    }
+    return status;
 }
 
 }  // namespace ovms

@@ -57,7 +57,7 @@ Check also the demo of [transcription](../demos/audio/README.md#transcription) a
 ## Speech generation
 
 The implementation is compatible with the OpenAI API for [audio/speech](./model_server_rest_api_text_to_speech.md).
-It supports microsoft/speecht5_tts model.
+It supports Kokoro speech generation models, for example `Kokoro-82M-OpenVINO-FP16-OVMS`.
 
 Check also the demo of [speech generation](../demos/audio/README.md#speech-generation).
 

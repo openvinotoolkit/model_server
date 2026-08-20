@@ -148,13 +148,8 @@ else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
-ifeq ($(ESPEAK),1)
-  ESPEAK_PARAMS = " --//:espeak=on"
-else
-  ESPEAK_PARAMS = " --//:espeak=off"
-endif
-CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(ESPEAK_PARAMS)
-BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(ESPEAK_PARAMS)$(REPO_ENV)
+CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(REPO_ENV)
 
 # Option to Override release image.
 # Release image OS *must have* glibc version >= glibc version on BASE_OS:
@@ -201,7 +196,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2026.3.0"
+PRODUCT_VERSION ?= "2026.4.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -215,8 +210,6 @@ PYTHON_CLIENT_TEST_REST_PORT ?= 9280
 PYTHON_CLIENT_TEST_CONTAINER_NAME ?= python-client-test$(shell date +%Y-%m-%d-%H.%M.%S)
 
 TEST_PATH ?= tests/functional/
-
-BUILD_CUSTOM_NODES ?= false
 
 VERBOSE_LOGS ?= OFF
 
@@ -249,7 +242,8 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg JOBS=$(JOBS)\
 	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
 	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)\
-	--build-arg KONFLUX=$(KONFLUX)
+	--build-arg KONFLUX=$(KONFLUX)\
+	--build-arg ESPEAK=$(ESPEAK)
 
 
 .PHONY: default docker_build \
@@ -365,10 +359,6 @@ ifeq ($(NO_DOCKER_CACHE),true)
   endif
 endif
 
-ifeq ($(BUILD_CUSTOM_NODES),true)
-	@echo "Building custom nodes"
-	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
-endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace

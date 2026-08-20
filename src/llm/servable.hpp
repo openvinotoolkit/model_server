@@ -48,6 +48,8 @@ namespace ovms {
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
 
+double calculatePrefillSpeed(size_t inputTokenCount, double ttftMs);
+
 /*
 GenAiServable support.
 
@@ -220,8 +222,17 @@ public:
     /*
     loadRequest method implementation MUST fill executionContext payload and endpoint fields.
     Base implementation does that and makes sure URI matches either chat/completions or completions endpoint.
+    After endpoint routing, calls validateEndpoint() which derived classes can override to reject
+    unsupported endpoints (e.g. VLM/Omni reject /completions).
     */
     virtual absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const HttpPayload& payload);
+
+    // Override to reject endpoints not supported by this servable.
+    // Called after endpoint is determined. Return non-OK to reject.
+    virtual absl::Status validateEndpoint(Endpoint endpoint) const {
+        (void)endpoint;
+        return absl::OkStatus();
+    }
 
     // Creates execution context for the request
     virtual std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() = 0;

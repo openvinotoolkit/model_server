@@ -35,7 +35,7 @@ RerankGraphSettingsImpl& RerankGraphCLIParser::defaultGraphSettings() {
 }
 
 void RerankGraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task rerank graph options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull --task rerank [OPTIONS...]\n  ovms --configure --model_path <MODEL_PATH> --task rerank [OPTIONS...]", "--task rerank options");
     options->allow_unrecognised_options();
 
     // clang-format off
@@ -82,7 +82,7 @@ void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hf
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE) {
+        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE && serverMode != CONFIGURE_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {

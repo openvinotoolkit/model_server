@@ -53,10 +53,10 @@ enum Endpoint {
 };
 
 static Endpoint getEndpoint(const std::string& url) {
-    if (absl::StartsWith(url, "/v3/audio/transcriptions")) {
+    if (absl::StartsWith(url, "/v3/audio/transcriptions") || absl::StartsWith(url, "/v1/audio/transcriptions")) {
         return Endpoint::TRANSCRIPTIONS;
     }
-    if (absl::StartsWith(url, "/v3/audio/translations")) {
+    if (absl::StartsWith(url, "/v3/audio/translations") || absl::StartsWith(url, "/v1/audio/translations")) {
         return Endpoint::TRANSLATIONS;
     }
     return Endpoint::UNSUPPORTED;
@@ -169,11 +169,11 @@ public:
 
             std::vector<float> rawSpeech;
             try {
-                if (isWavBuffer(std::string(file))) {
+                if (ovms::audio_utils::isWavBuffer(std::string(file))) {
                     SPDLOG_DEBUG("Received file format: wav");
-                    rawSpeech = readWav(file);
+                    rawSpeech = ovms::audio_utils::readWav(file);
                 } else {
-                    rawSpeech = readMp3(file);
+                    rawSpeech = ovms::audio_utils::readMp3(file);
                     SPDLOG_DEBUG("Received file format: mp3");
                 }
             } catch (std::exception&) {

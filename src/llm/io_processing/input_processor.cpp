@@ -24,7 +24,9 @@
 #include "../../logging.hpp"
 #include "input_processors/chat_template_processor.hpp"
 #include "input_processors/empty_content_array_normalization_processor.hpp"
+#include "input_processors/empty_tool_calls_array_removing_processor.hpp"
 #include "input_processors/image_decoding_processor.hpp"
+#include "input_processors/audio_decoding_processor.hpp"
 #include "input_processors/chat_template_adapter.hpp"
 #include "input_processors/raw_prompt_extractor.hpp"
 #include "input_processors/text_content_normalization_processor.hpp"
@@ -42,16 +44,21 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         // Normalize empty content arrays to null before any content-aware processor runs.
         processors.emplace_back(std::make_unique<EmptyContentArrayNormalizationProcessor>());
 
-        // Flatten text-only content arrays for both LM and VLM. Arrays that contain
-        // images (or other modalities) are left untouched for ImageDecodingProcessor.
-        processors.emplace_back(std::make_unique<TextContentNormalizationProcessor>());
+        // Remove empty tool_calls arrays to avoid adding empty tool calls to the input prompt.
+        processors.emplace_back(std::make_unique<EmptyToolCallsArrayRemovingProcessor>());
 
-        if (context.config.isVLM) {
+        if (context.config.isVLM) {  // isVLM is true both in VLMPipeline and OmniPipeline
             const auto& settings = Config::instance().getServerSettings();
             processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
                 settings.allowedLocalMediaPath,
                 settings.allowedMediaDomains));
         }
+
+        if (context.config.isOmni) {
+            processors.emplace_back(std::make_unique<AudioDecodingProcessor>());
+        }
+
+        processors.emplace_back(std::make_unique<TextContentNormalizationProcessor>());
 
         if (context.chatTemplateCaps.needsWorkarounds()) {
             processors.emplace_back(std::make_unique<ChatTemplateAdapter>(context.chatTemplateCaps));

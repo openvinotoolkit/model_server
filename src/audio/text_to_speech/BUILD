@@ -26,6 +26,7 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
+        "//src:libovms_ov_utils",
         "t2s_calculator_cc_proto",
     ],
     visibility = ["//visibility:public"],

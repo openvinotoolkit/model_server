@@ -91,6 +91,7 @@ enum OvmsServerMode : int {
     LIST_MODELS_MODE,
     MODIFY_CONFIG_MODE,
     IN_MEMORY_GRAPH_MODE,
+    CONFIGURE_MODE,
     UNKNOWN_MODE
 };
 
@@ -130,7 +131,7 @@ struct TextGenGraphSettingsImpl {
 struct EmbeddingsGraphSettingsImpl {
     std::string normalize = "true";
     std::string truncate = "false";
-    std::string pooling = "CLS";
+    std::optional<std::string> pooling;
 };
 
 struct TextToSpeechGraphSettingsImpl {
@@ -191,7 +192,7 @@ struct ImageGenerationGraphSettingsImpl {
 struct ExportSettings {
     std::string modelName = "";
     std::string modelPath = "./";
-    std::string targetDevice = "CPU";
+    std::string targetDevice;
     std::optional<uint32_t> restWorkers;
     std::optional<std::string> extraQuantizationParams;
     std::optional<std::string> vocoder;

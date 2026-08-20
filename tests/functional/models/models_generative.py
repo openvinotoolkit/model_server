@@ -67,6 +67,27 @@ class GenerativeModel(ModelInfo):
             if name in cls.__dict__:
                 cls._own_field_defaults[name] = cls.__dict__[name]
 
+    def _apply_diamond_defaults(self, mixin_class):
+        """Fix field defaults for diamond inheritance.
+
+        When a class inherits from both a mixin class and a specialized
+        type (e.g. ImageGenerationModel), the mixin's inherited field
+        defaults override the specialized type's directly-defined defaults. This method
+        restores the correct defaults from specialized parent classes.
+        """
+        cls = type(self)
+        seen_fields = set()
+        seen_fields.update(getattr(cls, '_own_field_defaults', {}).keys())
+        seen_fields.update(getattr(mixin_class, '_own_field_defaults', {}).keys())
+        for base in cls.__mro__:
+            if base in (cls, object, mixin_class, GenerativeModel, ModelInfo):
+                continue
+            own_defaults = getattr(base, '_own_field_defaults', {})
+            for field_name, default_value in own_defaults.items():
+                if field_name not in seen_fields:
+                    setattr(self, field_name, default_value)
+                    seen_fields.add(field_name)
+
     def __post_init__(self):
         self.model_base_path_on_host = generative_models_local_path
         self.model_subpath = os.path.join(self.precision_dir, Path(self.name))
@@ -129,29 +150,8 @@ class GenerativeModelHuggingFace(GenerativeModel):
     precision: str = "INT4"
     model_timeout: int = 900
 
-    def _apply_diamond_defaults(self):
-        """Fix field defaults for diamond inheritance.
-
-        When a class inherits from both GenerativeModelHuggingFace and a specialized
-        type (e.g. ImageGenerationModel), GenerativeModelHuggingFace's inherited field
-        defaults override the specialized type's directly-defined defaults. This method
-        restores the correct defaults from specialized parent classes.
-        """
-        cls = type(self)
-        seen_fields = set()
-        seen_fields.update(getattr(cls, '_own_field_defaults', {}).keys())
-        seen_fields.update(getattr(GenerativeModelHuggingFace, '_own_field_defaults', {}).keys())
-        for base in cls.__mro__:
-            if base in (cls, object, GenerativeModelHuggingFace, GenerativeModel, ModelInfo):
-                continue
-            own_defaults = getattr(base, '_own_field_defaults', {})
-            for field_name, default_value in own_defaults.items():
-                if field_name not in seen_fields:
-                    setattr(self, field_name, default_value)
-                    seen_fields.add(field_name)
-
     def __post_init__(self):
-        self._apply_diamond_defaults()
+        self._apply_diamond_defaults(GenerativeModelHuggingFace)
         if self.is_local:
             self.model_base_path_on_host = generative_models_local_path
             self.model_path_on_host = os.path.join(self.model_base_path_on_host, Path(self.name))

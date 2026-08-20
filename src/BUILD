@@ -41,18 +41,6 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-cc_library(
-    name = "custom_nodes_common_buffersqueue",
-    linkstatic = 1,
-    hdrs = ["custom_nodes/common/buffersqueue.hpp"],
-    srcs = [
-        "custom_nodes/common/buffersqueue.hpp",
-        "custom_nodes/common/buffersqueue.cpp",
-    ],
-    deps = ["libovms_queue"],
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
 ovms_cc_library(
     name = "executor_base",
     hdrs = ["executor_base.hpp"],
@@ -73,7 +61,6 @@ cc_shared_library(
         "@fmtlib//:__subpackages__",
         "@com_github_jarro2783_cxxopts//:__subpackages__",
         "@aws-sdk-cpp//:__subpackages__",
-        "@boost//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
         "//third_party:curl//:__subpackages__",
         "@com_github_google_crc32c//:__subpackages__",
@@ -108,7 +95,6 @@ cc_shared_library(
         "@flatbuffers//:__subpackages__",
         "@ruy//:__subpackages__",
         "@azure//:__subpackages__",
-        "@cpprest//:__subpackages__",
         "//third_party:opencv//:__subpackages__",
     ] + select({
         "//:not_disable_mediapipe": [
@@ -356,11 +342,36 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "libovms_default_task_detector",
+    hdrs = ["default_task_detector.hpp"],
+    srcs = ["default_task_detector.cpp"],
+    deps = [
+        "//src/port:rapidjson_document",
+        "//src/port:rapidjson_error",
+        "//src/port:rapidjson_istreamwrapper",
+        "libovmsstring_utils",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "libovms_default_task",
+    hdrs = ["default_task.hpp"],
+    srcs = ["default_task.cpp"],
+    deps = [
+        "libovms_default_task_detector",
+        "libovmsstatus",
+        "//src/pull_module:curl_downloader",
+        "//src/pull_module:hf_env_vars",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "libovms_cliparser",
     hdrs = ["cli_parser.hpp"],
     srcs = ["cli_parser.cpp"],
     deps = [
         "@com_github_jarro2783_cxxopts//:cxxopts",
+        "libovms_default_task",
         "libovms_server_settings",
         "libovms_version",
         "//src/filesystem:libovmsfilesystem",
@@ -1038,6 +1049,16 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "opencv_dep",
+    srcs = [
+        "deps/opencv.hpp",
+    ],
+    deps = [
+        "//third_party:opencv",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "tensor_conversion_common",
     hdrs = ["tensor_conversion_common.hpp"],
     srcs = ["tensor_conversion_common.cpp",],
@@ -1132,115 +1153,6 @@ cc_binary(
         "custom_node_interface.h",
     ],
     linkshared = 1,
-)
-
-cc_binary(
-    name = "libcustom_node_east_ocr.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/east_ocr/east_ocr.cpp",
-        "custom_nodes/east_ocr/nms.hpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-        "opencv_dep",
-    ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
-cc_binary(
-    name = "libcustom_node_face_blur.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/face_blur/face_blur.cpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-        "opencv_dep",
-    ],
-    linkshared = 1,
-    copts =COMMON_STATIC_LIBS_COPTS,
-)
-
-cc_binary(
-    name = "libcustom_node_add_one.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "custom_nodes/add_one/add_one.cpp",
-        "custom_node_interface.h",
-        "custom_nodes/add_one/add_one_internal_manager.hpp"
-    ],
-    deps = [
-        "custom_nodes_common_buffersqueue",
-        "libovms_queue",
-    ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
-ovms_cc_library(
-    name = "opencv_dep",
-    srcs = [
-        "deps/opencv.hpp",
-    ],
-    deps = [
-        "//third_party:opencv",
-    ],
-    visibility = ["//visibility:public",],
-)
-
-cc_binary(
-    name = "libcustom_node_model_zoo_intel_object_detection.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.hpp",
-        "custom_nodes/common/custom_node_library_internal_manager.cpp",
-        "custom_nodes/model_zoo_intel_object_detection/model_zoo_intel_object_detection.cpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-        "custom_nodes_common_buffersqueue",
-        "opencv_dep",
-        "libovms_queue",
-    ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
-cc_binary(
-    name = "libcustom_node_image_transformation.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/image_transformation/image_transformation.cpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-        "opencv_dep",
-    ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
-)
-
-cc_binary(
-    name = "libcustom_node_horizontal_ocr.so",
-    srcs = [
-        "custom_nodes/common/utils.hpp",
-        "custom_nodes/common/opencv_utils.hpp",
-        "custom_nodes/horizontal_ocr/horizontal_ocr.cpp",
-        "custom_node_interface.h",
-    ],
-    deps = [
-        "opencv_dep",
-    ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 # POC which can start OVMS with C-API built by bazel
@@ -1936,6 +1848,7 @@ ovms_cc_library(
     deps = ["cpp_headers",
             "@com_github_tencent_rapidjson//:rapidjson",
             "//third_party:openvino",
+            "//src/filesystem:libovmsfilesystem",
             "libovmslogging"],
     visibility = ["//visibility:public"],
 )
@@ -2030,7 +1943,13 @@ cc_binary(
         "-luuid",
         "-lstdc++fs",
         "-lcrypto",
-    ],
+    ] + select({
+        "//conditions:default": [
+            "-Wl,-rpath,$$ORIGIN/capi_benchmark.runfiles/ovms/external/azure/lib",
+            "-Wl,-rpath,$$ORIGIN/capi_benchmark.runfiles/azure/lib",
+        ],
+        "//src:windows": [],
+    }),
     copts = [
     ],
     deps = [
@@ -2039,8 +1958,6 @@ cc_binary(
     ],
     linkstatic = True,
 )
-
-
 
 cc_binary(
     name = "optimum-cli",
@@ -2060,19 +1977,19 @@ cc_binary(
     ] + select({
         "//conditions:default": [],
         "//src:windows" : ["main_windows.hpp", "main_windows.cpp",],}),
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//conditions:default": [
+            "-Wl,-rpath,$$ORIGIN/ovms.runfiles/ovms/external/azure/lib",
+            "-Wl,-rpath,$$ORIGIN/ovms.runfiles/azure/lib",
+        ],
+        "//src:windows": [],
+    }),
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",]
     + select({
-            "//conditions:default": [
-                "//src:libcustom_node_east_ocr.so",
-                "//src:libcustom_node_face_blur.so",
-                "//src:libcustom_node_horizontal_ocr.so",
-                "//src:libcustom_node_model_zoo_intel_object_detection.so",
-                "//src:libcustom_node_image_transformation.so",
-            ],
+            "//conditions:default": [],
             "//src:windows" : ["@winreg//:winreg"],
         })
      + select({
@@ -2086,12 +2003,6 @@ cc_binary(
             "//src/python/binding:pyovms.so",
         ],
         "//:disable_python": []
-    }) + select({
-        "//:espeak_on": [
-            "//third_party:espeak_ng",
-            "//third_party:espeak_ng_data",
-        ],
-        "//:espeak_off": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
@@ -2104,8 +2015,6 @@ cc_test(
         "test/c_api_tests.cpp",
         "test/capi_predict_validation_test.cpp",
         #"test/custom_loader_test.cpp", # TODO remove?
-        "test/custom_node_buffersqueue_test.cpp",
-        "test/custom_node_output_allocator_test.cpp",
         "test/demultiplexer_node_test.cpp",
         "test/deserialization_tests.cpp",
         "test/ensemble_config_change_stress.cpp",
@@ -2145,6 +2054,7 @@ cc_test(
         "test/tensor_conversion_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",
+        "test/task_determine_test.cpp",
         "test/test_http_utils.hpp",
         "test/threadsafequeue_test.cpp",
         "test/unit_tests.cpp",
@@ -2326,16 +2236,11 @@ cc_test(
         "//src:lib_node_dynamic_demultiplex.so",
         "//src:lib_node_perform_different_operations.so",
         "//src:lib_node_choose_maximum.so",
-        "//src:libcustom_node_east_ocr.so",
-        "//src:libcustom_node_face_blur.so",
-        "//src:libcustom_node_model_zoo_intel_object_detection.so",
-        "//src:libcustom_node_image_transformation.so",
-        "//src:libcustom_node_add_one.so",
-        "//src:libcustom_node_horizontal_ocr.so",
-    ],
+    ] + glob(["test/models_config_json/**"]),
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
+            "//src:libovms_default_task_detector",
             "//src/filesystem:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
             ":test_utils",
@@ -2348,7 +2253,6 @@ cc_test(
             ":test_gguf_environment",
             ":libtest_pythonenvironment",
             ":network_utils_test",
-            "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ":libgit2_test",
             ":pull_hf_model_test",
@@ -2385,6 +2289,9 @@ cc_test(
                 ":text2image_test",
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
+                "libovms_mediapipe_kfs_executor",
+                "//src/mediapipe_internal:mediapipe_utils",
+                "tensorflow_type_utils",
             ],
             "//:disable_mediapipe" :
             [
@@ -2393,7 +2300,13 @@ cc_test(
         }),
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,
-    linkopts = LINKOPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//conditions:default": [
+            "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/ovms/external/azure/lib",
+            "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/azure/lib",
+        ],
+        "//src:windows": [],
+    }),
 )
 
 cc_library(
@@ -2527,6 +2440,14 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+cc_library(
+    name = "test_wav_utils",
+    hdrs = ["test/wav_test_utils.hpp"],
+    linkstatic = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
 )
 
 cc_library(
@@ -2827,17 +2748,6 @@ cc_library(
     copts = COPTS_TESTS,
 )
 
-filegroup(
-  name = "release_custom_nodes",
-  srcs = [
-    "//src:libcustom_node_add_one.so",
-    "//src:libcustom_node_east_ocr.so",
-    "//src:libcustom_node_face_blur.so",
-    "//src:libcustom_node_horizontal_ocr.so",
-    "//src:libcustom_node_model_zoo_intel_object_detection.so",
-    "//src:libcustom_node_image_transformation.so",
-  ]
-)
 cc_library(
     name = "openvino_tests",
     linkstatic = 1,
@@ -2911,12 +2821,14 @@ cc_library(
         "test/llm/chat_template_analyzer_test.cpp",
         "test/llm/chat_template_adapter_test.cpp",
         "test/llm/chat_template_end_to_end_minja_test.cpp",
+        "test/llm/chat_template_and_parser_onyx_roundtrip_test.cpp",
     ],
     deps = [
         "@com_google_googletest//:gtest",
         "//src/llm:chat_template_analyzer",
         "//src/llm:chat_template_probe",
         "//src/llm:io_processing_input_processors",
+        "//src/llm:output_parsers",
         "//src/utils:env_guard",
         "//third_party:genai",
         ":test_platform_utils",
@@ -2936,6 +2848,7 @@ cc_library(
     deps = [
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
+        ":test_wav_utils",
         "//src/llm:io_processing_input_processors",
     ],
     copts = COPTS_TESTS,
@@ -2950,6 +2863,7 @@ cc_library(
     deps = [
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
+        ":test_wav_utils",
         "//src/llm:openai_completions_api_handler",
         "//src/llm:openai_responses_handler",
         "//src/llm:io_processing_input_processor",
@@ -2975,7 +2889,6 @@ filegroup(
   name = "static_analysis",
   srcs = [
     "//src:ovms",
-    "//src:release_custom_nodes",
     "//src:capi_benchmark",
     "//src:capi_cpp_example"
   ]

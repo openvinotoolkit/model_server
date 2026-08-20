@@ -299,7 +299,7 @@ public:
 
         std::unique_ptr<ov::Tensor> images;  // output
 
-        if (absl::StartsWith(payload.uri, "/v3/images/generations")) {
+        if (absl::StartsWith(payload.uri, "/v3/images/generations") || absl::StartsWith(payload.uri, "/v1/images/generations")) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Routed to image generations path", cc->NodeName());
             if (payload.parsedJson->HasParseError())
                 return absl::InvalidArgumentError("Failed to parse JSON");
@@ -338,7 +338,7 @@ public:
             if (!status.ok()) {
                 return status;
             }
-        } else if (absl::StartsWith(payload.uri, "/v3/images/edits")) {
+        } else if (absl::StartsWith(payload.uri, "/v3/images/edits") || absl::StartsWith(payload.uri, "/v1/images/edits")) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Routed to image edits path", cc->NodeName());
             if (payload.multipartParser->hasParseError())
                 return absl::InvalidArgumentError("Failed to parse multipart data");

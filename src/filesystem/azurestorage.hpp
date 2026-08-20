@@ -22,21 +22,21 @@
 #include <vector>
 
 #include "src/status.hpp"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wreorder"
 #pragma GCC diagnostic ignored "-Wunused-value"
-#include <was/file.h>
-
-#include "was/blob.h"
-#include "was/common.h"
-#include "was/storage_account.h"
+#include <azure/storage/blobs.hpp>
+#include <azure/storage/files/shares.hpp>
 #pragma GCC diagnostic pop
 
 namespace ovms {
 
-namespace as = azure::storage;
+namespace asblobs = Azure::Storage::Blobs;
+namespace asfiles = Azure::Storage::Files::Shares;
+
 using files_list_t = std::set<std::string>;
 
 class AzureStorageAdapter {
@@ -62,7 +62,7 @@ public:
     virtual ~AzureStorageAdapter() = default;
 
 protected:
-    const std::string extractAzureStorageExceptionMessage(const as::storage_exception& e);
+    const std::string extractAzureStorageExceptionMessage(const Azure::Storage::StorageException& e);
 
 private:
     virtual StatusCode parseFilePath(const std::string& path) = 0;
@@ -70,7 +70,7 @@ private:
 
 class AzureStorageBlob : public AzureStorageAdapter {
 public:
-    AzureStorageBlob(const std::string& path, as::cloud_storage_account& account);
+    AzureStorageBlob(const std::string& path, const std::string& connection_string);
 
     StatusCode checkPath(const std::string& path) override;
 
@@ -115,20 +115,14 @@ private:
 
     std::string container_;
 
-    as::cloud_blob_container as_container_;
+    std::string connection_string_;
 
-    as::cloud_block_blob as_block_blob_;
-
-    as::cloud_blob as_blob_;
-
-    as::cloud_storage_account account_;
-
-    as::cloud_blob_client as_blob_client_;
+    asblobs::BlobContainerClient as_container_;
 };
 
 class AzureStorageFile : public AzureStorageAdapter {
 public:
-    AzureStorageFile(const std::string& path, as::cloud_storage_account& account);
+    AzureStorageFile(const std::string& path, const std::string& connection_string);
 
     StatusCode checkPath(const std::string& path) override;
 
@@ -171,20 +165,18 @@ private:
 
     std::string share_;
 
-    as::cloud_storage_account account_;
+    std::string connection_string_;
 
-    as::cloud_file_client as_file_client_;
+    asfiles::ShareClient as_share_;
 
-    as::cloud_file_share as_share_;
+    asfiles::ShareDirectoryClient as_directory_;
 
-    as::cloud_file_directory as_directory_;
-
-    as::cloud_file as_file1_;
+    asfiles::ShareFileClient as_file1_;
 };
 
 class AzureStorageFactory {
 public:
-    std::shared_ptr<AzureStorageAdapter> getNewAzureStorageObject(const std::string& path, as::cloud_storage_account& account);
+    std::shared_ptr<AzureStorageAdapter> getNewAzureStorageObject(const std::string& path, const std::string& connection_string);
 
 private:
     bool isBlobStoragePath(std::string path);

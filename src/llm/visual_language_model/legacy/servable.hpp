@@ -55,6 +55,7 @@ struct VisualLanguageModelLegacyServableProperties : public GenAiServablePropert
 
 class VisualLanguageModelLegacyServable : public GenAiServable {
     std::shared_ptr<VisualLanguageModelLegacyServableProperties> properties;
+    void logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics);
 
 protected:
     void notifyExecutorThread();
@@ -66,7 +67,7 @@ public:
     }
 
     // Interface methods
-    absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const HttpPayload& payload);
+    absl::Status validateEndpoint(Endpoint endpoint) const override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;

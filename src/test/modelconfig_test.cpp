@@ -856,6 +856,38 @@ TEST(ModelConfig, plugin_config_num_streams_in_device_properties_kept_as_string)
     EXPECT_EQ(gpuProperties["NUM_STREAMS"].as<std::string>(), "4");
 }
 
+#ifdef _WIN32
+TEST(ModelConfig, plugin_config_cache_dir_windows_path_normalized) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str = "{\"CACHE_DIR\":\"c:\\\\models\\\\cache\"}";
+
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    ASSERT_EQ(actualPluginConfig.count("CACHE_DIR"), 1);
+    ASSERT_TRUE(actualPluginConfig["CACHE_DIR"].is<std::string>());
+    EXPECT_EQ(actualPluginConfig["CACHE_DIR"].as<std::string>(), "c:/models/cache");
+}
+
+TEST(ModelConfig, plugin_config_cache_dir_windows_path_normalized_in_device_properties) {
+    ovms::ModelConfig config;
+    std::string pluginConfig_str =
+        "{\"DEVICE_PROPERTIES\":{\"GPU\":{\"CACHE_DIR\":\"c:\\\\models\\\\gpu_cache\"}}}";
+
+    auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
+    auto actualPluginConfig = config.getPluginConfig();
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+
+    ASSERT_TRUE(actualPluginConfig["DEVICE_PROPERTIES"].is<ov::AnyMap>());
+    auto devices = actualPluginConfig["DEVICE_PROPERTIES"].as<ov::AnyMap>();
+    ASSERT_EQ(devices.count("GPU"), 1);
+    auto gpuProperties = devices["GPU"].as<ov::AnyMap>();
+    ASSERT_EQ(gpuProperties.count("CACHE_DIR"), 1);
+    ASSERT_TRUE(gpuProperties["CACHE_DIR"].is<std::string>());
+    EXPECT_EQ(gpuProperties["CACHE_DIR"].as<std::string>(), "c:/models/gpu_cache");
+}
+#endif
+
 TEST(ModelConfig, mappingInputs) {
     ovms::ModelConfig config;
     ovms::mapping_config_t mapping{

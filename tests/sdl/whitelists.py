@@ -95,8 +95,10 @@ whitelisted_dynamic_libraries = {
 # Libraries located in /ovms/lib/
 libraries = {
     OvmsBaseType.COMMON: {
-        'libazurestorage.so',
-        'libcpprest.so',
+        'libazure-core.so',
+        'libazure-storage-blobs.so',
+        'libazure-storage-common.so',
+        'libazure-storage-files-shares.so',
         'libespeak-ng.so',
         'libgit2.so',
         'libOpenCL.so',
@@ -132,6 +134,7 @@ libraries = {
         'libopenvino_intel_npu_compiler.so',
         'libopenvino_intel_npu_compiler_loader.so',
         'libopenvino_intel_npu_plugin.so',
+        'libopenvino_intel_npu_vm_runtime.so',
     },
     OvmsBaseType.UBUNTU22: set(),
     OvmsBaseType.UBUNTU24: set(),
@@ -157,6 +160,7 @@ libraries = {
         'openvino_intel_npu_compiler.dll',
         'openvino_intel_npu_compiler_loader.dll',
         'openvino_intel_npu_plugin.dll',
+        'openvino_intel_npu_vm_runtime.dll',
         'openvino_ir_frontend.dll',
         'openvino_onnx_frontend.dll',
         'openvino_paddle_frontend.dll',

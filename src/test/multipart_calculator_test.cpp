@@ -35,7 +35,7 @@ protected:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpoint = "/v3/chat/completions";
+    const std::string endpoint = "/v1/chat/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -108,7 +108,7 @@ It has two lines.
         return std::string_view(retval);
     });
 
-    const std::string URI = "/v3/something";
+    const std::string URI = "/v1/something";
     ASSERT_EQ(
         handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
@@ -161,8 +161,8 @@ It has two lines.
         return std::string_view(retval);
     });
 
-    // Default routing uses everything that comes after /v3/ as graph name
-    const std::string URI = "/v3/multipart";
+    // Default routing uses everything that comes after /v1/ as graph name
+    const std::string URI = "/v1/multipart";
 
     ASSERT_EQ(
         handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
@@ -202,8 +202,8 @@ It has two lines.
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("stream"))).WillOnce(::testing::Return(""));
     EXPECT_CALL(*multiPartParser, getFileContentByFieldName(::testing::_)).Times(0);
 
-    // Default routing uses everything that comes after /v3/ as graph name
-    const std::string URI = "/v3/NON_EXISTENT";
+    // Default routing uses everything that comes after /v1/ as graph name
+    const std::string URI = "/v1/NON_EXISTENT";
 
     ASSERT_EQ(
         handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
@@ -238,8 +238,8 @@ It has two lines.
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("stream"))).WillOnce(::testing::Return(""));
     EXPECT_CALL(*multiPartParser, getFileContentByFieldName(::testing::_)).Times(0);
 
-    // Default routing uses everything that comes after /v3/ as graph name
-    const std::string URI = "/v3/";
+    // Default routing uses everything that comes after /v1/ as graph name
+    const std::string URI = "/v1/";
 
     ASSERT_EQ(
         handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),

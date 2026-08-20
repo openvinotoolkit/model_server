@@ -25,6 +25,7 @@
 
 #include <fstream>
 
+#include <openvino/runtime/properties.hpp>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 
@@ -36,6 +37,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../config.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
@@ -51,6 +53,8 @@
 #include "servable_initializer.hpp"
 #include "visual_language_model/continuous_batching/servable.hpp"
 #include "visual_language_model/legacy/servable_initializer.hpp"
+#include "omni_model/legacy/servable_initializer.hpp"
+#include "omni_model/legacy/servable.hpp"
 
 namespace ovms {
 
@@ -81,6 +85,10 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
     // Minja path — use the shared probe component
     if (!probeChatTemplateCapsMinja(properties->tokenizer, properties->chatTemplateCaps)) {
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Minja cannot render this template's tool calls correctly");
+    }
+
+    if (!properties->reasoningParserName.empty() && !probeChatTemplateReasoning(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support reasoning_content field");
     }
 }
 
@@ -167,6 +175,24 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 #if (PYTHON_DISABLE == 0)
     properties->inputProcessorContext.templateProcessor = &properties->templateProcessor;
 #endif
+}
+
+void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties) {
+    // Propagate the global --cache_dir (ServerSettings) into the pipeline plugin config.
+    // Unlike the non-CB ModelInstance path (ModelInstance::setCacheOptions), these GenAI
+    // initializers construct the pipeline directly, so the server-level cache_dir is
+    // otherwise never applied and compiled-model cache artifacts are never persisted.
+    // An explicit CACHE_DIR in the node's plugin_config remains authoritative.
+    const std::string& globalCacheDir = Config::instance().cacheDir();
+    if (globalCacheDir.empty()) {
+        return;
+    }
+    if (properties->pluginConfig.find(ov::cache_dir.name()) == properties->pluginConfig.end()) {
+        properties->pluginConfig[ov::cache_dir.name()] = globalCacheDir;
+        SPDLOG_DEBUG("Applying global cache_dir to GenAI pipeline: {}", globalCacheDir);
+    } else {
+        SPDLOG_DEBUG("CACHE_DIR set explicitly in node plugin_config; keeping user value over global cache_dir");
+    }
 }
 
 #if (PYTHON_DISABLE == 0)
@@ -453,13 +479,22 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     }
 
     std::filesystem::path parsedModelsPathFs(parsedModelsPath);
-    // Existence of embeddings models indicates we are dealing with VLM pipeline
-    bool isVLM = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
-                  std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
+
+    // Existence of talker model indicates omni pipeline
+    bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
+    bool hasVlmModels = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
+                         std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
+
+    // Existence of text embeddings and vision embeddings models indicates we are dealing with VLM pipeline
+    // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
+    bool isOmni = hasTalkerModel && hasVlmModels;
+    bool isVLM = !hasTalkerModel && hasVlmModels;
 
     // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
     if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {
-        if (nodeOptions.device() == "NPU") {
+        if (isOmni) {
+            pipelineType = PipelineType::OMNI;
+        } else if (nodeOptions.device() == "NPU") {
             if (isVLM) {
                 pipelineType = PipelineType::VLM;
             } else {
@@ -485,6 +520,9 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
             break;
         case mediapipe::LLMCalculatorOptions::VLM_CB:
             pipelineType = PipelineType::VLM_CB;
+            break;
+        case mediapipe::LLMCalculatorOptions::OMNI:
+            pipelineType = PipelineType::OMNI;
             break;
         default:
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node options do not contain any recognized pipeline configuration.");
@@ -547,6 +585,14 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Legacy servable");
             VisualLanguageModelLegacyServableInitializer legacyServableInitializer;
             status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
+            if (status != StatusCode::OK) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
+                return status;
+            }
+        } else if (pipelineType == PipelineType::OMNI) {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Omni Model Legacy servable");
+            OmniModelLegacyServableInitializer omniServableInitializer;
+            status = omniServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;

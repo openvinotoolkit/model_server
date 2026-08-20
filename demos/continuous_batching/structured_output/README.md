@@ -11,49 +11,21 @@ Below are a few examples of using structured output to get result in desired for
 There are no extra steps needed to use structured output. Whole behavior is triggered based on the client request.
 
 ::::{tab-set}
-:::{tab-item} With Docker on GPU
+:::{tab-item} With Docker
 **Required:** Docker Engine installed
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+docker run  ${GPU_ARGS} --user $(id -u):$(id -g) -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path /models --rest_port 8000
 ```
 :::
-:::{tab-item} With Docker on NPU
-**Required:** Docker Engine installed
-
-```bash
-mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device NPU
-```
-:::
-:::{tab-item} With Docker on CPU
-**Required:** Docker Engine installed
-
-```bash
-mkdir models
-docker run --user $(id -u):$(id -g) -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device CPU
-```
-:::
-:::{tab-item} On Baremetal Host and GPU
+:::{tab-item} On Baremetal Host Windows
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
-ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device GPU --task text_generation
-```
-:::
-:::{tab-item} On Baremetal Host and NPU
-**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
-
-```bat
-ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device NPU --task text_generation
-```
-:::
-:::{tab-item} On Baremetal Host and CPU
-**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
-
-```bat
-ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device CPU --task text_generation
+mkdir c:\models
+ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path c:\models --rest_port 8000
 ```
 :::
 ::::

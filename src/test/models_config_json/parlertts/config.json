@@ -1,0 +1,5 @@
+{
+  "architectures": ["ParlerTTSForConditionalGeneration"],
+  "model_type": "parlertts",
+  "hidden_size": 768
+}

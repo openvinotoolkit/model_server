@@ -17,9 +17,11 @@
 import csv
 import threading
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
+import psutil
 from dateutil import parser
 
 from tests.functional.utils.logger import get_logger
@@ -32,6 +34,7 @@ class ResourceMonitor(threading.Thread, ABC):
     def __init__(self):
         threading.Thread.__init__(self)
         self._stop_event = threading.Event()
+        self.stop_reason = None
 
     def stop(self):
         self._stop_event.set()
@@ -42,6 +45,7 @@ class ResourceMonitor(threading.Thread, ABC):
             try:
                 self.check_resources()
             except StopIteration as e:
+                self.stop_reason = str(e)
                 self._stop_event.set()
                 break
         self.save_data()
@@ -55,13 +59,33 @@ class ResourceMonitor(threading.Thread, ABC):
         pass
 
 
+def _cgroup_cache_bytes(cgroup_memory_stats):
+    if "cache" in cgroup_memory_stats:
+        return float(cgroup_memory_stats.get("cache", 0))
+    return float(cgroup_memory_stats.get("file", 0))
+
+
 class DockerResourceMonitor(ResourceMonitor):
     MEMORY_USAGE = "MEMORY_USAGE"
-    FIELDS = ["DATE", "PIDS_COUNT", MEMORY_USAGE]  # + ["CPU_USAGE"] # Enable in further releases
+    PRIVATE_MEMORY = "PRIVATE_MEMORY"
+    MEMORY_CACHE = "MEMORY_CACHE"
+    FIELDS = ["DATE", "PIDS_COUNT", MEMORY_USAGE, PRIVATE_MEMORY, MEMORY_CACHE]  # + ["CPU_USAGE"] # Enable in further releases
+    VALIDATED_FIELDS = [MEMORY_USAGE, PRIVATE_MEMORY]
+    LOGGED_MEMORY_FIELDS = [MEMORY_CACHE]
+    COUNTER_FIELDS = ["PIDS_COUNT"]
+    LOGGED_FIELDS = LOGGED_MEMORY_FIELDS + COUNTER_FIELDS
     FIELDS_TO_STATS = {
         "DATE": lambda x: x["read"],
         "PIDS_COUNT": lambda x: int(x["pids_stats"].get("current", "0")),
         MEMORY_USAGE: lambda x: "{:.2f}M".format(float(x["memory_stats"].get("usage", "0.0")) / (2**20)),
+        PRIVATE_MEMORY: lambda x: "{:.2f}M".format(
+            float(x["memory_stats"].get("stats", {}).get(
+                "anon", x["memory_stats"].get("stats", {}).get("rss", 0)
+            )) / (2**20)
+        ),
+        MEMORY_CACHE: lambda x: "{:.2f}M".format(
+            _cgroup_cache_bytes(x["memory_stats"].get("stats", {})) / (2**20)
+        ),
         # Enable after debug & fixing
         # "CPU_USAGE": lambda x:
         #     [cpu / x['cpu_stats']['cpu_usage']['total_usage'] for cpu in x['cpu_stats']['cpu_usage']['percpu_usage']],
@@ -140,9 +164,142 @@ class DockerResourceMonitor(ResourceMonitor):
         'networks' = {dict: 1} {'eth0': {'rx_bytes': 90, 'rx_packets': 1, 'rx_errors': 0, ...
         """
         stats = self.container.stats(stream=False, decode=False)
+        # Prevent reading zeroes from stopped container
+        pids = int(stats.get("pids_stats", {}).get("current", 0) or 0)
+        usage = float(stats.get("memory_stats", {}).get("usage", 0) or 0)
+        if pids <= 0 or usage <= 0:
+            reason = (
+                f"container {self.container.name} reports no live process "
+                f"(pids_stats.current={pids}, memory_stats.usage={usage} bytes) - the container "
+                f"stopped, crashed or was removed while the test was still sampling"
+            )
+            logger.warning(f"Stopping Docker resource monitor: {reason}")
+            raise StopIteration(reason)
         return stats
 
     def get_stats_by_field(self, field):
         result = self._get_resource_data()
         self._docker_stats_data_raw.append(result)
         return self.get_field_data(field, result)
+
+    def sample_all(self):
+        """Read one stats snapshot and return all tracked metrics as floats (MB / counts).
+
+        A single snapshot keeps every metric in the returned sample mutually
+        consistent (same instant) and avoids one docker stats call per metric.
+        """
+        stats = self._get_resource_data()
+        self._docker_stats_data_raw.append(stats)
+        return {
+            field: float(str(self.get_field_data(field, stats)).replace("M", ""))
+            for field in self.get_validated_metric_names() + self.get_logged_metric_names()
+        }
+
+    @classmethod
+    def get_validated_metric_names(cls):
+        return cls.VALIDATED_FIELDS
+
+    @classmethod
+    def get_logged_metric_names(cls):
+        return cls.LOGGED_FIELDS
+
+    @classmethod
+    def get_memory_metric_names(cls):
+        return cls.VALIDATED_FIELDS + cls.LOGGED_MEMORY_FIELDS
+
+    @classmethod
+    def get_counter_metric_names(cls):
+        return cls.COUNTER_FIELDS
+
+
+class WindowsResourceMonitor(ResourceMonitor):
+    WORKING_SET_SIZE = "WORKING_SET_SIZE"
+    PRIVATE_BYTES = "PRIVATE_BYTES"
+    PAGE_FAULTS = "PAGE_FAULTS"
+
+    MEMORY_USAGE = WORKING_SET_SIZE
+
+    FIELDS = ["DATE", WORKING_SET_SIZE, PRIVATE_BYTES, PAGE_FAULTS]
+    VALIDATED_FIELDS = [PRIVATE_BYTES]
+    LOGGED_MEMORY_FIELDS = [WORKING_SET_SIZE]
+    COUNTER_FIELDS = [PAGE_FAULTS]
+    LOGGED_FIELDS = LOGGED_MEMORY_FIELDS + COUNTER_FIELDS
+    SAMPLE_INTERVAL_SEC = 1.0
+    # Optional callback invoked after save_data with (log_path).
+    on_data_saved = None
+
+    def __init__(self, ovms_pid):
+        super().__init__()
+        self.ovms_pid = ovms_pid
+        self._process = psutil.Process(int(ovms_pid))
+        self._stats_data_raw = []
+
+    def cleanup(self):
+        if not self._stop_event.is_set():
+            if self.is_alive():
+                self.stop()
+            self.save_data()
+
+    def _get_resource_data(self):
+        stats = {"DATE": datetime.now().isoformat()}
+        try:
+            info = self._process.memory_info()
+        except psutil.Error as error:
+            reason = (f"OVMS process pid={self.ovms_pid} is no longer readable ({error}) - it "
+                      f"exited, crashed or was killed while the test was still sampling")
+            logger.warning(f"Stopping Windows resource monitor: {reason}")
+            raise StopIteration(reason) from error
+        # wset/private are the Win32 counters .NET exposes as WorkingSet64/PrivateMemorySize64.
+        stats[self.WORKING_SET_SIZE] = float(info.wset) / (1024 * 1024)
+        stats[self.PRIVATE_BYTES] = float(info.private) / (1024 * 1024)
+        stats[self.PAGE_FAULTS] = int(info.num_page_faults)
+        return stats
+
+    def check_resources(self):
+        result = self._get_resource_data()
+        self._stats_data_raw.append(result)
+        self._stop_event.wait(self.SAMPLE_INTERVAL_SEC)
+
+    def save_data(self):
+        self.rows = list(self._stats_data_raw)
+        log_path = Path(artifacts_dir, f"windows_stats_pid_{self.ovms_pid}.log")
+        with log_path.open("w") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=self.FIELDS)
+            writer.writeheader()
+            writer.writerows(self.rows)
+        if WindowsResourceMonitor.on_data_saved:
+            WindowsResourceMonitor.on_data_saved(log_path)
+        return log_path
+
+    def get_stats_by_field(self, field):
+        result = self._get_resource_data()
+        self._stats_data_raw.append(result)
+        value = result[field]
+        if field in (self.WORKING_SET_SIZE, self.PRIVATE_BYTES):
+            return f"{value:.2f}M"
+        return str(value)
+
+    def sample_all(self):
+        """Read one process snapshot and return all tracked metrics as floats (MB / counts)."""
+        stats = self._get_resource_data()
+        self._stats_data_raw.append(stats)
+        return {
+            field: float(stats[field])
+            for field in self.get_validated_metric_names() + self.get_logged_metric_names()
+        }
+
+    @classmethod
+    def get_validated_metric_names(cls):
+        return cls.VALIDATED_FIELDS
+
+    @classmethod
+    def get_logged_metric_names(cls):
+        return cls.LOGGED_FIELDS
+
+    @classmethod
+    def get_memory_metric_names(cls):
+        return cls.VALIDATED_FIELDS + cls.LOGGED_MEMORY_FIELDS
+
+    @classmethod
+    def get_counter_metric_names(cls):
+        return cls.COUNTER_FIELDS
