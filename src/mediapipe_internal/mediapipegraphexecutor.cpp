@@ -63,8 +63,8 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     mediapipeServableMetricReporter(mediapipeServableMetricReporter),
     guard(std::move(guard)),
     activeInferenceGuard(activeInferenceCount
-        ? std::optional<ActiveInferenceGuard>(ActiveInferenceGuard(std::move(activeInferenceCount), std::move(lastActivityTimeNs)))
-        : std::nullopt) {}
+                             ? std::optional<ActiveInferenceGuard>(ActiveInferenceGuard(std::move(activeInferenceCount), std::move(lastActivityTimeNs)))
+                             : std::nullopt) {}
 MediapipeGraphExecutor::MediapipeGraphExecutor(
     const std::string& name,
     const std::string& version,
@@ -90,7 +90,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter),
     activeInferenceGuard(activeInferenceCount
-        ? std::optional<ActiveInferenceGuard>(ActiveInferenceGuard(std::move(activeInferenceCount), std::move(lastActivityTimeNs)))
-        : std::nullopt) {}
+                             ? std::optional<ActiveInferenceGuard>(ActiveInferenceGuard(std::move(activeInferenceCount), std::move(lastActivityTimeNs)))
+                             : std::nullopt) {}
 
 }  // namespace ovms

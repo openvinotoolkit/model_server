@@ -265,6 +265,7 @@ struct ModelsSettingsImpl {
     uint32_t nireq = 0;
     std::string targetDevice;
     std::string pluginConfig;
+    std::optional<std::string> groupName;
     std::vector<std::string> userSetSingleModelArguments;
 
     std::string configPath;

@@ -2145,7 +2145,7 @@ TEST(SchemaTest, MediapipeConfigGroupNameInvalidType) {
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
 #endif
-    const char* mediapipeConfigNegative = R"(
+const char* mediapipeConfigNegative = R"(
     {
         "model_config_list": [],
         "mediapipe_config_list": [
@@ -2157,8 +2157,8 @@ TEST(SchemaTest, MediapipeConfigGroupNameInvalidType) {
         ]
     })";
 
-    rapidjson::Document configDoc;
-    configDoc.Parse(mediapipeConfigNegative);
-    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
-    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+rapidjson::Document configDoc;
+configDoc.Parse(mediapipeConfigNegative);
+auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
