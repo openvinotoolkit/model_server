@@ -101,8 +101,7 @@ std::optional<Delta> DevstralToolParser::parseChunk(const std::string& chunk, co
                 }
             }
             return std::nullopt;
-        }
-        if (pos != std::string::npos) {
+        } else {
             this->internalState = PROCESSING_ARGS;
             this->toolName = this->streamContent.substr(0, pos);
             ovms::trim(this->toolName);  // trim in case of extra spaces/newlines
@@ -124,9 +123,8 @@ std::optional<Delta> DevstralToolParser::parseChunk(const std::string& chunk, co
             } else {
                 return ToolCallDelta{this->toolCallIndex, generateRandomId(), this->toolName, ""};
             }
-        } else {
-            return std::nullopt;
         }
+        return std::nullopt;
     }
     if (this->internalState == PROCESSING_ARGS) {
         size_t endPos = this->streamContent.find(this->parsingEndTag);
@@ -137,9 +135,7 @@ std::optional<Delta> DevstralToolParser::parseChunk(const std::string& chunk, co
             arguments = this->streamContent;
         }
 
-        // When the end tag arrives with no preceding argument content and we have already emitted
-        // argument content in prior calls (e.g. char-by-char feeding via parse()), suppress the
-        // spurious "{}" delta that would otherwise be appended to the accumulated arguments.
+        // Suppress the spurious "{}" delta that would otherwise be appended to the accumulated arguments.
         if (arguments.empty() && argumentsEmitted) {
             this->streamContent = "";
             return std::nullopt;

@@ -18,10 +18,9 @@
 #include <vector>
 #include <utility>
 
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-
 #include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 
 namespace ovms {
 class Gemma4ToolParser : public BaseOutputParser {

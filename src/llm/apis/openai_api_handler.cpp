@@ -266,8 +266,6 @@ absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLim
 }
 
 void OpenAIApiHandler::initOutputParser() {
-    if (!request.skipSpecialTokens)
-        return;
     if (toolParserName.empty() && reasoningParserName.empty())
         return;
     outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, request.toolNameSchemaMap);
