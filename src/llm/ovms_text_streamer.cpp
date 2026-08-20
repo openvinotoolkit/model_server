@@ -21,6 +21,8 @@
 
 #include <rapidjson/document.h>
 
+#include "../logging.hpp"
+
 namespace {
 // Matches GenAI's is_incomplete() in text_streamer.cpp.
 // The tokenizer outputs U+FFFD (\xef\xbf\xbd) as a 3-byte replacement
@@ -181,7 +183,20 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
 
     std::optional<rapidjson::Document> delta;
     if (m_output_parser != nullptr) {
-        delta = m_output_parser->parseChunk(chunk, tokens, m_tools_available, finish_reason);
+        try {
+            delta = m_output_parser->parseChunk(chunk, tokens, m_tools_available, finish_reason);
+        } catch (const std::exception& e) {
+            // Do not let parser exceptions unwind GenAI's internal generate() call: that
+            // leaves the underlying InferRequest stuck "busy" for the next request.
+            // Cancel generation gracefully instead; hadParserError() is checked by the
+            // caller once generate() returns to report the failure.
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Output parser failed, cancelling generation: {}", e.what());
+            m_had_parser_error = true;
+            rapidjson::Document empty;
+            empty.SetObject();
+            m_callback(std::move(empty), true);
+            return ov::genai::StreamingStatus::CANCEL;
+        }
     } else if (!chunk.empty()) {
         // No parser: wrap raw text in a trivial {"delta":{"content":"..."}} document.
         // Skip when chunk is empty (e.g. STOP flush after a newline-clearing write).

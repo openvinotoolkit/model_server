@@ -306,6 +306,33 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
     EXPECT_EQ(parsedOutput.content, "");
 }
 
+TEST_F(Minicpm5OutputParserTest, ParseWithUnterminatedThinkBlockDoesNotCrash) {
+    constexpr int64_t thinkStartTokenId = Minicpm5ReasoningParser::reasoningStartTokenId;
+
+    auto outputParserWithReasoning =
+        std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
+
+    auto encode = [](ov::genai::Tokenizer& tok, const std::string& text) {
+        auto tensor = tok.encode(text, ov::genai::add_special_tokens(false)).input_ids;
+        return std::vector<int64_t>(tensor.data<int64_t>(), tensor.data<int64_t>() + tensor.get_size());
+    };
+
+    std::vector<int64_t> generatedTokens;
+    generatedTokens.push_back(thinkStartTokenId);
+    auto reasoningTokens = encode(*minicpm5Tokenizer, "This is my internal reasoning about what to call.");
+    generatedTokens.insert(generatedTokens.end(), reasoningTokens.begin(), reasoningTokens.end());
+    // No closing think token here - generation stops mid-reasoning.
+    auto functionCallTokens = encode(*minicpm5Tokenizer, R"(<function name="search"><param name="query">Intel</param></function>)");
+    generatedTokens.insert(generatedTokens.end(), functionCallTokens.begin(), functionCallTokens.end());
+
+    ParsedOutput parsedOutput;
+    ASSERT_NO_THROW(parsedOutput = outputParserWithReasoning->parse(generatedTokens, true));
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "search");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"query":"Intel"})");
+}
+
 TEST_F(Minicpm5OutputParserTest, RequiresStreamingWithSpecialTokens) {
     Minicpm5ToolParser toolParser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
     EXPECT_TRUE(toolParser.requiresStreamingWithSpecialTokens());

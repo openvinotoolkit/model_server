@@ -469,3 +469,28 @@ TEST_F(MistralOutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
         }
     }
 }
+
+TEST_F(MistralOutputParserTest, StreamingToolCallArgumentsBeforeNameThrows) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"[{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // At this point "arguments" key has just appeared in the accumulated JSON, but "name" was never provided.
+        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    };
+
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+        if (expectedDelta.has_value()) {
+            FAIL() << "Expected delta should be nullopt for this test case.";
+        }
+        try {
+            std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
+            if (doc.has_value()) {
+                FAIL() << "Expected an exception to be thrown for chunk: " << chunk;
+            }
+        } catch (const std::runtime_error& e) {
+            EXPECT_STREQ(e.what(), "Tool call name is missing in generated output");
+        } catch (...) {
+            FAIL() << "Expected a std::runtime_error to be thrown for chunk: " << chunk;
+        }
+    }
+}

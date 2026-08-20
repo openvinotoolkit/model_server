@@ -78,11 +78,19 @@ public:
     ov::genai::StreamingStatus write(const std::vector<int64_t>& tokens) override;
     void end() override;
 
+    // True when the output parser threw during a flush. Generation is cancelled
+    // gracefully (StreamingStatus::CANCEL) rather than letting the exception unwind
+    // GenAI's internal generate() loop, which would leave the underlying InferRequest
+    // stuck "busy" for the next request. Callers must check this after generate()
+    // returns to report the failure (e.g. set their own success flag).
+    bool hadParserError() const { return m_had_parser_error; }
+
 private:
     // TODO(phase3): see constructor comment — ownership will be reworked.
     std::shared_ptr<OutputParser> m_output_parser;
     bool m_tools_available;
     Callback m_callback;
+    bool m_had_parser_error = false;
 
     // Must match the file-scope constexpr in openvino/genai text_streamer.cpp.
     // Named here so a future GenAI change is a single update point.

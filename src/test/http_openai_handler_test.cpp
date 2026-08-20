@@ -28,7 +28,9 @@
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/apis/openai_responses.hpp"
+#include "../llm/io_processing/output_parser.hpp"
 #include "../llm/language_model/legacy/servable.hpp"
+#include "../llm/ovms_text_streamer.hpp"
 #include "../llm/visual_language_model/legacy/servable.hpp"
 #include "../client_connection.hpp"
 #include <openvino/genai/visual_language/pipeline.hpp>
@@ -4902,6 +4904,46 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseRespons
         << "output_tokens must equal num_generated_tokens from perf_metrics: " << response;
     ASSERT_NE(response.find("\"input_tokens\":8"), std::string::npos)
         << "input_tokens must equal num_input_tokens from perf_metrics: " << response;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, legacyServableParserExceptionCancelsGenerationAndReportsFailure) {
+    ovms::ToolsSchemas_t emptyToolsSchema{};
+    auto outputParser = std::make_shared<ovms::OutputParser>(*tokenizer, "mistral", "", emptyToolsSchema);
+
+    int finalCallbackCount = 0;
+    auto callback = [&](rapidjson::Document /*delta*/, bool isLast) -> ov::genai::StreamingStatus {
+        if (isLast) {
+            finalCallbackCount++;
+        }
+        return ov::genai::StreamingStatus::RUNNING;
+    };
+    auto streamer = std::make_shared<ovms::OVMSTextStreamer>(*tokenizer, outputParser, /*tools_available=*/true, callback, ov::AnyMap{});
+
+    // "arguments" appears before "name" is known - MistralToolParser::parseChunk throws for this shape.
+    const std::string malformedToolCall = "[{\"arguments\": {\"x\": 1}, \"name\": \"foo\"}]";
+    auto inputIds = tokenizer->encode(malformedToolCall, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> tokens(inputIds.data<int64_t>(), inputIds.data<int64_t>() + inputIds.get_size());
+    ASSERT_FALSE(tokens.empty());
+
+    ov::genai::StreamingStatus status = ov::genai::StreamingStatus::RUNNING;
+    ASSERT_NO_THROW(status = streamer->write(tokens));
+    if (status == ov::genai::StreamingStatus::RUNNING) {
+        // Offending text may still be sitting in the delay buffer - end() flushes it.
+        ASSERT_NO_THROW(streamer->end());
+    }
+    ASSERT_TRUE(streamer->hadParserError());
+    EXPECT_EQ(finalCallbackCount, 1);
+
+    // Mirrors what LegacyExecutor::processRequest does with the streamer after pipe->generate() returns.
+    auto ctx = makeLegacyResponsesContext(tokenizer, /*numInputTokens=*/10, /*numGeneratedTokens=*/5);
+    ASSERT_NE(ctx, nullptr);
+    ctx->textStreamer = streamer;s
+    ctx->success = !streamer->hadParserError();
+
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+    ovms::LegacyServable servable;
+    EXPECT_EQ(servable.preparePartialResponse(ctxBase),
+        absl::InvalidArgumentError("Request processing failed, check its correctness."));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, vlmLegacyServablePreparePartialResponseResponsesEndpointHasCorrectUsageInCompletedEvent) {
