@@ -131,10 +131,8 @@ protected:
     absl::Status parseResponseFormat();
     absl::Status ensureArgumentsInToolCalls(Value& messageObj);
     void initOutputParser();
-    // Assemble a ParsedOutput from a sequence of streaming delta Documents produced by OVMSTextStreamer.
-    // Each document has the shape {"delta":{...}} as emitted by flush_chunk, or an empty object for
-    // finish-only chunks.  Content, reasoning, and tool-call fragments are accumulated in order.
-    static ParsedOutput parsedOutputFromDeltas(const std::vector<rapidjson::Document>& deltas);
+    // Assemble a ParsedOutput from a sequence of streaming Delta variants produced by OVMSTextStreamer.
+    static ParsedOutput parsedOutputFromDeltas(const std::vector<Delta>& deltas);
 
 public:
     OpenAIApiHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -211,17 +209,17 @@ public:
     // Phase 2: delta-based unary serialisation — assembles a complete response from streaming
     // delta Documents collected via deltaChannel after OVMSTextStreamer finishes.
     // Single-choice variant (used by Legacy servables).
-    virtual std::string serializeUnaryResponse(const std::vector<rapidjson::Document>& deltas, ov::genai::GenerationFinishReason finishReason) = 0;
+    virtual std::string serializeUnaryResponse(const std::vector<Delta>& deltas, ov::genai::GenerationFinishReason finishReason) = 0;
     // Multi-choice variant: N delta-vectors (one per sequence) + per-sequence finish reasons.
     // logprobData may be empty when logprobs are not requested; otherwise its size equals
     // allDeltas.size(). Used by ContinuousBatchingServable for both n=1 and n>1.
-    virtual std::string serializeUnaryResponse(const std::vector<std::vector<rapidjson::Document>>& allDeltas,
+    virtual std::string serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
         const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
         const std::vector<UnaryChoiceLogprobs>& logprobData) = 0;
     // Convenience overload: no logprobs (delegates to the virtual above with empty logprobData).
-    std::string serializeUnaryResponse(const std::vector<std::vector<rapidjson::Document>>& allDeltas,
+    std::string serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
         const std::vector<ov::genai::GenerationFinishReason>& finishReasons);
-    virtual std::string serializeStreamingChunk(rapidjson::Document parsedDelta, ov::genai::GenerationFinishReason finishReason) = 0;
+    virtual std::string serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) = 0;
     virtual std::string serializeStreamingUsageChunk() = 0;
     virtual std::string serializeStreamingHandshakeChunk() = 0;
 

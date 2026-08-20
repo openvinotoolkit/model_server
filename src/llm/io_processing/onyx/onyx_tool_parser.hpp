@@ -25,8 +25,6 @@
 
 #include <openvino/genai/tokenizer.hpp>
 
-#include "src/port/rapidjson_document.hpp"
-
 #include "src/llm/io_processing/base_output_parser.hpp"
 #include "src/llm/apis/tool_schema_wrapper.hpp"
 #include "src/logging.hpp"
@@ -153,8 +151,8 @@ private:
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
 
-    std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& functionName);
-    std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
+    std::optional<Delta> sendFirstDeltaIfNeeded(const std::string& functionName);
+    std::optional<Delta> sendFullDelta(const ToolCalls_t& toolCalls);
     void buildStartTags();
 
 public:
@@ -169,7 +167,7 @@ public:
         returnedCompleteDeltas.clear();
     }
 
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 
     static OutputParsingConfig defaultParsingConfig() {
         OutputParsingConfig cfg;

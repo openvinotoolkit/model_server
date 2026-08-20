@@ -101,10 +101,10 @@ private:
     // Parsing methods below read chunks from streamOutputCache hence no string argument is needed
 
     // Regular content parsing method does not require finishReason as content is always parsed
-    std::optional<rapidjson::Document> parseContentChunk(ProcessingPhase newPhase = CONTENT);
+    std::optional<Delta> parseContentChunk(ProcessingPhase newPhase = CONTENT);
 
-    std::optional<rapidjson::Document> parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS_PROCESSING_TOOL);
-    std::optional<rapidjson::Document> parseReasoningChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
+    std::optional<Delta> parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS_PROCESSING_TOOL);
+    std::optional<Delta> parseReasoningChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
 
     // Configure parser to treat the output as already-in-reasoning from the first token.
     // Used when the chat template appends the reasoning start tag (e.g. "<think>\n") as
@@ -120,7 +120,7 @@ public:
     bool isReasoningParserAvailable() const;
     std::string getToolParserStartTag() const;
 
-    // Reset streaming state and recreate parser instances to clear internal parser state.
+    // Reset streaming state (phase, buffer, and per-parser internal state) for a new generation.
     void resetStreamingState();
 
     // Auto-detect and apply implicit reasoning start based on the prompt produced by the chat template.
@@ -149,7 +149,7 @@ public:
     //
     // tokens holds the token IDs that produced chunkResponse (informational; used for
     // token-ID-based phase-start detection in OVMSTextStreamer).
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason);
+    std::optional<Delta> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason);
 
     // Decide decode mode dynamically based on parser phase and user preference.
     // Content/unknown phases use defaultDecodingWithSpecialTokens OR user preference.

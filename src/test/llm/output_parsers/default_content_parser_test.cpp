@@ -47,17 +47,16 @@ protected:
         tokenizer.reset();
     }
 
-    // Helper: invoke parseChunk and return the "content" string from the delta, or nullopt if
-    // the parser returned nullopt.
+    // Helper: invoke parseChunk and return the content string, or nullopt if the parser returned nullopt.
     static std::optional<std::string> parseContent(DefaultContentParser& parser, const std::string& buf) {
         auto result = parser.parseChunk(buf, {}, ov::genai::GenerationFinishReason::NONE);
         if (!result.has_value())
             return std::nullopt;
-        const auto& deltaIt = result->FindMember("delta");
-        EXPECT_NE(deltaIt, result->MemberEnd());
-        const auto& contentIt = deltaIt->value.FindMember("content");
-        EXPECT_NE(contentIt, deltaIt->value.MemberEnd());
-        return std::string(contentIt->value.GetString(), contentIt->value.GetStringLength());
+        const auto* cd = std::get_if<ContentDelta>(&*result);
+        EXPECT_NE(cd, nullptr) << "Expected ContentDelta";
+        if (!cd)
+            return std::nullopt;
+        return cd->text;
     }
 };
 
@@ -172,5 +171,7 @@ TEST_F(DefaultContentParserTest, NonEmptyTokensIgnored) {
     DefaultContentParser parser(*tokenizer, {"<|eot|>"});
     auto result = parser.parseChunk("hello", {1, 2, 3}, ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(std::string((*result)["delta"]["content"].GetString()), "hello");
+    const auto* cd = std::get_if<ContentDelta>(&*result);
+    ASSERT_NE(cd, nullptr);
+    EXPECT_EQ(cd->text, "hello");
 }

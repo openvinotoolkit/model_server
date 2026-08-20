@@ -29,19 +29,32 @@
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
+#include "../../../llm/apis/openai_rapidjson_delta_serializer.hpp"
 #include "../../../llm/ovms_text_streamer.hpp"
 
 namespace ovms {
 namespace test {
 
+// Serialize a Delta to a rapidjson::Document for use in test assertions that compare
+// JSON strings.  Re-parses the serializer output so tests can use HasMember() etc.
+inline rapidjson::Document deltaToDocument(const Delta& d) {
+    RapidJsonDeltaSerializer s;
+    rapidjson::Document doc;
+    std::string json = std::visit([&](const auto& v) { return s.serialize(v); }, d);
+    doc.Parse(json.c_str());
+    return doc;
+}
+
+// Serialize a Delta directly to the JSON string produced by RapidJsonDeltaSerializer.
+inline std::string deltaToJson(const Delta& d) {
+    RapidJsonDeltaSerializer s;
+    return std::visit([&](const auto& v) { return s.serialize(v); }, d);
+}
+
 // Drives a complete token sequence through OVMSTextStreamer and accumulates all
 // emitted deltas into a ParsedOutput.  This mirrors exactly what the production
 // servable does in unary (non-streaming) mode: push all tokens to the streamer,
 // then read the accumulated deltas.
-//
-// The streamer handles BPE-correct decoding, dynamic skip_special_tokens
-// switching, and token-ID-based phase detection — no special "unary mode" logic
-// is needed; the caller simply collects everything the callback produces.
 inline ParsedOutput parseWithStreamer(
     const ov::genai::Tokenizer& tokenizer,
     OutputParser& outputParser,
@@ -54,44 +67,27 @@ inline ParsedOutput parseWithStreamer(
     ParsedOutput result;
     std::vector<ToolCall> toolCalls;
 
-    auto callback = [&](rapidjson::Document doc, bool isLast) {
-        if (!doc.IsObject()) {
-            ADD_FAILURE() << "parseWithStreamer callback received non-object Document (isLast=" << isLast << ")";
-            return ov::genai::StreamingStatus::RUNNING;
-        }
-        if (!doc.HasMember("delta")) {
-            // Empty object fired at STOP when parser emitted no final delta — expected, skip silently.
-            return ov::genai::StreamingStatus::RUNNING;
-        }
-        const auto& d = doc["delta"];
-        if (!d.IsObject())
-            return ov::genai::StreamingStatus::RUNNING;
-        if (d.HasMember("content") && d["content"].IsString())
-            result.content.append(d["content"].GetString());
-        if (d.HasMember("reasoning_content") && d["reasoning_content"].IsString())
-            result.reasoning.append(d["reasoning_content"].GetString());
-        if (d.HasMember("tool_calls") && d["tool_calls"].IsArray()) {
-            for (const auto& entry : d["tool_calls"].GetArray()) {
-                if (!entry.IsObject() || !entry.HasMember("index"))
-                    continue;
-                const int idx = entry["index"].GetInt();
-                if (idx < 0)
-                    continue;
-                const auto uidx = static_cast<size_t>(idx);
-                if (uidx >= toolCalls.size())
-                    toolCalls.resize(uidx + 1);
-                auto& tc = toolCalls[uidx];
-                if (entry.HasMember("id") && entry["id"].IsString())
-                    tc.id = entry["id"].GetString();
-                if (entry.HasMember("function") && entry["function"].IsObject()) {
-                    const auto& fn = entry["function"];
-                    if (fn.HasMember("name") && fn["name"].IsString())
-                        tc.name = fn["name"].GetString();
-                    if (fn.HasMember("arguments") && fn["arguments"].IsString())
-                        tc.arguments.append(fn["arguments"].GetString());
-                }
-            }
-        }
+    auto callback = [&](Delta delta, bool /*isLast*/) {
+        std::visit(overloaded{
+                       [&](const ContentDelta& d) { result.content.append(d.text); },
+                       [&](const ReasoningDelta& d) { result.reasoning.append(d.text); },
+                       [&](const ToolCallDelta& d) {
+                           if (d.index < 0)
+                               return;
+                           const auto idx = static_cast<size_t>(d.index);
+                           if (idx >= toolCalls.size())
+                               toolCalls.resize(idx + 1);
+                           auto& tc = toolCalls[idx];
+                           if (d.id)
+                               tc.id = *d.id;
+                           if (d.name)
+                               tc.name = *d.name;
+                           tc.arguments.append(d.arguments);
+                       },
+                       [](const FinishDelta&) {},
+                       [](const AudioDelta&) {},
+                   },
+            delta);
         return ov::genai::StreamingStatus::RUNNING;
     };
 
@@ -108,14 +104,11 @@ inline ParsedOutput parseWithStreamer(
     streamer.end();
 
     // Compact arguments JSON and drop incomplete calls that never emitted args.
-    // Streaming may emit an initial name delta before malformed calls terminate;
-    // unary aggregation should keep only fully materialized calls.
     ToolCalls_t completedToolCalls;
     completedToolCalls.reserve(toolCalls.size());
     for (auto& tc : toolCalls) {
-        if (tc.arguments.empty()) {
+        if (tc.arguments.empty())
             continue;
-        }
         rapidjson::Document argsDoc;
         if (!argsDoc.Parse(tc.arguments.c_str()).HasParseError()) {
             rapidjson::StringBuffer sb;

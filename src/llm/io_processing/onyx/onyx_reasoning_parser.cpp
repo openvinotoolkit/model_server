@@ -18,14 +18,12 @@
 #include <string>
 #include <vector>
 
-#include "src/port/rapidjson_document.hpp"
-
 #include "src/logging.hpp"
 #include "onyx_reasoning_parser.hpp"
 
 namespace ovms {
 
-std::optional<rapidjson::Document> OnyxReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason /*finishReason*/) {
+std::optional<Delta> OnyxReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason /*finishReason*/) {
     if (chunk.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for OnyxReasoningParser");
         return std::nullopt;
@@ -59,17 +57,6 @@ std::optional<rapidjson::Document> OnyxReasoningParser::parseChunk(const std::st
         return std::nullopt;
     }
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    writer.StartObject();
-    writer.String("delta");
-    writer.StartObject();
-    writer.String("reasoning_content");
-    writer.String(text.c_str());
-    writer.EndObject();
-    writer.EndObject();
-    rapidjson::Document doc;
-    doc.Parse(buffer.GetString());
-    return doc;
+    return ReasoningDelta{text};
 }
 }  // namespace ovms

@@ -144,7 +144,6 @@ private:
     Qwen3CoderToolParserImpl streamParser;
     int toolCallIndex{-1};
     ToolCalls_t currentToolCalls;
-    rapidjson::Document currentJson;
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
 
@@ -155,15 +154,14 @@ public:
     void resetState() override {
         streamParser.reset();
         toolCallIndex = -1;
-        currentJson.SetNull();
         returnedFirstDeltas.clear();
         returnedCompleteDeltas.clear();
     }
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 
 private:
-    std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
-    std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
+    std::optional<Delta> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
+    std::optional<Delta> sendFullDelta(const ToolCalls_t& toolCalls);
 };
 }  // namespace ovms
 template <>

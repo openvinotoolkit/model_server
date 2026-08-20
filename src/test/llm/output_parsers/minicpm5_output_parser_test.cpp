@@ -134,23 +134,17 @@ protected:
             } else {
                 tokens = encodeInput(chunk);
             }
-            std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, tokens, true, finishReason);
+            std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, tokens, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }
             if (expectedDelta.has_value() && doc.has_value()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                std::string docStr = buffer.GetString();
+                std::string docStr = ovms::test::deltaToJson(*doc);
                 EXPECT_EQ(docStr, expectedDelta.value()) << "Mismatch for chunk: " << chunk;
             } else {
                 std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
                 std::string docStr = doc.has_value() ? [&]() {
-                    rapidjson::StringBuffer buffer;
-                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                    doc->Accept(writer);
-                    return std::string(buffer.GetString());
+                    return ovms::test::deltaToJson(*doc);
                 }()
                                                      : "std::nullopt";
                 FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
@@ -163,15 +157,12 @@ protected:
     void assertStreamingVec(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
             auto tokens = encodeInput(chunk);
-            std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, tokens, true, finishReason);
+            std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, tokens, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }
             if (expectedDelta.has_value() && doc.has_value()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                std::string docStr = buffer.GetString();
+                std::string docStr = ovms::test::deltaToJson(*doc);
                 std::string expected = expectedDelta.value();
                 std::string idKey = "\"id\":\"";
                 auto docIdPos = docStr.find(idKey);
@@ -199,10 +190,7 @@ protected:
             } else {
                 std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
                 std::string docStr = doc.has_value() ? [&]() {
-                    rapidjson::StringBuffer buffer;
-                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                    doc->Accept(writer);
-                    return std::string(buffer.GetString());
+                    return ovms::test::deltaToJson(*doc);
                 }()
                                                      : "std::nullopt";
                 FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk

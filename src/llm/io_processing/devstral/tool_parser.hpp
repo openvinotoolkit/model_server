@@ -21,9 +21,7 @@
 #include <utility>
 #include <vector>
 
-#include "src/port/rapidjson_document.hpp"
 #include "src/llm/io_processing/base_output_parser.hpp"
-#include "src/llm/io_processing/partial_json_builder.hpp"
 #include "src/llm/apis/tool_schema_wrapper.hpp"
 
 namespace ovms {
@@ -49,7 +47,7 @@ class DevstralToolParser : public BaseOutputParser {
     std::string streamContent = "";  // content accumulated from stream chunks
     std::string toolName = "";
     bool argumentsEmitted = false;  // true once any argument content delta has been sent
-    std::optional<rapidjson::Document> sendFullDelta(ToolCall& toolCall);
+    std::optional<Delta> sendFullDelta(ToolCall& toolCall);
 
 public:
     DevstralToolParser() = delete;
@@ -80,9 +78,9 @@ public:
         argumentsEmitted = false;
     }
 
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    rapidjson::Document parseContentChunk();
-    rapidjson::Document wrapCombinedDelta(ToolCall& toolCall);
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+    ContentDelta parseContentChunk();
+    ToolCallDelta wrapCombinedDelta(ToolCall& toolCall);
 };
 
 }  // namespace ovms

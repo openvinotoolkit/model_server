@@ -34,7 +34,7 @@ public:
     explicit DefaultContentParser(ov::genai::Tokenizer& tokenizer,
         std::vector<std::string> stringsToErase = {});
 
-    std::optional<rapidjson::Document> parseChunk(const std::string& buffer,
+    std::optional<Delta> parseChunk(const std::string& buffer,
         const std::vector<int64_t>& tokens,
         ov::genai::GenerationFinishReason finishReason) override;
 };

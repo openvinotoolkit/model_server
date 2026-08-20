@@ -16,8 +16,6 @@
 #include <utility>
 #include <vector>
 
-#include "src/port/rapidjson_stringbuffer.hpp"
-#include "src/port/rapidjson_writer.hpp"
 #include "src/stringutils.hpp"
 
 #include "onyx_content_parser.hpp"
@@ -54,7 +52,7 @@ OnyxContentParser::OnyxContentParser(ov::genai::Tokenizer& tokenizer,
     BaseOutputParser(tokenizer,
         configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
 
-std::optional<rapidjson::Document> OnyxContentParser::parseChunk(
+std::optional<Delta> OnyxContentParser::parseChunk(
     const std::string& buffer,
     const std::vector<int64_t>& /*tokens*/,
     ov::genai::GenerationFinishReason /*finishReason*/) {
@@ -74,18 +72,7 @@ std::optional<rapidjson::Document> OnyxContentParser::parseChunk(
         eraseTags(content, HOLD_TAGS);
     eraseTags(content, ROUTING_TAGS);
 
-    rapidjson::StringBuffer buf;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
-    writer.StartObject();
-    writer.String("delta");
-    writer.StartObject();
-    writer.String("content");
-    writer.String(content.c_str(), static_cast<rapidjson::SizeType>(content.size()));
-    writer.EndObject();
-    writer.EndObject();
-    rapidjson::Document doc;
-    doc.Parse(buf.GetString());
-    return doc;
+    return ContentDelta{std::move(content)};
 }
 
 }  // namespace ovms

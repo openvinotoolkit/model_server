@@ -117,22 +117,21 @@ const std::string& OutputParser::StreamOutputCache::getBuffer() const {
     return buffer;
 }
 
-std::optional<rapidjson::Document> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
+std::optional<Delta> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
     auto result = contentParser->parseChunk(streamOutputCache.getBuffer(), {}, ov::genai::GenerationFinishReason::NONE);
     if (!result.has_value())
         return std::nullopt;  // hold — keep buffer
     streamOutputCache.clear();
     processingPhase = newPhase;
-    const auto& deltaIt = result->FindMember("delta");
-    if (deltaIt != result->MemberEnd()) {
-        const auto& contentIt = deltaIt->value.FindMember("content");
-        if (contentIt != deltaIt->value.MemberEnd() && contentIt->value.GetStringLength() == 0)
-            return std::nullopt;  // consumed preamble, nothing to emit
+    // Suppress preamble-only ContentDelta (empty text = structural tag consumed, nothing to emit).
+    if (const auto* cd = std::get_if<ContentDelta>(&*result)) {
+        if (cd->text.empty())
+            return std::nullopt;
     }
     return result;
 }
 
-std::optional<rapidjson::Document> OutputParser::parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
+std::optional<Delta> OutputParser::parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
     if (!toolParser) {
         throw std::runtime_error("Tool parser is not available, cannot parse tool call chunk");
     }
@@ -145,7 +144,7 @@ std::optional<rapidjson::Document> OutputParser::parseToolCallChunk(const std::v
         if (pos != std::string::npos)
             remainder = buf.substr(pos + endTag.size());
     }
-    std::optional<rapidjson::Document> result;
+    std::optional<Delta> result;
     try {
         result = toolParser->parseChunk(streamOutputCache.getBuffer(), tokens, finishReason);
     } catch (...) {
@@ -159,7 +158,7 @@ std::optional<rapidjson::Document> OutputParser::parseToolCallChunk(const std::v
     return result;
 }
 
-std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
+std::optional<Delta> OutputParser::parseReasoningChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
     if (!reasoningParser) {
         throw std::runtime_error("Reasoning parser is not available, cannot parse reasoning chunk");
     }
@@ -172,7 +171,7 @@ std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(const std::
         if (pos != std::string::npos)
             remainder = buf.substr(pos + endTag.size());
     }
-    std::optional<rapidjson::Document> result;
+    std::optional<Delta> result;
     try {
         result = reasoningParser->parseChunk(streamOutputCache.getBuffer(), tokens, finishReason);
     } catch (...) {
@@ -359,7 +358,7 @@ void OutputParser::detectAndSetImplicitReasoningStart(const std::string& rendere
     return;
 }
 
-std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {
     /*
     Using appropriate parser based on the current processing phase
     Call to this method should return either result from parserContentChunk, parseToolCallChunk, parseReasoningChunk when we can determine the phase

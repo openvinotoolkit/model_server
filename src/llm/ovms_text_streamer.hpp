@@ -22,7 +22,6 @@
 #include <vector>
 
 #include <openvino/genai/text_streamer.hpp>
-#include <rapidjson/document.h>
 
 #include "io_processing/output_parser.hpp"
 
@@ -63,14 +62,13 @@ namespace ovms {
 // the no-op callback passed at construction is never invoked.
 class OVMSTextStreamer : public ov::genai::TextStreamer {
 public:
-    // Callback receives a Document and the isLast flag, and returns the streaming status.
-    // Document shape is always {"delta":{...}} matching the OpenAI delta format.
+    // Callback receives a Delta and the isLast flag, and returns the streaming status.
     // For the finish-only case (nullopt from parseChunk + STOP finishReason),
-    // an empty *object* Document (SetObject()) is passed so the caller can emit the finish_reason chunk.
+    // a FinishDelta{} is passed so the caller can emit the finish_reason chunk.
     // isLast is true when finish_reason != NONE — callers that push into a DeltaChannel
-    // should forward this flag to DeltaChannel::push() so the final document and the
+    // should forward this flag to DeltaChannel::push() so the final delta and the
     // completion signal are observed atomically (no separate signalComplete() needed).
-    using Callback = std::function<ov::genai::StreamingStatus(rapidjson::Document, bool /*isLast*/)>;
+    using Callback = std::function<ov::genai::StreamingStatus(Delta, bool /*isLast*/)>;
 
     // outputParser may be nullptr (e.g. for the unary VLM path).
     // toolsAvailable must be evaluated after parseRequest() has processed the body.

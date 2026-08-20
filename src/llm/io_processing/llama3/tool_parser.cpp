@@ -48,7 +48,7 @@ static inline void changeParametersToArguments(rapidjson::Document& json) {
     }
 }
 
-std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> Llama3ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     const bool hasPendingState =
         !argumentsDelayWindow[0].empty() ||
         !argumentsDelayWindow[1].empty() ||
@@ -149,7 +149,6 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
         throw std::runtime_error("Generated tool call structure is not valid");  // re-throw
     }
 
-    rapidjson::Document doc;
     // Case 1: 'parameters'/'arguments' has just appeared in the current chunk. If so, we return first delta.
     if (jsonHasArgumentsOrParameters(newJson) && !jsonHasArgumentsOrParameters(lastJson)) {
         std::string functionName;
@@ -163,10 +162,9 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call name has not been generated and parameters already started");
             throw std::runtime_error("Tool call name is missing in generated output");
         }
-        // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":{"name": <functionName>}}]}
-        doc = wrapFirstDelta(functionName, toolCallIndex);
+        const int currentToolCallIndex = toolCallIndex;
         lastJson.CopyFrom(newJson, lastJson.GetAllocator());
-        return doc;
+        return ToolCallDelta{currentToolCallIndex, generateRandomId(), functionName, ""};
         // Case 2: 'parameters' already exists in the last JSON, we compute delta and return it.
     } else if (lastJson.HasMember("arguments") || lastJson.HasMember("parameters")) {
         changeParametersToArguments(newJson);
@@ -181,12 +179,14 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
                 return std::nullopt;
             }
         }
-        // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":<delta>}]}
-        doc = wrapDelta(delta, toolCallIndex);
-        if (isCurrentToolCallParsingFinished) {
+        // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":{"arguments":"..."}}]}
+        std::string argsStr;
+        if (delta.HasMember("arguments") && delta["arguments"].IsString())
+            argsStr = delta["arguments"].GetString();
+        const int currentToolCallIndex = toolCallIndex;
+        if (isCurrentToolCallParsingFinished)
             this->startNextToolCall();
-        }
-        return doc;
+        return ToolCallDelta{currentToolCallIndex, std::nullopt, std::nullopt, argsStr};
         // Case 3: No 'parameters' exists or just appeared, so we keep building up until we have complete function name
     } else {
         lastJson.CopyFrom(newJson, lastJson.GetAllocator());

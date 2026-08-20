@@ -109,7 +109,7 @@ void Phi4ToolParser::clearState() {
     openBracesCount = 1;  // Reset to 1 as we count the tool call opening brace
 }
 
-std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> Phi4ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     Phi4 with vLLM template produces tool calls in the format:
     functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
@@ -236,7 +236,6 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
             throw std::runtime_error("Generated tool call structure is not valid");
         }
 
-        rapidjson::Document doc;
         // Case 1: 'arguments' has just appeared in the current chunk. If so, we return first delta.
         if (newJson.HasMember("arguments") && !lastJson.HasMember("arguments")) {
             std::string functionName;
@@ -250,9 +249,8 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                 throw std::runtime_error("Tool call name is missing in generated output");
             }
             // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":{"name": <functionName>}}]}
-            doc = wrapFirstDelta(functionName, toolCallIndex);
             lastJson.CopyFrom(newJson, lastJson.GetAllocator());
-            return doc;
+            return ToolCallDelta{toolCallIndex, generateRandomId(), functionName, ""};
             // Case 2: 'arguments' already exists in the last JSON, we compute delta and return it.
         } else if (lastJson.HasMember("arguments")) {
             rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
@@ -277,9 +275,11 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                 }
             }
 
-            // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":<delta>}]}
-            doc = wrapDelta(delta, toolCallIndex);
-            return doc;
+            // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":{"arguments":"..."}}]}
+            std::string argsStr;
+            if (delta.HasMember("arguments") && delta["arguments"].IsString())
+                argsStr = delta["arguments"].GetString();
+            return ToolCallDelta{toolCallIndex, std::nullopt, std::nullopt, argsStr};
             // Case 3: No 'arguments' exists or just appeared, so we keep building up until we have complete function name
         } else {
             lastJson.CopyFrom(newJson, lastJson.GetAllocator());
