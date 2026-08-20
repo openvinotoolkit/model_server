@@ -2063,9 +2063,88 @@ TEST(SchemaTest, MediapipeConfigIdleUnloadTimeoutWrongTypeRejected) {
     auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
 }
-#endif
 
-TEST(SchemaTest, MediapipeConfigNegativeAdditionalMediapipeConfigField) {
+TEST(SchemaTest, ModelConfigGroupNameValidString) {
+    const char* config = R"(
+    {
+        "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "group_name": "rag"
+            }
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(config);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, ModelConfigGroupNameInvalidType) {
+    const char* config = R"(
+    {
+        "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "group_name": 123
+            }
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(config);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+#if (MEDIAPIPE_DISABLE == 0)
+TEST(SchemaTest, MediapipeConfigGroupNameValidString) {
+    const char* config = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_graph",
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path",
+            "group_name": "llm_group"
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(config);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, MediapipeConfigGroupNameInvalidType) {
+    const char* config = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_graph",
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path",
+            "group_name": 42
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(config);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+#endif
     const char* mediapipeConfigNegative = R"(
     {
         "model_config_list": [],

@@ -241,6 +241,9 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 						}
 					},
 					"minProperties": 1
+				},
+				"group_name": {
+					"type": "string"
 				}
 			},
 			"additionalProperties": false
@@ -361,6 +364,9 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
              "idle_unload_timeout_seconds": {
                  "type": "integer",
                  "minimum": 0
+             },
+             "group_name": {
+                 "type": "string"
              }
         },
         "additionalProperties": false

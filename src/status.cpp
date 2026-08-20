@@ -346,5 +346,8 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::DEVICE_WRONG_FORMAT, "Device is in wrong format"},
     {StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED, "Shape is dynamic but NPU is used"},
     {StatusCode::STATIC_RESOLUTION_MISUSE, "Wrong usage of static resolution"},
+
+    {StatusCode::GROUP_LOAD_FAILED, "Model group failed to load"},
+    {StatusCode::GROUP_UNLOAD_BLOCKED, "Cannot unload model group due to active requests"},
 };
 }  // namespace ovms

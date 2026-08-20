@@ -73,6 +73,7 @@
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
+#include "model_group_manager.hpp"
 #include "kfs_frontend/kfs_request_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "deserialization_main.hpp"
@@ -655,6 +656,27 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     auto availableMediapipes = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
     for (auto const& graphName : availableMediapipes) {
         parseModel(writer, graphName, timestamp);
+    }
+
+    // In idle management mode, include unloaded mediapipe graphs from configured groups
+    auto* groupMgr = modelManager.getGroupManager();
+    if (groupMgr && groupMgr->isEnabled()) {
+        std::set<std::string> alreadyListed(availableMediapipes.begin(), availableMediapipes.end());
+        for (const auto& servableName : groupMgr->getAllConfiguredServableNames()) {
+            if (alreadyListed.find(servableName) == alreadyListed.end()) {
+                // Check if it's not already listed as a regular model
+                bool alreadyAsModel = false;
+                for (const auto& name : availableModelNames) {
+                    if (name == servableName) {
+                        alreadyAsModel = true;
+                        break;
+                    }
+                }
+                if (!alreadyAsModel) {
+                    parseModel(writer, servableName, timestamp);
+                }
+            }
+        }
     }
 #endif
     writer.EndArray();

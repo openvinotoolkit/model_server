@@ -128,6 +128,12 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
             this->setIdleUnloadTimeoutSeconds(timeoutSeconds);
             SPDLOG_DEBUG("Mediapipe graph {} idle_unload_timeout_seconds set to {}", this->getGraphName(), timeoutSeconds);
         }
+        if (v.HasMember("group_name")) {
+            this->setGroupName(v["group_name"].GetString());
+        } else {
+            this->setGroupName(this->getGraphName());
+        }
+        SPDLOG_DEBUG("Mediapipe graph {} group_name set to {}", this->getGraphName(), this->getGroupName());
     } catch (std::logic_error& e) {
         SPDLOG_DEBUG("Relative path error: {}", e.what());
         return StatusCode::INTERNAL_ERROR;
