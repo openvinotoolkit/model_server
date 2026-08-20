@@ -95,8 +95,10 @@ whitelisted_dynamic_libraries = {
 # Libraries located in /ovms/lib/
 libraries = {
     OvmsBaseType.COMMON: {
-        'libazurestorage.so',
-        'libcpprest.so',
+        'libazure-core.so',
+        'libazure-storage-blobs.so',
+        'libazure-storage-common.so',
+        'libazure-storage-files-shares.so',
         'libespeak-ng.so',
         'libgit2.so',
         'libOpenCL.so',
