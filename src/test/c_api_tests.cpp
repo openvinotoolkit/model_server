@@ -29,6 +29,7 @@
 #include "../capi_frontend/capi_request_utils.hpp"
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
+#include "../ovinferrequestsqueue.hpp"
 #include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/serialization.hpp"
 #include "../capi_frontend/deserialization.hpp"
@@ -2043,6 +2044,62 @@ TEST_F(CAPIInference, AsyncErrorHandling) {
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
     unblockSignal.get();
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    unloadGuard.reset();
+    instance.retireModel();
+}
+
+// Model instance whose async inference start deterministically throws, to exercise the
+// modelInferAsync start_async() error path (see #2871). Production ModelInstance forwards
+// startAsyncInference() to ov::InferRequest::start_async(); here we override it to throw.
+class MockModelInstanceThrowingOnStartAsync : public ovms::ModelInstance {
+public:
+    MockModelInstanceThrowingOnStartAsync(ov::Core& ieCore) :
+        ModelInstance(std::string("UNUSED_NAME"), 0, ieCore, nullptr, nullptr) {
+        status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::START);
+    }
+    virtual ~MockModelInstanceThrowingOnStartAsync() {}
+    ovms::Status loadModel(const ovms::ModelConfig& config) override {
+        return ModelInstance::loadModel(config);
+    }
+    void startAsyncInference(ov::InferRequest& inferRequest) override {
+        throw std::runtime_error("simulated start_async failure");
+    }
+};
+
+// Regression test for #2871: when start_async() throws, modelInferAsync must release the
+// infer-request slot it acquired. With a single-stream pool, a leak makes the slot
+// permanently unavailable; we assert it is returned by querying the queue afterwards.
+TEST_F(CAPIInference, AsyncStartAsyncThrowReleasesInferRequestSlot) {
+    ov::Core core;
+    MockModelInstanceThrowingOnStartAsync instance(core);
+    ovms::ModelConfig config = DUMMY_MODEL_CONFIG;
+    config.setNireq(1);  // single slot -> a leaked slot is observable
+    ASSERT_EQ(instance.loadModel(config), ovms::StatusCode::OK);
+    std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;
+    instance.waitForLoaded(0, unloadGuard);
+
+    // Sanity: the single slot is idle before inference.
+    {
+        auto idle = instance.getInferRequestsQueue().tryToGetIdleStream();
+        ASSERT_TRUE(idle.has_value());
+        instance.getInferRequestsQueue().returnStream(idle.value());
+    }
+
+    ovms::InferenceRequest request("dummy", 0);
+    std::vector<float> in(DUMMY_MODEL_INPUT_SIZE, INITIAL_VALUE);
+    request.addInput(DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size());
+    request.setInputBuffer(DUMMY_MODEL_INPUT_NAME, in.data(), DUMMY_MODEL_INPUT_SIZE * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
+    CallbackUnblockingAndCheckingStruct callbackStruct;
+    request.setCompletionCallback(callbackCheckingIfErrorReported, &callbackStruct);
+
+    auto status = ovms::modelInferAsync<ovms::InferenceRequest, ovms::InferenceResponse>(instance, &request, unloadGuard);
+    EXPECT_EQ(status, ovms::StatusCode::OV_INTERNAL_INFERENCE_ERROR) << status.string();
+
+    // The slot acquired by modelInferAsync must have been returned to the pool despite the
+    // start_async() failure. Without the fix it leaks and tryToGetIdleStream() returns nullopt.
+    auto idleAfter = instance.getInferRequestsQueue().tryToGetIdleStream();
+    EXPECT_TRUE(idleAfter.has_value()) << "infer-request slot leaked after start_async() threw (#2871)";
+
     unloadGuard.reset();
     instance.retireModel();
 }

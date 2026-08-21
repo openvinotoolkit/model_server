@@ -27,7 +27,12 @@ namespace ovms {
 struct OutputKeeper {
     std::unordered_map<std::string, ov::Tensor> outputs;
     ov::InferRequest& request;
+    bool cancelled{false};
     OutputKeeper(ov::InferRequest& request, const tensor_map_t& outputsInfo);
     ~OutputKeeper();
+    // Disable the output-tensor restore performed by the destructor. Used on the async
+    // start_async() error path, where inference never ran (so there is nothing to restore)
+    // and reentering the InferRequest from the destructor would deadlock (#2871).
+    void cancel() { this->cancelled = true; }
 };
 }  // namespace ovms
