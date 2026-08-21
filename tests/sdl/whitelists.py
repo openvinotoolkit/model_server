@@ -144,6 +144,7 @@ libraries = {
     OvmsBaseType.REDHAT: set(),
     OvmsBaseType.REDHAT_PYTHON: set(),
     OvmsBaseType.WINDOWS: {
+        'ClientApi.dll',
         'espeak-ng.dll',
         'git2.dll',
         'libcurl-x64.dll',
