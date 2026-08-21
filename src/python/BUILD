@@ -86,7 +86,10 @@ ovms_cc_library(
     deps = PYBIND_DEPS + [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
+        "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmsprecision",
+        "//src:httppayload",
+        "//src:libmultipart_parser",
         "ovmspytensor",
         "pytensorovtensorconvertercalculator_cc_proto",
         "pythonbackend",
