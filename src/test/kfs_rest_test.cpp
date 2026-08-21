@@ -204,9 +204,8 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
     std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
     auto dispatchStatus = handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser);
     if (dispatchStatus != ovms::StatusCode::OK) {
-        std::cerr << "dispatchToProcessor failed with status code: " << static_cast<int>(dispatchStatus.getCode()) << std::endl;
-        std::cerr << "dispatchToProcessor status details: " << dispatchStatus.string() << std::endl;
-        std::cerr << "dispatchToProcessor response payload: " << response << std::endl;
+        std::cerr << "dispatchToProcessor failed: code=" << static_cast<int>(dispatchStatus.getCode())
+                  << ", details=" << dispatchStatus.string() << ", response=" << response << std::endl;
     }
     ASSERT_EQ(dispatchStatus, ovms::StatusCode::OK);
 

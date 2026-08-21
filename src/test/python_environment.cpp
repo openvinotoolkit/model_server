@@ -18,8 +18,8 @@
 #include <memory>
 #include <stdexcept>
 
-#include "../config.hpp"
-#include "../status.hpp"
+#include "src/config.hpp"
+#include "src/status.hpp"
 
 namespace {
 #if (PYTHON_DISABLE == 0)

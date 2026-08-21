@@ -367,7 +367,6 @@ public:
         const std::string& name);
     Status createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
         const std::string& name);
-    MediapipeRuntimeApi* getMediapipeRuntimeApi() const;
 #endif
 
     /**

@@ -234,7 +234,8 @@ Status ModelManager::startFromConfig() {
     // IN_MEMORY_GRAPH_MODE) onto mpConfig so downstream consumers
     // (MediapipeGraphDefinition, MediapipeGraphConfig::logGraphConfigContent)
     // can read it without depending on the global Config.
-    if (const auto& inMemoryPbtxt = config.getServerSettings().inMemoryGraphPbtxt; inMemoryPbtxt.has_value()) {
+    const auto& inMemoryPbtxt = config.getServerSettings().inMemoryGraphPbtxt;
+    if (inMemoryPbtxt.has_value()) {
         mpConfig.setInMemoryGraphPbTxt(*inMemoryPbtxt);
     }
     if (!CheckStartFromGraph(config.modelPath(), mpConfig, false)) {
@@ -1608,10 +1609,6 @@ Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& gra
 Status ModelManager::createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
     const std::string& name) {
     return this->mediapipeFactory->createHandle(graph, name);
-}
-
-MediapipeRuntimeApi* ModelManager::getMediapipeRuntimeApi() const {
-    return this->mediapipeFactory.get();
 }
 #endif
 

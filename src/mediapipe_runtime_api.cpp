@@ -34,7 +34,7 @@
 
 #include "logging.hpp"
 #include "kfs_python_tensor_bridge.hpp"
-#include "mediapipe_graph_executor_interface.hpp"
+#include "mediapipe_internal/mediapipe_graph_executor_interface.hpp"
 #include "utils/newline_delimited.hpp"
 
 struct OVMS_Server_;
@@ -426,12 +426,15 @@ bool MediapipeRuntimeApi::isLoaded() const {
     return api != nullptr && api->factoryHandle != nullptr;
 }
 
+#define OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED() \
+    if (!isLoaded()) {                                \
+        return StatusCode::INTERNAL_ERROR;            \
+    }
+
 Status MediapipeRuntimeApi::processConfig(const MediapipeGraphConfig& config,
     MetricProvider& metrics,
     const ServableNameChecker& checker) {
-    if (!isLoaded()) {
-        return StatusCode::INTERNAL_ERROR;
-    }
+    OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED();
     int code = api->processConfig(api->factoryHandle, &config, &metrics, &checker);
     if (code == static_cast<int>(StatusCode::OK)) {
         return StatusCode::OK;
@@ -445,9 +448,7 @@ Status MediapipeRuntimeApi::processConfig(const MediapipeGraphConfig& config,
 
 Status MediapipeRuntimeApi::create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
     const std::string& name) const {
-    if (!isLoaded()) {
-        return StatusCode::INTERNAL_ERROR;
-    }
+    OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED();
     int code = api->createExecutor(api->factoryHandle, name.c_str(), &pipeline);
     if (code != static_cast<int>(StatusCode::OK)) {
         const char* details = api->lastError();
@@ -461,9 +462,7 @@ Status MediapipeRuntimeApi::create(std::unique_ptr<MediapipeGraphExecutor>& pipe
 
 Status MediapipeRuntimeApi::createHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& pipeline,
     const std::string& name) const {
-    if (!isLoaded()) {
-        return StatusCode::INTERNAL_ERROR;
-    }
+    OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED();
     int code = api->createExecutorHandle(api->factoryHandle, name.c_str(), &pipeline);
     if (code != static_cast<int>(StatusCode::OK)) {
         const char* details = api->lastError();
@@ -572,5 +571,7 @@ Status MediapipeRuntimeApi::createServableConfigInMemory(const std::string& dire
     }
     return Status(static_cast<StatusCode>(code), details);
 }
+
+#undef OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED
 
 }  // namespace ovms

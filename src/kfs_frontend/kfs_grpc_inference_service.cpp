@@ -31,7 +31,7 @@
 #include "../execution_context.hpp"
 #include "../grpc_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-#include "../mediapipe_graph_executor_interface.hpp"
+#include "../mediapipe_internal/mediapipe_graph_executor_interface.hpp"
 #endif
 #include "src/metrics/metric.hpp"
 #include "../model.hpp"

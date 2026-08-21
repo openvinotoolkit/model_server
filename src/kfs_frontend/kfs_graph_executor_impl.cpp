@@ -169,6 +169,42 @@ static const KFSDataType& MPPrecisionToKFSPrecision(::mediapipe::Tensor::Element
 template <typename T>
 static Status receiveAndSerializePacket(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName);
 
+static Status kfsPyTensorBridgeUnavailable(const std::string& streamName);
+
+static Status receiveAndSerializePythonTensorIfSupported(
+    const ::mediapipe::Packet& packet,
+    KFSResponse& response,
+    const std::string& outputStreamName) {
+    const auto* bridge = getKfsPyTensorBridgeVTable();
+    if (bridge == nullptr) {
+        return kfsPyTensorBridgeUnavailable(outputStreamName);
+    }
+
+    char dtypeBuf[128] = {};
+    std::vector<int64_t> shapeBuf(128);
+    size_t shapeLen = 0;
+    const void* dataPtr = nullptr;
+    size_t dataSize = 0;
+    const int rc = bridge->extractPacketData(
+        &packet, dtypeBuf, sizeof(dtypeBuf),
+        shapeBuf.data(), shapeBuf.size(), &shapeLen,
+        &dataPtr, &dataSize);
+    if (rc != 0) {
+        return Status(static_cast<StatusCode>(-rc),
+            "KFS Python tensor bridge serialization failed");
+    }
+
+    auto* output = response.add_outputs();
+    output->set_name(outputStreamName);
+    output->set_datatype(dtypeBuf);
+    for (size_t i = 0; i < shapeLen; i++) {
+        output->add_shape(shapeBuf[i]);
+    }
+    response.add_raw_output_contents()->assign(
+        static_cast<const char*>(dataPtr), dataSize);
+    return StatusCode::OK;
+}
+
 #if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
 static Status tfTensorRuntimeUnavailable(const std::string& streamName) {
     std::stringstream ss;
@@ -1207,34 +1243,7 @@ Status onPacketReadySerializeImpl(
         SPDLOG_DEBUG("Response processing Mediapipe Image Frame: {}", packetName);
         status = receiveAndSerializePacket<mediapipe::ImageFrame>(packet, response, packetName);
     } else if (packetType == mediapipe_packet_type_enum::OVMS_PY_TENSOR) {
-        const auto* bridge = getKfsPyTensorBridgeVTable();
-        if (bridge == nullptr) {
-            status = kfsPyTensorBridgeUnavailable(packetName);
-        } else {
-            char dtypeBuf[128] = {};
-            std::vector<int64_t> shapeBuf(128);
-            size_t shapeLen = 0;
-            const void* dataPtr = nullptr;
-            size_t dataSize = 0;
-            const int rc = bridge->extractPacketData(
-                &packet, dtypeBuf, sizeof(dtypeBuf),
-                shapeBuf.data(), shapeBuf.size(), &shapeLen,
-                &dataPtr, &dataSize);
-            if (rc != 0) {
-                status = Status(static_cast<StatusCode>(-rc),
-                    "KFS Python tensor bridge serialization failed");
-            } else {
-                auto* output = response.add_outputs();
-                output->set_name(packetName);
-                output->set_datatype(dtypeBuf);
-                for (size_t i = 0; i < shapeLen; i++) {
-                    output->add_shape(shapeBuf[i]);
-                }
-                response.add_raw_output_contents()->assign(
-                    static_cast<const char*>(dataPtr), dataSize);
-                status = StatusCode::OK;
-            }
-        }
+        status = receiveAndSerializePythonTensorIfSupported(packet, response, packetName);
     } else if ((packetType == mediapipe_packet_type_enum::OVTENSOR) ||
                (packetType == mediapipe_packet_type_enum::UNKNOWN)) {
         SPDLOG_DEBUG("Response processing packet type:  OVTensor name: {}", packetName);

@@ -55,6 +55,19 @@ _SHARED_LIB_COPTS_LINUX = [
     "-Wno-attributes",
 ]
 
+ovms_cc_library(
+    name = "python_calculators_plugin_loader",
+    hdrs = ["python_calculators_plugin_loader.hpp"],
+    srcs = ["python_calculators_plugin_loader.cpp"],
+    deps = [
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:kfs_python_tensor_bridge",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 _SHARED_LIB_COPTS_WINDOWS = [
     "/guard:cf",
     "/W4",
@@ -268,7 +281,7 @@ ovms_cc_library(
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
         "//src:libovms_module",
-        "//src:python_calculators_plugin_loader",
+        ":python_calculators_plugin_loader",
         "//src/mediapipe_internal:mediapipe_utils",
         "pythonbackend",
         "utils",
@@ -342,7 +355,7 @@ cc_binary(
         "//src:libovmsstatus",
         "//src:libovms_module",
         "//src:cpp_headers",
-        "//src:python_calculators_plugin_loader",
+        ":python_calculators_plugin_loader",
     ],
     copts = COPTS_SO,
     linkopts = LINKOPTS_SO,

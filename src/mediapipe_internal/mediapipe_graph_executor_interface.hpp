@@ -12,13 +12,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//*****************************************************************************
+//****************************************************************************
 #pragma once
 
 #include <string>
 
-#include "execution_context.hpp"
-#include "status.hpp"
+#include "../execution_context.hpp"
+#include "../status.hpp"
 
 namespace grpc_impl {
 template <typename W, typename R>

@@ -47,7 +47,7 @@
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
-#include "mediapipe_graph_executor_interface.hpp"
+#include "mediapipe_internal/mediapipe_graph_executor_interface.hpp"
 #include "metrics/metric_config.hpp"
 #include "metrics/metric_module.hpp"
 #include "metrics/metric_registry.hpp"

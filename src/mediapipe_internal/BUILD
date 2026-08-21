@@ -16,6 +16,16 @@
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
+    name = "mediapipe_executor_interface",
+    hdrs = ["mediapipe_graph_executor_interface.hpp"],
+    deps = [
+        "//src:libovms_execution_context",
+        "//src:libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "node_initializer",
     srcs = [
         "node_initializer.cpp",
@@ -227,7 +237,7 @@ ovms_cc_library(
     name = "libovms_mediapipe_runtime_owner",
     deps = [
         ":libovms_mediapipe",
-        "//src:libovms_mediapipe_kfs_runtime_executor",
+        "//src:kfs_graph_executor_impl_runtime",
         "//src:libovms_mediapipe_http_executor",
         "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
         "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",

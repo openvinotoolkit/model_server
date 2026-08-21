@@ -19,7 +19,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#include "../python/pythoninterpretermodule.hpp"
+#include "src/python/pythoninterpretermodule.hpp"
 
 namespace ovms {
 class PythonBackend;

@@ -576,15 +576,11 @@ ovms_cc_library(
 )
 ovms_cc_library(
     name = "mediapipe_executor_interface",
-    hdrs = ["mediapipe_graph_executor_interface.hpp"],
-    deps = [
-        "libovms_execution_context",
-        "libovmsstatus",
-    ],
+    deps = ["//src/mediapipe_internal:mediapipe_executor_interface"],
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "libovms_mediapipe_kfs_executor_h",
+    name = "kfs_graph_executor_impl_h",
     hdrs = [
         "kfs_frontend/kfs_graph_executor_impl.hpp",
     ],
@@ -610,7 +606,7 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "libovms_mediapipe_kfs_executor",
+    name = "kfs_graph_executor_impl",
     srcs = [
         "kfs_frontend/kfs_graph_executor_impl.cpp",
         "kfs_frontend/kfs_graph_executor_impl.hpp",
@@ -637,7 +633,7 @@ ovms_cc_library(
     alwayslink = 1,
 )
 ovms_cc_library(
-    name = "libovms_mediapipe_kfs_runtime_executor",
+    name = "kfs_graph_executor_impl_runtime",
     srcs = [
         "kfs_frontend/kfs_graph_executor_impl.cpp",
         "kfs_frontend/kfs_graph_executor_impl.hpp",
@@ -872,19 +868,6 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "python_calculators_plugin_loader",
-    hdrs = ["python_calculators_plugin_loader.hpp"],
-    srcs = ["python_calculators_plugin_loader.cpp"],
-    deps = [
-        "cpp_headers",
-        "libovmslogging",
-        "libovmsstatus",
-        "kfs_python_tensor_bridge",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
     name = "ovms_lib",
     srcs = [
         "capi_frontend/capi.cpp",
@@ -906,7 +889,7 @@ ovms_cc_library(
         deps = select({
             "//:not_disable_python": [
                 "//src/python:python_runtime_loader",
-                "python_calculators_plugin_loader",
+                "//src/python:python_calculators_plugin_loader",
             ],
             "//:disable_python": []
         }) + select({
@@ -2240,7 +2223,7 @@ cc_test(
         "test/task_determine_test.cpp",
         "test/test_http_utils.hpp",
         "test/threadsafequeue_test.cpp",
-        "test/gtest_main.cpp",
+        "test/unit_tests.cpp",
         "test/localfilesystem_test.cpp",
         ] + select({
             "//:not_disable_cloud": [
@@ -2478,11 +2461,11 @@ cc_test(
                 "//src/llm:output_parsers",
                 ":test_llm_output_parser_tests",
                 "//src:libovms_mediapipe_http_executor",
-                "//src:libovms_mediapipe_kfs_executor",
+                "//src:kfs_graph_executor_impl",
                 # DO NOT REMOVE: tests require MediaPipe framework symbols/registrations
                 # via this linkage point to keep runtime-split behavior stable.
                 "//src:libmediapipe_framework_impl",
-                "//src:libovms_mediapipe_kfs_executor_h",
+                "//src:kfs_graph_executor_impl_h",
                 ":test_chat_template_workarounds",
                 ":test_llm_input_processing_tests",
                 ":test_llm_input_processing_integration_tests",

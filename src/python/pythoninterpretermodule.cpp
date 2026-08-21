@@ -17,7 +17,7 @@
 
 #include <string>
 #include <utility>
-#include "../python_calculators_plugin_loader.hpp"
+#include "python_calculators_plugin_loader.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
