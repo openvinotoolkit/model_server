@@ -4937,7 +4937,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServableParserExceptionCancelsGenerat
     // Mirrors what LegacyExecutor::processRequest does with the streamer after pipe->generate() returns.
     auto ctx = makeLegacyResponsesContext(tokenizer, /*numInputTokens=*/10, /*numGeneratedTokens=*/5);
     ASSERT_NE(ctx, nullptr);
-    ctx->textStreamer = streamer;s
+    ctx->textStreamer = streamer;
     ctx->success = !streamer->hadParserError();
 
     std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
