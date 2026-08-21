@@ -6,7 +6,7 @@ Example usage:
 
 Deploy OVMS with LLM, VLM or embedding model:
 ```bash
-mkdir models
+mkdir -p ${HOME}/models
 # in case GPU is available
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 
