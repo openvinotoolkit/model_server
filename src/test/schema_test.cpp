@@ -2003,6 +2003,66 @@ TEST(SchemaTest, MediapipeConfigInModelConfigPositive) {
     auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
+
+TEST(SchemaTest, MediapipeConfigIdleUnloadTimeoutPositive) {
+    const char* mediapipeConfigPositive = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_model",
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path_base",
+            "idle_unload_timeout_seconds": 300
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(mediapipeConfigPositive);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, MediapipeConfigIdleUnloadTimeoutNegativeValueRejected) {
+    const char* mediapipeConfigNegative = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_model",
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path_base",
+            "idle_unload_timeout_seconds": -5
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(mediapipeConfigNegative);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, MediapipeConfigIdleUnloadTimeoutWrongTypeRejected) {
+    const char* mediapipeConfigNegative = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_model",
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path_base",
+            "idle_unload_timeout_seconds": "notAnInteger"
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(mediapipeConfigNegative);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
 #endif
 
 TEST(SchemaTest, MediapipeConfigNegativeAdditionalMediapipeConfigField) {
