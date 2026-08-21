@@ -17,7 +17,8 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
      "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
-     "create_config_settings", "PYBIND_DEPS", "ovms_cc_library")
+     "COPTS_CLOUD", "COPTS_TESTS",
+     "create_config_settings", "PYBIND_DEPS", "ovms_cc_library", "ovms_cc_test_library")
 
 COPTS_OV_TRACE = select({
     "//conditions:default": ["-DOV_TRACE=0"],
@@ -27,13 +28,6 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//conditions:default": [],
     "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
 })
-COPTS_CLOUD = select({
-    "//conditions:default": ["-DCLOUD_DISABLE=1"],
-    "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
-})
-
-COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_CLOUD
-
 
 config_setting(
     name = "windows",
@@ -2031,7 +2025,6 @@ cc_test(
         "test/model_test.cpp",
         "test/model_version_policy_test.cpp",
         "test/modelconfig_test.cpp",
-        "test/modelinstance_test.cpp",
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/node_library_manager_test.cpp",
@@ -2264,6 +2257,7 @@ cc_test(
             ":test_test_models",
             ":test_test_models_configs",
             ":test_cmd_exec",
+            ":test_modelinstance_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2744,6 +2738,21 @@ cc_library(
     ],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
+)
+
+ovms_cc_test_library(
+    name = "test_modelinstance_test",
+    srcs = ["test/modelinstance_test.cpp"],
+    deps = [
+        ":test_test_models_configs",
+        ":test_test_with_temp_dir",
+        ":libtest_environment",
+        ":libtest_gpuenvironment",
+        ":modelinstance",
+        ":modelinstanceunloadguard",
+        "//third_party:openvino",
+        "@com_google_googletest//:gtest",
+    ],
 )
 
 cc_library(
