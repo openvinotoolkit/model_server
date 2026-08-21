@@ -18,29 +18,14 @@
 #include <string>
 #include <vector>
 
-#include "src/port/rapidjson_document.hpp"
-
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
 #include "reasoning_parser.hpp"
 #include "harmony.hpp"
-#include "../utils.hpp"
 
 namespace ovms {
-void GptOssReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    openai::Harmony harmony(tokenizer, generatedTokens);
-    if (!harmony.parse()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Harmony parsing failed");
-        return;
-    }
 
-    parsedOutput.content = harmony.getContent();
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Content | [{}]", parsedOutput.content);
-    parsedOutput.reasoning = harmony.getReasoning();
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Reasoning | [{}]", parsedOutput.reasoning);
-}
-
-std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> GptOssReasoningParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Processing Chunk [{}]", newChunk);
 
     if (newChunk.empty()) {
@@ -51,10 +36,10 @@ std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::
 
     StreamState lastState = state;
 
-    if (startsWith(chunk, getParsingStartTags()[0])) {
+    if (startsWith(chunk, parsingConfig.startTags[0])) {
         // Final content
         state = StreamState::READING_REASONING;
-        chunk = chunk.substr(getParsingStartTags()[0].size());
+        chunk = chunk.substr(parsingConfig.startTags[0].size());
     } else if (startsWith(chunk, "<|start|>assistant<|channel|>final<|message|>")) {
         // Final content
         state = StreamState::READING_CONTENT;
@@ -67,10 +52,10 @@ std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::
         // Preamble
         state = StreamState::READING_CONTENT;
         chunk = chunk.substr(std::strlen("<|channel|>commentary<|message|>"));
-    } else if (endsWith(chunk, getParsingEndTag())) {
+    } else if (endsWith(chunk, parsingConfig.endTag)) {
         // End
         state = StreamState::UNKNOWN;
-        chunk = chunk.substr(0, chunk.size() - getParsingEndTag().size());
+        chunk = chunk.substr(0, chunk.size() - parsingConfig.endTag.size());
     } else if (endsWith(chunk, "<|return|>")) {
         // End
         state = StreamState::UNKNOWN;
@@ -83,26 +68,13 @@ std::optional<rapidjson::Document> GptOssReasoningParser::parseChunk(const std::
     switch (lastState) {
     case StreamState::READING_REASONING:
     case StreamState::READING_CONTENT: {
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        writer.StartObject();
-        writer.String("delta");
-        writer.StartObject();
-        if (state == StreamState::READING_REASONING)
-            writer.String("reasoning_content");
-        else
-            writer.String("content");
-        writer.String(chunk.c_str());
-        writer.EndObject();
-        writer.EndObject();
-        rapidjson::Document doc;
-        doc.Parse(buffer.GetString());
-
-        if (state == StreamState::READING_REASONING)
+        if (state == StreamState::READING_REASONING) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Sending Reasoning [{}]", chunk);
-        else
+            return ReasoningDelta{chunk};
+        } else {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Sending Content [{}]", chunk);
-        return doc;
+            return ContentDelta{chunk};
+        }
     }
     case StreamState::UNKNOWN:
         break;

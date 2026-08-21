@@ -95,13 +95,14 @@ class OpenAIResponsesHandler : public OpenAIApiHandler {
 public:
     using OpenAIApiHandler::OpenAIApiHandler;  // Inherit constructors
 
-    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
-        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) override;
+    absl::Status parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+        std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) override;
 
-    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) override;
-    std::string serializeUnaryResponse(ov::genai::EncodedResults& results) override;
-    std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) override;
-    std::string serializeStreamingChunk(rapidjson::Document parsedDelta, ov::genai::GenerationFinishReason finishReason) override;
+    std::string serializeUnaryResponse(const std::vector<Delta>& deltas, ov::genai::GenerationFinishReason finishReason) override;
+    std::string serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
+        const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
+        const std::vector<UnaryChoiceLogprobs>& logprobData) override;
+    std::string serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) override;
     std::string serializeStreamingUsageChunk() override;
     std::string serializeStreamingHandshakeChunk() override;
     std::string serializeStreamingCreatedEvent() override;

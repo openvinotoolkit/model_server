@@ -17,6 +17,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
@@ -44,36 +45,26 @@ protected:
 
 public:
     GptOssReasoningParser() = delete;
-    explicit GptOssReasoningParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    // Unary
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    // Streaming
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-
-    const std::vector<std::string>& getParsingStartTags() const override {
-        // If you add another element you have to update implementation as well
-        // as mostly it assumed just one element
-        static const std::vector<std::string> parsingStartTags{parsingStartTag};
-        return parsingStartTags;
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"<|channel|>analysis<|message|>"};
+        cfg.preambleStartTags = {"<|channel|>final<|message|>",
+            "<|channel|>commentary<|message|>",
+            "<|start|>assistant<|channel|>final<|message|>"};
+        cfg.endTag = "<|end|>";
+        cfg.needsSpecialTokens = true;
+        cfg.defaultDecodingWithSpecialTokens = true;
+        return cfg;
     }
 
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags = {
-            "<|channel|>final<|message|>",
-            "<|channel|>commentary<|message|>",               // Preable to reasoning, users usually sees that
-            "<|start|>assistant<|channel|>final<|message|>",  // Final content users sees
-        };
-        return specialParsingStartTags;
-    }
+    explicit GptOssReasoningParser(ov::genai::Tokenizer& tokenizer,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
 
-    const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
-    }
+    void resetState() override { state = StreamState::UNKNOWN; }
 
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };
 }  // namespace ovms
