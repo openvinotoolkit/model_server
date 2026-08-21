@@ -20,6 +20,7 @@ load("//:common_settings.bzl", "ovms_cc_library")
 ovms_cc_library(
     name = "rerank_servable",
     hdrs = ["rerank_servable.hpp"],
+    srcs = ["rerank_servable.cpp"],
     deps = ["//src:sidepacket_servable",
             "//src/port:rapidjson_document",
             "//src/port:rapidjson_istreamwrapper",
