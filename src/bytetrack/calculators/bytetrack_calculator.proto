@@ -1,0 +1,33 @@
+//*****************************************************************************
+// Copyright 2026 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+
+syntax = "proto2";
+
+package mediapipe;
+
+import "mediapipe/framework/calculator.proto";
+
+message ByteTrackCalculatorOptions {
+  extend mediapipe.CalculatorOptions {
+    optional ByteTrackCalculatorOptions ext = 247258241;
+  }
+  optional float matching_threshold = 2 [default = 0.8];
+  optional int32 track_buffer = 3 [default = 30];
+  optional float track_high_threshold = 4 [default = 0.25];
+  optional float track_low_threshold = 5 [default = 0.1];
+  optional float new_track_threshold = 6 [default = 0.25];
+  optional bool fuse_score = 7 [default = true];
+}
