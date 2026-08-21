@@ -23,7 +23,7 @@ echo "Generating certificates..."
 echo "===================================================================================================================================================="
 echo "WARNING: For development and testing only. Please follow your organization security practices on handling and distribution of cryptography material."
 echo "===================================================================================================================================================="
-openssl req -x509 -nodes -days 1 -newkey rsa:4096 -keyout server.key -out server.pem -subj "/C=US/CN=localhost"
+openssl req -x509 -nodes -days 1 -newkey rsa:4096 -keyout server.key -out server.pem -subj "/C=US/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 # Make sure CN will match the DNS name of the OVMS endpoint used by the remote clients
 
 rm -rf ca && mkdir ca && cd ca && touch certindex && echo 01 > certserial && echo 01 > crlnumber ; cd -
