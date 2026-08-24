@@ -58,6 +58,7 @@
 #include "filesystem/filesystemfactory.hpp"
 #include "graph_export/graph_export.hpp"
 #include "logging.hpp"
+#include "model_management/servable_loading_queue.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
 #include "mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -82,6 +83,7 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "c:\\Intel\\openvino_cache";
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 #endif
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
+    loadingQueue(std::make_unique<ServableLoadingQueue>()),
     pipelineFactory(std::make_unique<PipelineFactory>()),
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipeFactory(std::make_unique<MediapipeFactory>(pythonBackend)),
@@ -92,6 +94,60 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     metricRegistry(registry),
     pythonBackend(pythonBackend) {
     this->ieCore = std::make_unique<ov::Core>();
+    loadingQueue->start([this](ServableLoadingTask& task) -> Status {
+        switch (task.type) {
+        case ServableLoadingTaskType::LoadModel: {
+            if (!task.modelConfig.has_value()) {
+                auto it = servedModelConfigs.find(task.name);
+                if (it == servedModelConfigs.end())
+                    return StatusCode::MODEL_NAME_MISSING;
+                task.modelConfig = it->second;
+            }
+            return reloadModelWithVersions(task.modelConfig.value());
+        }
+        case ServableLoadingTaskType::RetireModel: {
+            auto model = findModelByName(task.name);
+            if (!model) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            model->retireAllVersions();
+            return StatusCode::OK;
+        }
+#if (MEDIAPIPE_DISABLE == 0)
+        case ServableLoadingTaskType::LoadMediapipe: {
+            auto* def = mediapipeFactory->findDefinitionByName(task.name);
+            if (task.graphConfig.has_value()) {
+                const auto& config = task.graphConfig.value();
+                if (!def) {
+                    return mediapipeFactory->createDefinition(task.name, config, *this, *this);
+                }
+                if (def->isReloadRequired(config)) {
+                    return mediapipeFactory->reloadDefinition(task.name, config, *this);
+                }
+            } else {
+                // Urgent reload with existing config (inference-triggered)
+                if (!def)
+                    return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
+                return def->reload(*this, def->getMediapipeGraphConfig());
+            }
+            return StatusCode::OK;
+        }
+        case ServableLoadingTaskType::UnloadMediapipe: {
+            auto* def = mediapipeFactory->findDefinitionByName(task.name);
+            if (!def) {
+                return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
+            }
+            def->retire();
+            return StatusCode::OK;
+        }
+#else
+        case ServableLoadingTaskType::LoadMediapipe:
+        case ServableLoadingTaskType::UnloadMediapipe:
+            return StatusCode::INTERNAL_ERROR;
+#endif
+        }
+        return StatusCode::INTERNAL_ERROR;
+    });
 
     OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
     // Take --cache_dir from CLI
@@ -449,28 +505,6 @@ Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const Models
     return StatusCode::OK;
 }
 
-Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory) {
-    if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
-        return StatusCode::OK;
-    }
-    mediapipesInConfigFile.insert(config.getGraphName());
-    MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
-    if (mediapipeGraphDefinition == nullptr) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
-        auto status = factory.createDefinition(config.getGraphName(), config, *this, *this);
-        return status;
-    }
-    if (mediapipeGraphDefinition->isReloadRequired(config)) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} triggering reload", config.getGraphName());
-        auto status = factory.reloadDefinition(config.getGraphName(),
-            config,
-            *this);
-        return status;
-    }
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} already loaded and reload is not required", config.getGraphName());
-    return StatusCode::OK;
-}
 #endif
 
 #if (MEDIAPIPE_DISABLE == 0)
@@ -545,12 +579,18 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
             mediapipesInConfigFileNames.insert(mediapipeGraphConfig.getGraphName());
         }
         mediapipeFactory->retireOtherThan(std::move(mediapipesInConfigFileNames));
-        std::set<std::string> mediapipesAlreadyLoaded;
+        std::set<std::string> alreadyScheduled;
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
+            if (!alreadyScheduled.insert(mediapipeGraphConfig.getGraphName()).second) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", mediapipeGraphConfig.getGraphName());
+                continue;
+            }
             if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
                 mediapipeGraphConfig.logGraphConfigContent();
             }
-            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesAlreadyLoaded, *mediapipeFactory);
+            ServableLoadingTask task{ServableLoadingTaskType::LoadMediapipe, mediapipeGraphConfig.getGraphName(), mediapipeGraphConfig};
+            auto future = loadingQueue->scheduleTask(std::move(task));
+            auto status = future.get();
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             }
@@ -751,7 +791,9 @@ Status ModelManager::ConfigLoader::loadModels(ModelManager& modelManager, const 
             continue;
         }
 
-        status = modelManager.reloadModelWithVersions(modelConfig);
+        ServableLoadingTask task{ServableLoadingTaskType::LoadModel, modelName, modelConfig};
+        auto future = modelManager.loadingQueue->scheduleTask(std::move(task));
+        status = future.get();
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
 
         modelsInConfigFile.emplace(modelName);
@@ -867,7 +909,9 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
     Status firstErrorStatus = StatusCode::OK;
     for (auto& modelConfig : gatedModelConfigs) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Trying to reload model({}) configuration", modelConfig.getName());
-        auto status = reloadModelWithVersions(modelConfig);
+        ServableLoadingTask task{ServableLoadingTaskType::LoadModel, modelConfig.getName(), modelConfig};
+        auto future = loadingQueue->scheduleTask(std::move(task));
+        auto status = future.get();
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             continue;
@@ -885,7 +929,7 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
 
 Status ModelManager::loadConfig() {
     rapidjson::Document configJson;
-    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);  // TODO(idle-unload): @atobiszei narrow scope to parsing-only after queue refactoring
     Status status = parseConfig(this->configFilename, configJson, this->lastConfigFileMD5, WRONG_CONFIG_FILE_RETRY_DELAY_MS, MAX_CONFIG_JSON_READ_RETRY_COUNT);
     if (!status.ok()) {
         this->lastLoadConfigStatus = status;
@@ -991,13 +1035,15 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
 }
 
 Status ModelManager::updateConfigurationWithoutConfigFile() {
-    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);  // TODO(idle-unload): @atobiszei narrow scope to parsing-only after queue refactoring
     SPDLOG_LOGGER_TRACE(modelmanager_logger, "Checking if something changed with model versions");
     bool reloadNeeded = false;
     Status firstErrorStatus = StatusCode::OK;
     Status status;
     for (auto& [name, config] : servedModelConfigs) {
-        status = reloadModelWithVersions(config);
+        ServableLoadingTask task{ServableLoadingTaskType::LoadModel, name, config};
+        auto future = loadingQueue->scheduleTask(std::move(task));
+        status = future.get();
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
         } else if (status == StatusCode::OK_RELOADED) {
@@ -1048,7 +1094,7 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
     while (exitSignal.wait_for(std::chrono::milliseconds(this->watcherIntervalMillisec)) == std::future_status::timeout) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle begin");
-        std::unique_lock<std::recursive_mutex> loadingLock(configMtx);
+        std::unique_lock<std::recursive_mutex> loadingLock(configMtx);  // TODO(idle-unload): @atobiszei  narrow scope to parsing-only after queue refactoring
         if (watchConfigFile) {
             bool isNeeded;
             configFileReloadNeeded(isNeeded);
@@ -1107,6 +1153,7 @@ void ModelManager::join() {
     if (cleanerStarted) {
         cleanerExitTrigger.set_value();
     }
+    loadingQueue->stop();
 
     if (watcherStarted) {
         if (monitor.joinable()) {
@@ -1457,6 +1504,18 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     return blocking_status;
+}
+
+std::future<Status> ModelManager::requestServableLoad(const std::string& name) {
+// TODO @atobiszei check at which point the requestLoad is happening - shoudl be possible only on existing servable
+#if (MEDIAPIPE_DISABLE == 0)
+    if (mediapipeFactory->findDefinitionByName(name)) {
+        ServableLoadingTask task{ServableLoadingTaskType::LoadMediapipe, name};
+        return loadingQueue->scheduleTask(std::move(task), true);
+    }
+#endif
+    ServableLoadingTask task{ServableLoadingTaskType::LoadModel, name};
+    return loadingQueue->scheduleTask(std::move(task), true);
 }
 
 const std::shared_ptr<ModelInstance> ModelManager::findModelInstance(const std::string& name, model_version_t version) const {

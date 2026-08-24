@@ -141,6 +141,7 @@ Status MediapipeFactory::create(std::unique_ptr<MediapipeGraphExecutor>& pipelin
         return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
     }
     auto& definition = *it->second;
+    lock.unlock();
     return definition.create(pipeline);
 }
 
