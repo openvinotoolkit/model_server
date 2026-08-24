@@ -29,7 +29,6 @@
 namespace ovms {
 class Llama3ToolParser : public BaseOutputParser {
 protected:
-    // ";" separator between tool calls
     std::string separator = ";";
 
     // Streaming required members

@@ -1069,27 +1069,22 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkAlwaysIncludesDeltaF
 
 // ---- serializeUnaryResponse(deltas, finishReason) tests ----
 
-// Helper: build a content delta as OVMSTextStreamer produces it.
 static ovms::ContentDelta makeContentDelta(const std::string& text) {
     return ovms::ContentDelta{text};
 }
 
-// Helper: build a reasoning delta.
 static ovms::ReasoningDelta makeReasoningDelta(const std::string& text) {
     return ovms::ReasoningDelta{text};
 }
 
-// Helper: build a first tool-call delta (id + name, no arguments yet).
 static ovms::ToolCallDelta makeToolCallFirstDelta(const std::string& id, const std::string& name, int index = 0) {
     return ovms::ToolCallDelta{index, id, name, ""};
 }
 
-// Helper: build a tool-call arguments delta (arguments fragment, no id/name).
 static ovms::ToolCallDelta makeToolCallArgsDelta(const std::string& args, int index = 0) {
     return ovms::ToolCallDelta{index, std::nullopt, std::nullopt, args};
 }
 
-// Helper: build a finish-only chunk.
 static ovms::FinishDelta makeFinishChunk() {
     return ovms::FinishDelta{};
 }

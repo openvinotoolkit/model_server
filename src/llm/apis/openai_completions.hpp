@@ -30,6 +30,9 @@ class OpenAIChatCompletionsHandler : public OpenAIApiHandler {
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains);
 
+    // Builds the "delta" object of a streaming chat-completions chunk from a typed Delta variant.
+    static Value serializeDeltaValue(const Delta& delta, Document::AllocatorType& allocator);
+
 public:
     using OpenAIApiHandler::OpenAIApiHandler;  // Inherit constructors
 

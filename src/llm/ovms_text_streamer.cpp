@@ -291,7 +291,6 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
     if (m_output_parser != nullptr) {
         delta = m_output_parser->parseChunk(chunk, tokens, m_tools_available, finish_reason);
     } else if (!chunk.empty()) {
-        // No parser: pass raw text as a ContentDelta.
         delta = ContentDelta{chunk};
     }
 

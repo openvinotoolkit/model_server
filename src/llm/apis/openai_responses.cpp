@@ -1065,7 +1065,6 @@ std::string OpenAIResponsesHandler::serializeUnaryResponse(
         parsedOutputs.push_back(parsedOutputFromDeltas(deltas));
     }
     const ov::genai::GenerationFinishReason finishReason = [&]() {
-        // Promote LENGTH if any sequence was truncated, to avoid hiding truncation.
         for (const auto& fr : finishReasons) {
             if (fr == ov::genai::GenerationFinishReason::LENGTH) {
                 return fr;

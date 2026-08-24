@@ -292,7 +292,6 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
                 localDeltas.push_back(std::move(delta));
                 return ov::genai::StreamingStatus::RUNNING;
             };
-            // Reset parser state so each sequence starts from a clean phase/cache.
             auto outputParser = executionContext->apiHandler->getOutputParser();
             if (outputParser) {
                 outputParser->resetStreamingState();

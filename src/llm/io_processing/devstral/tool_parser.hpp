@@ -46,7 +46,7 @@ class DevstralToolParser : public BaseOutputParser {
     int toolCallIndex = -1;
     std::string streamContent = "";  // content accumulated from stream chunks
     std::string toolName = "";
-    bool argumentsEmitted = false;  // true once any argument content delta has been sent
+    bool argumentsEmitted = false;
     std::optional<Delta> sendFullDelta(ToolCall& toolCall);
 
 public:

@@ -50,6 +50,43 @@ static bool hasToolCallsInStreamingDelta(const Delta& delta) {
     return std::holds_alternative<ToolCallDelta>(delta);
 }
 
+Value OpenAIChatCompletionsHandler::serializeDeltaValue(const Delta& delta, Document::AllocatorType& allocator) {
+    return std::visit(overloaded{
+                          [&](const ContentDelta& d) -> Value {
+                              Value v(kObjectType);
+                              v.AddMember("content", Value(d.text.c_str(), allocator), allocator);
+                              return v;
+                          },
+                          [&](const ReasoningDelta& d) -> Value {
+                              Value v(kObjectType);
+                              v.AddMember("reasoning_content", Value(d.text.c_str(), allocator), allocator);
+                              return v;
+                          },
+                          [&](const ToolCallDelta& d) -> Value {
+                              Value tcObj(kObjectType);
+                              if (d.id) {
+                                  tcObj.AddMember("id", Value(d.id->c_str(), allocator), allocator);
+                                  tcObj.AddMember("type", Value("function", allocator), allocator);
+                              }
+                              tcObj.AddMember("index", d.index, allocator);
+                              Value fn(kObjectType);
+                              if (d.name)
+                                  fn.AddMember("name", Value(d.name->c_str(), allocator), allocator);
+                              if (!d.arguments.empty())
+                                  fn.AddMember("arguments", Value(d.arguments.c_str(), allocator), allocator);
+                              tcObj.AddMember("function", fn, allocator);
+                              Value arr(kArrayType);
+                              arr.PushBack(tcObj, allocator);
+                              Value v(kObjectType);
+                              v.AddMember("tool_calls", arr, allocator);
+                              return v;
+                          },
+                          [&](const FinishDelta&) -> Value { return Value(kObjectType); },
+                          [&](const AudioDelta&) -> Value { return Value(kObjectType); },
+                      },
+        delta);
+}
+
 // --- Request parsing ---
 
 absl::Status OpenAIChatCompletionsHandler::parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
@@ -442,44 +479,10 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(Delta delta, o
     // TODO: logprobs: object/null; Log probability information for the choice.
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        // Build the delta JSON value from the typed Delta variant.
         hasToolCalls = hasToolCallsInStreamingDelta(delta);
         if (hasToolCalls)
             toolCallsDetectedInStream = true;
-        Value deltaVal = std::visit(overloaded{
-                                        [&](const ContentDelta& d) -> Value {
-                                            Value v(kObjectType);
-                                            v.AddMember("content", Value(d.text.c_str(), allocator), allocator);
-                                            return v;
-                                        },
-                                        [&](const ReasoningDelta& d) -> Value {
-                                            Value v(kObjectType);
-                                            v.AddMember("reasoning_content", Value(d.text.c_str(), allocator), allocator);
-                                            return v;
-                                        },
-                                        [&](const ToolCallDelta& d) -> Value {
-                                            Value tcObj(kObjectType);
-                                            if (d.id) {
-                                                tcObj.AddMember("id", Value(d.id->c_str(), allocator), allocator);
-                                                tcObj.AddMember("type", Value("function", allocator), allocator);
-                                            }
-                                            tcObj.AddMember("index", d.index, allocator);
-                                            Value fn(kObjectType);
-                                            if (d.name)
-                                                fn.AddMember("name", Value(d.name->c_str(), allocator), allocator);
-                                            if (!d.arguments.empty())
-                                                fn.AddMember("arguments", Value(d.arguments.c_str(), allocator), allocator);
-                                            tcObj.AddMember("function", fn, allocator);
-                                            Value arr(kArrayType);
-                                            arr.PushBack(tcObj, allocator);
-                                            Value v(kObjectType);
-                                            v.AddMember("tool_calls", arr, allocator);
-                                            return v;
-                                        },
-                                        [&](const FinishDelta&) -> Value { return Value(kObjectType); },
-                                        [&](const AudioDelta&) -> Value { return Value(kObjectType); },
-                                    },
-            delta);
+        Value deltaVal = serializeDeltaValue(delta, allocator);
         choice.AddMember("delta", deltaVal, allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {
         // For /v1/completions extract plain text from ContentDelta only.

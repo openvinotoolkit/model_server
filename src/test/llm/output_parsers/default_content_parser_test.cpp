@@ -47,7 +47,6 @@ protected:
         tokenizer.reset();
     }
 
-    // Helper: invoke parseChunk and return the content string, or nullopt if the parser returned nullopt.
     static std::optional<std::string> parseContent(DefaultContentParser& parser, const std::string& buf) {
         auto result = parser.parseChunk(buf, {}, ov::genai::GenerationFinishReason::NONE);
         if (!result.has_value())

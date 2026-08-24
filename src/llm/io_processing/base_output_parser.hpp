@@ -83,7 +83,6 @@ protected:
     // inside the parsed segment (e.g. reasoning) without producing the start tag itself.
     bool implicitStart = false;
 
-    // Resolve tokenIdStartTags → resolvedStartTokenToTag using the tokenizer.
     // Called once from the constructor.
     void resolveSpecialTokenIds() {
         for (const auto& tag : parsingConfig.tokenIdStartTags) {

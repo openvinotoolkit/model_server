@@ -62,7 +62,6 @@ namespace ovms {
 // the no-op callback passed at construction is never invoked.
 class OVMSTextStreamer : public ov::genai::TextStreamer {
 public:
-    // Callback receives a Delta and the isLast flag, and returns the streaming status.
     // For the finish-only case (nullopt from parseChunk + STOP finishReason),
     // a FinishDelta{} is passed so the caller can emit the finish_reason chunk.
     // isLast is true when finish_reason != NONE — callers that push into a DeltaChannel
@@ -97,7 +96,6 @@ private:
 
     static constexpr size_t DELAY_N_TOKENS = 3;
 
-    // Writes skip_special_tokens into m_additional_detokenization_params and updates m_decode_special_tokens.
     void apply_decode_params(bool decode_special_tokens);
 
     // Flushes pending cache and switches decode mode; returns a status if the token was consumed as a phase-start token.

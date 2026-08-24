@@ -57,7 +57,6 @@ std::optional<Delta> OnyxContentParser::parseChunk(
     const std::vector<int64_t>& /*tokens*/,
     ov::genai::GenerationFinishReason /*finishReason*/) {
 
-    // Check structural (hold-eligible) tags.
     bool anyComplete = false;
     for (const auto& tag : HOLD_TAGS) {
         if (buffer.find(tag) != std::string::npos) {

@@ -304,11 +304,9 @@ bool OutputParser::needSpecialTokensForCurrentDecode(bool userWantsSpecialTokens
     if (processingPhase == CONTENT || processingPhase == UNKNOWN) {
         return defaultDecodingWithSpecialTokens || userWantsSpecialTokens;
     }
-    // Reasoning phase: the active reasoning parser owns the decision.
     if (processingPhase == REASONING) {
         return reasoningParser && reasoningParser->getParsingConfig().needsSpecialTokens;
     }
-    // Tool-call phases: the active tool parser owns the decision.
     if (processingPhase == TOOL_CALLS_PROCESSING_TOOL || processingPhase == TOOL_CALLS_WAITING_FOR_TOOL) {
         return toolParser && toolParser->getParsingConfig().needsSpecialTokens;
     }
@@ -316,7 +314,6 @@ bool OutputParser::needSpecialTokensForCurrentDecode(bool userWantsSpecialTokens
 }
 
 std::string OutputParser::getPhaseStartTagForToken(int64_t tokenId, bool toolsAvailable) const {
-    // Returns the tag string for a phase-start token, or empty if not a phase-start token.
     // The guard conditions mirror isPhaseStartToken: don't re-fire for a phase we are
     // already in (the parser's own text-based detection handles re-entry there).
     if (toolParser && toolsAvailable) {
@@ -492,7 +489,6 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
         if (toolStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
             return parseToolCallChunk(tokens, finishReason, TOOL_CALLS_PROCESSING_TOOL);
         }
-        // Check for content-turn start signal or generation end.
         const auto& contentTurnStartTags = contentParser->getParsingConfig().startTags;
         if (!contentTurnStartTags.empty()) {
             TagLookupStatus contentTurnStatus = streamOutputCache.lookupTags(contentTurnStartTags);

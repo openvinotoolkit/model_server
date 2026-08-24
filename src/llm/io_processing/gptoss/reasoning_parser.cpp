@@ -37,7 +37,6 @@ std::optional<Delta> GptOssReasoningParser::parseChunk(const std::string& newChu
     StreamState lastState = state;
 
     if (startsWith(chunk, parsingConfig.startTags[0])) {
-        // Analysis (reasoning) channel start
         state = StreamState::READING_REASONING;
         chunk = chunk.substr(parsingConfig.startTags[0].size());
     } else if (endsWith(chunk, parsingConfig.endTag)) {

@@ -122,7 +122,6 @@ protected:
     std::vector<int64_t> verboseRawTokens;
     std::string verboseRawText;
 
-    // Endpoint-specific parsing; called by parseRequest().
     virtual absl::Status parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
         std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) = 0;
 
