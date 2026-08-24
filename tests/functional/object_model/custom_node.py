@@ -268,40 +268,6 @@ class CustomNodeImageTransformation(OvmsCCustomNode):
             "debug": "true",
         }
 
-@dataclass
-class CustomNodeDemultiply(OvmsTestDevCustomNode):
-    ORIGINAL_DEMULTIPLY_COUNT = 3
-
-    def __init__(self, demultiply_size=None, **kwargs):
-        super().__init__(
-            name="demultiply",
-            inputs={"tensor": {"shape": [1, 3, 224, 224], "dtype": np.float32}},
-            outputs={"tensor_out": {"shape": [demultiply_size, 1, 3, 224, 224], "dtype": np.float32}},
-            **kwargs,
-        )
-
-        self.demultiply_size = demultiply_size
-
-    def get_parameters(self):
-        return {"demultiply_size": str(self.demultiply_size)}
-
-
-@dataclass
-class CustomNodeElastic1T(OvmsTestDevCustomNode):
-
-    def __init__(self, input_shape=None, output_shape=None, **kwargs):
-        super().__init__(
-            name="elastic_in_1t_out_1t",
-            inputs={"tensor_in": {"shape": input_shape, "dtype": np.float32}},
-            outputs={"tensor_out": {"shape": output_shape, "dtype": np.float32}},
-            **kwargs,
-        )
-        self.input_shape = input_shape
-        self.output_shape = output_shape
-
-    def get_parameters(self):
-        return {"input_shape": str(self.input_shape), "output_shape": str(self.output_shape)}
-
 
 @dataclass
 class CustomNodeDemultiplyGather(OvmsTestDevCustomNode):

@@ -26,16 +26,11 @@ from tests.functional.config import datasets_path
 from ovms.constants.model_dataset import RandomDataset
 from tests.functional.models.models import ModelInfo
 from ovms.constants.models import (
-    ArgMax,
     Dummy,
     DummyAdd2Inputs,
     DummyIncrement,
     DummyIncrementDecrement,
-    GoogleNetV2Fp32,
     Increment4d,
-    Resnet,
-    ResnetWrongInputShapeDim,
-    ResnetWrongInputShapes,
     VehicleAttributesRecognition,
     VehicleDetection,
 )
@@ -45,10 +40,7 @@ from tests.functional.object_model.custom_node import (
     CustomNode,
     CustomNodeAddSub,
     CustomNodeChooseMaximum,
-    CustomNodeDemultiply,
     CustomNodeDifferentOperations,
-    CustomNodeDynamicDemultiplex,
-    CustomNodeElastic1T,
     CustomNodeVehicles,
 )
 from tests.functional.object_model.mediapipe_calculators import (
@@ -554,13 +546,11 @@ class Pipeline(ModelInfo):
 
 class SimplePipeline(Pipeline):
 
-    def __init__(self, model=None, demultiply_count=None, name=None, **kwargs):
+    def __init__(self, model, demultiply_count=None, name=None, **kwargs):
         name = "single_model_pipeline" if name is None else f"single_model_pipeline_{name}"
         super().__init__(name=name, **kwargs)
         self.demultiply_count = demultiply_count
 
-        if model is None:
-            model = Resnet()
 
         self._initialize([model])
 
@@ -664,67 +654,6 @@ class ComplexDummyPipeline(Pipeline):
 
         nodes = [request, node1, node2, node3, node4, node5, node6, output]
         return nodes
-
-
-class DemultiplyPipeline(Pipeline):
-
-    def __init__(self, demultiply_value, **kwargs):
-        super().__init__("demultiply_pipeline", **kwargs)
-        self.demultiply_node = Node(
-            "demultiply", CustomNodeDemultiply(demultiply_value), NodeType.Custom, demultiply_count=-1
-        )
-        self.resnet_node = Node("resnet", Resnet())
-        self._initialize()
-        self.update_demultiply_value(demultiply_value)
-
-    def update_demultiply_value(self, new_demultiply_value):
-        self.demultiply_node.model.demultiply_size = new_demultiply_value
-        self.set_expected_output_shape()
-
-    def set_expected_output_shape(self):
-        self.outputs["result"]["shape"] = [self.demultiply_node.model.demultiply_size] + self.resnet_node.model.outputs[
-            "softmax_tensor"
-        ]["shape"]
-
-    def _create_nodes(self, models=None):
-        request = Node("request", node_type=NodeType.Input)
-        output = Node("output", node_type=NodeType.Output, input_names=["result"])
-
-        NodesConnection.connect(self.demultiply_node, 0, request, 0)
-        NodesConnection.connect(self.resnet_node, 0, self.demultiply_node, 0)
-        NodesConnection.connect(output, 0, self.resnet_node, 0)
-
-        return [request, self.demultiply_node, self.resnet_node, output]
-
-
-class ElasticPipeline(Pipeline):
-
-    def __init__(self, input_shape, output_shape, demultiply_count=None, **kwargs):
-        super().__init__("elastic_pipeline", **kwargs)
-        self.custom_node = Node(
-            "elastic_node",
-            CustomNodeElastic1T(input_shape, output_shape),
-            NodeType.Custom,
-            demultiply_count=demultiply_count,
-        )
-        self._request = Node("request", node_type=NodeType.Input)
-        self.model_node = Node("resnet", Resnet())
-        for key in self.model_node.model.inputs:
-            self.model_node.model.inputs[key]["shape"] = None
-        self._initialize()
-        self.set_expected_output_shape()
-
-    def set_expected_output_shape(self):
-        demultiply_value = self.custom_node.model.outputs["tensor_out"]["shape"][0]
-        self.outputs["result"]["shape"] = [demultiply_value] + self.model_node.model.outputs["softmax_tensor"]["shape"]
-
-    def _create_nodes(self, models):
-        output = Node("output", node_type=NodeType.Output, input_names=["result"])
-
-        NodesConnection.connect(self.custom_node, 0, self._request, 0)
-        NodesConnection.connect(self.model_node, 0, self.custom_node, 0)
-        NodesConnection.connect(output, 0, self.model_node, 0)
-        return [self._request, self.custom_node, self.model_node, output]
 
 
 class ElasticBatchSizePipeline(Pipeline):
@@ -947,32 +876,6 @@ class DummyDynamicDemuxPipeline(Pipeline):
         NodesConnection.connect(output, 0, node_dummy, 0)
         nodes = [request, node_dummy, output]
 
-        return nodes
-
-
-class DifferentDemultiplyValuesPipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("dynamic_demultiplex_pipeline", **kwargs)
-        self.demux_node = Node(
-            "diff_node", CustomNodeDynamicDemultiplex(), node_type=NodeType.Custom, demultiply_count=-1
-        )
-        self._initialize()
-        self.set_expected_output_shape()
-
-    def set_expected_output_shape(self):
-        self.outputs["output_0"]["shape"] = self.demux_node.model.outputs["dynamic_demultiplex_results"]["shape"]
-
-    def _create_nodes(self, models=None):
-        request = Node("request", node_type=NodeType.Input, input_names=self.input_names)
-        dummy_node = Node("dummy_node", Dummy())
-        output = Node("output", node_type=NodeType.Output, output_names=self.output_names)
-
-        NodesConnection.connect(self.demux_node, 0, request, 0)
-        NodesConnection.connect(dummy_node, 0, self.demux_node, 0)
-        NodesConnection.connect(output, 0, dummy_node, 0)
-
-        nodes = [request, self.demux_node, dummy_node, output]
         return nodes
 
 
@@ -1200,10 +1103,8 @@ class MediaPipe(Pipeline):
 
 
 class SimpleMediaPipe(MediaPipe):
-    def __init__(self, model=None, demultiply_count=None, **kwargs):
+    def __init__(self, model, demultiply_count=None, **kwargs):
         pipeline = SimplePipeline
-        if model is None:
-            model = Resnet()
         super().__init__(model, pipeline, demultiply_count, **kwargs)
         self.calculators = [OpenVINOModelServerSessionCalculator(model=self), OpenVINOInferenceCalculator(model=self)]
         self._initialize([model])
@@ -1253,6 +1154,7 @@ class ImageClassificationMediaPipe(MediaPipe):
         self.regular_models = self.get_regular_models()
 
     def _create_nodes(self, models=None):
+        from ovms.constants.models import Resnet, GoogleNetV2Fp32, ArgMax
         session_calculator = OpenVINOModelServerSessionCalculator()
         inference_calculator = OpenVINOInferenceCalculator()
 
@@ -1311,9 +1213,8 @@ class ImageClassificationMediaPipe(MediaPipe):
 
 
 class SimpleModelMediaPipe(MediaPipe):
-    def __init__(self, model=None, use_mapping=False, batch_size=None, single_mediapipe_model_mode=False,
+    def __init__(self, model, use_mapping=False, batch_size=None, single_mediapipe_model_mode=False,
                  pbtxt_name=None):
-        model = Resnet(batch_size=batch_size) if model is None else model
         self.__dict__.update(model.__dict__)
         super().__init__(model)
         self.calculators = [OpenVINOInferenceCalculator(), OpenVINOModelServerSessionCalculator()]
@@ -1415,18 +1316,20 @@ class SimpleDynamicModelMediaPipe(SimpleModelMediaPipe):
 
 class SimpleModelMediaPipeResnetWrongInputShapes(SimpleModelMediaPipe):
     def __init__(self, model=None, use_mapping=False, batch_size=None):
+        from ovms.constants.models import ResnetWrongInputShapes
         model = ResnetWrongInputShapes()
         super().__init__(model, use_mapping, batch_size)
 
 
 class SimpleModelMediaPipeResnetWrongInputShapeDim(SimpleModelMediaPipe):
     def __init__(self, model=None, use_mapping=False, batch_size=None):
+        from ovms.constants.models import ResnetWrongInputShapeDim
         model = ResnetWrongInputShapeDim()
         super().__init__(model, use_mapping, batch_size)
 
 
 class CorruptedFileModelMediaPipe(SimpleModelMediaPipe):
-    def __init__(self, model=None):
+    def __init__(self, model):
         super().__init__(model)
         self.calculators = [CorruptedFileCalculator()]
 
