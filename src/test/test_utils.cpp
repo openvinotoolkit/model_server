@@ -267,11 +267,20 @@ bool isShapeTheSame(const KFSShapeType& actual, const std::vector<int64_t>&& exp
 void readFile(const std::string& path, size_t& filesize, std::unique_ptr<char[]>& bytes) {
     std::ifstream DataFile;
     DataFile.open(path, std::ios::binary);
+    if (!DataFile.is_open()) {
+        throw std::runtime_error("Failed to open file: " + path);
+    }
     DataFile.seekg(0, std::ios::end);
-    filesize = DataFile.tellg();
-    DataFile.seekg(0);
+    std::streampos endPos = DataFile.tellg();
+    if (endPos == std::streampos(-1)) {
+        throw std::runtime_error("Failed to determine file size for: " + path);
+    }
+    filesize = static_cast<size_t>(endPos);
+    DataFile.seekg(0, std::ios::beg);
     bytes = std::make_unique<char[]>(filesize);
-    DataFile.read(bytes.get(), filesize);
+    if (!DataFile.read(bytes.get(), static_cast<std::streamsize>(filesize)).good()) {
+        throw std::runtime_error("Failed to read file: " + path);
+    }
 }
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes) {
