@@ -27,9 +27,8 @@
 namespace ovms {
 
 /*
-    This parser handles reasoning, but is also responsible for parsing regular content.
-    This model group requires use of reasoning to work even if reasoning is not needed.
-    This is due to the fact that regular content is placed in harmony format in similar fashion as reasoning.
+    This parser handles only the analysis (reasoning) channel of the harmony format.
+    Regular content (final/commentary channels) is handled separately by GptOssContentParser.
 */
 class GptOssReasoningParser : public BaseOutputParser {
 protected:
@@ -39,7 +38,6 @@ protected:
     enum class StreamState : int {
         UNKNOWN = 0,
         READING_REASONING = 1,
-        READING_CONTENT = 2,
     };
     StreamState state = StreamState::UNKNOWN;
 
@@ -49,9 +47,6 @@ public:
     static OutputParsingConfig defaultParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"<|channel|>analysis<|message|>"};
-        cfg.preambleStartTags = {"<|channel|>final<|message|>",
-            "<|channel|>commentary<|message|>",
-            "<|start|>assistant<|channel|>final<|message|>"};
         cfg.endTag = "<|end|>";
         cfg.needsSpecialTokens = true;
         cfg.defaultDecodingWithSpecialTokens = true;

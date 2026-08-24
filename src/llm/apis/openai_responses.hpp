@@ -92,6 +92,12 @@ class OpenAIResponsesHandler : public OpenAIApiHandler {
     // Audio streaming event serializers
     std::string serializeAudioDeltaEvent(const std::string& audioB64);
 
+    // Per-delta-type event composition for serializeStreamingChunk
+    void appendAudioDeltaEvents(const AudioDelta& delta, std::vector<std::string>& events);
+    void appendReasoningDeltaEvents(const ReasoningDelta& delta, std::vector<std::string>& events, const std::string& reasoningItemId);
+    void appendContentDeltaEvents(const ContentDelta& delta, std::vector<std::string>& events, const std::string& outputItemId, const std::string& reasoningItemId);
+    void appendToolCallDeltaEvents(const ToolCallDelta& delta, std::vector<std::string>& events, const std::string& reasoningItemId);
+
 public:
     using OpenAIApiHandler::OpenAIApiHandler;  // Inherit constructors
 

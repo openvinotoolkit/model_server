@@ -238,6 +238,13 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     // lower noise). Each parser that requires this sets defaultDecodingWithSpecialTokens in its config.
     if (toolParserName == "onyx" || reasoningParserName == "onyx")
         contentParser = std::make_unique<OnyxContentParser>(tokenizer);
+    else if (toolParserName == "gptoss" || reasoningParserName == "gptoss")
+        contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{
+                                                                              "<|start|>assistant<|channel|>final<|message|>",
+                                                                              "<|channel|>final<|message|>",
+                                                                              "<|channel|>commentary<|message|>",
+                                                                              "<|end|>",
+                                                                              "<|return|>"});
     else if (toolParserName == "gemma4")
         contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<turn|>", "<|tool_response>"});
     else if (toolParserName == "lfm2")

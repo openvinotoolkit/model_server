@@ -1401,6 +1401,65 @@ std::string OpenAIResponsesHandler::serializeAudioDeltaEvent(const std::string& 
     return buffer.GetString();
 }
 
+// --- Per-delta-type event composition for serializeStreamingChunk ---
+
+void OpenAIResponsesHandler::appendAudioDeltaEvents(const AudioDelta& d, std::vector<std::string>& events) {
+    events.emplace_back(serializeAudioDeltaEvent(d.base64));
+}
+
+void OpenAIResponsesHandler::appendReasoningDeltaEvents(const ReasoningDelta& d, std::vector<std::string>& events, const std::string& reasoningItemId) {
+    if (!responsesState.reasoningInitialized) {
+        events.emplace_back(serializeReasoningOutputItemAddedEvent(reasoningItemId));
+        events.emplace_back(serializeReasoningSummaryPartAddedEvent(reasoningItemId));
+        responsesState.reasoningInitialized = true;
+    }
+    responsesState.reasoningText += d.text;
+    events.emplace_back(serializeReasoningSummaryTextDeltaEvent(reasoningItemId, d.text));
+}
+
+void OpenAIResponsesHandler::appendContentDeltaEvents(const ContentDelta& d, std::vector<std::string>& events, const std::string& outputItemId, const std::string& reasoningItemId) {
+    if (d.text.empty()) {
+        return;
+    }
+    if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
+        events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
+        events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
+        events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
+        responsesState.reasoningCompleted = true;
+    }
+    const uint64_t msgIdx = responsesState.reasoningInitialized ? 1 : 0;
+    if (!responsesState.messageInitialized) {
+        events.emplace_back(serializeOutputItemAddedEvent(outputItemId, msgIdx));
+        events.emplace_back(serializeContentPartAddedEvent(outputItemId, msgIdx));
+        responsesState.messageInitialized = true;
+    }
+    responsesState.outputText += d.text;
+    events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, d.text, msgIdx));
+}
+
+void OpenAIResponsesHandler::appendToolCallDeltaEvents(const ToolCallDelta& d, std::vector<std::string>& events, const std::string& reasoningItemId) {
+    if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
+        events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
+        events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
+        events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
+        responsesState.reasoningCompleted = true;
+    }
+    const uint64_t baseIdx = responsesState.reasoningInitialized ? 1 : 0;
+    const uint64_t tcOutputIdx = baseIdx + static_cast<uint64_t>(d.index);
+    if (d.name) {
+        while (static_cast<int>(responsesState.toolCalls.size()) <= d.index)
+            responsesState.toolCalls.push_back(ToolCall{});
+        responsesState.toolCalls[d.index].id = d.id ? *d.id : "";
+        responsesState.toolCalls[d.index].name = *d.name;
+        responsesState.toolCalls[d.index].arguments = "";
+        events.emplace_back(serializeFunctionCallOutputItemAddedEvent(responsesState.toolCalls[d.index], tcOutputIdx));
+    }
+    if (!d.arguments.empty() && static_cast<int>(responsesState.toolCalls.size()) > d.index) {
+        responsesState.toolCalls[d.index].arguments += d.arguments;
+        events.emplace_back(serializeFunctionCallArgumentsDeltaEvent(responsesState.toolCalls[d.index].id, d.arguments, tcOutputIdx));
+    }
+}
+
 // --- Top-level streaming methods ---
 
 std::string OpenAIResponsesHandler::serializeStreamingCreatedEvent() {
@@ -1454,58 +1513,10 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(Delta delta, ov::gen
     }
 
     std::visit(overloaded{
-                   [&](const AudioDelta& d) {
-                       events.emplace_back(serializeAudioDeltaEvent(d.base64));
-                   },
-                   [&](const ReasoningDelta& d) {
-                       if (!responsesState.reasoningInitialized) {
-                           events.emplace_back(serializeReasoningOutputItemAddedEvent(reasoningItemId));
-                           events.emplace_back(serializeReasoningSummaryPartAddedEvent(reasoningItemId));
-                           responsesState.reasoningInitialized = true;
-                       }
-                       responsesState.reasoningText += d.text;
-                       events.emplace_back(serializeReasoningSummaryTextDeltaEvent(reasoningItemId, d.text));
-                   },
-                   [&](const ContentDelta& d) {
-                       if (!d.text.empty()) {
-                           if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
-                               events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
-                               events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
-                               events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
-                               responsesState.reasoningCompleted = true;
-                           }
-                           const uint64_t msgIdx = responsesState.reasoningInitialized ? 1 : 0;
-                           if (!responsesState.messageInitialized) {
-                               events.emplace_back(serializeOutputItemAddedEvent(outputItemId, msgIdx));
-                               events.emplace_back(serializeContentPartAddedEvent(outputItemId, msgIdx));
-                               responsesState.messageInitialized = true;
-                           }
-                           responsesState.outputText += d.text;
-                           events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, d.text, msgIdx));
-                       }
-                   },
-                   [&](const ToolCallDelta& d) {
-                       if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
-                           events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
-                           events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
-                           events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
-                           responsesState.reasoningCompleted = true;
-                       }
-                       const uint64_t baseIdx = responsesState.reasoningInitialized ? 1 : 0;
-                       const uint64_t tcOutputIdx = baseIdx + static_cast<uint64_t>(d.index);
-                       if (d.name) {
-                           while (static_cast<int>(responsesState.toolCalls.size()) <= d.index)
-                               responsesState.toolCalls.push_back(ToolCall{});
-                           responsesState.toolCalls[d.index].id = d.id ? *d.id : "";
-                           responsesState.toolCalls[d.index].name = *d.name;
-                           responsesState.toolCalls[d.index].arguments = "";
-                           events.emplace_back(serializeFunctionCallOutputItemAddedEvent(responsesState.toolCalls[d.index], tcOutputIdx));
-                       }
-                       if (!d.arguments.empty() && static_cast<int>(responsesState.toolCalls.size()) > d.index) {
-                           responsesState.toolCalls[d.index].arguments += d.arguments;
-                           events.emplace_back(serializeFunctionCallArgumentsDeltaEvent(responsesState.toolCalls[d.index].id, d.arguments, tcOutputIdx));
-                       }
-                   },
+                   [&](const AudioDelta& d) { appendAudioDeltaEvents(d, events); },
+                   [&](const ReasoningDelta& d) { appendReasoningDeltaEvents(d, events, reasoningItemId); },
+                   [&](const ContentDelta& d) { appendContentDeltaEvents(d, events, outputItemId, reasoningItemId); },
+                   [&](const ToolCallDelta& d) { appendToolCallDeltaEvents(d, events, reasoningItemId); },
                    [&](const FinishDelta&) {},
                },
         delta);

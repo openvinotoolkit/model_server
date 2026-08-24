@@ -37,21 +37,9 @@ std::optional<Delta> GptOssReasoningParser::parseChunk(const std::string& newChu
     StreamState lastState = state;
 
     if (startsWith(chunk, parsingConfig.startTags[0])) {
-        // Final content
+        // Analysis (reasoning) channel start
         state = StreamState::READING_REASONING;
         chunk = chunk.substr(parsingConfig.startTags[0].size());
-    } else if (startsWith(chunk, "<|start|>assistant<|channel|>final<|message|>")) {
-        // Final content
-        state = StreamState::READING_CONTENT;
-        chunk = chunk.substr(std::strlen("<|start|>assistant<|channel|>final<|message|>"));
-    } else if (startsWith(chunk, "<|channel|>final<|message|>")) {
-        // Final content
-        state = StreamState::READING_CONTENT;
-        chunk = chunk.substr(std::strlen("<|channel|>final<|message|>"));
-    } else if (startsWith(chunk, "<|channel|>commentary<|message|>")) {
-        // Preamble
-        state = StreamState::READING_CONTENT;
-        chunk = chunk.substr(std::strlen("<|channel|>commentary<|message|>"));
     } else if (endsWith(chunk, parsingConfig.endTag)) {
         // End
         state = StreamState::UNKNOWN;
@@ -65,19 +53,9 @@ std::optional<Delta> GptOssReasoningParser::parseChunk(const std::string& newChu
     if (chunk.size() == 0)
         return std::nullopt;
 
-    switch (lastState) {
-    case StreamState::READING_REASONING:
-    case StreamState::READING_CONTENT: {
-        if (state == StreamState::READING_REASONING) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Sending Reasoning [{}]", chunk);
-            return ReasoningDelta{chunk};
-        } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Sending Content [{}]", chunk);
-            return ContentDelta{chunk};
-        }
-    }
-    case StreamState::UNKNOWN:
-        break;
+    if (lastState == StreamState::READING_REASONING) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Sending Reasoning [{}]", chunk);
+        return ReasoningDelta{chunk};
     }
 
     return std::nullopt;

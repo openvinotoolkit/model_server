@@ -30,6 +30,7 @@ namespace ovms {
 //                    argument delta (id/name nullopt):
 //                      {"delta":{"tool_calls":[{"index":<n>,"function":{"arguments":"<args>"}}]}}
 //   FinishDelta    → {}
+//   AudioDelta     → {}
 class RapidJsonDeltaSerializer : public IDeltaSerializer {
 public:
     std::string serialize(const ContentDelta& delta) const override;
