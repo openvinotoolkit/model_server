@@ -17,6 +17,7 @@
 
 #include <regex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <aws/core/Aws.h>
@@ -29,6 +30,14 @@ namespace ovms {
 
 class S3FileSystem : public FileSystem {
 public:
+    /**
+     * @brief Resolve an S3-compatible endpoint into a clean host:port string and scheme.
+     *
+     * If no scheme is provided, HTTP is used by default for compatibility with MinIO
+     * and other S3-compatible deployments that expose plain HTTP endpoints.
+     */
+    static std::pair<std::string, Aws::Http::Scheme> parseEndpoint(const std::string& endpoint);
+
     /**
      * @brief Construct a new S3FileSystem object
      *
