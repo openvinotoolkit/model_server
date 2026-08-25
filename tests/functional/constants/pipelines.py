@@ -1102,40 +1102,46 @@ class FailedToLoadModelMediaPipe(SimpleMediaPipe):
 
 
 class ImageClassificationMediaPipe(MediaPipe):
-    def __init__(self, **kwargs):
+    def __init__(self, models, **kwargs):
         Pipeline.__init__(self, "image_classification_pipeline", **kwargs)
         super().__init__()
+        self.googlenet_model = models[0]
+        self.resnet_model = models[1]
+        self.argmax_model = models[2]
         self._initialize()
         self.regular_models = self.get_regular_models()
 
     def _create_nodes(self, models=None):
-        from ovms.constants.models import Resnet, GoogleNetV2Fp32, ArgMax
+        googlenet = self.googlenet_model()
+        resnet = self.resnet_model()
+        argmax = self.argmax_model()
+
         session_calculator = OpenVINOModelServerSessionCalculator()
         inference_calculator = OpenVINOInferenceCalculator()
 
         googlenet_session_node = MediaPipeGraphNode(
-            "googlenet_session_node", GoogleNetV2Fp32(), calculator=session_calculator
+            "googlenet_session_node", googlenet, calculator=session_calculator
         )
-        resnet_session_node = MediaPipeGraphNode("resnet_session_node", Resnet(), calculator=session_calculator)
-        argmax_session_node = MediaPipeGraphNode("argmax_session_node", ArgMax(), calculator=session_calculator)
+        resnet_session_node = MediaPipeGraphNode("resnet_session_node", resnet, calculator=session_calculator)
+        argmax_session_node = MediaPipeGraphNode("argmax_session_node", argmax, calculator=session_calculator)
 
         googlenet_inference_node = MediaPipeGraphNode(
             "googlenet_inference_node",
-            GoogleNetV2Fp32(),
+            googlenet,
             calculator=inference_calculator,
             input_stream="GOOGLE_INPUT:input_0",
             output_stream="GOOGLE_OUTPUT:google_output",
         )
         resnet_inference_node = MediaPipeGraphNode(
             "resnet_inference_node",
-            Resnet(),
+            resnet,
             calculator=inference_calculator,
             input_stream="RESNET_INPUT:input_0",
             output_stream="RESNET_OUTPUT:resnet_output",
         )
         argmax_inference_node = MediaPipeGraphNode(
             "argmax_inference_node",
-            ArgMax(),
+            argmax,
             calculator=inference_calculator,
             input_stream=["ARGMAX_INPUT1:google_output", "ARGMAX_INPUT2:resnet_output"],
             output_stream="ARGMAX_OUTPUT:argmax_0",
@@ -1271,15 +1277,11 @@ class SimpleDynamicModelMediaPipe(SimpleModelMediaPipe):
 
 class SimpleModelMediaPipeResnetWrongInputShapes(SimpleModelMediaPipe):
     def __init__(self, model=None, use_mapping=False, batch_size=None):
-        from ovms.constants.models import ResnetWrongInputShapes
-        model = ResnetWrongInputShapes()
         super().__init__(model, use_mapping, batch_size)
 
 
 class SimpleModelMediaPipeResnetWrongInputShapeDim(SimpleModelMediaPipe):
     def __init__(self, model=None, use_mapping=False, batch_size=None):
-        from ovms.constants.models import ResnetWrongInputShapeDim
-        model = ResnetWrongInputShapeDim()
         super().__init__(model, use_mapping, batch_size)
 
 
