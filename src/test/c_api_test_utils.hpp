@@ -177,6 +177,9 @@ struct ServerGuard {
     OVMS_Server* server{nullptr};
 
 private:
+    // Keep the settings objects alive for the duration of OVMS_ServerStartFromConfigurationFile().
+    // The server does not require these handles to remain valid after startup; they are only
+    // needed as setup arguments for the C API initialization call.
     ServerSettingsGuard serverSettingsGuard;
     ModelsSettingsGuard modelsSettingsGuard;
 };

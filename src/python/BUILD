@@ -20,38 +20,20 @@ load("@aspect_bazel_lib//:e2e/copy_action/copy.bzl", "simple_copy_file")
 load("//:common_settings.bzl",
      "COMMON_STATIC_LIBS_LINKOPTS",
      "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS",
-    "COMMON_LOCAL_DEFINES", "PYBIND_HEADERS_ONLY", "PYBIND_DEPS", "ovms_cc_library")
+    "COMMON_LOCAL_DEFINES", "LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY",
+    "PYBIND_HEADERS_ONLY", "PYBIND_DEPS", "ovms_cc_library")
 
-# Copts for the python shared library.  Same hardening flags as
-# LINUX_COMMON_STATIC_LIBS_COPTS but WITHOUT -fvisibility=hidden.
-# Omitting -fvisibility=hidden lets entry-point symbols
-# (PythonInterpreterModule, etc.) remain visible in the ELF dynamic
-# symbol table, and avoids a -Werror=attributes conflict that arises
-# when OvmsPyTensor (default visibility) has a pybind11::object field
-# (hidden visibility).
-_SHARED_LIB_COPTS_LINUX = [
-    "-Wall",
-    "-Wno-unknown-pragmas",
-    "-Wno-sign-compare",
-    # -fvisibility=hidden intentionally omitted
-    "-Werror",
-    "-Wno-deprecated-declarations",
-    "-Wimplicit-fallthrough",
-    "-fcf-protection=full",
-    "-Wformat",
-    "-Wformat-security",
-    "-Werror=format-security",
-    "-Wl,-z,noexecstack",
-    "-fPIC",
-    "-Wl,-z,relro",
-    "-Wl,-z,relro,-z,now",
-    "-Wl,-z,nodlopen",
-    "-fstack-protector-strong",
+# Copts for the python shared library. These intentionally mirror the common
+# Linux static-library flags, but omit -fvisibility=hidden so the exported
+# Python entry points remain visible in the ELF dynamic symbol table.
+# Keeping the no-visibility list in common_settings.bzl ensures a single place to
+# track compiler hardening and warning changes.
+_SHARED_LIB_COPTS_LINUX = LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY + [
     # pybind11 declares its entire namespace with
     # __attribute__((visibility("hidden"))), so any struct that contains a
     # pybind11 type (e.g. py::object) will trigger -Wattributes when the
-    # containing struct has default visibility.  This is expected and safe
-    # for code compiled into a single DSO — suppress the diagnostic here.
+    # containing struct has default visibility. This is expected and safe for a
+    # single DSO; suppress the diagnostic here.
     "-Wno-attributes",
 ]
 
@@ -363,6 +345,7 @@ cc_binary(
     visibility = ["//visibility:public"],
 )
 
+# simple copy one file to another used on different operatiing systems
 simple_copy_file(
     name = "copy_libovmspython",
     src = "libovmspython.so",
@@ -434,11 +417,15 @@ ovms_cc_library(
 )
 
 # Runtime implementation of the KFS OVMS_PY_TENSOR bridge vtable.
-# Linking this into ovms_test allows Windows tests to resolve
-# OVMS_getKfsPyTensorBridgeVTable from the current process, mirroring
-# Linux RTLD_DEFAULT behavior and avoiding plugin DLL loading in unit tests.
+# This source is intentionally compiled in two different BUILD scopes:
+#   1) as part of the runtime plugin (libpython_calculators.so), which is
+#      loaded at process startup and provides the real bridge implementation,
+#   2) as an in-process helper linked into ovms_test and similar runtime
+#      consumers, so the symbol is resolvable without requiring a separate
+#      plugin DLL load. This keeps the main ovms binary free of direct Python
+#      linkage while preserving test/runtime symbol availability.
 ovms_cc_library(
-    name = "kfs_python_tensor_bridge_runtime",
+    name = "kfs_python_tensor_bridge_impl",
     srcs = [
         "kfs_python_tensor_bridge_impl.cpp",
     ],
@@ -462,6 +449,12 @@ cc_import(
     visibility = ["//visibility:private"],
 )
 
+# This object set intentionally duplicates the bridge implementation from the
+# runtime plugin. It exists so unit tests and in-process runtime code can
+# resolve the same exported bridge symbols without first dlopen-ing the plugin.
+# The duplicate is architectural: the plugin is a separate shared library for
+# the production runtime split, while this target provides the same symbols in
+# the current process for tests and embedded loads.
 ovms_cc_library(
     name = "python_calculators_runtime_objects",
     srcs = [
@@ -535,6 +528,7 @@ cc_binary(
     visibility = ["//visibility:public"],
 )
 
+# simple copy one file to another used on different operatiing systems
 simple_copy_file(
     name = "copy_libpython_calculators",
     src = "libpython_calculators.so",

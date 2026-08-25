@@ -128,6 +128,16 @@ public:
     const std::string name;
     const std::string version;
 
+    // These virtual overloads are the actual public API for the executor.
+    // Each front-end (gRPC/KFS/HTTP) resolves into one of these request-specific
+    // entry points and then calls the typed template helper below with the
+    // concrete request/response model.
+    //
+    // The template methods are intentionally named differently from the virtual
+    // interface methods to make the dispatch flow explicit: the virtual methods
+    // are the transport-facing contract, while the typed helpers perform the
+    // concrete Mediapipe execution logic.
+
 private:
     const ::mediapipe::CalculatorGraphConfig config;
     stream_types_mapping_t inputTypes;
@@ -164,6 +174,9 @@ public:
         PythonBackend* pythonBackend,
         MediapipeServableMetricReporter* mediapipeServableMetricReporter);
 
+    // Transport-facing virtual API. These are the overloads selected by the
+    // front-end adapters and then immediately delegated into the typed helper
+    // below for the actual mediapipe execution.
     Status infer(const inference::ModelInferRequest* request,
         inference::ModelInferResponse* response,
         const ExecutionContext& executionContext) override;
@@ -177,8 +190,13 @@ public:
         HttpAsyncWriter& serverReaderWriter,
         const ExecutionContext& executionContext) override;
 
+    // Template helper used by the transport-specific overloads above.
+    // This is the real implementation body: it is templated so one execution
+    // path can handle both gRPC and HTTP request types without duplicating the
+    // graph logic. The name intentionally differs from the virtual API to keep
+    // the front-end dispatch and the concrete runtime implementation separate.
     template <typename RequestType, typename ResponseType>
-    Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
+    Status inferTyped(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", this->name);
         MetricCounterGuard failedRequestsGuard(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, false));
@@ -357,7 +375,7 @@ public:
     }
 
     template <typename RequestType, typename ReaderWriterType>
-    Status inferStream(const RequestType& req, ReaderWriterType& serverReaderWriter, ExecutionContext executionContext) {
+    Status inferStreamTyped(const RequestType& req, ReaderWriterType& serverReaderWriter, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         if (this->guard.has_value()) {
             return inferStreamWithQueue(req, serverReaderWriter, executionContext);

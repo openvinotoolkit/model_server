@@ -54,6 +54,11 @@ struct PreparedChatTemplateRuntime {
 
 thread_local std::string lastRuntimeOutput;
 
+// Ownership/lifetime contract for output:
+// - This function owns storage in thread-local lastRuntimeOutput.
+// - *output is a borrowed pointer to lastRuntimeOutput.c_str().
+// - The pointer remains valid until the next setRuntimeOutput() call on the
+//   same thread (or thread shutdown).
 void setRuntimeOutput(const std::string& outputText, const char** output) {
     lastRuntimeOutput = outputText;
     if (output != nullptr) {
@@ -65,6 +70,7 @@ bool isInterpreterInitialized() {
     return Py_IsInitialized();
 }
 
+// Forwards the same ownership/lifetime contract as setRuntimeOutput().
 void setInterpreterNotInitializedError(const char** output, const char* context) {
     setRuntimeOutput(std::string(PY_RUNTIME_INIT_ERROR_PREFIX) +
                          "Python interpreter is not initialized for " + context,
@@ -145,6 +151,11 @@ extern "C" PYTHON_RUNTIME_EXPORT ovms::Module* OVMS_createPythonInterpreterModul
 
 extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char** errorMessage) {
     ovms::initialize_named_loggers_from_default();
+    // Ownership/lifetime contract for errorMessage:
+    // - Storage is owned by static thread-local lastError.
+    // - *errorMessage is a borrowed pointer to lastError.c_str().
+    // - The pointer remains valid until the next write to lastError on the
+    //   same thread (or thread shutdown).
     static thread_local std::string lastError;
     if (errorMessage != nullptr) {
         *errorMessage = nullptr;
@@ -208,6 +219,11 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyChatTemplateRuntime(
     const char* bosToken,
     const char* eosToken,
     const char** output) {
+    // Ownership/lifetime contract for output:
+    // - Storage is owned by thread-local lastRuntimeOutput.
+    // - *output is a borrowed pointer to lastRuntimeOutput.c_str().
+    // - The pointer remains valid until the next runtime output update on the
+    //   same thread (or thread shutdown). Callers should copy immediately.
     if (output != nullptr) {
         *output = nullptr;
     }
@@ -374,6 +390,11 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
     const char* eosToken,
     void** preparedHandle,
     const char** output) {
+    // Ownership/lifetime contract for output:
+    // - Storage is owned by thread-local lastRuntimeOutput.
+    // - *output is a borrowed pointer to lastRuntimeOutput.c_str().
+    // - The pointer remains valid until the next runtime output update on the
+    //   same thread (or thread shutdown). Callers should copy immediately.
     if (output != nullptr) {
         *output = nullptr;
     }
@@ -526,6 +547,11 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyPreparedChatTemplateRuntime(
     void* preparedHandle,
     const char* requestBody,
     const char** output) {
+    // Ownership/lifetime contract for output:
+    // - Storage is owned by thread-local lastRuntimeOutput.
+    // - *output is a borrowed pointer to lastRuntimeOutput.c_str().
+    // - The pointer remains valid until the next runtime output update on the
+    //   same thread (or thread shutdown). Callers should copy immediately.
     if (output != nullptr) {
         *output = nullptr;
     }

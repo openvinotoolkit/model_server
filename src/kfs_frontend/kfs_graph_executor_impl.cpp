@@ -58,14 +58,14 @@
 namespace ovms {
 
 Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, const ExecutionContext& executionContext) {
-    return this->infer<KFSRequest, KFSResponse>(request, response, executionContext);
+    return this->inferTyped<KFSRequest, KFSResponse>(request, response, executionContext);
 }
 
 Status MediapipeGraphExecutor::inferStream(
     const KFSRequest& firstRequest,
     grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
     const ExecutionContext& executionContext) {
-    return this->inferStream<KFSRequest, grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>>(firstRequest, serverReaderWriter, executionContext);
+    return this->inferStreamTyped<KFSRequest, grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>>(firstRequest, serverReaderWriter, executionContext);
 }
 
 // Utilities

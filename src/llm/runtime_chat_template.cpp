@@ -91,6 +91,8 @@ RuntimeChatTemplatePrepareStatus prepareRuntimeChatTemplate(
         &runtimeHandle,
         &runtimeOutput);
 
+    // runtimeOutput is owned by the runtime library and is valid only until
+    // the next runtime call on this thread; copy it immediately.
     if (runtimeOutput != nullptr) {
         output = runtimeOutput;
     } else {
@@ -143,6 +145,8 @@ RuntimeChatTemplateStatus tryApplyPreparedChatTemplateRuntime(
         requestBody.c_str(),
         &runtimeOutput);
 
+    // runtimeOutput is owned by the runtime library and is valid only until
+    // the next runtime call on this thread; copy it immediately.
     if (runtimeOutput != nullptr) {
         output = runtimeOutput;
     } else {

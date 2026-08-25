@@ -2487,6 +2487,9 @@ cc_test(
             "//:not_disable_python": PYBIND_HEADERS_ONLY + [
                 "//src/python:python_headers_only",
                 "//src/python:libovmspythonmodule",
+                # Keep explicit in-process Python runtime entry points available to
+                # tests and embedded execution paths without pulling the full
+                # runtime into the main ovms link graph.
                 "//src/python:python_runtime_entry_static",
             ],
             "//:disable_python": [],

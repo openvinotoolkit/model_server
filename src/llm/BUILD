@@ -647,15 +647,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
-filegroup(
-    name = "py_jinja_srcs",
-    srcs = [
-        "py_jinja_template_processor.cpp",
-        "py_jinja_template_processor.hpp",
-    ],
-    visibility = ["//src/python:__pkg__"],
-)
-
 ovms_cc_library(
     name = "py_jinja_template_processor_header",
     hdrs = ["py_jinja_template_processor.hpp"],

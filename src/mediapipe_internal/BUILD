@@ -198,6 +198,8 @@ ovms_cc_library(
         ":mediapipe_utils",
         ":side_packet_builder",
         "//src:mediapipe_executor_interface",
+        # Keep the in-process Python calculator bridge available for test/runtime
+        # use without forcing the main ovms binary to link Python directly.
         "//src/python:python_calculators_runtime_objects",
         "//src/dags:pipelinedefinitionstatus",
         "//src:libovms_single_version_servable_definition",
