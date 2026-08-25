@@ -34,7 +34,9 @@
 
 #include "logging.hpp"
 #include "kfs_python_tensor_bridge.hpp"
+#include "python_runtime_version.hpp"
 #include "mediapipe_graph_executor_interface.hpp"
+#include "server.hpp"
 #include "utils/newline_delimited.hpp"
 
 struct OVMS_Server_;
@@ -325,10 +327,26 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             "bazel-bin\\src\\ovms_mediapipe_runtime_shared.dll",
             ".\\bazel-bin\\src\\ovms_mediapipe_runtime_shared.dll"};
 
+        char executablePathBuf[MAX_PATH] = {0};
+        DWORD executablePathBufLength = GetModuleFileNameA(nullptr, executablePathBuf, MAX_PATH);
+        if (executablePathBufLength > 0 && executablePathBufLength < MAX_PATH) {
+            std::string exePath(executablePathBuf, executablePathBufLength);
+            std::string exeDir = ".";
+            size_t separatorPos = exePath.find_last_of("\\/");
+            if (separatorPos != std::string::npos) {
+                exeDir = exePath.substr(0, separatorPos);
+            }
+            candidates.emplace_back(exeDir + "\\ovms_mediapipe_runtime_shared.dll");
+            candidates.emplace_back(exeDir + "\\src\\ovms_mediapipe_runtime_shared.dll");
+        }
+
+        candidates = withAbiVersionedCandidates(candidates);
+
         for (const auto& candidate : candidates) {
             api->handle = LoadLibraryA(candidate.c_str());
             if (api->handle != nullptr) {
-                SPDLOG_TRACE("MediaPipe runtime API loaded from: {}", candidate);
+                SPDLOG_INFO("MediaPipe runtime API loaded from: {}", candidate);
+                SPDLOG_INFO("MediaPipe runtime shared module handle = {}", fmt::ptr(api->handle));
                 break;
             }
         }
@@ -389,14 +407,18 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     }
 
     if (api->setExternalServerHandle != nullptr) {
-        OVMS_Server* serverHandle = nullptr;
-        auto* status = OVMS_ServerNew(&serverHandle);
-        if (status != nullptr) {
-            OVMS_StatusDelete(status);
-            SPDLOG_WARN("Failed to obtain OVMS server handle for MediaPipe runtime-shared");
-        } else {
-            api->setExternalServerHandle(static_cast<void*>(serverHandle));
-        }
+        // The MediaPipe runtime-shared library is loaded as a separate DLL and has its
+        // own static/global state. Creating a fresh OVMS_Server inside this runtime would
+        // not point at the live server instance used by the main process; bind directly to
+        // the main process singleton instead.
+        auto* serverHandle = static_cast<void*>(&ovms::Server::instance());
+        SPDLOG_INFO("MediaPipe runtime-shared is setting external OVMS server handle: live singleton ptr={} (this={})",
+            fmt::ptr(serverHandle),
+            fmt::ptr(&ovms::Server::instance()));
+        api->setExternalServerHandle(serverHandle);
+        SPDLOG_INFO("MediaPipe runtime-shared bound to main OVMS server singleton");
+    } else {
+        SPDLOG_WARN("MediaPipe runtime-shared does not export OVMS_MPSetExternalServerHandle; it will keep creating a local server handle inside the DLL");
     }
 }
 

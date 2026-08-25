@@ -18,8 +18,49 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
 set "PATH=%setPath%"
 
+set "ovms_exe_src="
+set "ovms_runtime_shared_src="
 set "libovmspython_src="
 set "libpython_calculators_src="
+
+IF "%~2"=="--with_python" (
+    echo Self contained Python will be included in the package
+    set "with_python=true"
+) ELSE (
+    echo Self contained Python will not be included in the package
+    set "with_python=false"
+)
+
+:: Resolve the expected Bazel outputs before copying. This allows packaging to fail
+:: with a specific, actionable error when the server or Python ABI artifacts were
+:: not built yet, instead of a generic "The system cannot find the file specified."
+if exist %cd%\bazel-bin\src\ovms.exe (
+    set "ovms_exe_src=%cd%\bazel-bin\src\ovms.exe"
+) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\ovms.exe (
+    set "ovms_exe_src=%cd%\bazel-out\x64_windows-opt\bin\src\ovms.exe"
+)
+if not defined ovms_exe_src (
+    echo Packaging validation failed: ovms.exe is missing from the Bazel outputs. Build the server first, e.g. with: bazel build //src:ovms
+    exit /b 1
+)
+
+:: Prefer the newest runtime-shared artifact from the staged Python ABI addon when
+:: a Python build was performed. This avoids packaging a stale default-output DLL
+:: left behind by a previous build or a separate output_user_root.
+if /i "%with_python%"=="true" (
+    if exist "%cd%\dist\windows\python_abi_addons\cp312\ovms_mediapipe_runtime_shared-cp312.dll" (
+        set "ovms_runtime_shared_src=%cd%\dist\windows\python_abi_addons\cp312\ovms_mediapipe_runtime_shared-cp312.dll"
+    )
+)
+if not defined ovms_runtime_shared_src if exist %cd%\bazel-bin\src\ovms_mediapipe_runtime_shared.dll (
+    set "ovms_runtime_shared_src=%cd%\bazel-bin\src\ovms_mediapipe_runtime_shared.dll"
+) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\ovms_mediapipe_runtime_shared.dll (
+    set "ovms_runtime_shared_src=%cd%\bazel-out\x64_windows-opt\bin\src\ovms_mediapipe_runtime_shared.dll"
+)
+if not defined ovms_runtime_shared_src (
+    echo Packaging validation failed: ovms_mediapipe_runtime_shared.dll is missing from the Bazel outputs. Build the runtime shared library first, e.g. with: bazel build //src:ovms_mediapipe_runtime_shared
+    exit /b 1
+)
 
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
@@ -36,14 +77,6 @@ IF "%~1"=="" (
     set "output_user_root=%1"
 )
 
-IF "%~2"=="--with_python" (
-    echo Self contained Python will be included in the package
-    set "with_python=true"
-) ELSE (
-    echo Self contained Python will not be included in the package
-    set "with_python=false"
-)
-
 :: Set default USE_OV_BINARY if not set
 if "%OV_USE_BINARY%"=="" (
     set "OV_USE_BINARY=1"
@@ -55,10 +88,10 @@ if exist dist\windows\ovms (
 )
 
 md dist\windows\ovms
-copy bazel-bin\src\ovms.exe dist\windows\ovms
+copy "!ovms_exe_src!" dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-copy %cd%\bazel-out\x64_windows-opt\bin\src\ovms_mediapipe_runtime_shared.dll dist\windows\ovms
+copy "!ovms_runtime_shared_src!" "dist\windows\ovms\ovms_mediapipe_runtime_shared.dll"
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
@@ -66,60 +99,144 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 set "dest_dir=C:\opt"
 
+:: NOTE: this whole section intentionally avoids wrapping everything in a
+:: single outer parenthesized IF (...) block, and avoids "::" comments and
+:: "else if" chains inside nested blocks. cmd.exe's block pre-parser can
+:: fail with errors like "'e.g.' was unexpected at this time." when deeply
+:: nested parenthesized blocks contain "::" style comments or long else-if
+:: chains - the error only surfaces once execution actually reaches the
+:: block, not at initial parse time. Using goto plus flag variables instead
+:: of nested parens sidesteps this entirely (see windows_build.bat for the
+:: same fix applied to its additional-Python-ABI section).
+if /i not "%with_python%"=="true" goto :skip_python_packaging
+
+if exist "%cd%\dist\windows\python_abi_addons\cp312\libovmspython-cp312.dll" (
+    set "libovmspython_src=%cd%\dist\windows\python_abi_addons\cp312\libovmspython-cp312.dll"
+) else if exist %cd%\bazel-bin\src\python\libovmspython.dll (
+    set "libovmspython_src=%cd%\bazel-bin\src\python\libovmspython.dll"
+) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll (
+    set "libovmspython_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll"
+)
+if not defined libovmspython_src (
+    echo Missing libovmspython.dll in bazel output. Ensure //src/python:libovmspython is built.
+    exit /b 1
+)
+
+if exist "%cd%\dist\windows\python_abi_addons\cp312\libpython_calculators-cp312.dll" (
+    set "libpython_calculators_src=%cd%\dist\windows\python_abi_addons\cp312\libpython_calculators-cp312.dll"
+) else if exist %cd%\bazel-bin\src\python\libpython_calculators.dll (
+    set "libpython_calculators_src=%cd%\bazel-bin\src\python\libpython_calculators.dll"
+) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll (
+    set "libpython_calculators_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll"
+)
+if not defined libpython_calculators_src (
+    echo Missing libpython_calculators.dll in bazel output. Ensure //src/python:libpython_calculators is built.
+    exit /b 1
+)
+
+:: Derive the default ABI tag from the embedded Python version (e.g. 3.12.10 -> cp312)
+set "python_version=3.12.10"
+for /f "tokens=1,2 delims=." %%a in ("!python_version!") do (
+    set "DEFAULT_MAJOR_VER=%%a"
+    set "DEFAULT_MINOR_VER=%%b"
+)
+set "defaultAbiTag=cp!DEFAULT_MAJOR_VER!!DEFAULT_MINOR_VER!"
+
+:: Copy pyovms module into root python/ (default import path) and into python\cp<tag>\ for
+:: symmetry with the additional-ABI addon layout (e.g. python\cp313\pyovms.pyd).
+md dist\windows\ovms\python
+copy %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
+if !errorlevel! neq 0 exit /b !errorlevel!
+if exist dist\windows\ovms\python\!defaultAbiTag! (
+    rmdir /s /q dist\windows\ovms\python\!defaultAbiTag!
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+md dist\windows\ovms\python\!defaultAbiTag!
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd "dist\windows\ovms\python\!defaultAbiTag!\pyovms.pyd"
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+:: Copy shared OVMS Python runtime libraries.
+:: Unversioned names (e.g. libovmspython.dll) are the loader fallback used when ABI detection
+:: returns empty (standard packaged deployment via setupvars.bat).
+:: Versioned names (e.g. libovmspython-cp312.dll) are symmetric with the additional-ABI addons
+:: and are used as the primary candidate when PYTHONHOME encodes the version.
+copy "!libovmspython_src!" "dist\windows\ovms\libovmspython.dll"
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy "!libovmspython_src!" "dist\windows\ovms\libovmspython-!defaultAbiTag!.dll"
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy "!libpython_calculators_src!" "dist\windows\ovms\libpython_calculators.dll"
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy "!libpython_calculators_src!" "dist\windows\ovms\libpython_calculators-!defaultAbiTag!.dll"
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+call %cd%\windows_prepare_python.bat %dest_dir% !python_version!
+if !errorlevel! neq 0 (
+    echo Error occurred when creating Python environment for the distribution.
+    exit /b !errorlevel!
+)
+:: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
+xcopy %dest_dir%\python-!python_version!-embed-amd64 dist\windows\ovms\python /E /I /H
+if !errorlevel! neq 0 (
+    echo Error occurred when creating Python environment for the distribution.
+    exit /b !errorlevel!
+)
+if not exist dist\windows\ovms\python\python312.zip (
+    echo Packaging validation failed: embedded stdlib python312.zip is missing from dist\windows\ovms\python.
+    exit /b 1
+)
+.\dist\windows\ovms\python\python.exe -m pip install "setuptools==80.9.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+if !errorlevel! neq 0 (
+    echo Error during Python dependencies for LLM installation. The package will not be fully functional.
+)
+
+:: Package any additional Python ABI runtime libraries staged by
+:: windows_build.bat under dist\windows\python_abi_addons\cp<tag>\, for
+:: example a cp313 build produced alongside the default cp312 build above.
+set "abiAddonsDir=%cd%\dist\windows\python_abi_addons"
+if not exist "!abiAddonsDir!" goto :skip_python_packaging
+
 if /i "%with_python%"=="true" (
-    if exist %cd%\bazel-bin\src\python\libovmspython.dll (
-        set "libovmspython_src=%cd%\bazel-bin\src\python\libovmspython.dll"
-    ) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll (
-        set "libovmspython_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll"
-    )
-    if not defined libovmspython_src (
-        echo Missing libovmspython.dll in bazel output. Ensure //src/python:libovmspython is built.
+    if not exist "!abiAddonsDir!\cp*" (
+        echo Packaging validation failed: no staged Python ABI directories were found under !abiAddonsDir!.
+        echo Build the default runtime and any additional ABI runtimes first, e.g. with: windows_build.bat opt --with_python 3.13.1
         exit /b 1
-    )
-
-    if exist %cd%\bazel-bin\src\python\libpython_calculators.dll (
-        set "libpython_calculators_src=%cd%\bazel-bin\src\python\libpython_calculators.dll"
-    ) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll (
-        set "libpython_calculators_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll"
-    )
-    if not defined libpython_calculators_src (
-        echo Missing libpython_calculators.dll in bazel output. Ensure //src/python:libpython_calculators is built.
-        exit /b 1
-    )
-
-    :: Copy pyovms module
-    md dist\windows\ovms\python
-    copy %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
-    if !errorlevel! neq 0 exit /b !errorlevel!
-
-    :: Copy shared OVMS python runtime libraries required by ovms.exe when Python is enabled.
-    copy "!libovmspython_src!" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy "!libpython_calculators_src!" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    :: Prepare self-contained python
-    set "python_version=3.12.10"
-
-    call %cd%\windows_prepare_python.bat %dest_dir% !python_version!
-    if !errorlevel! neq 0 (
-        echo Error occurred when creating Python environment for the distribution.
-        exit /b !errorlevel!
-    )
-    :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
-    xcopy %dest_dir%\python-!python_version!-embed-amd64 dist\windows\ovms\python /E /I /H
-    if !errorlevel! neq 0 (
-        echo Error occurred when creating Python environment for the distribution.
-        exit /b !errorlevel!
-    )
-    if not exist dist\windows\ovms\python\python312.zip (
-        echo Packaging validation failed: embedded stdlib python312.zip is missing from dist\windows\ovms\python.
-        exit /b 1
-    )
-    .\dist\windows\ovms\python\python.exe -m pip install "setuptools==80.9.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
-    if !errorlevel! neq 0 (
-        echo Error during Python dependencies for LLM installation. The package will not be fully functional.
     )
 )
+
+for /d %%V in ("!abiAddonsDir!\cp*") do (
+    set "abiTagDir=%%~nxV"
+    set "abiTag=!abiTagDir:cp=!"
+    echo Packaging additional Python ABI: !abiTag!
+
+    set "abiFilesOk=1"
+    if not exist "%%V\libovmspython-!abiTagDir!.dll" set "abiFilesOk=0"
+    if not exist "%%V\libpython_calculators-!abiTagDir!.dll" set "abiFilesOk=0"
+    if not exist "%%V\ovms_mediapipe_runtime_shared-!abiTagDir!.dll" set "abiFilesOk=0"
+    if not exist "%%V\pyovms.pyd" set "abiFilesOk=0"
+
+    if "!abiFilesOk!"=="0" (
+        echo Missing required staged files for ABI !abiTag! in %%V. Skipping.
+    ) else (
+        copy "%%V\libovmspython-!abiTagDir!.dll" dist\windows\ovms
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        copy "%%V\libpython_calculators-!abiTagDir!.dll" dist\windows\ovms
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        copy "%%V\ovms_mediapipe_runtime_shared-!abiTagDir!.dll" dist\windows\ovms
+        if !errorlevel! neq 0 exit /b !errorlevel!
+
+        if exist dist\windows\ovms\python\!abiTagDir! (
+            rmdir /s /q dist\windows\ovms\python\!abiTagDir!
+            if !errorlevel! neq 0 exit /b !errorlevel!
+        )
+        md dist\windows\ovms\python\!abiTagDir!
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        copy "%%V\pyovms.pyd" dist\windows\ovms\python\!abiTagDir!\pyovms.pyd
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    )
+)
+
+:skip_python_packaging
 
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!

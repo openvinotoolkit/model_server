@@ -28,6 +28,7 @@
 #endif
 
 #include "../logging.hpp"
+#include "../python_runtime_version.hpp"
 
 namespace ovms {
 namespace {
@@ -107,7 +108,7 @@ std::vector<std::string> buildCandidates() {
                                             "./bazel-bin/src/python/libovmspython.so",
                                         });
 #endif
-    return candidates;
+    return withAbiVersionedCandidates(candidates);
 }
 
 void initializeRuntimeState() {

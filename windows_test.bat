@@ -38,10 +38,21 @@ set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
-IF "%~3"=="" (
+:: Optional arg3: additional Python ABI version (e.g. 3.13.1) - sets OVMS_PYTHON_ABI so
+:: the Python runtime tests exercise the versioned loader path (e.g. cp313 DLLs).
+:: The full Python dev install for that version must already be present at C:\opt\Python<MAJOR><MINOR>.
+set "additionalPythonAbi=%~3"
+set "OVMS_PYTHON_ABI_TAG="
+IF NOT "%~3"=="" (
+    for /f "tokens=1,2 delims=." %%a in ("%~3") do (
+        set "OVMS_PYTHON_ABI_TAG=%%a%%b"
+    )
+)
+
+IF "%~4"=="" (
     set "gtestFilter=*"
 ) ELSE (
-    set "gtestFilter=%3"
+    set "gtestFilter=%4"
 )
 
 IF "%~2"=="--with_python" (
@@ -142,6 +153,12 @@ if !pytestExitCode! neq 0 (
     exit /b !pytestExitCode!
 )
 echo [INFO] install_ovms_service.bat unit tests passed.
+
+:: If an extra Python ABI was requested, expose it so runtime-loader tests exercise the cp<tag> path.
+IF NOT "!OVMS_PYTHON_ABI_TAG!"=="" (
+    set "OVMS_PYTHON_ABI=!OVMS_PYTHON_ABI_TAG!"
+    echo [INFO] OVMS_PYTHON_ABI set to !OVMS_PYTHON_ABI_TAG! for runtime tests
+)
 
 :: Start unit test
 echo Running: %runTest%

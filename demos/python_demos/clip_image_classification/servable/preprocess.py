@@ -15,7 +15,6 @@
 #*****************************************************************************
 
 from pyovms import Tensor
-from transformers import CLIPProcessor
 from PIL import Image
 import numpy as np
 from io import BytesIO
@@ -24,6 +23,10 @@ from tritonclient.utils import deserialize_bytes_tensor
 class OvmsPythonModel:
 
     def initialize(self, kwargs: dict):
+        try:
+            from transformers import CLIPProcessor
+        except ImportError:
+            from transformers.models.clip.processing_clip import CLIPProcessor
         model_id = "openai/clip-vit-base-patch16"
         self.processor = CLIPProcessor.from_pretrained(model_id)
 

@@ -494,6 +494,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovms_module",
+        "//src:python_runtime_version",
     ],
     visibility = ["//visibility:public"],
 )
