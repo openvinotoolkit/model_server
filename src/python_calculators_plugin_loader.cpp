@@ -16,6 +16,7 @@
 
 #include "python_calculators_plugin_loader.hpp"
 #include "kfs_python_tensor_bridge.hpp"
+#include "python_runtime_version.hpp"
 
 #include <cstdlib>
 #include <cstdio>
@@ -356,6 +357,8 @@ bool loadPythonCalculatorsPlugin() {
     } catch (...) {
     }
 
+    candidates = withAbiVersionedCandidates(candidates);
+
     // CRITICAL: Expose main process symbols to plugin before loading it.
     // The plugin will link to a shared MediaPipe library that contains undefined
     // OVMS symbols (from geti calculators in the external MediaPipe fork).
@@ -475,6 +478,8 @@ bool loadPythonCalculatorsPlugin() {
         candidates.insert(candidates.end(), executableRelativeCandidates.begin(), executableRelativeCandidates.end());
         candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
     }
+
+    candidates = withAbiVersionedCandidates(candidates);
 
     DWORD lastLoadError = ERROR_SUCCESS;
     for (const auto& candidate : candidates) {

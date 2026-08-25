@@ -3,13 +3,14 @@
         {
             "config": {
             "name": "clip",
-            "base_path": "/model/"
+            "base_path": "C:\\git\\model_server\\demos\\python_demos\\clip_image_classification\\servable\\model",
+            "target_device": "CPU"
         }
     }],
     "mediapipe_config_list": [
     {
         "name":"python_model",
-        "graph_path":"/workspace/graph.pbtxt"
+        "graph_path":"C:\\git\\model_server\\demos\\python_demos\\clip_image_classification\\servable\\graph.pbtxt"
     }
     ]
 }

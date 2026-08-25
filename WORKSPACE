@@ -174,17 +174,17 @@ http_archive(
 
 ################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
-#local_repository(
-#    name = "mediapipe",
-#    path = "C:\\git\\mediapipe",
-#)
+local_repository(
+    name = "mediapipe",
+    path = "C:\\git\\mediapipe",
+)
 
 # Remote fallback for non-local development:
-git_repository(
-     name = "mediapipe",
-     remote = "https://github.com/openvinotoolkit/mediapipe",
-     commit = "ec9f5b3e5e765097f8fd9622f2e5d0c037351173", # Fix capi ovms handle ownership - code review1
-)
+#git_repository(
+#     name = "mediapipe",
+#     remote = "https://github.com/openvinotoolkit/mediapipe",
+#     commit = "ec9f5b3e5e765097f8fd9622f2e5d0c037351173", # Fix capi ovms handle ownership - code review1
+#)
 
 # Protobuf for Node dependencies
 http_archive(

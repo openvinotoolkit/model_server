@@ -28,7 +28,7 @@ node {
   output_stream: "PIXEL_VALUES_PY:pixel_values_py"
   node_options: {
     [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
-      handler_path: "/workspace/preprocess.py"
+      handler_path: "C:\\git\\model_server\\demos\\python_demos\\clip_image_classification\\servable\\preprocess.py"
     }
   }
 }
@@ -118,7 +118,7 @@ node {
   output_stream: "LABEL:output_label"
   node_options: {
     [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
-      handler_path: "/workspace/postprocess.py"
+      handler_path: "C:\\git\\model_server\\demos\\python_demos\\clip_image_classification\\servable\\postprocess.py"
     }
   }
 }

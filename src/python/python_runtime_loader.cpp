@@ -29,6 +29,7 @@ using PythonLibraryHandle = HMODULE;
 
 #include "../logging.hpp"
 #include "../module.hpp"
+#include "../python_runtime_version.hpp"
 
 namespace ovms {
 
@@ -96,6 +97,7 @@ Module* ensurePythonRuntimeLoaded() {
         "./src/python/libovmspython.so",
         "bazel-bin/src/python/libovmspython.so",
         "./bazel-bin/src/python/libovmspython.so"};
+    candidates = withAbiVersionedCandidates(candidates);
 
     for (const auto& candidate : candidates) {
         pythonRuntimeHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
@@ -158,17 +160,28 @@ Module* ensurePythonRuntimeLoaded() {
         candidates.insert(candidates.end(), executableRelativeCandidates.begin(), executableRelativeCandidates.end());
         candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
     }
+    candidates = withAbiVersionedCandidates(candidates);
 
+    std::string triedCandidates;
     for (const auto& candidate : candidates) {
         pythonRuntimeHandle = LoadLibraryA(candidate.c_str());
         if (pythonRuntimeHandle != nullptr) {
             break;
         }
+        if (!triedCandidates.empty())
+            triedCandidates += ", ";
+        triedCandidates += candidate;
     }
 
     if (pythonRuntimeHandle == nullptr) {
         DWORD error = GetLastError();
-        SPDLOG_WARN("Python runtime library libovmspython.dll failed to load: {} ({})", error, std::system_category().message(error));
+        SPDLOG_WARN("Python runtime library libovmspython.dll failed to load. "
+                    "Tried candidates: [{}]. "
+                    "Ensure the OVMS package directory is on PATH and the correct ABI DLL exists next to ovms.exe. "
+                    "Detected ABI tag: '{}'. Win32 error: {} ({})",
+            triedCandidates,
+            detectPythonAbiTag(),
+            error, std::system_category().message(error));
         return nullptr;
     }
     createPythonInterpreterModuleFn = reinterpret_cast<CreatePythonInterpreterModuleFn>(GetProcAddress(pythonRuntimeHandle, "OVMS_createPythonInterpreterModule"));
@@ -192,7 +205,19 @@ Module* ensurePythonRuntimeLoaded() {
 
     const char* pythonRuntimeValidationError = nullptr;
     if (!validatePythonEnvironmentFn(&pythonRuntimeValidationError)) {
-        SPDLOG_WARN("Python runtime environment validation failed. Ensure Python dependencies and PYTHONPATH are configured. Details: {}",
+        const std::string abiTag = detectPythonAbiTag();
+        const char* pythonHome = std::getenv("PYTHONHOME");
+        const char* pythonPath = std::getenv("PYTHONPATH");
+        SPDLOG_WARN("Python runtime environment validation failed. "
+                    "Detected ABI tag: '{}'. PYTHONHOME: '{}'. PYTHONPATH: '{}'. "
+                    "Ensure the correct pyovms.pyd (e.g. python\\cp{}\\pyovms.pyd) is on PYTHONPATH "
+                    "and that the Python installation directory (containing python{}.dll) is on PATH. "
+                    "Details: {}",
+            abiTag.empty() ? "<none - will use unversioned fallback DLLs>" : abiTag,
+            pythonHome != nullptr ? pythonHome : "<not set>",
+            pythonPath != nullptr ? pythonPath : "<not set>",
+            abiTag.empty() ? "312" : abiTag,
+            abiTag.empty() ? "312" : abiTag,
             pythonRuntimeValidationError != nullptr ? pythonRuntimeValidationError : "Unknown error");
         createPythonInterpreterModuleFn = nullptr;
         validatePythonEnvironmentFn = nullptr;

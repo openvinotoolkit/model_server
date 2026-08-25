@@ -169,6 +169,7 @@ cc_binary(
         "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
         "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
         ":libovms_version_impl",
+        ":ovms_lib",
     ],
     linkopts = select({
         "//conditions:default": ["-Wl,--allow-shlib-undefined"],
@@ -713,9 +714,11 @@ ovms_cc_library(
         "kfs_python_tensor_bridge_hdrs",
         "mediapipe_executor_interface",
         "libovms_execution_context",
+        "libovms_module",
         "libovmsstatus",
         "libovmslogging",
         "libovms_servable_definition",
+        "python_runtime_version",
         "//src/utils:newline_delimited",
     ],
     visibility = ["//visibility:public"],
@@ -872,6 +875,13 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "python_runtime_version",
+    hdrs = ["python_runtime_version.hpp"],
+    srcs = ["python_runtime_version.cpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "python_calculators_plugin_loader",
     hdrs = ["python_calculators_plugin_loader.hpp"],
     srcs = ["python_calculators_plugin_loader.cpp"],
@@ -880,6 +890,7 @@ ovms_cc_library(
         "libovmslogging",
         "libovmsstatus",
         "kfs_python_tensor_bridge",
+        "python_runtime_version",
     ],
     visibility = ["//visibility:public"],
 )

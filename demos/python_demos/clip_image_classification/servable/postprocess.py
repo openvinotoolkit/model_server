@@ -16,8 +16,13 @@
 
 from pyovms import Tensor
 import numpy as np
-from scipy.special import softmax
 from tritonclient.utils import deserialize_bytes_tensor
+
+
+def softmax(x, axis=None):
+    x_max = np.max(x, axis=axis, keepdims=True)
+    e_x = np.exp(x - x_max)
+    return e_x / np.sum(e_x, axis=axis, keepdims=True)
 
 class OvmsPythonModel:
 

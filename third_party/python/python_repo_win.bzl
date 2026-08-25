@@ -15,8 +15,14 @@
 #
 
 def _python_repository_impl(repository_ctx):
-    lib_path = "Python312"
-    version = "python312"
+    # OVMS_WINDOWS_PYTHON_VERSION selects which dev Python install under C:\\opt
+    # is used to build against (e.g. "312" -> C:\\opt\\Python312\\python312.dll).
+    # Pass it via `--repo_env=OVMS_WINDOWS_PYTHON_VERSION=313` to build the
+    # Python runtime libraries against a different ABI. Defaults to "312" to
+    # preserve existing behavior.
+    python_version_tag = repository_ctx.os.environ.get("OVMS_WINDOWS_PYTHON_VERSION", "312")
+    lib_path = "Python" + python_version_tag
+    version = "python" + python_version_tag
     build_file_content = """
 cc_library(
     name = "python3-lib",
@@ -29,6 +35,6 @@ cc_library(
 
 python_repository = repository_rule(
     implementation = _python_repository_impl,
-    environ = ["BASE_IMAGE"],
+    environ = ["BASE_IMAGE", "OVMS_WINDOWS_PYTHON_VERSION"],
     local=False,
 )

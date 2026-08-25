@@ -75,14 +75,19 @@ This default command compiles ovms.exe without python dependencies, just C++ bin
 windows_build.bat
 ```
 
-Optionally, you add parameter to the windows_build.bat script
+Optionally, you add parameters to the windows_build.bat script
 ```bat
-windows_build.bat my_dir_on_c --with_python --with_tests --integrity
+windows_build.bat my_dir_on_c --with_python 3.13.1 --with_tests --integrity
 ```
 [arg1] This way you can change default dependency location directory to c:\my_dir_on_c
 [arg2] --with_python - this will build the ovms.exe with python dependency and support for python chat templates for GENAI LLM
-[arg3] --with_tests - this will also build ovms_test.exe target
-[arg4] --integrity - Add the compilation integrity flag to 0 or 1 - set the additional integritycheck compilation flag when compiling dependencies
+[arg3] additional Python version (e.g. `3.13.1`) - builds a second set of Python runtime libraries (`libovmspython`, `libpython_calculators`, `pyovms`) linked against the specified Python ABI, on top of the default Python 3.12 ABI. This enables serving Python nodes from virtualenvs created with that Python version. Requires a full Python development install (with headers and `pythonXYZ.dll`) at `C:\opt\Python<MAJOR><MINOR>` (e.g. `C:\opt\Python313`).
+[arg4] --with_tests - this will also build ovms_test.exe target
+[arg5] --integrity - set the additional integritycheck compilation flag
+
+> **Note:** When arg5 is provided, the build performs three Bazel invocations: the main build (cp312 default), the extra-ABI build (e.g. cp313), and a restore build that returns the bazel-bin artifacts to cp312 linkage so that packaging picks up the correct default DLLs.
+
+The staged extra-ABI libraries are placed in `dist\windows\python_abi_addons\cp<tag>\` and are automatically picked up by `windows_create_package.bat --with_python`.
 
 # Running unit tests - optional
 The script compiles ovms_test binary with C++ only, downloads and converts test LLM models (src\tests\llm_testing).
@@ -92,8 +97,12 @@ windows_test.bat
 
 The optional script compiles ovms_test binary with python support, downloads and converts test LLM models (src\tests\llm_testing) and installs Python torch and optimum.
 ```bat
-windows_test.bat opt --with_python
+windows_test.bat opt --with_python 3.13.1
 ```
+[arg1] This way you can change default dependency location directory to c:\my_dir_on_c
+[arg2] --with_python - compile and run tests with Python support
+[arg3] optional additional Python ABI version (e.g. `3.13.1`) - sets `OVMS_PYTHON_ABI` so the Python runtime tests exercise the versioned loader path (cp313 DLLs). Requires the dev Python install at `C:\opt\Python313`.
+[arg4] optional gtest filter (default `*`)
 
 # Creating deployment package
 This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.
@@ -102,9 +111,28 @@ The default version creates C++ only version without Python dependency.
 windows_create_package.bat
 ```
 
-Optionally you can create a package with Python dependency. Note that to create valid package with Python, you need to build using `--with_python` flag in the previous step as well.
+Optionally you can create a package with Python dependency. Note that to create a valid package with Python, you need to build using the `--with_python` flag in the previous step as well.
 ```bat
 windows_create_package.bat opt --with_python
+```
+
+The package includes the default Python 3.12 embedded runtime and its libraries:
+- `libovmspython.dll` / `libovmspython-cp312.dll` — Python runtime loader (cp312 fallback / cp312 explicit)
+- `libpython_calculators.dll` / `libpython_calculators-cp312.dll` — MediaPipe Python calculator plugin
+- `python\pyovms.pyd` and `python\cp312\pyovms.pyd` — Python binding module
+
+If arg5 was passed to `windows_build.bat` (e.g. `3.13.1`), the additional ABI libraries are also included:
+- `libovmspython-cp313.dll`, `libpython_calculators-cp313.dll`
+- `python\cp313\pyovms.pyd`
+
+**Selecting the active Python ABI at runtime:** `ovms.exe` detects the ABI from the `PYTHONHOME` environment variable. When started via `setupvars.bat`, `PYTHONHOME` points to the bundled `python\` directory (no version digits), so the unversioned fallback DLLs are used (cp312). To use a different ABI — e.g. when serving Python nodes from a cp313 virtualenv — set the environment before starting `ovms.exe`:
+```bat
+set PYTHONHOME=C:\Program Files\Python313
+set PYTHONPATH=<path_to_venv>\Lib\site-packages;<ovms_dir>\python\cp313
+```
+Or use the explicit override to bypass auto-detection:
+```bat
+set OVMS_PYTHON_ABI=313
 ```
 
 # Test the Deployment
