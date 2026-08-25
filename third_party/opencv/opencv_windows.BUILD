@@ -20,7 +20,7 @@ licenses(["notice"])  # BSD license
 
 exports_files(["LICENSE"])
 
-OPENCV_VERSION = "500"  # 5.0.0
+OPENCV_VERSION = "4140"  # 4.14.0
 
 config_setting(
     name = "opt_build",
@@ -32,7 +32,7 @@ config_setting(
     values = {"compilation_mode": "dbg"},
 )
 
-# The following build rule assumes that the executable "opencv-5.0.0-windows.exe"
+# The following build rule assumes that the executable "opencv-4.14.0-windows.exe"
 # is downloaded and the files are extracted to local.
 # If you install OpenCV separately, please modify the build rule accordingly.
 cc_library(
