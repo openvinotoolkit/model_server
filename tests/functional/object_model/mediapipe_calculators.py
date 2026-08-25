@@ -21,9 +21,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
-from tests.functional.utils.assertions import InvalidReturnCodeException
 from tests.functional.utils.logger import get_logger
-from tests.functional.utils.process import Process
+from tests.functional.utils.test_framework import copy_dir_tree
 
 from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
 from tests.functional.config import (
@@ -585,34 +584,12 @@ node: {{
         content = self.create_node_content(header, input_streams, output_streams)
         return content
 
-    @staticmethod
-    def _copy_model_tree(proc, src, dst):
-        if "C:\\" in src:
-            proc.run_and_check(
-                # /R:2 - retry 2 times
-                # /W:3 - wait 3 seconds between retries
-                f"robocopy /J /E /NP /NFL /NJH /R:2 /W:3 \"{src}\" \"{dst}\"",
-                env=os.environ.copy(),
-                exit_code_check=1,
-                exception_type=InvalidReturnCodeException,
-                timeout=1800,
-            )
-        else:
-            shutil.copytree(src, dst)
-
     def prepare_resources(self, base_location):
         dst_base = Path(base_location, "models")
         dst = Path(dst_base, f"./{self.model.name}")
         dst.parent.mkdir(exist_ok=True, parents=True)
         if not Path.exists(dst):
-            proc = Process()
-            proc.disable_check_stderr()
-            try:
-                self._copy_model_tree(proc, self.models_path, dst)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                if dst.exists():
-                    shutil.rmtree(dst, ignore_errors=True)
-                raise e
+            copy_dir_tree(Path(self.models_path), dst)
         return str(dst_base)
 
     @classmethod

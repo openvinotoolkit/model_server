@@ -31,10 +31,6 @@ from _pytest.mark import Mark, MarkDecorator
 from _pytest.python import Function
 
 from tests.functional import config
-from tests.functional.models.models_library import ModelsLib, ModelsLibrary
-from tests.functional.utils.download import wget_file
-from tests.functional.utils.reservation_manager.args import parse_args
-from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
 from tests.functional.config import (
     build_test_image,
     c_api_wrapper_dir,
@@ -89,10 +85,15 @@ from tests.functional.constants.ovms_type import (
 from tests.functional.constants.paths import Paths
 from tests.functional.constants.target_device import MAX_WORKERS_PER_TARGET_DEVICE, TargetDevice
 from tests.functional.constants.ovms_binaries import calculate_ovms_binary_name
+from tests.functional.models.models_library import ModelsLib, ModelsLibrary
+from tests.functional.object_model.dmesg_log_monitor import DmesgLogMonitor
 from tests.functional.object_model.ovms_info import OvmsInfo
+from tests.functional.object_model.ovsa import OvsaCerts
 from tests.functional.utils.core import TmpDir
 from tests.functional.utils.docker import DockerClient, DockerContainer, DOCKER_CONTAINER_TMP_PATH
+from tests.functional.utils.download import wget_file
 from tests.functional.utils.environment_info import EnvironmentInfo
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.marks import (
     MarkConditionalRunType,
@@ -103,9 +104,9 @@ from tests.functional.utils.marks import (
 )
 from tests.functional.utils.ov_hf_downloader import OVHfDownloader
 from tests.functional.utils.process import PID_STATE_ZOMBIE, Process, get_pid_name, get_pid_status
+from tests.functional.utils.reservation_manager.args import parse_args
+from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
 from tests.functional.utils.test_framework import change_dir_permissions, get_test_object_prefix, is_xdist_master
-from tests.functional.utils.helpers import get_base_device
-from tests.functional.object_model.ovsa import OvsaCerts
 
 logger = get_logger(__name__)
 
@@ -151,6 +152,7 @@ def init_environment(_config):
     if not machine_is_reserved_for_test_session:
         return
     init_cleanup()
+    dmesg_cleanup()
 
 
 def init_cleanup():
@@ -159,6 +161,16 @@ def init_cleanup():
             cleanup_ovms_processes()
         else:
             cleanup_docker(cleanup_docker_containers)
+
+
+def dmesg_cleanup():
+    if all([
+        config.cleanup_env_on_startup,
+        not config.disable_dmesg_log_monitor,
+        get_host_os() != OsType.Windows,
+    ]):
+        dmesg_log_monitor = DmesgLogMonitor()
+        dmesg_log_monitor.clear_dmesg_buffer()
 
 
 def clean_container(container):

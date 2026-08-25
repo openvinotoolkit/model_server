@@ -222,7 +222,8 @@ class OvmsMessages:
     ERROR_CFG_KEY_ERROR = "Keyword:{} Key: #{}"
     USE_CONFIG_PATH_OR_MODEL_PATH_WITH_SPARE_MODEL = "Use either config_path or model_path with model_name"
     USE_CONFIG_PATH_WITHOUT_MODEL = "Use config_path or model_path with model_name"
-    ERROR_LOADING_MODEL = "Error occurred while loading model: {}"
+    ERROR_LOADING_MODEL_NO_VALID_MODEL = "Error loading model: no valid model file found for model"
+    RROR_LOADING_MODEL = "Error occurred while loading model: {}"
     ERROR_LOADING_MODEL_INTERNAL_SERVER_ERROR = (
         "Error occurred while loading model: {}; version: {}; error: Internal server error"
     )
