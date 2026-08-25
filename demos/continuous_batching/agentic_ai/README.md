@@ -25,7 +25,7 @@ docker run -d -p 8080:8080 -e PORT=8080 mcp-weather-server:sse uv run python -m 
 On Windows the MCP server will be demonstrated as an instance with stdio interface inside the agent application. 
 File system MCP server requires NodeJS and npx, visit https://nodejs.org/en/download. The weather MCP should be installed as python package:
 ```bat 
-pip install python-dateutil mcp_weather_server
+pip install python-dateutil mcp_weather_server mcp^<2
 ```
 
 ## Prepare the agent
@@ -47,11 +47,11 @@ Assuming you have unpacked model server package with python enabled version, mak
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ::::{tab-set}
-:::{tab-item} Qwen3-VL-8B
-:sync: Qwen3-VL-8B
+:::{tab-item} Qwen3.5-9B
+:sync: Qwen3.5-9B
 Pull and start OVMS:
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --model_repository_path c:\models --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --cache_dir .cache --allowed_media_domains raw.githubusercontent.com
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3.5-9B-int4-ov --model_repository_path c:\models --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --cache_dir .cache --allowed_media_domains raw.githubusercontent.com
 ```
 
 Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
@@ -64,7 +64,7 @@ Use MCP server, with additional image of Gdańsk old town. VLM model deduces loc
 > **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
 ```bat
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.5-9B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
@@ -181,13 +181,13 @@ Let me know if you'd like forecast details or anything else!
 ### Deploying in a docker container on CPU
 
 ::::{tab-set}
-:::{tab-item} Qwen3-VL-8B
-:sync: Qwen3-VL-8B
+:::{tab-item} Qwen3.5-9B
+:sync: Qwen3.5-9B
 Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models openvino/model_server:weekly \
---rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --tool_parser hermes3 --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
+--rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3.5-9B-int4-ov --tool_parser hermes3 --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 
 Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
@@ -200,7 +200,7 @@ Use MCP server, with additional image of Gdańsk old town. VLM model deduces loc
 > **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
 ```bash
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.5-9B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
@@ -330,13 +330,13 @@ to `docker run` command, use the image with GPU support. Export the models with 
 It can be applied using the commands below:
 
 ::::{tab-set}
-:::{tab-item} Qwen3-VL-8B
-:sync: Qwen3-VL-8B
+:::{tab-item} Qwen3.5-9B
+:sync: Qwen3.5-9B
 Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
+--rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3.5-9B-int4-ov --tool_parser hermes3 --target_device GPU --task text_generation --pipeline_type VLM_CB --allowed_media_domains raw.githubusercontent.com
 ```
 
 Use MCP server, with additional image of Gdańsk old town. VLM model deduces location and calls `get_weather` tool to summarize the weather conditions in the city.
@@ -349,7 +349,7 @@ Use MCP server, with additional image of Gdańsk old town. VLM model deduces loc
 > **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
 ```bash
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3-VL-8B-Instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.5-9B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
