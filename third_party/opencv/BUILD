@@ -35,6 +35,11 @@ cc_library(
     hdrs = glob([
         "include/**/*.*"
     ]),
-    strip_include_prefix = "include/opencv4",
+    # OpenCV 4 installs headers under include/opencv4/opencv2,
+    # OpenCV 5 uses include/opencv5/opencv2.
+    includes = [
+        "include/opencv4",
+        "include/opencv5",
+    ],
     visibility = ["//visibility:public"],
 )

@@ -23,7 +23,7 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
     if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
     if "%%A"=="CURL_VERSION" if "!curl_version!"=="" set "curl_version=%%B"
 )
-:: Build DLL suffix by removing dots (e.g. 4.13.0 -> 4130)
+:: Build DLL suffix by removing dots (e.g. 5.0.0 -> 500)
 set "opencv_dll_ver=!opencv_version:.=!"
 IF "%~1"=="" (
     echo No argument provided. Using default opt path

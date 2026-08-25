@@ -116,67 +116,67 @@ COPY custom_node_interface.h /
 WORKDIR /deps
 RUN cp /opt/opencv_repo/include/opencv2/opencv.hpp /deps/opencv.hpp
 WORKDIR /custom_nodes/common
-RUN g++ -c -std=c++17 *.cpp ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 *.cpp ${OPS} -I/opt/opencv/include/opencv5
 
 # OvmsTestDevCustomNode - default cpp location: /custom_nodes/<node_name>/
 # 1. east_ocr
 WORKDIR /custom_nodes/east_ocr/
-RUN g++ -c -std=c++17 east_ocr.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 east_ocr.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv5
 RUN g++ -shared ${OPS} -o /custom_nodes/east_ocr/libcustom_node_east_ocr.so east_ocr.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 # 2. model_zoo_intel_object_detection
 WORKDIR /custom_nodes/model_zoo_intel_object_detection/
-RUN g++ -c -std=c++17 model_zoo_intel_object_detection.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 model_zoo_intel_object_detection.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv5
 RUN g++ -shared ${OPS} -o /custom_nodes/model_zoo_intel_object_detection/libcustom_node_model_zoo_intel_object_detection.so model_zoo_intel_object_detection.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 # 3. image_transformation
 WORKDIR /custom_nodes/image_transformation/
-RUN g++ -c -std=c++17 image_transformation.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 image_transformation.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv5
 RUN g++ -shared ${OPS} -o /custom_nodes/image_transformation/libcustom_node_image_transformation.so image_transformation.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 # OvmsTestDevCustomNode - default cpp location: /custom_nodes/<node_name>/
 # 1. demultiply
 WORKDIR /custom_nodes/demultiply/
-RUN g++ -c -std=c++17 demultiply.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 demultiply.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv5
 RUN g++ -shared ${OPS} -o /custom_nodes/demultiply/libcustom_node_demultiply.so demultiply.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 # 2. demultiply_gather
 WORKDIR /custom_nodes/demultiply_gather/
-RUN g++ -c -std=c++17 demultiply_gather.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 demultiply_gather.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv5
 RUN g++ -shared ${OPS} -o /custom_nodes/demultiply_gather/libcustom_node_demultiply_gather.so demultiply_gather.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 # 3. elastic_in_1t_out_1t
 WORKDIR /custom_nodes/elastic_in_1t_out_1t/
-RUN g++ -c -std=c++17 elastic_in_1t_out_1t.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 elastic_in_1t_out_1t.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv5
 RUN g++ -shared ${OPS} -o /custom_nodes/elastic_in_1t_out_1t/libcustom_node_elastic_in_1t_out_1t.so elastic_in_1t_out_1t.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 
 # OvmsCUnitTestCustomNode - default cpp location: /custom_nodes/
 WORKDIR /custom_nodes
 # 1. node_add_sub - NODE_TYPE=c
-RUN g++ -c -std=c++17 node_add_sub.c ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 node_add_sub.c ${OPS} -I/opt/opencv/include/opencv5
 RUN g++ -shared ${OPS} -o /custom_nodes/libcustom_node_node_add_sub.so node_add_sub.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 # 2. node_choose_maximum
-RUN g++ -c -std=c++17 node_choose_maximum.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 node_choose_maximum.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv5
 RUN g++ -shared ${OPS} -o /custom_nodes/libcustom_node_node_choose_maximum.so node_choose_maximum.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 # 3. node_perform_different_operations
-RUN g++ -c -std=c++17 node_perform_different_operations.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 node_perform_different_operations.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv5
 RUN g++ -shared ${OPS} -o /custom_nodes/libcustom_node_node_perform_different_operations.so node_perform_different_operations.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 # 4. node_dynamic_demultiplex
-RUN g++ -c -std=c++17 node_dynamic_demultiplex.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
+RUN g++ -c -std=c++17 node_dynamic_demultiplex.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv5
 RUN g++ -shared ${OPS} -o /custom_nodes/libcustom_node_node_dynamic_demultiplex.so node_dynamic_demultiplex.o /custom_nodes/common/*.o \
-    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+    -L/opt/opencv/lib/ -I/opt/opencv/include/opencv5 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 ENTRYPOINT ["/ovms/bin/ovms"]
