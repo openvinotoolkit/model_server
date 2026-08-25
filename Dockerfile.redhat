@@ -116,7 +116,7 @@ RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
 ####### Build OpenCV
 COPY third_party/opencv /ovms/third_party/opencv
 WORKDIR /ovms/third_party/opencv
-ARG OPENCV_VERSION=4.13.0
+ARG OPENCV_VERSION=5.0.0
 RUN if [ "$VERBOSE_LOGS" == "ON" ] ; then export VERBOSE=1 ; fi && OPENCV_VERSION=${OPENCV_VERSION} ./install_opencv.sh
 ####### End of OpenCV
 
