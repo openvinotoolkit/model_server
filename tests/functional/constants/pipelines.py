@@ -30,7 +30,6 @@ from ovms.constants.models import (
     DummyAdd2Inputs,
     DummyIncrement,
     DummyIncrementDecrement,
-    Increment4d,
     VehicleAttributesRecognition,
     VehicleDetection,
 )
@@ -567,51 +566,6 @@ class SimplePipeline(Pipeline):
         return [request, node1, output]
 
 
-class MultipleInputsOutputsPipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("multiple_inputs_outputs_pipeline", **kwargs)
-        self._initialize()
-
-    def _create_nodes(self, models=None):
-        node1 = Node("node_1", DummyIncrementDecrement())
-
-        request = Node("request", node_type=NodeType.Input)
-        output = Node("output", node_type=NodeType.Output)
-
-        NodesConnection.connect(node1, 0, request, 0)
-        NodesConnection.connect(node1, 1, request, 1)
-        NodesConnection.connect(output, 0, node1, 0)
-        NodesConnection.connect(output, 1, node1, 1)
-
-        nodes = [request, node1, output]
-        return nodes
-
-    def get_expected_output(self, input_data: dict, client_type: str = None):
-        model_output = self.get_models()[0].get_expected_output(input_data)
-        return self.map_model_output_to_pipeline_output(model_output)
-
-
-class InputNotConnectedPipeline(Pipeline):
-
-    def __init__(self, **kwargs):
-        super().__init__("single_input_not_nonnected_pipeline", **kwargs)
-        self._initialize()
-
-    def _create_nodes(self, models=None):
-        node1 = Node("node_1", DummyIncrementDecrement())
-
-        request = Node("request", node_type=NodeType.Input)
-        output = Node("output", node_type=NodeType.Output)
-
-        NodesConnection.connect(node1, 0, request, 0)
-        NodesConnection.connect(output, 0, node1, 0)
-        NodesConnection.connect(output, 1, node1, 1)
-
-        nodes = [request, node1, output]
-        return nodes
-
-
 class ComplexDummyPipeline(Pipeline):
 
     def __init__(self, **kwargs):
@@ -910,17 +864,18 @@ class SingleLevelPipeline(Pipeline):
 
 
 class MultiLevelPipeline(Pipeline):
-    def __init__(self, shape_model_list, **kwargs):
+    def __init__(self, shape_model_list, model, **kwargs):
         super().__init__("multi_level_pipeline", **kwargs)
         self._vertical_shape_list = shape_model_list
         self._initialize()
+        self.model = model
 
     def _create_nodes(self, model=None):
         request = Node("request", node_type=NodeType.Input, output_names=["img"])
 
         model_nodes = []
         for idx, shape in enumerate(self._vertical_shape_list):
-            model = Increment4d()
+            model = self.model
             model.name = f"{model.name}_{idx}"
             model.update_shapes(shape)
             model.set_input_shape_for_ovms(shape)
