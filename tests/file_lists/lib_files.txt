@@ -54,7 +54,7 @@ libopenvino_c.so->libopenvino_c.so.2631
 libopenvino_c.so.2026.3.1
 libopenvino_c.so.2631->libopenvino_c.so.2026.3.1
 libopenvino_genai.so->libopenvino_genai.so.2631
-libopenvino_genai.so.2026.3.1
+libopenvino_genai.so.2026.3.1.0
 libopenvino_genai.so.2631->libopenvino_genai.so.2026.3.1.0
 libopenvino_hetero_plugin.so
 libopenvino_intel_cpu_plugin.so
