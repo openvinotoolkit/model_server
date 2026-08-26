@@ -14,40 +14,33 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include "src/llm/io_processing/base_output_parser.hpp"
-#include <vector>
+#include "src/llm/io_processing/qwen3/reasoning_parser.hpp"
+#include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace ovms {
-class Minicpm5ReasoningParser : public BaseOutputParser {
-public:
-    static inline const std::string reasoningStartTag = "<think>";
-    static inline const std::string reasoningEndTag = "</think>";
-
-    static constexpr int64_t reasoningStartTokenId = 8;
-    static constexpr int64_t reasoningEndTokenId = 9;
-
+// MiniCPM5 reasoning uses the same <think>/<\think> grammar as Qwen3 but both delimiters
+// are registered special tokens, so tokenIdStartTags is set and needsSpecialTokens/
+// defaultDecodingWithSpecialTokens are both true.
+class Minicpm5ReasoningParser : public Qwen3ReasoningParser {
 public:
     Minicpm5ReasoningParser() = delete;
-    explicit Minicpm5ReasoningParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags{this->reasoningStartTag};
-        return parsingStartTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags{};
-        return specialParsingStartTags;
-    }
-    const std::string& getParsingEndTag() const override {
-        return reasoningEndTag;
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"<think>"};
+        cfg.tokenIdStartTags = {"<think>"};
+        cfg.endTag = "</think>";
+        cfg.needsSpecialTokens = true;
+        cfg.defaultDecodingWithSpecialTokens = true;
+        return cfg;
     }
 
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
+    explicit Minicpm5ReasoningParser(ov::genai::Tokenizer& tokenizer,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        Qwen3ReasoningParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
 };
 }  // namespace ovms

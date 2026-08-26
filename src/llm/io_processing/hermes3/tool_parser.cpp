@@ -116,69 +116,7 @@ void Hermes3ToolParser::clearState() {
     argumentsDelayWindow[1].clear();
 }
 
-void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    const std::string startTag = "<tool_call>";
-    const std::string endTag = "</tool_call>";
-    std::vector<std::string> tools;
-    size_t pos = 0;
-    size_t firstToolCallPos;
-
-    // Save position of the first tool call start tag to properly clear content after parsing.
-    firstToolCallPos = parsedOutput.content.find(startTag, pos);
-    while (true) {
-        size_t start = parsedOutput.content.find(startTag, pos);
-        if (start == std::string::npos) {
-            break;
-        }
-        start += startTag.length();
-        size_t end = parsedOutput.content.find(endTag, start);
-        std::string tool;
-        if (end != std::string::npos) {
-            tool = parsedOutput.content.substr(start, end - start);
-            pos = end + endTag.length();
-        } else {
-            tool = parsedOutput.content.substr(start);
-            pos = parsedOutput.content.length();
-        }
-        if (!tool.empty()) {
-            tools.push_back(tool);
-        }
-    }
-
-    for (const std::string& tool : tools) {
-        ToolCall toolCall;
-        rapidjson::Document toolDoc;
-        toolDoc.Parse(tool.c_str());
-        if (toolDoc.HasParseError()) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse tool call as JSON");
-            continue;
-        }
-        if (toolDoc.HasMember("name") && toolDoc["name"].IsString()) {
-            toolCall.name = toolDoc["name"].GetString();
-        } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
-            continue;
-        }
-
-        if (toolDoc.HasMember("arguments") && toolDoc["arguments"].IsObject()) {
-            rapidjson::StringBuffer sb;
-            rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-            toolDoc["arguments"].Accept(toolWriter);
-            toolCall.arguments = sb.GetString();
-        } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-            continue;
-        }
-        toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-        parsedOutput.toolCalls.push_back(toolCall);
-    }
-    // Remove tool calls from the content
-    if (firstToolCallPos != std::string::npos) {
-        parsedOutput.content.erase(firstToolCallPos);
-    }
-}
-
-std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> Hermes3ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     We first collect data until we have full function name - that's when we return the first delta.
     Every next delta contains next parts of the arguments. Hermes3 generates arguments as JSON, but OpenAI API expects them in a string format.
@@ -203,7 +141,15 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
 
     toolCallCompleted = (finishReason != ov::genai::GenerationFinishReason::NONE);
 
-    if (chunk.empty()) {
+    const bool hasPendingState =
+        !unprocessedBuffer.empty() ||
+        !argumentsDelayWindow[0].empty() ||
+        !argumentsDelayWindow[1].empty() ||
+        lastJson.HasMember("arguments");
+
+    // Empty chunks are usually ignorable, except finalization calls when we still
+    // have delayed argument state to flush (e.g. empty STOP chunk from streamer).
+    if (chunk.empty() && !hasPendingState) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Hermes3ToolParser");
         return std::nullopt;
     }
@@ -326,7 +272,6 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
         throw std::runtime_error("Generated tool call structure is not valid");
     }
 
-    rapidjson::Document doc;
     // Case 1: 'arguments' has just appeared in the current chunk. If so, we return first delta.
     if (newJson.HasMember("arguments") && !lastJson.HasMember("arguments")) {
         std::string functionName;
@@ -340,9 +285,8 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
             throw std::runtime_error("Tool call name is missing in generated output");
         }
         // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":{"name": <functionName>}}]}
-        doc = wrapFirstDelta(functionName, toolCallIndex);
         lastJson.CopyFrom(newJson, lastJson.GetAllocator());
-        return doc;
+        return ToolCallDelta{toolCallIndex, generateRandomId(), functionName, ""};
         // Case 2: 'arguments' already exists in the last JSON, we compute delta and return it.
     } else if (lastJson.HasMember("arguments")) {
         rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
@@ -356,9 +300,11 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
                 return std::nullopt;
             }
         }
-        // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":<delta>}]}
-        doc = wrapDelta(delta, toolCallIndex);
-        return doc;
+        // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":{"arguments":"..."}}]}
+        std::string argsStr;
+        if (delta.HasMember("arguments") && delta["arguments"].IsString())
+            argsStr = delta["arguments"].GetString();
+        return ToolCallDelta{toolCallIndex, std::nullopt, std::nullopt, argsStr};
         // Case 3: No 'arguments' exists or just appeared, so we keep building up until we have complete function name
     } else {
         lastJson.CopyFrom(newJson, lastJson.GetAllocator());
