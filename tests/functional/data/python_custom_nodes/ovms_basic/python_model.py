@@ -25,9 +25,7 @@ class OvmsPythonModel:
         self.node_name = kwargs["node_name"]
         self.input_names = kwargs["input_names"]
         self.output_names = kwargs["output_names"]
-        self.class_methods = {
-            name: func for name, func in inspect.getmembers(OvmsPythonModel, predicate=inspect.isfunction)
-        }
+        self.class_methods = dict(inspect.getmembers(OvmsPythonModel, predicate=inspect.isfunction))
 
     def execute(self, inputs: list):
         text_input_data = [bytes(input).decode() for input in inputs]

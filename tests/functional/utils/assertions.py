@@ -121,7 +121,6 @@ def _assert_status_code_and_message(status, error_message_phrase, status_code, e
         error_msg = yaml.load(error_msg, Loader=yaml.Loader)  # convert dict saved as string
     except (yaml.scanner.ScannerError, yaml.parser.ParserError) as exception:
         e = exception
-        pass
     error_msg = error_msg["error"] if getattr(error_msg, "error", None) is not None else str(error_msg)
     assert error_message_phrase in error_msg, \
         f"Expected output:\n{error_message_phrase}\nnot found in exception {e.__class__.__name__} value:\n{error_msg}"
@@ -359,12 +358,10 @@ class ConvertModelException(OvmsTestException):
 
 class UploadModelsUnstableException(OvmsTestException):
     """Raised when upload/export restored models from backup."""
-    pass
 
 
 class ReloadModelsUnstableException(OvmsTestException):
     """Raised when reload linked models from fallback (previous weeks)."""
-    pass
 
 
 class OVVPException(OvmsTestException):

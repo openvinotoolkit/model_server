@@ -286,7 +286,6 @@ class ClientAuthSsl(ClientAuthNoAuth):
     Class implemented to comply with coding standard.
     Authorisation is taken care by SSL certificates, no extra auth is needed.
     """
-    pass
 
 
 class HTTPCookieAuth(AuthBase):
@@ -541,27 +540,18 @@ class ClientAuthFactory:
 
         if auth_type == ClientAuthType.TOKEN_AUTH:
             return ClientAuthToken(auth_url, session, params)
-
-        elif auth_type == ClientAuthType.HTTP_SESSION:
+        if auth_type == ClientAuthType.HTTP_SESSION:
             return ClientAuthSession(auth_url, session, params)
-
-        elif auth_type == ClientAuthType.HTTP_BASIC:
+        if auth_type == ClientAuthType.HTTP_BASIC:
             return ClientAuthHttpBasic(auth_url, session, params)
-
-        elif auth_type == ClientAuthType.TOKEN_NO_AUTH:
+        if auth_type == ClientAuthType.TOKEN_NO_AUTH:
             return ClientAuthTokenProvided(auth_url, session, params)
-
-        elif auth_type == ClientAuthType.NO_AUTH:
+        if auth_type == ClientAuthType.NO_AUTH:
             return ClientAuthNoAuth(auth_url, session)
-
-        elif auth_type == ClientAuthType.SSL:
+        if auth_type == ClientAuthType.SSL:
             return ClientAuthSsl(auth_url, session)
-
-        elif auth_type == ClientAuthType.LOGIN_PAGE:
+        if auth_type == ClientAuthType.LOGIN_PAGE:
             return ClientAuthLoginPage(auth_url, session, params)
-
-        elif auth_type == ClientAuthType.OAUTH2_PROXY_AUTH:
+        if auth_type == ClientAuthType.OAUTH2_PROXY_AUTH:
             return ClientAuthOAuth2Proxy(auth_url, session, params)
-
-        else:
-            raise ClientAuthFactoryInvalidAuthTypeException(auth_type)
+        raise ClientAuthFactoryInvalidAuthTypeException(auth_type)

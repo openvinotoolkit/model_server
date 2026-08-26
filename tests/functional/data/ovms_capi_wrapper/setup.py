@@ -24,8 +24,7 @@ from Cython.Build import cythonize
 from pyximport import pyximport
 
 
-def build_ovms_capi_wrapper(ovms_capi_wrapper_path,
-                            capi_package_content_path):
+def build_ovms_capi_wrapper(ovms_capi_wrapper_path, capi_package_content_path):
     includes_dir = str(Path(capi_package_content_path, "../include/"))
     lib_dir = str(Path(capi_package_content_path, "lib"))
 
@@ -67,7 +66,9 @@ def prepare_dynamic_load(ovms_capi_wrapper_path, capi_package_content_path):
 
 if __name__ == "__main__":
     # Expect valid extracted capi package in `capi_package_content_path`
-    capi_cython_extensions = build_ovms_capi_wrapper(ovms_capi_wrapper_path=f"{os.getcwd()}/include/ovms_capi_wrapper.pyx",
-                                                     capi_package_content_path=os.getcwd())
+    capi_cython_extensions = build_ovms_capi_wrapper(
+        ovms_capi_wrapper_path=f"{os.getcwd()}/include/ovms_capi_wrapper.pyx",
+        capi_package_content_path=os.getcwd(),
+    )
     extension = cythonize(capi_cython_extensions)
     setup(ext_modules=extension)

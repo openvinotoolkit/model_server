@@ -59,7 +59,6 @@ class SigtermCleaner:
                 item.cleanup()
             except (UnexpectedResponseError, AssertionError) as exc:
                 logger.exception(str(exc))
-                pass
         sys.exit(1)
 
 

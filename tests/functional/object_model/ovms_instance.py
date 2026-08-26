@@ -376,7 +376,6 @@ class OvmsInstance(ABC):
         """
         Fetch and save OVMS process id.
         """
-        pass
 
     @abstractmethod
     def start(self, ensure_started=False, *args, **kwargs):

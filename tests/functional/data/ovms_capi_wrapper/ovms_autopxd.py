@@ -43,8 +43,8 @@ class OvmsAutoPxd(AutoPxd):
             if type_decl:
                 # inline struct, add a reference to whatever name it was defined on the top level
                 self.append(escape(name))
-        else:
-            return self.visit_Block(node, kind)
+            return None
+        return self.visit_Block(node, kind)
 
     def translate(self, code):
         self.visit(parse(code=code))

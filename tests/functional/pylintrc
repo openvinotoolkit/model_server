@@ -78,16 +78,16 @@ ignore-paths=
     constants/paths.py,
     constants/pipelines.py,  # (R0801: duplicate code with models.py)
     constants/target_device_configuration.py,  # W0105: String statement has no effect (pointless-string-statement)
-    data/ovms_capi_wrapper/ovms_autopxd.py,
-    data/ovms_capi_wrapper/setup.py,
-    data/python_custom_nodes/incrementer/incrementer.py,
-    data/python_custom_nodes/ovms_basic/python_model.py,
-    data/python_custom_nodes/ovms_basic/python_model_loopback.py,
-    data/python_custom_nodes/ovms_corrupted/python_model_corrupted_import.py,
-    data/python_custom_nodes/ovms_corrupted/python_model_exceptions.py,
-    data/python_custom_nodes/ovms_corrupted/python_model_loopback_multiple_use_of_valid_outputs.py,
-    data/python_custom_nodes/ovms_corrupted/python_model_loopback_return_instead_of_yield.py,
-    data/python_custom_nodes/ovms_corrupted/python_model_writing_to_loopback_output_in_execute.py,
+    tests/functional/data/ovms_capi_wrapper/ovms_autopxd.py,
+    tests/functional/data/ovms_capi_wrapper/setup.py,
+    tests/functional/data/python_custom_nodes/incrementer/incrementer.py,
+    tests/functional/data/python_custom_nodes/ovms_basic/python_model.py,
+    tests/functional/data/python_custom_nodes/ovms_basic/python_model_loopback.py,
+    tests/functional/data/python_custom_nodes/ovms_corrupted/python_model_corrupted_import.py,
+    tests/functional/data/python_custom_nodes/ovms_corrupted/python_model_exceptions.py,
+    tests/functional/data/python_custom_nodes/ovms_corrupted/python_model_loopback_multiple_use_of_valid_outputs.py,
+    tests/functional/data/python_custom_nodes/ovms_corrupted/python_model_loopback_return_instead_of_yield.py,
+    tests/functional/data/python_custom_nodes/ovms_corrupted/python_model_writing_to_loopback_output_in_execute.py,
     fixtures/*,
     object_model/cpu_extension.py,  # C0103: Attribute name doesn't conform to naming style (invalid-name)
     object_model/custom_loader.py,
@@ -127,9 +127,9 @@ ignore-paths=
     utils/http/http_session.py,
     utils/http/http_socket_wrapper.py,
     utils/inference/capi.py,
-    utils/inference/communication/base.py,
-    utils/inference/communication/grpc.py,
-    utils/inference/communication/rest.py,
+    tests/functional/utils/inference/communication/base.py,
+    tests/functional/utils/inference/communication/grpc.py,
+    tests/functional/utils/inference/communication/rest.py,
     utils/inference/inference_client_factory.py,
     utils/inference/serving/base.py,
     utils/inference/serving/kf.py,
@@ -529,6 +529,7 @@ disable=
     useless-suppression,           # (I0021)
     deprecated-pragma,             # (I0022)
     use-symbolic-message-instead,  # (I0023)
+    inconsistent-return-statements, # (R1710, to be FIXED)
     duplicate-code,                # (R0801, to be FIXED)
     logging-fstring-interpolation, # (W1203, to be FIXED)
     logging-format-interpolation,  # (W1202, to be FIXED)
@@ -543,9 +544,11 @@ disable=
     too-many-lines,                # (allowed intentionally)
     too-many-nested-blocks,        # (allowed intentionally)
     too-many-positional-arguments, # (allowed intentionally)
+    too-many-public-methods,       # (allowed intentionally)
     too-many-statements,           # (allowed intentionally)
     too-many-locals,               # (allowed intentionally)
     too-many-branches,             # (allowed intentionally)
+    too-many-return-statements,    # (allowed intentionally)
 
 
 # Enable the message, report, category or checker with the given id(s). You can

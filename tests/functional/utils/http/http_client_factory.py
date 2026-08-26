@@ -33,33 +33,23 @@ class HttpClientFactory:
 
         if client_type == HttpClientType.TOKEN_AUTH:
             return cls._get_instance(configuration, ClientAuthType.TOKEN_AUTH)
-
-        elif client_type == HttpClientType.SESSION_AUTH:
+        if client_type == HttpClientType.SESSION_AUTH:
             return cls._get_instance(configuration, ClientAuthType.HTTP_SESSION)
-
-        elif client_type == HttpClientType.NO_AUTH:
+        if client_type == HttpClientType.NO_AUTH:
             return cls._get_instance(configuration, ClientAuthType.NO_AUTH)
-
-        elif client_type == HttpClientType.K8S:
+        if client_type == HttpClientType.K8S:
             return cls._get_instance(configuration, ClientAuthType.TOKEN_NO_AUTH)
-
-        elif client_type == HttpClientType.BROKER:
+        if client_type == HttpClientType.BROKER:
             return cls._get_instance(configuration, ClientAuthType.HTTP_BASIC)
-
-        elif client_type == HttpClientType.BASIC_AUTH:
+        if client_type == HttpClientType.BASIC_AUTH:
             return cls._get_instance(configuration, ClientAuthType.HTTP_BASIC)
-
-        elif client_type == HttpClientType.API:
+        if client_type == HttpClientType.API:
             return cls._get_instance(configuration, ClientAuthType.LOGIN_PAGE)
-
-        elif client_type == HttpClientType.OAUTH2_PROXY_AUTH:
+        if client_type == HttpClientType.OAUTH2_PROXY_AUTH:
             return cls._get_instance(configuration, ClientAuthType.OAUTH2_PROXY_AUTH)
-
-        elif client_type == HttpClientType.SSL:
+        if client_type == HttpClientType.SSL:
             return cls._get_instance(configuration, ClientAuthType.SSL)
-
-        else:
-            raise HttpClientFactoryInvalidClientTypeException(client_type)
+        raise HttpClientFactoryInvalidClientTypeException(client_type)
 
     @classmethod
     def remove(cls, configuration: HttpClientConfiguration):

@@ -69,7 +69,6 @@ class ClientAuthBase(metaclass=ABCMeta):
 
     def parse_params(self, params: dict) -> None:
         """params parser to pass configuration customizations"""
-        pass
 
     @property
     def auth_request_params(self) -> dict:
