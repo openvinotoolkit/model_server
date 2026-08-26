@@ -18,6 +18,7 @@
 # pylint: disable=too-many-public-methods
 # pylint: disable=unused-argument
 
+import copy
 import json
 import math
 import os
@@ -371,7 +372,7 @@ class ModelInfo:
 
     def create_new_version(self, container_folder, new_version, copy_from_host_path=False, model_name=None):
         model_name = model_name if model_name is not None else self.name
-        result = type(self)()
+        result = copy.deepcopy(self)
 
         if copy_from_host_path:
             source = self.model_path_on_host
