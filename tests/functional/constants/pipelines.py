@@ -867,8 +867,8 @@ class MultiLevelPipeline(Pipeline):
     def __init__(self, shape_model_list, model, **kwargs):
         super().__init__("multi_level_pipeline", **kwargs)
         self._vertical_shape_list = shape_model_list
-        self._initialize()
         self.model = model
+        self._initialize()
 
     def _create_nodes(self, model=None):
         request = Node("request", node_type=NodeType.Input, output_names=["img"])
