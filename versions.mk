@@ -35,5 +35,5 @@ DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvi
 GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2026.3/windows/openvino_genai_windows_2026.3.0.0_x86_64.zip
 
 # Third-party dependency versions (used for binary builds)
-OPENCV_VERSION ?= 4.13.0
-CURL_VERSION ?= 8.21.0_4
+OPENCV_VERSION ?= 4.14.0
+CURL_VERSION ?= 8.21.0_7
