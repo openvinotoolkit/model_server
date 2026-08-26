@@ -222,7 +222,7 @@ class OvmsInfo(BaseInfo):
 
         if image_to_pull not in cls.IMAGES or force_pull:
             repository, tag = image_to_pull.split(":")
-            logger.info("Pulling image: {} tag: {}".format(repository, tag))
+            logger.info(f"Pulling image: {repository} tag: {tag}")
             image = DockerClient().pull(repository=repository, tag=tag)
             cls.IMAGES[image_to_pull] = image
         return cls.IMAGES[image_to_pull]

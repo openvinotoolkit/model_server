@@ -457,7 +457,7 @@ PID_STATE_ZOMBIE = "Z (zombie)"
 
 def get_pid_details_as_dict(pid):
     try:
-        proc_status = Path(f"/proc/{pid}/status").read_text()
+        proc_status = Path(f"/proc/{pid}/status").read_text(encoding="utf-8")
         proc_status_dict = {}
         for line in proc_status.splitlines():
             key, *val = line.split(":")     # if value contains multiple ':'  len(val) > 1

@@ -75,7 +75,7 @@ class ClientAuthType(Enum):
     OAUTH2_PROXY_AUTH = "OAuth2ProxyAuth"
 
 
-class NoAuthConfigurationProvider(object):
+class NoAuthConfigurationProvider:
     """Provide configuration for no client_auth http client."""
 
     @classmethod
@@ -88,7 +88,7 @@ class NoAuthConfigurationProvider(object):
         )
 
 
-class SslAuthConfigurationProvider(object):
+class SslAuthConfigurationProvider:
     """Provide configuration for https client with SSL/TLS."""
 
     @classmethod
@@ -522,7 +522,7 @@ class ClientAuthOAuth2Proxy(ClientAuthBase):
         return data
 
 
-class ClientAuthFactory(object):
+class ClientAuthFactory:
     """Client authentication factory."""
 
     EMPTY_URL = ""

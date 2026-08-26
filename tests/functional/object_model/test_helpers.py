@@ -110,7 +110,7 @@ def send_request_to_endpoint(port, address=None, endpoint=None, expected_code=No
             endpoint == Endpoints.RELOAD_CONFIG.value]):
         logger.warning(f"{msg1} {msg2} Both of those codes are accepted.")
         return ret
-    elif not ret.status_code == expected_code:
+    if not ret.status_code == expected_code:
         raise InvalidReturnCodeException(f"{msg1} {msg2}")
     logger.info(msg1)
     return ret

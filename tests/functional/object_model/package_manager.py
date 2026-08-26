@@ -45,7 +45,7 @@ class PackageManager(ABC):
     def create(base_os=OsType.Ubuntu24):
         if OsType.Redhat in base_os:
             return MicrodnfPackageManager()
-        elif OsType.Ubuntu22 in base_os or OsType.Ubuntu24 in base_os:
+        if OsType.Ubuntu22 in base_os or OsType.Ubuntu24 in base_os:
             return AptPackageManager()
 
         raise NotImplementedError()
@@ -107,8 +107,7 @@ class PackageManager(ABC):
             after_install_host_pkg_list = self.get_list_of_installed_packages(container_id=None)
             assert not self.get_missing_packages(container_pkg_list, after_install_host_pkg_list)
             return host_pkg_list
-        else:  # Return if there are no more pkgs_to_install except those defined in GPU_LIBS_TO_SKIP
-            return host_pkg_list
+        return host_pkg_list # Return if there are no more pkgs_to_install except those defined in GPU_LIBS_TO_SKIP
 
     def upgrade_packages(self, packages_to_upgrade, container_pkg_list):
         for key, value in packages_to_upgrade.items():
@@ -119,7 +118,7 @@ class PackageManager(ABC):
             except InstallPkgVersionException as e:
                 cmd, retcode, stdout, stderr = e.get_process_details()
                 if "The following packages have unmet dependencies" in stdout:
-                    logger.debug(f"Upgrading all system packages ...")
+                    logger.debug("Upgrading all system packages ...")
                     self.run_process(self.upgrade_cmd, exception_type=UpgradePkgException)
                     host_packages = self.get_list_of_installed_packages(container_id=None)
                     if not self.get_packages_to_upgrade(host_packages, container_pkg_list):
@@ -134,11 +133,10 @@ class PackageManager(ABC):
         pkgs = self.get_packages_to_upgrade(host_packages, container_pkg_list)
         if not pkgs:
             return
-        else:
-            for key, value in pkgs.items():
-                logger.warning(
-                    f"Failed to upgrade package {key}. Continue with the current version: {value['version']}"
-                )
+        for key, value in pkgs.items():
+            logger.warning(
+                f"Failed to upgrade package {key}. Continue with the current version: {value['version']}"
+            )
 
 
 class DnfPackageManager(PackageManager):

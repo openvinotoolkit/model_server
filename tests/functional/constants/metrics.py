@@ -480,7 +480,7 @@ class Metrics:
                     logger.debug(f"Found expected value={value} in metric {metric_name} for method {method}")
                     metric_found = True
                     break
-        assert metric_found, f"No metric found"
+        assert metric_found, "No metric found"
 
     def verify_metric_values(self, value):
         for metric in self.list:
@@ -489,9 +489,6 @@ class Metrics:
 
 class DefaultMetrics(Metrics):
 
-    def __init__(self):
-        super().__init__()
-
     @staticmethod
     def create_from_model_list(model_list):
         return Metrics.create_from_model_list(model_list, metrics=Metric.Default_names)
@@ -499,9 +496,6 @@ class DefaultMetrics(Metrics):
 
 class AdditionalMetrics(Metrics):
     Names = ["ovms_infer_req_queue_size", "ovms_infer_req_active"]
-
-    def __init__(self):
-        super().__init__()
 
 
 # Output example

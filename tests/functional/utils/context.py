@@ -25,7 +25,7 @@ from tests.functional.utils.core import get_children_from_module
 from tests.functional.utils.logger import get_logger
 
 
-class Context(object):
+class Context:
     logger = get_logger("context")
     EXCEPTIONS_TO_CATCH = [
         UnexpectedResponseError,

@@ -283,8 +283,7 @@ def set_plugin_config_boolean_value(plugin_config_str, config_file=False):
                 plugin_config_str,
             )
         return plugin_config_str
-    else:
-        return plugin_config_str.replace('\\"false\\"', "false").replace('\\"true\\"', "true")
+    return plugin_config_str.replace('\\"false\\"', "false").replace('\\"true\\"', "true")
 
 
 def get_model_base_path(model_base_path, context, ovms_run):

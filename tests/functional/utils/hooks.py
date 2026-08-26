@@ -220,7 +220,7 @@ def cleanup_tmp_repos_dir(config):
     try:
         shutil.rmtree(config.tmp_repos_dir)
     except PermissionError as e:
-        if get_host_os() == OsType.Windows and type(e) == PermissionError:
+        if get_host_os() == OsType.Windows and isinstance(e, PermissionError):
             change_dir_permissions(config.tmp_repos_dir)
             shutil.rmtree(config.tmp_repos_dir)
 
@@ -409,7 +409,7 @@ def build_ovms_capi_image():
                 shutil.copy(os.path.join(ovms_c_repo_path, gpu_install_script), ovms_capi_dst_path)
         else:
             for gpu_install_script in GPU_INSTALL_SCRIPTS[base_os]:
-                with open(os.path.join(ovms_capi_dst_path, gpu_install_script), "a"):
+                with open(os.path.join(ovms_capi_dst_path, gpu_install_script), "a", encoding="utf-8"):
                     pass
 
         dockerfile = f"Dockerfile.{UBUNTU if UBUNTU in base_os else base_os}"
@@ -763,7 +763,7 @@ def log_configuration_variables():
     pt_env_vars = list(filter(lambda x: x[0].startswith("TT_"), os.environ.items()))
     pt_env_vars.sort()
     for env_var in pt_env_vars:
-        logger.info("{}={}".format(*env_var))
+        logger.info(f"{env_var[0]}={env_var[1]}")
 
 
 def mute_warnings():
@@ -1023,7 +1023,7 @@ def deselect(item, test_type, required_marker_ids, excluded_marker_ids):
                     # make sure that item is not deselected by other marker
                     return deselect_by_excluded_marker_ids(item, excluded_marker_ids)
             return True
-        elif excluded_marker_ids:
+        if excluded_marker_ids:
             return deselect_by_excluded_marker_ids(item, excluded_marker_ids)
 
     return False
@@ -1113,7 +1113,7 @@ def log_labeled_stats(issues):
     msg = ["Skipped tests statistic:"]
     issues_sorted_by_quantity = sorted(issues.items(), key=lambda i: i[1], reverse=True)
     for issue, quantity in issues_sorted_by_quantity:
-        msg.append("{:>11}: {:>6}".format(issue, quantity))
+        msg.append(f"{issue:>11}: {quantity:>6}")
     logger.info("\n".join(msg))
 
 
@@ -1121,8 +1121,8 @@ def log_others(other_items):
     msg = ["Skipped tests not labeled with issue:"]
     items_grouped_by_reason = groupby(other_items, key=lambda i: i.reason)
     for reason, items in list(items_grouped_by_reason):
-        msg.append("{}:".format(reason))
-        msg.extend("|---{}".format(item.test_name) for item in list(items))
+        msg.append(f"{reason}:")
+        msg.extend(f"|---{item.test_name}" for item in list(items))
     logger.info("\n".join(msg))
 
 

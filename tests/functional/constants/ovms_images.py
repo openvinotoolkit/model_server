@@ -110,7 +110,7 @@ DEFAULT_OVMS_IMAGE_TAG = {
 def calculate_ovms_image_suffix(target_device):
     if is_nginx_mtls:
         return DEFAULT_OVMS_IMAGE_SUFFIXES[NGINX]
-    elif ct.is_gpu_based_target(target_device) or ct.is_npu_target():
+    if ct.is_gpu_based_target(target_device) or ct.is_npu_target():
         return DEFAULT_OVMS_IMAGE_SUFFIXES[TargetDevice.GPU]
     return ""
 
@@ -142,7 +142,7 @@ def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu22):
 
     if force_use_ovms_image and ovms_image:
         return ovms_image
-    elif ovms_image:
+    if ovms_image:
         image_name = re.sub("|".join(DEFAULT_OVMS_IMAGE_SUFFIXES.values()), "", ovms_image.split(":")[0])
         image_tag = ovms_image.split(":")[1]
         image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"

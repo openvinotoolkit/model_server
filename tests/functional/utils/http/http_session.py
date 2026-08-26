@@ -36,7 +36,7 @@ POOL_SIZE = 100
 logger = get_logger(__name__)
 
 
-class HttpSession(object, metaclass=ABCMeta):
+class HttpSession(metaclass=ABCMeta):
     """HttpSession is wrapper for the Session class from the requests library.
 
     It stores the information about the username, password, possible proxies and certificates.

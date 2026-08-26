@@ -34,7 +34,7 @@ logger = get_logger(__name__)
 
 @dataclass_json
 @dataclass(frozen=False)
-class OvmsParams(object):
+class OvmsParams:
     name: str = None
     grpc_port: int = None
     log_level: str = logging_level_ovms
@@ -97,7 +97,7 @@ class OvmsParams(object):
         result = []
         if self.list_models or self.add_to_config or self.remove_from_config:
             return result
-        elif self.model_name is not None:
+        if self.model_name is not None:
             result.append(ModelsLib.create_model(self.model_name))
         elif self.models is None:
             result.append(ModelsLib.get_default_model(self.target_device)())

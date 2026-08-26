@@ -69,7 +69,7 @@ class OvmsDockerParams(OvmsParams):
     network: str = None
 
 
-class OvmsDockerLauncher(object):
+class OvmsDockerLauncher:
 
     @classmethod
     def _update_ports(cls, context, port, parameters, ovms_instance_params, full_cmd):
@@ -114,7 +114,7 @@ class OvmsDockerLauncher(object):
     ):
         if parameters.models is not None:
             logger.info(
-                "Creating ovms with model(s): {}".format(", ".join([model.name for model in parameters.models]))
+                f"Creating ovms with model(s): {', '.join([model.name for model in parameters.models])}"
             )
         if parameters.name is None:
             parameters.name = (
@@ -198,7 +198,7 @@ class OvmsDockerLauncher(object):
 
     @classmethod
     def _prepare_ports(cls, grpc_port: int = None, rest_port: int = None) -> dict:
-        ports = dict()
+        ports = {}
         if grpc_port is not None:
             ports.update({f"{grpc_port}/tcp": grpc_port})
         if rest_port is not None:
@@ -251,7 +251,7 @@ class OvmsDockerLauncher(object):
             if parameters.volumes is None:
                 volumes.update(cls.prepare_new_volumes_for_container([config_path_on_host]))
             config_file = os.path.join(config_path_on_host, Paths.CONFIG_FILE_NAME)
-            config_data = Path(config_file).read_text()
+            config_data = Path(config_file).read_text(encoding="utf-8")
 
         # Create and save .pbtxt file for each model in pipeline
         if (
@@ -378,15 +378,10 @@ class OvmsDockerLauncher(object):
         else:
             command = parameters.custom_command
 
-        docker_kwargs = dict(volumes=volumes, devices=devices, network=network, privileged=privileged)
+        docker_kwargs = {"volumes": volumes, "devices": devices, "network": network, "privileged": privileged}
         docker_kwargs.update(extra_docker_params)
 
-        instance_kwargs = dict(
-            container_folder=container_folder,
-            rest_port=parameters.rest_port,
-            grpc_port=parameters.grpc_port,
-            target_device=parameters.target_device,
-        )
+        instance_kwargs = {"container_folder": container_folder, "rest_port": parameters.rest_port, "grpc_port": parameters.grpc_port, "target_device": parameters.target_device}
         if parameters.limits:
             docker_kwargs.update(parameters.limits)
 
@@ -409,7 +404,7 @@ class OvmsDockerLauncher(object):
         regular_models = parameters.get_regular_models()
         using_custom_loader = any([(x.custom_loader is not None) for x in regular_models])
         if using_custom_loader and not parameters.use_config:
-            msg = f"Custom loader is supported only with config file passed with --config_path."
+            msg = "Custom loader is supported only with config file passed with --config_path."
             logger.error(msg)
             raise Exception(msg)
 
@@ -436,8 +431,7 @@ class OvmsDockerLauncher(object):
 
         if use_config:
             return config_dir_path_on_host, Paths.CONFIG_PATH_INTERNAL
-        else:
-            return None, None
+        return None, None
 
     @staticmethod
     def prepare_new_volumes_for_container(container_folders, mode="ro"):
@@ -485,7 +479,7 @@ class OvmsDockerLauncher(object):
 
 def parse_cmd(result, environment, entrypoint, entrypoint_params):
 
-    full_cmd = f"docker run -d"
+    full_cmd = "docker run -d"
     if result["docker_kwargs"]["privileged"]:
         full_cmd += " --privileged"
 
@@ -528,7 +522,7 @@ def parse_cmd(result, environment, entrypoint, entrypoint_params):
 
     # '/ovms/bin/ovms --log_level INFO --port 9007 --rest_port 8005 --config_path /models/config.json'
     if entrypoint is not None:
-        full_cmd += " " + result["command"] if type(result["command"]) == str else " " + " ".join(result["command"])
+        full_cmd += " " + result["command"] if isinstance(result["command"], str) else " " + " ".join(result["command"])
     elif "/ovms/bin/ovms" in result["command"]:
         result["command"] = result["command"].partition("/ovms/bin/ovms")[2].strip()
         full_cmd += " " + result["command"]
@@ -691,7 +685,7 @@ class OvmsCmdLineDockerInstance(OvmsInstance):
                 _, stdout, _ = process.run(f"docker ps --filter id={self.get_short_id()}")
                 if short_id not in stdout:
                     break
-                elif time.time() > timeout:
+                if time.time() > timeout:
                     raise TimeoutError(f"Container {short_id} is not removed")
 
     def execute_command(self, cmd, stream=False, cwd=None):

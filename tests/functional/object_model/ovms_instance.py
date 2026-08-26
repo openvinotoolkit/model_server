@@ -257,8 +257,7 @@ class OvmsInstance(ABC):
     def get_port(self, api_type):
         if isinstance(api_type, str):
             return self.ovms_ports[api_type]
-        else:
-            return self.ovms_ports[api_type.type]
+        return self.ovms_ports[api_type.type]
 
     def execute_and_check(self, cmd, verbose=False, cwd=None):
         exit_code, stdout = self.execute_command(cmd, cwd)
@@ -326,8 +325,7 @@ class OvmsInstance(ABC):
                 if result:
                     exception, line = result
                     raise exception(line)
-                else:
-                    raise OvmsTestException(f"Received break status: {current_status}", ovms_log=ovms_logs_lines)
+                raise OvmsTestException(f"Received break status: {current_status}", ovms_log=ovms_logs_lines)
             if current_status == status:
                 break
 
@@ -391,12 +389,11 @@ class OvmsInstance(ABC):
     def get_signal_type(terminate_signal_type):
         if terminate_signal_type == Ovms.SIGKILL_SIGNAL:
             return signal.SIGKILL
-        elif terminate_signal_type == Ovms.SIGINT_SIGNAL:
+        if terminate_signal_type == Ovms.SIGINT_SIGNAL:
             return signal.SIGINT
-        elif terminate_signal_type == Ovms.SIGTERM_SIGNAL:
+        if terminate_signal_type == Ovms.SIGTERM_SIGNAL:
             return signal.SIGTERM
-        else:
-            raise NotImplementedError(f"Unknown signal: {terminate_signal_type}")
+        raise NotImplementedError(f"Unknown signal: {terminate_signal_type}")
 
     def filter_unexpected_messages(self, unexpected_messages):
         for msg in unexpected_messages:

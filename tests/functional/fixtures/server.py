@@ -139,7 +139,7 @@ def start_ovms(
     if ensure_started:
         assert not parameters.check_version, "OVMS container will not start if --version argument was given."
         log_fixture(
-            "Ensure ovms is running with model(s): {}".format(", ".join([model.name for model in result.models]))
+            f"Ensure ovms is running with model(s): {', '.join([model.name for model in result.models])}"
         )
         result.ovms.ensure_started(result.models, timeout=timeout, os_type=context.base_os)
 

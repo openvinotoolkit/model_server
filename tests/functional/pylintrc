@@ -535,6 +535,7 @@ disable=
     missing-class-docstring,       # (C0115, to be FIXED)
     missing-module-docstring,      # (C0114, to be FIXED)
     too-few-public-methods,        # (R0903, to be FIXED)
+    too-many-instance-attributes   # (allowed intentionally)
     too-many-lines,          # (allowed intentionally)
     too-many-statements,     # (allowed intentionally)
     too-many-locals,         # (allowed intentionally)

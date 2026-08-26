@@ -98,11 +98,10 @@ class OvmsCapiInstance(OvmsBinary):
     def get_port(self, api_type):
         if not isinstance(api_type, str) and api_type.communication == OvmsType.CAPI:
             return self
-        else:
-            return super().get_port(api_type)
+        return super().get_port(api_type)
 
     def get_status(self, status=None, timeout=None):
-        status = Path(f"/proc/{self.process._proc.pid}/status").read_text()
+        status = Path(f"/proc/{self.process._proc.pid}/status").read_text(encoding="utf-8")
         status = [line for line in status.splitlines() if line.startswith("State:")]
         if "sleeping" in status[0]:
             result = CONTAINER_STATUS_RUNNING
@@ -163,7 +162,7 @@ class OvmsCapiInstance(OvmsBinary):
         # Write directly to stdin file descriptor in /proc/<pid> filesystem.
         # It should mitigate interprocess communication issues in 'pure pythonic' approach.
         logger.debug(self._stdin_proc_fd)
-        with open(self._stdin_proc_fd, "w") as fd:
+        with open(self._stdin_proc_fd, "w", encoding="utf-8") as fd:
             fd.write(self.ensure_newline(cmd))
 
     def send_command_to_process_with_output(self, cmd, cmd_kwargs):
@@ -190,19 +189,19 @@ class OvmsCapiInstance(OvmsBinary):
         return self.send_command_to_process(cmd)
 
     def send_stop_server_command(self):
-        cmd = f"self.srv = self.capi.server_stop()"
+        cmd = "self.srv = self.capi.server_stop()"
         return self.send_command_to_process(cmd)
 
     def send_terminate_command(self):
-        cmd = f"self.running = False"
+        cmd = "self.running = False"
         return self.send_command_to_process(cmd)
 
     def send_terminate_command(self):
-        cmd = f"self.running = False"
+        cmd = "self.running = False"
         return self.send_command_to_process(cmd)
 
     def send_get_model_meta_command(self, model_name, model_version):
-        cmd = f"self.capi.get_model_meta()"
+        cmd = "self.capi.get_model_meta()"
         cmd_kwargs = {"servableName": model_name, "servableVersion": model_version}
         return self.send_command_to_process_with_output(cmd, cmd_kwargs)
 
@@ -216,7 +215,7 @@ class OvmsCapiInstance(OvmsBinary):
         _in_data = {key: value.shape for key, value in input_data.items()}
         # Write directly to stdin file descriptor in /proc/<pid> filesystem.
         # It should mitigate interprocess communication issues in 'pure pythonic' approach.
-        cmd = f"self.result = self.capi.send_inference()"
+        cmd = "self.result = self.capi.send_inference()"
         cmd_kwargs = {
             "model_name": model.name,
             "inputs": input_data,
@@ -233,7 +232,7 @@ class OvmsCapiInstance(OvmsBinary):
 
     def get_major_minor_version(self):
         filepath = os.path.join(ovms_c_repo_path, "src/ovms.h")
-        with open(filepath, "r") as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             data = f.read()
 
         major = re.search(r"OVMS_API_VERSION_MAJOR (\d+)", data).group(1)

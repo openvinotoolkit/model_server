@@ -75,10 +75,9 @@ def load_labels(path):
     labels_extension = path.split(sep=".")[-1]
     if labels_extension == "npy":
         return load_npy_labels(path=path)
-    elif labels_extension in ["txt", "json"]:
+    if labels_extension in ["txt", "json"]:
         raise NotImplementedError()
-    else:
-        raise RuntimeError(f"Incorrect label data type: {labels_extension}")
+    raise RuntimeError(f"Incorrect label data type: {labels_extension}")
 
 
 def load_images(data_path, height, width, ids):
@@ -88,7 +87,7 @@ def load_images(data_path, height, width, ids):
         assert file_extension in ['jpg', 'jpeg']
         inputs = load_jpeg(data_path, height, width, ids)
         return inputs
-    elif os.path.isdir(data_path):
+    if os.path.isdir(data_path):
         inputs = []
         images = list(filter(lambda x: re.match(r".+\.jpe?g", x.lower()), os.listdir(data_path)))
         for img in images:

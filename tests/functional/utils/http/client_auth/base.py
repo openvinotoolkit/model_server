@@ -22,7 +22,7 @@ from requests.auth import AuthBase
 from tests.functional.utils.http.http_session import HttpSession
 
 
-class ClientAuthBase(object, metaclass=ABCMeta):
+class ClientAuthBase(metaclass=ABCMeta):
     """Base class that all http client authentication implementations derive from.
 
     It performs automatic authentication.

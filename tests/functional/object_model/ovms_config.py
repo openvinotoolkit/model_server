@@ -37,7 +37,7 @@ from tests.functional.utils.remote_test_environment import copy_custom_lib_to_ho
 logger = get_logger(__name__)
 
 
-class OvmsConfig(object):
+class OvmsConfig:
 
     @staticmethod
     def generate(name, models, **kwargs):
@@ -104,19 +104,19 @@ class OvmsConfig(object):
             if config_path is None
             else config_path
         )
-        logger.info("Saving config file to {}, content:\n{}".format(config_path, config_json))
+        logger.info(f"Saving config file to {config_path}, content:\n{config_json}")
 
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        with open(os.path.join(config_path), "w") as outfile:
+        with open(os.path.join(config_path), "w", encoding="utf-8") as outfile:
             outfile.write(config_json)
 
         return Paths.CONFIG_PATH_INTERNAL
 
     @staticmethod
     def save_without_encoding(config_path, config_dict: dict):
-        logger.info("Saving config file to {}, content:\n{}".format(config_path, str(config_dict)))
+        logger.info(f"Saving config file to {config_path}, content:\n{str(config_dict)}")
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        with open(os.path.join(config_path), "w") as outfile:
+        with open(os.path.join(config_path), "w", encoding="utf-8") as outfile:
             outfile.write(str(config_dict))
 
         return Paths.CONFIG_PATH_INTERNAL
@@ -232,12 +232,12 @@ class OvmsConfig(object):
 
     @staticmethod
     def load(config_path):
-        with open(config_path, "r") as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             try:
                 config_json = f.read()
                 config_dict = json.loads(config_json)
             except ValueError as e:
-                logger.error("Error while loading json: {}".format(config_json))
+                logger.error(f"Error while loading json: {config_json}")
                 raise e
         return config_dict
 
@@ -295,7 +295,7 @@ class OvmsConfig(object):
 
     @staticmethod
     def replace_subconfig_paths(name, subconfig_path, resources_dir):
-        subconfig_dict = json.loads(Path(subconfig_path).read_text())
+        subconfig_dict = json.loads(Path(subconfig_path).read_text(encoding="utf-8"))
         for i, model in enumerate(subconfig_dict["model_config_list"]):
             subconfig_dict["model_config_list"][i]["config"]["base_path"] = model["config"]["base_path"].replace(
                 Paths.MODELS_PATH_INTERNAL, os.path.join(resources_dir, Paths.MODELS_PATH_NAME)
@@ -311,7 +311,7 @@ class OvmsConfig(object):
         else:
             config_path = Path(os.path.join(config_path_on_host, Paths.CONFIG_FILE_NAME))
             if config_path.exists():
-                config_dict = json.loads(config_path.read_text())
+                config_dict = json.loads(config_path.read_text(encoding="utf-8"))
 
         subconfig_dict = {Config.MODEL_CONFIG_LIST: []}
         mediapipe_model = [model for model in parameters.models if model.is_mediapipe][0]

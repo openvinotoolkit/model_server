@@ -21,7 +21,7 @@ from tests.functional.utils.http.http_client import HttpClient
 from tests.functional.utils.http.http_client_configuration import HttpClientConfiguration
 
 
-class HttpClientFactory(object):
+class HttpClientFactory:
     """Http client factory with implemented singleton behaviour for each generated client."""
 
     _INSTANCES = {}

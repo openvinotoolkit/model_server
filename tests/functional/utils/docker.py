@@ -42,7 +42,7 @@ class DockerClient(docker.DockerClient):
 
     def build(self, dockerfile: str, build_args, nocache: bool = True, **kwargs) -> tuple:
         logs = []
-        with open(dockerfile, "r") as file:
+        with open(dockerfile, "r", encoding="utf-8") as file:
             data = file.read()
         file_obj = BytesIO(data.encode("utf-8"))
         image, generator = self.images.build(fileobj=file_obj, nocache=nocache, buildargs=build_args, **kwargs)
@@ -61,8 +61,8 @@ class DockerClient(docker.DockerClient):
         for line in logs:
             assert (
                 "requested access to the resource is denied" not in line
-            ), "Unauthorized to push docker image: {}".format(line)
-            assert "error" not in line, "Failed to push docker image: {}".format(line)
+            ), f"Unauthorized to push docker image: {line}"
+            assert "error" not in line, f"Failed to push docker image: {line}"
         return logs
 
     def pull(self, repository, tag):
@@ -154,7 +154,7 @@ class DockerContainer(metaclass=ABCMeta):
         limits: Limits = None,
         **kwargs,
     ):
-        logger.info("Running container with:\n image: {}\n command: {}\n volumes: {}".format(image, command, volumes))
+        logger.info(f"Running container with:\n image: {image}\n command: {command}\n volumes: {volumes}")
         if limits is not None:
             kwargs.update(limits)
         container = cls.client.run(
@@ -190,7 +190,7 @@ class DockerContainer(metaclass=ABCMeta):
         limits: Limits = None,
         **kwargs,
     ):
-        logger.info("Creating container with:\n image: {}\n command: {}\n volumes: {}".format(image, command, volumes))
+        logger.info(f"Creating container with:\n image: {image}\n command: {command}\n volumes: {volumes}")
         if limits is not None:
             kwargs.update(limits)
         container = cls.client.create(
@@ -249,32 +249,28 @@ class DockerContainer(metaclass=ABCMeta):
     @classmethod
     def volume(cls, external_path: str, internal_path: str, mode: str = "ro", volumes: dict = None):
         if not isinstance(volumes, dict):
-            volumes = dict()
+            volumes = {}
         volumes[external_path] = {"bind": internal_path, "mode": mode}
         return volumes
 
     def start_container(self):
-        assert self.container is not None, "Lack of container {} to start (is None)\nContainers found:\n{}".format(
-            self.name, repr(self.client.list_containers(all_containers=True))
-        )
+        assert self.container is not None, f"Lack of container {self.name} to start (is None)\n" \
+                                           f"Containers found:\n{repr(self.client.list_containers(all_containers=True))}"
         return self.container.start()
 
     def stop_container(self, **kwargs):
-        assert self.container is not None, "Lack of container {} to stop (is None)\nContainers found:\n{}".format(
-            self.name, repr(self.client.list_containers(all_containers=True))
-        )
+        assert self.container is not None, f"Lack of container {self.name} to stop (is None)\n" \
+                                           f"Containers found:\n{repr(self.client.list_containers(all_containers=True))}"
         return self.container.stop(**kwargs)
 
     def kill_container(self, signal=signal.SIGTERM):
-        assert self.container is not None, "Lack of container {} to kill (is None)\nContainers found:\n{}".format(
-            self.name, repr(self.client.list_containers(all_containers=True))
-        )
+        assert self.container is not None, f"Lack of container {self.name} to kill (is None)\n" \
+                                           f"Containers found:\n{repr(self.client.list_containers(all_containers=True))}"
         return self.container.kill(signal=signal)  # SIGKILL (not supported for Windows), SIGINT; default: SIGTERM
 
     def remove_container(self, ensure_deleted: bool = False):
-        assert self.container is not None, "Lack of container {} to remove (is None)\nContainers found:\n{}".format(
-            self.name, repr(self.client.list_containers(all_containers=True))
-        )
+        assert self.container is not None, f"Lack of container {self.name} to remove (is None)\n" \
+                                           f"Containers found:\n{repr(self.client.list_containers(all_containers=True))}"
         removed = self.container.remove()
         if ensure_deleted:
             self.ensure_not_on_list(self.name)
@@ -286,8 +282,8 @@ class DockerContainer(metaclass=ABCMeta):
 
     def check_non_empty_logs(self, specific_str: str, acceptable_logs_length_trigger: int = 0, **kwargs):
         logs = self.get_logs(**kwargs)
-        assert len(logs) > acceptable_logs_length_trigger, "Logs list for {} should not be empty".format(self.name)
-        assert specific_str in logs, "Specific string: {} not found in logs: {}".format(specific_str, logs)
+        assert len(logs) > acceptable_logs_length_trigger, f"Logs list for {self.name} should not be empty"
+        assert specific_str in logs, f"Specific string: {specific_str} not found in logs: {logs}"
         return logs
 
     def ensure_logs_contain_specific_str(
@@ -356,18 +352,15 @@ class DockerContainer(metaclass=ABCMeta):
     def check_not_on_list(cls, container: Union[str, "DockerContainer"], comparator: Callable[[Any, Any], bool] = None):
         current_list = cls.list()
         logger.debug(
-            "Searching for container with a name: {name}, among:\n{elem}\n".format(
-                name=container if isinstance(container, str) else container.name,
-                elem="\n".join([repr(elem) for elem in current_list]),
-            )
+            f"Searching for container with a name: {container if isinstance(container, str) else container.name}, "
+            f"among:\n{'\n'.join([repr(elem) for elem in current_list])}\n"
         )
         if comparator is None:
-            assert container not in current_list, "{} was found on: {}".format(container, pprint.pformat(current_list))
+            assert container not in current_list, f"{container} was found on: {pprint.pformat(current_list)}"
         else:
             for member in current_list:
-                assert comparator(container, member) is False, "{} was found on: {}".format(
-                    container, pprint.pformat(current_list)
-                )
+                assert comparator(container, member) is False, \
+                    f"{container} was found on: {pprint.pformat(current_list)}"
 
     @classmethod
     def ensure_not_on_list(

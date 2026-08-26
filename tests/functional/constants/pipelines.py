@@ -134,22 +134,20 @@ class Node:
     def get_input_name(self, id):
         if self.input_names:
             return self.input_names[id]
+        if self.node_type == NodeType.Output:
+            prefix = "output"
         else:
-            if self.node_type == NodeType.Output:
-                prefix = "output"
-            else:
-                prefix = "input"
-            return f"{prefix}_{id}"
+            prefix = "input"
+        return f"{prefix}_{id}"
 
     def get_output_name(self, id):
         if self.output_names:
             return self.output_names[id]
+        if self.node_type == NodeType.Input:
+            prefix = "input"
         else:
-            if self.node_type == NodeType.Input:
-                prefix = "input"
-            else:
-                prefix = self.model.name
-            return f"{prefix}_{id}"
+            prefix = self.model.name
+        return f"{prefix}_{id}"
 
     def _change_name(self, names, old_name, new_name):
         for index, name in enumerate(names):

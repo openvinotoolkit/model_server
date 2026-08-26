@@ -364,7 +364,7 @@ class OvmsBinary(OvmsInstance):
         else:
             OvmsConfig.generate(name, models)
 
-        config_dict = json.loads(Path(config_path_on_host).read_text())
+        config_dict = json.loads(Path(config_path_on_host).read_text(encoding="utf-8"))
 
         if models_to_verify:
             break_msg_list = self.get_break_msg_list(models_to_verify)

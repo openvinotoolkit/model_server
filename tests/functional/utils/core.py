@@ -46,7 +46,7 @@ def get_children_from_module(parent, module):
 
 def get_token_value(token_file_path, fallback_value=None):
     if os.path.exists(token_file_path):
-        token_value = Path(token_file_path).read_text().strip()
+        token_value = Path(token_file_path).read_text(encoding="utf-8").strip()
         return token_value
     return fallback_value
 
@@ -160,7 +160,6 @@ class ComplexEncoder(json.JSONEncoder):
     def default(self, obj):
         if hasattr(obj, 'to_str'):
             return obj.to_str()
-        elif isinstance(obj, type):
+        if isinstance(obj, type):
             return str(obj)
-        else:
-            return json.JSONEncoder.default(self, obj)
+        return json.JSONEncoder.default(self, obj)

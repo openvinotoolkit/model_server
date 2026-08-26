@@ -165,7 +165,7 @@ class LogMonitor(ABC):
                             if found_lines:
                                 recent = found_lines[-5:]
                                 logger.debug(
-                                    f"[wait_for_messages] Last OVMS output:\n"
+                                    "[wait_for_messages] Last OVMS output:\n"
                                     + "\n".join(f"  {line}" for line in recent)
                                 )
                             last_progress_log_time = now
@@ -257,8 +257,7 @@ class LogMonitor(ABC):
                 log_line = self._read_log_line()
                 if log_line is None:
                     break
-                else:
-                    found_lines.append(log_line)
+                found_lines.append(log_line)
 
                 for specific_msg in messages_to_find_vs_results_map:
                     if messages_to_find_vs_results_map[specific_msg] is None:

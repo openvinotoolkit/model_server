@@ -84,10 +84,9 @@ class ConditionalMark(MarkMeta):
             test_params = item.keywords.node.callspec.id
             if isinstance(params, Pattern):
                 return bool(params.match(test_params))
-            elif isinstance(params, str):
+            if isinstance(params, str):
                 return params == test_params
-            else:
-                raise AttributeError(f"Unexpected conditional marker params {params}")
+            raise AttributeError(f"Unexpected conditional marker params {params}")
         return True
 
     @classmethod

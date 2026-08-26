@@ -103,7 +103,7 @@ def get_mediapipe_details_from_context(context):
     log_monitor = ovms_session.ovms.create_log(True)
     ovms_log = log_monitor.get_logs_as_txt()
     config_file = os.path.join(ovms_session.ovms.container_folder, Paths.MODELS_PATH_NAME, Paths.CONFIG_FILE_NAME)
-    config = json.loads(Path(config_file).read_text())
+    config = json.loads(Path(config_file).read_text(encoding="utf-8"))
     mediapipe_model = [model for model in ovms_session.models if model.is_mediapipe][0]
     src_code = [calc.src_file_path for calc in mediapipe_model.calculators]
     graphs = mediapipe_model.graphs
