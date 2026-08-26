@@ -12,7 +12,7 @@ def agent_name_linux = ""
 def test_agent_linux = "ovms_ptl"
 def disable_doc_tests_linux = false
 def disable_doc_tests_windows = false
-def validation_branch = "develop"
+def validation_branch = "release_2026_3_1_val"
 
 // Documentation test commit message overrides:
 //
