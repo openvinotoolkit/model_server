@@ -298,7 +298,7 @@ ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2026.3.0"
+ARG PROJECT_VERSION="2026.3.1"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 
@@ -382,7 +382,7 @@ RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_rele
 FROM $RELEASE_BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2026.3.0"
+LABEL "version"="2026.3.1"
 LABEL "release"="2026"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"

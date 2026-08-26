@@ -19,9 +19,9 @@
 # Any variable can be overridden by the environment or command-line.
 
 # Source repository git commits / branches (used for source builds)
-OV_SOURCE_BRANCH ?= 8a17657b995fd3b4a52f8484acfcf2bb61214623
-OV_TOKENIZERS_BRANCH ?= 183c6f25cda2a469cba5eff8b72022d2d51ba0ca
-OV_GENAI_BRANCH ?= bd8d6542e3ca1ac30042d5d8d4202ce00b5f4af0
+OV_SOURCE_BRANCH ?= releases/2026/3
+OV_TOKENIZERS_BRANCH ?= releases/2026/3
+OV_GENAI_BRANCH ?= releases/2026/3
 
 # Source repository organizations
 OV_SOURCE_ORG ?= openvinotoolkit
@@ -29,10 +29,10 @@ OV_GENAI_ORG ?= openvinotoolkit
 OV_TOKENIZERS_ORG ?= openvinotoolkit
 
 # Binary package URLs for each supported platform.
-DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2026.3/linux/openvino_genai_ubuntu24_2026.3.0.0_x86_64.tar.gz
-DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2026.3/linux/openvino_genai_ubuntu22_2026.3.0.0_x86_64.tar.gz
-DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2026.3/linux/openvino_genai_rhel8_2026.3.0.0_x86_64.tar.gz
-GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2026.3/windows/openvino_genai_windows_2026.3.0.0_x86_64.zip
+DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_ubuntu24_2026.3.1.0rc1_x86_64.tar.gz
+DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_ubuntu22_2026.3.1.0rc1_x86_64.tar.gz
+DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_rhel9_2026.3.1.0rc1_x86_64.tar.gz
+GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/pdb_openvino_genai_windows_2026.3.1.0rc1_x86_64.zip
 
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.13.0
