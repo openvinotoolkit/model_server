@@ -119,6 +119,10 @@ pipeline {
                         env.BUILDSTAMP = new Date().format('yyyyMMddHHmmss')
                     }
                     echo "Buildstamp: ${env.BUILDSTAMP}"
+                    def releaseTag = env.RELEASE_TAG?.trim()
+                    if (env.OVMS_PYTHON_ENABLED == "0" && releaseTag && !releaseTag.endsWith("_nopython")) {
+                        env.RELEASE_TAG = "${releaseTag}_nopython"
+                    }
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         def python_suffix = ""

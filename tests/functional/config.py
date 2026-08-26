@@ -241,7 +241,7 @@ docker_client_timeout = get_int("TT_DOCKER_CLIENT_TIMEOUT", 120)
 server_address = os.environ.get("TT_SERVER_ADDRESS", "localhost")
 
 """ TT_RESOURCE_MONITOR_ENABLED - Dump ovms container resource statistics once per second """
-resource_monitor_enabled = get_bool("TT_RESOURCE_MONITOR_ENABLED", True)
+resource_monitor_enabled = get_bool("TT_RESOURCE_MONITOR_ENABLED", False)
 
 """ TT_TEST_TEMP_DIR - directory path where all temporary files are stored, default is not set """
 test_temp_dir = os.environ.get("TT_TEST_TEMP_DIR", None)
