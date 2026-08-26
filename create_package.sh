@@ -36,7 +36,9 @@ find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d \
     -exec cp -vP {} /ovms_release/lib/ \;
 
 # Copy pyovms.so directly as a file (not symlink) to avoid broken Bazel cache paths.
-find /ovms/bazel-out/k8-*/bin/src/python/binding -name 'pyovms.so' -type f -exec cp -v {} /ovms_release/lib/ \;
+if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
+    find /ovms/bazel-out/k8-*/bin/src/python/binding -name 'pyovms.so' -type f -exec cp -v {} /ovms_release/lib/ \;
+fi
 
 # Copy Azure SDK libs directly from the CMake install prefix so that the
 # unversioned .so files are local relative symlinks (not absolute Bazel cache paths).

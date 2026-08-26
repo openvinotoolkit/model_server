@@ -206,12 +206,10 @@ inline void prepareKFSInferInputTensor<bool>(::KFSRequest& request, const std::s
         throw std::string("Unsupported");
     }
     auto it = request.mutable_inputs()->begin();
-    size_t bufferId = 0;
     while (it != request.mutable_inputs()->end()) {
         if (it->name() == name)
             break;
         ++it;
-        ++bufferId;
     }
     KFSTensorInputProto* tensor;
     if (it != request.mutable_inputs()->end()) {
