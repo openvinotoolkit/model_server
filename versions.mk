@@ -29,10 +29,10 @@ OV_GENAI_ORG ?= openvinotoolkit
 OV_TOKENIZERS_ORG ?= openvinotoolkit
 
 # Binary package URLs for each supported platform.
-DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_ubuntu24_2026.3.1.0rc1_x86_64.tar.gz
-DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_ubuntu22_2026.3.1.0rc1_x86_64.tar.gz
-DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_rhel9_2026.3.1.0rc1_x86_64.tar.gz
-GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_windows_2026.3.1.0rc1_x86_64.zip
+DLDT_PACKAGE_URL_UBUNTU24 ?= http://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_ubuntu24_2026.3.1.0rc1_x86_64.tar.gz
+DLDT_PACKAGE_URL_UBUNTU22 ?= http://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_ubuntu22_2026.3.1.0rc1_x86_64.tar.gz
+DLDT_PACKAGE_URL_RHEL ?= http://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_rhel9_2026.3.1.0rc1_x86_64.tar.gz
+GENAI_PACKAGE_URL_WINDOWS ?= http://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.3.1.0rc1/openvino_genai_windows_2026.3.1.0rc1_x86_64.zip
 
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.14.0
