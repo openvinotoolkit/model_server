@@ -109,7 +109,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=ubuntu"
-RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update && \
+# ubuntu:24.04 base image only enables main/restricted by default; universe is required for software-properties-common.
+RUN if [ "$BASE_OS" == "ubuntu24" ] ; then \
+    if [ -f /etc/apt/sources.list.d/ubuntu.sources ] ; then \
+        sed -i 's/^Components: main restricted$/Components: main restricted universe multiverse/' /etc/apt/sources.list.d/ubuntu.sources ; \
+    fi && \
+    apt-get update && \
     apt-get install -y software-properties-common --no-install-recommends; add-apt-repository 'ppa:deadsnakes/ppa' -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* ; fi
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
