@@ -85,6 +85,15 @@ struct Minicpm5ToolParserImpl {
 
     Status removeToolCallsFromContentIfNeeded(std::string& outContent);
 
+    void reset() {
+        currentState = State::Content;
+        currentFunction.clear();
+        currentParameterName.clear();
+        streamContent.clear();
+        lastProcessedPosition = 0;
+        toolCallPositions = ToolCallPositions{};
+    }
+
     State getCurrentState() const { return this->currentState; }
     size_t getLastProcessedPosition() const { return this->lastProcessedPosition; }
 
@@ -136,49 +145,40 @@ public:
 private:
     const ToolsSchemas_t& toolSchemas;
     ToolsParameterTypeMap_t toolsParametersTypes;
-    bool filledParametersTypesMap{false};
     Minicpm5ToolParserImpl streamParser;
     int toolCallIndex{-1};
     ToolCalls_t currentToolCalls;
-    rapidjson::Document currentJson;
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
 
 public:
     Minicpm5ToolParser() = delete;
+
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {FUNCTION_START_TAG};
+        cfg.needsSpecialTokens = true;
+        cfg.defaultDecodingWithSpecialTokens = true;
+        return cfg;
+    }
+
     explicit Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas);
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> startTags = {FUNCTION_START_TAG};
-        return startTags;
-    }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags = {};
-        return specialParsingStartTags;
-    }
-    const std::string& getParsingEndTag() const override {
-        static const std::string EMPTY_STRING = "";
-        return EMPTY_STRING;
+    void resetState() override {
+        streamParser.reset();
+        toolCallIndex = -1;
+        currentToolCalls.clear();
+        returnedFirstDeltas.clear();
+        returnedCompleteDeltas.clear();
     }
 
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
-
-    const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> tagsToErase = {SOS_TOKEN_STR, EOS_TOKEN_STR};
-        return tagsToErase;
-    }
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 
 private:
     const std::vector<int64_t> removeReasoningTokens(const std::vector<int64_t>& generatedTokens);
-    std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
-    std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
-    rapidjson::Document wrapCombinedDelta(const ToolCall& toolCall);
-    void lazyFillInitToolParametersTypesMap();
+    std::optional<Delta> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
+    std::optional<Delta> sendFullDelta(const ToolCalls_t& toolCalls);
+    ToolCallDelta wrapCombinedDelta(const ToolCall& toolCall);
 };
 
 }  // namespace ovms
