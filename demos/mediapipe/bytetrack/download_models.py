@@ -107,7 +107,7 @@ inp.preprocess().convert_element_type(ov.Type.f32).convert_layout(
 model = ppp.build()
 
 output_path = f"{MODEL_NAME}/1/{MODEL_NAME}.xml"
-
+os.makedirs(os.path.dirname(output_path), exist_ok=True)
 ov.save_model(model, output_path)
 
 print("\nSaved:", os.path.abspath(output_path))
