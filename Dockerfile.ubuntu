@@ -97,7 +97,7 @@ RUN git clone --depth 1 --branch azure-storage-blobs_12.18.0 https://github.com/
 ####### Build OpenCV
 COPY third_party/opencv /ovms/third_party/opencv
 WORKDIR /ovms/third_party/opencv
-ARG OPENCV_VERSION=4.13.0
+ARG OPENCV_VERSION=4.14.0
 RUN OPENCV_VERSION=${OPENCV_VERSION} ./install_opencv.sh
 ####### End of OpenCV
 

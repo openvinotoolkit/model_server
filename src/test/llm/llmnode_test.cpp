@@ -2080,8 +2080,8 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
             if (params.checkLogprobs) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
             }
-            if (choice.HasMember("delta")) {
-                ASSERT_TRUE(choice["delta"].IsObject());
+            // "delta" may be an empty object {} in finish-reason-only chunks
+            if (choice["delta"].HasMember("content")) {
                 ASSERT_TRUE(choice["delta"]["content"].IsString());
             }
         }
@@ -2131,7 +2131,10 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStreamSkipSpecialTokens
         for (auto& choice : d["choices"].GetArray()) {
             if (choice.HasMember("delta")) {
                 ASSERT_TRUE(choice["delta"].IsObject());
-                ASSERT_TRUE(choice["delta"]["content"].IsString());
+                // "delta" may be an empty object {} in finish-reason-only chunks
+                if (choice["delta"].HasMember("content")) {
+                    ASSERT_TRUE(choice["delta"]["content"].IsString());
+                }
             }
         }
         EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
