@@ -46,8 +46,6 @@ libopencv_ximgproc.so->libopencv_ximgproc.so.414
 libopencv_ximgproc.so.4.14.0
 libopencv_ximgproc.so.414->libopencv_ximgproc.so.4.14.0
 libopenvino.so->libopenvino.so.2631
-libopenvino.so.2026.3.1
-libopenvino.so.2631->libopenvino.so.2026.3.1
 libopenvino.so->libopenvino.so.2631
 libopenvino.so.2026.3.1
 libopenvino.so.2631->libopenvino.so.2026.3.1
