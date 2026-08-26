@@ -33,7 +33,7 @@ Download the detector model that the OpenVINO Model Server will use. This same c
 python download_models.py --model OpenVINO/yolox_tiny-fp16-ov
 ```
 
-> Swap `--model` for any of the repo IDs listed below to use a different YOLOX size.
+> Swap `--model-repo` for any of the repo IDs listed below to use a different YOLOX size.
 
 | Model | HuggingFace Repo |
 |---|---|
