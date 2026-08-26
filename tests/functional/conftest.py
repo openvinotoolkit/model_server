@@ -14,10 +14,12 @@
 # limitations under the License.
 #
 
+import pytest
 import random
 import sys
 
 from tests.functional.config import enable_pytest_plugins, pytest_keyword_filter, machine_is_reserved_for_test_session
+from tests.functional.constants.components import OvmsComponents
 from tests.functional.constants.ovms import (
     CURRENT_TARGET_DEVICE_DICT_ARGUMENT,
     TMP_REPOS_DIR_ARGUMENT,

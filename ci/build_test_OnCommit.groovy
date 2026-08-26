@@ -191,7 +191,7 @@ pipeline {
               }
               when { expression { functional_tests_changed == "true" } }
               steps {
-                  sh 'python3 -m venv .venv-pylint && . .venv-pylint/bin/activate && grep pylint tests/requirements.txt | pip install -r /dev/stdin && python3 -m pylint tests/functional'
+                  sh 'python3 -m venv .venv-pylint && . .venv-pylint/bin/activate && grep pylint tests/requirements.txt | pip install -r /dev/stdin && python3 -m pylint --rcfile=tests/functional/pylintrc tests/functional'
               }
             }
           }
