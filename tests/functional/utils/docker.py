@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,no-member
 
 import pprint
 import signal
@@ -333,9 +333,9 @@ class DockerContainer(metaclass=ABCMeta):
     def assert_status(self, status):
         current_status = self.get_status()
         assert current_status == status, (
-            "Not expected status for container {} found. \n "
-            "Expected: {}, \n "
-            "received: {}".format(self.container.name, status, self.container.status)
+            f"Not expected status for container {self.container.name} found. \n "
+            f"Expected: {status}, \n "
+            f"received: {self.container.status}"
         )
         return True
 
@@ -385,12 +385,7 @@ class DockerContainer(metaclass=ABCMeta):
     def __repr__(self):
         _id = self.container.id if self.container is not None else ""
         ports = pprint.pformat(self.container.ports) if self.container is not None else "<empty>"
-        return "<%s: %s%s>@%s" % (
-            self.__class__.__name__,
-            self.id,
-            " (%s)" % _id,
-            "ports: %s." % ports,
-        )
+        return f"<{self.__class__.__name__}: {self.id} ({_id})>@ports: {ports}."
 
     @classmethod
     def list_from_response(cls, rsp):

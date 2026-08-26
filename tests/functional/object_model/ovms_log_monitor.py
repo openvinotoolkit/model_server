@@ -48,7 +48,7 @@ class OvmsLogMonitor(LogMonitor):
         str_set_to_find,
         break_msg_list=None,
         timeout=None,
-        callbacks=[],
+        callbacks=None,
         ovms_instance=None,
         all_messages=True,
     ):
@@ -263,7 +263,7 @@ class OvmsLogMonitor(LogMonitor):
         self.ensure_contains_messages(msg_list, timeout=timeout, ovms_instance=ovms_instance)
 
     def models_loaded(
-        self, models, custom_msg_list=None, break_msg_list=None, timeout=None, callbacks=[], ovms_instance=None
+        self, models, custom_msg_list=None, break_msg_list=None, timeout=None, callbacks=None, ovms_instance=None
     ):
         if timeout is None:
             timeout = wait_for_messages_timeout
@@ -312,7 +312,7 @@ class OvmsLogMonitor(LogMonitor):
                     [OvmsMessages.MODEL_RELOADING.format(model.name)], raise_exception_if_not_found=True
                 )
             else:
-                found_messages, messages_to_find_vs_results_map = self.find_messages(
+                _, messages_to_find_vs_results_map = self.find_messages(
                     [OvmsMessages.MODEL_LOADING.format(model.name, model.version, model.base_path)],
                     raise_exception_if_not_found=True,
                 )

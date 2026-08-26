@@ -129,12 +129,13 @@ class LogMonitor(ABC):
         break_msg_list=None,
         raise_exception_if_not_found=True,
         timeout=None,
-        callbacks=[],
+        callbacks=None,
         ovms_instance=None,
         check_ovms_running=True,
         all_messages=False,
     ):
         break_msg_list = [] if break_msg_list is None else break_msg_list
+        callbacks = callbacks or []
         if timeout is None:
             timeout = wait_for_messages_timeout
 

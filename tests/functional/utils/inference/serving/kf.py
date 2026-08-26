@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,no-member
 
 import enum
 import json

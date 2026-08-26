@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,no-member
 
 import abc
 
@@ -30,14 +30,12 @@ class AbstractServingWrapper(metaclass=abc.ABCMeta):
         """
             Assigns objects for inference purposes.
         """
-        pass
 
     @abc.abstractmethod
     def create_inference(self):
         """
             Assigns objects for inference purposes.
         """
-        pass
 
     @abc.abstractmethod
     def predict(self, request):
@@ -48,7 +46,6 @@ class AbstractServingWrapper(metaclass=abc.ABCMeta):
         """
             REST path construction is dependent from serving used: (Tensorflow / KServe)
         """
-        pass
 
     @abc.abstractmethod
     def get_inputs_outputs_from_response(self, response):

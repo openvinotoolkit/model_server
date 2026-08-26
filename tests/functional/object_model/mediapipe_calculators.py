@@ -151,10 +151,10 @@ class MediaPipeCalculator:
         input_streams = ""
         output_streams = ""
         if model is not None:
-            for i, model_input in enumerate(model.inputs, start=0):
+            for i, _model_input in enumerate(model.inputs, start=0):
                 input_streams += f'input_stream: "{input_stream}_{i}" \n'
 
-            for i, model_output in enumerate(model.outputs, start=0):
+            for i, _model_output in enumerate(model.outputs, start=0):
                 output_streams += f'output_stream: "{output_stream}_{i}" \n'
         else:
             if isinstance(input_stream, List):
@@ -185,7 +185,7 @@ class MediaPipeCalculator:
 
         inputs = ""
         model_name = self.get_upper_model_name(model)
-        for (i, model_input), inp_stream in zip(enumerate(model.inputs, start=0), input_streams):
+        for (i, _model_input), inp_stream in zip(enumerate(model.inputs, start=0), input_streams):
             inp = f"{model_name}_INPUT_{i}"
             inputs += (
                 f'input_stream: "{inp}:{inp_stream}_{i}" \n'
@@ -194,7 +194,7 @@ class MediaPipeCalculator:
             )
 
         outputs = ""
-        for (i, model_output), out_stream in zip(enumerate(model.outputs, start=0), output_streams):
+        for (i, _model_output), out_stream in zip(enumerate(model.outputs, start=0), output_streams):
             out = f"{model_name}_OUTPUT_{i}"
             outputs += (
                 f'output_stream: "{out}:{out_stream}_{i}" \n'

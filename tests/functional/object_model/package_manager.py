@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=no-member
 
 import re
 from abc import ABC, abstractmethod
@@ -176,7 +177,7 @@ class DnfPackageManager(PackageManager):
             else:
                 match = rpm_list_pkg_no_arch_regexp.match(pkg)
                 assert match, f"Unable to parse package info: {pkg}"
-                name, version, release = match.groups()
+                name, version, _release = match.groups()
                 arch = "noarch"
             detected_packages[name] = {"arch": arch, "version": version}
 

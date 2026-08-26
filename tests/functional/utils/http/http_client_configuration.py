@@ -108,7 +108,7 @@ class HttpClientConfiguration:
 
     @property
     def as_dict(self) -> dict:
-        kwargs = dict()
+        kwargs = {}
         self.set_value(kwargs, "username", self.username)
         self.set_value(kwargs, "password", self.password)
         self.set_value(kwargs, "proxies", self.proxies)

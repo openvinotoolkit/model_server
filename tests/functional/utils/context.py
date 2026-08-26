@@ -52,7 +52,7 @@ class Context:
                 try:
                     self.logger.info(f"calling {item!s} to /get object to/ clean.")
                     item = item()
-                except BaseException as exc:
+                except BaseException as exc:  # pylint: disable=broad-exception-caught
                     self.logger.exception(f"Cannot call on callable item {item!r}", exc_info=exc)
                     continue
             if item is None:

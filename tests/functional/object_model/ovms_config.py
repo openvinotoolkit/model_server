@@ -123,7 +123,7 @@ class OvmsConfig:
 
     @staticmethod
     def build(
-        models: List[ModelInfo] = [],
+        models: List[ModelInfo] = None,
         pipelines: List[Pipeline] = None,
         custom_nodes: List[CustomNode] = None,
         metrics_enable=MetricsPolicy.NotDefined,
@@ -133,6 +133,8 @@ class OvmsConfig:
         use_subconfig=False,
         custom_graph_paths=None,
     ) -> dict:
+        if models is None:
+            models = []
         config = OvmsConfig.build_ovms_config(
             models,
             pipelines,
@@ -148,7 +150,7 @@ class OvmsConfig:
 
     @staticmethod
     def build_ovms_config(
-        models: List[ModelInfo] = [],
+        models: List[ModelInfo] = None,
         pipelines: List[Pipeline] = None,
         custom_nodes: List[CustomNode] = None,
         metrics_enable=MetricsPolicy.NotDefined,
@@ -158,6 +160,8 @@ class OvmsConfig:
         use_subconfig=False,
         custom_graph_paths=None,
     ) -> dict:
+        if models is None:
+            models = []
         if use_subconfig:
             config = {Config.MODEL_CONFIG_LIST: []}
         else:

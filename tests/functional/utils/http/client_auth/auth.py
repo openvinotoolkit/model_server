@@ -381,8 +381,9 @@ class ClientAuthOAuth2Proxy(ClientAuthBase):
         return "\n".join(cookies) + "\n"
 
     def login_hook(self, http_session: HttpSession) -> Callable[[Response], Response]:
-        state = dict(logging_hook_fn=0, redirects=0,
-                     authorizations=0, authorizations_skipped=0)
+        state = {
+            "logging_hook_fn": 0, "redirects": 0, "authorizations": 0, "authorizations_skipped": 0
+        }
 
         def login_hook_fn(initial_response: Response, *args, **kwargs) -> Response:
             logger.verbose(f"\nLogin hook for session: {str(id(http_session))[-4:]}."

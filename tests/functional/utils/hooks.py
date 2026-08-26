@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=no-member
 
 import itertools
 import os
@@ -647,7 +648,7 @@ def parametrize_plugin_config(metafunc):
         (device_type, plugin_config) for device_type in config.target_devices
         for plugin_config in args[0][get_base_device(device_type)]
     ]
-    ids_list = lambda i: get_ids_with_target_device(i, lambda x: "-".join(map(lambda y: "%s=%s" % y, x.items())))
+    ids_list = lambda i: get_ids_with_target_device(i, lambda x: "-".join(map(lambda y: f"{y[0]}={y[1]}", x.items())))
     metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.PLUGIN_CONFIG}", params_list, ids=ids_list)
 
 

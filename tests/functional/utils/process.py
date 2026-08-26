@@ -254,9 +254,9 @@ class CommonProcess(AbstractProcess):
         for child_proc in child_processes:
             try:
                 child_proc.terminate()
-            except psutil.NoSuchProcess as e:
+            except psutil.NoSuchProcess:
                 pass
-            except psutil.AccessDenied as e:
+            except psutil.AccessDenied:
                 self._kill_by_shell(child_proc.pid, end_time=end_time, force=force, sudo=True)
 
             _, alive = psutil.wait_procs([child_proc],

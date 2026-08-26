@@ -76,7 +76,7 @@ ignore-paths=
     constants/ovms_messages.py,  # W0511:
     constants/ovms_openai.py,
     constants/paths.py,
-    constants/pipelines.py,  # (R0801: duplicate code with models.py)
+    tests/functional/constants/pipelines.py,  # (R0801: duplicate code with models.py)
     constants/target_device_configuration.py,  # W0105: String statement has no effect (pointless-string-statement)
     tests/functional/data/ovms_capi_wrapper/ovms_autopxd.py,
     tests/functional/data/ovms_capi_wrapper/setup.py,
@@ -112,44 +112,44 @@ ignore-paths=
     object_model/shape.py,
     object_model/test_environment.py,  # R0205: (useless-object-inheritance)
     object_model/test_helpers.py,
-    utils/assertions.py,
+    tests/functional/utils/assertions.py,
     utils/context.py,
     utils/core.py,
     utils/docker.py,
     utils/git_operations.py,
     utils/hooks.py,
     utils/http/base.py,
-    utils/http/client_auth/auth.py,
+    tests/functional/utils/http/client_auth/auth.py,
     utils/http/client_auth/base.py,
     utils/http/http_client.py,
     utils/http/http_client_configuration.py,
     utils/http/http_client_factory.py,
     utils/http/http_session.py,
     utils/http/http_socket_wrapper.py,
-    utils/inference/capi.py,
-    tests/functional/utils/inference/communication/base.py,
+    tests/functional/utils/inference/capi.py,
+    utils/inference/communication/base.py,
     tests/functional/utils/inference/communication/grpc.py,
     tests/functional/utils/inference/communication/rest.py,
     utils/inference/inference_client_factory.py,
     utils/inference/serving/base.py,
-    utils/inference/serving/kf.py,
+    tests/functional/utils/inference/serving/kf.py,
     utils/inference/serving/openai.py,
     utils/inference/serving/tf.py,
-    utils/inference/serving/triton.py,
+    tests/functional/utils/inference/serving/triton.py,
     utils/log_monitor.py,
     utils/logger.py,
     utils/marks.py,
-    utils/numpy_loader.py,
+    tests/functional/utils/numpy_loader.py,
     utils/port_manager.py,
     utils/process.py,
     utils/reservation_manager/__init__.py,
-    utils/reservation_manager/__main__.py,
-    utils/reservation_manager/args.py,
+    tests/functional/utils/reservation_manager/__main__.py,
+    tests/functional/utils/reservation_manager/args.py,
     utils/reservation_manager/locker.py,
-    utils/reservation_manager/manager.py,
+    tests/functional/utils/reservation_manager/manager.py,
     utils/reservation_manager/manager_config.py,
-    utils/reservation_manager/runner.py,
-    utils/reservation_manager/unittests/test_manager.py,
+    tests/functional/utils/reservation_manager/runner.py,
+    tests/functional/utils/reservation_manager/unittests/test_manager.py,
 
 # Files or directories matching the regular expression patterns are skipped.
 # The regex matches against base names, not paths. The default value ignores
@@ -529,6 +529,8 @@ disable=
     useless-suppression,           # (I0021)
     deprecated-pragma,             # (I0022)
     use-symbolic-message-instead,  # (I0023)
+    broad-exception-caught,        # (W0718, to be FIXED)
+    broad-exception-raised,        # (W0719, to be FIXED)
     inconsistent-return-statements, # (R1710, to be FIXED)
     duplicate-code,                # (R0801, to be FIXED)
     logging-fstring-interpolation, # (W1203, to be FIXED)

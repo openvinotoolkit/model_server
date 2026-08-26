@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,abstract-method
 
 from dataclasses import dataclass
 from typing import Tuple, Union
