@@ -16,6 +16,7 @@ src/test/modelconfig_test.cpp:656: OptionA
 src/test/modelconfig_test.cpp:662: OptionA
 src/test/modelconfig_test.cpp:668: OptionA
 src/test/modelinstance_test.cpp:1093: THROUGHTPUT
+src/test/llm/output_parsers/qwen3_output_parser_test.cpp:720: thi
 third_party/aws-sdk-cpp/aws-sdk-cpp.bz
 WORKSPACE:98: thirdparty
 demos/classification_using_paddlepaddle_model/python/utils/imagenet_class_index.json
@@ -42,5 +43,6 @@ src/test/llm/output_parsers/qwen3_output_parser_test.cpp:719: thi ==> the, this
 STrack
 strack
 nd
+src/test/llm/output_parsers/qwen3_output_parser_test.cpp:697: thi ==> the, this
 extras/chat_template_examples/chat_template_onyx.jinja
 src/test/llm/chat_templates/chat_template_onyx.jinja

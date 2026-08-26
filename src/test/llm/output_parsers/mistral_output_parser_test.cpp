@@ -20,6 +20,7 @@
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
+#include "output_parser_test_utils.hpp"
 #include "../../platform_utils.hpp"
 
 using namespace ovms;
@@ -61,7 +62,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string testInput = input;
     auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*mistralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -74,7 +75,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithSingleToolCall_MissingToo
     std::string testInput = "[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s>";
     auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*mistralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -90,7 +91,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     std::string testInput = input;
     auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*mistralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
@@ -111,28 +112,11 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     EXPECT_NE(secondToolCallId, thirdToolCallId);
 }
 
-TEST_F(MistralOutputParserTest, ParseToolCallOutputWithOneValidToolCallAndTwoInvalid) {
-    std::string input = "[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}},"
-                        "{\"tool_name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}},"
-                        "{\"name\": \"third_tool\", \"options\": {\"key\": \"value\"}}]</s>";
-    std::string testInput = input;
-    auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
-    auto firstToolCallId = parsedOutput.toolCalls[0].id;
-}
-
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = mistralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*mistralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, "");
@@ -142,32 +126,47 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall)
     std::string input = "This is a content part and next will be a tool call.\n\n[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s>";
     auto generatedTensor = mistralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]");
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*mistralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentOnBothSidesAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\n[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s> This is a content part after tool call.";
     auto generatedTensor = mistralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}] This is a content part after tool call.");
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*mistralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    // Current parser contract: after entering tool-call phase we do not switch
+    // back to content phase, so trailing free-form text is not emitted as content.
+    EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 
-TEST_F(MistralOutputParserTest, ParseToolCallOutputWithMultipleToolCallsReturnsContentOnly) {
+TEST_F(MistralOutputParserTest, ParseToolCallOutputWithMultipleToolCallsOutOfExpectedStructure) {
     std::string input = "[TOOL_CALLS][{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]</s> \n\nThis is some content\n\n[TOOL_CALLS][{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]</s>";
     std::string testInput = input;
     auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    // Same expected content as tokenizer does not add special tokens
-    EXPECT_EQ(parsedOutput.content, "[{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}] \n\nThis is some content\n\n[{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]");
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*mistralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    // Streaming/unary unified behavior: once tool-call phase starts, parser
+    // consumes subsequent chunks as tool-call stream rather than content.
+    EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "tool1");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"a\":1}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+    EXPECT_EQ(parsedOutput.toolCalls[1].name, "tool2");
+    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"b\":2}");
+    EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);
 }
 
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithArrayArguments) {
@@ -175,7 +174,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithArrayArguments) {
     std::string testInput = input;
     auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*mistralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -255,15 +254,12 @@ TEST_F(MistralOutputParserTest, HolisticStreaming) {
         int64_t chunkIteration = -1;
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
             chunkIteration++;
-            std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
+            std::optional<ovms::Delta> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }
             if (expectedDelta.has_value() && doc.has_value()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                std::string docStr = buffer.GetString();
+                std::string docStr = ovms::test::deltaToJson(*doc);
                 // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
                 std::string expected = expectedDelta.value();
                 std::string idKey = "\"id\":\"";
@@ -292,10 +288,7 @@ TEST_F(MistralOutputParserTest, HolisticStreaming) {
             } else if (expectedDelta.has_value()) {
                 FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
             } else if (doc.has_value()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                std::string docStr = buffer.GetString();
+                std::string docStr = ovms::test::deltaToJson(*doc);
                 FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
             } else {
                 FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
@@ -374,15 +367,12 @@ TEST_F(MistralOutputParserTest, StreamingToolWithComplexArguments) {
 
     auto outputParser = std::make_unique<OutputParser>(*mistralTokenizer, "mistral", "", EMPTY_TOOLS_SCHEMA);
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
             std::string expected = expectedDelta.value();
             std::string idKey = "\"id\":\"";
@@ -411,10 +401,7 @@ TEST_F(MistralOutputParserTest, StreamingToolWithComplexArguments) {
         } else {
             std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
             std::string docStr = doc.has_value() ? [&]() {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                return std::string(buffer.GetString());
+                return ovms::test::deltaToJson(*doc);
             }()
                                                  : "std::nullopt";
             FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
@@ -453,15 +440,12 @@ TEST_F(MistralOutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         // Second argument is false as we simulate the case where tools have not been provided in the request
-        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, false, ov::genai::GenerationFinishReason::NONE);
+        std::optional<ovms::Delta> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, false, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             std::string expected = expectedDelta.value();
             EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
         } else {

@@ -27,6 +27,7 @@
 
 #include "src/llm/io_processing/output_parser.hpp"
 #include "src/test/platform_utils.hpp"
+#include "src/test/llm/output_parsers/output_parser_test_utils.hpp"
 
 using namespace ovms;
 
@@ -100,7 +101,7 @@ protected:
 
         ToolsSchemas_t toolsSchemas = makeToolsSchemas();
         OutputParser outputParser(tokenizer, "onyx", "onyx", toolsSchemas);
-        return outputParser.parse(generatedTokens, toolsAvailable);
+        return ovms::test::parseWithStreamer(tokenizer, outputParser, generatedTokens, toolsAvailable);
     }
 };
 
