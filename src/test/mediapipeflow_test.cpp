@@ -4536,7 +4536,7 @@ TEST_F(UnaryQueueReinitTest, GraphIsReinitializedAfterCalculatorError) {
             {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(),
             std::move(guard)};
         prepareInferRequest(request, -1.0f);
-        auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
+        auto status = executor.inferTyped<KFSRequest, KFSResponse>(&request, &response, executionContext);
         ASSERT_FALSE(status.ok());
         EXPECT_EQ(status.getCode(), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     }
@@ -4552,7 +4552,7 @@ TEST_F(UnaryQueueReinitTest, GraphIsReinitializedAfterCalculatorError) {
             {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(),
             std::move(guard)};
         prepareInferRequest(request, 2.0f);
-        auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
+        auto status = executor.inferTyped<KFSRequest, KFSResponse>(&request, &response, executionContext);
         ASSERT_TRUE(status.ok());
     }
 }
