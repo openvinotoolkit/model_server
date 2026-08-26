@@ -181,8 +181,6 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
     for (auto& input : inputs) {
         auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        // With no tools available this path should behave like plain text output,
-        // so Gemma control tokens are stripped during decode.
         ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, false);
         EXPECT_EQ(parsedOutput.content, inputWithoutSpecialTokens);
         EXPECT_EQ(parsedOutput.reasoning, "");
