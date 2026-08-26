@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import os
 from abc import abstractmethod
@@ -413,7 +414,7 @@ class Pipeline(ModelInfo):
                     )
                     if demultiply_count is not None:
                         dumultipy_content = []
-                        for i in range(number_of_batches_in_request):
+                        for _i in range(number_of_batches_in_request):
                             dumultipy_content.append(input_data[input_name])
                         input_data[input_name] = np.array(dumultipy_content)
                 else:
@@ -431,10 +432,10 @@ class Pipeline(ModelInfo):
         return data
 
     def prepare_model_input_data(self, batch_size=None):
-        return super(Pipeline, self).prepare_input_data(batch_size)
+        return super().prepare_input_data(batch_size)
 
     def prepare_model_resources(self, base_location):
-        return super(Pipeline, self).prepare_resources(base_location)
+        return super().prepare_resources(base_location)
 
     def map_inputs(self, prepare_inputs: dict):
         result_dict = {}
@@ -1059,7 +1060,7 @@ class MediaPipe(Pipeline):
     def prepare_input_data(self, batch_size=None, input_key=None):
         data = self.prepare_pipeline_input_data(batch_size)
         new_data = {}
-        for i, key in enumerate(list(data.keys()), start=0):
+        for _i, key in enumerate(list(data.keys()), start=0):
             new_input_key = input_key if input_key is not None else "input"
             new_data.update({new_input_key: data[key]})
         return new_data

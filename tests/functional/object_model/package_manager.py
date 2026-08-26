@@ -116,7 +116,7 @@ class PackageManager(ABC):
             try:
                 self.run_process(cmd, exception_type=InstallPkgVersionException)
             except InstallPkgVersionException as e:
-                cmd, retcode, stdout, stderr = e.get_process_details()
+                cmd, _retcode, stdout, stderr = e.get_process_details()
                 if "The following packages have unmet dependencies" in stdout:
                     logger.debug("Upgrading all system packages ...")
                     self.run_process(self.upgrade_cmd, exception_type=UpgradePkgException)
@@ -172,7 +172,7 @@ class DnfPackageManager(PackageManager):
         for pkg in package_list:
             match = rpm_list_pkg_regexp.match(pkg)
             if match:
-                name, version, release, arch = match.groups()
+                name, version, _release, arch = match.groups()
             else:
                 match = rpm_list_pkg_no_arch_regexp.match(pkg)
                 assert match, f"Unable to parse package info: {pkg}"

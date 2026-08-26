@@ -89,4 +89,4 @@ class Paths:
 
 
 def any_is_relative_to(paths, subpath):
-    return any([_path in subpath for _path in paths])
+    return any(_path in subpath for _path in paths)

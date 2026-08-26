@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import json
 import os
@@ -128,7 +129,7 @@ class MediaPipeCalculator:
                         contents.update({calc.name: calc.create_proto_content(model=model)})
 
                 content_to_save = " ".join(value for key, value in contents.items())
-                if all(["pbtxt" in elem for elem in mediapipe_model_graph_paths]):
+                if all("pbtxt" in elem for elem in mediapipe_model_graph_paths):
                     for path in mediapipe_model_graph_paths:
                         filename = os.path.basename(path)
                         cls.save(mediapipe_model, content_to_save, dst_path=dst_path, filename=filename)
@@ -415,7 +416,7 @@ class CorruptedFileCalculator(OVMSOVCalculator):
         create_header=True,
     ):
         model = self.model if self.model is not None else model
-        ovms_ov_content = super(CorruptedFileCalculator, self).create_proto_content(model)
+        ovms_ov_content = super().create_proto_content(model)
         content = ovms_ov_content.replace("input_stream", self.name)
         return content
 

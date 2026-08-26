@@ -15,9 +15,9 @@
 #
 
 import os
+import re
 
 import docker
-import re
 
 from tests.functional.utils.environment_info import DEFAULT_FULL_VERSION_NUMBER, BaseInfo
 from tests.functional.utils.logger import get_logger

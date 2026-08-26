@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import datetime
 import os
@@ -73,7 +74,7 @@ class OvmsLogMonitor(LogMonitor):
         if model.input_shape_for_ovms is not None:
             input_shape = model.input_shape_for_ovms
             if isinstance(input_shape, dict):
-                input_shape = [x for x in input_shape.values()][0]
+                input_shape = list(input_shape.values())[0]
 
             if isinstance(input_shape, str):
                 match = re.findall(r"([-\d:]+)", input_shape)
@@ -234,7 +235,7 @@ class OvmsLogMonitor(LogMonitor):
         if timeout is None:
             timeout = 60
             if models:
-                timeout += sum([model.get_ovms_loading_time() for model in models])
+                timeout += sum(model.get_ovms_loading_time() for model in models)
         self.ensure_contains_messages(msg_list, break_msg_list, timeout=timeout)
 
     def reloading(self, models, timeout=30):
@@ -258,7 +259,7 @@ class OvmsLogMonitor(LogMonitor):
         if timeout is None:
             timeout = 60
             if models:
-                timeout += sum([model.get_ovms_loading_time() for model in models])
+                timeout += sum(model.get_ovms_loading_time() for model in models)
         self.ensure_contains_messages(msg_list, timeout=timeout, ovms_instance=ovms_instance)
 
     def models_loaded(
@@ -267,7 +268,7 @@ class OvmsLogMonitor(LogMonitor):
         if timeout is None:
             timeout = wait_for_messages_timeout
             if models:
-                timeout += sum([model.get_ovms_loading_time() for model in models])
+                timeout += sum(model.get_ovms_loading_time() for model in models)
         msg_list = self._get_log_models_loaded(models)
         if custom_msg_list is not None:
             msg_list.extend(custom_msg_list)
@@ -307,7 +308,7 @@ class OvmsLogMonitor(LogMonitor):
         result = []
         for model in models:
             if is_reload:
-                found_messages, messages_to_find_vs_results_map = self.find_messages(
+                _found_messages, messages_to_find_vs_results_map = self.find_messages(
                     [OvmsMessages.MODEL_RELOADING.format(model.name)], raise_exception_if_not_found=True
                 )
             else:
@@ -340,7 +341,7 @@ class OvmsLogMonitor(LogMonitor):
 
     @staticmethod
     def get_status_change_from_logs(logs, expected_state=""):
-        status_change_messages = list(filter(lambda x: OvmsMessagesRegex.STATUS_CHANGE_RE.search(x), logs))
+        status_change_messages = list(filter(OvmsMessagesRegex.STATUS_CHANGE_RE.search, logs))
         status_change_messages = list(filter(lambda x: expected_state in x, status_change_messages))
         return status_change_messages
 
@@ -421,7 +422,7 @@ class OvmsDockerLogMonitor(OvmsLogMonitor):
     def get_logs_as_txt(self):
         process = Process()
         process.disable_check_stderr()
-        exit_code, stdout, _ = process.run(f"docker logs {self._container.id} 2>&1")
+        _exit_code, stdout, _ = process.run(f"docker logs {self._container.id} 2>&1")
         return stdout
 
     def is_ovms_running(self):
@@ -451,6 +452,6 @@ class OvmsCmdLineDockerLogMonitor(OvmsLogMonitor):
         self.process.set_log_silence()
 
     def get_all_logs(self):
-        exit_code, stdout, _ = self.process.run(f"docker logs {self.docker_id} 2>&1")
+        _exit_code, stdout, _ = self.process.run(f"docker logs {self.docker_id} 2>&1")
         self._read_lines = stdout.splitlines()
         return self._read_lines

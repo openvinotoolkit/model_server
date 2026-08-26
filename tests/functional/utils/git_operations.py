@@ -32,7 +32,7 @@ def _get_current_git_repo_object():
         return None
     try:
         repo = Repo(current_directory, search_parent_directories=True)
-    except (NoSuchPathError, InvalidGitRepositoryError) as e:
+    except (NoSuchPathError, InvalidGitRepositoryError) as _e:
         print(f"Cannot get repo from current directory: {current_directory}")
         return None
     return repo

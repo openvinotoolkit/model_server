@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 """Wrapper for the Session class from the requests library."""
 

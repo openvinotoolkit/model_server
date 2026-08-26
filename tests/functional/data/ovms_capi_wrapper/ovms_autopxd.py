@@ -64,7 +64,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Script translates OVMS header file to .pxd file")
     parser.add_argument("-i", "--input_file", help="OVMS header file path")
     parser.add_argument("-o", "--output_file", help=".pxd output file path")
-    
+
     args = parser.parse_args()
 
     if len(sys.argv) !=5:

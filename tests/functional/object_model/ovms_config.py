@@ -162,7 +162,7 @@ class OvmsConfig:
             config = {Config.MODEL_CONFIG_LIST: []}
         else:
             config = {Config.MODEL_CONFIG_LIST: [model.get_config() for model in models]}
-            if all([c is None for c in config[Config.MODEL_CONFIG_LIST]]):
+            if all(c is None for c in config[Config.MODEL_CONFIG_LIST]):
                 config = {Config.MODEL_CONFIG_LIST: []}
         if resource_dir and CurrentOvmsType.ovms_type in [
             OvmsType.CAPI,
@@ -203,7 +203,7 @@ class OvmsConfig:
                 ):
                     model["base_path"] = os.path.join(resource_dir, f'./{model["base_path"]}')
 
-        loader_configs = set([model.custom_loader.loader_config for model in models if model.custom_loader is not None])
+        loader_configs = {model.custom_loader.loader_config for model in models if model.custom_loader is not None}
         for loader in loader_configs:
             if (
                 resource_dir
@@ -315,17 +315,17 @@ class OvmsConfig:
 
         subconfig_dict = {Config.MODEL_CONFIG_LIST: []}
         mediapipe_model = [model for model in parameters.models if model.is_mediapipe][0]
-        feature_extraction_models = \
+        _feature_extraction_models = \
             [
                 model for model in parameters.models
                 if hasattr(model, "is_feature_extraction") and model.is_feature_extraction
             ]
-        rerank_models = \
+        _rerank_models = \
             [
                 model for model in parameters.models
                 if hasattr(model, "is_rerank") and model.is_rerank
             ]
-        regular_models = [model for model in mediapipe_model.regular_models]
+        regular_models = list(mediapipe_model.regular_models)
 
         filename = Paths.SUBCONFIG_FILE_NAME
         subconfigs = [os.path.basename(elem.get("subconfig", ""))
@@ -338,8 +338,8 @@ class OvmsConfig:
                 subconfig_dict[Config.MODEL_CONFIG_LIST].append(model.get_config())
                 filename = (
                     f"subconfig_{model.name}.json"
-                    if config_dict is not None and all(["subconfig" in elem
-                                                        for elem in config_dict[Config.MEDIAPIPE_CONFIG_LIST]])
+                    if config_dict is not None and all("subconfig" in elem
+                                                        for elem in config_dict[Config.MEDIAPIPE_CONFIG_LIST])
                     else Paths.SUBCONFIG_FILE_NAME
                 )
         mediapipe_resources_path = os.path.join(config_path_on_host, mediapipe_model.name)

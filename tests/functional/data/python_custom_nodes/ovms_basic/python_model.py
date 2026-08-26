@@ -28,7 +28,7 @@ class OvmsPythonModel:
         self.class_methods = {
             name: func for name, func in inspect.getmembers(OvmsPythonModel, predicate=inspect.isfunction)
         }
-        
+
     def execute(self, inputs: list):
         text_input_data = [bytes(input).decode() for input in inputs]
 

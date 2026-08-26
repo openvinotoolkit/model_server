@@ -13,15 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
-import grpc
 import json
 import os
-import pytest
 import re
-import yaml
 from pathlib import Path
 from typing import Callable, Type
+
+import grpc
+import pytest
+import yaml
 
 from tests.functional.utils.logger import get_logger
 from tests.functional.constants.ovms import CurrentOvmsType
@@ -71,7 +73,7 @@ class AggregatedMultipleOvmsTestExceptions(OvmsTestException):
 class UnexpectedResponseError(OvmsTestException):
     def __init__(self, status=None, error_message=None, message=None):
         message = message or f"Code:{status} Message:{error_message}"
-        super(UnexpectedResponseError, self).__init__(message)
+        super().__init__(message)
         self.status = status
         self.error_message = error_message
 

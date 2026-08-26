@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import os
 import re
@@ -216,11 +217,11 @@ class OvmsDockerLauncher:
             if model.use_mapping is True:
                 if mapping_exists:
                     # Delete original mapping since it is tested in case: `default_model_mapping`
-                    OvmsMappingConfig.delete_mapping(model)
+                    OvmsMappingConfig.delete_mapping(ovms_container, model)
                 OvmsMappingConfig.generate(model, context)  # create generic mapping
             if model.use_mapping is False:
                 if mapping_exists:
-                    OvmsMappingConfig.delete_mapping(model)  # just delete mapping
+                    OvmsMappingConfig.delete_mapping(ovms_container, model)  # just delete mapping
 
     @classmethod
     def build_ovms_instance_params(cls, context: Context, parameters: OvmsDockerParams):
@@ -402,7 +403,7 @@ class OvmsDockerLauncher:
     @classmethod
     def create_config(cls, parameters, name):
         regular_models = parameters.get_regular_models()
-        using_custom_loader = any([(x.custom_loader is not None) for x in regular_models])
+        using_custom_loader = any((x.custom_loader is not None) for x in regular_models)
         if using_custom_loader and not parameters.use_config:
             msg = "Custom loader is supported only with config file passed with --config_path."
             logger.error(msg)
@@ -578,7 +579,7 @@ class OvmsDockerInstance(OvmsInstance):
     def get_short_id(self):
         return self.container.container.short_id
 
-    def cleanup(self):
+    def cleanup(self, timeout=30):
         if not self.container.deleted:
             try:
                 super().cleanup()
@@ -694,7 +695,7 @@ class OvmsCmdLineDockerInstance(OvmsInstance):
             detach = "-d"
         else:
             detach = ""
-        exit_code, stdout, stderr = process.run(f"docker exec {detach} -u root {self.docker_id} {cmd}", cwd=cwd)
+        exit_code, stdout, _stderr = process.run(f"docker exec {detach} -u root {self.docker_id} {cmd}", cwd=cwd)
         return exit_code, stdout
 
     def get_env_variables(self):

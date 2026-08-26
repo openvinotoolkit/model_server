@@ -92,8 +92,8 @@ def context(request, sigterm_cleaner, target_device, ovms_type, base_os):
     classes_with_external_libraries_used = ["TestByXCli2"]
     use_ovms_testing_image = any([
         reqids_node
-        and any([x in requirements_with_external_libraries for x in reqids_node[0].args]),  # By requirement id
-        reqids_parent and any([x in requirements_with_external_libraries for x in reqids_parent[0].args]),
+        and any(x in requirements_with_external_libraries for x in reqids_node[0].args),  # By requirement id
+        reqids_parent and any(x in requirements_with_external_libraries for x in reqids_parent[0].args),
         request.node.parent.name in classes_with_external_libraries_used,
     ])
     # Currently we enable testing image only for test that require custom build binaries:

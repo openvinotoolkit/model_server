@@ -147,11 +147,11 @@ class DmesgLogMonitor(LogMonitor):
         logger.info(f"Dmesg OVMS process ID: {self.ovms_pid}")
         if unexpected_messages:
             dmesg_exceptions = get_children_from_module(DmesgError, assertions_module)  # [(name, class_def), ...]
-            for name, exception_class in dmesg_exceptions:
+            for _name, exception_class in dmesg_exceptions:
                 msg = getattr(exception_class, "msg", None)
                 regex = getattr(exception_class, "regex", None)
                 if (msg and any(filter(lambda x: msg in x, unexpected_messages))) or (
-                    regex and any(filter(lambda x: regex.match(x), unexpected_messages))
+                    regex and any(filter(regex.match, unexpected_messages))
                 ):
                     logger.error(f"Found unexpected message in dmesg logs: {msg}")
                     raise exception_class("\n".join(unexpected_messages), dmesg_log=logs)

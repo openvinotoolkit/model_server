@@ -101,7 +101,7 @@ class TestPoolPart:
         for start, stop in TestManager.pool_part_ranges:
             try:
                 PoolPart(start, stop)
-            except AssertionError as e:
+            except AssertionError as _e:
                 pytest.fail(f"Creating PoolPart should succeed with range: "
                             f"start {start}, stp: {stop}")
 

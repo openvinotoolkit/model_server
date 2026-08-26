@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 from dataclasses import dataclass
 from typing import Tuple, Union
@@ -268,7 +269,7 @@ class OpenAIRequestParams:
 
     def prepare_dict(self, set_null_values=False, **kwargs):
         if set_null_values:
-            request_params_dict = {key: value for key, value in vars(self).items()}
+            request_params_dict = dict(vars(self).items())
         else:
             request_params_dict = {key: value for key, value in vars(self).items() if value is not None}
         return request_params_dict

@@ -48,7 +48,7 @@ def transpose_input(images, axes):
 
 
 def crop_resize(img, cropx, cropy):
-    y, x, c = img.shape
+    y, x, _c = img.shape
     if y < cropy:
         img = cv2.resize(img, (x, cropy))
         y = cropy
@@ -106,7 +106,7 @@ def load_images(data_path, height, width, ids):
 
 def load_numpy(data_path):
     assert os.path.isfile(data_path)
-    file_extension = os.path.basename(data_path).split(sep=".")[-1]
+    _file_extension = os.path.basename(data_path).split(sep=".")[-1]
     # optional preprocessing depending on the model
     data = np.load(data_path, mmap_mode='r+', allow_pickle=False)
     data = data - np.min(data)  # Normalization 0-255
@@ -119,7 +119,7 @@ def load_numpy(data_path):
 
 
 def prepare_data(data_path, expected_shape, batch_size, transpose_axes=None, expected_layout=None, data_layout=None):
-    filename, file_extension = os.path.splitext(data_path)
+    _filename, file_extension = os.path.splitext(data_path)
     if file_extension == '.npy':
         data = load_numpy(data_path)
     else:

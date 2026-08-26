@@ -24,7 +24,7 @@ class OvmsPythonModel:
         self.output_names = [output_name for output_name in kwargs["output_names"] if output_name != "loopback"]
         self.class_methods = {name: func for name, func in
                               inspect.getmembers(OvmsPythonModel, predicate=inspect.isfunction)}
-        
+
     def execute(self, inputs: list):
         input_data = inputs[0]
         text = bytes(input_data).decode()

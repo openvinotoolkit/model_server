@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import enum
 import json
@@ -259,7 +260,7 @@ class KserveWrapper(AbstractServingWrapper):
     def set_serving_inputs_outputs_grpc(self, response, model_name=None):
         model_name = model_name if model_name is not None else self.model_name
         assert response.name == model_name, f"Cannot find model_name={model_name} in response={response}"
-        versions = [int(v) for v in response.versions]
+        _versions = [int(v) for v in response.versions]
 
         self.model.inputs = {}
         self.model.outputs = {}
@@ -365,18 +366,18 @@ class KserveWrapper(AbstractServingWrapper):
 
     def _merge(self, input_list, output=None):
         if output is None:
-            if any(type(child) == bytes for child in input_list):
+            if any(isinstance(child, bytes) for child in input_list):
                 assert all(
-                    type(child) == bytes for child in input_list
+                    isinstance(child, bytes) for child in input_list
                 ), "Do not mix types, all inputs should be use bytes"
                 output = b''
             else:
                 output = []
 
         for children in input_list:
-            if type(children) == list:
+            if isinstance(children, list):
                 self._merge(children, output)
-            elif type(children) == bytes:
+            elif isinstance(children, bytes):
                 output += children
             else:
                 output.append(children)

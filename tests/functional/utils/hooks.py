@@ -21,12 +21,12 @@ import shutil
 import sys
 import time
 import warnings
-import pytest
-
 from collections import Counter, defaultdict, namedtuple
-from docker import errors as docker_errors
 from itertools import groupby
 from pathlib import Path
+
+import pytest
+from docker import errors as docker_errors
 from _pytest.mark import Mark, MarkDecorator
 from _pytest.python import Function
 
@@ -332,7 +332,7 @@ def run_docker_build_ovms_image(cmd, ovms_image_name, cwd, timeout=None):
     print(f"Building {ovms_image_name} image using cmd: {cmd}")
     proc = Process()
     proc.disable_check_stderr()
-    code, stdout, stderr = proc.run_and_check_return_all(cmd, cwd=cwd, timeout=timeout)
+    _code, stdout, stderr = proc.run_and_check_return_all(cmd, cwd=cwd, timeout=timeout)
     assert (f"naming to {ovms_image_name}" in stderr) or (
         f"Successfully tagged {ovms_image_name}" in stdout
     ), f"Image was not built successfully; stderr: {stderr}"
@@ -425,8 +425,8 @@ def build_ovms_capi_image():
 
 def prepare_ovms_package():
     if all([
-        all([OvmsType.CAPI not in ovms_type for ovms_type in config.ovms_types]),
-        all([OvmsType.BINARY not in ovms_type for ovms_type in config.ovms_types]),
+        all(OvmsType.CAPI not in ovms_type for ovms_type in config.ovms_types),
+        all(OvmsType.BINARY not in ovms_type for ovms_type in config.ovms_types),
     ]):
         return
 

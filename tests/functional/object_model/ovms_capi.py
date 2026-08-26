@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import os
 import pickle
@@ -137,7 +138,7 @@ class OvmsCapiInstance(OvmsBinary):
             # Execute python api command without any validation (sic!).
             # Expect valid command sent by host process.
             print(cmd)
-            result = exec(cmd)
+            _result = exec(cmd)
         except Exception as e:
             logger.exception(e)
 

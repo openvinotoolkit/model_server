@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import base64
 import json
 import os
 import struct
 import time
-import cohere
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -30,6 +30,7 @@ from pathlib import Path
 from threading import Event
 from typing import List, Union
 
+import cohere
 import grpc
 import numpy as np
 import requests
@@ -178,7 +179,7 @@ class InferenceRequest:
 @dataclass(frozen=False)
 class BinaryInferenceRequest(InferenceRequest):
     layout: str = Ovms.BINARY_IO_LAYOUT_ROW_NAME
-    dataset: ModelDataset = field(default_factory=lambda: DefaultBinaryDataset())
+    dataset: ModelDataset = field(default_factory=DefaultBinaryDataset)
     format: str = None
     validate_match: bool = True
     batch_size: int = 1
@@ -823,7 +824,7 @@ def get_model_status(client, accepted_model_states=None, model_version=None, por
 def get_multiple_model_status(models_and_expected_state):
     for client, state in models_and_expected_state:
         try:
-            model_state = get_model_status(client, accepted_model_states=[state])
+            _model_state = get_model_status(client, accepted_model_states=[state])
         except (_InactiveRpcError, UnexpectedResponseError) as e:
             if state in [Ovms.ModelStatus.UNKNOWN, Ovms.ModelStatus.UNDEFINED]:
                 pass  # It is expected exceptions for given ModelStatus so proceed.
@@ -883,7 +884,7 @@ def wait_for_model_meta(client, model, wait_time=1):
             received_meta_str = json.loads(response)
             logger.info(f"Expected metadata received for model {model.name}:\r\n{received_meta_str}")
             break
-        except (RpcError, AssertionError) as ex:
+        except (RpcError, AssertionError) as _ex:
             time.sleep(wait_time)
 
     assert validation_passed, f"Unexpected model metadata, current: {received_meta} for model: {model}"

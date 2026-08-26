@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import pprint
 import signal
@@ -351,9 +352,10 @@ class DockerContainer(metaclass=ABCMeta):
     @classmethod
     def check_not_on_list(cls, container: Union[str, "DockerContainer"], comparator: Callable[[Any, Any], bool] = None):
         current_list = cls.list()
+        items = '\n'.join([repr(elem) for elem in current_list])
         logger.debug(
             f"Searching for container with a name: {container if isinstance(container, str) else container.name}, "
-            f"among:\n{'\n'.join([repr(elem) for elem in current_list])}\n"
+            f"among:\n{items}\n"
         )
         if comparator is None:
             assert container not in current_list, f"{container} was found on: {pprint.pformat(current_list)}"
@@ -376,7 +378,7 @@ class DockerContainer(metaclass=ABCMeta):
             tries=cls.NOT_ON_LIST_RETRY["tries"],
             delay=cls.NOT_ON_LIST_RETRY["delay"],
         )
-        for count in range(1, ensure_count):
+        for _count in range(1, ensure_count):
             time.sleep(cls.NOT_ON_LIST_RETRY["delay"])
             cls.check_not_on_list(container, comparator)
 

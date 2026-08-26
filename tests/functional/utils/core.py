@@ -22,10 +22,11 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from enum import Enum
-from filelock import UnixFileLock, WindowsFileLock
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
+
+from filelock import UnixFileLock, WindowsFileLock
 
 from tests.functional.constants.os_type import get_host_os, OsType
 
@@ -54,7 +55,7 @@ def get_token_value(token_file_path, fallback_value=None):
 def get_username():
     try:
         user_name = os.getlogin()
-    except OSError as e:
+    except OSError as _e:
         user = os.environ.get("USER", "not_known_user")
         logname = os.environ.get("LOGNAME", user)
         user_name = os.environ.get("USERNAME", logname)
@@ -82,7 +83,7 @@ class SelfDeletingCommonFileLock:
     def acquire_no_raise(self, timeout):
         try:
             self.acquire(timeout=timeout)
-        except TimeoutError as e:
+        except TimeoutError as _e:
             return False
         return True
 
@@ -106,7 +107,7 @@ class SelfDeletingUnixFileLock(SelfDeletingCommonFileLock, UnixFileLock):
     def acquire_no_raise(self, timeout):
         try:
             self.acquire(timeout=timeout)
-        except TimeoutError as e:
+        except TimeoutError as _e:
             return False
         return True
 
