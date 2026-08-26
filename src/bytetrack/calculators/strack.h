@@ -55,7 +55,7 @@ public:
 
     // KalmanState ToProto() const;
     int tracklet_len() const { return tracklet_len_; }
-    std::string label() const { return label_; }
+    const std::string& label() const { return label_; }
     const Mean& mean() const { return mean_; }
     const Cov& cov() const { return cov_; }
 

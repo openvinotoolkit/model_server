@@ -74,7 +74,7 @@ inline Eigen::MatrixXf BuildIoUCostMatrix(
 }
 
 inline Eigen::MatrixXf FuseScore(
-    const Eigen::MatrixXf cost_matrix,
+    const Eigen::MatrixXf& cost_matrix,
     const std::vector<bytetrack::STrack>& detections) {
     if (cost_matrix.size() == 0) {
         return cost_matrix;

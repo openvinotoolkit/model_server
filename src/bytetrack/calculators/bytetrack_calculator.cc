@@ -86,7 +86,7 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
               << "  tracked_=" << tracked_stracks_.size()
               << "  lost_=" << lost_stracks_.size();
 
-    LOG(INFO) << "ByteTrackCalculator::Process called, frame " << frame_id_;
+    // LOG(INFO) << "ByteTrackCalculator::Process called, frame " << frame_id_;
     auto high_dets = std::make_unique<std::vector<Detection>>();
     auto low_dets = std::make_unique<std::vector<Detection>>();
 
@@ -300,7 +300,7 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
             lost_ptrs2.push_back(&t);
         for (auto& t : tracked_stracks_)
             new_tracked_ptrs.push_back(&t);  // fresh pointers!
-        for (auto& t : removed_stracks_)
+        for (auto& t : removed_stracks)
             removed_ptrs.push_back(&t);
         for (auto& t : lost_stracks)
             local_lost_ptrs.push_back(&t);
@@ -313,14 +313,13 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
         // for (auto* t : new_lost) lost_stracks_.push_back(*t);
         std::vector<bytetrack::STrack> l_stracks;
         l_stracks.reserve(new_lost.size());
-        for (auto* t : new_lost)
-            l_stracks.push_back(*t);
+        for (auto* t : new_lost) {
+             if (t->state() != bytetrack::BaseTrack::TrackState::REMOVED)
+                 l_stracks.push_back(*t);
+         }
         lost_stracks_ = std::move(l_stracks);
     }
 
-    // extend removed_stracks_
-    for (auto& t : removed_stracks)
-        removed_stracks_.push_back(t);
 
     // remove duplicates
     {

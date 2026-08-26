@@ -38,7 +38,6 @@ private:
     ::mediapipe::ByteTrackCalculatorOptions options_;
     std::vector<bytetrack::STrack> tracked_stracks_;
     std::vector<bytetrack::STrack> lost_stracks_;
-    std::vector<bytetrack::STrack> removed_stracks_;
 
     int track_buffer_;
     float det_thresh_;

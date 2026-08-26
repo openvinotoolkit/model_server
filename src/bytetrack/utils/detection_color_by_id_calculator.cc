@@ -16,6 +16,10 @@
 #include "src/bytetrack/utils/detection_color_by_id_calculator.pb.h"
 
 #include <cmath>
+#include <cstdio>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/detection.pb.h"
@@ -34,7 +38,7 @@ public:
     absl::Status Open(CalculatorContext* cc) override {
         const auto& options =
             cc->Options<mediapipe::DetectionColorByIdCalculatorOptions>();
-        thickness_ = options.has_thickness() ? options.thickness() : 4.0f;
+        thickness_ = options.has_thickness() ? options.thickness() : 5.0f;
         saturation_ = options.has_saturation() ? options.saturation() : 0.85f;
         value_ = options.has_value() ? options.value() : 0.95f;
         return absl::OkStatus();

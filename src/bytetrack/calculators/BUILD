@@ -56,7 +56,8 @@ cc_library(
     name = "matching_utils",
     hdrs = ["matching_utils.h"],
     deps = [
-        "@mediapipe//mediapipe/util/tracking:box_tracker",
+        ":strack",
+        "@eigen_archive//:eigen3",
     ],
     alwayslink = 1
 )
