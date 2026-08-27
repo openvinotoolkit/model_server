@@ -1273,16 +1273,6 @@ class SimpleDynamicModelMediaPipe(SimpleModelMediaPipe):
         return nodes
 
 
-class SimpleModelMediaPipeResnetWrongInputShapes(SimpleModelMediaPipe):
-    def __init__(self, model=None, use_mapping=False, batch_size=None):
-        super().__init__(model, use_mapping, batch_size)
-
-
-class SimpleModelMediaPipeResnetWrongInputShapeDim(SimpleModelMediaPipe):
-    def __init__(self, model=None, use_mapping=False, batch_size=None):
-        super().__init__(model, use_mapping, batch_size)
-
-
 class CorruptedFileModelMediaPipe(SimpleModelMediaPipe):
     def __init__(self, model):
         super().__init__(model)
