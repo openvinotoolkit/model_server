@@ -15,8 +15,4 @@ sentence_transformers==5.3.0
 sentencepiece  # Required by: transformers`
 torchvision
 requests
-# Kokoro TTS export (text2speech --model_type kokoro).
-# typer must stay <0.12 because kokoro -> misaki -> spacy imports `typer.main`,
-# which was removed in typer 0.12.
 kokoro==0.9.4
-typer<0.12

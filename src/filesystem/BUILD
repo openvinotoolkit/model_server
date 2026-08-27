@@ -13,12 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("//:common_settings.bzl", "ovms_cc_library")
-
-COPTS_CLOUD = select({
-    "//conditions:default": ["-DCLOUD_DISABLE=1"],
-    "//:not_disable_cloud" : ["-DCLOUD_DISABLE=0"],
-})
+load("//:common_settings.bzl", "ovms_cc_library", "COPTS_CLOUD")
 
 ovms_cc_library(
     name = "libovmsfilesystem",
