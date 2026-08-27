@@ -73,7 +73,7 @@ from tests.functional.models.models_datasets import (
 )
 from tests.functional.constants.ovms import CurrentTarget as ct
 from tests.functional.constants.ovms import MediaPipeConstants, Ovms
-from tests.functional.constants.pipelines import SimpleMediaPipe
+from ovms.constants.pipelines import SimpleMediaPipe
 from tests.functional.object_model.ovms_instance import OvmsInstance
 from tests.functional.object_model.ovsa import OvsaCerts
 from tests.functional.object_model.python_custom_nodes.common import STREAMING_CHANNEL_ARGS
