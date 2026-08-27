@@ -549,8 +549,6 @@ class SimplePipeline(Pipeline):
         name = "single_model_pipeline" if name is None else f"single_model_pipeline_{name}"
         super().__init__(name=name, **kwargs)
         self.demultiply_count = demultiply_count
-
-
         self._initialize([model])
 
     def _create_nodes(self, models):
@@ -875,8 +873,8 @@ class MultiLevelPipeline(Pipeline):
 
         model_nodes = []
         for idx, shape in enumerate(self._vertical_shape_list):
-            model = self.model
-            model.name = f"{model.name}_{idx}"
+            model = deepcopy(self.model)
+            model.name = f"{self.model.name}_{idx}"
             model.update_shapes(shape)
             model.set_input_shape_for_ovms(shape)
             model_nodes.append(Node(f"model_{idx}", model))
