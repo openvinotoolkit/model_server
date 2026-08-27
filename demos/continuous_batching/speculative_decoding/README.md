@@ -374,63 +374,7 @@ for chunk in stream:
 
 # MTP (Multi-Token Prediction)
 
-Multi-Token Prediction replaces the draft model with a lightweight prediction head that is bundled with the main model weights — no separately downloaded model is required. The head is auto-detected by OVMS when `openvino_mtp_model.xml` is present in the draft model directory.
-
-MTP is supported in two configurations:
-
-- **Continuous Batching** (`LM_CB`) — default for CPU/GPU
-- **Stateful** (`pipeline_type: LM`) — default for NPU; can also run on CPU/GPU
-
-## Model preparation
-
-Export the main model and its MTP head together. For Gemma4:
-
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir models
-
-python export_model.py text_generation --source_model google/gemma-4-12b-it \
-    --draft_source_model google/gemma-4-12b-it \
-    --weight-format int4 \
-    --config_file_path models/config.json \
-    --model_repository_path models
-```
-
-The draft directory will contain `openvino_mtp_model.xml` alongside the regular model files. OVMS detects this file automatically and enables MTP mode — no additional flags are required.
-
-## Server Deployment
-
-MTP configuration in `graph.pbtxt` is identical to Fast Draft — only `draft_models_path` (and optionally `pipeline_type`) differ:
-
-```
-draft_models_path: "google/gemma-4-12b-it"   # path containing openvino_mtp_model.xml
-```
-
-For Gemma4 on NPU add:
-```
-pipeline_type: LM
-device: "NPU"
-```
-
-## Request Generation
-
-The API is identical to Fast Draft. `num_assistant_tokens` controls how many MTP candidates are proposed per target step:
-
-```python
-from openai import OpenAI
-
-client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
-
-response = client.chat.completions.create(
-    model="google/gemma-4-12b-it",
-    messages=[{"role": "user", "content": "Explain transformer attention in one paragraph."}],
-    temperature=0,
-    max_tokens=200,
-    extra_body={"num_assistant_tokens": 5},
-)
-print(response.choices[0].message.content)
-```
+> **To be done**.
 
 # Setting Default Generation Parameters
 

@@ -5477,6 +5477,7 @@ TEST_F(LLMOptionsHttpTest, LegacyServableDraftModelsPathIsProcessedNotIgnored) {
         }
         }
     )";
+    adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<GenAiServable> servable;
