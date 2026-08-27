@@ -1044,6 +1044,37 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     return StatusCode::OK;
 }
 
+void ModelManager::unloadIdleGraphs() {
+#if (MEDIAPIPE_DISABLE == 0)
+    // Collect names of definitions that should be unloaded; iterate under
+    // a brief shared lock (inside the factory getters), then call unload()
+    // outside it. unload() re-checks all preconditions under lifecycleMtx
+    // and is non-blocking (skips graphs with in-flight requests).
+    std::vector<std::string> toUnload;
+    {
+        const auto& names = mediapipeFactory->getMediapipePipelinesNames();
+        for (const auto& name : names) {
+            MediapipeGraphDefinition* def = mediapipeFactory->findDefinitionByName(name);
+            if (def && def->shouldUnloadDueToIdle()) {
+                toUnload.push_back(name);
+            }
+        }
+    }
+    for (const auto& name : toUnload) {
+        MediapipeGraphDefinition* def = mediapipeFactory->findDefinitionByName(name);
+        if (def) {
+            // Re-check under the per-definition idle mutex to avoid racing with
+            // a concurrent wakeUp() that may have already transitioned the state.
+            auto status = def->unload();
+            if (!status.ok()) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger,
+                    "Failed to idle-unload mediapipe graph {}: {}", name, status.string());
+            }
+        }
+    }
+#endif
+}
+
 void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
     while (exitSignal.wait_for(std::chrono::milliseconds(this->watcherIntervalMillisec)) == std::future_status::timeout) {
@@ -1058,6 +1089,12 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
         }
         updateConfigurationWithoutConfigFile();
         loadingLock.unlock();
+        // Idle-unload sweep: free resources of graphs idle past their timeout.
+        // Done AFTER releasing configMtx — unload() only needs the factory's
+        // definitions lock and the per-definition lifecycleMtx, and is
+        // non-blocking (it skips graphs with in-flight requests rather than
+        // draining). This keeps configMtx hold time minimal.
+        unloadIdleGraphs();
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
@@ -1587,6 +1624,51 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
 Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
+    // Lazy wake-up with bounded retry. A request can observe state==AVAILABLE here,
+    // then have the watcher flip it to UNLOADED before create()->waitForLoaded() runs,
+    // which returns MEDIAPIPE_DEFINITION_NOT_LOADED_YET. We retry a bounded number of
+    // times: wake if UNLOADED, then create(); if create() fails specifically because
+    // the graph is not-loaded-yet AND it is currently UNLOADED, wake and retry.
+    // wakeUpIfUnloaded() serialises the transition internally so exactly one of N
+    // concurrent callers triggers the actual reload; the rest wait and then proceed.
+    constexpr int kMaxWakeAttempts = 3;
+    for (int attempt = 0; attempt < kMaxWakeAttempts; ++attempt) {
+        // Re-fetch the definition each iteration: a concurrent config reload may
+        // retire+erase it mid-loop, so a cached pointer could dangle. Bail cleanly
+        // if it is gone.
+        MediapipeGraphDefinition* def = this->mediapipeFactory->findDefinitionByName(name);
+        if (def == nullptr) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+                "Mediapipe graph {} no longer exists during wake-up loop", name);
+            return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
+        }
+        if (def->getStateCode() == PipelineDefinitionStateCode::UNLOADED) {
+            auto wakeStatus = def->wakeUpIfUnloaded(*this);
+            if (!wakeStatus.ok()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                    "Mediapipe graph {} wake-up failed: {}", name, wakeStatus.string());
+                return wakeStatus;
+            }
+        }
+        auto createStatus = this->mediapipeFactory->create(graph, name);
+        if (createStatus.ok()) {
+            return createStatus;
+        }
+        // Only retry the specific race: graph got idle-unloaded between our check and
+        // waitForLoaded(). Any other failure (genuine load failure, missing graph, etc.)
+        // is returned immediately. Re-fetch to avoid using a possibly-stale pointer.
+        MediapipeGraphDefinition* defAfter = this->mediapipeFactory->findDefinitionByName(name);
+        bool racedWithUnload = defAfter &&
+                               (createStatus == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET) &&
+                               (defAfter->getStateCode() == PipelineDefinitionStateCode::UNLOADED);
+        if (!racedWithUnload) {
+            return createStatus;
+        }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+            "Mediapipe graph {} was idle-unloaded during request; retrying wake-up (attempt {}/{})",
+            name, attempt + 1, kMaxWakeAttempts);
+    }
+    // Exhausted retries — make one final attempt and return whatever it yields.
     return this->mediapipeFactory->create(graph, name);
 #else
     SPDLOG_ERROR("Mediapipe support was disabled during build process...");

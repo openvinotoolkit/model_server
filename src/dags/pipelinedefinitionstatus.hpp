@@ -34,7 +34,8 @@ enum class PipelineDefinitionStateCode {
     LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION,
     AVAILABLE_REQUIRED_REVALIDATION,
     AVAILABLE,
-    RETIRED
+    RETIRED,
+    UNLOADED
 };
 
 const std::string& pipelineDefinitionStateCodeToString(PipelineDefinitionStateCode code);
@@ -112,6 +113,11 @@ struct LoadingFailedLastValidationRequiredRevalidation;
  * State in which pipeline is retired - removed from config
  */
 struct RetiredState;
+/**
+ * State in which pipeline is idle-unloaded (resources freed) but not retired.
+ * Auto-reloads on the next inference request.
+ */
+struct UnloadedState;
 
 #define EVENT_STRUCT_WITH_NAME(x)               \
     struct x {                                  \
@@ -131,6 +137,7 @@ EVENT_STRUCT_WITH_NAME(ValidationFailedEvent);
 EVENT_STRUCT_WITH_NAME(ValidationPassedEvent);
 EVENT_STRUCT_WITH_NAME(UsedModelChangedEvent);
 EVENT_STRUCT_WITH_NAME(RetireEvent);
+EVENT_STRUCT_WITH_NAME(UnloadEvent);
 
 template <typename State>
 struct StateChanger {
@@ -155,6 +162,7 @@ struct BeginState {
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const;
     StateKeeper handle(const UsedModelChangedEvent& e) const;
     StateKeeper handle(const RetireEvent& e) const;
+    StateKeeper handle(const UnloadEvent& e) const;
 };
 
 struct ReloadState {
@@ -165,6 +173,7 @@ struct ReloadState {
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const;
     StateKeeper handle(const UsedModelChangedEvent& e) const;
     StateKeeper handle(const RetireEvent& e) const;
+    StateKeeper handle(const UnloadEvent& e) const;
 };
 
 struct AvailableState {
@@ -175,6 +184,7 @@ struct AvailableState {
     StateKeeper handle(const ValidationFailedEvent& e) const;
     StateChanger<AvailableRequiredRevalidation> handle(const UsedModelChangedEvent& e) const;
     StateChanger<RetiredState> handle(const RetireEvent& e) const;
+    StateChanger<UnloadedState> handle(const UnloadEvent& e) const;
 };
 
 struct AvailableRequiredRevalidation {
@@ -185,6 +195,7 @@ struct AvailableRequiredRevalidation {
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const;
     StateKeeper handle(const UsedModelChangedEvent& e) const;
     StateChanger<RetiredState> handle(const RetireEvent& e) const;
+    StateKeeper handle(const UnloadEvent& e) const;
 };
 
 struct LoadingPreconditionFailedState {
@@ -195,6 +206,11 @@ struct LoadingPreconditionFailedState {
     StateKeeper handle(const ValidationFailedEvent& e) const;
     StateChanger<LoadingFailedLastValidationRequiredRevalidation> handle(const UsedModelChangedEvent& e) const;
     StateChanger<RetiredState> handle(const RetireEvent& e) const;
+    // A failed wake-up reload of an idle graph reverts to UNLOADED so the next
+    // inference request can retry the wake (self-healing once the underlying issue
+    // is resolved). Only wakeUpIfUnloaded() sends UnloadEvent from this state;
+    // the watcher's unload() only does so from AVAILABLE.
+    StateChanger<UnloadedState> handle(const UnloadEvent& e) const;
 };
 
 struct LoadingFailedLastValidationRequiredRevalidation {
@@ -205,6 +221,7 @@ struct LoadingFailedLastValidationRequiredRevalidation {
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const;
     StateKeeper handle(const UsedModelChangedEvent& e) const;
     StateChanger<RetiredState> handle(const RetireEvent& e) const;
+    StateKeeper handle(const UnloadEvent& e) const;
 };
 
 struct RetiredState {
@@ -215,9 +232,25 @@ struct RetiredState {
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const;
     StateKeeper handle(const UsedModelChangedEvent& e) const;
     StateKeeper handle(const RetireEvent& e) const;
+    StateKeeper handle(const UnloadEvent& e) const;
 };
 
-class PipelineDefinitionStatus : public MachineState<BeginState, ReloadState, AvailableState, AvailableRequiredRevalidation, LoadingPreconditionFailedState, LoadingFailedLastValidationRequiredRevalidation, RetiredState> {
+struct UnloadedState {
+    static const PipelineDefinitionStateCode code = PipelineDefinitionStateCode::UNLOADED;
+    PipelineDefinitionStateCode getStateCode() const;
+    // Wake-up: reuse the reload path
+    StateChanger<ReloadState> handle(const ReloadEvent& e) const;
+    // Config removal while unloaded
+    StateChanger<RetiredState> handle(const RetireEvent& e) const;
+    // Defensive: if validation somehow passes after an unload, go back to AVAILABLE
+    StateChanger<AvailableState> handle(const ValidationPassedEvent& e) const;
+    // All other events are no-ops in UNLOADED
+    StateKeeper handle(const ValidationFailedEvent& e) const;
+    StateKeeper handle(const UsedModelChangedEvent& e) const;
+    StateKeeper handle(const UnloadEvent& e) const;
+};
+
+class PipelineDefinitionStatus : public MachineState<BeginState, ReloadState, AvailableState, AvailableRequiredRevalidation, LoadingPreconditionFailedState, LoadingFailedLastValidationRequiredRevalidation, RetiredState, UnloadedState> {
 public:
     PipelineDefinitionStatus(const std::string& type, const std::string& name);
     bool isAvailable() const;
