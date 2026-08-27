@@ -1,13 +1,16 @@
 # LLM Models in Speculative Decoding Pipeline{#ovms_demos_continuous_batching_speculative_decoding}
 
-Following [OpenVINO GenAI docs](https://docs.openvino.ai/2026/openvino-workflow-generative/inference-with-genai.html#efficient-text-generation-via-speculative-decoding):
-> Speculative decoding (or assisted-generation) enables faster token generation when an additional smaller draft model is used alongside the main model. This reduces the number of infer requests to the main model, increasing performance.
-> 
-> The draft model predicts the next K tokens one by one in an autoregressive manner. The main model validates these predictions and corrects them if necessary - in case of a discrepancy, the main model prediction is used. Then, the draft model acquires this token and runs prediction of the next K tokens, thus repeating the cycle.
+Speculative (assisted) decoding reduces generation latency without changing the output distribution. A lightweight drafter proposes candidate tokens; the main model validates them in one parallel forward pass. Accepted draft tokens replace sequential decode steps of the main model, yielding end-to-end speedups that are most pronounced at concurrency 1.
 
-The goal of this sampling method is to reduce latency while keeping the main model accuracy. It gives the biggest gain in low concurrency scenario.
+OpenVINO GenAI implements three drafting strategies, all exposed through the same `draft_models_path` configuration field in OVMS:
 
-This demo shows how to use speculative decoding in the model serving scenario, by deploying main and draft models in a speculative decoding pipeline in a manner similar to regular deployments with continuous batching.
+| Strategy | How it drafts | Best for | Extra model required |
+|---|---|---|---|
+| **Fast Draft** | Small off-the-shelf LLM | General-purpose; any target/draft pair | Yes — smaller LLM sharing target's tokenizer |
+| **EAGLE3** | Draft head conditioned on target's hidden states | Highest acceptance rate; code and reasoning; supports tree drafting | Yes — EAGLE3 head trained on the target family |
+| **MTP** | Built-in multi-token prediction head | Models with bundled MTP heads (e.g. Gemma4 on NPU) | No — head bundled with the main model |
+
+All three strategies share the same server API — only the generation parameters differ.
 
 ## Prerequisites
 
@@ -15,12 +18,18 @@ This demo shows how to use speculative decoding in the model serving scenario, b
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
-# Eagle3
-Currently using [EAGLE3](https://github.com/SafeAILab/EAGLE) requires some specific preparations hence dedicated section.
+# EAGLE3
+
+EAGLE3 replaces the generic draft model with a small head — typically one transformer layer — trained to predict the next token from the target model's hidden states. Because it sees the same internal representation as the target, its acceptance rate is substantially higher than Fast Draft on the same target.
+
+EAGLE3 supports two candidate generation modes:
+
+- **Chain drafting** (default) — runs the draft head autoregressively for `num_assistant_tokens` steps and submits a linear chain of candidates.
+- **Tree drafting** — expands `branching_factor` top-k continuations at each of `tree_depth` layers, then submits the highest-scoring `num_assistant_tokens` candidates in one packed verification step. This compounds the already-high EAGLE3 acceptance rate into longer accepted runs per target step, at the cost of a larger validation batch. Best on GPU at small batch sizes.
 
 ## Model considerations
 
-For this demo we picked a pair of models from [available models](https://github.com/SafeAILab/EAGLE#eagle-3-models-on-hugging-face):
+For this demo we use a model pair from [available EAGLE3 models](https://github.com/SafeAILab/EAGLE#eagle-3-models-on-hugging-face):
 - [Qwen/Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B) as a main model
 - [AngelSlim/Qwen3-8B_eagle3](https://huggingface.co/AngelSlim/Qwen3-8B_eagle3) as a draft model
 
@@ -153,39 +162,70 @@ P99 ITL (ms):                            72.11
 ==================================================
 ```
 
-## Setting default generation parameters
+## Chain drafting
 
-The main model's `generation_config.json` (e.g. `models/Qwen/Qwen3-8B/generation_config.json`) is read at server start-up as the default generation configuration for all requests that do not specify a given parameter. It ships with the model weights from Hugging Face, but is fully operator-editable.
+Send `num_assistant_tokens` to control how many candidates the draft head proposes per target step:
 
-For each generation parameter the server applies the following resolution order:
+```python
+from openai import OpenAI
 
-**request body → `generation_config.json` → OVMS built-in default**
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
 
-For example, to set a deployment-level default for `num_assistant_tokens`:
-```json
-{ "num_assistant_tokens": 7 }
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-8B",
+    messages=[{"role": "user", "content": "What is OpenVINO?"}],
+    temperature=0,
+    max_tokens=200,
+    extra_body={"num_assistant_tokens": 5},
+)
+print(response.choices[0].message.content)
 ```
-The built-in fallback is `5`. The same applies to `assistant_confidence_threshold` and all other generation parameters such as `temperature`, `max_new_tokens`, etc.
+
+Increase `num_assistant_tokens` until the tokens-per-step figure plateaus, then back off — past the plateau, rejected draft tokens are pure overhead.
+
+Setting `num_assistant_tokens: 0` disables drafting for that request; only the target model runs.
+
+## Tree drafting
+
+Tree drafting adds two `GenerationConfig` fields. Setting `tree_depth > 0` switches from chain to tree mode:
+
+```python
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-8B",
+    messages=[{"role": "user", "content": "What is OpenVINO?"}],
+    temperature=0,
+    max_tokens=200,
+    extra_body={
+        "num_assistant_tokens": 15,   # candidates verified per step
+        "branching_factor": 8,        # top-k expansions per tree layer
+        "tree_depth": 4,              # draft head iterations
+    },
+)
+```
+
+`total_draft_tokens = branching_factor² × (tree_depth − 1) + branching_factor` must be ≥ `num_assistant_tokens`. A reasonable starting point is `branching_factor=4..8`, `tree_depth=3..4`.
+
+Tree drafting is EAGLE3-only; it cannot be combined with beam search or multinomial sampling.
 
 ## Limitations
 
-Eagle3 deployments currently have following known limitations:
-- stateful mode (pipeline_type: LM) not supported,
-- concurrency not supported - max 1 request can be processed at a time (**ALWAYS** use rest_workers=2 when deploying Eagle3 pipeline),
-- prefix caching not supported,
-- only greedy sampling is supported (enforced by OVMS if pipeline configured properly),
+EAGLE3 deployments have the following known limitations:
+- concurrency not supported — max 1 request can be processed at a time (**always** use `rest_workers=2` when deploying an EAGLE3 pipeline)
+- prefix caching not supported
+- only greedy sampling supported (enforced automatically by OVMS)
 - MoE models not supported
 
-# Classic Models
+# Fast Draft
+
+Fast Draft is the classic two-model setup: a smaller off-the-shelf LLM that shares the target's tokenizer proposes tokens autoregressively, and the target model verifies them. It works with any target/draft pair without retraining. The speedup depends on how often the small model's distribution agrees with the large one.
 
 ## Model considerations
 
-From the functional perspective both main and draft models must use the same tokenizer, so the tokens from the draft model are correctly matched in the the main model.
+Both models must share the same tokenizer so draft token IDs map correctly to target token IDs.
 
-From the performance perspective, benefits from speculative decoding are strictly tied to the pair of models used.
-For some models, the performance boost is significant, while for others it's rather negligible. Models sizes and precisions also come into play, so optimal setup shall be found empirically.
+Performance gain depends heavily on the model pair and workload — the optimal combination should be found empirically. Model sizes and precisions both factor in.
 
-In this demo we will use:
+In this demo:
   - [meta-llama/CodeLlama-7b-hf](https://huggingface.co/meta-llama/CodeLlama-7b-hf) as a main model
   - [AMD-Llama-135m](https://huggingface.co/amd/AMD-Llama-135m) as a draft model
 
@@ -300,11 +340,7 @@ curl http://localhost:8000/v1/config
 
 ## Request Generation
 
-Models used in this demo - `meta-llama/CodeLlama-7b-hf` and `AMD-Llama-135m` are not chat models, so we will use `completions` endpoint to interact with the pipeline.
-
-Below you can see an exemplary unary request (you can switch `stream` parameter to enable streamed response). Compared to calls to regular continuous batching model, this request has additional parameter `num_assistant_tokens` which specifies how many tokens should a draft model generate before main model validates them.
-
-`num_assistant_tokens` does not have to be sent on every request — see [Setting default generation parameters](#setting-default-generation-parameters) for how to configure a deployment-level default via `generation_config.json`.
+Models used in this demo — `meta-llama/CodeLlama-7b-hf` and `AMD-Llama-135m` — are base (non-chat) models, so we use the `completions` endpoint.
 
 ```console
 pip3 install openai
@@ -330,24 +366,84 @@ for chunk in stream:
         print(chunk.choices[0].text, end="", flush=True)
 ```
 
-Output:
+**`num_assistant_tokens`** controls how many tokens the draft model proposes before the main model validates them. High values pay off when the draft frequently agrees with the target; low values reduce wasted work when it doesn't. `5` is a good starting point.
+
+**`assistant_confidence_threshold`** is an alternative stopping criterion: the draft keeps proposing while its token probability exceeds the threshold, then hands off to the target. It is mutually exclusive with `num_assistant_tokens`. Supported on the Continuous Batching backend only (`LM_CB`) — the stateful backend (`pipeline_type: LM`) does not implement dynamic-length drafting.
+
+`num_assistant_tokens` does not have to be sent on every request — see [Setting default generation parameters](#setting-default-generation-parameters) to configure a deployment-level default.
+
+# MTP (Multi-Token Prediction)
+
+Multi-Token Prediction replaces the draft model with a lightweight prediction head that is bundled with the main model weights — no separately downloaded model is required. The head is auto-detected by OVMS when `openvino_mtp_model.xml` is present in the draft model directory.
+
+MTP is supported in two configurations:
+
+- **Continuous Batching** (`LM_CB`) — default for CPU/GPU
+- **Stateful** (`pipeline_type: LM`) — default for NPU; can also run on CPU/GPU
+
+## Model preparation
+
+Export the main model and its MTP head together. For Gemma4:
+
+```console
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+mkdir models
+
+python export_model.py text_generation --source_model google/gemma-4-12b-it \
+    --draft_source_model google/gemma-4-12b-it \
+    --weight-format int4 \
+    --config_file_path models/config.json \
+    --model_repository_path models
+```
+
+The draft directory will contain `openvino_mtp_model.xml` alongside the regular model files. OVMS detects this file automatically and enables MTP mode — no additional flags are required.
+
+## Server Deployment
+
+MTP configuration in `graph.pbtxt` is identical to Fast Draft — only `draft_models_path` (and optionally `pipeline_type`) differ:
 
 ```
-if len(numbers) <= 1:
-  return numbers
-else:
-  pivot = numbers[0]
-  lesser = [x for x in numbers[1:] if x <= pivot]
-  greater = [x for x in numbers[1:] if x > pivot]
-  return quicksort(lesser) + [pivot] + quicksort(greater)
-                                    
-def quicksort_recursive(numbers):
-   if
-```   
+draft_models_path: "google/gemma-4-12b-it"   # path containing openvino_mtp_model.xml
+```
 
+For Gemma4 on NPU add:
+```
+pipeline_type: LM
+device: "NPU"
+```
 
-High value for `num_assistant_tokens` brings profit when tokens generated by the draft model mostly match the main model. If they don't, tokens are dropped and both models do additional work. For low values such risk is lower, but the potential performance boost is limited. Usually the value of `5` is a good compromise.
+## Request Generation
 
-Second speculative decoding specific parameter is `assistant_confidence_threshold ` which determines confidence level for continuing generation. If draft model generates token with confidence below that threshold, it stops generation for the current cycle and main model starts validation. `assistant_confidence_threshold` is a float in range (0, 1).
+The API is identical to Fast Draft. `num_assistant_tokens` controls how many MTP candidates are proposed per target step:
 
-**Note that `num_assistant_tokens` and `assistant_confidence_threshold` are mutually exclusive.**
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+
+response = client.chat.completions.create(
+    model="google/gemma-4-12b-it",
+    messages=[{"role": "user", "content": "Explain transformer attention in one paragraph."}],
+    temperature=0,
+    max_tokens=200,
+    extra_body={"num_assistant_tokens": 5},
+)
+print(response.choices[0].message.content)
+```
+
+# Setting Default Generation Parameters
+
+The main model's `generation_config.json` is read at server start-up as the default generation configuration for all requests. Parameters absent from the request body fall back to this file, then to OVMS built-in defaults.
+
+**Resolution order: request body → `generation_config.json` → OVMS built-in default**
+
+To set a deployment-level default for any assisted decoding parameter, edit `generation_config.json` in the main model directory:
+
+```json
+{
+    "num_assistant_tokens": 7
+}
+```
+
+The built-in fallback for `num_assistant_tokens` is `5`. All other generation parameters (`temperature`, `max_new_tokens`, `top_p`, etc.) follow the same resolution order.
