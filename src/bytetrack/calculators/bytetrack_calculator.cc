@@ -314,12 +314,11 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
         std::vector<bytetrack::STrack> l_stracks;
         l_stracks.reserve(new_lost.size());
         for (auto* t : new_lost) {
-             if (t->state() != bytetrack::BaseTrack::TrackState::REMOVED)
-                 l_stracks.push_back(*t);
-         }
+            if (t->state() != bytetrack::BaseTrack::TrackState::REMOVED)
+                l_stracks.push_back(*t);
+        }
         lost_stracks_ = std::move(l_stracks);
     }
-
 
     // remove duplicates
     {

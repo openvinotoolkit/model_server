@@ -16,10 +16,12 @@
 // basetrack.cpp
 #include "src/bytetrack/calculators/basetrack.h"
 
+#include <atomic>
+
 namespace mediapipe {
 namespace bytetrack {
 
-int BaseTrack::count_ = 0;
+std::atomic<int> BaseTrack::count_{0};
 
 }  // namespace bytetrack
 }  // namespace mediapipe

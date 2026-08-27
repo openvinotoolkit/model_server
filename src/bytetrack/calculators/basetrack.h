@@ -17,6 +17,8 @@
 #ifndef SRC_BYTETRACK_CALCULATORS_BASETRACK_H_
 #define SRC_BYTETRACK_CALCULATORS_BASETRACK_H_
 
+#include <atomic>
+
 namespace mediapipe {
 namespace bytetrack {
 
@@ -28,8 +30,8 @@ public:
         REMOVED };
 
     // mirrors Python's next_id() — static counter owned here
-    static int next_id() { return ++count_; }
-    static void reset_id() { count_ = 0; }
+    static int next_id() { return count_.fetch_add(1, std::memory_order_relaxed) + 1; }
+    static void reset_id() { count_.store(0, std::memory_order_relaxed); }
 
     // Accessors
     int track_id() const { return track_id_; }
@@ -49,7 +51,7 @@ protected:
     float score_ = 0.f;
     bool is_activated_ = false;
     TrackState state_ = TrackState::NEW;
-    static int count_;
+    static std::atomic<int> count_;
 };
 
 }  // namespace bytetrack
