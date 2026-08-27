@@ -90,7 +90,7 @@ models
 
 :::{dropdown} **Deploying with Docker**
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:weekly --rest_port 8000 --rest_workers 2 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:weekly --rest_port 8000 --config_path /workspace/config.json
 ```
 
 Running above command starts the container with no accelerators support. 
@@ -109,7 +109,7 @@ as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md),
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-ovms --rest_port 8000 --rest_workers 2 --config_path ./models/config.json
+ovms --rest_port 8000 --config_path ./models/config.json
 ```
 :::
 
@@ -206,14 +206,6 @@ response = client.chat.completions.create(
 `total_draft_tokens = branching_factor² × (tree_depth − 1) + branching_factor` must be ≥ `num_assistant_tokens`. A reasonable starting point is `branching_factor=4..8`, `tree_depth=3..4`.
 
 Tree drafting is EAGLE3-only; it cannot be combined with beam search or multinomial sampling.
-
-## Limitations
-
-EAGLE3 deployments have the following known limitations:
-- concurrency not supported — max 1 request can be processed at a time (**always** use `rest_workers=2` when deploying an EAGLE3 pipeline)
-- prefix caching not supported
-- only greedy sampling supported (enforced automatically by OVMS)
-- MoE models not supported
 
 # Fast Draft
 
