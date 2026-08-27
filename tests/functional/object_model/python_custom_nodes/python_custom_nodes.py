@@ -20,7 +20,7 @@ from tests.functional.utils.inference.communication import GRPC
 from tests.functional.utils.logger import get_logger
 from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
 from tests.functional.constants.ovms import Ovms
-from ovms.constants.pipelines import MediaPipe, NodesConnection, NodeType, PythonGraphNode
+from tests.functional.constants.pipelines import MediaPipe, NodesConnection, NodeType, PythonGraphNode
 from tests.functional.models.models_datasets import LanguageModelDataset
 from tests.functional.object_model.mediapipe_calculators import HttpLLMCalculator, PythonCalculator, \
     ImageGenCalculator, EmbeddingsCalculatorOV, RerankCalculatorOV, S2tCalculator, T2sCalculator

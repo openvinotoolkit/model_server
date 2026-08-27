@@ -73,7 +73,6 @@ from tests.functional.models.models_datasets import (
 )
 from tests.functional.constants.ovms import CurrentTarget as ct
 from tests.functional.constants.ovms import MediaPipeConstants, Ovms
-from ovms.constants.pipelines import SimpleMediaPipe
 from tests.functional.object_model.ovms_instance import OvmsInstance
 from tests.functional.object_model.ovsa import OvsaCerts
 from tests.functional.object_model.python_custom_nodes.common import STREAMING_CHANNEL_ARGS
@@ -725,7 +724,7 @@ def predict_and_assert(inference_infos: List[InferenceInfo], validate_results=Tr
         assert outputs, "Prediction returned no output"
         if validate_results:
             if inference_info.model.is_mediapipe:
-                if isinstance(inference_info.model, SimpleMediaPipe) and output_key is None:
+                if type(inference_info.model).__name__ == "SimpleMediaPipe" and output_key is None:
                     output_key = "output"
                 else:
                     output_key = output_key
