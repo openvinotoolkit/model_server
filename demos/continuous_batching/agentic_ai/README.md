@@ -203,7 +203,7 @@ Use MCP server, with additional image of Gdańsk old town. VLM model deduces loc
 
 > **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
-```bash
+```text
 python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.5-9B-int4-ov --base-url http://localhost:8000/v1 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
