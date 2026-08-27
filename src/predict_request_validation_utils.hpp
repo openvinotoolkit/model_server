@@ -290,7 +290,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
         return StatusCode::NOT_IMPLEMENTED;
     }
     Status finalStatus = StatusCode::OK;
-    // RETURN_IF_ERR(validateNumberOfTensors());
+    RETURN_IF_ERR(validateNumberOfTensors());
     RETURN_IF_ERR(validateRequestCoherency());
     size_t bufferId = 0;
     for (const auto& [name, tensorInfo] : ((choice == ValidationChoice::INPUT) ? inputsInfo : outputsInfo)) {
