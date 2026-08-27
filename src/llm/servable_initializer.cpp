@@ -565,6 +565,10 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         } else if (pipelineType == PipelineType::VLM_CB) {
             // VLM uses CB engine, so initialization part is shared (both servables share the same properties),
             // therefore we can use CB servable initializer to initialize VLM servable
+            if (!nodeOptions.draft_models_path().empty() && !nodeOptions.draft_eagle3_mode()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Fast Draft speculative decoding is not supported for VLM pipelines. Use EAGLE3 (draft_eagle3_mode: true) with a matching EAGLE3 head model instead.");
+                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+            }
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<VisualLanguageModelServable>();

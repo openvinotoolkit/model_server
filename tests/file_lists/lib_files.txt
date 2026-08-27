@@ -58,6 +58,9 @@ libopenvino_c.so.2640->libopenvino_c.so.2026.4.0
 libopenvino_genai.so->libopenvino_genai.so.2640
 libopenvino_genai.so.2026.4.0.0
 libopenvino_genai.so.2640->libopenvino_genai.so.2026.4.0.0
+libopenvino_gguf_frontend.so->libopenvino_gguf_frontend.so.2640
+libopenvino_gguf_frontend.so.2026.4.0
+libopenvino_gguf_frontend.so.2640->libopenvino_gguf_frontend.so.2026.4.0
 libopenvino_hetero_plugin.so
 libopenvino_intel_cpu_plugin.so
 libopenvino_intel_gpu_plugin.so

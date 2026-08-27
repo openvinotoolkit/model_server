@@ -121,6 +121,7 @@ struct TextGenGraphSettingsImpl {
     std::string dynamicSplitFuse = "true";
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
+    bool draftEagle3Mode = false;
     std::optional<std::string> pipelineType;
     std::optional<std::string> reasoningParser;
     std::optional<std::string> toolParser;
