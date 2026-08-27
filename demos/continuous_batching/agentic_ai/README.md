@@ -218,7 +218,7 @@ Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi) 
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models {GPU_ARGS} openvino/model_server:latest-gpu \
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models ${GPU_ARGS} openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-4B-int4-ov
 ```
 
@@ -239,7 +239,7 @@ Pull and start OVMS:
 mkdir -p ${HOME}/models
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi) 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models ${GPU_ARGS} openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov
+--rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --enable_tool_guided_generation true
 ```
 
 Use MCP server:
@@ -252,14 +252,14 @@ Exemplary output:
 The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is 42%, and the dew point is -2.9°C. Wind is blowing from the northeast at 3.6 km/h, with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, and there is 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
-:::{tab-item} Qwen3-30B-A3B-Instruct-2507-int4-ov
-:sync: Qwen3-30B-A3B-Instruct-2507-int4-ov
+:::{tab-item} Qwen3-30B-A3B-Instruct-2507
+:sync: Qwen3-30B-A3B-Instruct-2507
 Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi) 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models ${GPU_ARGS} openvino/model_server:latest-gpu \
---rest_port 8000 --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --model_repository_path /models
+--rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov
 ```
 
 Use MCP server:
@@ -336,7 +336,7 @@ Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi) 
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models openvino/model_server:latest-gpu \
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models ${GPU_ARGS} openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov
 ```
 
