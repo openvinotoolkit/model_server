@@ -5914,6 +5914,7 @@ TEST(BaseGenerationConfigBuilderTest, FastDraftDefaultsNumAssistantTokensTo5) {
     ov::genai::GenerationConfig baseConfig;
     BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
     OpenAIRequest request;
+    request.temperature = 0.0f;
     builder.parseConfigFromRequest(request);
     builder.adjustConfigForDecodingMethod();
     EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
@@ -5942,11 +5943,30 @@ TEST(BaseGenerationConfigBuilderTest, FastDraftConfidenceThresholdAloneIsValid) 
     ov::genai::GenerationConfig baseConfig;
     BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
     OpenAIRequest request;
+    request.temperature = 0.0f;
     request.assistantConfidenceThreshold = 0.8f;
     builder.parseConfigFromRequest(request);
     EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
     EXPECT_FLOAT_EQ(builder.getConfig().assistant_confidence_threshold, 0.8f);
     EXPECT_FALSE(builder.getConfig().num_assistant_tokens.has_value());
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftSamplingThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.7f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftGreedyWithoutMaxTokensIsValid) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
 }
 
 TEST(BaseGenerationConfigBuilderTest, PromptLookupDefaultsApplied) {

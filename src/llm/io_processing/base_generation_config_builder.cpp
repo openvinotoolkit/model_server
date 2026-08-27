@@ -33,6 +33,8 @@ void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
             throw std::invalid_argument("num_assistant_tokens and assistant_confidence_threshold are mutually exclusive; set only one");
         if (config.num_assistant_tokens.has_value() && config.num_assistant_tokens.value() == 0)
             throw std::invalid_argument("num_assistant_tokens must be greater than 0 for Fast Draft speculative decoding");
+        if (config.do_sample)
+            throw std::invalid_argument("multinomial sampling (temperature > 0) is not supported for Fast Draft speculative decoding; use temperature=0");
         if (!config.num_assistant_tokens.has_value() && config.assistant_confidence_threshold == 0.f) {
             config.num_assistant_tokens = 5;
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding num_assistant_tokens to default value of 5 for fast draft decoding as neither num_assistant_tokens nor assistant_confidence_threshold were set.");
