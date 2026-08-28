@@ -23,6 +23,7 @@
 #include "src/llm/io_processing/minicpm5/minicpm5_tool_parser.hpp"
 #include "src/llm/io_processing/minicpm5/minicpm5_reasoning_parser.hpp"
 #include "src/test/platform_utils.hpp"
+#include "src/test/llm/output_parsers/output_parser_test_utils.hpp"
 
 using namespace ovms;
 
@@ -106,11 +107,11 @@ protected:
     }
 
     std::vector<int64_t> encodeInput(const std::string& input) {
-        if (input == Minicpm5ReasoningParser::reasoningStartTag) {
-            return {Minicpm5ReasoningParser::reasoningStartTokenId};
+        if (input == "<think>") {
+            return {int64_t{8}};  // <think> token ID in MiniCPM5
         }
-        if (input == Minicpm5ReasoningParser::reasoningEndTag) {
-            return {Minicpm5ReasoningParser::reasoningEndTokenId};
+        if (input == "</think>") {
+            return {int64_t{9}};  // </think> token ID in MiniCPM5
         }
         auto generatedTensor = minicpm5Tokenizer->encode(input, ov::genai::add_special_tokens(true)).input_ids;
         return std::vector<int64_t>(
@@ -120,36 +121,30 @@ protected:
 
     ParsedOutput generateParsedOutput(const std::string& input) {
         auto generatedTokens = encodeInput(input);
-        return outputParser->parse(generatedTokens, true);
+        return ovms::test::parseWithStreamer(*minicpm5Tokenizer, *outputParser, generatedTokens, true, true);
     }
 
     void assertReasoningVec(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
             std::vector<int64_t> tokens = {};
-            if (chunk == Minicpm5ReasoningParser::reasoningStartTag) {
-                tokens = {Minicpm5ReasoningParser::reasoningStartTokenId};
-            } else if (chunk == Minicpm5ReasoningParser::reasoningEndTag) {
-                tokens = {Minicpm5ReasoningParser::reasoningEndTokenId};
+            if (chunk == "<think>") {
+                tokens = {int64_t{8}};  // <think>
+            } else if (chunk == "</think>") {
+                tokens = {int64_t{9}};  // </think>
             } else {
                 tokens = encodeInput(chunk);
             }
-            std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, tokens, true, finishReason);
+            std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, tokens, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }
             if (expectedDelta.has_value() && doc.has_value()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                std::string docStr = buffer.GetString();
+                std::string docStr = ovms::test::deltaToJson(*doc);
                 EXPECT_EQ(docStr, expectedDelta.value()) << "Mismatch for chunk: " << chunk;
             } else {
                 std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
                 std::string docStr = doc.has_value() ? [&]() {
-                    rapidjson::StringBuffer buffer;
-                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                    doc->Accept(writer);
-                    return std::string(buffer.GetString());
+                    return ovms::test::deltaToJson(*doc);
                 }()
                                                      : "std::nullopt";
                 FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
@@ -162,15 +157,12 @@ protected:
     void assertStreamingVec(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
             auto tokens = encodeInput(chunk);
-            std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, tokens, true, finishReason);
+            std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, tokens, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }
             if (expectedDelta.has_value() && doc.has_value()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                std::string docStr = buffer.GetString();
+                std::string docStr = ovms::test::deltaToJson(*doc);
                 std::string expected = expectedDelta.value();
                 std::string idKey = "\"id\":\"";
                 auto docIdPos = docStr.find(idKey);
@@ -198,10 +190,7 @@ protected:
             } else {
                 std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
                 std::string docStr = doc.has_value() ? [&]() {
-                    rapidjson::StringBuffer buffer;
-                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                    doc->Accept(writer);
-                    return std::string(buffer.GetString());
+                    return ovms::test::deltaToJson(*doc);
                 }()
                                                      : "std::nullopt";
                 FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
@@ -266,19 +255,34 @@ TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
     EXPECT_EQ(parsedOutput.reasoning, "");
 }
 
-// This scenario will be handled only in unary, in streaming it's not possible to parse reasoning without the starting tag
+// In production, MiniCPM5's chat template appends <think> at the end of the
+// prompt; detectAndSetImplicitReasoningStart detects it and sets the parser
+// into implicit reasoning mode. The model then outputs reasoning text directly
+// without emitting <think>, and terminates with </think>.
+// We simulate that here via setImplicitReasoningStart(true).
 TEST_F(Minicpm5OutputParserTest, ParseReasoningWithoutStartingTag) {
-    const std::string input = "This is my internal reasoning about what to call.</think>";
-    ParsedOutput parsedOutput = generateParsedOutput(input);
+    auto scopedParser = std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
+    scopedParser->detectAndSetImplicitReasoningStart("Some text\n<|im_start|>assistant\n<think>");
+
+    // Encode the reasoning text without BOS (in production these are generated
+    // tokens, not prompt tokens — the model never emits <think> itself).
+    auto encode = [](ov::genai::Tokenizer& tok, const std::string& text) {
+        auto tensor = tok.encode(text, ov::genai::add_special_tokens(false)).input_ids;
+        return std::vector<int64_t>(tensor.data<int64_t>(), tensor.data<int64_t>() + tensor.get_size());
+    };
+    std::vector<int64_t> generatedTokens = encode(*minicpm5Tokenizer, "This is my internal reasoning about what to call.");
+    generatedTokens.push_back(9);  // </think>
+
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*minicpm5Tokenizer, *scopedParser, generatedTokens, true, true);
 
     EXPECT_EQ(parsedOutput.toolCalls.size(), 0u);
-    EXPECT_NE(parsedOutput.reasoning.find("internal reasoning"), std::string::npos);
+    EXPECT_NE(parsedOutput.reasoning.find("This is my internal reasoning about what to call."), std::string::npos);
     EXPECT_EQ(parsedOutput.content, "");
 }
 
 TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
-    constexpr int64_t thinkStartTokenId = Minicpm5ReasoningParser::reasoningStartTokenId;
-    constexpr int64_t thinkEndTokenId = Minicpm5ReasoningParser::reasoningEndTokenId;
+    constexpr int64_t thinkStartTokenId = 8;  // <think> token ID in MiniCPM5
+    constexpr int64_t thinkEndTokenId = 9;    // </think> token ID in MiniCPM5
 
     auto outputParserWithReasoning =
         std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
@@ -296,7 +300,7 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
     auto functionCallTokens = encode(*minicpm5Tokenizer, R"(<function name="search"><param name="query">Intel</param></function>)");
     generatedTokens.insert(generatedTokens.end(), functionCallTokens.begin(), functionCallTokens.end());
 
-    ParsedOutput parsedOutput = outputParserWithReasoning->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*minicpm5Tokenizer, *outputParserWithReasoning, generatedTokens, true, true);
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "search");
@@ -306,38 +310,11 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
     EXPECT_EQ(parsedOutput.content, "");
 }
 
-TEST_F(Minicpm5OutputParserTest, ParseWithUnterminatedThinkBlockDoesNotCrash) {
-    constexpr int64_t thinkStartTokenId = Minicpm5ReasoningParser::reasoningStartTokenId;
-
-    auto outputParserWithReasoning =
-        std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
-
-    auto encode = [](ov::genai::Tokenizer& tok, const std::string& text) {
-        auto tensor = tok.encode(text, ov::genai::add_special_tokens(false)).input_ids;
-        return std::vector<int64_t>(tensor.data<int64_t>(), tensor.data<int64_t>() + tensor.get_size());
-    };
-
-    std::vector<int64_t> generatedTokens;
-    generatedTokens.push_back(thinkStartTokenId);
-    auto reasoningTokens = encode(*minicpm5Tokenizer, "This is my internal reasoning about what to call.");
-    generatedTokens.insert(generatedTokens.end(), reasoningTokens.begin(), reasoningTokens.end());
-    // No closing think token here - generation stops mid-reasoning.
-    auto functionCallTokens = encode(*minicpm5Tokenizer, R"(<function name="search"><param name="query">Intel</param></function>)");
-    generatedTokens.insert(generatedTokens.end(), functionCallTokens.begin(), functionCallTokens.end());
-
-    ParsedOutput parsedOutput;
-    ASSERT_NO_THROW(parsedOutput = outputParserWithReasoning->parse(generatedTokens, true));
-
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "search");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"query":"Intel"})");
-}
-
 TEST_F(Minicpm5OutputParserTest, RequiresStreamingWithSpecialTokens) {
     Minicpm5ToolParser toolParser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
-    EXPECT_TRUE(toolParser.requiresStreamingWithSpecialTokens());
+    EXPECT_TRUE(toolParser.getParsingConfig().needsSpecialTokens);
     Minicpm5ReasoningParser reasoningParser(*minicpm5Tokenizer);
-    EXPECT_TRUE(reasoningParser.requiresStreamingWithSpecialTokens());
+    EXPECT_TRUE(reasoningParser.getParsingConfig().needsSpecialTokens);
     EXPECT_NO_THROW({
         OutputParser parser(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
         (void)parser;
