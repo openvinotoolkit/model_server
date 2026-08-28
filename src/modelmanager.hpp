@@ -421,6 +421,8 @@ public:
 
     // Enqueue an urgent servable load request (for inference threads).
     std::future<Status> requestServableLoad(const std::string& name);
+    std::future<Status> requestServableRetire(const std::string& name);
+    std::future<Status> requestServableUnload(const std::string& name);
 
     /**
      * @brief Starts model manager using ovms::Config

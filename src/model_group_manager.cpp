@@ -16,8 +16,11 @@
 #include "model_group_manager.hpp"
 
 #include <chrono>
+#include <future>
 #include <memory>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include "logging.hpp"
 #include "model.hpp"
@@ -204,44 +207,28 @@ Status ModelGroupManager::loadGroup(const std::string& groupName, ModelManager& 
 
     Status firstError = StatusCode::OK;
 
-    // Load classic models
+    // Enqueue all servables in the group via the queue and collect futures
+    std::vector<std::pair<std::string, std::future<Status>>> futures;
     for (const auto& modelName : groupInfo.modelNames) {
-        auto configIt = mm.getServedModelConfigs().find(modelName);
-        if (configIt == mm.getServedModelConfigs().end()) {
-            SPDLOG_WARN("Model config for '{}' not found during group load", modelName);
-            continue;
-        }
-        ModelConfig config = configIt->second;
-        auto status = mm.reloadModelWithVersions(config);
-        if (!status.ok()) {
-            SPDLOG_ERROR("Failed to load model '{}' in group '{}': {}", modelName, groupName, status.string());
-            if (firstError.ok()) {
-                firstError = status;
-            }
-        } else {
-            SPDLOG_INFO("Loaded model '{}' in group '{}'", modelName, groupName);
-        }
+        futures.emplace_back(modelName, mm.requestServableLoad(modelName));
     }
-
 #if (MEDIAPIPE_DISABLE == 0)
-    // Wake up mediapipe graphs in this group
     for (const auto& graphName : groupInfo.mediapipeNames) {
-        MediapipeGraphDefinition* def = mm.getMediapipeFactory().findDefinitionByName(graphName);
-        if (def == nullptr) {
-            SPDLOG_WARN("Mediapipe graph '{}' not found during group load", graphName);
-            continue;
-        }
-        auto status = def->wakeUpIfUnloaded(mm);
-        if (!status.ok()) {
-            SPDLOG_ERROR("Failed to wake mediapipe graph '{}' in group '{}': {}", graphName, groupName, status.string());
-            if (firstError.ok()) {
-                firstError = status;
-            }
-        } else {
-            SPDLOG_INFO("Woke mediapipe graph '{}' in group '{}'", graphName, groupName);
-        }
+        futures.emplace_back(graphName, mm.requestServableLoad(graphName));
     }
 #endif
+
+    for (auto& [name, future] : futures) {
+        auto status = future.get();
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to load '{}' in group '{}': {}", name, groupName, status.string());
+            if (firstError.ok()) {
+                firstError = status;
+            }
+        } else {
+            SPDLOG_INFO("Loaded '{}' in group '{}'", name, groupName);
+        }
+    }
 
     activeGroupName_ = groupName;
     recordActivity();
@@ -264,26 +251,25 @@ Status ModelGroupManager::unloadGroup(const std::string& groupName, ModelManager
     const auto& groupInfo = it->second;
     lock.unlock();
 
-    // Retire classic models
+    // Enqueue retire/unload tasks via queue and collect futures
+    std::vector<std::pair<std::string, std::future<Status>>> futures;
     for (const auto& modelName : groupInfo.modelNames) {
-        auto model = mm.findModelByName(modelName);
-        if (model == nullptr) {
-            continue;
-        }
-        model->retireAllVersions();
-        SPDLOG_INFO("Retired model '{}' in group '{}'", modelName, groupName);
+        futures.emplace_back(modelName, mm.requestServableRetire(modelName));
     }
-
 #if (MEDIAPIPE_DISABLE == 0)
-    // Unload mediapipe graphs (AVAILABLE -> UNLOADED, frees resources but keeps definition)
     for (const auto& graphName : groupInfo.mediapipeNames) {
-        MediapipeGraphDefinition* def = mm.getMediapipeFactory().findDefinitionByName(graphName);
-        if (def != nullptr) {
-            def->unload();
-            SPDLOG_INFO("Unloaded mediapipe graph '{}' in group '{}'", graphName, groupName);
-        }
+        futures.emplace_back(graphName, mm.requestServableUnload(graphName));
     }
 #endif
+
+    for (auto& [name, future] : futures) {
+        auto status = future.get();
+        if (!status.ok()) {
+            SPDLOG_WARN("Failed to unload '{}' in group '{}': {}", name, groupName, status.string());
+        } else {
+            SPDLOG_INFO("Unloaded '{}' in group '{}'", name, groupName);
+        }
+    }
 
     if (activeGroupName_ == groupName) {
         activeGroupName_.clear();

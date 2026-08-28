@@ -134,9 +134,12 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
                     return mediapipeFactory->reloadDefinition(task.name, config, *this);
                 }
             } else {
-                // Urgent reload with existing config (inference-triggered)
+                // Urgent reload (inference-triggered wake-up or on-demand load)
                 if (!def)
                     return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
+                if (def->getStateCode() == PipelineDefinitionStateCode::UNLOADED) {
+                    return def->wakeUpIfUnloaded(*this);
+                }
                 return def->reload(*this, def->getMediapipeGraphConfig());
             }
             return StatusCode::OK;
@@ -146,8 +149,7 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             if (!def) {
                 return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
             }
-            def->retire();
-            return StatusCode::OK;
+            return def->unload();
         }
 #else
         case ServableLoadingTaskType::LoadMediapipe:
@@ -1019,17 +1021,15 @@ Status ModelManager::loadConfig() {
     // Build model groups and unload non-permanent servables for on-demand loading
     if (groupManager_ && groupManager_->isEnabled()) {
         groupManager_->buildGroups(this->servedModelConfigs, *this);
-        // Unload all non-permanent models so they are loaded on demand.
-        // Mediapipe graphs in non-permanent groups are already created in UNLOADED
-        // state by processMediapipeConfig, so only models need retirement here.
         for (const auto& [groupName, groupInfo] : groupManager_->getGroups()) {
             if (groupInfo.isPermanent()) {
                 continue;
             }
             for (const auto& modelName : groupInfo.modelNames) {
-                auto model = findModelByName(modelName);
-                if (model != nullptr) {
-                    model->retireAllVersions();
+                ServableLoadingTask task{ServableLoadingTaskType::RetireModel, modelName};
+                auto future = loadingQueue->scheduleTask(std::move(task));
+                auto retireStatus = future.get();
+                if (retireStatus.ok()) {
                     SPDLOG_INFO("Retired model '{}' (group '{}') for on-demand loading", modelName, groupName);
                 }
             }
@@ -1128,10 +1128,6 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
 
 void ModelManager::unloadIdleGraphs() {
 #if (MEDIAPIPE_DISABLE == 0)
-    // Collect names of definitions that should be unloaded; iterate under
-    // a brief shared lock (inside the factory getters), then call unload()
-    // outside it. unload() re-checks all preconditions under lifecycleMtx
-    // and is non-blocking (skips graphs with in-flight requests).
     std::vector<std::string> toUnload;
     {
         const auto& names = mediapipeFactory->getMediapipePipelinesNames();
@@ -1143,15 +1139,11 @@ void ModelManager::unloadIdleGraphs() {
         }
     }
     for (const auto& name : toUnload) {
-        MediapipeGraphDefinition* def = mediapipeFactory->findDefinitionByName(name);
-        if (def) {
-            // Re-check under the per-definition idle mutex to avoid racing with
-            // a concurrent wakeUp() that may have already transitioned the state.
-            auto status = def->unload();
-            if (!status.ok()) {
-                SPDLOG_LOGGER_WARN(modelmanager_logger,
-                    "Failed to idle-unload mediapipe graph {}: {}", name, status.string());
-            }
+        auto future = requestServableUnload(name);
+        auto status = future.get();
+        if (!status.ok()) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger,
+                "Failed to idle-unload mediapipe graph {}: {}", name, status.string());
         }
     }
 #endif
@@ -1596,6 +1588,16 @@ std::future<Status> ModelManager::requestServableLoad(const std::string& name) {
     return loadingQueue->scheduleTask(std::move(task), isPriorityRequest);
 }
 
+std::future<Status> ModelManager::requestServableRetire(const std::string& name) {
+    ServableLoadingTask task{ServableLoadingTaskType::RetireModel, name};
+    return loadingQueue->scheduleTask(std::move(task));
+}
+
+std::future<Status> ModelManager::requestServableUnload(const std::string& name) {
+    ServableLoadingTask task{ServableLoadingTaskType::UnloadMediapipe, name};
+    return loadingQueue->scheduleTask(std::move(task));
+}
+
 const std::shared_ptr<ModelInstance> ModelManager::findModelInstance(const std::string& name, model_version_t version) const {
     auto model = findModelByName(name);
     if (!model) {
@@ -1687,12 +1689,17 @@ Status ModelManager::getModelInstance(const std::string& modelName,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const {
     SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
 
-    // On-demand group loading for idle model management
+    // On-demand group loading via queue for idle model management
     if (groupManager_ && groupManager_->isEnabled()) {
-        auto status = groupManager_->ensureGroupLoaded(modelName, const_cast<ModelManager&>(*this));
-        if (!status.ok()) {
-            SPDLOG_ERROR("Failed to load group for model '{}': {}", modelName, status.string());
-            return status;
+        std::string group = groupManager_->getGroupForServable(modelName);
+        if (!group.empty() && !groupManager_->isGroupLoaded(group)) {
+            // const_cast needed: getModelInstance is const per interface, but group
+            // loading enqueues tasks via the queue which is logically non-mutating
+            auto status = groupManager_->ensureGroupLoaded(modelName, const_cast<ModelManager&>(*this));
+            if (!status.ok()) {
+                SPDLOG_ERROR("Failed to load group for model '{}': {}", modelName, status.string());
+                return status;
+            }
         }
         groupManager_->recordActivity();
     }
@@ -1738,61 +1745,30 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
 Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
-    // On-demand group loading for idle model management
+    // On-demand group loading via queue for idle model management
     if (groupManager_ && groupManager_->isEnabled()) {
-        auto status = groupManager_->ensureGroupLoaded(name, *this);
-        if (!status.ok()) {
-            SPDLOG_ERROR("Failed to load group for mediapipe graph '{}': {}", name, status.string());
-            return status;
+        std::string group = groupManager_->getGroupForServable(name);
+        if (!group.empty() && !groupManager_->isGroupLoaded(group)) {
+            auto status = groupManager_->ensureGroupLoaded(name, *this);
+            if (!status.ok()) {
+                SPDLOG_ERROR("Failed to load group for mediapipe graph '{}': {}", name, status.string());
+                return status;
+            }
         }
         groupManager_->recordActivity();
     }
 
-    // Lazy wake-up with bounded retry. A request can observe state==AVAILABLE here,
-    // then have the watcher flip it to UNLOADED before create()->waitForLoaded() runs,
-    // which returns MEDIAPIPE_DEFINITION_NOT_LOADED_YET. We retry a bounded number of
-    // times: wake if UNLOADED, then create(); if create() fails specifically because
-    // the graph is not-loaded-yet AND it is currently UNLOADED, wake and retry.
-    // wakeUpIfUnloaded() serialises the transition internally so exactly one of N
-    // concurrent callers triggers the actual reload; the rest wait and then proceed.
-    constexpr int kMaxWakeAttempts = 3;
-    for (int attempt = 0; attempt < kMaxWakeAttempts; ++attempt) {
-        // Re-fetch the definition each iteration: a concurrent config reload may
-        // retire+erase it mid-loop, so a cached pointer could dangle. Bail cleanly
-        // if it is gone.
-        MediapipeGraphDefinition* def = this->mediapipeFactory->findDefinitionByName(name);
-        if (def == nullptr) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger,
-                "Mediapipe graph {} no longer exists during wake-up loop", name);
-            return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
+    // Wake up idle-unloaded graph via queue
+    auto* def = this->mediapipeFactory->findDefinitionByName(name);
+    if (def && def->getStateCode() == PipelineDefinitionStateCode::UNLOADED) {
+        auto future = requestServableLoad(name);
+        auto status = future.get();
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                "Mediapipe graph {} wake-up failed: {}", name, status.string());
+            return status;
         }
-        if (def->getStateCode() == PipelineDefinitionStateCode::UNLOADED) {
-            auto wakeStatus = def->wakeUpIfUnloaded(*this);
-            if (!wakeStatus.ok()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger,
-                    "Mediapipe graph {} wake-up failed: {}", name, wakeStatus.string());
-                return wakeStatus;
-            }
-        }
-        auto createStatus = this->mediapipeFactory->create(graph, name);
-        if (createStatus.ok()) {
-            return createStatus;
-        }
-        // Only retry the specific race: graph got idle-unloaded between our check and
-        // waitForLoaded(). Any other failure (genuine load failure, missing graph, etc.)
-        // is returned immediately. Re-fetch to avoid using a possibly-stale pointer.
-        MediapipeGraphDefinition* defAfter = this->mediapipeFactory->findDefinitionByName(name);
-        bool racedWithUnload = defAfter &&
-                               (createStatus == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET) &&
-                               (defAfter->getStateCode() == PipelineDefinitionStateCode::UNLOADED);
-        if (!racedWithUnload) {
-            return createStatus;
-        }
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
-            "Mediapipe graph {} was idle-unloaded during request; retrying wake-up (attempt {}/{})",
-            name, attempt + 1, kMaxWakeAttempts);
     }
-    // Exhausted retries — make one final attempt and return whatever it yields.
     return this->mediapipeFactory->create(graph, name);
 #else
     SPDLOG_ERROR("Mediapipe support was disabled during build process...");
