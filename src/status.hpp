@@ -330,6 +330,7 @@ enum class StatusCode {
     NONEXISTENT_LOG_LEVEL,
     NONEXISTENT_PTR,
     SERVER_NOT_READY,
+    SERVER_SHUTTING_DOWN,
 
     // Server Start errors
     OPTIONS_USAGE_ERROR,

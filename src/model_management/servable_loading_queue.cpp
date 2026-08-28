@@ -35,7 +35,7 @@ void ServableLoadingQueue::start(TaskProcessor processor) {
     this->worker = std::thread(&ServableLoadingQueue::workerLoop, this);
 }
 
-void ServableLoadingQueue::stop() {
+void ServableLoadingQueue::requestStop() {
     {
         std::lock_guard<std::mutex> lock(this->mutex);
         if (!this->running) {
@@ -44,8 +44,18 @@ void ServableLoadingQueue::stop() {
         this->running = false;
     }
     this->cv.notify_one();
+}
+
+void ServableLoadingQueue::stop() {
+    requestStop();
     if (this->worker.joinable()) {
         this->worker.join();
+    }
+    std::lock_guard<std::mutex> lock(this->mutex);
+    while (!this->queue.empty()) {
+        auto& task = this->queue.front();
+        task.completion.set_value(StatusCode::SERVER_SHUTTING_DOWN);
+        this->queue.pop_front();
     }
 }
 
@@ -70,7 +80,7 @@ void ServableLoadingQueue::workerLoop() {
         {
             std::unique_lock<std::mutex> lock(this->mutex);
             this->cv.wait(lock, [this] { return !this->queue.empty() || !this->running; });
-            if (!this->running && this->queue.empty()) {
+            if (!this->running) {
                 break;
             }
             task = std::move(this->queue.front());

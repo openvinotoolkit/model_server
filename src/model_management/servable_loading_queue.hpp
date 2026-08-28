@@ -37,7 +37,10 @@ public:
     ServableLoadingQueue& operator=(const ServableLoadingQueue&) = delete;
 
     void start(TaskProcessor processor);
+    // Blocks until worker joins, then drains pending tasks. Must always be called.
     void stop();
+    // Signals worker to stop without blocking. stop() must still be called after.
+    void requestStop();
 
     // Returns future that resolves when the task completes.
     // urgent=true inserts at front (for inference-triggered loads).

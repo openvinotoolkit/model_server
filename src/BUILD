@@ -2259,6 +2259,7 @@ cc_test(
             ":test_test_models_configs",
             ":test_cmd_exec",
             ":test_modelinstance_test",
+            ":servable_loading_queue_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2365,6 +2366,20 @@ cc_library(
         "test/test_file_utils.cpp",
         ],
     deps = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+cc_library(
+    name = "servable_loading_queue_test",
+    srcs = ["test/servable_loading_queue_test.cpp"],
+    deps = [
+        "//src/model_management:servable_loading_queue",
+        "@com_google_googletest//:gtest",
+    ],
+    linkstatic = 1,
+    alwayslink = 1,
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,

@@ -82,6 +82,7 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::NO_MODEL_VERSION_AVAILABLE, ovms::HTTPStatusCode::ERROR},
         {StatusCode::MODEL_NOT_LOADED, ovms::HTTPStatusCode::ERROR},
         {StatusCode::SERVER_NOT_READY, ovms::HTTPStatusCode::SERVICE_UNAV},
+        {StatusCode::SERVER_SHUTTING_DOWN, ovms::HTTPStatusCode::SERVICE_UNAV},
         {StatusCode::JSON_INVALID, ovms::HTTPStatusCode::PRECOND_FAILED},
         {StatusCode::MODELINSTANCE_NOT_FOUND, ovms::HTTPStatusCode::ERROR},
         {StatusCode::SHAPE_WRONG_FORMAT, ovms::HTTPStatusCode::ERROR},

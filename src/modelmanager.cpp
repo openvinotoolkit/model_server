@@ -1153,7 +1153,7 @@ void ModelManager::join() {
     if (cleanerStarted) {
         cleanerExitTrigger.set_value();
     }
-    loadingQueue->stop();
+    loadingQueue->requestStop();
 
     if (watcherStarted) {
         if (monitor.joinable()) {
@@ -1170,6 +1170,7 @@ void ModelManager::join() {
             SPDLOG_INFO("Shutdown cleaner thread");
         }
     }
+    loadingQueue->stop();
 }
 
 void ModelManager::getVersionsToChange(
@@ -1507,15 +1508,15 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
 }
 
 std::future<Status> ModelManager::requestServableLoad(const std::string& name) {
-// TODO @atobiszei check at which point the requestLoad is happening - shoudl be possible only on existing servable
+    const bool isPriorityRequest = true;
 #if (MEDIAPIPE_DISABLE == 0)
     if (mediapipeFactory->findDefinitionByName(name)) {
         ServableLoadingTask task{ServableLoadingTaskType::LoadMediapipe, name};
-        return loadingQueue->scheduleTask(std::move(task), true);
+        return loadingQueue->scheduleTask(std::move(task), isPriorityRequest);
     }
 #endif
     ServableLoadingTask task{ServableLoadingTaskType::LoadModel, name};
-    return loadingQueue->scheduleTask(std::move(task), true);
+    return loadingQueue->scheduleTask(std::move(task), isPriorityRequest);
 }
 
 const std::shared_ptr<ModelInstance> ModelManager::findModelInstance(const std::string& name, model_version_t version) const {
