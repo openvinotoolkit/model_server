@@ -17,6 +17,8 @@
 
 import os
 import re
+
+from collections import defaultdict
 from pathlib import Path
 
 from tests.functional.constants.os_type import OsType
@@ -62,9 +64,6 @@ uses_mapping = get_uses_mapping()
 """TEST_DIR -  location where models and test data should be copied from TEST_DIR_CACHE and deleted after tests"""
 test_dir = os.environ.get("TEST_DIR", f"/tmp/{generate_test_object_name(prefix='ovms_models')}")
 
-"""TEST_DIR_CACHE -  location where models and test data should be downloaded to and serve as cache for TEST_DIR"""
-test_dir_cache = os.environ.get("TEST_DIR_CACHE", "/tmp/ovms_models_cache")
-
 """ TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
 ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
 
@@ -105,17 +104,20 @@ python_disable = bool(get_int("PYTHON_DISABLE", 0))
 """ TT_WIN_PY_VERSION - Python version for virtualenv on Windows OS """
 windows_python_version = os.environ.get("TT_WIN_PY_VERSION", "3.12")
 
-""" TT_DOCKER_REGISTRY - Docker registry"""
+""" TT_DOCKER_REGISTRY - Docker registry """
 docker_registry = os.environ.get("TT_DOCKER_REGISTRY", None)
 
 """ OVMS_CPP_DOCKER_IMAGE """
-ovms_cpp_docker_image = os.environ.get("OVMS_CPP_DOCKER_IMAGE", None)
-
-""" TT_OVMS_IMAGE_NAME """
-ovms_image = os.environ.get("TT_OVMS_IMAGE_NAME", None)
+ovms_cpp_docker_image = os.environ.get("OVMS_CPP_DOCKER_IMAGE", "openvino/model_server")
 
 """ OVMS_CPP_IMAGE_TAG - tag of OVMS image to test (compatible with build parameter) """
-ovms_image_tag = os.environ.get("OVMS_CPP_IMAGE_TAG", None)
+ovms_image_tag = os.environ.get("OVMS_CPP_IMAGE_TAG", "latest")
+
+""" TT_DEFAULT_OVMS_IMAGE_TAG - default value of ovms image tag (based on OS) """
+ovms_image_tag_dict = defaultdict(lambda: ovms_image_tag)
+
+""" TT_OVMS_IMAGE_NAME - full image name (name + tag) """
+ovms_image = os.environ.get("TT_OVMS_IMAGE_NAME", None)
 
 """ TT_OVMS_TEST_IMAGE_NAME - image name for cpu extensions and custom nodes """
 ovms_test_image_name = os.environ.get("TT_OVMS_TEST_IMAGE_NAME", None)
@@ -131,21 +133,8 @@ ovms_c_release_artifacts_path = get_list("TT_OVMS_C_RELEASE_ARTIFACTS_PATH")
 """START_CONTAINER_COMMAND - command to start ovms container"""
 start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 
-"""CONTAINER_LOG_LINE - log line to check in container"""
-# For multiple log lines, pass them separated with ':'
-container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Started model manager thread")
-container_log_line = container_log_line.split(":")
-
 """OVMS_BINARY_PATH - path to ovms binary file; when specified, tests are executed against provided binary."""
 ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
-
-"""LOG_LEVEL - set log level """
-log_level = os.environ.get("LOG_LEVEL", "INFO")
-
-path_to_mount = os.path.join(test_dir, "saved_models")
-os.makedirs(path_to_mount, exist_ok=True)
-
-path_to_mount_cache = os.path.join(test_dir_cache, "saved_models")
 
 """ TT_MINIO_IMAGE_NAME - Docker image for Minio"""
 minio_image = os.environ.get(
@@ -431,3 +420,11 @@ huggingface_token_file_path = get_path(
 
 """ TT_HUGGINGFACE_TOKEN - huggingface token value. Env var takes priority, then file. """
 huggingface_token = os.environ.get("TT_HUGGINGFACE_TOKEN") or get_token_value(huggingface_token_file_path, "")
+
+"""TT_ON_COMMIT_TESTS - False -> api-on-commit tests are not run,
+                        True -> api-on-commit tests are run, default: True """
+run_on_commit_tests = get_bool("TT_ON_COMMIT_TESTS", True)
+
+"""TT_RUN_REGRESSION_TESTS - False -> api-regression tests are not run,
+                             True -> api-regression tests are run, default: False """
+run_regression_tests = get_bool("TT_RUN_REGRESSION_TESTS", False)

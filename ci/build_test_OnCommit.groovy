@@ -71,7 +71,7 @@ pipeline {
               if (git_diff =~ /(\n|^)client/) {
                   client_test_needed = "true"
               }
-              if (git_diff =~ /(\n|^)tests\/functional/) {
+              if (git_diff =~ /(\n|^)(tests\/functional|tests\/requirements\.txt)/) {
                   functional_tests_changed = "true"
               }
               if (git_diff =~ /(\n|^)(demos\/common\/export_models\/|prepare_llm_models\.sh$)/) {

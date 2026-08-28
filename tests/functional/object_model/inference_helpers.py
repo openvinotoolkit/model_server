@@ -94,53 +94,18 @@ class InferenceBuilder:
         self, api_type, port, batch_size=Ovms.BATCHSIZE, ovsa_certs=None, model_version=None, client_type=None
     ):
         ovsa_certs = ovsa_certs if ovsa_certs is not None else OvsaCerts.default_certs
-        if client_type == KFS:
-            assert 0, "Please check flow for KFS client"
-            kfs_api_type = InferenceClientKFS if api_type == InferenceClientTFS else InferenceRestClientKFS
-            inference_client = self.create_kfs_client(kfs_api_type, port)
-        else:
-            inference_client = api_type(
-                port=port,
-                model_name=self.model.name,
-                batch_size=batch_size,
-                input_names=list(self.model.inputs.keys()),
-                output_names=list(self.model.outputs.keys()),
-                model_meta_from_serving=False,
-                ssl_certificates=ovsa_certs,
-                model_version=model_version,
-            )
+        inference_client = api_type(
+            port=port,
+            model_name=self.model.name,
+            batch_size=batch_size,
+            input_names=list(self.model.inputs.keys()),
+            output_names=list(self.model.outputs.keys()),
+            model_meta_from_serving=False,
+            ssl_certificates=ovsa_certs,
+            model_version=model_version,
+        )
         inference_client._model = self.model
         return inference_client
-
-    def create_client_and_data(self, inference_request, random_data=False):
-        if inference_request.client_type == KFS:
-            # This should be included into KserveWrapper, please correct calling test not to use `create_client_and_data`
-            assert False, "Please correct it"
-            kfs_api_type = (
-                InferenceClientKFS if inference_request.api_type == InferenceClientTFS else InferenceRestClientKFS
-            )
-            port = inference_request.get_port()
-            inference_client = self.create_kfs_client(kfs_api_type, port)
-        else:
-            inference_client = self.create_client(
-                inference_request.api_type,
-                inference_request.get_port(),
-                inference_request.batch_size,
-                client_type=inference_request.client_type,
-                model_version=inference_request.model_version,
-            )
-        if inference_request is not None and inference_request.dataset:
-            input_data = inference_request.load_data()
-        else:
-            input_data = self.model.prepare_input_data(inference_request.batch_size, random_data=random_data)
-        return inference_client, input_data
-
-    def create_kfs_client(self, api_type, port):
-        kfs_api_client = api_type(port, model_name=self.model.name, batch_size=self.model.batch_size)
-        kfs_api_client.model = self.model
-        kfs_api_client.port = port
-        kfs_api_client.model_name = self.model.name
-        return kfs_api_client
 
 
 @dataclass(frozen=False)

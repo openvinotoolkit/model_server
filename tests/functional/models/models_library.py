@@ -14,14 +14,76 @@
 # limitations under the License.
 #
 
-from tests.functional.models.models_generative import Qwen3Embedding06BFp16OvHf
+from collections import defaultdict
+
+from tests.functional.constants.target_device import TargetDevice
+from tests.functional.models.models_generative import (
+    BgeRerankerBaseFp16OvHf,
+    Gemma34bItInt4OvHf,
+    Gemma34bItInt4CwOvHf,
+    LFM25350MInt8OvHf,
+    Phi35MiniInstructInt4CwOvHf,
+    Qwen3Embedding06BFp16OvHf,
+    Qwen3Reranker06BFp16OvHf,
+    Qwen3Reranker06BSeqClsFp16OvHf,
+)
 
 
 class ModelsLibrary:
 
     @property
-    def various_feature_extraction_models(self):
+    def various_mini_large_language_models(self):
+        return defaultdict(
+            list,
+            {
+                TargetDevice.CPU: [LFM25350MInt8OvHf],
+                TargetDevice.GPU: [LFM25350MInt8OvHf],
+                TargetDevice.NPU: [Phi35MiniInstructInt4CwOvHf],
+            },
+        )
+
+    @property
+    def various_mini_vision_language_models(self):
+        return defaultdict(
+            list,
+            {
+                TargetDevice.CPU: [Gemma34bItInt4OvHf],
+                TargetDevice.GPU: [Gemma34bItInt4OvHf],
+                TargetDevice.NPU: [Gemma34bItInt4CwOvHf],
+            },
+        )
+
+    @property
+    def various_large_and_vision_language_models_on_commit(self):
+        return defaultdict(
+            list,
+            {
+                TargetDevice.CPU:
+                    self.various_mini_large_language_models[TargetDevice.CPU] +
+                    self.various_mini_vision_language_models[TargetDevice.CPU],
+                TargetDevice.GPU:
+                    self.various_mini_large_language_models[TargetDevice.GPU] +
+                    self.various_mini_vision_language_models[TargetDevice.GPU],
+                TargetDevice.NPU:
+                    self.various_mini_large_language_models[TargetDevice.NPU] +
+                    self.various_mini_vision_language_models[TargetDevice.NPU],
+            },
+        )
+
+    @property
+    def various_feature_extraction_models_on_commit(self):
         return [Qwen3Embedding06BFp16OvHf]
+
+    @property
+    def various_rerank_models_on_commit(self):
+        return [BgeRerankerBaseFp16OvHf]
+
+    @property
+    def various_rerank_models(self):
+        return [
+            Qwen3Reranker06BFp16OvHf,
+            Qwen3Reranker06BSeqClsFp16OvHf,
+        ]
 
 
 ModelsLib = ModelsLibrary()     # pylint: disable=invalid-name

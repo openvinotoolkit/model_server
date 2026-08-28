@@ -33,6 +33,7 @@ from _pytest.python import Function
 
 from tests.functional import config
 from tests.functional.config import (
+    airplane_mode,
     build_test_image,
     c_api_wrapper_dir,
     cleanup_env_on_startup,
@@ -59,11 +60,16 @@ from tests.functional.config import (
 from tests.functional.constants.os_type import get_host_os, OsType, UBUNTU
 from tests.functional.constants.os_version import os_type_to_base_image_binary_docker
 from tests.functional.constants.ovms import (
+    API_TYPE_PARAM_NAME,
     BASE_OS_PARAM_NAME,
+    CLOUD_TYPE_PARAM_NAME,
     CURRENT_TARGET_DEVICE_DICT_ARGUMENT,
+    ENDPOINT_PARAM_NAME,
+    MODEL_TYPE_PARAM_NAME,
     OVMS_TYPE_PARAM_NAME,
     TARGET_DEVICE_PARAM_NAME,
     TMP_REPOS_DIR_ARGUMENT,
+    USES_CONFIG_PARAM_NAME,
     USES_MAPPING_PARAM_NAME,
 )
 from tests.functional.constants.ovms_images import (
@@ -93,6 +99,7 @@ from tests.functional.object_model.ovsa import OvsaCerts
 from tests.functional.utils.core import TmpDir
 from tests.functional.utils.docker import DockerClient, DockerContainer, DOCKER_CONTAINER_TMP_PATH
 from tests.functional.utils.download import wget_file
+from tests.functional.utils.inference.serving.openai import OpenAIWrapper
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.utils.helpers import get_base_device
 from tests.functional.utils.logger import get_logger
@@ -491,6 +498,9 @@ def download_docker_images():
 
 
 def download_resources_master():
+    if airplane_mode:
+        print("Skipping downloading required resources")
+        return
     print("Download required resources")
     download_models()
     download_docker_images()
@@ -1012,11 +1022,38 @@ def update_parent_markers(item, marker_types):
                 item.own_markers.append(components)
 
 
+def generic_test_deselect(item):
+    """
+    Pytest test cases are generated as Cartesian products of all given arguments.
+    Same of parameters combinations are incompatible or contradictory and cannot be applied.
+
+    In this function check generic @pytest.mark.parametrize / @fixture symbols from `item`.
+    """
+    target_device = item.callspec.params.get(TARGET_DEVICE_PARAM_NAME, None)
+    ovms_type = item.callspec.params.get(OVMS_TYPE_PARAM_NAME, None)
+    api_type = item.callspec.params.get(API_TYPE_PARAM_NAME, None)
+    base_os = item.callspec.params.get(BASE_OS_PARAM_NAME, None)
+    use_config = item.callspec.params.get(USES_CONFIG_PARAM_NAME, None)
+    cloud_type = item.callspec.params.get(CLOUD_TYPE_PARAM_NAME, None)
+    model_type = item.callspec.params.get(MODEL_TYPE_PARAM_NAME, None)
+    use_mapping = item.callspec.params.get(USES_MAPPING_PARAM_NAME, None)
+    endpoint = item.callspac.params.get(ENDPOINT_PARAM_NAME, None)
+
+    # Disable completions endpoint for VLM models
+    if model_type.is_vision_language and endpoint == OpenAIWrapper.COMPLETIONS:
+        return True
+
+    return False
+
+
 def deselect(item, test_type, required_marker_ids, excluded_marker_ids):
     # Validate different scenarios where test should be deselected from execution during `collect` stage.
     if isinstance(item, Function):
         if test_type is None:
             raise RuntimeError("Test do not have test_type: " + item.name)
+
+        if generic_test_deselect(item):
+            return True
 
         if required_marker_ids:
             for required_marker_id_list in required_marker_ids:
@@ -1024,6 +1061,7 @@ def deselect(item, test_type, required_marker_ids, excluded_marker_ids):
                     # make sure that item is not deselected by other marker
                     return deselect_by_excluded_marker_ids(item, excluded_marker_ids)
             return True
+
         if excluded_marker_ids:
             return deselect_by_excluded_marker_ids(item, excluded_marker_ids)
 

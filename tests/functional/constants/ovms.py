@@ -245,6 +245,7 @@ BASE_OS_PARAM_NAME = "base_os"
 TEST_RUN_WORKER_ARGUMENT = "test_run_reporters"
 TMP_REPOS_DIR_ARGUMENT = "tmp_repos_dir"
 CURRENT_TARGET_DEVICE_DICT_ARGUMENT = "current_target_device_dict"
+ENDPOINT_PARAM_NAME = "endpoint"
 
 
 class Config:
