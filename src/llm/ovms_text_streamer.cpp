@@ -21,8 +21,6 @@
 
 #include "../logging.hpp"
 
-#include "../logging.hpp"
-
 namespace {
 // Matches GenAI's is_incomplete() in text_streamer.cpp.
 // The tokenizer outputs U+FFFD (\xef\xbf\xbd) as a 3-byte replacement
