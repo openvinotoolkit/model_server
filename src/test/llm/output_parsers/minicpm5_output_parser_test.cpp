@@ -310,7 +310,9 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
     EXPECT_EQ(parsedOutput.content, "");
 }
 
-TEST_F(Minicpm5OutputParserTest, RequiresStreamingWithSpecialTokens) {
+
+TEST_F(Minicpm5OutputParserTest, RequiresSpecialTokens) {
+    // Both parsers declare needsSpecialTokens via OutputParsingConfig.
     Minicpm5ToolParser toolParser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
     EXPECT_TRUE(toolParser.getParsingConfig().needsSpecialTokens);
     Minicpm5ReasoningParser reasoningParser(*minicpm5Tokenizer);

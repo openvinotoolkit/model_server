@@ -300,9 +300,7 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
             // caller once generate() returns to report the failure.
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Output parser failed, cancelling generation: {}", e.what());
             m_had_parser_error = true;
-            rapidjson::Document empty;
-            empty.SetObject();
-            m_callback(std::move(empty), true);
+            m_callback(FinishDelta{}, true);
             return ov::genai::StreamingStatus::CANCEL;
         }
     } else if (!chunk.empty()) {

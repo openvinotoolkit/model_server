@@ -467,7 +467,7 @@ TEST_F(MistralOutputParserTest, StreamingToolCallArgumentsBeforeNameThrows) {
             FAIL() << "Expected delta should be nullopt for this test case.";
         }
         try {
-            std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
+            std::optional<ovms::Delta> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
             if (doc.has_value()) {
                 FAIL() << "Expected an exception to be thrown for chunk: " << chunk;
             }

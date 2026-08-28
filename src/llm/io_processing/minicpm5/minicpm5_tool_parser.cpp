@@ -51,25 +51,6 @@ Minicpm5ToolParserImpl::Minicpm5ToolParserImpl(const ToolsParameterTypeMap_t& to
  * tagEnd is the position of the '>' that closes the enclosing tag.
  * Returns the extracted value, or empty string on failure.
  */
-std::string Minicpm5ToolParserImpl::extractNameAttribute(
-    const std::string& content, size_t nameAttrValueStart, size_t tagEnd) {
-    if (nameAttrValueStart >= tagEnd || nameAttrValueStart >= content.size()) {
-        return {};
-    }
-    char quote = content[nameAttrValueStart];
-    if (quote != '"' && quote != '\'') {
-        // No quote: read until next whitespace or '>'
-        size_t end = content.find_first_of(" \t\n\r>/", nameAttrValueStart);
-        if (end == std::string::npos || end > tagEnd)
-            end = tagEnd;
-        return content.substr(nameAttrValueStart, end - nameAttrValueStart);
-    }
-    size_t closeQuote = content.find(quote, nameAttrValueStart + 1);
-    if (closeQuote == std::string::npos || closeQuote > tagEnd) {
-        return {};
-    }
-    return content.substr(nameAttrValueStart + 1, closeQuote - nameAttrValueStart - 1);
-}
 
 void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameterValueAsString) {
     if (this->removeNewlineAroundParameters)
@@ -130,34 +111,6 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
     }
 }
 
-Status Minicpm5ToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
-    if (toolCallPositions.begin.size() != toolCallPositions.end.size()) {
-        SPDLOG_DEBUG("Minicpm5: mismatched tool tags, begin: {}, end: {}",
-            toolCallPositions.begin.size(), toolCallPositions.end.size());
-        return Status(StatusCode::INTERNAL_ERROR, "Mismatched tool tags");
-    }
-    while (!toolCallPositions.begin.empty() && !toolCallPositions.end.empty()) {
-        auto posBegin = toolCallPositions.begin.top();
-        auto posEnd = toolCallPositions.end.top();
-        SPDLOG_TRACE("Minicpm5: removing tool call from outContent begin:{}, end:{}", posBegin, posEnd);
-        outContent.erase(posBegin, posEnd - posBegin);
-        toolCallPositions.begin.pop();
-        toolCallPositions.end.pop();
-    }
-
-    const std::vector<std::string> tokensToErase = {
-        Minicpm5ToolParser::SOS_TOKEN_STR,
-        Minicpm5ToolParser::EOS_TOKEN_STR};
-
-    for (const auto& token : tokensToErase) {
-        size_t pos = 0;
-        while ((pos = outContent.find(token, pos)) != std::string::npos) {
-            outContent.erase(pos, token.length());
-        }
-    }
-
-    return StatusCode::OK;
-}
 
 void Minicpm5ToolParserImpl::handleInsideContentState() {
     // Look for the next <function tag; everything else is plain content.
@@ -297,30 +250,6 @@ Minicpm5ToolParser::Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const To
     toolSchemas(toolSchemas),
     toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
     streamParser(this->toolsParametersTypes) {}
-
-const std::vector<int64_t> Minicpm5ToolParser::removeReasoningTokens(const std::vector<int64_t>& generatedTokens) {
-    std::vector<int64_t> tokensWithoutReasoning;
-    tokensWithoutReasoning.reserve(generatedTokens.size());
-    auto reasoningStartIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningStartTokenId);
-    auto reasoningEndIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId);
-    if (reasoningEndIt == generatedTokens.end()) {
-        // No closing reasoning tag: incrementing end() below would be UB, so keep tokens unchanged.
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Minicpm5ToolParser: Reasoning end token not found in the generated tokens. Start token found: {}, Start position: {}",
-            reasoningStartIt != generatedTokens.end(), std::distance(generatedTokens.begin(), reasoningStartIt));
-        tokensWithoutReasoning.insert(tokensWithoutReasoning.end(), generatedTokens.begin(), generatedTokens.end());
-    } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Minicpm5ToolParser: Reasoning tokens found. Start position: {}, End position: {}",
-            std::distance(generatedTokens.begin(), reasoningStartIt), std::distance(generatedTokens.begin(), reasoningEndIt));
-        if (reasoningStartIt == generatedTokens.end()) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Minicpm5ToolParser: Reasoning start wasn't found, but reasoning end was found. Start position: {}, End position: {}",
-                std::distance(generatedTokens.begin(), reasoningStartIt), std::distance(generatedTokens.begin(), reasoningEndIt));
-            reasoningStartIt = generatedTokens.begin();
-        }
-        tokensWithoutReasoning.insert(tokensWithoutReasoning.end(), generatedTokens.begin(), reasoningStartIt);
-        tokensWithoutReasoning.insert(tokensWithoutReasoning.end(), reasoningEndIt + 1, generatedTokens.end());
-    }
-    return tokensWithoutReasoning;
-}
 
 std::optional<Delta> Minicpm5ToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
     if (toolCalls.size() != 1) {
