@@ -174,13 +174,14 @@ make test_functional
 
 - Configuration options are :
 
-| Variable    | Description                                                                 |
-| :---        |:----------------------------------------------------------------------------|
-| `TT_OVMS_IMAGE_NAME`  | Docker image name for the tests.                                            |
-| `TT_LOGGING_LEVEL` | The log level for tests.                                                    |
-| `TT_LOGGING_LEVEL_OVMS` | The log level for OVMS.                                                     |
-| `BUILD_LOGS` | Path to save artifacts.                                                     |
-| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container.                  |
+| Variable                  | Description                                                |
+|:--------------------------|:-----------------------------------------------------------|
+| `OVMS_CPP_DOCKER_IMAGE`   | Docker image name for the tests.                           |
+| `OVMS_CPP_IMAGE_TAG`      | Docker image tag for the tests.                            |
+| `TT_LOGGING_LEVEL`        | The log level for tests.                                   |
+| `TT_LOGGING_LEVEL_OVMS`   | The log level for OVMS.                                    |
+| `BUILD_LOGS`              | Path to save artifacts.                                    |
+| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container. |
 
 2. Add any configuration variables to the command line in this format :
 

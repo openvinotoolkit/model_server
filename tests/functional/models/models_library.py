@@ -17,16 +17,7 @@
 from collections import defaultdict
 
 from tests.functional.constants.target_device import TargetDevice
-from tests.functional.models.models_generative import (
-    BgeRerankerBaseFp16OvHf,
-    Gemma34bItInt4OvHf,
-    Gemma34bItInt4CwOvHf,
-    LFM25350MInt8OvHf,
-    Phi35MiniInstructInt4CwOvHf,
-    Qwen3Embedding06BFp16OvHf,
-    Qwen3Reranker06BFp16OvHf,
-    Qwen3Reranker06BSeqClsFp16OvHf,
-)
+from tests.functional.models import models_generative as mg
 
 
 class ModelsLibrary:
@@ -36,9 +27,9 @@ class ModelsLibrary:
         return defaultdict(
             list,
             {
-                TargetDevice.CPU: [LFM25350MInt8OvHf],
-                TargetDevice.GPU: [LFM25350MInt8OvHf],
-                TargetDevice.NPU: [Phi35MiniInstructInt4CwOvHf],
+                TargetDevice.CPU: [mg.LFM25350MInt8OvHf],
+                TargetDevice.GPU: [mg.LFM25350MInt8OvHf],
+                TargetDevice.NPU: [mg.Phi35MiniInstructInt4CwOvHf],
             },
         )
 
@@ -47,9 +38,9 @@ class ModelsLibrary:
         return defaultdict(
             list,
             {
-                TargetDevice.CPU: [Gemma34bItInt4OvHf],
-                TargetDevice.GPU: [Gemma34bItInt4OvHf],
-                TargetDevice.NPU: [Gemma34bItInt4CwOvHf],
+                TargetDevice.CPU: [mg.Gemma34bItInt4OvHf],
+                TargetDevice.GPU: [mg.Gemma34bItInt4OvHf],
+                TargetDevice.NPU: [mg.Gemma34bItInt4CwOvHf],
             },
         )
 
@@ -72,17 +63,17 @@ class ModelsLibrary:
 
     @property
     def various_feature_extraction_models_on_commit(self):
-        return [Qwen3Embedding06BFp16OvHf]
+        return [mg.Qwen3Embedding06BFp16OvHf]
 
     @property
     def various_rerank_models_on_commit(self):
-        return [BgeRerankerBaseFp16OvHf]
+        return [mg.BgeRerankerBaseFp16OvHf]
 
     @property
     def various_rerank_models(self):
         return [
-            Qwen3Reranker06BFp16OvHf,
-            Qwen3Reranker06BSeqClsFp16OvHf,
+            mg.Qwen3Reranker06BFp16OvHf,
+            mg.Qwen3Reranker06BSeqClsFp16OvHf,
         ]
 
 

@@ -600,7 +600,7 @@ test_throughput_dummy_model: venv
 	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 test_functional: venv
-	@. $(ACTIVATE); pytest --json=report.json -v -s $(TEST_PATH)
+	@export OVMS_CPP_DOCKER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE) && export OVMS_CPP_IMAGE_TAG=$(OVMS_CPP_IMAGE_TAG);. $(ACTIVATE); pytest --json=report.json -v -s $(TEST_PATH)
 
 test_python_clients:
 	@echo "Prepare docker image"

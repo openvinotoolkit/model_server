@@ -134,9 +134,9 @@ def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu22):
 
     ct.target_device = target_device
 
-    if force_use_ovms_image and ovms_image:
-        return ovms_image
     if ovms_image:
+        if force_use_ovms_image:
+            return ovms_image
         image_name = re.sub("|".join(DEFAULT_OVMS_IMAGE_SUFFIXES.values()), "", ovms_image.split(":")[0])
         image_tag = ovms_image.split(":")[1]
         image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
@@ -146,6 +146,8 @@ def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu22):
             image_name = f"{docker_registry}/{ovms_cpp_docker_image}"
         else:
             image_name = ovms_cpp_docker_image
+        if force_use_ovms_image:
+            return f"{image_name}:{ovms_image_tag}"
         image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
         image_tag = ovms_image_tag if ovms_image_tag else ovms_image_tag_dict[base_os]
         image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)

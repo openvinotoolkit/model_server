@@ -122,7 +122,7 @@ ovms_image = os.environ.get("TT_OVMS_IMAGE_NAME", None)
 """ TT_OVMS_TEST_IMAGE_NAME - image name for cpu extensions and custom nodes """
 ovms_test_image_name = os.environ.get("TT_OVMS_TEST_IMAGE_NAME", None)
 
-""" TT_FORCE_USE_OVMS_IMAGE - force to use TT_OVMS_IMAGE_NAME """
+""" TT_FORCE_USE_OVMS_IMAGE - force to use given image parameters (skip automatic suffix updates) """
 force_use_ovms_image = get_bool("TT_FORCE_USE_OVMS_IMAGE", False)
 
 """ TT_OVMS_C_RELEASE_ARTIFACTS_PATH - path to current release artifacts """
