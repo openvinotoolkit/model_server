@@ -21,6 +21,7 @@
 #include "src/port/rapidjson_istreamwrapper.hpp"
 #include "src/port/rapidjson_error.hpp"
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -34,10 +35,12 @@ public:
         const std::string& pluginConfig,
         const std::string& graphPath,
         mediapipe::EmbeddingsCalculatorOVOptions_Pooling pooling,
-        bool normalizeEmbeddings) :
+        bool normalizeEmbeddings,
+        std::optional<uint32_t> configuredMaxLength = std::nullopt) :
         SidepacketServable(modelDir, targetDevice, pluginConfig, graphPath),
         pooling(pooling),
-        normalizeEmbeddings(normalizeEmbeddings) {}
+        normalizeEmbeddings(normalizeEmbeddings),
+        configuredMaxLength(configuredMaxLength) {}
 
     int getTargetOutputIndex() const {
         return targetOutputIndex;
@@ -61,6 +64,7 @@ protected:
 private:
     mediapipe::EmbeddingsCalculatorOVOptions_Pooling pooling;
     bool normalizeEmbeddings;
+    std::optional<uint32_t> configuredMaxLength;
     bool npuPostprocessingRequired = false;
     ov::CompiledModel postProcCompiledModel;
     std::unique_ptr<OVInferRequestsQueue> postProcInferRequestsQueue;

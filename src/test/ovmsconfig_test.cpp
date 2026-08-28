@@ -1934,9 +1934,11 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
         (char*)"--plugin_config",
         (char*)"{\"SOME_KEY\":\"SOME_VALUE\"}",
         (char*)"--cache_dir",
-        (char*)"/tmp/cache_dir_with_emptiness"};
+        (char*)"/tmp/cache_dir_with_emptiness",
+        (char*)"--max_length",
+        (char*)"512"};
 
-    int arg_count = 24;
+    int arg_count = 26;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1951,6 +1953,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
     ASSERT_TRUE(embeddingsGraphSettings.pooling.has_value());
     ASSERT_EQ(embeddingsGraphSettings.pooling.value(), "CLS");
+    ASSERT_TRUE(embeddingsGraphSettings.maxLength.has_value());
+    ASSERT_EQ(embeddingsGraphSettings.maxLength.value(), 512);
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(exportSettings.targetDevice, "GPU");
     ASSERT_EQ(exportSettings.modelName, servingName);
@@ -2036,6 +2040,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
     ASSERT_FALSE(embeddingsGraphSettings.pooling.has_value());
+    ASSERT_FALSE(embeddingsGraphSettings.maxLength.has_value());
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.modelName, modelName);

@@ -327,6 +327,10 @@ node {
         oss << R"(
             pooling: )" << graphSettings.pooling.value() << R"(,)";
     }
+    if (graphSettings.maxLength.has_value()) {
+        oss << R"(
+            max_length: )" << graphSettings.maxLength.value() << R"(,)";
+    }
     if (!exportSettings.targetDevice.empty()) {
         oss << R"(
             target_device: ")" << exportSettings.targetDevice << R"(",)";

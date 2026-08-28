@@ -74,13 +74,17 @@ public:
             nodeOptions.has_pooling() ? std::make_optional(nodeOptions.pooling()) : std::nullopt;
         const auto pooling = resolveEmbeddingsPooling(modelsPath, graphPooling);
 
+        const std::optional<uint32_t> configuredMaxLength =
+            nodeOptions.has_max_length() ? std::make_optional(nodeOptions.max_length()) : std::nullopt;
+
         auto servable = std::make_shared<EmbeddingsServable>(
             nodeOptions.models_path(),
             nodeOptions.target_device(),
             nodeOptions.plugin_config(),
             basePath,
             pooling,
-            nodeOptions.normalize_embeddings());
+            nodeOptions.normalize_embeddings(),
+            configuredMaxLength);
         servable->initialize(
             nodeOptions.models_path(),
             nodeOptions.target_device(),
