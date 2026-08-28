@@ -25,9 +25,12 @@ using namespace ovms;
 
 class ChatTemplateAdapterTest : public ::testing::Test {
 protected:
-    ov::genai::ChatHistory buildHistory(const std::string& messagesJson) {
+    ov::genai::ChatHistory buildHistory(const std::string& messagesJson, const std::string& tools = "") {
         ov::genai::ChatHistory history;
         auto container = ov::genai::JsonContainer::from_json_string(messagesJson);
+        if (!tools.empty()) {
+            history.set_tools(ov::genai::JsonContainer::from_json_string(tools));
+        }
         for (size_t i = 0; i < container.size(); ++i) {
             history.push_back(container[i]);
         }
@@ -161,4 +164,68 @@ TEST_F(ChatTemplateAdapterTest, applyToHistoryDoesNothingWhenNoCapsSet) {
     std::string after = history.get_messages().to_json_string();
 
     EXPECT_EQ(before, after);
+}
+
+TEST_F(ChatTemplateAdapterTest, applyToHistoryHandlesToolDefinitionsWithoutResponses) {
+    ChatTemplateCaps caps;
+    caps.removeResponseFromToolDefinition = true;
+
+    const std::string toolDefinitions = R"([{"type": "function", "function": {"name": "cat", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"file_name": {"type": "string", "description": "The name of the file from current directory to display. No path is allowed. "}}, "required": ["file_name"]}, "response": {"type": "dict", "properties": {"file_content": {"type": "string", "description": "The content of the file."}}}}},
+                                            {"type": "function", "function": {"name": "cd", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"folder": {"type": "string", "description": "The folder of the directory to change to. You can only change one folder level at a time. "}}, "required": ["folder"]}, "response": {"type": "dict", "properties": {"current_working_directory": {"type": "string", "description": "The new current working directory path."}}}}}])";
+
+    auto history = buildHistory(R"([
+        {"role": "user", "content": "hello"}
+    ])",
+        toolDefinitions);
+
+    chat_template_adapter::applyToHistory(caps, history);
+
+    ASSERT_EQ(history.size(), 1);
+    auto toolDefinitionArray = history.get_tools();
+    ASSERT_TRUE(toolDefinitionArray.is_array());
+    EXPECT_EQ(toolDefinitionArray.size(), 2u);
+    EXPECT_EQ(toolDefinitionArray[0]["function"]["name"], "cat");
+    EXPECT_EQ(toolDefinitionArray[1]["function"]["name"], "cd");
+    EXPECT_FALSE(toolDefinitionArray[0]["function"].contains("response"));
+    EXPECT_FALSE(toolDefinitionArray[1]["function"].contains("response"));
+}
+
+TEST_F(ChatTemplateAdapterTest,applyToHistoryHandlesRemovedResponsesInToolDefinitions) {
+ChatTemplateCaps caps;
+    caps.removeResponseFromToolDefinition = true;
+
+    const std::string toolDefinitions = R"([{"type": "function", "function": {"name": "cat", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"file_name": {"type": "string", "description": "The name of the file from current directory to display. No path is allowed. "}}, "required": ["file_name"]}}},
+                                            {"type": "function", "function": {"name": "cd", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"folder": {"type": "string", "description": "The folder of the directory to change to. You can only change one folder level at a time. "}}, "required": ["folder"]}}}])";
+
+    auto history = buildHistory(R"([
+        {"role": "user", "content": "hello"}
+    ])",
+        toolDefinitions);
+
+    chat_template_adapter::applyToHistory(caps, history);
+
+    ASSERT_EQ(history.size(), 1);
+    auto toolDefinitionArray = history.get_tools();
+    ASSERT_TRUE(toolDefinitionArray.is_array());
+    EXPECT_EQ(toolDefinitionArray.size(), 2u);
+    EXPECT_EQ(toolDefinitionArray[0]["function"]["name"], "cat");
+    EXPECT_EQ(toolDefinitionArray[1]["function"]["name"], "cd");
+    EXPECT_FALSE(toolDefinitionArray[0]["function"].contains("response"));
+    EXPECT_FALSE(toolDefinitionArray[1]["function"].contains("response"));
+}
+
+TEST_F(ChatTemplateAdapterTest,applyToHistoryHandlesEmptyToolDefinitions) {
+ChatTemplateCaps caps;
+    caps.removeResponseFromToolDefinition = true;
+
+    auto history = buildHistory(R"([
+        {"role": "user", "content": "hello"}
+    ])");
+
+    chat_template_adapter::applyToHistory(caps, history);
+
+    ASSERT_EQ(history.size(), 1);
+    auto toolDefinitionArray = history.get_tools();
+    ASSERT_TRUE(toolDefinitionArray.is_array());
+    EXPECT_EQ(toolDefinitionArray.size(), 0);
 }
