@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
 #include "../config.hpp"
 #include "src/utils/env_guard.hpp"
 #include "src/filesystem/filesystem.hpp"
@@ -35,7 +35,7 @@
 #include "../ov_utils.hpp"
 #include "../servable_definition_unload_guard.hpp"
 #include "../servable_name_checker.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 #include "src/systeminfo.hpp"
 #include "../tensorinfo.hpp"

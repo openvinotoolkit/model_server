@@ -30,7 +30,7 @@
 #include "../logging.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 #include "stress_test_utils.hpp"
 #include "test_models.hpp"

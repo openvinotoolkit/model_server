@@ -37,7 +37,7 @@
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../config.hpp"
 #include "../dags/node_library.hpp"
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
@@ -48,7 +48,7 @@
 #include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
 #include "../shape.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../tensorinfo.hpp"
 
 #include "../kfs_frontend/validation.hpp"

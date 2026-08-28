@@ -15,7 +15,7 @@
 //*****************************************************************************
 
 #include "python_calculators_plugin_loader.hpp"
-#include "../kfs_python_tensor_bridge.hpp"
+#include "src/kfs_python_tensor_bridge.hpp"
 
 #include <cstdlib>
 #include <cstdio>

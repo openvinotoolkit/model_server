@@ -27,7 +27,7 @@
 #include "../logging.hpp"
 #include "../module.hpp"
 #include "../module_names.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "python_backend.hpp"
 
 namespace py = pybind11;

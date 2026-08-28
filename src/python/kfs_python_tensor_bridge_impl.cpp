@@ -25,9 +25,9 @@
 
 #include "python_backend.hpp"
 #include "utils.hpp"
-#include "../kfs_python_tensor_bridge.hpp"
+#include "src/kfs_python_tensor_bridge.hpp"
 #include "../logging.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)

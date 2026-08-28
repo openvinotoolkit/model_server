@@ -35,7 +35,7 @@
 #include "../logging.hpp"
 #include "../mediapipe_runtime_api.hpp"
 #include "../module_names.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 
 namespace ovms {

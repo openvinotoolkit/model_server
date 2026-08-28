@@ -24,11 +24,11 @@
 #include <utility>
 #include <vector>
 
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
 #include "mediapipe_graph_executor_interface.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../timer.hpp"
 #include "src/llm/execution_context_utils.hpp"
 #pragma warning(push)

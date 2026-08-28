@@ -48,7 +48,7 @@
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../tensor_conversion.hpp"
 #include "../timer.hpp"
 

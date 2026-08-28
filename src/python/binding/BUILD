@@ -47,7 +47,7 @@ pybind_extension(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
-# simple copy one file to another used on different operatiing systems
+# simple copy one file to another used on different operating systems
 load("@aspect_bazel_lib//:e2e/copy_action/copy.bzl", "simple_copy_file")
 simple_copy_file(
     name = "copy_pyovms",

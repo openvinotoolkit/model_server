@@ -33,7 +33,7 @@
 #include "../grpcservermodule.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../kfs_python_tensor_bridge.hpp"
+#include "src/kfs_python_tensor_bridge.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"

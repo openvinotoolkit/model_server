@@ -22,9 +22,6 @@
 #include <variant>
 
 #include "../../../logging.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "src/llm/py_jinja_template_processor.hpp"
-#endif
 
 namespace ovms {
 std::string ChatTemplateProcessor::serializeForJinja(const ov::genai::ChatHistory& chatHistory) {
@@ -43,30 +40,12 @@ std::string ChatTemplateProcessor::serializeForJinja(const ov::genai::ChatHistor
     return json;
 }
 
-#if (PYTHON_DISABLE == 0)
 ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
     bool useMinja,
-    const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate,
-    PyJinjaTemplateProcessor* templateProcessorPtr) :
+    const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate) :
     tokenizer(tokenizer),
     useMinja(useMinja),
-    preparedRuntimeChatTemplate(preparedRuntimeChatTemplate),
-    templateProcessor(std::nullopt) {
-    if (templateProcessorPtr != nullptr) {
-        templateProcessor = std::ref(*templateProcessorPtr);
-    }
-}
-#else
-ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
-    bool useMinja,
-    const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate,
-    PyJinjaTemplateProcessor* templateProcessorPtr) :
-    tokenizer(tokenizer),
-    useMinja(useMinja),
-    preparedRuntimeChatTemplate(preparedRuntimeChatTemplate) {
-    (void)templateProcessorPtr;
-}
-#endif
+    preparedRuntimeChatTemplate(preparedRuntimeChatTemplate) {}
 
 absl::Status ChatTemplateProcessor::extractAddGenerationPrompt(const ov::genai::ChatHistory& chatHistory,
     ov::genai::JsonContainer& kwargs, bool& addGenerationPrompt) {
@@ -99,7 +78,11 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
 
     const std::string jsonBody = serializeForJinja(chatHistory);
 
-    if (!useMinja && preparedRuntimeChatTemplate != nullptr && preparedRuntimeChatTemplate->isPrepared()) {
+    if (!useMinja) {
+        if (preparedRuntimeChatTemplate == nullptr || !preparedRuntimeChatTemplate->isPrepared()) {
+            return absl::Status(absl::StatusCode::kInternal,
+                "Prepared runtime chat template is unavailable");
+        }
         std::string runtimeOutput;
         RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
         auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
@@ -113,8 +96,7 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
             (void)runtimeError;
             return absl::Status(absl::StatusCode::kInvalidArgument, runtimeOutput);
         }
-    }
-    if (req.promptText.empty()) {
+    } else {
         const auto& tools = chatHistory.get_tools();
         ov::genai::JsonContainer kwargs;
         bool addGenerationPrompt = true;

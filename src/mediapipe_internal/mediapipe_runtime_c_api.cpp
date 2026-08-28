@@ -28,7 +28,7 @@
 #include "../graph_export/graph_export.hpp"
 #include "../servable_definition.hpp"
 #include "../servable_name_checker.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../utils/newline_delimited.hpp"
 #include "mediapipegraphconfig.hpp"
@@ -206,7 +206,8 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPGraphExportCreateServableConfig(c
     return static_cast<int>(status.getCode());
 }
 
-// In-memory variant: returns the generated pbtxt via *outPbtxt (malloc'd, caller must free).
+// In-memory variant: returns the generated pbtxt via *outPbtxt. Ownership is
+// transferred to the caller, which must release the buffer with free().
 // Used by Server::startModules in IN_MEMORY_GRAPH_MODE to obtain the graph without writing to disk.
 extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPGraphExportCreateServableConfigInMemory(const char* directoryPath,
     const ovms::HFSettingsImpl* hfSettings,

@@ -22,7 +22,7 @@
 #include <unistd.h>
 #endif
 
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../systeminfo.hpp"
 
 using namespace testing;

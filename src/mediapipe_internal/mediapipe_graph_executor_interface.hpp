@@ -17,8 +17,8 @@
 
 #include <string>
 
-#include "../execution_context.hpp"
-#include "../status.hpp"
+#include "src/execution_context.hpp"
+#include "src/status.hpp"
 
 namespace grpc_impl {
 template <typename W, typename R>

@@ -345,7 +345,7 @@ cc_binary(
     visibility = ["//visibility:public"],
 )
 
-# simple copy one file to another used on different operatiing systems
+# simple copy one file to another used on different operating systems
 simple_copy_file(
     name = "copy_libovmspython",
     src = "libovmspython.so",
@@ -528,7 +528,7 @@ cc_binary(
     visibility = ["//visibility:public"],
 )
 
-# simple copy one file to another used on different operatiing systems
+# simple copy one file to another used on different operating systems
 simple_copy_file(
     name = "copy_libpython_calculators",
     src = "libpython_calculators.so",

@@ -156,7 +156,8 @@ public:
 
     /**
      * @brief Populate the in-memory pbtxt buffer used in IN_MEMORY_GRAPH_MODE.
-     *        Called by ModelManager::startFromConfig; ownership is moved in.
+      *        Called by ModelManager::startFromConfig. The value is stored in
+      *        this configuration; passing an rvalue allows its contents to be moved.
      */
     void setInMemoryGraphPbTxt(std::string pbtxt) {
         this->inMemoryGraphPbTxt = std::move(pbtxt);

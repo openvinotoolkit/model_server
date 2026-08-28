@@ -456,7 +456,7 @@ Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const Models
     return StatusCode::OK;
 }
 
-Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeRuntimeApi& factory) {
+Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeRuntimeApi& api) {
     if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
         return StatusCode::OK;
@@ -466,8 +466,8 @@ Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, 
         "Processing mediapipe graph config: {} graph_path: {} runtime_loaded: {}",
         config.getGraphName(),
         config.getGraphPath(),
-        factory.isLoaded());
-    auto status = factory.processConfig(config, *this, *this);
+        api.isLoaded());
+    auto status = api.processConfig(config, *this, *this);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger,
             "Failed to process mediapipe graph config: {} status: {}",
@@ -477,7 +477,7 @@ Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, 
         SPDLOG_LOGGER_DEBUG(modelmanager_logger,
             "Processed mediapipe graph config successfully: {} definition_exists: {}",
             config.getGraphName(),
-            factory.definitionExists(config.getGraphName()));
+            api.definitionExists(config.getGraphName()));
     }
     return status;
 }

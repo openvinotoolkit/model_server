@@ -30,11 +30,11 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../predict_request_validation_utils.hpp"
 #include "../single_version_servable_definition.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #if !(defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME)
 #include "../tensorflow_type_utils.hpp"
 #endif
-#include "../kfs_python_tensor_bridge.hpp"
+#include "src/kfs_python_tensor_bridge.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6385 6386 6326 6011 6294 6201 4309 4005 4456 6246)

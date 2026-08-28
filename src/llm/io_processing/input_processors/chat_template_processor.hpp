@@ -15,8 +15,6 @@
 //*****************************************************************************
 #pragma once
 
-#include <functional>
-#include <optional>
 #include <string>
 
 #include <openvino/genai/tokenizer.hpp>
@@ -26,31 +24,26 @@
 
 namespace ovms {
 
-class PyJinjaTemplateProcessor;
-
 // Applies the chat template to ChatHistory, producing req.promptText.
 // Active when: input is ChatHistory variant (CHAT_COMPLETIONS and RESPONSES).
 //
 // The processor decides the path based on configuration/resources passed in constructor:
 // - useMinja=true forces tokenizer.apply_chat_template().
-// - useMinja=false tries prepared runtime Jinja first
-//   (PYTHON_DISABLE==0 only), then tokenizer.apply_chat_template().
+// - useMinja=false uses the prepared runtime Jinja path.
 class ChatTemplateProcessor : public BaseInputProcessor {
 public:
-    // templateProcessor is used only when PYTHON_DISABLE==0.
     ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
         bool useMinja,
-        const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate,
-        PyJinjaTemplateProcessor* templateProcessor = nullptr);
+        const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate);
 
     absl::Status process(InputRequest& req) override;
 
     // Serialises chatHistory to {"messages":[...], "tools":[...], "chat_template_kwargs":{...}}
-    // for Python Jinja template engines.
+    // for the runtime Python/Jinja template engine.
     //
-    // Public for unit tests: this is the OVMS-owned JSON shape that the PyJinja /
-    // runtime chat-template path receives, so the tests need to be able to lock it
-    // down independently of the Python runtime being loaded.
+    // Public for unit tests: this is the OVMS-owned JSON shape passed to the
+    // runtime chat-template path, so the tests can lock it down independently
+    // of the Python runtime being loaded.
     static std::string serializeForJinja(const ov::genai::ChatHistory& chatHistory);
 
 private:
@@ -63,11 +56,6 @@ private:
     // kwargs so it isn't supplied twice.
     static absl::Status extractAddGenerationPrompt(const ov::genai::ChatHistory& chatHistory,
         ov::genai::JsonContainer& kwargs, bool& addGenerationPrompt);
-
-#if (PYTHON_DISABLE == 0)
-    // Present only on the PyJinja path; nullopt means use tokenizer.apply_chat_template().
-    std::optional<std::reference_wrapper<PyJinjaTemplateProcessor>> templateProcessor;
-#endif
 };
 
 }  // namespace ovms

@@ -164,9 +164,9 @@ private:
 };
 
 struct ServerGuard {
-    ServerGuard(const std::string& configPath, bool startGrpc = false) :
-        serverSettingsGuard(startGrpc),
-        modelsSettingsGuard(configPath) {
+    ServerGuard(const std::string& configPath, bool startGrpc = false) {
+        ServerSettingsGuard serverSettingsGuard(startGrpc);
+        ModelsSettingsGuard modelsSettingsGuard(configPath);
         THROW_ON_ERROR_CAPI(OVMS_ServerNew(&server));
         THROW_ON_ERROR_CAPI(OVMS_ServerStartFromConfigurationFile(server, serverSettingsGuard.settings, modelsSettingsGuard.settings));
     }
@@ -175,13 +175,6 @@ struct ServerGuard {
             OVMS_ServerDelete(server);
     }
     OVMS_Server* server{nullptr};
-
-private:
-    // Keep the settings objects alive for the duration of OVMS_ServerStartFromConfigurationFile().
-    // The server does not require these handles to remain valid after startup; they are only
-    // needed as setup arguments for the C API initialization call.
-    ServerSettingsGuard serverSettingsGuard;
-    ModelsSettingsGuard modelsSettingsGuard;
 };
 struct CallbackUnblockingStruct {
     std::promise<uint32_t> signal;

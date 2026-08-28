@@ -40,7 +40,7 @@
 #include "../config.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "io_processing/chat_template/analyzer.hpp"
 #include "io_processing/chat_template/probe.hpp"
 #include "io_processing/parser_config_validation.hpp"
@@ -197,14 +197,11 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
     // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
     const bool runtimeTemplatePrepared = properties->preparedRuntimeChatTemplate.isPrepared();
-    const bool pyTemplatePrepared = properties->hasPreparedPyTemplateProcessor();
-    const bool canUseJinjaProcessor = runtimeTemplatePrepared || pyTemplatePrepared;
     properties->inputProcessorContext.config.useMinja =
-        (properties->chatTemplateMode == ChatTemplateMode::MINJA) || !canUseJinjaProcessor;
+        properties->chatTemplateMode == ChatTemplateMode::MINJA;
     properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
     properties->inputProcessorContext.preparedRuntimeChatTemplate =
         runtimeTemplatePrepared ? &properties->preparedRuntimeChatTemplate : nullptr;
-    properties->inputProcessorContext.templateProcessor = properties->getPreparedPyTemplateProcessorOrNull();
 }
 
 void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties) {

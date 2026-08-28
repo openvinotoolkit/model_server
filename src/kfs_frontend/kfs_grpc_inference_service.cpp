@@ -28,10 +28,10 @@
 #include "../dags/pipeline.hpp"
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
 #include "../grpc_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-#include "../mediapipe_internal/mediapipe_graph_executor_interface.hpp"
+#include "src/mediapipe_internal/mediapipe_graph_executor_interface.hpp"
 #endif
 #include "src/metrics/metric.hpp"
 #include "../model.hpp"
@@ -46,7 +46,7 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../single_version_servable_definition.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 #include "../tensorinfo.hpp"
 #include "../timer.hpp"

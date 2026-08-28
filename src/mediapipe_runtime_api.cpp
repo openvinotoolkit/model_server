@@ -555,15 +555,12 @@ Status MediapipeRuntimeApi::createServableConfigInMemory(const std::string& dire
     }
     char* buffer = nullptr;
     int code = api->createServableConfigInMemory(directoryPath.c_str(), &hfSettings, &buffer);
+    std::unique_ptr<char, decltype(&std::free)> bufferGuard(buffer, &std::free);
     if (code == static_cast<int>(StatusCode::OK)) {
         if (buffer != nullptr) {
             outPbtxt.assign(buffer);
-            std::free(buffer);
         }
         return StatusCode::OK;
-    }
-    if (buffer != nullptr) {
-        std::free(buffer);
     }
     const char* details = api->lastError ? api->lastError() : nullptr;
     if (details == nullptr) {
@@ -571,7 +568,5 @@ Status MediapipeRuntimeApi::createServableConfigInMemory(const std::string& dire
     }
     return Status(static_cast<StatusCode>(code), details);
 }
-
-#undef OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED
 
 }  // namespace ovms

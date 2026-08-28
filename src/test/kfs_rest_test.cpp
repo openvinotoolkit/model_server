@@ -28,7 +28,7 @@
 #include "../http_rest_api_handler.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../version.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"

@@ -47,7 +47,7 @@
 #include "../prediction_service_utils.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 #include "src/timer.hpp"
 #include "c_api_test_utils.hpp"

@@ -25,7 +25,7 @@
 #include <spdlog/spdlog.h>
 
 #include "src/filesystem/filesystem.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 

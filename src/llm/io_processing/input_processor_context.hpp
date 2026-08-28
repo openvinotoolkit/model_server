@@ -25,8 +25,6 @@
 
 namespace ovms {
 
-class PyJinjaTemplateProcessor;
-
 // Holds the per-deployment resources needed by InputProcessor.
 // Created once during servable initialization; reused across requests.
 struct InputProcessorContext {
@@ -34,7 +32,6 @@ struct InputProcessorContext {
     ChatTemplateCaps chatTemplateCaps;
     ov::genai::Tokenizer tokenizer;
     PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate = nullptr;
-    PyJinjaTemplateProcessor* templateProcessor = nullptr;
 };
 
 }  // namespace ovms

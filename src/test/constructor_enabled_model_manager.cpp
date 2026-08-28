@@ -17,7 +17,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../status.hpp"
+#include "src/status.hpp"
 
 ConstructorEnabledModelManager::ConstructorEnabledModelManager(const std::string& modelCacheDirectory, ovms::PythonBackend* pythonBackend) :
     ovms::ModelManager(modelCacheDirectory, &registry, pythonBackend) {}
