@@ -120,7 +120,6 @@ private:
     void handleInsideParamNameState();
     void handleInsideParamState();
     void handleInsideAfterFunctionState(ToolCalls_t& toolCalls);
-
 };
 
 class Minicpm5ToolParser : public BaseOutputParser {

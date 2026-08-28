@@ -111,7 +111,6 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
     }
 }
 
-
 void Minicpm5ToolParserImpl::handleInsideContentState() {
     // Look for the next <function tag; everything else is plain content.
     auto posFunc = this->streamContent.find(Minicpm5ToolParser::FUNCTION_START_TAG, this->lastProcessedPosition);
