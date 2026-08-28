@@ -56,6 +56,8 @@ openvino/model_server:latest \
 Add the S3 path as the model_path and pass the credentials as environment variables to the Docker container.
 `S3_ENDPOINT` is optional for Amazon S3 storage and mandatory for MinIO and other S3-compatible storage types.
 
+When `S3_ENDPOINT` is set without a scheme, OVMS uses `http://` by default for compatibility with MinIO and other S3-compatible deployments. To force TLS, provide the endpoint as `https://host:port` explicitly.
+
 Example command with `s3://<bucket>/<model_path>:`
 
 ```bash

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <random>
 #include <string>
+#include <cctype>
 
 #include "utils.hpp"
 
@@ -69,6 +70,10 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
     int quoteDepth = 0;
     int singleQuoteDepth = 0;
 
+    auto isWordChar = [](char c) {
+        return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+    };
+
     for (size_t i = startPos; i < str.length(); ++i) {
         if (bracketDepth == 0 && braceDepth == 0 && quoteDepth == 0 && singleQuoteDepth == 0 &&
             str.compare(i, target.length(), target) == 0) {
@@ -86,7 +91,30 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
         } else if (str[i] == '"' && (i == 0 || str[i - 1] != '\\')) {
             quoteDepth = 1 - quoteDepth;
         } else if (quoteDepth == 0 && str[i] == '\'' && (i == 0 || str[i - 1] != '\\')) {
-            singleQuoteDepth = 1 - singleQuoteDepth;
+            const bool prevIsWord = (i > 0) && isWordChar(str[i - 1]);
+            const bool nextIsWord = (i + 1 < str.size()) && isWordChar(str[i + 1]);
+
+            if (singleQuoteDepth == 0) {
+                // Opening single quote: ignore apostrophes inside words.
+                if (!(prevIsWord && nextIsWord)) {
+                    singleQuoteDepth = 1;
+                }
+            } else {
+                // Inside single-quoted text: treat apostrophes in words as plain
+                // characters (it's, Johns'). Close only when the following
+                // non-space token looks like an argument/list/object delimiter.
+                if (prevIsWord && nextIsWord) {
+                    continue;
+                }
+
+                size_t j = i + 1;
+                while (j < str.size() && std::isspace(static_cast<unsigned char>(str[j])) != 0) {
+                    ++j;
+                }
+                if (j == str.size() || str[j] == ',' || str[j] == ':' || str[j] == ']' || str[j] == '}' || str[j] == ')') {
+                    singleQuoteDepth = 0;
+                }
+            }
         }
     }
     return std::string::npos;
