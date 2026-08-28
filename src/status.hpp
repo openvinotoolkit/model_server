@@ -360,6 +360,10 @@ enum class StatusCode {
     SHAPE_DYNAMIC_BUT_NPU_USED,
     STATIC_RESOLUTION_MISUSE,
 
+    // Model Group Management
+    GROUP_LOAD_FAILED,
+    GROUP_UNLOAD_BLOCKED,
+
     STATUS_CODE_END
 };
 

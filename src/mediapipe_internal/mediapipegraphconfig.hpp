@@ -73,6 +73,11 @@ private:
      */
     int idleUnloadTimeoutSeconds = 0;
 
+    /**
+     * @brief Group name for idle model management. Defaults to graph name.
+     */
+    std::string groupName;
+
 public:
     MediapipeGraphConfig(const std::string& graphName = "",
         const std::string& basePath = "",
@@ -184,6 +189,14 @@ public:
 
     void setIdleUnloadTimeoutSeconds(int seconds) {
         this->idleUnloadTimeoutSeconds = seconds;
+    }
+
+    const std::string& getGroupName() const {
+        return this->groupName;
+    }
+
+    void setGroupName(const std::string& groupName) {
+        this->groupName = groupName;
     }
 
     bool isReloadRequired(const MediapipeGraphConfig& rhs) const;

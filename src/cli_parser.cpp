@@ -137,6 +137,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
+            ("idle_unload_timeout_seconds",
+                "Idle timeout in seconds for model group unloading. When > 0, models not in the 'permanent' group are loaded on demand and unloaded after this idle period. Only effective with config.json multi-model setup. Default is 0 (disabled).",
+                cxxopts::value<uint32_t>()->default_value("0"),
+                "IDLE_UNLOAD_TIMEOUT_SECONDS")
             ("custom_node_resources_cleaner_interval_seconds",
                 "Time interval between two consecutive resources cleanup scans. Default is 300. Zero value disables resources cleaner.",
                 cxxopts::value<uint32_t>()->default_value("300"),
@@ -569,6 +573,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
 
     serverSettings.resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
+    serverSettings.idleUnloadTimeoutSeconds = result->operator[]("idle_unload_timeout_seconds").as<uint32_t>();
     serverSettings.grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
     if (result->count("log_level"))

@@ -58,6 +58,7 @@
 #include "filesystem/filesystemfactory.hpp"
 #include "graph_export/graph_export.hpp"
 #include "logging.hpp"
+#include "model_group_manager.hpp"
 #include "model_management/servable_loading_queue.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "mediapipe_internal/mediapipefactory.hpp"
@@ -243,6 +244,13 @@ Status ModelManager::start(const Config& config) {
     resourcesCleanupIntervalMillisec = config.resourcesCleanerPollWaitSeconds() * 1000;
     Status status;
     this->startedWithConfigFile = (config.configPath() != "");
+
+    // Initialize model group manager if idle unload is enabled and using config file
+    if (this->startedWithConfigFile && config.idleUnloadTimeoutSeconds() > 0) {
+        groupManager_ = std::make_unique<ModelGroupManager>(config.idleUnloadTimeoutSeconds());
+        SPDLOG_INFO("Model group idle management enabled with {}s timeout", config.idleUnloadTimeoutSeconds());
+    }
+
     if (isStartedWithConfigFile()) {
         status = startFromFile(config.configPath());
     } else {
@@ -1000,6 +1008,33 @@ Status ModelManager::loadConfig() {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
 
+    // Build model groups and unload non-permanent servables for on-demand loading
+    if (groupManager_ && groupManager_->isEnabled()) {
+        groupManager_->buildGroups(this->servedModelConfigs, *this);
+        // Unload all non-permanent servables so they are loaded on demand
+        for (const auto& [groupName, groupInfo] : groupManager_->getGroups()) {
+            if (groupInfo.isPermanent()) {
+                continue;
+            }
+            for (const auto& modelName : groupInfo.modelNames) {
+                auto model = findModelByName(modelName);
+                if (model != nullptr) {
+                    model->retireAllVersions();
+                    SPDLOG_INFO("Retired model '{}' (group '{}') for on-demand loading", modelName, groupName);
+                }
+            }
+#if (MEDIAPIPE_DISABLE == 0)
+            for (const auto& graphName : groupInfo.mediapipeNames) {
+                MediapipeGraphDefinition* def = mediapipeFactory->findDefinitionByName(graphName);
+                if (def != nullptr) {
+                    def->unload();
+                    SPDLOG_INFO("Unloaded mediapipe graph '{}' (group '{}') for on-demand loading", graphName, groupName);
+                }
+            }
+#endif
+        }
+    }
+
     this->lastLoadConfigStatus = firstErrorStatus;
     return firstErrorStatus;
 }
@@ -1141,6 +1176,10 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
         // non-blocking (it skips graphs with in-flight requests rather than
         // draining). This keeps configMtx hold time minimal.
         unloadIdleGraphs();
+        // Model group idle unload: unload the active non-permanent group if idle
+        if (groupManager_ && groupManager_->isEnabled()) {
+            groupManager_->unloadActiveGroupIfIdle(*this);
+        }
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
@@ -1647,6 +1686,16 @@ Status ModelManager::getModelInstance(const std::string& modelName,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const {
     SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
 
+    // On-demand group loading for idle model management
+    if (groupManager_ && groupManager_->isEnabled()) {
+        auto status = groupManager_->ensureGroupLoaded(modelName, const_cast<ModelManager&>(*this));
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to load group for model '{}': {}", modelName, status.string());
+            return status;
+        }
+        groupManager_->recordActivity();
+    }
+
     auto model = findModelByName(modelName);
     if (model == nullptr) {
         return StatusCode::MODEL_NAME_MISSING;
@@ -1671,6 +1720,10 @@ const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() cons
 }
 
 const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
+    // In idle management mode, report all configured models as available
+    if (groupManager_ && groupManager_->isEnabled()) {
+        return groupManager_->getAllConfiguredServableNames();
+    }
     std::vector<std::string> names;
     std::shared_lock lock(modelsMtx);
     for (auto& [name, model] : models) {
@@ -1684,6 +1737,16 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
 Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
+    // On-demand group loading for idle model management
+    if (groupManager_ && groupManager_->isEnabled()) {
+        auto status = groupManager_->ensureGroupLoaded(name, *this);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to load group for mediapipe graph '{}': {}", name, status.string());
+            return status;
+        }
+        groupManager_->recordActivity();
+    }
+
     // Lazy wake-up with bounded retry. A request can observe state==AVAILABLE here,
     // then have the watcher flip it to UNLOADED before create()->waitForLoaded() runs,
     // which returns MEDIAPIPE_DEFINITION_NOT_LOADED_YET. We retry a bounded number of
