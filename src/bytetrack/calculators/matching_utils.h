@@ -230,11 +230,13 @@ inline AssignmentResult LinearAssignment(const Eigen::MatrixXf& cost, float thre
                 }
             }
             u[i] = u1;
-            if (col2row[j1] == -1) {
-                row2col[i] = j1;
-                col2row[j1] = i;
-            } else {
-                v[j1] -= (u2 - u1);
+            if (j1 != -1) {
+                if (col2row[j1] == -1) {
+                    row2col[i] = j1;
+                    col2row[j1] = i;
+                } else {
+                    v[j1] -= (u2 - u1);
+                }
             }
         }
     }
