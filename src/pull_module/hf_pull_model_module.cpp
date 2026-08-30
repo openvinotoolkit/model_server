@@ -31,6 +31,7 @@
 #include "curl_downloader.hpp"
 #include "gguf_downloader.hpp"
 #include "hf_env_vars.hpp"
+#include "oci_downloader.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "../logging.hpp"
 #include "../module_names.hpp"
@@ -249,6 +250,8 @@ Status HfPullModelModule::clone() {
         downloader = std::make_unique<OptimumDownloader>(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
     } else if (this->hfSettings.downloadType == GGUF_DOWNLOAD) {
         downloader = std::make_unique<GGUFDownloader>(this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels, this->hfSettings.ggufFilename, this->GetHfEndpoint());
+    } else if (this->hfSettings.downloadType == OCI_DOWNLOAD) {
+        downloader = std::make_unique<OciDownloader>(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
     } else {
         SPDLOG_ERROR("Unsupported download type");
         return StatusCode::INTERNAL_ERROR;
@@ -259,7 +262,17 @@ Status HfPullModelModule::clone() {
         return status;
     }
     graphDirectory = downloader->getGraphDirectory();
-    std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << graphDirectory << std::endl;
+    auto* ociDownloader = dynamic_cast<OciDownloader*>(downloader.get());
+    if (ociDownloader != nullptr) {
+        // llmman keeps the weights in its own content-addressed store, so the
+        // resolved location has to be propagated into graph.pbtxt rather than
+        // relying on the default "models live next to graph.pbtxt" layout.
+        this->hfSettings.exportSettings.modelPath = ociDownloader->getModelPath();
+        this->hfSettings.ggufFilename = ociDownloader->getGgufFilename();
+        std::cout << "Model: " << this->hfSettings.sourceModel << " resolved to: " << this->hfSettings.exportSettings.modelPath << std::endl;
+    } else {
+        std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << graphDirectory << std::endl;
+    }
 
     // Text gen with draft source model case - downloads second model
     if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()) {

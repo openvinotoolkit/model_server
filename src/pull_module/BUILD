@@ -32,6 +32,7 @@ ovms_cc_library(
     deps =  [
         "@ovms//src:libovmsstatus",
         "@ovms//src:libovmslogging",
+        "@ovms//src:libovms_server_settings",
         "@ovms//src/filesystem:libovmsfilesystem",
         "@ovms//src/filesystem:libovmslocalfilesystem",
     ],
@@ -112,6 +113,26 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "oci_downloader",
+    srcs = ["oci_downloader.cpp"],
+    hdrs = ["oci_downloader.hpp"],
+    deps =  [
+        ":cmd_exec",
+        ":model_downloader",
+        ":optimum_export",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@ovms//src/port:rapidjson_document",
+        "@ovms//src:libovmslogging",
+        "@ovms//src:libovmsstatus",
+        "@ovms//src:libovmsstring_utils",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src/filesystem:libovmsfilesystem",
+        "@ovms//src/filesystem:libovmslocalfilesystem",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "hf_pull_model_module",
     srcs = ["hf_pull_model_module.cpp"],
     hdrs = ["hf_pull_model_module.hpp"],
@@ -120,6 +141,7 @@ ovms_cc_library(
         ":curl_downloader",
         ":libgit2",
         "gguf_downloader",
+        ":oci_downloader",
         ":optimum_export",
         "@ovms//src/graph_export:graph_export",
         "@ovms//src:cpp_headers",

@@ -929,6 +929,38 @@ TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "model_repository_path parameter is required for pull mode");
 }
 
+TEST_F(OvmsConfigDeathTest, ociPullWithGgufFilename) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "oci://ghcr.io/org/model:tag",
+        "--task",
+        "text_generation",
+        "--gguf_filename",
+        "model.gguf",
+        "--model_repository_path",
+        "/models",
+    };
+    int arg_count = 11;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST_F(OvmsConfigDeathTest, ociPullWithoutTask) {
+    // The task cannot be inferred from a registry reference without pulling
+    // the image, which must not happen while the CLI is still being parsed.
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "oci://ghcr.io/org/model:tag",
+        "--model_repository_path",
+        "/models",
+    };
+    int arg_count = 6;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
+}
+
 TEST_F(OvmsConfigDeathTest, hfPullWrongPrecisionParameter) {
     char* n_argv[] = {
         "ovms",
@@ -1316,6 +1348,84 @@ TEST(OvmsExportHfSettingsTest, pullFromHfOutsideOvOrg) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.downloadType, ovms::GIT_CLONE_DOWNLOAD);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+}
+
+TEST(OvmsExportHfSettingsTest, pullOciModelPack) {
+    std::string modelName = "oci://ghcr.io/org/model:tag";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
+    };
+
+    int arg_count = 8;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.downloadType, ovms::OCI_DOWNLOAD);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+}
+
+TEST(OvmsExportHfSettingsTest, pullOciModelPackWithWeightFormatStaysOci) {
+    // --weight-format is forwarded to the conversion OciDownloader may run on
+    // a safetensors payload; it must not reroute the pull to optimum-cli.
+    std::string modelName = "oci://ghcr.io/org/model:tag";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--weight-format",
+        (char*)"fp16",
+        (char*)"--task",
+        (char*)"text_generation",
+    };
+
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.downloadType, ovms::OCI_DOWNLOAD);
+    ASSERT_EQ(hfSettings.exportSettings.precision, "fp16");
+}
+
+TEST(OvmsExportHfSettingsTest, pullAndStartOciModelPackNaming) {
+    std::string modelName = "oci://ghcr.io/org/model:tag";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--rest_port",
+        (char*)"8080",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
+    };
+
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+    // The served name keeps the registry reference the user typed; the
+    // directory drops the scheme and the ':' that Windows would reject.
+    ASSERT_EQ(config.modelName(), "ghcr.io/org/model:tag");
+    ASSERT_EQ(config.modelPath(), ovms::FileSystem::joinPath({downloadPath, "ghcr.io/org/model_tag"}));
 }
 
 TEST(OvmsExportHfSettingsTest, allChanged) {
