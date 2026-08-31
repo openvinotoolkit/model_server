@@ -16,6 +16,7 @@
 #include "graph_cli_parser.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
@@ -163,7 +164,8 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         if (result->count("draft_model_path")) {
             if (result->count("draft_source_model"))
                 throw std::invalid_argument("--draft_model_path and --draft_source_model are mutually exclusive");
-            graphSettings.draftModelPath = result->operator[]("draft_model_path").as<std::string>();
+            const auto rawPath = std::filesystem::path(result->operator[]("draft_model_path").as<std::string>());
+            graphSettings.draftModelPath = std::filesystem::absolute(rawPath).lexically_normal().string();
         }
         if (result->count("draft_eagle3_mode")) {
             graphSettings.draftEagle3Mode = result->operator[]("draft_eagle3_mode").as<bool>();
