@@ -25,7 +25,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 

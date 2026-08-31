@@ -21,7 +21,7 @@
 #include "config.hpp"
 #include "logging.hpp"
 #include "metrics/metric_module.hpp"
-#include "modelmanager.hpp"
+#include "src/model_management/modelmanager.hpp"
 #include "server.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "python/pythoninterpretermodule.hpp"

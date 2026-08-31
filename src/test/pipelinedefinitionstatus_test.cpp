@@ -302,131 +302,131 @@ TEST(PipelineDefinitionStatus, ConvertToModelStatus) {
 }
 
 // ---------------------------------------------------------------------------
-// Idle unload feature: UNLOADED state transitions (issue #4141)
+// Idle unload feature: SLEEPING state transitions (issue #4141)
 // ---------------------------------------------------------------------------
 
-TEST(PipelineDefinitionStatus, AvailableThenUnload) {
+TEST(PipelineDefinitionStatus, AvailableThenSleep) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
-    pds.handle(UnloadEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 
-TEST(PipelineDefinitionStatus, UnloadedThenReloadGoesToReloading) {
+TEST(PipelineDefinitionStatus, SleepingThenReloadGoesToReloading) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
-    pds.handle(UnloadEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     pds.handle(ReloadEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
 }
 
-TEST(PipelineDefinitionStatus, UnloadedThenReloadThenValidationPassGoesToAvailable) {
+TEST(PipelineDefinitionStatus, SleepingThenReloadThenValidationPassGoesToAvailable) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
-    pds.handle(UnloadEvent());
+    pds.handle(SleepEvent());
     pds.handle(ReloadEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 }
 
-TEST(PipelineDefinitionStatus, UnloadedThenValidationPassDefensiveGoesToAvailable) {
+TEST(PipelineDefinitionStatus, SleepingThenValidationPassDefensiveGoesToAvailable) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
-    pds.handle(UnloadEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 }
 
-TEST(PipelineDefinitionStatus, UnloadedThenRetireGoesToRetired) {
+TEST(PipelineDefinitionStatus, SleepingThenRetireGoesToRetired) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
-    pds.handle(UnloadEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     pds.handle(RetireEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
 }
 
-TEST(PipelineDefinitionStatus, UnloadedIsNotAvailable) {
+TEST(PipelineDefinitionStatus, SleepingIsNotAvailable) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
     ASSERT_TRUE(pds.isAvailable());
-    pds.handle(UnloadEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     ASSERT_FALSE(pds.isAvailable());
 }
 
-TEST(PipelineDefinitionStatus, UnloadedConvertsToModelStatusAvailable) {
+TEST(PipelineDefinitionStatus, SleepingConvertsToModelStatusAvailable) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
-    pds.handle(UnloadEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
-    // UNLOADED must report AVAILABLE so health checks / routing do not exclude the
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    // SLEEPING must report AVAILABLE so health checks / routing do not exclude the
     // servable (it auto-reloads on the next inference request).
     ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::AVAILABLE, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
 }
 
-TEST(PipelineDefinitionStatus, UnloadEventOnBeginIsNoOp) {
+TEST(PipelineDefinitionStatus, SleepEventOnBeginIsNoOp) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
-    pds.handle(UnloadEvent());
+    pds.handle(SleepEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
 }
 
-TEST(PipelineDefinitionStatus, UnloadEventOnReloadingIsNoOp) {
+TEST(PipelineDefinitionStatus, SleepEventOnReloadingIsNoOp) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
     pds.handle(ReloadEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
-    pds.handle(UnloadEvent());
+    pds.handle(SleepEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
 }
 
-TEST(PipelineDefinitionStatus, UnloadEventOnRetiredIsNoOp) {
+TEST(PipelineDefinitionStatus, SleepEventOnRetiredIsNoOp) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
     pds.handle(RetireEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
-    pds.handle(UnloadEvent());
+    pds.handle(SleepEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
 }
 
-TEST(PipelineDefinitionStatus, UnloadEventOnLoadingPreconditionFailedRevertsToUnloaded) {
+TEST(PipelineDefinitionStatus, SleepEventOnLoadingPreconditionFailedRevertsToSleeping) {
     // A failed wake-up reload (validate -> LOADING_PRECONDITION_FAILED) is reverted
-    // to UNLOADED by wakeUpIfUnloaded() via UnloadEvent so the next request retries.
+    // to SLEEPING by wakeUpIfSleeping() via SleepEvent so the next request retries.
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationFailedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
-    pds.handle(UnloadEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 
-TEST(PipelineDefinitionStatus, UnloadedAfterFailedWakeIsRetryableViaReload) {
-    // Full retry path: AVAILABLE -> UNLOADED -> (wake) RELOADING -> (fail) FAILED
-    // -> (revert) UNLOADED -> (retry wake) RELOADING -> (pass) AVAILABLE.
+TEST(PipelineDefinitionStatus, SleepingAfterFailedWakeIsRetryableViaReload) {
+    // Full retry path: AVAILABLE -> SLEEPING -> (wake) RELOADING -> (fail) FAILED
+    // -> (revert) SLEEPING -> (retry wake) RELOADING -> (pass) AVAILABLE.
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
-    pds.handle(UnloadEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     pds.handle(ReloadEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
     pds.handle(ValidationFailedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
-    pds.handle(UnloadEvent());  // wakeUpIfUnloaded reverts on failure
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(SleepEvent());  // wakeUpIfSleeping reverts on failure
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     pds.handle(ReloadEvent());
     pds.handle(ValidationPassedEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 }
 
-TEST(PipelineDefinitionStatus, UnloadEventOnUnloadedIsIdempotent) {
+TEST(PipelineDefinitionStatus, SleepEventOnSleepingIsIdempotent) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
-    pds.handle(UnloadEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
-    pds.handle(UnloadEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }

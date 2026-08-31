@@ -31,7 +31,7 @@
 #include "../logging.hpp"
 #include "../model.hpp"
 #include "../modelinstanceunloadguard.hpp"
-#include "../modelmanager.hpp"
+#include "src/model_management/modelmanager.hpp"
 #include "../prediction_service_utils.hpp"
 #include "absl/synchronization/notification.h"
 #include "constructor_enabled_model_manager.hpp"

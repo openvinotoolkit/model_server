@@ -45,35 +45,35 @@
 #pragma warning(pop)
 #include <sys/stat.h>
 
-#include "cleaner_utils.hpp"
-#include "config.hpp"
-#include "customloaderconfig.hpp"
-#include "customloaderinterface.hpp"
-#include "customloaders.hpp"
-#include "dags/custom_node_library_manager.hpp"
-#include "dags/pipeline_config_parser.hpp"
-#include "dags/pipeline_factory.hpp"
-#include "dags/pipelinedefinition.hpp"
-#include "filesystem/filesystem.hpp"
-#include "filesystem/filesystemfactory.hpp"
-#include "graph_export/graph_export.hpp"
-#include "logging.hpp"
+#include "src/cleaner_utils.hpp"
+#include "src/config.hpp"
+#include "src/customloaderconfig.hpp"
+#include "src/customloaderinterface.hpp"
+#include "src/customloaders.hpp"
+#include "src/dags/custom_node_library_manager.hpp"
+#include "src/dags/pipeline_config_parser.hpp"
+#include "src/dags/pipeline_factory.hpp"
+#include "src/dags/pipelinedefinition.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/filesystem/filesystemfactory.hpp"
+#include "src/graph_export/graph_export.hpp"
+#include "src/logging.hpp"
 #include "model_group_manager.hpp"
-#include "model_management/servable_loading_queue.hpp"
+#include "servable_loading_queue.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-#include "mediapipe_internal/mediapipefactory.hpp"
-#include "mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/mediapipe_internal/mediapipefactory.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
 #endif
-#include "metrics/metric_config.hpp"
-#include "metrics/metric_registry.hpp"
-#include "model.hpp"
-#include "modelinstance.hpp"  // for logging
-#include "modelinstanceunloadguard.hpp"
-#include "ov_utils.hpp"
-#include "schema.hpp"
-#include "servable_definition.hpp"
-#include "stringutils.hpp"
-#include "systeminfo.hpp"
+#include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric_registry.hpp"
+#include "src/model.hpp"
+#include "src/modelinstance.hpp"  // for logging
+#include "src/modelinstanceunloadguard.hpp"
+#include "src/ov_utils.hpp"
+#include "src/schema.hpp"
+#include "src/servable_definition.hpp"
+#include "src/stringutils.hpp"
+#include "src/systeminfo.hpp"
 
 namespace ovms {
 
@@ -120,13 +120,13 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             if (task.graphConfig.has_value()) {
                 const auto& config = task.graphConfig.value();
                 if (!def) {
-                    // Non-permanent idle groups: create as UNLOADED to skip expensive loading
+                    // Non-permanent idle groups: create as SLEEPING to skip expensive loading
                     if (groupManager_ && groupManager_->isEnabled() &&
                         !config.getGroupName().empty() && config.getGroupName() != "permanent") {
                         SPDLOG_LOGGER_DEBUG(modelmanager_logger,
-                            "Mediapipe graph:{} belongs to non-permanent group '{}'; creating as UNLOADED",
+                            "Mediapipe graph:{} belongs to non-permanent group '{}'; creating as SLEEPING",
                             task.name, config.getGroupName());
-                        return mediapipeFactory->createDefinitionAsUnloaded(task.name, config, *this);
+                        return mediapipeFactory->createDefinitionAsSleeping(task.name, config, *this);
                     }
                     return mediapipeFactory->createDefinition(task.name, config, *this, *this);
                 }
@@ -137,8 +137,8 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
                 // Urgent reload (inference-triggered wake-up or on-demand load)
                 if (!def)
                     return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
-                if (def->getStateCode() == PipelineDefinitionStateCode::UNLOADED) {
-                    return def->wakeUpIfUnloaded(*this);
+                if (def->getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
+                    return def->wakeUpIfSleeping(*this);
                 }
                 return def->reload(*this, def->getMediapipeGraphConfig());
             }
@@ -1760,7 +1760,7 @@ Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& gra
 
     // Wake up idle-unloaded graph via queue
     auto* def = this->mediapipeFactory->findDefinitionByName(name);
-    if (def && def->getStateCode() == PipelineDefinitionStateCode::UNLOADED) {
+    if (def && def->getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
         auto future = requestServableLoad(name);
         auto status = future.get();
         if (!status.ok()) {

@@ -78,7 +78,7 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     return stat;
 }
 
-Status MediapipeFactory::createDefinitionAsUnloaded(const std::string& pipelineName,
+Status MediapipeFactory::createDefinitionAsSleeping(const std::string& pipelineName,
     const MediapipeGraphConfig& config,
     MetricProvider& metrics) {
     if (definitionExists(pipelineName)) {
@@ -87,7 +87,7 @@ Status MediapipeFactory::createDefinitionAsUnloaded(const std::string& pipelineN
     }
     std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(
         pipelineName, config, metrics.getMetricRegistry(), &metrics.getMetricConfig(), pythonBackend);
-    graphDefinition->setAsUnloaded();
+    graphDefinition->setAsSleeping();
     std::unique_lock lock(definitionsMtx);
     definitions.insert({pipelineName, std::move(graphDefinition)});
     return StatusCode::OK;

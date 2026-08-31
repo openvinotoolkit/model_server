@@ -6069,13 +6069,13 @@ TEST_F(LLMIdleUnloadTest, UnloadAfterIdleFreesResources) {
     ASSERT_TRUE(def.shouldUnloadDueToIdle());
 
     ASSERT_EQ(def.unload(), StatusCode::OK);
-    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     // Resources freed: the GenAi servable map should be empty.
     ASSERT_TRUE(def.getGenAiServableMap().empty());
     ASSERT_FALSE(def.isAvailable());
 }
 
-// Lazy reload: after unload, wakeUpIfUnloaded brings it back to AVAILABLE with resources.
+// Lazy reload: after unload, wakeUpIfSleeping brings it back to AVAILABLE with resources.
 TEST_F(LLMIdleUnloadTest, WakeUpReloadsResources) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = buildOptGraphPbtxt();
@@ -6088,17 +6088,17 @@ TEST_F(LLMIdleUnloadTest, WakeUpReloadsResources) {
 
     def.backdateLastActivityForTest(60);
     ASSERT_EQ(def.unload(), StatusCode::OK);
-    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     ASSERT_TRUE(def.getGenAiServableMap().empty());
 
     // Wake up.
-    ASSERT_EQ(def.wakeUpIfUnloaded(manager), StatusCode::OK);
+    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     ASSERT_TRUE(def.isAvailable());
     ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
 
     // Wake-up while already AVAILABLE is a no-op success.
-    ASSERT_EQ(def.wakeUpIfUnloaded(manager), StatusCode::OK);
+    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 }
 
@@ -6166,7 +6166,7 @@ TEST_F(LLMIdleUnloadTest, PythonNodeWithIdleUnloadRejected) {
 }
 #endif
 
-// Exactly-one-reload under concurrency: N threads call wakeUpIfUnloaded on an UNLOADED def.
+// Exactly-one-reload under concurrency: N threads call wakeUpIfSleeping on an SLEEPING def.
 // Best-effort: asserts all end AVAILABLE and the graph is loaded exactly once afterwards.
 // Note: this verifies the end-state invariant (single AVAILABLE graph, resources present);
 // the per-definition mutex guarantees a single reload, but counting reloads deterministically
@@ -6183,14 +6183,14 @@ TEST_F(LLMIdleUnloadTest, ConcurrentWakeUpEndsAvailable) {
     ASSERT_EQ(def.validate(manager), StatusCode::OK);
     def.backdateLastActivityForTest(60);
     ASSERT_EQ(def.unload(), StatusCode::OK);
-    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 
     constexpr int kThreads = 8;
     std::vector<std::thread> threads;
     std::vector<ovms::Status> results(kThreads, StatusCode::UNKNOWN_ERROR);
     for (int i = 0; i < kThreads; ++i) {
         threads.emplace_back([&def, &manager, &results, i]() {
-            results[i] = def.wakeUpIfUnloaded(manager);
+            results[i] = def.wakeUpIfSleeping(manager);
         });
     }
     for (auto& t : threads) {
@@ -6203,11 +6203,11 @@ TEST_F(LLMIdleUnloadTest, ConcurrentWakeUpEndsAvailable) {
     ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
 }
 
-// Best-effort stress: interleave unload() (watcher role) and wakeUpIfUnloaded()
+// Best-effort stress: interleave unload() (watcher role) and wakeUpIfSleeping()
 // (request role) repeatedly and assert the graph never ends in a torn state.
 // lifecycleMtx makes unload and wake mutually exclusive, so every observed
 // settled state must be internally consistent: AVAILABLE with resources, or
-// cleanly UNLOADED (empty maps). Determinism is limited by thread scheduling;
+// cleanly SLEEPING (empty maps). Determinism is limited by thread scheduling;
 // this exercises the FIX 1/FIX 2 serialization rather than asserting an exact
 // sequence.
 TEST_F(LLMIdleUnloadTest, ConcurrentUnloadWakeNeverTearsState) {
@@ -6240,7 +6240,7 @@ TEST_F(LLMIdleUnloadTest, ConcurrentUnloadWakeNeverTearsState) {
     for (int i = 0; i < kWakers; ++i) {
         wakers.emplace_back([&]() {
             while (!stop.load()) {
-                auto s = def.wakeUpIfUnloaded(manager);
+                auto s = def.wakeUpIfSleeping(manager);
                 if (!s.ok())
                     errors.fetch_add(1);
                 std::this_thread::yield();
@@ -6259,13 +6259,13 @@ TEST_F(LLMIdleUnloadTest, ConcurrentUnloadWakeNeverTearsState) {
     ASSERT_EQ(errors.load(), 0);
 
     // Quiesce: ensure it ends AVAILABLE with resources (no torn RELOADING/null state).
-    ASSERT_EQ(def.wakeUpIfUnloaded(manager), StatusCode::OK);
+    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
     auto finalState = def.getStateCode();
-    // A settled state must be either AVAILABLE (with resources) or UNLOADED (empty).
+    // A settled state must be either AVAILABLE (with resources) or SLEEPING (empty).
     if (finalState == ovms::PipelineDefinitionStateCode::AVAILABLE) {
         ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
     } else {
-        ASSERT_EQ(finalState, ovms::PipelineDefinitionStateCode::UNLOADED);
+        ASSERT_EQ(finalState, ovms::PipelineDefinitionStateCode::SLEEPING);
         ASSERT_TRUE(def.getGenAiServableMap().empty());
     }
 }
@@ -6423,11 +6423,11 @@ TEST_F(LLMIdleUnloadTest, ActiveInferenceGuardIntegration) {
     def.backdateLastActivityForTest(60);
     EXPECT_TRUE(def.shouldUnloadDueToIdle());
     EXPECT_EQ(def.unload(), StatusCode::OK);
-    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Wake-failure recovery: a failed wake-up reload must leave the graph UNLOADED
+// Wake-failure recovery: a failed wake-up reload must leave the graph SLEEPING
 // (retryable), NOT LOADING_PRECONDITION_FAILED (wedged). Then once the underlying
 // problem is resolved, the next wake self-heals to AVAILABLE.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -6475,7 +6475,7 @@ static std::string buildBrokenOptGraphPbtxt() {
     return testPbtxt;
 }
 
-TEST_F(LLMIdleUnloadTest, FailedWakeLeavesGraphUnloadedAndRetryable) {
+TEST_F(LLMIdleUnloadTest, FailedWakeLeavesGraphSleepingAndRetryable) {
     ConstructorEnabledModelManager manager;
     std::string goodPbtxt = buildOptGraphPbtxt();
     std::string brokenPbtxt = buildBrokenOptGraphPbtxt();
@@ -6490,25 +6490,25 @@ TEST_F(LLMIdleUnloadTest, FailedWakeLeavesGraphUnloadedAndRetryable) {
     // Idle-unload the healthy graph.
     def.backdateLastActivityForTest(60);
     ASSERT_EQ(def.unload(), StatusCode::OK);
-    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 
     // Simulate the model becoming temporarily unavailable: swap in a broken config
     // so the wake-up reload's validate() fails.
     def.inputConfig = brokenPbtxt;
-    auto failStatus = def.wakeUpIfUnloaded(manager);
+    auto failStatus = def.wakeUpIfSleeping(manager);
     EXPECT_FALSE(failStatus.ok()) << "expected wake-up to fail with broken model";
-    // CRITICAL: the graph must be retryable, i.e. back in UNLOADED — not wedged in
+    // CRITICAL: the graph must be retryable, i.e. back in SLEEPING — not wedged in
     // LOADING_PRECONDITION_FAILED.
-    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 
     // A second attempt while still broken also fails but stays retryable.
-    auto failStatus2 = def.wakeUpIfUnloaded(manager);
+    auto failStatus2 = def.wakeUpIfSleeping(manager);
     EXPECT_FALSE(failStatus2.ok());
-    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::UNLOADED);
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 
     // Restore the model: the next wake self-heals to AVAILABLE.
     def.inputConfig = goodPbtxt;
-    auto okStatus = def.wakeUpIfUnloaded(manager);
+    auto okStatus = def.wakeUpIfSleeping(manager);
     EXPECT_EQ(okStatus, StatusCode::OK) << okStatus.string();
     EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     EXPECT_NE(def.getGenAiServable("llmNode"), nullptr);

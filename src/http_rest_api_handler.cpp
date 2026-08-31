@@ -53,7 +53,7 @@
 #include "model_metric_reporter.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
-#include "modelmanager.hpp"
+#include "src/model_management/modelmanager.hpp"
 #include "profiler.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
@@ -73,7 +73,7 @@
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
-#include "model_group_manager.hpp"
+#include "src/model_management/model_group_manager.hpp"
 #include "kfs_frontend/kfs_request_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "deserialization_main.hpp"

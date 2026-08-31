@@ -36,7 +36,7 @@ const std::string& pipelineDefinitionStateCodeToString(PipelineDefinitionStateCo
         {PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION, "AVAILABLE_REQUIRED_REVALIDATION"},
         {PipelineDefinitionStateCode::AVAILABLE, "AVAILABLE"},
         {PipelineDefinitionStateCode::RETIRED, "RETIRED"},
-        {PipelineDefinitionStateCode::UNLOADED, "UNLOADED"}};
+        {PipelineDefinitionStateCode::SLEEPING, "SLEEPING"}};
     return names.at(code);
 }
 
@@ -63,7 +63,7 @@ StateKeeper BeginState::handle(const RetireEvent& e) const {
     throw std::logic_error(INVALID_TRANSITION_MESSAGE);
     return {};
 }
-StateKeeper BeginState::handle(const UnloadEvent& e) const {
+StateKeeper BeginState::handle(const SleepEvent& e) const {
     return {};  // unload is a no-op when not yet loaded
 }
 
@@ -88,7 +88,7 @@ StateKeeper ReloadState::handle(const RetireEvent& e) const {
     throw std::logic_error(INVALID_TRANSITION_MESSAGE);
     return {};
 }
-StateKeeper ReloadState::handle(const UnloadEvent& e) const {
+StateKeeper ReloadState::handle(const SleepEvent& e) const {
     return {};  // unload is a no-op while reloading
 }
 
@@ -112,7 +112,7 @@ StateChanger<AvailableRequiredRevalidation> AvailableState::handle(const UsedMod
 StateChanger<RetiredState> AvailableState::handle(const RetireEvent& e) const {
     return {};
 }
-StateChanger<UnloadedState> AvailableState::handle(const UnloadEvent& e) const {
+StateChanger<SleepingState> AvailableState::handle(const SleepEvent& e) const {
     return {};
 }
 
@@ -134,7 +134,7 @@ StateKeeper AvailableRequiredRevalidation::handle(const UsedModelChangedEvent& e
 StateChanger<RetiredState> AvailableRequiredRevalidation::handle(const RetireEvent& e) const {
     return {};
 }
-StateKeeper AvailableRequiredRevalidation::handle(const UnloadEvent& e) const {
+StateKeeper AvailableRequiredRevalidation::handle(const SleepEvent& e) const {
     return {};  // unload is a no-op in AVAILABLE_REQUIRED_REVALIDATION
 }
 
@@ -158,8 +158,8 @@ StateChanger<LoadingFailedLastValidationRequiredRevalidation> LoadingPreconditio
 StateChanger<RetiredState> LoadingPreconditionFailedState::handle(const RetireEvent& e) const {
     return {};
 }
-StateChanger<UnloadedState> LoadingPreconditionFailedState::handle(const UnloadEvent& e) const {
-    // Revert a failed wake-up reload back to UNLOADED so the next request retries.
+StateChanger<SleepingState> LoadingPreconditionFailedState::handle(const SleepEvent& e) const {
+    // Revert a failed wake-up reload back to SLEEPING so the next request retries.
     return {};
 }
 
@@ -181,7 +181,7 @@ StateKeeper LoadingFailedLastValidationRequiredRevalidation::handle(const UsedMo
 StateChanger<RetiredState> LoadingFailedLastValidationRequiredRevalidation::handle(const RetireEvent& e) const {
     return {};
 }
-StateKeeper LoadingFailedLastValidationRequiredRevalidation::handle(const UnloadEvent& e) const {
+StateKeeper LoadingFailedLastValidationRequiredRevalidation::handle(const SleepEvent& e) const {
     return {};  // unload is a no-op when loading already failed
 }
 
@@ -207,29 +207,29 @@ StateKeeper RetiredState::handle(const RetireEvent& e) const {
     throw std::logic_error(INVALID_TRANSITION_MESSAGE);
     return {};
 }
-StateKeeper RetiredState::handle(const UnloadEvent& e) const {
+StateKeeper RetiredState::handle(const SleepEvent& e) const {
     return {};  // unload is a no-op when already retired
 }
 
-PipelineDefinitionStateCode UnloadedState::getStateCode() const {
+PipelineDefinitionStateCode SleepingState::getStateCode() const {
     return code;
 }
-StateChanger<ReloadState> UnloadedState::handle(const ReloadEvent& e) const {
+StateChanger<ReloadState> SleepingState::handle(const ReloadEvent& e) const {
     return {};  // wake-up: transition through reload path
 }
-StateChanger<RetiredState> UnloadedState::handle(const RetireEvent& e) const {
+StateChanger<RetiredState> SleepingState::handle(const RetireEvent& e) const {
     return {};  // config removal while unloaded
 }
-StateChanger<AvailableState> UnloadedState::handle(const ValidationPassedEvent& e) const {
+StateChanger<AvailableState> SleepingState::handle(const ValidationPassedEvent& e) const {
     return {};  // defensive: if validation passes directly, go available
 }
-StateKeeper UnloadedState::handle(const ValidationFailedEvent& e) const {
+StateKeeper SleepingState::handle(const ValidationFailedEvent& e) const {
     return {};
 }
-StateKeeper UnloadedState::handle(const UsedModelChangedEvent& e) const {
+StateKeeper SleepingState::handle(const UsedModelChangedEvent& e) const {
     return {};
 }
-StateKeeper UnloadedState::handle(const UnloadEvent& e) const {
+StateKeeper SleepingState::handle(const SleepEvent& e) const {
     return {};  // already unloaded, idempotent
 }
 
@@ -278,7 +278,7 @@ std::tuple<ModelVersionState, ModelVersionStatusErrorCode> PipelineDefinitionSta
             ModelVersionState::END,
             ModelVersionStatusErrorCode::OK};
 
-    case PipelineDefinitionStateCode::UNLOADED:
+    case PipelineDefinitionStateCode::SLEEPING:
         // Report AVAILABLE: the graph auto-reloads on the next inference request,
         // so health checks and routing should treat it as available. Reporting END
         // or UNLOADING would cause clients and load-balancers to permanently

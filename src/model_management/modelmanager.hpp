@@ -26,13 +26,13 @@
 #include <utility>
 #include <vector>
 
-#include "dags/dag_resource_manager.hpp"
-#include "metrics/metric_provider.hpp"
-#include "model_instance_provider.hpp"
-#include "modelconfig.hpp"
-#include "resources_cleaner.hpp"
-#include "servable_name_checker.hpp"
-#include "status.hpp"
+#include "src/dags/dag_resource_manager.hpp"
+#include "src/metrics/metric_provider.hpp"
+#include "src/model_instance_provider.hpp"
+#include "src/modelconfig.hpp"
+#include "src/resources_cleaner.hpp"
+#include "src/servable_name_checker.hpp"
+#include "src/status.hpp"
 
 namespace ov {
 class Core;

@@ -246,41 +246,6 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     if (!validationResult.ok()) {
         return validationResult;
     }
-    // Phase-1 restriction: idle unload is not supported for graphs with Python nodes.
-    // Python nodes may hold per-request iterator state (e.g. PythonExecutorCalculator)
-    // that cannot be safely reconstructed after a resource-free/reload cycle.
-    if (mgconfig.getIdleUnloadTimeoutSeconds() > 0) {
-        for (int i = 0; i < this->config.node_size(); ++i) {
-            const std::string& calculator = this->config.node(i).calculator();
-            if (calculator == "PythonExecutorCalculator" || calculator == "PyTorchCalculator") {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger,
-                    "Mediapipe graph {}: idle_unload_timeout_seconds is not supported for graphs "
-                    "containing Python calculator nodes ({}). "
-                    "Remove idle_unload_timeout_seconds or remove the Python node.",
-                    getName(), calculator);
-                return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-            }
-        }
-        // Phase-1 scope restriction: idle_unload_timeout_seconds is validated only for
-        // LLM/VLM continuous-batching graphs (graphs containing HttpLLMCalculator).
-        // Other node types (embeddings, rerank, STT, TTS, image-gen, plain passthrough)
-        // have not been validated for the idle-unload/lazy-reload cycle.
-        bool hasLlmCalculator = false;
-        for (int i = 0; i < this->config.node_size(); ++i) {
-            if (this->config.node(i).calculator() == "HttpLLMCalculator") {
-                hasLlmCalculator = true;
-                break;
-            }
-        }
-        if (!hasLlmCalculator) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger,
-                "Mediapipe graph {}: idle_unload_timeout_seconds is only supported for "
-                "LLM/VLM continuous-batching graphs (HttpLLMCalculator) in this release. "
-                "Remove idle_unload_timeout_seconds from non-LLM graph configurations.",
-                getName());
-            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
-        }
-    }
 
     validationResult = resolveGraphQueueSize();
     if (!validationResult.ok()) {
@@ -533,7 +498,7 @@ Status MediapipeGraphDefinition::setStreamTypes() {
 
 Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config) {
     // Serialize against unload()/wakeUp() on the watcher/request threads.
-    // Recursive: wakeUpIfUnloaded() already holds this and calls reload().
+    // Recursive: wakeUpIfSleeping() already holds this and calls reload().
     std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
@@ -594,19 +559,19 @@ bool MediapipeGraphDefinition::shouldUnloadDueToIdle() const {
     return (nowNs - lastActivity) >= timeoutNs;
 }
 
-void MediapipeGraphDefinition::setAsUnloaded() {
-    // Transition from BEGIN → AVAILABLE → UNLOADED without loading any resources.
+void MediapipeGraphDefinition::setAsSleeping() {
+    // Transition from BEGIN → AVAILABLE → SLEEPING without loading any resources.
     // Used during initialization with idle group management to create definitions
     // that exist in the factory but skip the expensive validate()/initializeNodes()
-    // path. wakeUpIfUnloaded() will later perform the full load on demand.
+    // path. wakeUpIfSleeping() will later perform the full load on demand.
     this->status.handle(ValidationPassedEvent());
-    this->status.handle(UnloadEvent());
+    this->status.handle(SleepEvent());
     SPDLOG_LOGGER_INFO(modelmanager_logger,
-        "Mediapipe graph {} created in UNLOADED state (idle group management)", getName());
+        "Mediapipe graph {} created in SLEEPING state (idle group management)", getName());
 }
 
 Status MediapipeGraphDefinition::unload() {
-    // Serialize against wakeUpIfUnloaded()/reload()/retire() using the SAME lock so
+    // Serialize against wakeUpIfSleeping()/reload()/retire() using the SAME lock so
     // all lifecycle mutations are mutually exclusive. This prevents the watcher thread
     // from tearing down resources while the config thread reloads/retires, or while a
     // request thread is in the middle of a wake-up reload.
@@ -637,19 +602,19 @@ Status MediapipeGraphDefinition::unload() {
         return StatusCode::OK;
     }
 
-    // Transition state: AVAILABLE -> UNLOADED (blocks new unloadGuards in waitForLoaded).
-    this->status.handle(UnloadEvent());
+    // Transition state: AVAILABLE -> SLEEPING (blocks new unloadGuards in waitForLoaded).
+    this->status.handle(SleepEvent());
 
     // Defensive: only tear down resources if the transition actually happened.
-    // (UnloadEvent is a no-op on any non-AVAILABLE state.)
-    if (status.getStateCode() != PipelineDefinitionStateCode::UNLOADED) {
+    // (SleepEvent is a no-op on any non-AVAILABLE state.)
+    if (status.getStateCode() != PipelineDefinitionStateCode::SLEEPING) {
         SPDLOG_LOGGER_WARN(modelmanager_logger,
-            "Idle-unload of mediapipe graph {} aborted: state did not transition to UNLOADED (now {})",
+            "Idle-unload of mediapipe graph {} aborted: state did not transition to SLEEPING (now {})",
             getName(), pipelineDefinitionStateCodeToString(status.getStateCode()));
         return StatusCode::OK;
     }
 
-    // Once UNLOADED, no new unloadGuards can be acquired and we verified
+    // Once SLEEPING, no new unloadGuards can be acquired and we verified
     // requestsHandlesCounter == 0 above, so there is nothing to drain.
     // Release queue (pooled graphs hold GPU/CPU resources).
     this->queue.reset();
@@ -665,18 +630,18 @@ Status MediapipeGraphDefinition::unload() {
     return StatusCode::OK;
 }
 
-Status MediapipeGraphDefinition::wakeUpIfUnloaded(const ServableNameChecker& checker) {
+Status MediapipeGraphDefinition::wakeUpIfSleeping(const ServableNameChecker& checker) {
     // Recursive: this holds lifecycleMtx and then calls reload(), which re-acquires it.
     std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
     // Double-check under lock: another thread may have already completed the reload.
-    if (status.getStateCode() != PipelineDefinitionStateCode::UNLOADED) {
+    if (status.getStateCode() != PipelineDefinitionStateCode::SLEEPING) {
         return StatusCode::OK;
     }
     // Re-use the existing reload path:
     //   handle(ReloadEvent) -> fresh sidePacketMaps -> validate() -> initializeNodes()
     // The stored mgconfig holds all required configuration.
     SPDLOG_LOGGER_INFO(modelmanager_logger,
-        "Mediapipe graph {} is UNLOADED; triggering lazy wake-up reload", getName());
+        "Mediapipe graph {} is SLEEPING; triggering lazy wake-up reload", getName());
     auto start = std::chrono::steady_clock::now();
     Status reloadStatus = reload(checker, this->mgconfig);
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -693,14 +658,14 @@ Status MediapipeGraphDefinition::wakeUpIfUnloaded(const ServableNameChecker& che
     } else {
         // Wake-up reload failed (e.g. model files temporarily unavailable). reload()
         // ran validate() which left the state in LOADING_PRECONDITION_FAILED. Revert
-        // to UNLOADED so the NEXT inference request retries the wake — making a
+        // to SLEEPING so the NEXT inference request retries the wake — making a
         // transient failure self-healing rather than permanently wedging a previously
         // healthy idle graph. We are still holding lifecycleMtx here.
-        // (If validate() somehow ended elsewhere, UnloadEvent is a no-op on states
+        // (If validate() somehow ended elsewhere, SleepEvent is a no-op on states
         // other than AVAILABLE/LOADING_PRECONDITION_FAILED, so this is safe.)
-        this->status.handle(UnloadEvent());
+        this->status.handle(SleepEvent());
         SPDLOG_LOGGER_ERROR(modelmanager_logger,
-            "Mediapipe graph {} wake-up failed after {}ms: {}. Reverted to UNLOADED; "
+            "Mediapipe graph {} wake-up failed after {}ms: {}. Reverted to SLEEPING; "
             "next request will retry the wake.",
             getName(), elapsed.count(), reloadStatus.string());
     }

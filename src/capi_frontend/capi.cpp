@@ -40,7 +40,7 @@
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
 #include "../modelinstanceunloadguard.hpp"
-#include "../modelmanager.hpp"
+#include "src/model_management/modelmanager.hpp"
 #include "../module_names.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../profiler.hpp"

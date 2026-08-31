@@ -20,7 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../model_group_manager.hpp"
+#include "src/model_management/model_group_manager.hpp"
 #include "../modelconfig.hpp"
 #include "../status.hpp"
 

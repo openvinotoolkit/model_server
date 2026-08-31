@@ -41,7 +41,7 @@ OVMS_ServableState convertToServableState(ovms::PipelineDefinitionStateCode code
     case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED:
     case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION:
         return OVMS_ServableState::OVMS_STATE_LOADING_FAILED;
-    case ovms::PipelineDefinitionStateCode::UNLOADED:
+    case ovms::PipelineDefinitionStateCode::SLEEPING:
         return OVMS_ServableState::OVMS_STATE_RETIRED;
     }
     throw new std::exception();

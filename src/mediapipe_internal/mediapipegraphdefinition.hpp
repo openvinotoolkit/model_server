@@ -83,17 +83,17 @@ public:
 
     // Idle unload feature
     Status unload();
-    // wakeUpIfUnloaded: thread-safe wrapper — holds lifecycleMtx, double-checks
-    // the UNLOADED state, and calls wakeUp() exactly once; other concurrent callers
-    // wait on the mutex then return immediately since the state is no longer UNLOADED.
-    Status wakeUpIfUnloaded(const ServableNameChecker& checker);
+    // wakeUpIfSleeping: thread-safe wrapper — holds lifecycleMtx, double-checks
+    // the SLEEPING state, and calls wakeUp() exactly once; other concurrent callers
+    // wait on the mutex then return immediately since the state is no longer SLEEPING.
+    Status wakeUpIfSleeping(const ServableNameChecker& checker);
     bool isIdleUnloadEnabled() const;
     bool shouldUnloadDueToIdle() const;
 
-    // Create definition in UNLOADED state without loading any resources.
+    // Create definition in SLEEPING state without loading any resources.
     // Used during initialization with idle group management to avoid loading
     // non-permanent graphs that would be immediately unloaded.
-    void setAsUnloaded();
+    void setAsSleeping();
 
     // Test-only: backdate the last-activity timestamp by the given number of seconds
     // so idle-timeout behavior can be exercised deterministically without sleeping.
@@ -203,13 +203,15 @@ private:
     // lock) whenever mgconfig is assigned.
     std::atomic<int64_t> idleUnloadTimeoutSecondsCache{0};
 
+    // TODO FIXME (@atobiszei): revisit whether lifecycleMtx is still needed
+    // now that ServableLoadingQueue serializes task dispatch.
     // Serializes ALL per-definition lifecycle mutations (reload/retire/unload/wakeUp)
     // so they are mutually exclusive regardless of which thread runs them or which
     // outer lock (ModelManager::configMtx) is held by the caller. This is required
     // because unload() runs on the watcher thread (no configMtx) while reload()/retire()
     // run on the config thread (under configMtx) and they mutate the same per-definition
     // state (this->status variant, this->sidePacketMaps).
-    // Recursive because wakeUpIfUnloaded() holds it and calls reload(), which also takes it.
+    // Recursive because wakeUpIfSleeping() holds it and calls reload(), which also takes it.
     // Lock ordering is one-directional: configMtx -> lifecycleMtx. Nothing here ever
     // acquires configMtx, so no deadlock is possible.
     mutable std::recursive_mutex lifecycleMtx;

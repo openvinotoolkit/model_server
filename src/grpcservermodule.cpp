@@ -33,7 +33,7 @@
 #include "config.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
-#include "modelmanager.hpp"
+#include "src/model_management/modelmanager.hpp"
 #include "network_utils.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"

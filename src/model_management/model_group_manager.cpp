@@ -22,14 +22,14 @@
 #include <utility>
 #include <vector>
 
-#include "logging.hpp"
-#include "model.hpp"
-#include "modelconfig.hpp"
-#include "modelinstance.hpp"
+#include "src/logging.hpp"
+#include "src/model.hpp"
+#include "src/modelconfig.hpp"
+#include "src/modelinstance.hpp"
 #include "modelmanager.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-#include "mediapipe_internal/mediapipefactory.hpp"
-#include "mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/mediapipe_internal/mediapipefactory.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
 #endif
 
 namespace ovms {

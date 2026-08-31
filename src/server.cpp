@@ -60,7 +60,7 @@
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "metrics/metric_module.hpp"
-#include "modelmanager.hpp"
+#include "src/model_management/modelmanager.hpp"
 #include "ovms_exit_codes.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"

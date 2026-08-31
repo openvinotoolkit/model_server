@@ -158,6 +158,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "libovms_servable_definition",
     hdrs = ["servable_definition.hpp"],
+    visibility = ["//visibility:public"],
 )
 ovms_cc_library(
     name = "libovms_single_version_servable_definition",
@@ -576,49 +577,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "modelmanager",
-    hdrs = ["modelmanager.hpp", "model_group_manager.hpp"],
-    srcs = ["modelmanager.cpp", "model_group_manager.cpp"],
-    deps = select({
-        "//conditions:default": [],
-        "//:not_disable_mediapipe" : [
-            "//src/mediapipe_internal:libovms_mediapipe",
-        ],
-    }) + [
-        "cleaner_utils",
-        "customloaders",
-        "libovms_config",
-        "libovms_model_instance_provider",
-        "libovms_ov_utils",
-        "libovms_servable_definition",
-        "libovms_servable_name_checker",
-        "libovmslogging",
-        "libovmsschema",
-        "libovmsstring_utils",
-        "libovmsstatus",
-        "model",
-        "modelconfig",
-        "modelinstance",
-        "modelinstanceunloadguard",
-        "resources_cleaner",
-        "//src/dags:custom_node_library_manager",
-        "//src/dags:dag_resource_manager",
-        "//src/dags:pipeline_config_parser",
-        "//src/dags:pipeline_factory",
-        "//src/dags:pipelinedefinition",
-        "//src/filesystem:libovmsfilesystem",
-        "//src/filesystem:libovmsfilesystemfactory",
-        "//src/graph_export:graph_export",
-        "//src/metrics:libovms_metric_provider",
-        "//src/metrics:libovmsmetrics",
-        "//src/model_management:servable_loading_queue",
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "//src/port:rapidjson_stringbuffer",
-        "//src/port:rapidjson_writer",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
     name = "rest_parser_utils",
     hdrs = [
         "rest_parser.hpp",
@@ -715,7 +673,7 @@ ovms_cc_library(
         "cpp_headers",
         "libovms_module",
         "libovmslogging",
-        "modelmanager",
+        "//src/model_management:modelmanager",
         "//src/metrics:libovmsmetrics",
     ],
     visibility = ["//visibility:public"],
@@ -833,7 +791,7 @@ ovms_cc_library(
             "libovms_kfs_utils",
             "libovms_kfs_grpc_inference_service_h",
             "modelchangesubscription",
-            "modelmanager",
+            "//src/model_management:modelmanager",
             "servablemanagermodule",
             "//src/filesystem:libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",

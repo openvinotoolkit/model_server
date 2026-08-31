@@ -46,7 +46,7 @@
 #endif
 #include "src/metrics/metric_registry.hpp"
 #include "../modelinstance.hpp"
-#include "../modelmanager.hpp"
+#include "src/model_management/modelmanager.hpp"
 #include "../shape.hpp"
 #include "../status.hpp"
 #include "../tensorinfo.hpp"

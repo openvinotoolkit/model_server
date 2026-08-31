@@ -22,7 +22,7 @@
 
 #include "src/filesystem/filesystem.hpp"
 #include "../model.hpp"
-#include "../modelmanager.hpp"
+#include "src/model_management/modelmanager.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_models_configs.hpp"
 

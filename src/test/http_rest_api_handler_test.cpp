@@ -19,7 +19,7 @@
 #include "../http_rest_api_handler.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
-#include "../modelmanager.hpp"
+#include "src/model_management/modelmanager.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "platform_utils.hpp"
