@@ -126,7 +126,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<bool>()->default_value("false"),
                 "VERBOSE_RESPONSE")
             ("disable_input_count_validation",
-                "When enabled, the number and names of inputs in an inference request are not validated against the model/pipeline signature; requests with extra, unrecognized input names are no longer rejected for that reason. Does not affect shape/precision validation of recognized inputs. Default: false (extra inputs cause the request to be rejected).",
+                "When enabled, OVMS allows inference requests to include additional, unrecognized inputs beyond the model/pipeline signature (extra inputs are ignored). Required inputs must still be present, and shape/precision validation is still performed for recognized inputs. Default: false (extra inputs cause the request to be rejected).",
                 cxxopts::value<bool>()->default_value("false"),
                 "DISABLE_INPUT_COUNT_VALIDATION")
 #ifdef MTR_ENABLED
