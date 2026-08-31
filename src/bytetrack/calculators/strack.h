@@ -49,8 +49,6 @@ public:
 
     Eigen::Vector4f tlwh() const;
     Eigen::Vector4f tlbr() const;
-    // static Eigen::Vector4f TlbrToTlwh(const Eigen::Vector4f& tlbr);
-    // static Eigen::Vector4f TlwhToTlbr(const Eigen::Vector4f& tlwh);
     static Eigen::Vector4f TlwhToXyah(const Eigen::Vector4f& tlwh);
 
     // KalmanState ToProto() const;

@@ -14,8 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-#ifndef SRC_BYTETRACK_CALCULATORS_BYTETRACK_CALCULATOR_H_
-#define SRC_BYTETRACK_CALCULATORS_BYTETRACK_CALCULATOR_H_
+#pragma once
 
 #include <utility>
 #include <vector>
@@ -67,5 +66,3 @@ private:
         std::vector<bytetrack::STrack*>& b);
 };
 }  // namespace mediapipe
-
-#endif  // SRC_BYTETRACK_CALCULATORS_BYTETRACK_CALCULATOR_H_

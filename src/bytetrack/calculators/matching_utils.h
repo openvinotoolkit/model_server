@@ -112,57 +112,6 @@ inline Eigen::MatrixXf BuildIoUCostMatrix(
     return cost;
 }
 
-// inline AssignmentResult LinearAssignment(const Eigen::MatrixXf& cost, float thresh){
-//     int N = (int)cost.rows();
-//     int M = (int)cost.cols();
-
-//     // Collect candidates below threshold
-//     std::vector<std::tuple<float,int,int>> entries;
-//     entries.reserve(N * M);
-//     for (int i = 0; i < N; ++i)
-//         for (int j = 0; j < M; ++j)
-//             if (cost(i,j) <= thresh)
-//                 entries.emplace_back(cost(i,j), i, j);
-
-//     std::sort(entries.begin(), entries.end());
-
-//     // Greedy assignment
-//     std::vector<bool> track_used(N, false);
-//     std::vector<bool> box_used(M, false);
-//     std::vector<std::pair<int,int>> matched;
-//     matched.reserve(std::min(N, M));
-
-//     for (auto& [c, i, j] : entries) {
-//         if (!track_used[i] && !box_used[j]) {
-//             matched.emplace_back(i, j);
-//             track_used[i] = true;
-//             box_used[j]   = true;
-//         }
-//     }
-
-//     // Pack into Eigen outputs
-//     int K = (int)matched.size();
-//     Eigen::MatrixXi matches(K, 2);          // (K,2) — mirrors np.empty((0,2)) when K=0
-//     for (int k = 0; k < K; ++k) {
-//         matches(k, 0) = matched[k].first;
-//         matches(k, 1) = matched[k].second;
-//     }
-
-//     // Count unmatched first, then fill — avoids push_back on Eigen vectors
-//     int n_ut = (int)std::count(track_used.begin(), track_used.end(), false);
-//     int n_ub = (int)std::count(box_used.begin(),   box_used.end(),   false);
-
-//     Eigen::VectorXi unmatched_tracks(n_ut);
-//     Eigen::VectorXi unmatched_boxes(n_ub);
-
-//     for (int i = 0, k = 0; i < N; ++i)
-//         if (!track_used[i]) unmatched_tracks(k++) = i;
-//     for (int j = 0, k = 0; j < M; ++j)
-//         if (!box_used[j])   unmatched_boxes(k++) = j;
-
-//     return {matches, unmatched_tracks, unmatched_boxes};
-// }
-
 inline AssignmentResult LinearAssignment(const Eigen::MatrixXf& cost, float thresh) {
     int N = (int)cost.rows();
     int M = (int)cost.cols();

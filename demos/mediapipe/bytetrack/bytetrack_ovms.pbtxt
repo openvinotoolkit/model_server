@@ -51,19 +51,6 @@ node {
   }
 }
 
-### OpenVINOYoloXTensorsToDetectionsCalculator was developed for TFLite specific model, but we can use OVYoloXTensorsToDetectionsCalculator for OpenVINO model.
-
-#node{
-#    calculator: "OpenVINOYoloXTensorsToDetectionsCalculator"
-#    input_stream: "TENSORS:detection_tensors"
-#    output_stream: "DETECTIONS:detections"
-#    node_options: {
-#    [type.googleapis.com/mediapipe.OpenVINOYoloXTensorsToDetectionsCalculatorOptions] {
-#      conf_thresh: 0.1
-#    }
-#  }
-# }
-
 node {
   calculator: "OVYoloXTensorsToDetectionsCalculator"
   input_stream: "TENSORS:detection_tensors"

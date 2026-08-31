@@ -15,12 +15,13 @@
 #
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_proto_library")
+load("//:common_settings.bzl","ovms_cc_library")
 
 licenses(["notice"])
 
 package(default_visibility = ["//visibility:public"])
 
-cc_library(
+ovms_cc_library(
     name = "bytetrack_calculators",
     deps = [
         "//src/bytetrack/utils:detection_color_by_id_calculator",
@@ -28,7 +29,7 @@ cc_library(
         ":kalman_matrices",
         ":strack",
         ":bytetrack_calculator",
-        ":render_data_passthrough",
+        "//src/test/mediapipe/calculators:render_data_passthrough",
     ],
     alwayslink = 1
 )
@@ -110,18 +111,4 @@ cc_library(
          "@eigen_archive//:eigen3",
     ],
     alwayslink = 1,
-)
-
-# This calculator is for debugging to check whether render data is correctly passed through the graph.
-cc_library(
-    name = "render_data_passthrough",
-    srcs = ["render_data_passthrough_calculator.cc"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@mediapipe//mediapipe/framework/formats:detection_cc_proto",
-        "@mediapipe//mediapipe/framework/port:status",
-        "@mediapipe//mediapipe/util:render_data_cc_proto",
-    ],
-    alwayslink = 1
 )

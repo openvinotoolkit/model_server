@@ -14,8 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-#ifndef SRC_BYTETRACK_CALCULATORS_BASETRACK_H_
-#define SRC_BYTETRACK_CALCULATORS_BASETRACK_H_
+#pragma once
 
 #include <atomic>
 
@@ -56,5 +55,3 @@ protected:
 
 }  // namespace bytetrack
 }  // namespace mediapipe
-
-#endif  // SRC_BYTETRACK_CALCULATORS_BASETRACK_H_
