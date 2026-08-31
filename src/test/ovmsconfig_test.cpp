@@ -2552,9 +2552,12 @@ TEST(OvmsConfigTest, positiveMulti) {
 TEST(OvmsConfigTest, disableInputCountValidationDefaultsToFalse) {
     char* n_argv[] = {
         "ovms",
-        "--rest_port", "45",
-        "--model_name", "model",
-        "--model_path", "/path",
+        "--rest_port",
+        "45",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
     };
     int arg_count = 7;
     ConstructorEnabledConfig config;
