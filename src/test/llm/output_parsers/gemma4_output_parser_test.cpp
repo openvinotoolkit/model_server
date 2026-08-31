@@ -601,6 +601,23 @@ TEST_F(Gemma4OutputParserTest, StreamingWithToolResponseTokenAtTheEndOfGeneratio
     assertStreamingVec(chunkToDeltaVec);
 }
 
+// Model omits the "<tool_call|>" end tag entirely and jumps straight to a stray
+// "<|tool_response>" before stopping. Arguments must be emitted exactly once
+// (regression test: the finish-flush fallback used to blindly re-emit them).
+TEST_F(Gemma4OutputParserTest, StreamingWithMissingEndTagBeforeStop) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<|tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"call:", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ls", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{a:", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"ls"}}]}})"},
+        {"true}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"a\":true}"}}]}})"},
+        {"<|tool_response>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"", ov::genai::GenerationFinishReason::STOP, std::nullopt},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
 TEST_F(Gemma4OutputParserTest, StreamingContentWithTurnTokenAtTheEndOfGeneration) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {"This is", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"This is"}})"},
