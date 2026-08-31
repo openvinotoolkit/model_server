@@ -78,11 +78,7 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
 
     const std::string jsonBody = serializeForJinja(chatHistory);
 
-    if (!useMinja) {
-        if (preparedRuntimeChatTemplate == nullptr || !preparedRuntimeChatTemplate->isPrepared()) {
-            return absl::Status(absl::StatusCode::kInternal,
-                "Prepared runtime chat template is unavailable");
-        }
+    if (!useMinja && preparedRuntimeChatTemplate != nullptr && preparedRuntimeChatTemplate->isPrepared()) {
         std::string runtimeOutput;
         RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
         auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(

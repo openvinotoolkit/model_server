@@ -29,7 +29,8 @@ namespace ovms {
 //
 // The processor decides the path based on configuration/resources passed in constructor:
 // - useMinja=true forces tokenizer.apply_chat_template().
-// - useMinja=false uses the prepared runtime Jinja path.
+// - useMinja=false uses the prepared runtime Jinja path if available,
+//   otherwise falls back to tokenizer.apply_chat_template() (no runtime prepared).
 class ChatTemplateProcessor : public BaseInputProcessor {
 public:
     ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
