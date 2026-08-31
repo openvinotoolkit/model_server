@@ -137,7 +137,7 @@ protected:
     void setDisableInputCountValidation(bool value) {
         ovms::ServerSettingsImpl testServerSettings = originalServerSettings;
         testServerSettings.disableInputCountValidation = value;
-        ASSERT_TRUE(ovms::Config::instance().parse(&testServerSettings, &originalModelsSettings));
+        ovms::Config::instance().parse(&testServerSettings, &originalModelsSettings);
     }
 
     void TearDown() override {

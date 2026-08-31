@@ -1425,6 +1425,8 @@ ovms_cc_library(
             "libovms_kfs_utils",
             "libovms_tensorinfo",
             "libovmsprecision",
+            "libovms_config",
+            "cpp_headers",
 ],
     visibility = ["//visibility:public",],
 )
