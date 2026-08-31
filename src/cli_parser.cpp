@@ -125,6 +125,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "\"__verbose\" object with additional debug information.",
                 cxxopts::value<bool>()->default_value("false"),
                 "VERBOSE_RESPONSE")
+            ("relaxed_input_count_validation",
+                "When enabled, inference requests containing input names not defined in the model/pipeline signature are ignored instead of rejected. Does not affect shape/precision validation of recognized inputs. Default: false (extra inputs cause the request to be rejected).",
+                cxxopts::value<bool>()->default_value("false"),
+                "RELAXED_INPUT_COUNT_VALIDATION")
 #ifdef MTR_ENABLED
             ("trace_path",
                 "Path to the trace file",
@@ -577,6 +581,8 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.logPath = result->operator[]("log_path").as<std::string>();
     if (result->count("verbose_response"))
         serverSettings.verboseResponse = result->operator[]("verbose_response").as<bool>();
+    if (result->count("relaxed_input_count_validation"))
+        serverSettings.relaxedInputCountValidation = result->operator[]("relaxed_input_count_validation").as<bool>();
 
     if (result->count("grpc_channel_arguments"))
         serverSettings.grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();

@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+#include "config.hpp"
 #include "logging.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
@@ -290,7 +291,11 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
         return StatusCode::NOT_IMPLEMENTED;
     }
     Status finalStatus = StatusCode::OK;
-    // RETURN_IF_ERR(validateNumberOfTensors());    
+    // Extra/unrecognized inputs are rejected by default (matches Triton behavior); opt into
+    // TF-Serving-like permissive behavior with --relaxed_input_count_validation.
+    if (choice == ValidationChoice::INPUT && !ovms::Config::instance().relaxedInputCountValidation()) {
+        RETURN_IF_ERR(validateNumberOfTensors());
+    }
     RETURN_IF_ERR(validateRequestCoherency());
     size_t bufferId = 0;
     for (const auto& [name, tensorInfo] : ((choice == ValidationChoice::INPUT) ? inputsInfo : outputsInfo)) {
