@@ -65,6 +65,10 @@ void GraphCLIParser::createOptions() {
             "HF model name or path to the local folder with PyTorch or OpenVINO draft model.",
             cxxopts::value<std::string>(),
             "DRAFT_SOURCE_MODEL")
+        ("draft_eagle3_mode",
+            "Enable EAGLE3 speculative decoding mode for the draft model.",
+            cxxopts::value<bool>()->default_value("false")->implicit_value("true"),
+            "DRAFT_EAGLE3_MODE")
         ("dynamic_split_fuse",
             "Dynamic split fuse algorithm enabled. Default true.",
             cxxopts::value<std::string>()->default_value("true"),
@@ -147,6 +151,9 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         graphSettings.dynamicSplitFuse = result->operator[]("dynamic_split_fuse").as<std::string>();
         if (result->count("draft_source_model")) {
             graphSettings.draftModelDirName = result->operator[]("draft_source_model").as<std::string>();
+        }
+        if (result->count("draft_eagle3_mode")) {
+            graphSettings.draftEagle3Mode = result->operator[]("draft_eagle3_mode").as<bool>();
         }
         if (result->count("pipeline_type")) {
             graphSettings.pipelineType = result->operator[]("pipeline_type").as<std::string>();

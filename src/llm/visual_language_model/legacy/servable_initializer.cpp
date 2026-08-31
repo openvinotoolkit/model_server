@@ -97,12 +97,6 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         SPDLOG_INFO("No device specified for VLM model, using recommended device: {}", properties->device);
     }
 
-    if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
-        // Consider moving draft parameters to separate structure in node options, so it's validated on the proto level
-        SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
-        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-    }
-
     status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());

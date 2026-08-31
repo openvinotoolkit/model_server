@@ -203,6 +203,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
             # Speculative decoding configuration)";
         oss << R"(
             draft_models_path: ")" << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << R"(",)";
+        if (graphSettings.draftEagle3Mode) {
+            oss << R"(
+            draft_eagle3_mode: true,)";
+        }
     }
     oss << R"(
         }

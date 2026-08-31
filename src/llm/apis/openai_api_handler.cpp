@@ -330,7 +330,11 @@ ov::genai::ChatHistory& OpenAIApiHandler::getChatHistory() {
 
 absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationConfigBuilder& configBuilder) {
     configBuilder.parseConfigFromRequest(request);
-    configBuilder.adjustConfigForDecodingMethod();
+    try {
+        configBuilder.adjustConfigForDecodingMethod();
+    } catch (const std::invalid_argument& e) {
+        return absl::InvalidArgumentError(e.what());
+    }
     try {
         configBuilder.validateStructuredOutputConfig(tokenizer);
     } catch (const std::exception& e) {
@@ -758,10 +762,14 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     auto numAssistantTokensIt = doc.FindMember("num_assistant_tokens");
     auto assistantConfidenceThresholdIt = doc.FindMember("assistant_confidence_threshold");
     auto maxNgramSizeIt = doc.FindMember("max_ngram_size");
+    auto branchingFactorIt = doc.FindMember("branching_factor");
+    auto treeDepthIt = doc.FindMember("tree_depth");
 
     bool numAssistantTokensItHasValue = (numAssistantTokensIt != doc.MemberEnd() && !numAssistantTokensIt->value.IsNull());
     bool assistantConfidenceThresholdItHasValue = (assistantConfidenceThresholdIt != doc.MemberEnd() && !assistantConfidenceThresholdIt->value.IsNull());
     bool maxNgramSizeItHasValue = (maxNgramSizeIt != doc.MemberEnd() && !maxNgramSizeIt->value.IsNull());
+    bool branchingFactorItHasValue = (branchingFactorIt != doc.MemberEnd() && !branchingFactorIt->value.IsNull());
+    bool treeDepthItHasValue = (treeDepthIt != doc.MemberEnd() && !treeDepthIt->value.IsNull());
 
     if (numAssistantTokensItHasValue) {
         request.numAssistantTokens = numAssistantTokensIt->value.GetUint();
@@ -771,6 +779,16 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     }
     if (maxNgramSizeItHasValue) {
         request.maxNgramSize = maxNgramSizeIt->value.GetUint();
+    }
+    if (branchingFactorItHasValue) {
+        if (!branchingFactorIt->value.IsUint())
+            return absl::InvalidArgumentError("branching_factor is not an unsigned integer");
+        request.branchingFactor = branchingFactorIt->value.GetUint();
+    }
+    if (treeDepthItHasValue) {
+        if (!treeDepthIt->value.IsUint())
+            return absl::InvalidArgumentError("tree_depth is not an unsigned integer");
+        request.treeDepth = treeDepthIt->value.GetUint();
     }
 
     it = doc.FindMember("skip_special_tokens");

@@ -2351,6 +2351,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefaultToMaxTokensLimit) {
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
     std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty",
         "length_penalty", "temperature", "top_p", "top_k", "seed", "stop", "include_stop_str_in_output", "best_of", "n", "num_assistant_tokens", "assistant_confidence_threshold",
+        "branching_factor", "tree_depth",
         "logprobs", "max_completion_tokens", "tools", "tool_choice"};
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
@@ -2381,6 +2382,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions) {
     std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty",
         "length_penalty", "temperature", "top_p", "top_k", "seed", "stop", "include_stop_str_in_output", "best_of", "n", "num_assistant_tokens", "assistant_confidence_threshold",
+        "branching_factor", "tree_depth",
         "logprobs", "echo"};
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
@@ -2396,6 +2398,56 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
         std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
         EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     }
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingBranchingFactorAndTreeDepthParsedCorrectly) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hi"}],
+    "branching_factor": 4,
+    "tree_depth": 3
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    ASSERT_TRUE(apiHandler->getRequest().branchingFactor.has_value());
+    EXPECT_EQ(apiHandler->getRequest().branchingFactor.value(), 4u);
+    ASSERT_TRUE(apiHandler->getRequest().treeDepth.has_value());
+    EXPECT_EQ(apiHandler->getRequest().treeDepth.value(), 3u);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingBranchingFactorNonUintReturnsError) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hi"}],
+    "branching_factor": -1
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_NE(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingTreeDepthNonUintReturnsError) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [{"role": "user", "content": "hi"}],
+    "tree_depth": -1
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_NE(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesMaxOutputTokensSetsLimit) {
