@@ -291,9 +291,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
         return StatusCode::NOT_IMPLEMENTED;
     }
     Status finalStatus = StatusCode::OK;
-    // Extra/unrecognized inputs are rejected by default (matches Triton behavior); opt into
-    // TF-Serving-like permissive behavior with --relaxed_input_count_validation.
-    if (choice == ValidationChoice::INPUT && !ovms::Config::instance().relaxedInputCountValidation()) {
+    if (choice == ValidationChoice::INPUT && !ovms::Config::instance().disableInputCountValidation()) {
         RETURN_IF_ERR(validateNumberOfTensors());
     }
     RETURN_IF_ERR(validateRequestCoherency());

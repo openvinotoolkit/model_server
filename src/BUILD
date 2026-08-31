@@ -1468,6 +1468,8 @@ ovms_cc_library(
     srcs = ["capi_frontend/inferenceparameter.cpp",],
     deps = [
             "ovms_header",
+            "libovms_config",
+            "cpp_headers",
             "libovmscapi_utils_h", # TODO @atobisze
     ],
     visibility = ["//visibility:public"],

@@ -312,7 +312,7 @@ public:
      */
     uint32_t resourcesCleanerPollWaitSeconds() const;
 
-    bool relaxedInputCountValidation() const;
+    bool disableInputCountValidation() const;
     bool allowCredentials() const;
     const std::string& allowedOrigins() const;
     const std::string& allowedMethods() const;
