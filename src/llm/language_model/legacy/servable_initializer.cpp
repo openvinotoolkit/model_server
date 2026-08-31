@@ -97,7 +97,8 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
                                             ? (std::filesystem::path(graphPath) / fsDraftModelsPath).string()
                                             : fsDraftModelsPath.string();
         try {
-            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, nodeOptions.draft_device());
+            const std::string draftDevice = nodeOptions.draft_device().empty() ? properties->device : nodeOptions.draft_device();
+            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, draftDevice);
             properties->pluginConfig.insert(draftPipeline);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during draft model initialization for draft_models_path: {} exception: {}", draftPipelinePath, e.what());

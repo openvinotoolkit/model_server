@@ -90,11 +90,12 @@ models
 
 :::{dropdown} **Deploying with Docker**
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:weekly --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm $(test -d /dev/dri && echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)") \
+  -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:weekly \
+  --rest_port 8000 --config_path /workspace/config.json
 ```
 
-Running above command starts the container with no accelerators support. 
-To deploy on devices other than CPU, change `target_device` parameter in `export_model.py` call and follow [AI accelerators guide](../../../docs/accelerators.md) for additionally required docker parameters.
+OVMS auto-detects the best available device at startup. To target a specific device explicitly, pass `--target_device GPU` (or `NPU`, `HETERO:GPU,CPU`, etc.) to `export_model.py` and follow the [AI accelerators guide](../../../docs/accelerators.md) for additionally required docker parameters.
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
@@ -119,7 +120,7 @@ Let's check how the deployed model is doing by running performance test. For tha
 
 Install vLLM and download sonnet dataset: 
 ```bash
-pip install vllm --extra-index-url https://wheels.vllm.ai/nightly/cpu
+pip install vllm --index-url https://wheels.vllm.ai/nightly/cpu --extra-index-url https://pypi.org/simple
 curl https://raw.githubusercontent.com/vllm-project/vllm/refs/heads/main/benchmarks/sonnet.txt -o sonnet.txt
 ```
 
@@ -287,8 +288,7 @@ models
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
 
-Running above command starts the container with no accelerators support. 
-To deploy on devices other than CPU, change `target_device` parameter in `export_model.py` call and follow [AI accelerators guide](../../../docs/accelerators.md) for additionally required docker parameters.
+OVMS auto-detects the best available device at startup. To target a specific device explicitly, pass `--target_device GPU` (or `NPU`, `HETERO:GPU,CPU`, etc.) to `export_model.py` and follow the [AI accelerators guide](../../../docs/accelerators.md) for additionally required docker parameters.
 :::
 
 :::{dropdown} **Deploying on Bare Metal**

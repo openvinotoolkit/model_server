@@ -209,7 +209,8 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         auto draftSchedulerConfig = prepareDraftPipelineSchedulerConfig(nodeOptions);
 
         try {
-            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, nodeOptions.draft_device(),
+            const std::string draftDevice = nodeOptions.draft_device().empty() ? properties->device : nodeOptions.draft_device();
+            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, draftDevice,
                 ov::genai::scheduler_config(draftSchedulerConfig));
             properties->pluginConfig.insert(draftPipeline);
         } catch (const std::exception& e) {

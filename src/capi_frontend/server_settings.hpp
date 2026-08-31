@@ -122,6 +122,8 @@ struct TextGenGraphSettingsImpl {
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
     bool draftEagle3Mode = false;
+    std::optional<std::string> draftDevice;
+    std::optional<std::string> draftModelPath;
     std::optional<std::string> pipelineType;
     std::optional<std::string> reasoningParser;
     std::optional<std::string> toolParser;
