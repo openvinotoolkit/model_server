@@ -104,7 +104,11 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
             embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();
         }
         if (result->count("max_length") > 0) {
-            embeddingsGraphSettings.maxLength = result->operator[]("max_length").as<uint32_t>();
+            const auto maxLength = result->operator[]("max_length").as<uint32_t>();
+             if (maxLength == 0) {
+                 throw std::invalid_argument("max_length must be greater than 0");
+             }
+             embeddingsGraphSettings.maxLength = maxLength;
         }
     }
     if (embeddingsGraphSettings.pooling.has_value() &&

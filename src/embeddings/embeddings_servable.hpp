@@ -20,6 +20,8 @@
 #include "src/filesystem/filesystem.hpp"
 #include "src/port/rapidjson_istreamwrapper.hpp"
 #include "src/port/rapidjson_error.hpp"
+
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
