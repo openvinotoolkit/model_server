@@ -16,7 +16,6 @@
 #include "graph_cli_parser.hpp"
 
 #include <algorithm>
-#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <stdexcept>

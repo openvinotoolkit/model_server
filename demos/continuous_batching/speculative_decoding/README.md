@@ -384,17 +384,17 @@ docker run -d --rm $(test -d /dev/dri && echo "--device /dev/dri --group-add $(s
   --rest_port 8000 \
   --model_repository_path /models \
   --source_model OpenVINO/Qwen3.8-27B-int4-ov \
-  --draft_model_path .
+  --draft_model_path . \
   --enable_prefix_caching false
 ```
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
-```bash
+```console
 ovms --rest_port 8000 \
   --model_repository_path c:\models \
   --source_model OpenVINO/Qwen3.8-27B-int4-ov \
-  --draft_model_path .
+  --draft_model_path . \
   --enable_prefix_caching false
 ```
 :::

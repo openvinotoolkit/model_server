@@ -3155,6 +3155,57 @@ TEST(OvmsGraphCliParserTest, noneParserNamesAreAccepted) {
     EXPECT_EQ(graphSettings.reasoningParser.value(), "none");
 }
 
+TEST(OvmsGraphCliParserTest, draftSourceModelIsParsed) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--draft_source_model", "org/draft-model"};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.draftModelDirName.has_value());
+    EXPECT_EQ(graphSettings.draftModelDirName.value(), "org/draft-model");
+    EXPECT_FALSE(graphSettings.draftModelPath.has_value());
+}
+
+TEST(OvmsGraphCliParserTest, draftModelPathIsParsed) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--draft_model_path", "."};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.draftModelPath.has_value());
+    EXPECT_EQ(graphSettings.draftModelPath.value(), ".");
+    EXPECT_FALSE(graphSettings.draftModelDirName.has_value());
+}
+
+TEST(OvmsGraphCliParserTest, draftDeviceIsParsed) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--draft_model_path", ".", "--draft_device", "GPU"};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.draftDevice.has_value());
+    EXPECT_EQ(graphSettings.draftDevice.value(), "GPU");
+}
+
+TEST(OvmsGraphCliParserTest, draftModelPathAndDraftSourceModelAreMutuallyExclusive) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    std::vector<std::string> args = {"--draft_source_model", "org/draft-model", "--draft_model_path", "."};
+    parser.parse(args);
+    EXPECT_THROW({
+        try {
+            parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+        } catch (const std::invalid_argument& e) {
+            EXPECT_NE(std::string(e.what()).find("mutually exclusive"), std::string::npos);
+            throw;
+        }
+    },
+        std::invalid_argument);
+}
+
 TEST_F(OvmsInferredTaskTest, positiveConfigureModeInfersTaskFromModel) {
     const std::string modelPath = resolveTestModelPath("llama");
     const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";

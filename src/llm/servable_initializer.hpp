@@ -70,9 +70,10 @@ public:
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 // Detects draft model strategy from model artifacts without a full model load.
-// Reads last 32KB of the XML (rt_info is at the end of OV IR format) for eagle3/dflash markers.
-// DFlash takes priority over EAGLE3 when both markers are present (matches GenAI's strategy selection).
-// Throws std::runtime_error if the XML cannot be opened.
+// Scans the tail of the draft model XML (walking backward in bounded chunks/lines, up to a line cap)
+// to find eagle3/dflash rt_info markers; MTP is detected separately via file presence.
+// DFlash takes priority over EAGLE3 when both markers are present (matches GenAI's strategy selection order).
+// Throws std::runtime_error if the XML is missing or cannot be opened/read.
 GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
