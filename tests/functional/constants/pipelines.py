@@ -26,7 +26,8 @@ from tests.functional.models.models import ModelInfo
 from tests.functional.constants.ovms import Config
 from tests.functional.constants.paths import Paths
 from tests.functional.object_model.custom_node import CustomNode
-from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator, PythonCalculator
+from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator, PythonCalculator, \
+    OpenVINOModelServerSessionCalculator, OpenVINOInferenceCalculator
 
 
 class NodesConnection:
@@ -518,6 +519,27 @@ class Pipeline(ModelInfo):
         self.get_output_node().change_input_name(old_name, new_name)
 
 
+class SimplePipeline(Pipeline):
+
+    def __init__(self, model, demultiply_count=None, name=None, **kwargs):
+        name = "single_model_pipeline" if name is None else f"single_model_pipeline_{name}"
+        super().__init__(name=name, **kwargs)
+        self.demultiply_count = demultiply_count
+        self._initialize([model])
+
+    def _create_nodes(self, models=None):
+        model = models[0]
+        node1 = Node("node_1", model)
+
+        request = Node("request", node_type=NodeType.Input, output_names=["input"])
+        output = Node("output", node_type=NodeType.Output, input_names=["output"])
+
+        NodesConnection.connect(node1, 0, request, 0)
+        NodesConnection.connect(output, 0, node1, 0)
+
+        return [request, node1, output]
+
+
 class MediaPipe(Pipeline):
     name = "MediaPipe"
     is_mediapipe = True
@@ -683,3 +705,36 @@ class MediaPipe(Pipeline):
         )
         full_content = header + " \n\n".join(nodes)
         self.graphs = [full_content]
+
+
+class SimpleMediaPipe(MediaPipe):
+    def __init__(self, model, demultiply_count=None, **kwargs):
+        pipeline = SimplePipeline
+        super().__init__(model, pipeline, demultiply_count, **kwargs)
+        self.calculators = [OpenVINOModelServerSessionCalculator(model=self), OpenVINOInferenceCalculator(model=self)]
+        self._initialize([model])
+        self.regular_models = self.get_regular_models()
+        assert not self.name.endswith("_mediapipe")
+        if kwargs.get("name") is None:
+            self.name += "_mediapipe"
+        else:
+            self.name = kwargs.get("name")
+
+    def _create_nodes(self, models=None):
+        session_calculator = self.calculators[0]
+        inference_calculator = self.calculators[1]
+
+        model = models[0]
+        session_node = MediaPipeGraphNode("node1", model, calculator=session_calculator)
+        inference_node = MediaPipeGraphNode(
+            "node2", model, calculator=inference_calculator, input_stream="input", output_stream="output"
+        )
+
+        request = MediaPipeGraphNode("request", node_type=NodeType.Input, output_names=["input"])
+        output = MediaPipeGraphNode("output", node_type=NodeType.Output, input_names=["output"])
+
+        NodesConnection.connect(session_node, 0, inference_node, 0)
+        NodesConnection.connect(inference_node, 0, request, 0)
+        NodesConnection.connect(output, 0, inference_node, 0)
+
+        return [request, session_node, inference_node, output]

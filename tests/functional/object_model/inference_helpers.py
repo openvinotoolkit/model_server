@@ -44,6 +44,7 @@ from tritonclient.grpc import service_pb2, service_pb2_grpc
 from tritonclient.grpc.service_pb2 import ModelInferRequest
 from tritonclient.utils import InferenceServerException, deserialize_bytes_tensor, serialize_byte_tensor
 
+from tests.functional.constants.pipelines import SimpleMediaPipe
 from tests.functional.utils.assertions import ModelNotReadyException, StreamingApiException, UnexpectedResponseError
 from tests.functional.utils.inference.communication.grpc import GRPC, GrpcCommunicationInterface, channel_options
 from tests.functional.utils.inference.communication.rest import REST, RestCommunicationInterface
@@ -724,7 +725,7 @@ def predict_and_assert(inference_infos: List[InferenceInfo], validate_results=Tr
         assert outputs, "Prediction returned no output"
         if validate_results:
             if inference_info.model.is_mediapipe:
-                if type(inference_info.model).__name__ == "SimpleMediaPipe" and output_key is None:
+                if isinstance(inference_info.model, SimpleMediaPipe) and output_key is None:
                     output_key = "output"
                 else:
                     output_key = output_key
