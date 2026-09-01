@@ -33,7 +33,7 @@ For this demo we use [OpenVINO/Qwen3.8-27B-int4-ov](https://huggingface.co/OpenV
 :::{dropdown} **Deploying with Docker**
 ```bash
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-docker run -d --rm ${GPU_ARGS} -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly \
+docker run -d --rm ${GPU_ARGS} --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly \
   --rest_port 8000 \
   --model_repository_path /models \
   --source_model OpenVINO/Qwen3.8-27B-int4-ov \
@@ -187,7 +187,7 @@ models
 :::{dropdown} **Deploying with Docker**
 ```bash
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-docker run ${GPU_ARGS} -d --rm -p 8000:8000 -v ${HOME}/models:/models:ro openvino/model_server:weekly \
+docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:ro openvino/model_server:weekly \
     --model_path /models/Qwen/Qwen3-8B \
     --model_name Qwen/Qwen3-8B \
     --rest_port 8000
@@ -331,7 +331,7 @@ models
 :::{dropdown} **Deploying with Docker**
 ```bash
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-docker run -d ${GPU_ARGS} --rm -p 8000:8000 -v ${HOME}/models:/models:ro openvino/model_server:weekly \
+docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:ro openvino/model_server:weekly \
     --rest_port 8000 \
     --model_path /models/meta-llama/CodeLlama-7b-hf \
     --model_name meta-llama/CodeLlama-7b-hf
