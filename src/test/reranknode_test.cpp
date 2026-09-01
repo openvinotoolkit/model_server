@@ -164,17 +164,17 @@ protected:
 
 public:
     std::string modelName = "rerank_ov";
-    const size_t MAX_POSITION_EMBEDDINGS = 12;
+    const size_t MAX_LENGTH = 12;
     const size_t MAX_ALLOWED_CHUNKS = 4;
 
     static void SetUpTestSuite() {
         std::string port = "9173";
         /*
             Setup with:
-            max_position_embeddings: 12
+            max_length: 12
             max_allowed_chunks: 4
 
-            Meaning query is trimmed to contain at most 6 tokens (half of max_position_embeddings)
+            Meaning query is trimmed to contain at most 6 tokens (half of max_length)
             And maximum number of documents or chunks (after chunking process) can be 4
             Allowed space for chunk is 12-6-4=2 tokens
         */
@@ -285,7 +285,7 @@ protected:
     static std::unique_ptr<std::thread> t;
 
 public:
-    const size_t MAX_POSITION_EMBEDDINGS = 8;
+    const size_t MAX_LENGTH = 8;
     const size_t MAX_ALLOWED_CHUNKS = 4;
 
     std::string modelName = "rerank_ov";
@@ -293,10 +293,10 @@ public:
         std::string port = "9173";
         /*
             Setup with:
-            max_position_embeddings: 8
+            max_length: 8
             max_allowed_chunks: 4
 
-            This is invalid setup since there is reservation for 4 special tokens and space for query is max half of max_position_embeddings (4) - meaning 0 token space for document
+            This is invalid setup since there is reservation for 4 special tokens and space for query is max half of max_length (4) - meaning 0 token space for document
         */
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/invalid_config.json");
         SetUpSuite(port, configPath, t);

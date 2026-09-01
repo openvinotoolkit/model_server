@@ -25,7 +25,7 @@ node {
       [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
         models_path: "/ovms/src/test/llm_testing/BAAI/bge-reranker-base/ov"
         max_allowed_chunks: 4
-        max_position_embeddings: 8
+        max_length: 8
       }
     }
 }

@@ -1636,9 +1636,11 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
         (char*)"--plugin_config",
         (char*)"{\"SOME_KEY\":\"SOME_VALUE\"}",
         (char*)"--cache_dir",
-        (char*)"/tmp/cache_dir_with_emptiness"};
+        (char*)"/tmp/cache_dir_with_emptiness",
+        (char*)"--max_length",
+        (char*)"42"};
 
-    int arg_count = 20;
+    int arg_count = 22;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1650,6 +1652,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 1002);
+    ASSERT_TRUE(rerankGraphSettings.maxLength.has_value());
+    ASSERT_EQ(rerankGraphSettings.maxLength.value(), 42);
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(exportSettings.targetDevice, "GPU");
     ASSERT_EQ(exportSettings.modelName, servingName);
@@ -1727,6 +1731,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 10000);
+    ASSERT_FALSE(rerankGraphSettings.maxLength.has_value());
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.modelName, modelName);

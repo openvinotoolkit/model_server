@@ -47,7 +47,11 @@ void RerankGraphCLIParser::createOptions() {
         ("max_allowed_chunks",
             "Maximum allowed chunks.",
             cxxopts::value<uint64_t>()->default_value("10000"),
-            "MAX_ALLOWED_CHUNKS");
+            "MAX_ALLOWED_CHUNKS")
+        ("max_length",
+            "Maximum input length in tokens. If omitted, OVMS will detect it from the model's config.json.",
+            cxxopts::value<uint64_t>(),
+            "MAX_LENGTH");
 }
 
 void RerankGraphCLIParser::printHelp() {
@@ -88,6 +92,13 @@ void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hf
     } else {
         hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
         rerankGraphSettings.maxAllowedChunks = result->operator[]("max_allowed_chunks").as<uint64_t>();
+        if (result->count("max_length") > 0) {
+            const auto maxLength = result->operator[]("max_length").as<uint64_t>();
+            if (maxLength == 0) {
+                throw std::invalid_argument("max_length must be greater than 0");
+            }
+            rerankGraphSettings.maxLength = maxLength;
+        }
     }
 
     hfSettings.graphSettings = std::move(rerankGraphSettings);

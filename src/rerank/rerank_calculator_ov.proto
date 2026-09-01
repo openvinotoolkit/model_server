@@ -30,7 +30,7 @@ message RerankCalculatorOVOptions {
 
     optional uint64 max_allowed_chunks = 2 [default = 10000];  // Default taken from Cohere API documentation
 
-    optional uint64 max_position_embeddings = 3;
+    optional uint64 max_length = 3;
 
     optional string target_device = 4;
     

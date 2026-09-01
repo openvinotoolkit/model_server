@@ -310,6 +310,7 @@ node {
         [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
             models_path: "/some/path",
             max_allowed_chunks: 18,
+            max_length: 42,
             target_device: "GPU",
             plugin_config: '{"NUM_STREAMS":"2"}',
         }
@@ -740,6 +741,7 @@ TEST_F(GraphCreationTest, rerankPositiveNonDefault) {
     exportSettings.modelPath = "/some/path";
     exportSettings.pluginConfig.numStreams = 2;
     rerankGraphSettings.maxAllowedChunks = 18;
+    rerankGraphSettings.maxLength = 384;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
 
     assertCreatedGraphEquals(hfSettings, expectedRerankGraphContentsNonDefault);

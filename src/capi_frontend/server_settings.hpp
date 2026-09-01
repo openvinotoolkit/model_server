@@ -145,6 +145,7 @@ struct SpeechToTextGraphSettingsImpl {
 
 struct RerankGraphSettingsImpl {
     uint64_t maxAllowedChunks = 10000;
+    std::optional<uint64_t> maxLength;
 };
 
 enum class LoraSourceType {

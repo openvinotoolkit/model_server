@@ -111,10 +111,9 @@ public:
         sep_token = rerank_session->getSepToken().value_or(0);
         pad_token = rerank_session->getPadToken().value_or(0);
 
-        // max_position_embeddings
-        if (options.has_max_position_embeddings()) {
-            this->max_position_embeddings = options.max_position_embeddings();
-            SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Options defined max_position_embeddings: {}", this->max_position_embeddings);
+        if (options.has_max_length()) {
+            this->max_position_embeddings = options.max_length();
+            SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Options defined max_length: {}", this->max_position_embeddings);
         } else {
             if (rerank_session->getMaxModelLength().has_value()) {
                 this->max_position_embeddings = rerank_session->getMaxModelLength().value();
