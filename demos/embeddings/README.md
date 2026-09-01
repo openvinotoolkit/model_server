@@ -250,7 +250,7 @@ python export_model.py embeddings_ov --source_model sentence-transformers/all-mp
 :::{tab-item} Qwen/Qwen3-Embedding-0.6B
 :sync: Qwen3-Embedding-0.6B-int8
 ```bash
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings --target_device NPU --max_length 200
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings --target_device NPU --max_length 1000
 
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
@@ -258,7 +258,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: BAAI/bge-large-en-v1.5-fp16
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models --max_length 200
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --model_name bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models --max_length 1000
 ```
 :::
 ::::
@@ -611,7 +611,7 @@ The `tokenize` endpoint provides a simple API for tokenizing input text using th
 
 Example usage:
 ```console
-curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-large-en-v1.5\", \"text\": \"hello world\" }"
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\" }"
 ```
 Response:
 ```json
@@ -628,7 +628,7 @@ It's possible to use additional parameters:
 
  Example usage:
 ```console
-curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
 ```
 
 Response:
