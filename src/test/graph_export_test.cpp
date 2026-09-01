@@ -661,6 +661,56 @@ TEST_F(GraphCreationTest, positiveDraftAndFuse) {
     assertCreatedGraphEquals(hfSettings, expectedDraftAndFuseGraphContents);
 }
 
+const std::string expectedDraftEagle3GraphContents = R"(
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node: {
+    name: "LLMExecutor"
+    calculator: "HttpLLMCalculator"
+    input_stream: "LOOPBACK:loopback"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
+    output_stream: "LOOPBACK:loopback"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
+    node_options: {
+        [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+            max_num_seqs:256,
+            models_path: "./",
+            enable_prefix_caching: true,
+            cache_size: 10,
+            # Speculative decoding configuration
+            draft_models_path: "-ovms-src-test-llm_testing-facebook-opt-125m",
+            draft_eagle3_mode: true,
+        }
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+        [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+            sync_set {
+            tag_index: "LOOPBACK:0"
+            }
+        }
+        }
+    }
+    }
+)";
+
+TEST_F(GraphCreationTest, positiveDraftEagle3Mode) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    ovms::TextGenGraphSettingsImpl graphSettings;
+    graphSettings.draftModelDirName = "/ovms/src/test/llm_testing/facebook/opt-125m";
+    graphSettings.draftEagle3Mode = true;
+    hfSettings.graphSettings = std::move(graphSettings);
+    assertCreatedGraphEquals(hfSettings, expectedDraftEagle3GraphContents);
+}
+
 TEST_F(GraphCreationTest, positiveGGUF) {
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     ovms::HFSettingsImpl hfSettings;

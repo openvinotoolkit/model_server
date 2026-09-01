@@ -213,101 +213,55 @@ std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::parseChunk(const std::strin
     return std::nullopt;
 }
 
-void Qwen3CoderToolParser::lazyFillInitToolParametersTypesMap() {
-    if (this->filledParametersTypesMap) {
-        return;
-    }
-    SPDLOG_DEBUG("Filling tools parameters types map");
-    this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
-    this->filledParametersTypesMap = true;
-    SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", this->toolsParametersTypes.size());
-}
-
-Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
-    BaseOutputParser(tokenizer),
+Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
+    std::optional<OutputParsingConfig> configOverride) :
+    BaseOutputParser(tokenizer, [&]() {
+        if (configOverride.has_value())
+            return std::move(*configOverride);
+        OutputParsingConfig cfg;
+        cfg.startTags = {TOOL_START_TAG, FUNCTION_NAME_TAG};
+        return cfg;
+    }()),
     toolSchemas(toolSchemas),
+    toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
     streamParser(this->toolsParametersTypes) {
 }
 
-void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    // there may be multiple parameters per function,
-    // there may be multiple lines per parameter value
-    // there may be no parameters for a function
-    // there may be multiple tool_call sections in the content
-    // there is only one function per tool call
-    // <tool_call>
-    // <function=FUNCTION_NAME>
-    // <parameter=PARAM_NAME>
-    // PARAM_VALUE
-    // </parameter>
-    // </function>
-    // </tool_call>
-    this->lazyFillInitToolParametersTypesMap();
-    auto toolCallsOpt = this->streamParser.parseChunk(parsedOutput.content);
-    if (toolCallsOpt.has_value()) {
-        // TODO do we want to support not ending in content state?
-        parsedOutput.toolCalls = std::move(toolCallsOpt.value());
-        SPDLOG_DEBUG("Parsing ended successfully, removing tool calls from content");
-        auto status = this->streamParser.removeToolCallsFromContentIfNeeded(parsedOutput.content);
-        if (!status.ok()) {
-            SPDLOG_DEBUG("Failed to remove tool calls from content: {}", status.string());
-        }
-        return;
-    }
-    SPDLOG_DEBUG("Parsing ended, no tool calls found");
-    return;
-}
 std::optional<std::string> Qwen3CoderToolParserImpl::getCurrentFunctionName() const {
     if (this->currentFunction.name.empty()) {
         return std::nullopt;
     }
     return this->currentFunction.name;
 }
-std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
+std::optional<Delta> Qwen3CoderToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
     if (toolCalls.size() != 1) {
         SPDLOG_ERROR("For streaming we expected one tool call, got: {}", toolCalls.size());
-        // TODO we should return status code but this require change of parsers API
         throw std::runtime_error("For streaming we expected one tool call");
     }
     auto& toolCall = toolCalls[0];
-    rapidjson::Document argsDelta;
-    argsDelta.Parse(toolCall.arguments.c_str());
     this->returnedCompleteDeltas.insert(this->toolCallIndex);
-    rapidjson::Document argumentsWrapper;
-    argumentsWrapper.SetObject();
-    rapidjson::Document::AllocatorType& allocator = argumentsWrapper.GetAllocator();
-    // now we need to add string toolCall.arguments to argumentsWrapper under "arguments" key
-    rapidjson::Value toolCallsString(rapidjson::kStringType);
-    toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
     SPDLOG_TRACE("Tool call arguments string: {}", toolCall.arguments);
-
-    argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
-    auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
-    SPDLOG_DEBUG("First delta doc: {}", documentToString(currentDelta));
-    return currentDelta;
+    SPDLOG_DEBUG("Full delta: index={} arguments={}", this->toolCallIndex, toolCall.arguments);
+    return ToolCallDelta{this->toolCallIndex, std::nullopt, std::nullopt, toolCall.arguments};
 }
 
-std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
+std::optional<Delta> Qwen3CoderToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
     if (this->returnedFirstDeltas.size() == (this->returnedCompleteDeltas.size() + 1)) {
         SPDLOG_TRACE("Skipping first delta, already sent for current function, returnedFirstDeltas.size(): {} returnedCompleteDeltas.size(): {}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
-        // we can skip sending first delta since we sent it for current function
         return std::nullopt;
     }
     int toolCallId = ++this->toolCallIndex;
-    rapidjson::Document doc = wrapFirstDelta(toolCallName, toolCallId);
-    this->currentJson.CopyFrom(doc, this->currentJson.GetAllocator());
     this->returnedFirstDeltas.insert(toolCallId);
-    SPDLOG_DEBUG("First delta doc: {}", documentToString(doc));
-    return doc;
+    SPDLOG_DEBUG("First delta: name={} index={}", toolCallName, toolCallId);
+    return ToolCallDelta{toolCallId, generateRandomId(), toolCallName, ""};
 }
 
-std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> Qwen3CoderToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     // streamParser will return optional toolCalls when a tool call is completed
     // if toolCalls is returned, we need to wrap it in the required JSON structure and return it
     // if toolCalls is not returned, but we are insideFunction state, we need to return the first delta with function name once
     // otherwise nullopt
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));
-    this->lazyFillInitToolParametersTypesMap();
     if (newChunk.empty()) {
         return std::nullopt;
     }

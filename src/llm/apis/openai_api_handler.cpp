@@ -99,19 +99,6 @@ std::string OpenAIApiHandler::serializeFailedEvent(const std::string& errorMessa
     return "";
 }
 
-std::vector<int64_t> OpenAIApiHandler::encodeTextToTokens(const std::string& text) {
-    auto result = tokenizer.encode(text);
-    auto& input_ids = result.input_ids;
-    if (input_ids.get_shape().size() != 2)
-        throw std::runtime_error("input_ids should have 2 dimensions");
-    if (input_ids.get_shape()[0] != 1)
-        throw std::runtime_error("input_ids should have 1 batch size");
-    if (input_ids.get_element_type() != ov::element::i64)
-        throw std::runtime_error("input_ids should have i64 element type");
-    int64_t* data = reinterpret_cast<int64_t*>(input_ids.data());
-    return std::vector<int64_t>(data, data + input_ids.get_shape()[1]);
-}
-
 absl::Status OpenAIApiHandler::parseResponseFormat() {
     auto it = doc.FindMember("response_format");
     if (it != doc.MemberEnd()) {
@@ -270,6 +257,20 @@ absl::Status OpenAIApiHandler::parseTools() {
     return absl::OkStatus();
 }
 
+absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+    std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+    auto status = parseRequestImpl(maxTokensLimit, bestOfLimit, maxModelLength, allowedLocalMediaPath, allowedMediaDomains);
+    if (status.ok())
+        initOutputParser();
+    return status;
+}
+
+void OpenAIApiHandler::initOutputParser() {
+    if (toolParserName.empty() && reasoningParserName.empty())
+        return;
+    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, request.toolNameSchemaMap);
+}
+
 absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseToolsToJsonContainer() {
     auto it = doc.FindMember("tools");
     if (it == doc.MemberEnd() || it->value.IsNull()) {
@@ -329,7 +330,11 @@ ov::genai::ChatHistory& OpenAIApiHandler::getChatHistory() {
 
 absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationConfigBuilder& configBuilder) {
     configBuilder.parseConfigFromRequest(request);
-    configBuilder.adjustConfigForDecodingMethod();
+    try {
+        configBuilder.adjustConfigForDecodingMethod();
+    } catch (const std::invalid_argument& e) {
+        return absl::InvalidArgumentError(e.what());
+    }
     try {
         configBuilder.validateStructuredOutputConfig(tokenizer);
     } catch (const std::exception& e) {
@@ -395,15 +400,37 @@ void OpenAIApiHandler::incrementProcessedTokens(size_t numTokens) {
     usage.completionTokens += numTokens;
 }
 
-ParsedOutput OpenAIApiHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
-    OVMS_PROFILE_FUNCTION();
-    ParsedOutput parsedOutput;
-    if ((endpoint != Endpoint::CHAT_COMPLETIONS && endpoint != Endpoint::RESPONSES) || outputParser == nullptr) {
-        parsedOutput.content = this->tokenizer.decode(generatedIds, ov::genai::skip_special_tokens(request.skipSpecialTokens));
-    } else {
-        parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
+std::string OpenAIApiHandler::serializeUnaryResponse(
+    const std::vector<std::vector<Delta>>& allDeltas,
+    const std::vector<ov::genai::GenerationFinishReason>& finishReasons) {
+    return serializeUnaryResponse(allDeltas, finishReasons, {});
+}
+
+ParsedOutput OpenAIApiHandler::parsedOutputFromDeltas(const std::vector<Delta>& deltas) {
+    ParsedOutput output;
+    std::vector<ToolCall> toolCalls;
+    for (const Delta& d : deltas) {
+        std::visit(overloaded{
+                       [&](const ContentDelta& x) { output.content += x.text; },
+                       [&](const ReasoningDelta& x) { output.reasoning += x.text; },
+                       [&](const ToolCallDelta& x) {
+                           const auto idx = static_cast<size_t>(x.index);
+                           if (idx >= toolCalls.size())
+                               toolCalls.resize(idx + 1);
+                           ToolCall& tc = toolCalls[idx];
+                           if (x.id)
+                               tc.id = *x.id;
+                           if (x.name)
+                               tc.name = *x.name;
+                           tc.arguments += x.arguments;
+                       },
+                       [&](const FinishDelta&) {},
+                       [&](const AudioDelta&) {},
+                   },
+            d);
     }
-    return parsedOutput;
+    output.toolCalls = std::move(toolCalls);
+    return output;
 }
 
 // --- Free functions ---
@@ -735,10 +762,14 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     auto numAssistantTokensIt = doc.FindMember("num_assistant_tokens");
     auto assistantConfidenceThresholdIt = doc.FindMember("assistant_confidence_threshold");
     auto maxNgramSizeIt = doc.FindMember("max_ngram_size");
+    auto branchingFactorIt = doc.FindMember("branching_factor");
+    auto treeDepthIt = doc.FindMember("tree_depth");
 
     bool numAssistantTokensItHasValue = (numAssistantTokensIt != doc.MemberEnd() && !numAssistantTokensIt->value.IsNull());
     bool assistantConfidenceThresholdItHasValue = (assistantConfidenceThresholdIt != doc.MemberEnd() && !assistantConfidenceThresholdIt->value.IsNull());
     bool maxNgramSizeItHasValue = (maxNgramSizeIt != doc.MemberEnd() && !maxNgramSizeIt->value.IsNull());
+    bool branchingFactorItHasValue = (branchingFactorIt != doc.MemberEnd() && !branchingFactorIt->value.IsNull());
+    bool treeDepthItHasValue = (treeDepthIt != doc.MemberEnd() && !treeDepthIt->value.IsNull());
 
     if (numAssistantTokensItHasValue) {
         request.numAssistantTokens = numAssistantTokensIt->value.GetUint();
@@ -749,15 +780,22 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     if (maxNgramSizeItHasValue) {
         request.maxNgramSize = maxNgramSizeIt->value.GetUint();
     }
+    if (branchingFactorItHasValue) {
+        if (!branchingFactorIt->value.IsUint())
+            return absl::InvalidArgumentError("branching_factor is not an unsigned integer");
+        request.branchingFactor = branchingFactorIt->value.GetUint();
+    }
+    if (treeDepthItHasValue) {
+        if (!treeDepthIt->value.IsUint())
+            return absl::InvalidArgumentError("tree_depth is not an unsigned integer");
+        request.treeDepth = treeDepthIt->value.GetUint();
+    }
 
     it = doc.FindMember("skip_special_tokens");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("skip_special_tokens is not a bool");
         request.skipSpecialTokens = it->value.GetBool();
-    }
-    if (!request.skipSpecialTokens && outputParser != nullptr) {
-        outputParser.reset();
     }
 
     request.maxModelLength = maxModelLength;
