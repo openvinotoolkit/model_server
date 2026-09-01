@@ -383,7 +383,7 @@ docker run -d --rm $(test -d /dev/dri && echo "--device /dev/dri --group-add $(s
   -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly \
   --rest_port 8000 \
   --model_repository_path /models \
-  --source_model OpenVINO/Qwen3.8-27B-int8-ov \
+  --source_model OpenVINO/Qwen3.8-27B-int4-ov \
   --draft_model_path .
   --enable_prefix_caching false
 ```
@@ -393,7 +393,7 @@ docker run -d --rm $(test -d /dev/dri && echo "--device /dev/dri --group-add $(s
 ```bash
 ovms --rest_port 8000 \
   --model_repository_path c:\models \
-  --source_model OpenVINO/Qwen3.8-27B-int8-ov \
+  --source_model OpenVINO/Qwen3.8-27B-int4-ov \
   --draft_model_path .
   --enable_prefix_caching false
 ```
@@ -406,7 +406,7 @@ The API is identical to other speculative decoding strategies:
 ```python
 from openai import OpenAI
 
-client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
 
 response = client.chat.completions.create(
     model="OpenVINO/Qwen3.8-27B-int8-ov",
