@@ -131,6 +131,19 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
 }
 
 Status Minicpm5ToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
+    // Generation can be truncated mid-tool-call (max_tokens hit, or eos suppressed) so an opening
+    // "<function" is recorded with no matching "</function>" close. That leaves begin with more
+    // entries than end. The unterminated call is always the most recent one (top of the begin
+    // stack), so drop it -- erasing from its start to end-of-content -- rather than bailing and
+    // leaving every (including completed) block in the content returned to the user.
+    while (toolCallPositions.begin.size() > toolCallPositions.end.size()) {
+        auto posBegin = toolCallPositions.begin.top();
+        toolCallPositions.begin.pop();
+        if (posBegin <= outContent.size()) {
+            SPDLOG_TRACE("Minicpm5: removing unterminated tool call from outContent begin:{} to end", posBegin);
+            outContent.erase(posBegin);
+        }
+    }
     if (toolCallPositions.begin.size() != toolCallPositions.end.size()) {
         SPDLOG_DEBUG("Minicpm5: mismatched tool tags, begin: {}, end: {}",
             toolCallPositions.begin.size(), toolCallPositions.end.size());

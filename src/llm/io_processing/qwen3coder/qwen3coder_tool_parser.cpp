@@ -37,6 +37,19 @@ const std::string Qwen3CoderToolParser::FUNCTION_END_TAG = "</function>";
 const std::string Qwen3CoderToolParser::TOOL_END_TAG = "</tool_call>";
 
 Status Qwen3CoderToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
+    // Generation can be truncated mid-tool-call (max_tokens hit, or eos suppressed) so an opening
+    // "<tool_call>"/"<function=" is recorded with no matching close. That leaves begin with more
+    // entries than end. The unterminated call is always the most recent one (top of the begin
+    // stack), so drop it -- erasing from its start to end-of-content -- rather than bailing and
+    // leaving every (including completed) block in the content returned to the user.
+    while (toolCallPositions.begin.size() > toolCallPositions.end.size()) {
+        auto posBegin = toolCallPositions.begin.top();
+        toolCallPositions.begin.pop();
+        if (posBegin <= outContent.size()) {
+            SPDLOG_TRACE("Removing unterminated tool call from outContent begin:{} to end", posBegin);
+            outContent.erase(posBegin);
+        }
+    }
     if (toolCallPositions.begin.size() != toolCallPositions.end.size()) {
         SPDLOG_DEBUG("Mismatched tool tags, begin: {}, end: {}", toolCallPositions.begin.size(), toolCallPositions.end.size());
         return Status(StatusCode::INTERNAL_ERROR, "Mismatched tool tags");

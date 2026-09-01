@@ -265,6 +265,20 @@ value1
     EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size());
     EXPECT_EQ(content, "\n");
 }
+
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnterminatedToolCallContentCleanedNotError) {
+    // Truncated mid-parameter-value, no closing tags at all: removeToolCallsFromContentIfNeeded()
+    // must trim the dangling fragment instead of returning INTERNAL_ERROR (begin/end mismatch).
+    std::string input = "<tool_call>\n<function=string_tool>\n<parameter=arg1>val";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_FALSE(callsOpt.has_value());
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(content.find("<tool_call>"), std::string::npos) << content;
+}
+
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryWithNoToolCall) {
     std::string input = R"(Unexpected void found. Philosophical crisis imminent.)";
     const std::string expectedContent = input;

@@ -562,6 +562,19 @@ TEST(Minicpm5ToolParserImplTest, UnterminatedFunctionNoCall) {
     EXPECT_FALSE(callsOpt.has_value() && !callsOpt.value().empty());
 }
 
+TEST(Minicpm5ToolParserImplTest, UnterminatedFunctionContentCleanedNotError) {
+    // Truncated mid-parameter-value, no closing tags at all: removeToolCallsFromContentIfNeeded()
+    // must trim the dangling fragment instead of returning INTERNAL_ERROR (begin/end mismatch).
+    const std::string input =
+        R"(<function name="get_weather"><param name="city">Berlin)";
+    auto content = input;
+    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+    parser.parseChunk(content);
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(content.find("<function"), std::string::npos) << content;
+}
+
 TEST(Minicpm5ToolParserImplTest, EmptyParamValue) {
     const std::string input =
         R"(<function name="get_weather"><param name="city"></param></function>)";
