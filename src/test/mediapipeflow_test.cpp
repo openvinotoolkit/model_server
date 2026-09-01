@@ -4598,53 +4598,22 @@ TEST(MediapipeIdleUnloadGuard, UnloadSkipsWhenRequestsInFlight) {
     ASSERT_TRUE(def.sidePacketMapsEmptyForTest());
 }
 
-// ---------------------------------------------------------------------------
-// setAsSleeping() — skip initial loading for idle group management
-// ---------------------------------------------------------------------------
-
-TEST(MediapipeIdleUnloadGuard, SetAsSleepingTransitionsFromBeginToSleeping) {
+TEST(MediapipeIdleUnloadGuard, LazyLoadConstructorStartsSleeping) {
     ovms::MediapipeGraphConfig mgc{"skipLoad", "", ""};
     mgc.setIdleUnloadTimeoutSeconds(10);
-    DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr);
-    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
-
-    def.setAsSleeping();
-
+    DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr, true);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 
-TEST(MediapipeIdleUnloadGuard, SetAsSleepingDoesNotClearResources) {
+TEST(MediapipeIdleUnloadGuard, LazyLoadThenUnloadIsNoOp) {
     ovms::MediapipeGraphConfig mgc{"skipLoad", "", ""};
     mgc.setIdleUnloadTimeoutSeconds(10);
-    DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr);
-    // Insert a marker into side packet maps before setAsSleeping.
-    def.insertSidePacketMarkerForTest("marker");
-    const void* mapsBefore = def.sidePacketMapsPtrForTest();
-
-    def.setAsSleeping();
-
-    // setAsSleeping only transitions the state machine — it does not clear resources
-    // (there are none to clear since validate() was never called).
-    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
-    ASSERT_TRUE(def.hasSidePacketMarkerForTest("marker"));
-    ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);
-}
-
-TEST(MediapipeIdleUnloadGuard, SetAsSleepingThenUnloadIsNoOp) {
-    ovms::MediapipeGraphConfig mgc{"skipLoad", "", ""};
-    mgc.setIdleUnloadTimeoutSeconds(10);
-    DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr);
-    def.setAsSleeping();
+    DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr, true);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 
-    // A second unload() on an already-SLEEPING graph should be a no-op.
     ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
-
-// ---------------------------------------------------------------------------
-// createDefinitionAsSleeping() — factory-level test
-// ---------------------------------------------------------------------------
 
 namespace {
 class StubMetricProvider : public ovms::MetricProvider {
@@ -4657,13 +4626,14 @@ private:
 };
 }  // namespace
 
-TEST(MediapipeIdleUnloadGuard, CreateDefinitionAsSleeping) {
+TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoad) {
     ovms::MediapipeFactory factory(nullptr);
     ovms::MediapipeGraphConfig mgc{"unloadedGraph", "", ""};
     mgc.setIdleUnloadTimeoutSeconds(10);
     StubMetricProvider metrics;
+    ovms::ModelManager manager;
 
-    auto status = factory.createDefinitionAsSleeping("unloadedGraph", mgc, metrics);
+    auto status = factory.createDefinition("unloadedGraph", mgc, metrics, manager, true);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     auto* def = factory.findDefinitionByName("unloadedGraph");
@@ -4671,14 +4641,15 @@ TEST(MediapipeIdleUnloadGuard, CreateDefinitionAsSleeping) {
     ASSERT_EQ(def->getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 
-TEST(MediapipeIdleUnloadGuard, CreateDefinitionAsSleepingRejectsDuplicate) {
+TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoadRejectsDuplicate) {
     ovms::MediapipeFactory factory(nullptr);
     ovms::MediapipeGraphConfig mgc{"dupGraph", "", ""};
     StubMetricProvider metrics;
+    ovms::ModelManager manager;
 
-    auto status1 = factory.createDefinitionAsSleeping("dupGraph", mgc, metrics);
+    auto status1 = factory.createDefinition("dupGraph", mgc, metrics, manager, true);
     ASSERT_EQ(status1, ovms::StatusCode::OK);
 
-    auto status2 = factory.createDefinitionAsSleeping("dupGraph", mgc, metrics);
+    auto status2 = factory.createDefinition("dupGraph", mgc, metrics, manager, true);
     ASSERT_EQ(status2, ovms::StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST);
 }

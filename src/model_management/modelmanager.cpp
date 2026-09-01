@@ -99,6 +99,10 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         switch (task.type) {
         case ServableLoadingTaskType::LoadModel: {
             if (!task.modelConfig.has_value()) {
+                auto model = findModelByName(task.name);
+                if (model) {
+                    return model->wakeUpIfSleeping();
+                }
                 auto it = servedModelConfigs.find(task.name);
                 if (it == servedModelConfigs.end())
                     return StatusCode::MODEL_NAME_MISSING;
@@ -121,12 +125,13 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
                 const auto& config = task.graphConfig.value();
                 if (!def) {
                     // Non-permanent idle groups: create as SLEEPING to skip expensive loading
-                    if (groupManager_ && groupManager_->isEnabled() &&
+                    if (servableGroupManager && servableGroupManager->isEnabled() &&
                         !config.getGroupName().empty() && config.getGroupName() != "permanent") {
                         SPDLOG_LOGGER_DEBUG(modelmanager_logger,
                             "Mediapipe graph:{} belongs to non-permanent group '{}'; creating as SLEEPING",
                             task.name, config.getGroupName());
-                        return mediapipeFactory->createDefinitionAsSleeping(task.name, config, *this);
+                        bool lazyLoad = true;
+                        return mediapipeFactory->createDefinition(task.name, config, *this, *this, lazyLoad);
                     }
                     return mediapipeFactory->createDefinition(task.name, config, *this, *this);
                 }
@@ -135,10 +140,17 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
                 }
             } else {
                 // Urgent reload (inference-triggered wake-up or on-demand load)
-                if (!def)
+                if (!def) {
                     return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
+                }
                 if (def->getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
-                    return def->wakeUpIfSleeping(*this);
+                    // TODO consider moving whole part as an interface to ServableContainer so that we
+                    // could just call servableContainer->wakeUp(A). However we would need to to expose scheduler then
+                    auto status = def->wakeUpIfSleeping(*this);
+                    if (status.ok()) {
+                        mediapipeFactory->registerLoraAliasesFor(task.name);
+                    }
+                    return status;
                 }
                 return def->reload(*this, def->getMediapipeGraphConfig());
             }
@@ -257,7 +269,7 @@ Status ModelManager::start(const Config& config) {
 
     // Initialize model group manager if idle unload is enabled and using config file
     if (this->startedWithConfigFile && config.idleUnloadTimeoutSeconds() > 0) {
-        groupManager_ = std::make_unique<ModelGroupManager>(config.idleUnloadTimeoutSeconds());
+        servableGroupManager = std::make_unique<ModelGroupManager>(static_cast<uint64_t>(config.idleUnloadTimeoutSeconds()) * 1'000'000ULL);
         SPDLOG_INFO("Model group idle management enabled with {}s timeout", config.idleUnloadTimeoutSeconds());
     }
 
@@ -1019,13 +1031,18 @@ Status ModelManager::loadConfig() {
     }
 
     // Build model groups and unload non-permanent servables for on-demand loading
-    if (groupManager_ && groupManager_->isEnabled()) {
-        groupManager_->buildGroups(this->servedModelConfigs, *this);
-        for (const auto& [groupName, groupInfo] : groupManager_->getGroups()) {
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        servableGroupManager->buildGroups(this->servedModelConfigs, *this);
+        for (const auto& [groupName, groupInfo] : servableGroupManager->getGroups()) {
             if (groupInfo.isPermanent()) {
                 continue;
             }
             for (const auto& modelName : groupInfo.modelNames) {
+                auto model = findModelByName(modelName);
+                if (model && model->getDefaultModelInstance() &&
+                    model->getDefaultModelInstance()->getStatus().isSleeping()) {
+                    continue;
+                }
                 ServableLoadingTask task{ServableLoadingTaskType::RetireModel, modelName};
                 auto future = loadingQueue->scheduleTask(std::move(task));
                 auto retireStatus = future.get();
@@ -1170,8 +1187,8 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
         // draining). This keeps configMtx hold time minimal.
         unloadIdleGraphs();
         // Model group idle unload: unload the active non-permanent group if idle
-        if (groupManager_ && groupManager_->isEnabled()) {
-            groupManager_->unloadActiveGroupIfIdle(*this);
+        if (servableGroupManager && servableGroupManager->isEnabled()) {
+            servableGroupManager->unloadActiveGroupIfIdle(*this);
         }
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
@@ -1432,9 +1449,11 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 }
 
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed) {
+    bool lazyLoad = servableGroupManager && servableGroupManager->isEnabled() &&
+                    config.getGroupName() != "permanent";
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry, this->metricConfig.get());
+        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry, this->metricConfig.get(), lazyLoad);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -1690,18 +1709,18 @@ Status ModelManager::getModelInstance(const std::string& modelName,
     SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
 
     // On-demand group loading via queue for idle model management
-    if (groupManager_ && groupManager_->isEnabled()) {
-        std::string group = groupManager_->getGroupForServable(modelName);
-        if (!group.empty() && !groupManager_->isGroupLoaded(group)) {
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        std::string group = servableGroupManager->getGroupForServable(modelName);
+        if (!group.empty() && !servableGroupManager->isGroupLoaded(group)) {
             // const_cast needed: getModelInstance is const per interface, but group
             // loading enqueues tasks via the queue which is logically non-mutating
-            auto status = groupManager_->ensureGroupLoaded(modelName, const_cast<ModelManager&>(*this));
+            auto status = servableGroupManager->ensureGroupLoaded(modelName, const_cast<ModelManager&>(*this));
             if (!status.ok()) {
                 SPDLOG_ERROR("Failed to load group for model '{}': {}", modelName, status.string());
                 return status;
             }
         }
-        groupManager_->recordActivity();
+        servableGroupManager->recordActivity();
     }
 
     auto model = findModelByName(modelName);
@@ -1729,13 +1748,14 @@ const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() cons
 
 const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
     // In idle management mode, report all configured models as available
-    if (groupManager_ && groupManager_->isEnabled()) {
-        return groupManager_->getAllConfiguredServableNames();
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        return servableGroupManager->getAllConfiguredServableNames();
     }
     std::vector<std::string> names;
     std::shared_lock lock(modelsMtx);
     for (auto& [name, model] : models) {
-        if (model->getDefaultModelInstance() && model->getDefaultModelInstance()->getStatus().getState() == ModelVersionState::AVAILABLE) {
+        auto instance = model->getDefaultModelInstance();
+        if (instance && instance->getStatus().appearsAvailable()) {
             names.push_back(model->getName());
         }
     }
@@ -1746,16 +1766,16 @@ Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& gra
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
     // On-demand group loading via queue for idle model management
-    if (groupManager_ && groupManager_->isEnabled()) {
-        std::string group = groupManager_->getGroupForServable(name);
-        if (!group.empty() && !groupManager_->isGroupLoaded(group)) {
-            auto status = groupManager_->ensureGroupLoaded(name, *this);
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        std::string group = servableGroupManager->getGroupForServable(name);
+        if (!group.empty() && !servableGroupManager->isGroupLoaded(group)) {
+            auto status = servableGroupManager->ensureGroupLoaded(name, *this);
             if (!status.ok()) {
                 SPDLOG_ERROR("Failed to load group for mediapipe graph '{}': {}", name, status.string());
                 return status;
             }
         }
-        groupManager_->recordActivity();
+        servableGroupManager->recordActivity();
     }
 
     // Wake up idle-unloaded graph via queue

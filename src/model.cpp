@@ -88,7 +88,7 @@ void Model::updateDefaultVersion(int ignoredVersion) {
     for (const auto& [version, versionInstance] : modelVersions) {
         if (version != ignoredVersion &&
             version > newDefaultVersion &&
-            ModelVersionState::AVAILABLE == versionInstance->getStatus().getState()) {
+            versionInstance->getStatus().appearsAvailable()) {
             newDefaultVersion = version;
         }
     }
@@ -117,14 +117,14 @@ std::shared_ptr<ovms::ModelInstance> Model::modelInstanceFactory(const std::stri
     return std::make_shared<ModelInstance>(modelName, modelVersion, ieCore, registry, metricConfig);
 }
 
-Status Model::addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig) {
+Status Model::addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig, bool lazyLoad) {
     const auto& version = config.getVersion();
     std::shared_ptr<ModelInstance> modelInstance = modelInstanceFactory(config.getName(), version, ieCore, registry, metricConfig);
 
     std::unique_lock lock(modelVersionsMtx);
     modelVersions.emplace(version, modelInstance);
     lock.unlock();
-    auto status = modelInstance->loadModel(config);
+    auto status = modelInstance->loadModel(config, lazyLoad);
     if (!status.ok()) {
         return status;
     }
@@ -133,7 +133,7 @@ Status Model::addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegi
     return StatusCode::OK;
 }
 
-Status Model::addVersions(std::shared_ptr<model_versions_t>& versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed, MetricRegistry* registry, const MetricConfig* metricConfig) {
+Status Model::addVersions(std::shared_ptr<model_versions_t>& versionsToStart, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed, MetricRegistry* registry, const MetricConfig* metricConfig, bool lazyLoad) {
     Status result = StatusCode::OK;
     downloadModels(fs, config, versionsToStart);
     versionsFailed->clear();
@@ -141,7 +141,7 @@ Status Model::addVersions(std::shared_ptr<model_versions_t>& versionsToStart, ov
         SPDLOG_INFO("Will add model: {}; version: {} ...", getName(), version);
         config.setVersion(version);
         config.parseModelMapping();
-        auto status = addVersion(config, ieCore, registry, metricConfig);
+        auto status = addVersion(config, ieCore, registry, metricConfig, lazyLoad);
         if (!status.ok()) {
             SPDLOG_ERROR("Error occurred while loading model: {}; version: {}; error: {}",
                 getName(),
@@ -159,6 +159,17 @@ const std::shared_ptr<ModelInstance> Model::getModelInstanceByVersion(const mode
     std::shared_lock lock(modelVersionsMtx);
     auto it = modelVersions.find(version);
     return it != modelVersions.end() ? it->second : nullptr;
+}
+
+Status Model::wakeUpIfSleeping() {
+    std::shared_lock lock(modelVersionsMtx);
+    for (auto& [version, instance] : modelVersions) {
+        auto status = instance->wakeUpIfSleeping();
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    return StatusCode::OK;
 }
 
 Status Model::retireVersions(std::shared_ptr<model_versions_t>& versionsToRetire) {

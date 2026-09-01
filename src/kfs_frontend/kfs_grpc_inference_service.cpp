@@ -45,7 +45,6 @@
 #include "../inference_executor.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "src/model_management/modelmanager.hpp"
-#include "src/model_management/model_group_manager.hpp"
 #include "../ovinferrequestsqueue.hpp"
 #include "../servable_definition.hpp"
 #include "../servable_definition_unload_guard.hpp"
@@ -122,16 +121,6 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
     SPDLOG_DEBUG("ModelReady requested name: {}, version: {}", name, versionString);
     if (model == nullptr) {
         SPDLOG_DEBUG("ModelReady requested model {} is missing, trying to find definition with such name", name);
-        // In idle management mode, report configured-but-unloaded models as ready
-        auto* groupMgr = manager.getGroupManager();
-        if (groupMgr && groupMgr->isEnabled()) {
-            std::string group = groupMgr->getGroupForServable(name);
-            if (!group.empty()) {
-                SPDLOG_DEBUG("ModelReady: model {} belongs to group '{}', reporting ready (idle management mode)", name, group);
-                response->set_ready(true);
-                return StatusCode::OK;
-            }
-        }
         auto* definition = manager.findServableDefinition(name);
         if (!definition) {
             return StatusCode::MODEL_NAME_MISSING;
@@ -140,7 +129,7 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
         if (!svsd) {
             return StatusCode::MODEL_NAME_MISSING;
         }
-        response->set_ready(svsd->isAvailable());
+        response->set_ready(svsd->getStatus().appearsAvailable());
         INCREMENT_IF_ENABLED(svsd->getMetricReporter().getModelReadyMetric(executionContext, true));
         return StatusCode::OK;
     }
@@ -164,15 +153,6 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
         SPDLOG_DEBUG("ModelReady requested model: name {}; default version", name);
         instance = model->getDefaultModelInstance();
         if (instance == nullptr) {
-            // In idle management mode, report configured models as ready even if no instance is loaded
-            auto* groupMgr = manager.getGroupManager();
-            if (groupMgr && groupMgr->isEnabled()) {
-                std::string group = groupMgr->getGroupForServable(name);
-                if (!group.empty()) {
-                    response->set_ready(true);
-                    return StatusCode::OK;
-                }
-            }
             SPDLOG_DEBUG("ModelReady requested model {}; version {} is missing", name, versionString);
             return Status(StatusCode::MODEL_VERSION_MISSING);
         }
@@ -379,7 +359,7 @@ Status KFSInferenceServiceImpl::buildResponse(
 Status KFSInferenceServiceImpl::buildResponse(
     SingleVersionServableDefinition& definition,
     KFSGetModelStatusResponse* response) {
-    bool isReady = definition.getStatus().isAvailable();
+    bool isReady = definition.getStatus().appearsAvailable();
     SPDLOG_DEBUG("Creating ModelReady response for definition: {}; ready: {}", definition.getName(), isReady);
     response->set_ready(isReady);
     return StatusCode::OK;

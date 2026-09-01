@@ -790,13 +790,14 @@ public:
     bool hasSidePacketMarkerForTest(const std::string& key) {
         return this->sidePacketMaps->genAiServableMap.count(key) > 0;
     }
-    uint64_t requestsHandlesCounterForTest() const { return this->requestsHandlesCounter.load(); }
+    uint64_t requestsHandlesCounterForTest() const { return this->pendingCreateExecutorCount.load(); }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,
         std::string inputConfig,
-        ovms::PythonBackend* pythonBackend = nullptr) :
-        ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend) {
+        ovms::PythonBackend* pythonBackend = nullptr,
+        bool lazyLoad = false) :
+        ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend, lazyLoad) {
         this->inputConfig = inputConfig;
     }
 

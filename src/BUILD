@@ -2219,6 +2219,7 @@ cc_test(
             ":test_cmd_exec",
             ":test_modelinstance_test",
             ":servable_loading_queue_test",
+            ":test_idle_model_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2243,6 +2244,7 @@ cc_test(
                 ":text2image_test",
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
+                ":test_idle_mediapipe_test",
                 "libovms_mediapipe_kfs_executor",
                 "//src/mediapipe_internal:mediapipe_utils",
                 "tensorflow_type_utils",
@@ -2336,6 +2338,33 @@ ovms_cc_test_library(
     srcs = ["test/servable_loading_queue_test.cpp"],
     deps = [
         "//src/model_management:servable_loading_queue",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+ovms_cc_test_library(
+    name = "test_idle_model_test",
+    srcs = ["test/idle_model_test.cpp"],
+    deps = [
+        ":test_constructor_enabled_model_manager",
+        ":test_test_models",
+        ":test_test_models_configs",
+        ":test_test_with_temp_dir",
+        ":test_utils",
+        "//third_party:openvino",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+ovms_cc_test_library(
+    name = "test_idle_mediapipe_test",
+    srcs = ["test/idle_mediapipe_test.cpp"],
+    deps = [
+        ":test_constructor_enabled_model_manager",
+        ":test_utils",
+        "//src/dags:pipelinedefinitionstatus",
+        "//src/mediapipe_internal:libovms_mediapipe",
+        "//src/mediapipe_internal:mediapipegraphconfig",
         "@com_google_googletest//:gtest",
     ],
 )

@@ -25,14 +25,10 @@ class ConstructorEnabledModelManager : public ovms::ModelManager {
 
 public:
     ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "", ovms::PythonBackend* pythonBackend = nullptr);
+    ConstructorEnabledModelManager(uint64_t idleTimeoutMicroseconds);
     ~ConstructorEnabledModelManager();
-    /*
-     *  Loads config but resets the config filename to the one provided in the argument. In production server this is only changed once
-     */
+
     ovms::Status loadConfig(const std::string& jsonFilename);
-    /**
-     * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
-     */
     void updateConfigurationWithoutConfigFile();
     void setWaitForModelLoadedTimeoutMs(int value);
 };

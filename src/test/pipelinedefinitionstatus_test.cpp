@@ -357,6 +357,8 @@ TEST(PipelineDefinitionStatus, SleepingIsNotAvailable) {
     pds.handle(SleepEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     ASSERT_FALSE(pds.isAvailable());
+    ASSERT_TRUE(pds.isSleeping());
+    ASSERT_TRUE(pds.appearsAvailable());
 }
 
 TEST(PipelineDefinitionStatus, SleepingConvertsToModelStatusAvailable) {
@@ -369,11 +371,11 @@ TEST(PipelineDefinitionStatus, SleepingConvertsToModelStatusAvailable) {
     ASSERT_EQ((std::tuple<ModelVersionState, ModelVersionStatusErrorCode>(ModelVersionState::AVAILABLE, ModelVersionStatusErrorCode::OK)), pds.convertToModelStatus());
 }
 
-TEST(PipelineDefinitionStatus, SleepEventOnBeginIsNoOp) {
+TEST(PipelineDefinitionStatus, SleepEventOnBeginTransitionsToSleeping) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
     pds.handle(SleepEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 
 TEST(PipelineDefinitionStatus, SleepEventOnReloadingIsNoOp) {

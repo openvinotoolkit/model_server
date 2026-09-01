@@ -657,27 +657,6 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     for (auto const& graphName : availableMediapipes) {
         parseModel(writer, graphName, timestamp);
     }
-
-    // In idle management mode, include unloaded mediapipe graphs from configured groups
-    auto* groupMgr = modelManager.getGroupManager();
-    if (groupMgr && groupMgr->isEnabled()) {
-        std::set<std::string> alreadyListed(availableMediapipes.begin(), availableMediapipes.end());
-        for (const auto& servableName : groupMgr->getAllConfiguredServableNames()) {
-            if (alreadyListed.find(servableName) == alreadyListed.end()) {
-                // Check if it's not already listed as a regular model
-                bool alreadyAsModel = false;
-                for (const auto& name : availableModelNames) {
-                    if (name == servableName) {
-                        alreadyAsModel = true;
-                        break;
-                    }
-                }
-                if (!alreadyAsModel) {
-                    parseModel(writer, servableName, timestamp);
-                }
-            }
-        }
-    }
 #endif
     writer.EndArray();
     writer.String("object");

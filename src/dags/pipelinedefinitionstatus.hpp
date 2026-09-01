@@ -162,7 +162,7 @@ struct BeginState {
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const;
     StateKeeper handle(const UsedModelChangedEvent& e) const;
     StateKeeper handle(const RetireEvent& e) const;
-    StateKeeper handle(const SleepEvent& e) const;
+    StateChanger<SleepingState> handle(const SleepEvent& e) const;
 };
 
 struct ReloadState {
@@ -254,6 +254,8 @@ class PipelineDefinitionStatus : public MachineState<BeginState, ReloadState, Av
 public:
     PipelineDefinitionStatus(const std::string& type, const std::string& name);
     bool isAvailable() const;
+    bool isSleeping() const;
+    bool appearsAvailable() const;
     bool canEndLoaded() const;
     bool isRevalidationRequired() const;
     std::tuple<ModelVersionState, ModelVersionStatusErrorCode> convertToModelStatus() const;

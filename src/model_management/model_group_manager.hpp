@@ -41,10 +41,10 @@ struct ModelGroupInfo {
 
 class ModelGroupManager {
 public:
-    explicit ModelGroupManager(uint32_t idleTimeoutSeconds);
+    explicit ModelGroupManager(uint64_t idleTimeoutMicroseconds);
 
-    bool isEnabled() const { return idleTimeoutSeconds_ > 0; }
-    uint32_t getIdleTimeoutSeconds() const { return idleTimeoutSeconds_; }
+    bool isEnabled() const { return idleTimeoutMicroseconds_ > 0; }
+    uint64_t getIdleTimeoutMicroseconds() const { return idleTimeoutMicroseconds_; }
 
     void buildGroups(const std::unordered_map<std::string, ModelConfig>& modelConfigs,
         ModelManager& mm);
@@ -72,7 +72,7 @@ private:
     Status loadGroup(const std::string& groupName, ModelManager& mm);
     Status unloadGroup(const std::string& groupName, ModelManager& mm);
 
-    uint32_t idleTimeoutSeconds_;
+    uint64_t idleTimeoutMicroseconds_;
 
     mutable std::shared_mutex groupsMtx_;
     std::unordered_map<std::string, ModelGroupInfo> groups_;

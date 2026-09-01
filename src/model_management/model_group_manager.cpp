@@ -34,8 +34,8 @@
 
 namespace ovms {
 
-ModelGroupManager::ModelGroupManager(uint32_t idleTimeoutSeconds) :
-    idleTimeoutSeconds_(idleTimeoutSeconds),
+ModelGroupManager::ModelGroupManager(uint64_t idleTimeoutMicroseconds) :
+    idleTimeoutMicroseconds_(idleTimeoutMicroseconds),
     lastActivityTimeNs_(std::make_shared<std::atomic<int64_t>>(
         std::chrono::steady_clock::now().time_since_epoch().count())) {
 }
@@ -357,7 +357,7 @@ void ModelGroupManager::unloadActiveGroupIfIdle(ModelManager& mm) {
     // Check idle timeout
     int64_t lastActivity = lastActivityTimeNs_->load(std::memory_order_relaxed);
     int64_t nowNs = std::chrono::steady_clock::now().time_since_epoch().count();
-    int64_t timeoutNs = static_cast<int64_t>(idleTimeoutSeconds_) * 1'000'000'000LL;
+    int64_t timeoutNs = static_cast<int64_t>(idleTimeoutMicroseconds_) * 1'000LL;
     if ((nowNs - lastActivity) < timeoutNs) {
         return;
     }
@@ -368,7 +368,7 @@ void ModelGroupManager::unloadActiveGroupIfIdle(ModelManager& mm) {
         return;
     }
 
-    SPDLOG_INFO("Idle unloading model group '{}' after {}s timeout", activeGroupName_, idleTimeoutSeconds_);
+    SPDLOG_INFO("Idle unloading model group '{}' after {}us timeout", activeGroupName_, idleTimeoutMicroseconds_);
     std::lock_guard<std::mutex> swapLock(loadUnloadMtx_);
     // Re-check after acquiring lock
     if (activeGroupName_.empty()) {

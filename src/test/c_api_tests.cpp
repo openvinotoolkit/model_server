@@ -1979,7 +1979,7 @@ public:
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::START);
     }
     virtual ~MockModelInstanceWithSetOutputInfo() {}
-    ovms::Status loadModel(const ovms::ModelConfig& config) override {
+    ovms::Status loadModel(const ovms::ModelConfig& config, bool lazyLoad = false) override {
         ModelInstance::loadModel(config);
         return ovms::StatusCode::OK;
     }

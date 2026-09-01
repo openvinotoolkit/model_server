@@ -151,7 +151,7 @@ class MockModel : public ovms::Model {
 public:
     MockModel() :
         Model("MOCK_NAME") {}
-    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::Core&, ovms::MetricRegistry*, const ovms::MetricConfig*), (override));
+    MOCK_METHOD(ovms::Status, addVersion, (const ovms::ModelConfig&, ov::Core&, ovms::MetricRegistry*, const ovms::MetricConfig*, bool), (override));
 };
 
 std::shared_ptr<MockModel> modelMock;
@@ -987,7 +987,7 @@ TEST_F(ModelManagerWatcher, StartFromFile) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _, _))
         .Times(1)
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
     auto status = manager.startFromFile(fileToReload);
@@ -1004,7 +1004,7 @@ TEST_F(ModelManagerWatcher, StartFromFileRelativePath) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _, _))
         .Times(1)
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
     auto status = manager.startFromFile(fileToReload);
@@ -1066,7 +1066,7 @@ TEST_F(ModelManagerWatcher, ConfigReloadingShouldAddNewModel) {
     createConfigFileWithContent(getConfig1Model(this->getFilePath("/models/dummy1")), fileToReload);
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
-    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _, _))
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
 
     auto status = manager.startFromFile(fileToReload);
@@ -1087,7 +1087,7 @@ TEST_F(ModelManagerWatcher, ConfigReloadingShouldAddNewModelRelativePath) {
     createConfigFileWithContent(relative_config_1_model, fileToReload);
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
-    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _, _))
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
 
     auto status = manager.startFromFile(fileToReload);
@@ -1386,7 +1386,7 @@ TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameName) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _, _))
         .Times(1)
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
     auto status = manager.startFromFile(fileToReload);
@@ -1421,7 +1421,7 @@ TEST_F(ModelManager, ConfigReloadingWithTwoModelsWithTheSameNameRelativePath) {
     modelMock = std::make_shared<MockModel>();
     MockModelManager manager;
 
-    EXPECT_CALL(*modelMock, addVersion(_, _, _, _))
+    EXPECT_CALL(*modelMock, addVersion(_, _, _, _, _))
         .Times(1)
         .WillRepeatedly(Return(ovms::Status(ovms::StatusCode::OK)));
     auto status = manager.startFromFile(fileToReload);
@@ -2022,7 +2022,7 @@ public:
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
-    ovms::Status loadModel(const ovms::ModelConfig& config) override {
+    ovms::Status loadModel(const ovms::ModelConfig& config, bool lazyLoad = false) override {
         status = ovms::ModelVersionStatus(name, version);
         status.setAvailable();
         return ovms::StatusCode::OK;
@@ -2076,7 +2076,7 @@ public:
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {}
 
 protected:
-    ovms::Status loadModel(const ovms::ModelConfig& config) override {
+    ovms::Status loadModel(const ovms::ModelConfig& config, bool lazyLoad = false) override {
         status = ovms::ModelVersionStatus(name, version);
         status.setLoading();
         return ovms::StatusCode::OK;
@@ -2113,7 +2113,7 @@ public:
     }
 
 protected:
-    ovms::Status loadModel(const ovms::ModelConfig& config) override {
+    ovms::Status loadModel(const ovms::ModelConfig& config, bool lazyLoad = false) override {
         this->status = ovms::ModelVersionStatus(name, version);
         this->status.setLoading();
         this->thread = std::make_unique<std::thread>([this]() {

@@ -59,7 +59,8 @@ public:
         const MediapipeGraphConfig& config = MGC,
         MetricRegistry* registry = nullptr,
         const MetricConfig* metricConfig = nullptr,
-        PythonBackend* pythonBackend = nullptr);
+        PythonBackend* pythonBackend = nullptr,
+        bool lazyLoad = false);
 
     const PipelineDefinitionStatus& getStatus() const override {
         return this->status;
@@ -90,16 +91,9 @@ public:
     bool isIdleUnloadEnabled() const;
     bool shouldUnloadDueToIdle() const;
 
-    // Create definition in SLEEPING state without loading any resources.
-    // Used during initialization with idle group management to avoid loading
-    // non-permanent graphs that would be immediately unloaded.
-    void setAsSleeping();
-
-    // Test-only: backdate the last-activity timestamp by the given number of seconds
-    // so idle-timeout behavior can be exercised deterministically without sleeping.
-    void backdateLastActivityForTest(int64_t seconds) {
-        int64_t nowNs = std::chrono::steady_clock::now().time_since_epoch().count();
-        lastActivityTimeNs->store(nowNs - seconds * 1'000'000'000LL, std::memory_order_relaxed);
+    // Record inference activity. Defaults to now; tests pass an explicit timestamp.
+    void recordActivity(int64_t timestampNs = std::chrono::steady_clock::now().time_since_epoch().count()) {
+        lastActivityTimeNs->store(timestampNs, std::memory_order_relaxed);
     }
 
     // Returns the shared active-inference counter so create() can hand it to the executor.

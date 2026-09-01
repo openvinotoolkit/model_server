@@ -63,7 +63,7 @@ protected:
         }
 
         // Keeps the model in loading state forever
-        ovms::Status loadModel(const ovms::ModelConfig& config) override {
+        ovms::Status loadModel(const ovms::ModelConfig& config, bool lazyLoad = false) override {
             status.setLoading();
             return ovms::StatusCode::OK;
         }

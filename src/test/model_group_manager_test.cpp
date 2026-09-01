@@ -47,13 +47,13 @@ TEST_F(ModelGroupManagerTest, DisabledByDefault) {
 }
 
 TEST_F(ModelGroupManagerTest, EnabledWithPositiveTimeout) {
-    ModelGroupManager mgr(30);
+    ModelGroupManager mgr(30'000'000);
     ASSERT_TRUE(mgr.isEnabled());
-    ASSERT_EQ(mgr.getIdleTimeoutSeconds(), 30u);
+    ASSERT_EQ(mgr.getIdleTimeoutMicroseconds(), 30'000'000u);
 }
 
 TEST_F(ModelGroupManagerTest, BuildGroups_DefaultGroupNames) {
-    ModelGroupManager mgr(30);
+    ModelGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "model_a"},
         {"model_b", "model_b"},
@@ -68,7 +68,7 @@ TEST_F(ModelGroupManagerTest, BuildGroups_DefaultGroupNames) {
 }
 
 TEST_F(ModelGroupManagerTest, BuildGroups_ExplicitGroupNames) {
-    ModelGroupManager mgr(30);
+    ModelGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "rag"},
         {"model_b", "rag"},
@@ -82,7 +82,7 @@ TEST_F(ModelGroupManagerTest, BuildGroups_ExplicitGroupNames) {
 }
 
 TEST_F(ModelGroupManagerTest, BuildGroups_PermanentGroup) {
-    ModelGroupManager mgr(30);
+    ModelGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "permanent"},
         {"model_b", "permanent"},
@@ -97,7 +97,7 @@ TEST_F(ModelGroupManagerTest, BuildGroups_PermanentGroup) {
 }
 
 TEST_F(ModelGroupManagerTest, BuildGroups_MixedGroups) {
-    ModelGroupManager mgr(30);
+    ModelGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "rag"},
         {"model_b", "rag"},
@@ -114,7 +114,7 @@ TEST_F(ModelGroupManagerTest, BuildGroups_MixedGroups) {
 }
 
 TEST_F(ModelGroupManagerTest, GetGroupForServable) {
-    ModelGroupManager mgr(30);
+    ModelGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "rag"},
         {"model_b", "audio"},
@@ -126,7 +126,7 @@ TEST_F(ModelGroupManagerTest, GetGroupForServable) {
 }
 
 TEST_F(ModelGroupManagerTest, IsGroupLoaded_PermanentAlwaysTrue) {
-    ModelGroupManager mgr(30);
+    ModelGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "permanent"},
         {"model_b", "rag"},
@@ -138,7 +138,7 @@ TEST_F(ModelGroupManagerTest, IsGroupLoaded_PermanentAlwaysTrue) {
 }
 
 TEST_F(ModelGroupManagerTest, GetAllConfiguredServableNames) {
-    ModelGroupManager mgr(30);
+    ModelGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "rag"},
         {"model_b", "rag"},
@@ -154,7 +154,7 @@ TEST_F(ModelGroupManagerTest, GetAllConfiguredServableNames) {
 }
 
 TEST_F(ModelGroupManagerTest, RecordActivityUpdatesTimestamp) {
-    ModelGroupManager mgr(30);
+    ModelGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({{"model_a", "rag"}});
     mgr.buildGroups(configs);
 
@@ -163,7 +163,7 @@ TEST_F(ModelGroupManagerTest, RecordActivityUpdatesTimestamp) {
 }
 
 TEST_F(ModelGroupManagerTest, ActiveGroupNameInitiallyEmpty) {
-    ModelGroupManager mgr(30);
+    ModelGroupManager mgr(30'000'000);
     EXPECT_TRUE(mgr.getActiveGroupName().empty());
 }
 

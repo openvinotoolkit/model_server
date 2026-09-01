@@ -214,6 +214,8 @@ protected:
      */
     uint32_t resourcesCleanupIntervalMillisec = 1000;
 
+    std::unique_ptr<ModelGroupManager> servableGroupManager;
+
 private:
     /**
      * @brief last md5sum of configfile
@@ -239,11 +241,6 @@ private:
      */
     std::string rootDirectoryPath;
     bool startedWithConfigFile = false;
-
-    /**
-     * @brief Model group manager for idle load/unload
-     */
-    std::unique_ptr<ModelGroupManager> groupManager_;
 
     /**
      * @brief Set json config directory path
@@ -315,12 +312,8 @@ public:
         return models;
     }
 
-    const std::unordered_map<std::string, ModelConfig>& getServedModelConfigs() const {
-        return servedModelConfigs;
-    }
-
     ModelGroupManager* getGroupManager() const {
-        return groupManager_.get();
+        return servableGroupManager.get();
     }
 
     const std::vector<std::string> getNamesOfAvailableModels() const;

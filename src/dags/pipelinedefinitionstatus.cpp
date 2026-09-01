@@ -63,8 +63,8 @@ StateKeeper BeginState::handle(const RetireEvent& e) const {
     throw std::logic_error(INVALID_TRANSITION_MESSAGE);
     return {};
 }
-StateKeeper BeginState::handle(const SleepEvent& e) const {
-    return {};  // unload is a no-op when not yet loaded
+StateChanger<SleepingState> BeginState::handle(const SleepEvent& e) const {
+    return {};
 }
 
 PipelineDefinitionStateCode ReloadState::getStateCode() const {
@@ -240,12 +240,19 @@ bool PipelineDefinitionStatus::isAvailable() const {
     return (state == PipelineDefinitionStateCode::AVAILABLE) ||
            (state == PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
 }
+bool PipelineDefinitionStatus::isSleeping() const {
+    return getStateCode() == PipelineDefinitionStateCode::SLEEPING;
+}
+bool PipelineDefinitionStatus::appearsAvailable() const {
+    return isAvailable() || isSleeping();
+}
 bool PipelineDefinitionStatus::canEndLoaded() const {
     auto state = getStateCode();
     return isAvailable() ||
            (state == PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION) ||
            (state == PipelineDefinitionStateCode::BEGIN) ||
-           (state == PipelineDefinitionStateCode::RELOADING);
+           (state == PipelineDefinitionStateCode::RELOADING) ||
+           (state == PipelineDefinitionStateCode::SLEEPING);
 }
 bool PipelineDefinitionStatus::isRevalidationRequired() const {
     auto state = getStateCode();

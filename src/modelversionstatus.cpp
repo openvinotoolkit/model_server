@@ -30,6 +30,7 @@ static const std::unordered_map<ModelVersionState, std::string> versionStatesStr
     {ModelVersionState::START, "START"},
     {ModelVersionState::LOADING, "LOADING"},
     {ModelVersionState::AVAILABLE, "AVAILABLE"},
+    {ModelVersionState::SLEEPING, "SLEEPING"},
     {ModelVersionState::UNLOADING, "UNLOADING"},
     {ModelVersionState::END, "END"}};
 const std::string& ModelVersionStateToString(ModelVersionState state) {
@@ -77,6 +78,14 @@ bool ModelVersionStatus::isFailedLoading() const {
     return this->state == ovms::ModelVersionState::LOADING && this->errorCode == ovms::ModelVersionStatusErrorCode::UNKNOWN;
 }
 
+bool ModelVersionStatus::isSleeping() const {
+    return this->state == ovms::ModelVersionState::SLEEPING;
+}
+
+bool ModelVersionStatus::appearsAvailable() const {
+    return this->state == ovms::ModelVersionState::AVAILABLE || this->state == ovms::ModelVersionState::SLEEPING;
+}
+
 void ModelVersionStatus::setLoading(ModelVersionStatusErrorCode error_code) {
     SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
     state = ModelVersionState::LOADING;
@@ -87,6 +96,13 @@ void ModelVersionStatus::setLoading(ModelVersionStatusErrorCode error_code) {
 void ModelVersionStatus::setAvailable(ModelVersionStatusErrorCode error_code) {
     SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
     state = ModelVersionState::AVAILABLE;
+    errorCode = error_code;
+    logStatus();
+}
+
+void ModelVersionStatus::setSleeping(ModelVersionStatusErrorCode error_code) {
+    SPDLOG_DEBUG("{}: {} - {} (previous state: {}) -> error: {}", __func__, this->modelName, this->version, ModelVersionStateToString(this->state), ModelVersionStatusErrorCodeToString(error_code));
+    state = ModelVersionState::SLEEPING;
     errorCode = error_code;
     logStatus();
 }
