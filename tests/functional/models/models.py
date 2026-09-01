@@ -371,6 +371,7 @@ class ModelInfo:
 
     def create_new_version(self, container_folder, new_version, copy_from_host_path=False, model_name=None):
         model_name = model_name if model_name is not None else self.name
+        # Use deepcopy instead of type(self)() to avoid calling __init__ which may require arguments
         result = copy.deepcopy(self)
 
         if copy_from_host_path:

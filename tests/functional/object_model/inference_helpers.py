@@ -44,7 +44,6 @@ from tritonclient.grpc import service_pb2, service_pb2_grpc
 from tritonclient.grpc.service_pb2 import ModelInferRequest
 from tritonclient.utils import InferenceServerException, deserialize_bytes_tensor, serialize_byte_tensor
 
-from tests.functional.constants.pipelines import SimpleMediaPipe
 from tests.functional.utils.assertions import ModelNotReadyException, StreamingApiException, UnexpectedResponseError
 from tests.functional.utils.inference.communication.grpc import GRPC, GrpcCommunicationInterface, channel_options
 from tests.functional.utils.inference.communication.rest import REST, RestCommunicationInterface
@@ -74,6 +73,7 @@ from tests.functional.models.models_datasets import (
 )
 from tests.functional.constants.ovms import CurrentTarget as ct
 from tests.functional.constants.ovms import MediaPipeConstants, Ovms
+from tests.functional.constants.pipelines import SimpleMediaPipe
 from tests.functional.object_model.ovms_instance import OvmsInstance
 from tests.functional.object_model.ovsa import OvsaCerts
 from tests.functional.object_model.python_custom_nodes.common import STREAMING_CHANNEL_ARGS
