@@ -95,8 +95,10 @@ whitelisted_dynamic_libraries = {
 # Libraries located in /ovms/lib/
 libraries = {
     OvmsBaseType.COMMON: {
-        'libazurestorage.so',
-        'libcpprest.so',
+        'libazure-core.so',
+        'libazure-storage-blobs.so',
+        'libazure-storage-common.so',
+        'libazure-storage-files-shares.so',
         'libespeak-ng.so',
         'libgit2.so',
         'libOpenCL.so',
@@ -142,10 +144,11 @@ libraries = {
     OvmsBaseType.REDHAT: set(),
     OvmsBaseType.REDHAT_PYTHON: set(),
     OvmsBaseType.WINDOWS: {
+        'ClientApi.dll',
         'espeak-ng.dll',
         'git2.dll',
         'libcurl-x64.dll',
-        'opencv_world4130.dll',
+        'opencv_world4140.dll',
         'openvino.dll',
         'openvino_auto_batch_plugin.dll',
         'openvino_auto_plugin.dll',

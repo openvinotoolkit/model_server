@@ -177,46 +177,6 @@ Let me know if you'd like forecast details or anything else!
 :::
 ::::
 
-### Deploying on Windows with NPU
-
-::::{tab-set}
-:::{tab-item} Qwen3-8B
-:sync: Qwen3-8B
-Pull and start OVMS:
-```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-8B-int4-cw-ov --model_repository_path c:\models --tool_parser hermes3 --target_device NPU --task text_generation --cache_dir .cache --max_prompt_len 8000
-```
-
-Use MCP server:
-```bat
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-cw-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
-```
-
-Exemplary output:
-```text
-The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. The wind is blowing from the NE at 3.6 km/h, with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, and there is 84% cloud cover. Visibility is 24.1 km.
-```
-:::
-:::{tab-item} Qwen3-4B
-:sync: Qwen3-4B
-Pull and start OVMS:
-```bat
-ovms.exe --rest_port 8000 --source_model FluidInference/qwen3-4b-int4-ov-npu --model_repository_path c:\models --tool_parser hermes3 --target_device NPU --task text_generation --cache_dir .cache --max_prompt_len 8000
-```
-
-Use MCP server:
-```bat
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-cw-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
-```
-
-Exemplary output:
-```text
-The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. The wind is blowing from the NE at 3.6 km/h, with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa, and there is 84% cloud cover. Visibility is 24.1 km.
-```
-:::
-::::
-
-> **Note:** Setting the `--max_prompt_len` parameter too high may lead to performance degradation. It is recommended to use the smallest value that meets your requirements.
 
 ### Deploying in a docker container on CPU
 
@@ -511,57 +471,6 @@ Let me know if you'd like forecast details or anything else!
 ```
 :::
 ::::
-
-### Deploying in a docker container on NPU
-
-The case of NPU is similar to GPU, but `--device` should be set to `/dev/accel`, `--group-add` parameter should be the same.
-Running `docker run` command, use the image with GPU support. Export the models with precision matching the [NPU capacity](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html) and adjust pipeline configuration.
-It can be applied using the commands below:
-
-::::{tab-set}
-:::{tab-item} Qwen3-8B
-:sync: Qwen3-8B
-Pull and start OVMS:
-```bash
-mkdir -p ${HOME}/models
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-cw-ov --tool_parser hermes3 --target_device NPU --task text_generation --max_prompt_len 8000
-```
-
-Use MCP server:
-```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-cw-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
-```
-
-Exemplary output:
-```text
-The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. The wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover, and the visibility is 24.1 km.
-```
-:::
-:::{tab-item} Qwen3-4B
-:sync: Qwen3-4B
-Pull and start OVMS:
-```bash
-mkdir -p ${HOME}/models
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly \
---rest_port 8000 --model_repository_path /models --source_model FluidInference/qwen3-4b-int4-ov-npu --tool_parser hermes3 --target_device NPU --task text_generation --max_prompt_len 8000
-```
-
-Use MCP server:
-```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model FluidInference/qwen3-4b-int4-ov-npu --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream
-```
-
-Exemplary output:
-```text
-The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. The wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover, and the visibility is 24.1 km.
-```
-:::
-::::
-
-> **Note:** The tool checking the weather forecast in the demo is making a remote call to a REST API server. Make sure you have internet connection and proxy configured while running the agent. 
-
-> **Note:**  For more interactive mode you can run the application with streaming enabled by providing `--stream` parameter to the script.
 
 ### Using Llama index agentic framework
 
