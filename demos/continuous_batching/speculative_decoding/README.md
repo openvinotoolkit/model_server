@@ -409,7 +409,7 @@ from openai import OpenAI
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
 
 response = client.chat.completions.create(
-    model="OpenVINO/Qwen3.8-27B-int8-ov",
+    model="OpenVINO/Qwen3.8-27B-int4-ov",
     messages=[{"role": "user", "content": "Explain the transformer attention mechanism."}],
     temperature=0,
     max_tokens=200,
