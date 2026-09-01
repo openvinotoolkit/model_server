@@ -39,17 +39,15 @@ struct ModelGroupInfo {
     bool isPermanent() const { return groupName == "permanent"; }
 };
 
-class ModelGroupManager {
+class ServableGroupManager {
 public:
-    explicit ModelGroupManager(uint64_t idleTimeoutMicroseconds);
+    explicit ServableGroupManager(uint64_t idleTimeoutMicroseconds);
 
-    bool isEnabled() const { return idleTimeoutMicroseconds_ > 0; }
-    uint64_t getIdleTimeoutMicroseconds() const { return idleTimeoutMicroseconds_; }
+    bool isEnabled() const { return idleTimeoutMicroseconds > 0; }
+    uint64_t getIdleTimeoutMicroseconds() const { return idleTimeoutMicroseconds; }
 
     void buildGroups(const std::unordered_map<std::string, ModelConfig>& modelConfigs,
         ModelManager& mm);
-    // Overload for testing without ModelManager (processes only classic models)
-    void buildGroups(const std::unordered_map<std::string, ModelConfig>& modelConfigs);
 
     std::string getGroupForServable(const std::string& servableName) const;
 
@@ -61,27 +59,26 @@ public:
 
     void recordActivity();
 
-    const std::string& getActiveGroupName() const;
-
-    const std::unordered_map<std::string, ModelGroupInfo>& getGroups() const { return groups_; }
-
     std::vector<std::string> getAllConfiguredServableNames() const;
+    // needed only for tests
+    std::unordered_map<std::string, ModelGroupInfo> getGroups() const;
+    const std::string& getActiveGroupName() const;
 
 private:
     bool canUnloadActiveGroup(ModelManager& mm) const;
     Status loadGroup(const std::string& groupName, ModelManager& mm);
     Status unloadGroup(const std::string& groupName, ModelManager& mm);
 
-    uint64_t idleTimeoutMicroseconds_;
+    uint64_t idleTimeoutMicroseconds;
 
-    mutable std::shared_mutex groupsMtx_;
-    std::unordered_map<std::string, ModelGroupInfo> groups_;
-    std::unordered_map<std::string, std::string> servableToGroup_;
+    mutable std::shared_mutex groupsMtx;
+    std::unordered_map<std::string, ModelGroupInfo> groups;
+    std::unordered_map<std::string, std::string> servableToGroup;
 
-    mutable std::mutex loadUnloadMtx_;
-    std::string activeGroupName_;
+    mutable std::mutex loadUnloadMtx;
+    std::string activeGroupName;
 
-    std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs_;
+    std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs;
 };
 
 }  // namespace ovms

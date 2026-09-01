@@ -57,7 +57,7 @@ class MediapipeFactory;
 class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
 class ModelInstance;
-class ModelGroupManager;
+class ServableGroupManager;
 class ServableDefinition;
 class ModelInstanceUnloadGuard;
 class Pipeline;
@@ -214,7 +214,7 @@ protected:
      */
     uint32_t resourcesCleanupIntervalMillisec = 1000;
 
-    std::unique_ptr<ModelGroupManager> servableGroupManager;
+    std::unique_ptr<ServableGroupManager> servableGroupManager;
 
 private:
     /**
@@ -312,7 +312,7 @@ public:
         return models;
     }
 
-    ModelGroupManager* getGroupManager() const {
+    ServableGroupManager* getGroupManager() const {
         return servableGroupManager.get();
     }
 

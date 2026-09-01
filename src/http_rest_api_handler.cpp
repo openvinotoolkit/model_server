@@ -73,7 +73,7 @@
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
-#include "src/model_management/model_group_manager.hpp"
+#include "src/model_management/servable_group_manager.hpp"
 #include "kfs_frontend/kfs_request_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "deserialization_main.hpp"

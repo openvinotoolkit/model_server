@@ -17,7 +17,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "src/model_management/model_group_manager.hpp"
+#include "src/model_management/servable_group_manager.hpp"
 #include "src/status.hpp"
 
 ConstructorEnabledModelManager::ConstructorEnabledModelManager(const std::string& modelCacheDirectory, ovms::PythonBackend* pythonBackend) :
@@ -25,7 +25,7 @@ ConstructorEnabledModelManager::ConstructorEnabledModelManager(const std::string
 
 ConstructorEnabledModelManager::ConstructorEnabledModelManager(uint64_t idleTimeoutMicroseconds) :
     ovms::ModelManager("", &registry, nullptr) {
-    servableGroupManager = std::make_unique<ovms::ModelGroupManager>(idleTimeoutMicroseconds);
+    servableGroupManager = std::make_unique<ovms::ServableGroupManager>(idleTimeoutMicroseconds);
 }
 
 ConstructorEnabledModelManager::~ConstructorEnabledModelManager() {

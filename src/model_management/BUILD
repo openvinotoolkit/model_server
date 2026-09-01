@@ -42,8 +42,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "modelmanager",
-    hdrs = ["modelmanager.hpp", "model_group_manager.hpp"],
-    srcs = ["modelmanager.cpp", "model_group_manager.cpp"],
+    hdrs = ["modelmanager.hpp", "servable_group_manager.hpp"],
+    srcs = ["modelmanager.cpp", "servable_group_manager.cpp"],
     deps = select({
         "//conditions:default": [],
         "//:not_disable_mediapipe" : [

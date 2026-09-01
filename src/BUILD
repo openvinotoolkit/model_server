@@ -1984,7 +1984,6 @@ cc_test(
         "test/model_test.cpp",
         "test/model_version_policy_test.cpp",
         "test/modelconfig_test.cpp",
-        "test/model_group_manager_test.cpp",
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
         "test/node_library_manager_test.cpp",
@@ -2220,6 +2219,7 @@ cc_test(
             ":test_modelinstance_test",
             ":servable_loading_queue_test",
             ":test_idle_model_test",
+            ":test_servable_group_manager",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2352,6 +2352,17 @@ ovms_cc_test_library(
         ":test_test_with_temp_dir",
         ":test_utils",
         "//third_party:openvino",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+ovms_cc_test_library(
+    name = "test_servable_group_manager",
+    srcs = ["test/servable_group_manager_test.cpp"],
+    deps = [
+        ":test_constructor_enabled_model_manager",
+        "//src/model_management:modelmanager",
+        "//src:modelconfig",
         "@com_google_googletest//:gtest",
     ],
 )

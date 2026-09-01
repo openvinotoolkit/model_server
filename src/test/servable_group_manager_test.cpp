@@ -20,14 +20,17 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/model_management/model_group_manager.hpp"
-#include "../modelconfig.hpp"
-#include "../status.hpp"
+#include "src/model_management/servable_group_manager.hpp"
+#include "constructor_enabled_model_manager.hpp"
+#include "src/modelconfig.hpp"
+#include "src/status.hpp"
 
 using namespace ovms;
 
-class ModelGroupManagerTest : public ::testing::Test {
+class ServableGroupManagerTest : public ::testing::Test {
 protected:
+    ConstructorEnabledModelManager mm;
+
     std::unordered_map<std::string, ModelConfig> createModelConfigs(
         const std::vector<std::pair<std::string, std::string>>& nameGroupPairs) {
         std::unordered_map<std::string, ModelConfig> configs;
@@ -41,25 +44,25 @@ protected:
     }
 };
 
-TEST_F(ModelGroupManagerTest, DisabledByDefault) {
-    ModelGroupManager mgr(0);
+TEST_F(ServableGroupManagerTest, DisabledByDefault) {
+    ServableGroupManager mgr(0);
     ASSERT_FALSE(mgr.isEnabled());
 }
 
-TEST_F(ModelGroupManagerTest, EnabledWithPositiveTimeout) {
-    ModelGroupManager mgr(30'000'000);
+TEST_F(ServableGroupManagerTest, EnabledWithPositiveTimeout) {
+    ServableGroupManager mgr(30'000'000);
     ASSERT_TRUE(mgr.isEnabled());
     ASSERT_EQ(mgr.getIdleTimeoutMicroseconds(), 30'000'000u);
 }
 
-TEST_F(ModelGroupManagerTest, BuildGroups_DefaultGroupNames) {
-    ModelGroupManager mgr(30'000'000);
+TEST_F(ServableGroupManagerTest, BuildGroups_DefaultGroupNames) {
+    ServableGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "model_a"},
         {"model_b", "model_b"},
         {"model_c", "model_c"},
     });
-    mgr.buildGroups(configs);
+    mgr.buildGroups(configs, mm);
     const auto& groups = mgr.getGroups();
     ASSERT_EQ(groups.size(), 3u);
     EXPECT_TRUE(groups.count("model_a"));
@@ -67,28 +70,28 @@ TEST_F(ModelGroupManagerTest, BuildGroups_DefaultGroupNames) {
     EXPECT_TRUE(groups.count("model_c"));
 }
 
-TEST_F(ModelGroupManagerTest, BuildGroups_ExplicitGroupNames) {
-    ModelGroupManager mgr(30'000'000);
+TEST_F(ServableGroupManagerTest, BuildGroups_ExplicitGroupNames) {
+    ServableGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "rag"},
         {"model_b", "rag"},
         {"model_c", "rag"},
     });
-    mgr.buildGroups(configs);
+    mgr.buildGroups(configs, mm);
     const auto& groups = mgr.getGroups();
     ASSERT_EQ(groups.size(), 1u);
     EXPECT_TRUE(groups.count("rag"));
     EXPECT_EQ(groups.at("rag").modelNames.size(), 3u);
 }
 
-TEST_F(ModelGroupManagerTest, BuildGroups_PermanentGroup) {
-    ModelGroupManager mgr(30'000'000);
+TEST_F(ServableGroupManagerTest, BuildGroups_PermanentGroup) {
+    ServableGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "permanent"},
         {"model_b", "permanent"},
         {"model_c", "rag"},
     });
-    mgr.buildGroups(configs);
+    mgr.buildGroups(configs, mm);
     const auto& groups = mgr.getGroups();
     ASSERT_EQ(groups.size(), 2u);
     EXPECT_TRUE(groups.at("permanent").isPermanent());
@@ -96,8 +99,8 @@ TEST_F(ModelGroupManagerTest, BuildGroups_PermanentGroup) {
     EXPECT_EQ(groups.at("permanent").modelNames.size(), 2u);
 }
 
-TEST_F(ModelGroupManagerTest, BuildGroups_MixedGroups) {
-    ModelGroupManager mgr(30'000'000);
+TEST_F(ServableGroupManagerTest, BuildGroups_MixedGroups) {
+    ServableGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "rag"},
         {"model_b", "rag"},
@@ -105,7 +108,7 @@ TEST_F(ModelGroupManagerTest, BuildGroups_MixedGroups) {
         {"model_d", "audio"},
         {"model_e", "permanent"},
     });
-    mgr.buildGroups(configs);
+    mgr.buildGroups(configs, mm);
     const auto& groups = mgr.getGroups();
     ASSERT_EQ(groups.size(), 3u);
     EXPECT_EQ(groups.at("rag").modelNames.size(), 2u);
@@ -113,38 +116,38 @@ TEST_F(ModelGroupManagerTest, BuildGroups_MixedGroups) {
     EXPECT_EQ(groups.at("permanent").modelNames.size(), 1u);
 }
 
-TEST_F(ModelGroupManagerTest, GetGroupForServable) {
-    ModelGroupManager mgr(30'000'000);
+TEST_F(ServableGroupManagerTest, GetGroupForServable) {
+    ServableGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "rag"},
         {"model_b", "audio"},
     });
-    mgr.buildGroups(configs);
+    mgr.buildGroups(configs, mm);
     EXPECT_EQ(mgr.getGroupForServable("model_a"), "rag");
     EXPECT_EQ(mgr.getGroupForServable("model_b"), "audio");
     EXPECT_EQ(mgr.getGroupForServable("nonexistent"), "");
 }
 
-TEST_F(ModelGroupManagerTest, IsGroupLoaded_PermanentAlwaysTrue) {
-    ModelGroupManager mgr(30'000'000);
+TEST_F(ServableGroupManagerTest, IsGroupLoaded_PermanentAlwaysTrue) {
+    ServableGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "permanent"},
         {"model_b", "rag"},
     });
-    mgr.buildGroups(configs);
+    mgr.buildGroups(configs, mm);
     EXPECT_TRUE(mgr.isGroupLoaded("permanent"));
     EXPECT_FALSE(mgr.isGroupLoaded("rag"));
     EXPECT_FALSE(mgr.isGroupLoaded("nonexistent"));
 }
 
-TEST_F(ModelGroupManagerTest, GetAllConfiguredServableNames) {
-    ModelGroupManager mgr(30'000'000);
+TEST_F(ServableGroupManagerTest, GetAllConfiguredServableNames) {
+    ServableGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({
         {"model_a", "rag"},
         {"model_b", "rag"},
         {"model_c", "permanent"},
     });
-    mgr.buildGroups(configs);
+    mgr.buildGroups(configs, mm);
     auto names = mgr.getAllConfiguredServableNames();
     ASSERT_EQ(names.size(), 3u);
     std::set<std::string> nameSet(names.begin(), names.end());
@@ -153,17 +156,17 @@ TEST_F(ModelGroupManagerTest, GetAllConfiguredServableNames) {
     EXPECT_TRUE(nameSet.count("model_c"));
 }
 
-TEST_F(ModelGroupManagerTest, RecordActivityUpdatesTimestamp) {
-    ModelGroupManager mgr(30'000'000);
+TEST_F(ServableGroupManagerTest, RecordActivityUpdatesTimestamp) {
+    ServableGroupManager mgr(30'000'000);
     auto configs = createModelConfigs({{"model_a", "rag"}});
-    mgr.buildGroups(configs);
+    mgr.buildGroups(configs, mm);
 
     // Record activity and verify no crash
     mgr.recordActivity();
 }
 
-TEST_F(ModelGroupManagerTest, ActiveGroupNameInitiallyEmpty) {
-    ModelGroupManager mgr(30'000'000);
+TEST_F(ServableGroupManagerTest, ActiveGroupNameInitiallyEmpty) {
+    ServableGroupManager mgr(30'000'000);
     EXPECT_TRUE(mgr.getActiveGroupName().empty());
 }
 

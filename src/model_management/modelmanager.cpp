@@ -58,7 +58,7 @@
 #include "src/filesystem/filesystemfactory.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "src/logging.hpp"
-#include "model_group_manager.hpp"
+#include "servable_group_manager.hpp"
 #include "servable_loading_queue.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "src/mediapipe_internal/mediapipefactory.hpp"
@@ -269,7 +269,7 @@ Status ModelManager::start(const Config& config) {
 
     // Initialize model group manager if idle unload is enabled and using config file
     if (this->startedWithConfigFile && config.idleUnloadTimeoutSeconds() > 0) {
-        servableGroupManager = std::make_unique<ModelGroupManager>(static_cast<uint64_t>(config.idleUnloadTimeoutSeconds()) * 1'000'000ULL);
+        servableGroupManager = std::make_unique<ServableGroupManager>(static_cast<uint64_t>(config.idleUnloadTimeoutSeconds()) * 1'000'000ULL);
         SPDLOG_INFO("Model group idle management enabled with {}s timeout", config.idleUnloadTimeoutSeconds());
     }
 
@@ -1030,27 +1030,9 @@ Status ModelManager::loadConfig() {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
 
-    // Build model groups and unload non-permanent servables for on-demand loading
+    // Build model groups (non-permanent servables start SLEEPING via lazyLoad)
     if (servableGroupManager && servableGroupManager->isEnabled()) {
         servableGroupManager->buildGroups(this->servedModelConfigs, *this);
-        for (const auto& [groupName, groupInfo] : servableGroupManager->getGroups()) {
-            if (groupInfo.isPermanent()) {
-                continue;
-            }
-            for (const auto& modelName : groupInfo.modelNames) {
-                auto model = findModelByName(modelName);
-                if (model && model->getDefaultModelInstance() &&
-                    model->getDefaultModelInstance()->getStatus().isSleeping()) {
-                    continue;
-                }
-                ServableLoadingTask task{ServableLoadingTaskType::RetireModel, modelName};
-                auto future = loadingQueue->scheduleTask(std::move(task));
-                auto retireStatus = future.get();
-                if (retireStatus.ok()) {
-                    SPDLOG_INFO("Retired model '{}' (group '{}') for on-demand loading", modelName, groupName);
-                }
-            }
-        }
     }
 
     this->lastLoadConfigStatus = firstErrorStatus;
