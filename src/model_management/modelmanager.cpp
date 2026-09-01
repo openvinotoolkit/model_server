@@ -1690,19 +1690,12 @@ Status ModelManager::getModelInstance(const std::string& modelName,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const {
     SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
 
-    // On-demand group loading via queue for idle model management
     if (servableGroupManager && servableGroupManager->isEnabled()) {
-        std::string group = servableGroupManager->getGroupForServable(modelName);
-        if (!group.empty() && !servableGroupManager->isGroupLoaded(group)) {
-            // const_cast needed: getModelInstance is const per interface, but group
-            // loading enqueues tasks via the queue which is logically non-mutating
-            auto status = servableGroupManager->ensureGroupLoaded(modelName, const_cast<ModelManager&>(*this));
-            if (!status.ok()) {
-                SPDLOG_ERROR("Failed to load group for model '{}': {}", modelName, status.string());
-                return status;
-            }
+        auto status = servableGroupManager->ensureServableLoaded(modelName, const_cast<ModelManager&>(*this));
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to load servable '{}': {}", modelName, status.string());
+            return status;
         }
-        servableGroupManager->recordActivity();
     }
 
     auto model = findModelByName(modelName);
@@ -1747,28 +1740,24 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
 Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
-    // On-demand group loading via queue for idle model management
     if (servableGroupManager && servableGroupManager->isEnabled()) {
-        std::string group = servableGroupManager->getGroupForServable(name);
-        if (!group.empty() && !servableGroupManager->isGroupLoaded(group)) {
-            auto status = servableGroupManager->ensureGroupLoaded(name, *this);
+        // TODO current preview limitation -> we wait for whole group to load
+        auto status = servableGroupManager->ensureServableLoaded(name, *this);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to load servable '{}': {}", name, status.string());
+            return status;
+        }
+    } else {
+        // Per-graph idle wake-up without group management
+        auto* def = this->mediapipeFactory->findDefinitionByName(name);
+        if (def && def->getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
+            auto future = requestServableLoad(name);
+            auto status = future.get();
             if (!status.ok()) {
-                SPDLOG_ERROR("Failed to load group for mediapipe graph '{}': {}", name, status.string());
+                SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                    "Mediapipe graph {} wake-up failed: {}", name, status.string());
                 return status;
             }
-        }
-        servableGroupManager->recordActivity();
-    }
-
-    // Wake up idle-unloaded graph via queue
-    auto* def = this->mediapipeFactory->findDefinitionByName(name);
-    if (def && def->getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
-        auto future = requestServableLoad(name);
-        auto status = future.get();
-        if (!status.ok()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger,
-                "Mediapipe graph {} wake-up failed: {}", name, status.string());
-            return status;
         }
     }
     return this->mediapipeFactory->create(graph, name);

@@ -322,6 +322,21 @@ Status ServableGroupManager::ensureGroupLoaded(const std::string& servableName, 
     return loadGroup(groupName, mm);
 }
 
+Status ServableGroupManager::ensureServableLoaded(const std::string& servableName, ModelManager& mm) {
+    std::string group = getGroupForServable(servableName);
+    if (!group.empty() && !isGroupLoaded(group)) {
+        auto status = ensureGroupLoaded(servableName, mm);
+        if (!status.ok())
+            return status;
+    }
+    auto future = mm.requestServableLoad(servableName);
+    auto status = future.get();
+    if (!status.ok())
+        return status;
+    recordActivity();
+    return StatusCode::OK;
+}
+
 void ServableGroupManager::unloadActiveGroupIfIdle(ModelManager& mm) {
     if (!isEnabled()) {
         return;

@@ -55,6 +55,8 @@ public:
 
     Status ensureGroupLoaded(const std::string& servableName, ModelManager& mm);
 
+    Status ensureServableLoaded(const std::string& servableName, ModelManager& mm);
+
     void unloadActiveGroupIfIdle(ModelManager& mm);
 
     void recordActivity();
