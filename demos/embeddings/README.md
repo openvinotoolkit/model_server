@@ -250,7 +250,7 @@ python export_model.py embeddings_ov --source_model sentence-transformers/all-mp
 :::{tab-item} Qwen/Qwen3-Embedding-0.6B
 :sync: Qwen3-Embedding-0.6B-int8
 ```bash
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings --target_device NPU
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings --target_device NPU --max_length 200
 
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
@@ -258,11 +258,11 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: BAAI/bge-large-en-v1.5-fp16
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models --max_length 200
 ```
 :::
 ::::
-
+> **Note** For NPU Set `--max_length` as low as possible to speed up model loading and inference.
 > **Note** For NPU Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision. For int4 precisions, add required extra parameter `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
 > **Note** For NPU the pooling mode --pooling LAST has the best accuracy.
 > **Note** For NPU and the weight-format int4, use `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
