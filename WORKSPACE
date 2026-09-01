@@ -138,7 +138,7 @@ cc_library(
 
 new_local_repository(
     name = "windows_curl",
-    path = "C:\\opt\\curl-8.21.0_4-win64-mingw",
+    path = "C:\\opt\\curl-8.21.0_7-win64-mingw",
     build_file_content = """
 cc_import(
     name = "curl_lib",
@@ -284,7 +284,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
-    path = "C:\\opt\\opencv_4.13.0",
+    path = "C:\\opt\\opencv_4.14.0",
 )
 
 new_local_repository(
