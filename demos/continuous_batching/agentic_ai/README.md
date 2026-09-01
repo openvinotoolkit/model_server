@@ -89,16 +89,16 @@ Exemplary output:
 The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. Wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
-:::{tab-item} Phi-4-mini-instruct
-:sync: Phi-4-mini-instruct
+:::{tab-item} LFM2.5-350M
+:sync: LFM2.5-350M
 Pull and start OVMS:
 ```bat
-ovms.exe --rest_port 8000 --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --model_repository_path c:\models --enable_tool_guided_generation true --cache_dir .cache
+ovms.exe --rest_port 8000 --source_model OpenVINO/LFM2.5-350M-int8-ov --model_repository_path c:\models --cache_dir .cache
 ```
 
 Use MCP server:
 ```bat
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v1 --mcp-server weather --tool-choice required
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/LFM2.5-350M-int8-ov --base-url http://localhost:8000/v1 --mcp-server weather
 ```
 
 Exemplary output:
@@ -232,19 +232,19 @@ Exemplary output:
 The current weather in Tokyo is overcast with a temperature of 9.4°C (feels like 6.4°C). The relative humidity is at 42%, and the dew point is at -2.9°C. Wind is blowing from the NE at 3.6 km/h with gusts up to 24.8 km/h. The atmospheric pressure is 1018.9 hPa with 84% cloud cover. Visibility is 24.1 km.
 ```
 :::
-:::{tab-item} Phi-4-mini-instruct
-:sync: Phi-4-mini-instruct
+:::{tab-item} LFM2.5-350M
+:sync: LFM2.5-350M
 Pull and start OVMS:
 ```bash
 mkdir -p ${HOME}/models
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi) 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models ${GPU_ARGS} openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --enable_tool_guided_generation true
+--rest_port 8000 --model_repository_path /models --source_model OpenVINO/LFM2.5-350M-int8-ov
 ```
 
 Use MCP server:
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v1 --mcp-server-url http://localhost:8080/sse --mcp-server weather --tool-choice required
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/LFM2.5-350M-int8-ov --base-url http://localhost:8000/v1 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 Exemplary output:
