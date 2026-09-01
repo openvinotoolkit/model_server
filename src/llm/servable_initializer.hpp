@@ -26,6 +26,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 #include "src/llm/llm_calculator.pb.h"
+#include "src/llm/servable.hpp"
 
 namespace ovms {
 
@@ -68,6 +69,11 @@ public:
 };
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
+// Detects draft model strategy from model artifacts without a full model load.
+// Reads last 32KB of the XML (rt_info is at the end of OV IR format) for eagle3/dflash markers.
+// DFlash takes priority over EAGLE3 when both markers are present (matches GenAI's strategy selection).
+// Throws std::runtime_error if the XML cannot be opened.
+GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
 }  // namespace ovms

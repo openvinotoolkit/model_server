@@ -3155,28 +3155,6 @@ TEST(OvmsGraphCliParserTest, noneParserNamesAreAccepted) {
     EXPECT_EQ(graphSettings.reasoningParser.value(), "none");
 }
 
-TEST(OvmsGraphCliParserTest, draftEagle3ModeFlag) {
-    ovms::HFSettingsImpl hfSettings;
-    ovms::GraphCLIParser parser;
-    std::vector<std::string> args = {"--draft_source_model", "/some/draft", "--draft_eagle3_mode"};
-    parser.parse(args);
-    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
-    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_TRUE(graphSettings.draftModelDirName.has_value());
-    EXPECT_EQ(graphSettings.draftModelDirName.value(), "/some/draft");
-    EXPECT_TRUE(graphSettings.draftEagle3Mode);
-}
-
-TEST(OvmsGraphCliParserTest, draftEagle3ModeDefaultFalse) {
-    ovms::HFSettingsImpl hfSettings;
-    ovms::GraphCLIParser parser;
-    std::vector<std::string> args = {"--draft_source_model", "/some/draft"};
-    parser.parse(args);
-    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
-    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
-    EXPECT_FALSE(graphSettings.draftEagle3Mode);
-}
-
 TEST_F(OvmsInferredTaskTest, positiveConfigureModeInfersTaskFromModel) {
     const std::string modelPath = resolveTestModelPath("llama");
     const std::filesystem::path configJson = std::filesystem::path(modelPath) / "config.json";

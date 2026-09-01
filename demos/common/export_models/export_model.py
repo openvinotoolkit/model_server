@@ -247,8 +247,7 @@ node: {
           # Speculative decoding configuration
           draft_models_path: "./{{draft_model_dir_name}}",
           {%- if target_device %}
-          draft_device: "{{target_device}}",{% endif %}
-          draft_eagle3_mode: {{draft_eagle3_mode|default(false)}},{% endif %}
+          draft_device: "{{target_device}}",{% endif %}{% endif %}
           {%- if reasoning_parser %}
           reasoning_parser: "{{reasoning_parser}}",{% endif %}
           {%- if tool_parser %}

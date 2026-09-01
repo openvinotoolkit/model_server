@@ -38,6 +38,7 @@
 #include "../../io_processing/parser_config_validation.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
+#include "../../servable_initializer.hpp"
 
 namespace ovms {
 Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
@@ -107,7 +108,27 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
             SPDLOG_ERROR("Error during draft model initialization for draft_models_path: {}", draftPipelinePath);
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
-        properties->eagle3Mode = nodeOptions.draft_eagle3_mode();
+        try {
+            properties->draftModelStrategy = detectDraftModelStrategy(draftPipelinePath);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to detect draft model strategy for {}: {}", draftPipelinePath, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        using DS = GenAiServableProperties::DraftModelStrategy;
+        switch (properties->draftModelStrategy) {
+        case DS::EAGLE3:
+            SPDLOG_INFO("Draft model strategy: EAGLE3");
+            break;
+        case DS::DFLASH:
+            SPDLOG_INFO("Draft model strategy: DFlash");
+            break;
+        case DS::MTP:
+            SPDLOG_INFO("Draft model strategy: MTP (Multi-Token Prediction)");
+            break;
+        case DS::FAST_DRAFT:
+            SPDLOG_INFO("Draft model strategy: Fast Draft");
+            break;
+        }
     }
 
     status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);

@@ -232,6 +232,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
             draft_device: ")" << graphSettings.draftDevice.value() << R"(",)";
         }
         if (graphSettings.draftEagle3Mode) {
+            // draft_eagle3_mode kept for backward compat with existing pbtxt consumers; auto-detected at runtime
             oss << R"(
             draft_eagle3_mode: true,)";
         }
