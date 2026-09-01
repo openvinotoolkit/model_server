@@ -345,6 +345,39 @@ TEST_F(Minicpm5OutputParserTest, ParseContentAroundToolCall) {
     EXPECT_NE(parsedOutput.content, "Let me check the weather. Done.");
 }
 
+// =============================================================================
+// Recovery when generation stops before the tool call's closing tags ever arrive
+// (max_tokens truncation, or the model just omits them). Regression tests for
+// Minicpm5ToolParserImpl::finalizeOnGenerationEnd().
+// =============================================================================
+TEST_F(Minicpm5OutputParserTest, ToolCallRecoveredWhenStoppedMidParameterValue) {
+    const std::string input = R"(<function name="get_weather"><param name="city">Ber)";
+    ParsedOutput parsedOutput = generateParsedOutput(input);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"city":"Ber"})");
+}
+
+TEST_F(Minicpm5OutputParserTest, ToolCallRecoveredWithoutDanglingParameterName) {
+    // Stops mid parameter NAME -- that one incomplete parameter can't be recovered, but the
+    // function name was already known, so the call itself is still recovered without it.
+    const std::string input = R"(<function name="get_weather"><param name="ci)";
+    ParsedOutput parsedOutput = generateParsedOutput(input);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1u);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{}");
+}
+
+TEST_F(Minicpm5OutputParserTest, ToolCallDroppedWhenStoppedBeforeFunctionName) {
+    // Stops before the function name attribute even closes -- no usable data was ever captured.
+    const std::string input = R"(<function name="get_wea)";
+    ParsedOutput parsedOutput = generateParsedOutput(input);
+
+    EXPECT_TRUE(parsedOutput.toolCalls.empty());
+}
+
 TEST(Minicpm5ToolParserImplTest, SingleCallNoContent) {
     const std::string input =
         R"(<function name="get_weather"><param name="city">Berlin</param></function>)";
