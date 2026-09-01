@@ -56,7 +56,7 @@ void GenAiServable::determineDecodingMethod() {
         if (getProperties()->eagle3Mode) {
             getProperties()->decodingMethod = DecodingMethod::EAGLE3;
         } else {
-            getProperties()->decodingMethod = DecodingMethod::SPECULATIVE_DECODING;
+            getProperties()->decodingMethod = DecodingMethod::FAST_DRAFT;
         }
     }
     auto it = pluginConfig.find("prompt_lookup");

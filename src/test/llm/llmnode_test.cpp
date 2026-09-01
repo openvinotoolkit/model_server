@@ -5451,6 +5451,40 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsSpeculativeDecodingSanityCheck) {
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
 }
 
+TEST_F(LLMOptionsHttpTest, LegacyServableDraftModelsPathIsProcessedNotIgnored) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: { tag_index: 'LOOPBACK:0', back_edge: true }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                pipeline_type: LM
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                draft_models_path: "/nonexistent/draft/model"
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options { [mediapipe.SyncSetInputStreamHandlerOptions.ext] { sync_set { tag_index: "LOOPBACK:0" } } }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<GenAiServable> servable;
+    // draft_models_path is now processed; a bad path must fail rather than be silently ignored
+    EXPECT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+}
+
 class GetPromptTokensString : public ::testing::Test {
 public:
     std::string expectedTokensString;
@@ -5820,4 +5854,145 @@ TEST(BaseGenerationConfigBuilderTest, SeedPreservedWhenExplicitlySet) {
     request.seed = 42u;
     builder.parseConfigFromRequest(request);
     EXPECT_EQ(builder.getConfig().rng_seed, 42u);
+}
+
+// Unit tests for BaseGenerationConfigBuilder assisted decoding methods
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3DefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3ExplicitZeroNumAssistantTokensHonored) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 0u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3EnforcesGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.bestOf = 2;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3BranchingFactorAndTreeDepthMapped) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.branchingFactor = 4u;
+    request.treeDepth = 3u;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().branching_factor, 4u);
+    EXPECT_EQ(builder.getConfig().tree_depth, 3u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3AssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftDefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftBothAssistantParamsThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.numAssistantTokens = 5;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftConfidenceThresholdAloneIsValid) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    request.assistantConfidenceThreshold = 0.8f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FLOAT_EQ(builder.getConfig().assistant_confidence_threshold, 0.8f);
+    EXPECT_FALSE(builder.getConfig().num_assistant_tokens.has_value());
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftSamplingThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.7f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftGreedyWithoutMaxTokensIsValid) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+}
+
+TEST(BaseGenerationConfigBuilderTest, PromptLookupDefaultsApplied) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::PROMPT_LOOKUP};
+    OpenAIRequest request;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+    EXPECT_EQ(builder.getConfig().max_ngram_size, 3u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, PromptLookupZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::PROMPT_LOOKUP};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, PromptLookupAssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::PROMPT_LOOKUP};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
 }
