@@ -391,7 +391,6 @@ class OpenAIAudioTranscriptionsRequestParams(OpenAIRequestParams):
     stream: bool = None
 
     def set_default_values(self, **kwargs):
-        self.language = "en"
         self.temperature = 0.0
         self.timestamp_granularities = ["segment"]
         self.stream = kwargs.get("stream", None)
