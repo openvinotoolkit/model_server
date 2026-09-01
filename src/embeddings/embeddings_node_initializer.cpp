@@ -78,10 +78,10 @@ public:
             nodeOptions.has_max_length() ? std::make_optional(nodeOptions.max_length()) : std::nullopt;
 
         if (configuredMaxLength.has_value() && configuredMaxLength.value() == 0) {
-             SPDLOG_ERROR("Embeddings node name: {} invalid max_length (0) in graph: {}.", nodeName, graphName);
-             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+            SPDLOG_ERROR("Embeddings node name: {} invalid max_length (0) in graph: {}.", nodeName, graphName);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
         }
-        
+
         auto servable = std::make_shared<EmbeddingsServable>(
             nodeOptions.models_path(),
             nodeOptions.target_device(),
