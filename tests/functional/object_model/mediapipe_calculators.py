@@ -846,6 +846,7 @@ node {{
             normalize_embeddings: {self.normalize_embeddings},
             truncate: {self.truncate},
             {pooling_str}
+            max_length: 1000,
             {target_device_str}
             {plugin_config_str}
         }}
