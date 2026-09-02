@@ -4226,6 +4226,39 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMergedIntoAssistantToo
         })");
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputAsTextArrayPassesThrough) {
+    // function_call_output.output given as an array of input_text/output_text
+    // parts is preserved as a text-typed chat/completions content array. The
+    // downstream TextContentNormalizationProcessor is responsible for
+    // flattening it into a single string; this translator no longer does that
+    // eagerly.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "id": "call_1", "call_id": "call_1",
+                 "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": [
+                    {"type": "input_text", "text": "part1"},
+                    {"type": "output_text", "text": "part2"}
+                ]}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_1","content":[
+                    {"type":"text","text":"part1"},
+                    {"type":"text","text":"part2"}
+                ]}
+            ]
+        })");
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningPlusFunctionCallRidesOnAssistant) {
     // reasoning + function_call should both attach to the synthesised assistant
     // turn that owns the tool_calls.
