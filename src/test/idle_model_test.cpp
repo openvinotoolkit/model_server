@@ -158,6 +158,12 @@ TEST_F(ModelInstanceSleepTest, WakeUpWithInvalidPathFails) {
 
     auto status = instance.wakeUpIfSleeping();
     EXPECT_FALSE(status.ok());
+    EXPECT_EQ(instance.getStatus().getState(), ModelVersionState::SLEEPING);
+
+    // Failed wake-up should remain retryable on every next request.
+    status = instance.wakeUpIfSleeping();
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(instance.getStatus().getState(), ModelVersionState::SLEEPING);
 }
 
 TEST_F(ModelInstanceSleepTest, WakeUpIfAlreadyAvailableIsNoop) {

@@ -509,15 +509,10 @@ Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, cons
 }
 
 void MediapipeGraphDefinition::retire() {
-    // Serialize against unload()/wakeUp()/reload() on other threads.
     std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
     // Block creating new unloadGuards
     this->status.handle(RetireEvent());
-    while (pendingCreateExecutorCount > 0) {
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
-    }
-    this->queue.reset();
-    this->sidePacketMaps.reset();
+    unloadComponentsAfterPendingExecutorsAreCreated();
 }
 
 bool MediapipeGraphDefinition::isIdleUnloadEnabled() const {
@@ -528,7 +523,7 @@ bool MediapipeGraphDefinition::isIdleUnloadEnabled() const {
 bool MediapipeGraphDefinition::shouldUnloadDueToIdle() const {
     // Advisory pre-filter ONLY — reads no unsynchronized per-definition state.
     // It must NOT read this->status (the state-machine variant) without the lock,
-    // since the config thread can mutate it concurrently. unload() performs the
+    // since the config thread can mutate it concurrently. putToSleep() performs the
     // authoritative state==AVAILABLE check under lifecycleMtx.
     // pendingCreateExecutorCount, lastActivityTimeNs and idleUnloadTimeoutSecondsCache
     // are all atomics, so every read here is data-race-free. We never read mgconfig
@@ -554,51 +549,33 @@ bool MediapipeGraphDefinition::shouldUnloadDueToIdle() const {
     return (nowNs - lastActivity) >= timeoutNs;
 }
 
-Status MediapipeGraphDefinition::unload() {
-    // Serialize against wakeUpIfSleeping()/reload()/retire() using the SAME lock so
-    // all lifecycle mutations are mutually exclusive. This prevents the watcher thread
-    // from tearing down resources while the config thread reloads/retires, or while a
-    // request thread is in the middle of a wake-up reload.
+[[nodiscard]] Status MediapipeGraphDefinition::putToSleep() {
     std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
-
-    // Re-check the preconditions under the lock. Only AVAILABLE graphs with no
-    // in-flight requests may be unloaded. If the state changed (e.g. a wake-up
-    // moved us to RELOADING/AVAILABLE) or a request arrived after the watcher's
-    // shouldUnloadDueToIdle() check, skip this cycle WITHOUT touching resources.
+    if (status.getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
+        return StatusCode::OK;
+    }
     if (status.getStateCode() != PipelineDefinitionStateCode::AVAILABLE) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger,
             "Skipping idle-unload of mediapipe graph {}: state is no longer AVAILABLE", getName());
-        return StatusCode::OK;
+        return Status(StatusCode::MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE,
+            "Cannot put mediapipe graph to sleep: state is not AVAILABLE");
     }
     if (pendingCreateExecutorCount.load(std::memory_order_acquire) != 0) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger,
             "Skipping idle-unload of mediapipe graph {}: requests in flight", getName());
-        return StatusCode::OK;
+        return Status(StatusCode::MEDIAPIPE_PUT_TO_SLEEP_REQUESTS_IN_FLIGHT,
+            "Cannot put mediapipe graph to sleep: requests are in flight");
     }
-    // Guard: if inferences are actively executing, skip this unload cycle.
-    // This catches the case where the executor's inference is running (past create())
-    // but before ActiveInferenceGuard has decremented — i.e. a long generation that
-    // outlives idle_unload_timeout_seconds. Re-checked under the lock so the decision
-    // is consistent with the in-flight inference completing concurrently.
     if (activeInferenceCount && activeInferenceCount->load(std::memory_order_acquire) > 0) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger,
             "Skipping idle-unload of mediapipe graph {}: active inferences in progress", getName());
-        return StatusCode::OK;
+        return Status(StatusCode::MEDIAPIPE_PUT_TO_SLEEP_ACTIVE_INFERENCES,
+            "Cannot put mediapipe graph to sleep: active inferences in progress");
     }
 
-    // Transition state: AVAILABLE -> SLEEPING (blocks new unloadGuards in waitForLoaded).
     this->status.handle(SleepEvent());
 
-    // Defensive: only tear down resources if the transition actually happened.
-    // (SleepEvent is a no-op on any non-AVAILABLE state.)
-    if (status.getStateCode() != PipelineDefinitionStateCode::SLEEPING) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger,
-            "Idle-unload of mediapipe graph {} aborted: state did not transition to SLEEPING (now {})",
-            getName(), pipelineDefinitionStateCodeToString(status.getStateCode()));
-        return StatusCode::OK;
-    }
-    this->queue.reset();
-    this->sidePacketMaps->clear();
+    unloadComponentsAfterPendingExecutorsAreCreated();
 
     SET_IF_ENABLED(this->reporter->graphLoaded, 0);
     SPDLOG_LOGGER_INFO(modelmanager_logger,
@@ -628,13 +605,7 @@ Status MediapipeGraphDefinition::wakeUpIfSleeping(const ServableNameChecker& che
             "Mediapipe graph {} wake-up completed in {}ms",
             getName(), elapsed.count());
     } else {
-        // Wake-up reload failed (e.g. model files temporarily unavailable). reload()
-        // ran validate() which left the state in LOADING_PRECONDITION_FAILED. Revert
-        // to SLEEPING so the NEXT inference request retries the wake — making a
-        // transient failure self-healing rather than permanently wedging a previously
-        // healthy idle graph. We are still holding lifecycleMtx here.
-        // (If validate() somehow ended elsewhere, SleepEvent is a no-op on states
-        // other than AVAILABLE/LOADING_PRECONDITION_FAILED, so this is safe.)
+        // Wake-up reload failed. For now sleeping the graph again. So that new request will try to load again.
         this->status.handle(SleepEvent());
         SPDLOG_LOGGER_ERROR(modelmanager_logger,
             "Mediapipe graph {} wake-up failed after {}ms: {}. Reverted to SLEEPING; "
@@ -658,6 +629,14 @@ StatusCode MediapipeGraphDefinition::notLoadedYetCode() const {
 
 StatusCode MediapipeGraphDefinition::notLoadedAnymoreCode() const {
     return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
+}
+
+void MediapipeGraphDefinition::unloadComponentsAfterPendingExecutorsAreCreated() {
+    while (pendingCreateExecutorCount > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
+    this->queue.reset();
+    this->sidePacketMaps.reset();
 }
 
 Status MediapipeGraphDefinition::initializeNodes() {

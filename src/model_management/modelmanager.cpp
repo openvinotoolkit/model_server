@@ -159,9 +159,9 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         case ServableLoadingTaskType::UnloadMediapipe: {
             auto* def = mediapipeFactory->findDefinitionByName(task.name);
             if (!def) {
-                return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
+                return StatusCode::INTERNAL_ERROR;
             }
-            return def->unload();
+            return def->putToSleep();
         }
 #else
         case ServableLoadingTaskType::LoadMediapipe:

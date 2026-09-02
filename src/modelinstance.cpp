@@ -1355,7 +1355,12 @@ Status ModelInstance::wakeUpIfSleeping() {
     if (state != ModelVersionState::SLEEPING)
         return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
     SPDLOG_INFO("Waking up model: {}, version: {} ...", getName(), getVersion());
-    return loadModelImpl(this->config);
+    auto loadStatus = loadModelImpl(this->config);
+    if (!loadStatus.ok()) {
+        // Keep failed wake-ups retryable from inference path, same as mediapipe.
+        this->status.setSleeping();
+    }
+    return loadStatus;
 }
 
 void ModelInstance::putToSleep() {

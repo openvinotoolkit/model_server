@@ -64,13 +64,13 @@ TEST_F(MediapipeIdleSleepTest, UnloadTransitionsAvailableToSleeping) {
     auto def = makeAvailableDef("graph1");
     ASSERT_EQ(def->getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
 
-    ASSERT_EQ(def->unload(), StatusCode::OK);
+    ASSERT_EQ(def->putToSleep(), StatusCode::OK);
     EXPECT_EQ(def->getStateCode(), PipelineDefinitionStateCode::SLEEPING);
 }
 
 TEST_F(MediapipeIdleSleepTest, UnloadOnSleepingIsNoop) {
     auto def = makeSleepingDef("graph1");
-    ASSERT_EQ(def->unload(), StatusCode::OK);
+    ASSERT_EQ(def->putToSleep(), StatusCode::OK);
     EXPECT_EQ(def->getStateCode(), PipelineDefinitionStateCode::SLEEPING);
 }
 
@@ -103,7 +103,7 @@ TEST_F(MediapipeIdleSleepTest, WakeUpOnBeginReturnsError) {
 
 TEST_F(MediapipeIdleSleepTest, ConcurrentWakeUpAllSucceed) {
     auto def = makeAvailableDef("graph1");
-    ASSERT_EQ(def->unload(), StatusCode::OK);
+    ASSERT_EQ(def->putToSleep(), StatusCode::OK);
     ASSERT_EQ(def->getStateCode(), PipelineDefinitionStateCode::SLEEPING);
 
     constexpr int numThreads = 8;

@@ -4503,13 +4503,13 @@ TEST_F(UnaryQueueReinitTest, GraphIsReinitializedAfterCalculatorError) {
 }
 
 // ---------------------------------------------------------------------------
-// Idle unload feature: unload() guard correctness (issue #4141, model-free)
-// Verifies FIX 1: unload() must NOT tear down resources unless the state was
+// Idle unload feature: putToSleep() guard correctness (issue #4141, model-free)
+// Verifies FIX 1: putToSleep() must NOT tear down resources unless the state was
 // actually AVAILABLE and the SleepEvent transition really happened.
 // ---------------------------------------------------------------------------
 
 // A trivial pbtxt is enough; these tests never reach validate(), they drive the
-// state machine directly to exercise unload()'s preconditions.
+// state machine directly to exercise putToSleep() preconditions.
 static const std::string kIdleUnloadDummyPbtxt = R"(
     input_stream: "in"
     output_stream: "out"
@@ -4524,7 +4524,7 @@ TEST(MediapipeIdleUnloadGuard, SleepIsNoOpWhenStateBegin) {
     def.insertSidePacketMarkerForTest("marker");
     const void* mapsBefore = def.sidePacketMapsPtrForTest();
 
-    ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+    ASSERT_EQ(def.putToSleep(), ovms::StatusCode::MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE);
 
     // State unchanged and resources untouched.
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
@@ -4545,7 +4545,7 @@ TEST(MediapipeIdleUnloadGuard, SleepIsNoOpWhenStateReloading) {
     def.insertSidePacketMarkerForTest("marker");
     const void* mapsBefore = def.sidePacketMapsPtrForTest();
 
-    ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+    ASSERT_EQ(def.putToSleep(), ovms::StatusCode::MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE);
 
     // Critical: unload() must NOT have cleared resources while RELOADING.
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
@@ -4562,13 +4562,12 @@ TEST(MediapipeIdleUnloadGuard, SleepTransitionsAndTearsDownWhenAvailable) {
     def.insertSidePacketMarkerForTest("marker");
     const void* mapsBefore = def.sidePacketMapsPtrForTest();
 
-    ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+    ASSERT_EQ(def.putToSleep(), ovms::StatusCode::OK);
 
-    // Now it should have transitioned and cleared (but kept the same object).
+    // Now it should have transitioned and released resources.
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
-    ASSERT_FALSE(def.hasSidePacketMarkerForTest("marker"));
-    ASSERT_TRUE(def.sidePacketMapsEmptyForTest());
-    ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);  // clear(), not reset()
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), nullptr);
+    ASSERT_NE(def.sidePacketMapsPtrForTest(), mapsBefore);
 }
 
 TEST(MediapipeIdleUnloadGuard, UnloadSkipsWhenRequestsInFlight) {
@@ -4585,17 +4584,18 @@ TEST(MediapipeIdleUnloadGuard, UnloadSkipsWhenRequestsInFlight) {
         ovms::ServableDefinitionUnloadGuard guard(def);
         ASSERT_EQ(def.requestsHandlesCounterForTest(), 1u);
 
-        // unload() must skip without tearing down because counter > 0.
-        ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+        // putToSleep() must be rejected because counter > 0.
+        auto sleepStatus = def.putToSleep();
+        ASSERT_EQ(sleepStatus, ovms::StatusCode::MEDIAPIPE_PUT_TO_SLEEP_REQUESTS_IN_FLIGHT);
         ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
         ASSERT_TRUE(def.hasSidePacketMarkerForTest("marker"));
         ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);
     }
-    // After the guard releases, unload() now proceeds.
+    // After the guard releases, putToSleep() now proceeds.
     ASSERT_EQ(def.requestsHandlesCounterForTest(), 0u);
-    ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+    ASSERT_EQ(def.putToSleep(), ovms::StatusCode::OK);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
-    ASSERT_TRUE(def.sidePacketMapsEmptyForTest());
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), nullptr);
 }
 
 TEST(MediapipeIdleUnloadGuard, LazyLoadConstructorStartsSleeping) {
@@ -4611,7 +4611,7 @@ TEST(MediapipeIdleUnloadGuard, LazyLoadThenUnloadIsNoOp) {
     DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr, true);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 
-    ASSERT_EQ(def.unload(), ovms::StatusCode::OK);
+    ASSERT_EQ(def.putToSleep(), ovms::StatusCode::OK);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 

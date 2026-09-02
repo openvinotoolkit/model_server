@@ -213,6 +213,9 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME, "Subsequent request with incorrect servable name"},
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION, "Subsequent request with incorrect servable version"},
     {StatusCode::MEDIAPIPE_PRECONDITION_FAILED, "Mediapipe graph precondition failed"},
+    {StatusCode::MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE, "Cannot put mediapipe graph to sleep: state is not AVAILABLE"},
+    {StatusCode::MEDIAPIPE_PUT_TO_SLEEP_REQUESTS_IN_FLIGHT, "Cannot put mediapipe graph to sleep: requests are in flight"},
+    {StatusCode::MEDIAPIPE_PUT_TO_SLEEP_ACTIVE_INFERENCES, "Cannot put mediapipe graph to sleep: active inferences in progress"},
 
     // Python Nodes
     {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node name is already present in nodes list"},

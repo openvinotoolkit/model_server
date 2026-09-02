@@ -6072,10 +6072,10 @@ TEST_F(LLMIdleUnloadTest, UnloadAfterIdleFreesResources) {
     def.recordActivity(secondsAgo(60));
     ASSERT_TRUE(def.shouldUnloadDueToIdle());
 
-    ASSERT_EQ(def.unload(), StatusCode::OK);
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
-    // Resources freed: the GenAi servable map should be empty.
-    ASSERT_TRUE(def.getGenAiServableMap().empty());
+    // Resources freed: sidePacketMaps is reset.
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), nullptr);
     ASSERT_FALSE(def.isAvailable());
     ASSERT_TRUE(def.getStatus().isSleeping());
 }
@@ -6092,9 +6092,9 @@ TEST_F(LLMIdleUnloadTest, WakeUpReloadsResources) {
     ASSERT_EQ(def.validate(manager), StatusCode::OK);
 
     def.recordActivity(secondsAgo(60));
-    ASSERT_EQ(def.unload(), StatusCode::OK);
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
-    ASSERT_TRUE(def.getGenAiServableMap().empty());
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), nullptr);
 
     // Wake up.
     ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
@@ -6161,7 +6161,7 @@ TEST_F(LLMIdleUnloadTest, ConcurrentWakeUpEndsAvailable) {
     def.inputConfig = testPbtxt;
     ASSERT_EQ(def.validate(manager), StatusCode::OK);
     def.recordActivity(secondsAgo(60));
-    ASSERT_EQ(def.unload(), StatusCode::OK);
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 
     constexpr int kThreads = 8;
@@ -6206,7 +6206,7 @@ TEST_F(LLMIdleUnloadTest, ConcurrentUnloadWakeNeverTearsState) {
     std::thread unloader([&]() {
         while (!stop.load()) {
             def.recordActivity(secondsAgo(60));
-            auto s = def.unload();
+            auto s = def.putToSleep();
             if (!s.ok())
                 errors.fetch_add(1);
             std::this_thread::yield();
@@ -6245,7 +6245,7 @@ TEST_F(LLMIdleUnloadTest, ConcurrentUnloadWakeNeverTearsState) {
         ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
     } else {
         ASSERT_EQ(finalState, ovms::PipelineDefinitionStateCode::SLEEPING);
-        ASSERT_TRUE(def.getGenAiServableMap().empty());
+        ASSERT_EQ(def.sidePacketMapsPtrForTest(), nullptr);
     }
 }
 
@@ -6271,7 +6271,7 @@ TEST_F(LLMIdleUnloadTest, ConcurrentUnloadReloadRetireNoCrash) {
     std::thread unloader([&]() {
         while (!stop.load()) {
             def.recordActivity(secondsAgo(60));
-            (void)def.unload();
+            (void)def.putToSleep();
             std::this_thread::yield();
         }
     });
@@ -6387,8 +6387,9 @@ TEST_F(LLMIdleUnloadTest, ActiveInferenceGuardIntegration) {
         // Backdate activity to look idle — should NOT unload because count > 0.
         def.recordActivity(secondsAgo(60));
         EXPECT_FALSE(def.shouldUnloadDueToIdle());
-        EXPECT_EQ(def.unload(), StatusCode::OK);
-        // unload() should have been skipped (counter > 0) so we stay AVAILABLE.
+        auto sleepStatus = def.putToSleep();
+        EXPECT_EQ(sleepStatus, StatusCode::MEDIAPIPE_PUT_TO_SLEEP_ACTIVE_INFERENCES);
+        // putToSleep() should be rejected (counter > 0), state remains AVAILABLE.
         EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     }  // executor destroyed here -> counter decremented back to 0
 
@@ -6401,7 +6402,7 @@ TEST_F(LLMIdleUnloadTest, ActiveInferenceGuardIntegration) {
     // After the idle period elapses again (post-inference), it should unload.
     def.recordActivity(secondsAgo(60));
     EXPECT_TRUE(def.shouldUnloadDueToIdle());
-    EXPECT_EQ(def.unload(), StatusCode::OK);
+    EXPECT_EQ(def.putToSleep(), StatusCode::OK);
     EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 
@@ -6468,7 +6469,7 @@ TEST_F(LLMIdleUnloadTest, FailedWakeLeavesGraphSleepingAndRetryable) {
 
     // Idle-unload the healthy graph.
     def.recordActivity(secondsAgo(60));
-    ASSERT_EQ(def.unload(), StatusCode::OK);
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 
     // Simulate the model becoming temporarily unavailable: swap in a broken config

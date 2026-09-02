@@ -83,10 +83,7 @@ public:
     bool isReloadRequired(const MediapipeGraphConfig& config) const;
 
     // Idle unload feature
-    Status unload();
-    // wakeUpIfSleeping: thread-safe wrapper — holds lifecycleMtx, double-checks
-    // the SLEEPING state, and calls wakeUp() exactly once; other concurrent callers
-    // wait on the mutex then return immediately since the state is no longer SLEEPING.
+    Status putToSleep();
     Status wakeUpIfSleeping(const ServableNameChecker& checker);
     bool isIdleUnloadEnabled() const;
     bool shouldUnloadDueToIdle() const;
@@ -156,6 +153,7 @@ protected:
 private:
     StatusCode notLoadedYetCode() const override;
     StatusCode notLoadedAnymoreCode() const override;
+    void unloadComponentsAfterPendingExecutorsAreCreated();
 
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
