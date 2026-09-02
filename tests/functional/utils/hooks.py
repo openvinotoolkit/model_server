@@ -1037,7 +1037,7 @@ def generic_test_deselect(item):
     cloud_type = item.callspec.params.get(CLOUD_TYPE_PARAM_NAME, None)
     model_type = item.callspec.params.get(MODEL_TYPE_PARAM_NAME, None)
     use_mapping = item.callspec.params.get(USES_MAPPING_PARAM_NAME, None)
-    endpoint = item.callspac.params.get(ENDPOINT_PARAM_NAME, None)
+    endpoint = item.callspec.params.get(ENDPOINT_PARAM_NAME, None)
 
     # Disable completions endpoint for VLM models
     if model_type.is_vision_language and endpoint == OpenAIWrapper.COMPLETIONS:
