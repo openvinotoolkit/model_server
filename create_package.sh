@@ -125,7 +125,7 @@ if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL
 if [ "$FUZZER_BUILD" == "0" ]; then find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \; ; fi;
 cd /ovms_release/bin
 if [ "$FUZZER_BUILD" == "0" ]; then
-    patchelf --remove-rpath ./ovms
+    patchelf --remove-rpath ./ovms && \
     patchelf --set-rpath '$ORIGIN/../lib/' ./ovms
 fi
 find /ovms_release/lib/ -type f -iname '*.so*' -exec patchelf --debug --remove-rpath {} +
