@@ -77,16 +77,15 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
         float instant_fps = 1.0f / dt_sec;
         // Smooth it with a running average to avoid jitter
         estimated_fps_ = 0.9f * estimated_fps_ + 0.1f * instant_fps;
-        max_time_lost_ = static_cast<int>(estimated_fps_ / 30.0f * track_buffer_);
-        LOG(INFO) << "MAX TIME LOST: " << max_time_lost_;
+        max_time_lost_ = static_cast<int>(estimated_fps_ / 30.0f * (track_buffer_ == 0 ? 1e-9f : track_buffer_));
+        VLOG(1) << "MAX TIME LOST: " << max_time_lost_;
     }
     last_timestamp_ = current_ts;
     frame_id_++;
-    LOG(INFO) << "Frame " << frame_id_
-              << "  tracked_=" << tracked_stracks_.size()
-              << "  lost_=" << lost_stracks_.size();
+    VLOG(1) << "Frame " << frame_id_
+            << "  tracked_=" << tracked_stracks_.size()
+            << "  lost_=" << lost_stracks_.size();
 
-    // LOG(INFO) << "ByteTrackCalculator::Process called, frame " << frame_id_;
     auto high_dets = std::make_unique<std::vector<Detection>>();
     auto low_dets = std::make_unique<std::vector<Detection>>();
 
@@ -106,8 +105,8 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
     std::vector<bytetrack::STrack> lost_stracks;
     std::vector<bytetrack::STrack> removed_stracks;
 
-    LOG(INFO) << "High dets: " << high_dets->size()
-              << " Low dets: " << low_dets->size();
+    VLOG(1) << "High dets: " << high_dets->size()
+            << " Low dets: " << low_dets->size();
 
     // create tracks from high score detections
     std::vector<bytetrack::STrack> detections;
@@ -143,10 +142,10 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
     // gives 3 vectors
     auto [matches, u_track, u_detection] = bytetrack::LinearAssignment(dists, match_thresh_);
 
-    LOG(INFO) << "First step association, "
-              << " matches size: " << matches.size()
-              << ", U_track size: " << u_track.size()
-              << ", U_detection size: " << u_detection.size();
+    VLOG(1) << "First step association, "
+            << " matches size: " << matches.size()
+            << ", U_track size: " << u_track.size()
+            << ", U_detection size: " << u_detection.size();
 
     for (int k = 0; k < matches.rows(); ++k) {
         int itracked = matches(k, 0);
@@ -161,8 +160,8 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
             refind_stracks.push_back(*track);
         }
     }
-    LOG(INFO) << "  After 1st assoc: activated=" << activated_stracks.size()
-              << "  refind=" << refind_stracks.size();
+    VLOG(1) << "  After 1st assoc: activated=" << activated_stracks.size()
+            << "  refind=" << refind_stracks.size();
     /////////////////////// Second association ///////////////////////////
     std::vector<bytetrack::STrack> detections_second;
     if (low_dets->size() > 0) {
@@ -185,10 +184,10 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
 
     auto [matches2, u_track2, u_detection_second] = bytetrack::LinearAssignment(dists, 0.5f);
 
-    LOG(INFO) << "Second step association, "
-              << " matches2 size: " << matches2.size()
-              << ", U_track2 size: " << u_track2.size()
-              << ", U_detection_second size: " << u_detection_second.size();
+    VLOG(1) << "Second step association, "
+            << " matches2 size: " << matches2.size()
+            << ", U_track2 size: " << u_track2.size()
+            << ", U_detection_second size: " << u_detection_second.size();
 
     for (int k = 0; k < matches2.rows(); ++k) {
         int itracked = matches2(k, 0);
@@ -212,7 +211,7 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
             lost_stracks.push_back(*track);
         }
     }
-    LOG(INFO) << "  After 2nd assoc: lost=" << lost_stracks.size();
+    VLOG(1) << "  After 2nd assoc: lost=" << lost_stracks.size();
     /////////////////////// DEAL W UNCONFIRMED TRACKS ///////////////////////////
     std::vector<bytetrack::STrack> detections_uc;
     for (int i : u_detection) {
@@ -246,20 +245,20 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
         track.Activate(&kalman_filter_, frame_id_);
         activated_stracks.push_back(track);
     }
-    LOG(INFO) << "  After unconfirmed+new: activated=" << activated_stracks.size();
+    VLOG(1) << "  After unconfirmed+new: activated=" << activated_stracks.size();
     /////////////////////// UPDATE STATE /////////////////////////////
     for (auto& track : lost_stracks_) {
-        LOG(INFO) << "Time diff update state " << frame_id_ - track.frame_id() << ",";
+        VLOG(1) << "Time diff update state " << frame_id_ - track.frame_id() << ",";
         if (frame_id_ - track.frame_id() > max_time_lost_) {
             track.MarkRemoved();
             removed_stracks.push_back(track);
         }
     }
 
-    LOG(INFO) << "actiavted_stracks size: " << activated_stracks.size()
-              << ",refind_stracks size: " << refind_stracks.size()
-              << ",lost_stracks size: " << lost_stracks.size()
-              << ",removed_stracks size: " << removed_stracks.size();
+    VLOG(1) << "actiavted_stracks size: " << activated_stracks.size()
+            << ",refind_stracks size: " << refind_stracks.size()
+            << ",lost_stracks size: " << lost_stracks.size()
+            << ",removed_stracks size: " << removed_stracks.size();
 
     // Filter tracked_stracks_ to only TRACKED state, then join activated + refind
     // (mirrors: self.tracked_stracks = [t for t in self.tracked_stracks if t.state == Tracked])
@@ -309,8 +308,6 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
         new_lost = JointStracks(new_lost, local_lost_ptrs);  // extend
         new_lost = SubStracks(new_lost, removed_ptrs);
 
-        // lost_stracks_.clear();
-        // for (auto* t : new_lost) lost_stracks_.push_back(*t);
         std::vector<bytetrack::STrack> l_stracks;
         l_stracks.reserve(new_lost.size());
         for (auto* t : new_lost) {
@@ -339,9 +336,9 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
         lost_stracks_ = std::move(new_lost);
     }
 
-    LOG(INFO) << "After update state";
-    LOG(INFO) << "  End of frame: tracked=" << tracked_stracks_.size()
-              << "  lost=" << lost_stracks_.size();
+    VLOG(1) << "After update state";
+    VLOG(1) << "  End of frame: tracked=" << tracked_stracks_.size()
+            << "  lost=" << lost_stracks_.size();
 
     ////////////////////////////// OUTPUT ///////////////////////////////////
     auto output = std::make_unique<std::vector<Detection>>();
@@ -362,13 +359,15 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
         rb->set_height(box(3));
         output->push_back(d);
     }
-    LOG(INFO) << "After building detections";
-    LOG(INFO) << "  Output size: " << output->size();
+    VLOG(1) << "After building detections";
+    VLOG(1) << "  Output size: " << output->size();
     // cc->Outputs().Get("DETECTIONS",0).Add(
     // output.release(), cc->InputTimestamp());
     cc->Outputs().Get("DETECTIONS", 0).Add(output.release(), cc->Inputs().Get("DETECTIONS", 0).Value().Timestamp());
     return absl::OkStatus();
 }
+
+// ByteTrack Calculator track utils
 
 std::vector<bytetrack::STrack*> ByteTrackCalculator::JointStracks(std::vector<bytetrack::STrack*>& a, std::vector<bytetrack::STrack*>& b) {
     std::unordered_map<int, bool> exists;
@@ -407,7 +406,6 @@ std::vector<bytetrack::STrack*> ByteTrackCalculator::SubStracks(std::vector<byte
     return res;
 }
 
-//// WIP
 std::pair<std::vector<bytetrack::STrack*>, std::vector<bytetrack::STrack*>>
 ByteTrackCalculator::RemoveDuplicateStracks(std::vector<bytetrack::STrack*>& a, std::vector<bytetrack::STrack*>& b) {
     auto pdist = BuildIoUCostMatrix(a, b);

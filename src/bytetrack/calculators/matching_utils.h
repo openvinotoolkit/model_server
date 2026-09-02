@@ -51,7 +51,7 @@ inline float ComputeIoU(const Eigen::Vector4f& a,
 
     float area_a = (a[2] - a[0]) * (a[3] - a[1]);  // w * h
     float area_b = (b[2] - b[0]) * (b[3] - b[1]);
-    return inter_area / (area_a + area_b - inter_area);
+    return inter_area / ((area_a + area_b - inter_area) == 0.0f ? 1e-9f : area_a + area_b - inter_area);
 }
 
 inline Eigen::MatrixXf BuildIoUCostMatrix(

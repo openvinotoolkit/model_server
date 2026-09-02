@@ -29,7 +29,6 @@ ovms_cc_library(
         ":kalman_matrices",
         ":strack",
         ":bytetrack_calculator",
-        "//src/test/mediapipe/calculators:render_data_passthrough",
     ],
     alwayslink = 1
 )

@@ -133,7 +133,7 @@ Eigen::Vector4f STrack::TlwhToXyah(const Eigen::Vector4f& tlwh) {
 
     xyah(0) = x + w / 2.0f;
     xyah(1) = y + h / 2.0f;
-    xyah(2) = w / h;
+    xyah(2) = w / (h == 0.0f ? 1e-9f : h);
     xyah(3) = h;
 
     return xyah;
