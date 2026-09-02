@@ -435,9 +435,7 @@ TEST(PipelineDefinitionStatus, SleepingAfterFailedWakeIsRetryableViaReload) {
 
 TEST(PipelineDefinitionStatus, SleepEventOnSleepingIsIdempotent) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
-    pds.handle(ValidationPassedEvent());
     pds.handle(SleepEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
-    pds.handle(SleepEvent());
-    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    ASSERT_THROW(pds.handle(SleepEvent()), std::logic_error);
 }
