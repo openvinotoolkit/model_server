@@ -279,6 +279,56 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Chunking failed: exceeding max_allowed_chunks after chunking limit: 4; actual: 8"));  // 8 because of the last document which was chunked to 5 documents, 3 + 5 = 8
 }
 
+class RerankWithDeprecatedParamsHttpTest : public V3HttpTest {
+protected:
+    std::string endpoint = "/v1/rerank";
+    static std::unique_ptr<std::thread> t;
+
+public:
+    std::string modelName = "rerank_ov";
+    const size_t MAX_ALLOWED_CHUNKS = 4;
+
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/deprecated_config.json");
+        SetUpSuite(port, configPath, t);
+    }
+
+    void SetUp() {
+        V3HttpTest::SetUp();
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
+    }
+};
+std::unique_ptr<std::thread> RerankWithDeprecatedParamsHttpTest::t;
+
+TEST_F(RerankWithDeprecatedParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
+    rapidjson::Document document;
+    document.SetObject();
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+    document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
+    document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
+
+    rapidjson::Value documents(rapidjson::kArrayType);
+    for (size_t i = 0; i < MAX_ALLOWED_CHUNKS; i++) {
+        documents.PushBack("Test", allocator);  // Short document to not exceed 2 token space for chunks
+    }
+    document.AddMember("documents", documents, allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> wr(buffer);
+    document.Accept(wr);
+
+    std::string requestBody = buffer.GetString();
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+
 class RerankWithInvalidParamsHttpTest : public V3HttpTest {
 protected:
     std::string endpoint = "/v1/rerank";

@@ -27,6 +27,7 @@
 #include "../utils/env_guard.hpp"
 #include "../config.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "src/graph_export/rerank_graph_cli_parser.hpp"
 #include "../graph_export/graph_cli_parser.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
@@ -558,6 +559,24 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsZer
     };
     int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
+}
+
+TEST(OvmsGraphConfigTest, negativeRerankGraph_MaxLengthZero) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)"some/model",
+        (char*)"--model_repository_path",
+        (char*)"/some/path",
+        (char*)"--task",
+        (char*)"rerank",
+        (char*)"--max_length",
+        (char*)"0",
+    };
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::invalid_argument);
 }
 
 TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyAlias) {
@@ -3145,6 +3164,33 @@ TEST(OvmsGraphCliParserTest, emptyParserNamesAreAccepted) {
     EXPECT_EQ(graphSettings.toolParser.value(), "");
     ASSERT_TRUE(graphSettings.reasoningParser.has_value());
     EXPECT_EQ(graphSettings.reasoningParser.value(), "");
+}
+
+TEST(OvmsGraphCliParserTest, rerankMaxLengthZeroThrowsInvalidArgument) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::RerankGraphCLIParser parser;
+    std::vector<std::string> args = {"--max_length", "0"};
+    parser.parse(args);
+    EXPECT_THROW({
+        try {
+            parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+        } catch (const std::invalid_argument& e) {
+            EXPECT_NE(std::string(e.what()).find("max_length must be greater than 0"), std::string::npos);
+            throw;
+        }
+    },
+        std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, rerankMaxLengthNonZeroIsAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::RerankGraphCLIParser parser;
+    std::vector<std::string> args = {"--max_length", "1"};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(rerankGraphSettings.maxLength.has_value());
+    ASSERT_EQ(rerankGraphSettings.maxLength.value(), 1u);
 }
 
 TEST(OvmsGraphCliParserTest, noneParserNamesAreAccepted) {

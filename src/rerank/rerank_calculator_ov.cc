@@ -114,6 +114,10 @@ public:
         if (options.has_max_length()) {
             this->max_position_embeddings = options.max_length();
             SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Options defined max_length: {}", this->max_position_embeddings);
+        } else if (options.has_max_position_embeddings()) {
+            SPDLOG_LOGGER_WARN(rerank_calculator_logger, "max_position_embeddings option is deprecated, use max_length instead");
+            this->max_position_embeddings = options.max_position_embeddings();
+            SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Options defined max_position_embeddings: {}", this->max_position_embeddings);
         } else {
             if (rerank_session->getMaxModelLength().has_value()) {
                 this->max_position_embeddings = rerank_session->getMaxModelLength().value();
