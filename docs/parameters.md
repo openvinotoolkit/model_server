@@ -184,6 +184,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 |---------------------------|--------------|--------------------------------------------------------------------------------|
 | `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
 | `--max_allowed_chunks`    | `integer`    | Maximum allowed chunks. Default: 10000.                                        |
+| `--max_length`            | `integer`    | Maximum input length in tokens. If omitted, OVMS will detect it from the model's config.json. |
 
 ### Text to speech
 | option                    | Value format | Description                                                                    |
