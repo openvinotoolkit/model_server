@@ -147,7 +147,10 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--enable_prefix_caching`             | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                               |
 | `--max_num_batched_tokens`            | `integer`    | The maximum number of tokens that can be batched together.                                                                 |
 | `--cache_size`                        | `integer`    | KV Cache size in GB. Default: 0 which is a dynamic allocation.                              |
-| `--draft_source_model`                | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model.                                            |
+| `--draft_source_model`                | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model. Mutually exclusive with `--draft_model_path`.  |
+| `--draft_model_path`                  | `string`     | Absolute path to an already-exported OpenVINO draft model directory. Use for local models instead of `--draft_source_model`.   |
+| `--draft_eagle3_mode`                 | `bool`       | **Deprecated.** Draft model strategy (EAGLE3, DFlash, MTP, Fast Draft) is now auto-detected from model artifacts. This flag is accepted but has no effect.  |
+| `--draft_device`                      | `string`     | Device to run the draft model on. Defaults to the same device as the main model.                                              |
 | `--dynamic_split_fuse`                | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                                       |
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
 | `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).            |

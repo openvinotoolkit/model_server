@@ -121,7 +121,9 @@ struct TextGenGraphSettingsImpl {
     std::string dynamicSplitFuse = "true";
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
-    bool draftEagle3Mode = false;
+    bool draftEagle3Mode = false;  // deprecated: strategy is now auto-detected from model rt_info
+    std::optional<std::string> draftDevice;
+    std::optional<std::string> draftModelPath;
     std::optional<std::string> pipelineType;
     std::optional<std::string> reasoningParser;
     std::optional<std::string> toolParser;
