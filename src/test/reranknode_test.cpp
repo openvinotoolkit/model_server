@@ -328,7 +328,6 @@ TEST_F(RerankWithDeprecatedParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) 
         ovms::StatusCode::OK);
 }
 
-
 class RerankWithInvalidParamsHttpTest : public V3HttpTest {
 protected:
     std::string endpoint = "/v1/rerank";
