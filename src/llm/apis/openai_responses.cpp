@@ -271,47 +271,6 @@ static FunctionCallFields readFunctionCallFields(const rapidjson::Value& item) {
     return out;
 }
 
-static absl::StatusOr<std::string> normalizeFunctionCallOutput(const rapidjson::Value& outputValue) {
-    if (outputValue.IsString()) {
-        return std::string(outputValue.GetString());
-    }
-    if (!outputValue.IsArray()) {
-        return absl::InvalidArgumentError("function_call_output.output must be a string or array");
-    }
-
-    std::string textOnlyOutput;
-    bool hasAnyText = false;
-    for (const auto& contentItem : outputValue.GetArray()) {
-        if (!contentItem.IsObject()) {
-            continue;
-        }
-        auto contentObj = contentItem.GetObject();
-        auto typeIt = contentObj.FindMember("type");
-        auto textIt = contentObj.FindMember("text");
-        if (typeIt == contentObj.MemberEnd() || !typeIt->value.IsString() ||
-            textIt == contentObj.MemberEnd() || !textIt->value.IsString()) {
-            continue;
-        }
-        const std::string contentType = typeIt->value.GetString();
-        if (contentType != "input_text" && contentType != "output_text") {
-            continue;
-        }
-        if (hasAnyText) {
-            textOnlyOutput += "\n";
-        }
-        textOnlyOutput += textIt->value.GetString();
-        hasAnyText = true;
-    }
-    if (hasAnyText) {
-        return textOnlyOutput;
-    }
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    outputValue.Accept(writer);
-    return std::string(buffer.GetString());
-}
-
 // Reject function_call items that would translate to a syntactically valid but
 // semantically broken assistant.tool_calls entry (missing identifier, name, or
 // arguments). The call_id/id mismatch is also what breaks tool_call_id linkage
@@ -400,6 +359,7 @@ static absl::StatusOr<ResponsesInputItemKind> classifyInputItem(const rapidjson:
 // rapidjson messages array) is provided by the Sink template parameter, which
 // must implement:
 //   absl::Status extractContent(itemObj, index, std::string& outText);
+//   absl::Status extractToolOutput(itemObj, std::string& outText);
 //   void emitToolMessage(callId, output);
 //   void emitMessage(role, contentText, reasoning);  // reasoning empty -> skip
 //   void emitAssistantWithToolCalls(contentText, reasoning, toolCalls);
@@ -466,13 +426,10 @@ private:
         auto callIdIt = itemObj.FindMember("call_id");
         if (callIdIt != itemObj.MemberEnd() && callIdIt->value.IsString())
             callId = callIdIt->value.GetString();
-        auto outputIt = itemObj.FindMember("output");
-        if (outputIt == itemObj.MemberEnd())
-            return absl::InvalidArgumentError("function_call_output item is missing required output field");
-        auto outputStatus = normalizeFunctionCallOutput(outputIt->value);
-        if (!outputStatus.ok())
-            return outputStatus.status();
-        std::string output = outputStatus.value();
+        std::string output;
+        auto status = sink.extractToolOutput(itemObj, output);
+        if (!status.ok())
+            return status;
         sink.emitToolMessage(callId, output);
         return absl::OkStatus();
     }
@@ -601,12 +558,60 @@ public:
         return absl::OkStatus();
     }
 
+    // Extract the `output` field of a function_call_output item into either a
+    // plain string or a text-typed content array preserved in pendingContentArray.
+    // The text-typed array is left for TextContentNormalizationProcessor to flatten,
+    // matching how extractContent handles user/system input content arrays.
+    absl::Status extractToolOutput(const rapidjson::Value::ConstObject& itemObj,
+        std::string& outText) {
+        outText.clear();
+        hasPendingContent = false;
+        pendingContentArray.SetArray();
+        auto outputIt = itemObj.FindMember("output");
+        if (outputIt == itemObj.MemberEnd())
+            return absl::InvalidArgumentError("function_call_output item is missing required output field");
+        if (outputIt->value.IsString()) {
+            outText = outputIt->value.GetString();
+            return absl::OkStatus();
+        }
+        if (!outputIt->value.IsArray())
+            return absl::InvalidArgumentError("function_call_output.output must be a string or array");
+        if (outputIt->value.Empty())
+            return absl::InvalidArgumentError("function_call_output.output array must not be empty");
+        for (const auto& contentItem : outputIt->value.GetArray()) {
+            if (!contentItem.IsObject())
+                return absl::InvalidArgumentError("function_call_output.output items must be objects");
+            auto contentObj = contentItem.GetObject();
+            auto typeIt = contentObj.FindMember("type");
+            if (typeIt == contentObj.MemberEnd() || !typeIt->value.IsString())
+                return absl::InvalidArgumentError("function_call_output.output item type is missing or invalid");
+            const std::string type = typeIt->value.GetString();
+            if (type != "input_text" && type != "output_text")
+                return absl::InvalidArgumentError(absl::StrCat("unsupported function_call_output.output item type: ", type));
+            auto textIt = contentObj.FindMember("text");
+            if (textIt == contentObj.MemberEnd() || !textIt->value.IsString())
+                return absl::InvalidArgumentError(absl::StrCat(type, " requires a valid text field"));
+            rapidjson::Value textEntry(rapidjson::kObjectType);
+            textEntry.AddMember("type", rapidjson::Value("text", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
+            textEntry.AddMember("text", rapidjson::Value(textIt->value.GetString(), scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
+            pendingContentArray.PushBack(textEntry, scratchDoc.GetAllocator());
+        }
+        hasPendingContent = true;
+        return absl::OkStatus();
+    }
+
     void emitToolMessage(const std::string& callId, const std::string& output) {
         chatHistory.push_back({});
         chatHistory.last()["role"] = "tool";
         if (!callId.empty())
             chatHistory.last()["tool_call_id"] = callId;
-        chatHistory.last()["content"] = output;
+        if (hasPendingContent) {
+            // Preserve content array for TextContentNormalizationProcessor to flatten.
+            chatHistory.last()["content"] = rapidJsonValueToJsonContainer(pendingContentArray);
+            hasPendingContent = false;
+        } else {
+            chatHistory.last()["content"] = output;
+        }
     }
 
     void emitMessage(const std::string& role, const std::string& contentText, const std::string& reasoning) {
