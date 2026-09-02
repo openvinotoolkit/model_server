@@ -13,7 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -22,8 +24,6 @@
 #include <iterator>
 
 #include <spdlog/spdlog.h>
-
-#include <fstream>
 
 #include <openvino/runtime/properties.hpp>
 #include <rapidjson/error/en.h>
@@ -57,6 +57,93 @@
 #include "omni_model/legacy/servable.hpp"
 
 namespace ovms {
+
+GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath) {
+    namespace fs = std::filesystem;
+    using DS = GenAiServableProperties::DraftModelStrategy;
+    if (fs::exists(fs::path(draftPath) / "openvino_mtp_model.xml"))
+        return DS::MTP;
+
+    const auto xmlPath = fs::path(draftPath) / "openvino_model.xml";
+    if (!fs::exists(xmlPath))
+        throw std::runtime_error("Draft model XML not found at: " + xmlPath.string());
+    std::ifstream file(xmlPath.string(), std::ios::binary);
+    if (!file.good())
+        throw std::runtime_error("Cannot read draft model XML: " + xmlPath.string());
+
+    file.seekg(0, std::ios::end);
+    std::streamoff remaining = file.tellg();
+
+    static constexpr std::streamoff READ_BUF_SIZE = 4096;  // I/O buffer size, not a scan limit
+    static constexpr size_t MAX_LINES = 500;               // safety cap if rt_info is never found
+
+    bool inRtInfo = false;
+    bool foundDflash = false;
+    bool foundEagle3 = false;
+    bool stop = false;
+    size_t linesRead = 0;
+    std::string buffer;
+
+    // Scans a single line, walking the file from the last line upward.
+    auto processLine = [&](const std::string& l) {
+        if (l.find("</rt_info>") != std::string::npos) {
+            inRtInfo = true;
+            return;
+        }
+        if (l.find("<rt_info") != std::string::npos) {
+            stop = true;
+            return;
+        }
+        if (!inRtInfo)
+            return;
+        auto isTruthy = [&](const char* key, bool& found) {
+            if (found)
+                return;
+            auto keyPos = l.find(key);
+            if (keyPos == std::string::npos)
+                return;
+            auto valuePos = l.find("value=", keyPos);
+            if (valuePos == std::string::npos)
+                return;
+            if (l.find("\"1\"", valuePos) != std::string::npos ||
+                l.find("\"True\"", valuePos) != std::string::npos ||
+                l.find("\"true\"", valuePos) != std::string::npos)
+                found = true;
+        };
+        isTruthy("dflash_mode", foundDflash);
+        isTruthy("eagle3_mode", foundEagle3);
+    };
+
+    // Read backward in fixed-size buffers, prepending each earlier buffer to what's
+    // already accumulated, popping complete lines off the tail as soon as they are known.
+    // Stops as soon as the rt_info block has been fully scanned (its open tag reached)
+    // or MAX_LINES have been processed without finding it.
+    while (remaining > 0 && !stop && linesRead < MAX_LINES) {
+        const std::streamoff readSize = std::min(READ_BUF_SIZE, remaining);
+        remaining -= readSize;
+        file.seekg(remaining, std::ios::beg);
+        std::string chunk(static_cast<size_t>(readSize), '\0');
+        file.read(chunk.data(), readSize);
+        buffer.insert(0, chunk);
+
+        size_t nlPos;
+        while (!stop && linesRead < MAX_LINES && (nlPos = buffer.rfind('\n')) != std::string::npos) {
+            processLine(buffer.substr(nlPos + 1));
+            ++linesRead;
+            buffer.erase(nlPos);
+        }
+    }
+    if (!stop && linesRead < MAX_LINES && !buffer.empty()) {
+        processLine(buffer);
+    }
+
+    // DFlash takes priority over EAGLE3 (mirrors GenAI's CB pipeline strategy selection)
+    if (foundDflash)
+        return DS::DFLASH;
+    if (foundEagle3)
+        return DS::EAGLE3;
+    return DS::FAST_DRAFT;
+}
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
 
@@ -565,9 +652,21 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         } else if (pipelineType == PipelineType::VLM_CB) {
             // VLM uses CB engine, so initialization part is shared (both servables share the same properties),
             // therefore we can use CB servable initializer to initialize VLM servable
-            if (!nodeOptions.draft_models_path().empty() && !nodeOptions.draft_eagle3_mode()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Fast Draft speculative decoding is not supported for VLM pipelines. Use EAGLE3 (draft_eagle3_mode: true) with a matching EAGLE3 head model instead.");
-                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+            if (!nodeOptions.draft_models_path().empty()) {
+                // Only plain Fast Draft is unsupported for VLM; EAGLE3, DFlash and MTP all work
+                auto fsDraftPath = std::filesystem::path(nodeOptions.draft_models_path());
+                if (!fsDraftPath.is_absolute())
+                    fsDraftPath = std::filesystem::path(graphPath) / fsDraftPath;
+                try {
+                    auto strategy = detectDraftModelStrategy(fsDraftPath.string());
+                    if (strategy == GenAiServableProperties::DraftModelStrategy::FAST_DRAFT) {
+                        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Fast Draft speculative decoding is not supported for VLM pipelines. Use an EAGLE3 head, DFlash, or an MTP model instead.");
+                        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+                    }
+                } catch (const std::exception& e) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to detect draft model strategy: {}", e.what());
+                    return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+                }
             }
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;

@@ -51,6 +51,7 @@
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -59,6 +60,7 @@
 #include "../platform_utils.hpp"
 #include "../test_http_utils.hpp"
 #include "../test_utils.hpp"
+#include "../test_with_temp_dir.hpp"
 #include "src/test/environment.hpp"
 
 using namespace ovms;
@@ -5995,4 +5997,71 @@ TEST(BaseGenerationConfigBuilderTest, PromptLookupAssistantConfidenceThresholdTh
     request.assistantConfidenceThreshold = 0.5f;
     builder.parseConfigFromRequest(request);
     EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+// ==========================================
+// detectDraftModelStrategy tests
+// ==========================================
+
+class DetectDraftModelStrategyTest : public TestWithTempDir {};
+using DS = ovms::GenAiServableProperties::DraftModelStrategy;
+
+TEST_F(DetectDraftModelStrategyTest, MtpDetectedByFilePresence) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_mtp_model.xml"})).close();
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::MTP);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByNumericValue) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByTrueUppercase) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"True\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByTrueLowercase) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"true\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, DflashDetected) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<dflash_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::DFLASH);
+}
+
+TEST_F(DetectDraftModelStrategyTest, DflashTakesPriorityOverEagle3) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<dflash_mode value=\"1\" />\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::DFLASH);
+}
+
+TEST_F(DetectDraftModelStrategyTest, FastDraftWhenNoMarkers) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<layers></layers>\n<rt_info>\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::FAST_DRAFT);
+}
+
+TEST_F(DetectDraftModelStrategyTest, KeyOutsideRtInfoIgnored) {
+    // eagle3_mode keyword in a layer name must not trigger detection
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<layers>\n<layer name=\"eagle3_mode_layer\" />\n</layers>\n<rt_info>\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::FAST_DRAFT);
+}
+
+TEST_F(DetectDraftModelStrategyTest, ThrowsWhenXmlMissing) {
+    EXPECT_THROW(ovms::detectDraftModelStrategy(directoryPath), std::runtime_error);
+}
+
+TEST_F(DetectDraftModelStrategyTest, MtpTakesPriorityOverXmlScan) {
+    // MTP file presence short-circuits before reading the XML
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_mtp_model.xml"})).close();
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::MTP);
 }

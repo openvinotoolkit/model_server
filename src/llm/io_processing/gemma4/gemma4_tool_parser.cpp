@@ -364,7 +364,9 @@ std::optional<Delta> Gemma4ToolParser::parseChunk(const std::string& chunk, cons
             return ToolCallDelta{toolCallIndex, generateRandomId(), this->toolCall.name, ""};
         }
         if (this->currentState == State::ToolCallEnded) {
-            return wrapDeltaArgs(this->toolCall.arguments, toolCallIndex);
+            auto delta = wrapDeltaArgs(this->toolCall.arguments, toolCallIndex);
+            this->toolCall = ToolCall{};
+            return delta;
         }
         if (this->currentState == State::Content) {
             size_t contentEnd = this->streamingContent.find(TOOL_CALL_START_TAG, this->streamingPosition);
