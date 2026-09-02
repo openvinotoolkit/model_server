@@ -51,6 +51,7 @@
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -59,6 +60,7 @@
 #include "../platform_utils.hpp"
 #include "../test_http_utils.hpp"
 #include "../test_utils.hpp"
+#include "../test_with_temp_dir.hpp"
 #include "src/test/environment.hpp"
 
 using namespace ovms;
@@ -2080,8 +2082,8 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
             if (params.checkLogprobs) {
                 ASSERT_FALSE(choice["logprobs"].IsObject());
             }
-            if (choice.HasMember("delta")) {
-                ASSERT_TRUE(choice["delta"].IsObject());
+            // "delta" may be an empty object {} in finish-reason-only chunks
+            if (choice["delta"].HasMember("content")) {
                 ASSERT_TRUE(choice["delta"]["content"].IsString());
             }
         }
@@ -2131,7 +2133,10 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStreamSkipSpecialTokens
         for (auto& choice : d["choices"].GetArray()) {
             if (choice.HasMember("delta")) {
                 ASSERT_TRUE(choice["delta"].IsObject());
-                ASSERT_TRUE(choice["delta"]["content"].IsString());
+                // "delta" may be an empty object {} in finish-reason-only chunks
+                if (choice["delta"].HasMember("content")) {
+                    ASSERT_TRUE(choice["delta"]["content"].IsString());
+                }
             }
         }
         EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
@@ -5448,6 +5453,40 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsSpeculativeDecodingSanityCheck) {
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
 }
 
+TEST_F(LLMOptionsHttpTest, LegacyServableDraftModelsPathIsProcessedNotIgnored) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: { tag_index: 'LOOPBACK:0', back_edge: true }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                pipeline_type: LM
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                draft_models_path: "/nonexistent/draft/model"
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options { [mediapipe.SyncSetInputStreamHandlerOptions.ext] { sync_set { tag_index: "LOOPBACK:0" } } }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<GenAiServable> servable;
+    // draft_models_path is now processed; a bad path must fail rather than be silently ignored
+    EXPECT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+}
+
 class GetPromptTokensString : public ::testing::Test {
 public:
     std::string expectedTokensString;
@@ -5817,4 +5856,212 @@ TEST(BaseGenerationConfigBuilderTest, SeedPreservedWhenExplicitlySet) {
     request.seed = 42u;
     builder.parseConfigFromRequest(request);
     EXPECT_EQ(builder.getConfig().rng_seed, 42u);
+}
+
+// Unit tests for BaseGenerationConfigBuilder assisted decoding methods
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3DefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3ExplicitZeroNumAssistantTokensHonored) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 0u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3EnforcesGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.bestOf = 2;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3BranchingFactorAndTreeDepthMapped) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.branchingFactor = 4u;
+    request.treeDepth = 3u;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().branching_factor, 4u);
+    EXPECT_EQ(builder.getConfig().tree_depth, 3u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3AssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftDefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftBothAssistantParamsThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.numAssistantTokens = 5;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftConfidenceThresholdAloneIsValid) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    request.assistantConfidenceThreshold = 0.8f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FLOAT_EQ(builder.getConfig().assistant_confidence_threshold, 0.8f);
+    EXPECT_FALSE(builder.getConfig().num_assistant_tokens.has_value());
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftSamplingThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.7f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftGreedyWithoutMaxTokensIsValid) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+}
+
+TEST(BaseGenerationConfigBuilderTest, PromptLookupDefaultsApplied) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::PROMPT_LOOKUP};
+    OpenAIRequest request;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+    EXPECT_EQ(builder.getConfig().max_ngram_size, 3u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, PromptLookupZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::PROMPT_LOOKUP};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, PromptLookupAssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::PROMPT_LOOKUP};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+// ==========================================
+// detectDraftModelStrategy tests
+// ==========================================
+
+class DetectDraftModelStrategyTest : public TestWithTempDir {};
+using DS = ovms::GenAiServableProperties::DraftModelStrategy;
+
+TEST_F(DetectDraftModelStrategyTest, MtpDetectedByFilePresence) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_mtp_model.xml"})).close();
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::MTP);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByNumericValue) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByTrueUppercase) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"True\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByTrueLowercase) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"true\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, DflashDetected) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<dflash_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::DFLASH);
+}
+
+TEST_F(DetectDraftModelStrategyTest, DflashTakesPriorityOverEagle3) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<dflash_mode value=\"1\" />\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::DFLASH);
+}
+
+TEST_F(DetectDraftModelStrategyTest, FastDraftWhenNoMarkers) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<layers></layers>\n<rt_info>\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::FAST_DRAFT);
+}
+
+TEST_F(DetectDraftModelStrategyTest, KeyOutsideRtInfoIgnored) {
+    // eagle3_mode keyword in a layer name must not trigger detection
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<layers>\n<layer name=\"eagle3_mode_layer\" />\n</layers>\n<rt_info>\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::FAST_DRAFT);
+}
+
+TEST_F(DetectDraftModelStrategyTest, ThrowsWhenXmlMissing) {
+    EXPECT_THROW(ovms::detectDraftModelStrategy(directoryPath), std::runtime_error);
+}
+
+TEST_F(DetectDraftModelStrategyTest, MtpTakesPriorityOverXmlScan) {
+    // MTP file presence short-circuits before reading the XML
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_mtp_model.xml"})).close();
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::MTP);
 }

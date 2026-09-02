@@ -38,6 +38,7 @@
 #include "../../io_processing/parser_config_validation.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
+#include "../../servable_initializer.hpp"
 
 namespace ovms {
 Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
@@ -91,10 +92,43 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         SPDLOG_INFO("No device specified, using recommended device: {}", properties->device);
     }
 
-    if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
-        // Consider moving draft parameters to separate structure in node options, so it's validated on the proto level
-        SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
-        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    if (!nodeOptions.draft_models_path().empty()) {
+        auto fsDraftModelsPath = std::filesystem::path(nodeOptions.draft_models_path());
+        std::string draftPipelinePath = fsDraftModelsPath.is_relative()
+                                            ? (std::filesystem::path(graphPath) / fsDraftModelsPath).string()
+                                            : fsDraftModelsPath.string();
+        try {
+            const std::string draftDevice = nodeOptions.draft_device().empty() ? properties->device : nodeOptions.draft_device();
+            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, draftDevice);
+            properties->pluginConfig.insert(draftPipeline);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Error during draft model initialization for draft_models_path: {} exception: {}", draftPipelinePath, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        } catch (...) {
+            SPDLOG_ERROR("Error during draft model initialization for draft_models_path: {}", draftPipelinePath);
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        try {
+            properties->draftModelStrategy = detectDraftModelStrategy(draftPipelinePath);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to detect draft model strategy for {}: {}", draftPipelinePath, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        using DS = GenAiServableProperties::DraftModelStrategy;
+        switch (properties->draftModelStrategy) {
+        case DS::EAGLE3:
+            SPDLOG_INFO("Draft model strategy: EAGLE3");
+            break;
+        case DS::DFLASH:
+            SPDLOG_INFO("Draft model strategy: DFlash");
+            break;
+        case DS::MTP:
+            SPDLOG_INFO("Draft model strategy: MTP (Multi-Token Prediction)");
+            break;
+        case DS::FAST_DRAFT:
+            SPDLOG_INFO("Draft model strategy: Fast Draft");
+            break;
+        }
     }
 
     status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);
