@@ -38,9 +38,11 @@ void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding num_assistant_tokens to default value of 5 for fast draft decoding as neither num_assistant_tokens nor assistant_confidence_threshold were set.");
         }
         // Enforce greedy decoding
-        config.do_sample = false;  // Fast Draft does not support random sampling
-        config.num_beams = 1;      // Fast Draft does not support beam search
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Fast Draft greedy decoding enforced: setting do_sample to false and num_beams to 1.");
+        if (config.do_sample || config.num_beams != 1) {
+            config.do_sample = false;  // Fast Draft does not support random sampling
+            config.num_beams = 1;      // Fast Draft does not support beam search
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Fast Draft greedy decoding enforced: setting do_sample to false and num_beams to 1.");
+        }
         break;
     case DecodingMethod::EAGLE3:
         if (config.assistant_confidence_threshold != 0.f)
@@ -74,9 +76,11 @@ void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding unset max_tokens to 1000000 for DFlash decoding to avoid an integer overflow in the draft config computation.");
         }
         // Enforce greedy decoding
-        config.do_sample = false;  // DFlash does not support random sampling
-        config.num_beams = 1;      // DFlash does not support beam search
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: DFlash greedy decoding enforced: setting do_sample to false and num_beams to 1.");
+        if (config.do_sample || config.num_beams != 1) {
+            config.do_sample = false;  // DFlash does not support random sampling
+            config.num_beams = 1;      // DFlash does not support beam search
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: DFlash greedy decoding enforced: setting do_sample to false and num_beams to 1.");
+        }
         break;
     case DecodingMethod::MTP:
         if (config.assistant_confidence_threshold != 0.f)
@@ -96,9 +100,11 @@ void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding unset max_tokens to 1000000 for MTP decoding to avoid an unbounded reserve() call upstream.");
         }
         // Enforce greedy decoding
-        config.do_sample = false;  // MTP does not support random sampling
-        config.num_beams = 1;      // MTP does not support beam search
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: MTP greedy decoding enforced: setting do_sample to false and num_beams to 1.");
+        if (config.do_sample || config.num_beams != 1) {
+            config.do_sample = false;  // MTP does not support random sampling
+            config.num_beams = 1;      // MTP does not support beam search
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: MTP greedy decoding enforced: setting do_sample to false and num_beams to 1.");
+        }
         break;
     case DecodingMethod::PROMPT_LOOKUP:
         if (config.assistant_confidence_threshold != 0.f)
