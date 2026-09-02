@@ -41,7 +41,3 @@ OpenVINO Model Server has a set of mechanisms preventing denial of service attac
 ---
 
 - MediaPipe does not validate all the settings during graph initialization. Some settings are checked during graph creation phase (upon request processing). Therefore it is a good practice to always test the configuration by sending example requests to the KServe endpoints before deployment.
-
----
-
-By default, OVMS rejects inference requests whose input count/names don't match the model/pipeline signature. The `--disable_input_count_validation` flag turns off the *extra input* check, allowing requests with additional, unrecognized inputs to be processed (extra inputs are ignored; required inputs are still validated). **This flag is not recommended for production use** - disabling it weakens the server's input validation and may have inpact on performence.
