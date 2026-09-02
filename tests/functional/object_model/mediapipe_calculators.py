@@ -548,6 +548,7 @@ class LLMCalculator(PythonCalculator):
     max_tokens_limit: int = None
     device: str = None
     enable_tool_guided_generation: bool = False
+    enable_word_timestamps: bool = False
 
     def __post_init__(self):
         self.input_streams = 'input_stream: "REQUEST:in"'
@@ -927,6 +928,7 @@ class S2tCalculator(LLMCalculator):
         target_device_str = f'target_device: "{self.device if self.device is not None else TargetDevice.CPU}",'
         num_streams = 2 if get_base_device(self.device) == TargetDevice.GPU else 1
         plugin_config_str = f'plugin_config: \'{{ "NUM_STREAMS": "{num_streams}" }}\','
+        word_timestamps_str = "enable_word_timestamps: true," if self.enable_word_timestamps else ""
         content = f"""{header}
 node {{
     name: "{self.node_name}",
@@ -945,6 +947,7 @@ node {{
             models_path: "{self.models_path_internal}",
             {target_device_str}
             {plugin_config_str}
+            {word_timestamps_str}
         }}
     }}
     input_stream_handler {{

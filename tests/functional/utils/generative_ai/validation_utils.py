@@ -448,7 +448,7 @@ class GenerativeAIValidationUtils:
         # Spectral flatness — noise vs speech detector
         # Wiener entropy: geometric_mean(|FFT|) / arithmetic_mean(|FFT|)
         # White noise → ~1.0, speech → ~0.05-0.4
-        magnitude = np.abs(np.fft.rfft(data))
+        magnitude = np.abs(np.fft.rfft(data)) if n_samples > 0 else np.empty(0)
         magnitude = magnitude[magnitude > 0]  # avoid log(0)
         if len(magnitude) > 0:
             log_mean = np.mean(np.log(magnitude))
@@ -494,6 +494,10 @@ class GenerativeAIValidationUtils:
         if not allow_empty_response:
             metrics = cls._analyze_audio(speech_file_path)
 
+            assert metrics["duration_sec"] > 0, (
+                f"TTS returned no audio: the response is a {file_size} byte container with 0 audio samples. "
+                f"OVMS answered with a success status instead of an error. File: {speech_file_path}"
+            )
             assert metrics["duration_sec"] >= min_duration_sec, (
                 f"Audio too short: {metrics['duration_sec']}s < {min_duration_sec}s minimum. "
                 f"File: {speech_file_path}"

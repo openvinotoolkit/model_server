@@ -539,7 +539,7 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting speech2text model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export speech2text model", source_model)
