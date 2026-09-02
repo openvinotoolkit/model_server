@@ -90,14 +90,15 @@ struct OnyxToolParserImpl {
     // Return all tool calls fully closed ("</atem:function_calls>" seen) in the aggregated
     // content so far that were not returned before -- nullopt if none completed yet.
     std::optional<ToolCalls_t> parseChunk(const std::string& chunk);
+    // Called once generation has stopped and parseChunk() produced nothing new: synthesizes
+    // the closing tags still missing for whatever tool call is in flight (using only data
+    // already captured) so it can be recovered instead of silently dropped. An incomplete
+    // name/attribute can't be recovered and returns nullopt.
+    std::optional<ToolCalls_t> finalizeOnGenerationEnd();
     std::optional<std::string> getCurrentFunctionName() const;
     Status removeToolCallsFromContentIfNeeded(std::string& outContent);
     void reset() {
-        currentState = State::Content;
-        currentFunction.clear();
-        currentParameterName.clear();
-        streamContent.clear();
-        lastProcessedPosition = 0;
+        resetParsingState();
         toolCallPositions = ToolCallPositions{};
     }
     State getCurrentState() const {
@@ -112,6 +113,15 @@ private:
     // Onyx renders parameter values tight ("...\">VALUE</atem:parameter>"), so unlike
     // qwen3coder there is no surrounding-newline convention to trim.
     const bool removeNewlineAroundParameters = false;
+    // Resets everything except toolCallPositions, which removeToolCallsFromContentIfNeeded()
+    // still needs to consult after generation ends.
+    void resetParsingState() {
+        currentState = State::Content;
+        currentFunction.clear();
+        currentParameterName.clear();
+        streamContent.clear();
+        lastProcessedPosition = 0;
+    }
     State currentState = State::Content;
     OnyxFunctool currentFunction;
     std::string currentParameterName;
