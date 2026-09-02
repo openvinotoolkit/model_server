@@ -89,7 +89,8 @@ StateKeeper ReloadState::handle(const RetireEvent& e) const {
     return {};
 }
 StateKeeper ReloadState::handle(const SleepEvent& e) const {
-    return {};  // unload is a no-op while reloading
+    throw std::logic_error(INVALID_TRANSITION_MESSAGE);
+    return {};
 }
 
 PipelineDefinitionStateCode AvailableState::getStateCode() const {
@@ -134,8 +135,8 @@ StateKeeper AvailableRequiredRevalidation::handle(const UsedModelChangedEvent& e
 StateChanger<RetiredState> AvailableRequiredRevalidation::handle(const RetireEvent& e) const {
     return {};
 }
-StateKeeper AvailableRequiredRevalidation::handle(const SleepEvent& e) const {
-    return {};  // unload is a no-op in AVAILABLE_REQUIRED_REVALIDATION
+StateChanger<SleepingState> AvailableRequiredRevalidation::handle(const SleepEvent& e) const {
+    return {};
 }
 
 PipelineDefinitionStateCode LoadingPreconditionFailedState::getStateCode() const {
@@ -182,7 +183,7 @@ StateChanger<RetiredState> LoadingFailedLastValidationRequiredRevalidation::hand
     return {};
 }
 StateKeeper LoadingFailedLastValidationRequiredRevalidation::handle(const SleepEvent& e) const {
-    return {};  // unload is a no-op when loading already failed
+    return {};
 }
 
 PipelineDefinitionStateCode RetiredState::getStateCode() const {
@@ -208,7 +209,8 @@ StateKeeper RetiredState::handle(const RetireEvent& e) const {
     return {};
 }
 StateKeeper RetiredState::handle(const SleepEvent& e) const {
-    return {};  // unload is a no-op when already retired
+    throw std::logic_error(INVALID_TRANSITION_MESSAGE);
+    return {};
 }
 
 PipelineDefinitionStateCode SleepingState::getStateCode() const {
@@ -230,7 +232,8 @@ StateKeeper SleepingState::handle(const UsedModelChangedEvent& e) const {
     return {};
 }
 StateKeeper SleepingState::handle(const SleepEvent& e) const {
-    return {};  // already unloaded, idempotent
+    throw std::logic_error(INVALID_TRANSITION_MESSAGE);
+    return {};
 }
 
 PipelineDefinitionStatus::PipelineDefinitionStatus(const std::string& type, const std::string& name) :

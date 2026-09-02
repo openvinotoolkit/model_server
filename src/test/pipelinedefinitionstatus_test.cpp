@@ -378,22 +378,31 @@ TEST(PipelineDefinitionStatus, SleepEventOnBeginTransitionsToSleeping) {
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 
-TEST(PipelineDefinitionStatus, SleepEventOnReloadingIsNoOp) {
+TEST(PipelineDefinitionStatus, SleepEventOnReloadingShouldThrow) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
     pds.handle(ReloadEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
-    pds.handle(SleepEvent());
+    ASSERT_THROW(pds.handle(SleepEvent()), std::logic_error);
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
 }
 
-TEST(PipelineDefinitionStatus, SleepEventOnRetiredIsNoOp) {
+TEST(PipelineDefinitionStatus, SleepEventOnRetiredShouldThrow) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(ValidationPassedEvent());
     pds.handle(RetireEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
-    pds.handle(SleepEvent());
+    ASSERT_THROW(pds.handle(SleepEvent()), std::logic_error);
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+}
+
+TEST(PipelineDefinitionStatus, SleepEventOnAvailableRequiredRevalidationTransitionsToSleeping) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 
 TEST(PipelineDefinitionStatus, SleepEventOnLoadingPreconditionFailedRevertsToSleeping) {

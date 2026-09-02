@@ -195,7 +195,7 @@ struct AvailableRequiredRevalidation {
     StateChanger<LoadingPreconditionFailedState> handle(const ValidationFailedEvent& e) const;
     StateKeeper handle(const UsedModelChangedEvent& e) const;
     StateChanger<RetiredState> handle(const RetireEvent& e) const;
-    StateKeeper handle(const SleepEvent& e) const;
+    StateChanger<SleepingState> handle(const SleepEvent& e) const;
 };
 
 struct LoadingPreconditionFailedState {

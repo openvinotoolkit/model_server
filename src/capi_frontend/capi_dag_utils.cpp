@@ -43,7 +43,7 @@ OVMS_ServableState convertToServableState(ovms::PipelineDefinitionStateCode code
         return OVMS_ServableState::OVMS_STATE_LOADING_FAILED;
     case ovms::PipelineDefinitionStateCode::SLEEPING:
         return OVMS_ServableState::OVMS_STATE_AVAILABLE;
-    }  // TODO fixme C-API change - new value in enum?
+    }  // TODO #atobiszei idle management C-API change - new value in enum?
     throw new std::exception();
 }
 

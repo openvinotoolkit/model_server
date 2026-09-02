@@ -17,6 +17,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <memory>
+
 #include "src/model_management/servable_group_manager.hpp"
 #include "src/status.hpp"
 
