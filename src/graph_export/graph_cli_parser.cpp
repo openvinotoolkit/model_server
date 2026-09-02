@@ -65,8 +65,16 @@ void GraphCLIParser::createOptions() {
             "HF model name or path to the local folder with PyTorch or OpenVINO draft model.",
             cxxopts::value<std::string>(),
             "DRAFT_SOURCE_MODEL")
+        ("draft_model_path",
+            "Absolute path to an already-exported OpenVINO draft model directory (use instead of --draft_source_model for local models).",
+            cxxopts::value<std::string>(),
+            "DRAFT_MODEL_PATH")
+        ("draft_device",
+            "Device to run the draft model on. Defaults to the same device as the main model.",
+            cxxopts::value<std::string>(),
+            "DRAFT_DEVICE")
         ("draft_eagle3_mode",
-            "Enable EAGLE3 speculative decoding mode for the draft model.",
+            "[Deprecated] Draft model strategy is now auto-detected from model artifacts; this flag is accepted but ignored.",
             cxxopts::value<bool>()->default_value("false")->implicit_value("true"),
             "DRAFT_EAGLE3_MODE")
         ("dynamic_split_fuse",
@@ -152,8 +160,16 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         if (result->count("draft_source_model")) {
             graphSettings.draftModelDirName = result->operator[]("draft_source_model").as<std::string>();
         }
-        if (result->count("draft_eagle3_mode")) {
-            graphSettings.draftEagle3Mode = result->operator[]("draft_eagle3_mode").as<bool>();
+        if (result->count("draft_model_path")) {
+            if (result->count("draft_source_model"))
+                throw std::invalid_argument("--draft_model_path and --draft_source_model are mutually exclusive");
+            graphSettings.draftModelPath = result->operator[]("draft_model_path").as<std::string>();
+        }
+        if (result->count("draft_device")) {
+            graphSettings.draftDevice = result->operator[]("draft_device").as<std::string>();
+        }
+        if (result->count("draft_eagle3_mode") && result->operator[]("draft_eagle3_mode").as<bool>()) {
+            std::cerr << "[WARNING] --draft_eagle3_mode is deprecated; draft model strategy is now auto-detected from model artifacts and this flag has no effect." << std::endl;
         }
         if (result->count("pipeline_type")) {
             graphSettings.pipelineType = result->operator[]("pipeline_type").as<std::string>();

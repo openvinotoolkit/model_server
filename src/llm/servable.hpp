@@ -213,7 +213,12 @@ struct GenAiServableProperties {
     // Text processing utilities
     ov::genai::Tokenizer tokenizer;
     // Specific pipeline properties
-    bool eagle3Mode = false;
+    // DFlash has priority over EAGLE3 when both markers are present (matches GenAI's strategy selection order)
+    enum class DraftModelStrategy { FAST_DRAFT,
+        EAGLE3,
+        DFLASH,
+        MTP };
+    DraftModelStrategy draftModelStrategy = DraftModelStrategy::FAST_DRAFT;
     // Controls which steps InputProcessor builds for this servable type.
     // Aggregated per-deployment context for InputProcessor.
     InputProcessorContext inputProcessorContext;

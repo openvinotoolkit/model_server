@@ -52,6 +52,25 @@ void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
         config.num_beams = 1;      // Eagle3 does not support beam search
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Eagle3 greedy decoding enforced: setting do_sample to false and num_beams to 1.");
         break;
+    case DecodingMethod::DFLASH:
+        // DFlash rejects assistant_confidence_threshold (same as EAGLE3); multinomial sampling allowed
+        if (config.assistant_confidence_threshold != 0.f)
+            throw std::invalid_argument("assistant_confidence_threshold is not supported for DFlash speculative decoding");
+        if (config.num_assistant_tokens.has_value() && config.num_assistant_tokens.value() == 0)
+            throw std::invalid_argument("num_assistant_tokens must be greater than 0 for DFlash decoding");
+        if (!config.num_assistant_tokens.has_value()) {
+            config.num_assistant_tokens = 5;
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding num_assistant_tokens to default value of 5 for DFlash decoding as it was not set.");
+        }
+        break;
+    case DecodingMethod::MTP:
+        if (config.num_assistant_tokens.has_value() && config.num_assistant_tokens.value() == 0)
+            throw std::invalid_argument("num_assistant_tokens must be greater than 0 for MTP decoding");
+        if (!config.num_assistant_tokens.has_value()) {
+            config.num_assistant_tokens = 5;
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding num_assistant_tokens to default value of 5 for MTP decoding as it was not set.");
+        }
+        break;
     case DecodingMethod::PROMPT_LOOKUP:
         if (config.assistant_confidence_threshold != 0.f)
             throw std::invalid_argument("assistant_confidence_threshold is not supported for prompt lookup decoding");

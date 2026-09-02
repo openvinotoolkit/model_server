@@ -107,7 +107,7 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Process start", cc->NodeName());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Process start", cc->NodeName());
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(this->servable != nullptr);
 
@@ -184,12 +184,12 @@ public:
                 auto status = servable->readCompleteExecutionResults(executionContext);
                 if (status != absl::OkStatus())
                     return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Received complete execution results, preparing response", cc->NodeName());
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Received complete execution results, preparing response", cc->NodeName());
 
                 status = servable->prepareCompleteResponse(executionContext);
                 if (status != absl::OkStatus())
                     return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
 
                 std::string& response = executionContext->response;
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(response)}, iterationBeginTimestamp);
@@ -198,14 +198,14 @@ public:
                 auto status = servable->readPartialExecutionResults(executionContext);
                 if (status != absl::OkStatus())
                     return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Received partial execution results", cc->NodeName());
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Received partial execution results", cc->NodeName());
 
                 status = servable->preparePartialResponse(executionContext);
                 if (status != absl::OkStatus())
                     return status;
                 std::string& response = executionContext->response;
                 if (!response.empty()) {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(response)}, iterationBeginTimestamp);
                 }
                 if (executionContext->sendLoopbackSignal)
@@ -223,7 +223,7 @@ public:
         }
         auto now = std::chrono::system_clock::now();
         iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Process end", cc->NodeName());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Process end", cc->NodeName());
         return absl::OkStatus();
     }
 };
