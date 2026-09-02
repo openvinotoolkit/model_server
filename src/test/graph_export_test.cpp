@@ -741,7 +741,7 @@ TEST_F(GraphCreationTest, rerankPositiveNonDefault) {
     exportSettings.modelPath = "/some/path";
     exportSettings.pluginConfig.numStreams = 2;
     rerankGraphSettings.maxAllowedChunks = 18;
-    rerankGraphSettings.maxLength = 384;
+    rerankGraphSettings.maxLength = 42;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
 
     assertCreatedGraphEquals(hfSettings, expectedRerankGraphContentsNonDefault);
