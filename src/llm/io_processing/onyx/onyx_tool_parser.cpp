@@ -208,6 +208,40 @@ std::optional<ToolCalls_t> OnyxToolParserImpl::parseChunk(const std::string& chu
     return std::nullopt;
 }
 
+std::optional<ToolCalls_t> OnyxToolParserImpl::finalizeOnGenerationEnd() {
+    if (this->currentState == State::Content ||
+        this->currentState == State::InsideToolCall ||
+        this->currentState == State::InsideFunctionName) {
+        // No usable function name was ever captured -- nothing to recover. Still clear the
+        // dangling partial state so it doesn't look like a call is still in flight.
+        resetParsingState();
+        return std::nullopt;
+    }
+    if (this->currentState == State::InsideParameterName) {
+        // Drop the incomplete parameter name; close the function with whatever was captured before it.
+        this->currentState = State::InsideFunction;
+    }
+    if (this->currentState == State::InsideParameter) {
+        this->streamContent += OnyxToolParser::PARAMETER_END_TAG;
+    }
+    if (this->currentState == State::InsideParameter || this->currentState == State::InsideFunction) {
+        this->streamContent += OnyxToolParser::FUNCTION_END_TAG;
+    }
+    this->streamContent += OnyxToolParser::TOOL_END_TAG;
+
+    ToolCalls_t toolCalls;
+    while (parseUntilStateChange(toolCalls)) {
+    }
+    // Generation has ended: nothing more will ever be parsed from streamContent, so leave the
+    // parser in the same clean state a normal completion would (toolCallPositions is kept --
+    // removeToolCallsFromContentIfNeeded() still needs it afterward).
+    resetParsingState();
+    if (!toolCalls.empty()) {
+        return std::move(toolCalls);
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string> OnyxToolParserImpl::getCurrentFunctionName() const {
     if (this->currentFunction.name.empty()) {
         return std::nullopt;
@@ -296,10 +330,20 @@ std::optional<Delta> OnyxToolParser::parseChunk(const std::string& newChunk, con
     // streamParser returns assembled toolCalls once a call closes ("</atem:function_calls>");
     // until then, if the function name is already known, send its first delta once.
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));
-    if (newChunk.empty()) {
+    if (newChunk.empty() && finishReason == ov::genai::GenerationFinishReason::NONE) {
         return std::nullopt;
     }
-    auto toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    std::optional<ToolCalls_t> toolCallsOpt;
+    if (!newChunk.empty()) {
+        toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    }
+
+    // If no complete tool calls were returned yet and generation has ended, finalize the current
+    // tool call in progress to recover any remaining data (for example if arguments were not closed properly).
+    if (!toolCallsOpt.has_value() && finishReason != ov::genai::GenerationFinishReason::NONE) {
+        toolCallsOpt = this->streamParser.finalizeOnGenerationEnd();
+    }
+
     if (toolCallsOpt.has_value()) {
         return this->sendFullDelta(toolCallsOpt.value());
     }
