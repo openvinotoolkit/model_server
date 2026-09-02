@@ -51,7 +51,9 @@ ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/
 ## Request Generation
 
 The API is identical to other speculative decoding strategies:
-
+```console
+pip install openai
+```
 ```python
 from openai import OpenAI
 
