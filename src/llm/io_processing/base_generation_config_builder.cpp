@@ -33,12 +33,14 @@ void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
             throw std::invalid_argument("num_assistant_tokens and assistant_confidence_threshold are mutually exclusive; set only one");
         if (config.num_assistant_tokens.has_value() && config.num_assistant_tokens.value() == 0)
             throw std::invalid_argument("num_assistant_tokens must be greater than 0 for Fast Draft speculative decoding");
-        if (config.do_sample)
-            throw std::invalid_argument("multinomial sampling (temperature > 0) is not supported for Fast Draft speculative decoding; use temperature=0");
         if (!config.num_assistant_tokens.has_value() && config.assistant_confidence_threshold == 0.f) {
             config.num_assistant_tokens = 5;
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding num_assistant_tokens to default value of 5 for fast draft decoding as neither num_assistant_tokens nor assistant_confidence_threshold were set.");
         }
+        // Enforce greedy decoding
+        config.do_sample = false;  // Fast Draft does not support random sampling
+        config.num_beams = 1;      // Fast Draft does not support beam search
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Fast Draft greedy decoding enforced: setting do_sample to false and num_beams to 1.");
         break;
     case DecodingMethod::EAGLE3:
         if (config.assistant_confidence_threshold != 0.f)
@@ -53,7 +55,7 @@ void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Eagle3 greedy decoding enforced: setting do_sample to false and num_beams to 1.");
         break;
     case DecodingMethod::DFLASH:
-        // DFlash rejects assistant_confidence_threshold (same as EAGLE3); multinomial sampling allowed
+        // DFlash rejects assistant_confidence_threshold (same as EAGLE3)
         if (config.assistant_confidence_threshold != 0.f)
             throw std::invalid_argument("assistant_confidence_threshold is not supported for DFlash speculative decoding");
         if (config.num_assistant_tokens.has_value() && config.num_assistant_tokens.value() == 0)
@@ -62,14 +64,41 @@ void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
             config.num_assistant_tokens = 5;
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding num_assistant_tokens to default value of 5 for DFlash decoding as it was not set.");
         }
+        // TEMPORARY WORKAROUND: OpenVINO GenAI's DFlashDecodingImpl computes
+        // draft_config.max_new_tokens = config.max_new_tokens + num_assistant_tokens, which
+        // silently overflows (wraps to a tiny value) when max_new_tokens is left at its
+        // SIZE_MAX default (request has neither max_tokens nor a model-derived max_length).
+        // Remove once fixed upstream.
+        if (config.max_new_tokens == std::numeric_limits<size_t>::max() && config.max_length == std::numeric_limits<size_t>::max()) {
+            config.max_new_tokens = 1'000'000;
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding unset max_tokens to 1000000 for DFlash decoding to avoid an integer overflow in the draft config computation.");
+        }
+        // Enforce greedy decoding
+        config.do_sample = false;  // DFlash does not support random sampling
+        config.num_beams = 1;      // DFlash does not support beam search
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: DFlash greedy decoding enforced: setting do_sample to false and num_beams to 1.");
         break;
     case DecodingMethod::MTP:
+        if (config.assistant_confidence_threshold != 0.f)
+            throw std::invalid_argument("assistant_confidence_threshold is not supported for MTP decoding");
         if (config.num_assistant_tokens.has_value() && config.num_assistant_tokens.value() == 0)
             throw std::invalid_argument("num_assistant_tokens must be greater than 0 for MTP decoding");
         if (!config.num_assistant_tokens.has_value()) {
             config.num_assistant_tokens = 5;
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding num_assistant_tokens to default value of 5 for MTP decoding as it was not set.");
         }
+        // TEMPORARY WORKAROUND: OpenVINO GenAI's Gemma4 MTP strategy does
+        // generated_tokens.reserve(config.get_max_new_tokens()), which crashes when
+        // max_new_tokens is left at its SIZE_MAX default (request has neither max_tokens
+        // nor a model-derived max_length). Remove once fixed upstream.
+        if (config.max_new_tokens == std::numeric_limits<size_t>::max() && config.max_length == std::numeric_limits<size_t>::max()) {
+            config.max_new_tokens = 1'000'000;
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding unset max_tokens to 1000000 for MTP decoding to avoid an unbounded reserve() call upstream.");
+        }
+        // Enforce greedy decoding
+        config.do_sample = false;  // MTP does not support random sampling
+        config.num_beams = 1;      // MTP does not support beam search
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: MTP greedy decoding enforced: setting do_sample to false and num_beams to 1.");
         break;
     case DecodingMethod::PROMPT_LOOKUP:
         if (config.assistant_confidence_threshold != 0.f)
