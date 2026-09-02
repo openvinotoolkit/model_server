@@ -26,7 +26,7 @@ MTP replaces the separate draft model with a lightweight prediction head bundled
 
 For this demo we use [OpenVINO/Qwen3.8-27B-int4-ov](https://huggingface.co/OpenVINO/Qwen3.8-27B-int4-ov), which has a bundled MTP head and is exported in INT4 precision.
 
-> **Note:** This model requires OVMS 2026.4 or weekly pre-release build. See the model card for compatibility details. Prefix caching is not currently supported in MTP mode.
+> **Note:** This model requires OVMS 2026.4 or weekly pre-release build. See the model card for compatibility details. Prefix caching is not currently supported in MTP mode. It is also required to set max_tokens parameter
 
 ## Server Deployment
 
@@ -61,6 +61,7 @@ response = client.chat.completions.create(
     model="OpenVINO/Qwen3.8-27B-int4-ov",
     messages=[{"role": "user", "content": "Explain the transformer attention mechanism."}],
     temperature=0,
+    max_tokens=10000,
     extra_body={"num_assistant_tokens": 5},
 )
 print(response.choices[0].message)
@@ -218,7 +219,7 @@ response = client.chat.completions.create(
     model="Qwen/Qwen3-8B",
     messages=[{"role": "user", "content": "What is OpenVINO?"}],
     temperature=0,
-    max_tokens=200,
+    max_tokens=2000,
     extra_body={"num_assistant_tokens": 5},
 )
 print(response.choices[0].message.content)
@@ -390,7 +391,7 @@ stream = client.completions.create(
     model="meta-llama/CodeLlama-7b-hf",
     prompt="<s>def quicksort(numbers):",
     temperature=0,
-    max_tokens=100,
+    max_tokens=2000,
     extra_body={"num_assistant_tokens": 5},
     stream=True,
 )
