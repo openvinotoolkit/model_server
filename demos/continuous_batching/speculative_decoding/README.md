@@ -229,7 +229,7 @@ print(response.choices[0].message.content)
 
 Increase `num_assistant_tokens` until the tokens-per-step figure plateaus, then back off — past the plateau, rejected draft tokens are pure overhead.
 
-`num_assistant_tokens` must be greater than `0`; OVMS rejects a value of `0` for EAGLE3 decoding.
+Setting `num_assistant_tokens: 0` disables drafting for that request; only the target model runs.
 
 ## Tree drafting
 
