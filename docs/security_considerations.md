@@ -44,5 +44,4 @@ OpenVINO Model Server has a set of mechanisms preventing denial of service attac
 
 ---
 
-By default, OVMS rejects inference requests whose input count/names don't match the model/pipeline signature. The `--disable_input_count_validation` flag turns off the *extra input* check, allowing requests with additional, unrecognized inputs to be processed (extra inputs are ignored; required inputs are still validated). **This flag is not recommended for production use** - disabling it may expose the model to malformed or malicious requests carrying unexpected inputs and weakens the server's input validation guarantees. Only enable it if you fully trust the clients sending requests to the server.
-
+By default, OVMS rejects inference requests whose input count/names don't match the model/pipeline signature. The `--disable_input_count_validation` flag turns off the *extra input* check, allowing requests with additional, unrecognized inputs to be processed (extra inputs are ignored; required inputs are still validated). **This flag is not recommended for production use** - disabling it weakens the server's input validation and may have inpact on performence.
