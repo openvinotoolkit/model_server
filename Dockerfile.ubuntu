@@ -291,8 +291,17 @@ COPY package.json /ovms/
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1; fi
 
 # prebuild dependencies before copying sources & test dependencies for caching
+# GITHUB_TOKEN (optional) avoids GitHub anonymous-fetch throttling for WORKSPACE git_repository() rules.
+# Mounted as a BuildKit secret and read only by git's own credential-helper subprocess, so `set -x` below never echoes it.
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
+RUN --mount=type=secret,id=github_token \
+    if [ -s /run/secrets/github_token ]; then \
+        git config --global credential."https://github.com".helper '!f() { echo username=x-access-token; echo password=$(cat /run/secrets/github_token); }; f' ; \
+    fi ; \
+    bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest ; \
+    build_status=$? ; \
+    git config --global --unset credential."https://github.com".helper 2>/dev/null || true ; \
+    exit $build_status
 
 COPY src/ /ovms/src/
 

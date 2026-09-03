@@ -301,8 +301,17 @@ COPY package.json /ovms/
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
 ARG KONFLUX=1  # This is a workaround to avoid bazel fetching dependencies during build, which causes issues in Konflux. Should be disabled when building outside of Konflux to speed up the build by using bazel cache and avoid fetching dependencies which are already cached.
-RUN if [ "$KONFLUX" == "0" ] ; then true ; else exit 0 ; fi ; \
-    bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
+# GITHUB_TOKEN (optional) avoids GitHub anonymous-fetch throttling for WORKSPACE git_repository() rules.
+# Mounted as a BuildKit secret and read only by git's own credential-helper subprocess, so `set -x` below never echoes it.
+RUN --mount=type=secret,id=github_token \
+    if [ "$KONFLUX" == "0" ] ; then true ; else exit 0 ; fi ; \
+    if [ -s /run/secrets/github_token ]; then \
+        git config --global credential."https://github.com".helper '!f() { echo username=x-access-token; echo password=$(cat /run/secrets/github_token); }; f' ; \
+    fi ; \
+    bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest ; \
+    build_status=$? ; \
+    git config --global --unset credential."https://github.com".helper 2>/dev/null || true ; \
+    exit $build_status
 
 COPY src/ /ovms/src/
 
