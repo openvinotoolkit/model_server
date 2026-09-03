@@ -16,6 +16,7 @@
 #pragma once
 
 #include <openvino/genai/chat_history.hpp>
+#include <string>
 
 #include "../chat_template/caps.hpp"
 #include "../base_input_processor.hpp"
