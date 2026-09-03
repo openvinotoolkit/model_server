@@ -135,6 +135,21 @@ void trimNewline(std::string& str) {
     }
 }
 
+void trimSurroundingQuotes(std::string& str) {
+    if (str.size() < 2) {
+        return;
+    }
+    const char quote = str.front();
+    if ((quote != '"' && quote != '\'') || str.back() != quote) {
+        return;
+    }
+    // A quote in the middle means the character belongs to the value, not to a delimiter pair.
+    if (str.find(quote, 1) != str.size() - 1) {
+        return;
+    }
+    str = str.substr(1, str.size() - 2);
+}
+
 const char* jsonTypeOf(const rapidjson::Value& val) {
     if (val.IsObject())
         return "object";
