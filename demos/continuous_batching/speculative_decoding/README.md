@@ -82,7 +82,7 @@ curl https://raw.githubusercontent.com/vllm-project/vllm/refs/heads/main/benchma
 
 Run benchmark with 100 requests sent sequentially:
 ```bash
-vllm bench serve --dataset-name sonnet --dataset-path sonnet.txt --backend openai-chat --host localhost --port 8000 --endpoint /v3/chat/completions --max-concurrency 1 --model OpenVINO/Qwen3.8-27B-int4-ov --num-prompts 10
+vllm bench serve --dataset-name sonnet --dataset-path sonnet.txt --backend openai-chat --host localhost --port 8000 --endpoint /v1/chat/completions --max-concurrency 1 --model OpenVINO/Qwen3.8-27B-int4-ov --num-prompts 10
 ```
 ```
 ============ Serving Benchmark Result ============
@@ -214,7 +214,7 @@ Send `num_assistant_tokens` to control how many candidates the draft head propos
 ```python
 from openai import OpenAI
 
-client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+client = OpenAI(base_url="http://localhost:8000/1", api_key="unused")
 
 response = client.chat.completions.create(
     model="Qwen/Qwen3-8B",
@@ -237,178 +237,24 @@ Tree drafting adds two `GenerationConfig` fields. Setting `tree_depth > 0` switc
 ```python
 from openai import OpenAI
 
-client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
 response = client.chat.completions.create(
     model="Qwen/Qwen3-8B",
     messages=[{"role": "user", "content": "What is OpenVINO?"}],
     temperature=0,
-    max_tokens=200,
+    max_tokens=2000,
     extra_body={
-        "num_assistant_tokens": 15,   # candidates verified per step
-        "branching_factor": 8,        # top-k expansions per tree layer
-        "tree_depth": 4,              # draft head iterations
+        "num_assistant_tokens": 5,    # candidates verified per step
+        "branching_factor": 4,        # top-k expansions per tree layer
+        "tree_depth": 2,              # draft head iterations
     },
 )
+print(response.choices[0].message.content)
 ```
 
 `total_draft_tokens = branching_factor² × (tree_depth − 1) + branching_factor` must be ≥ `num_assistant_tokens`. A reasonable starting point is `branching_factor=4..8`, `tree_depth=3..4`.
 
 Tree drafting is EAGLE3-only; it cannot be combined with beam search or multinomial sampling.
-
-# Fast Draft
-
-Fast Draft is the classic two-model setup: a smaller off-the-shelf LLM that shares the target's tokenizer proposes tokens autoregressively, and the target model verifies them. It works with any target/draft pair without retraining. The speedup depends on how often the small model's distribution agrees with the large one.
-
-## Model considerations
-
-Both models must share the same tokenizer so draft token IDs map correctly to target token IDs.
-
-Performance gain depends heavily on the model pair and workload — the optimal combination should be found empirically. Model sizes and precisions both factor in.
-
-In this demo:
-  - [meta-llama/CodeLlama-7b-hf](https://huggingface.co/meta-llama/CodeLlama-7b-hf) as a main model
-  - [AMD-Llama-135m](https://huggingface.co/amd/AMD-Llama-135m) as a draft model
-
-both in INT8 precision.
-
-## Model preparation
-Here, the original PyTorch LLM models and tokenizers are converted to IR format and quantized.
-That ensures faster initialization time, better performance and lower memory consumption.
-LLM engine parameters will be defined inside the `graph.pbtxt` file.
-
-Download export script, install its dependencies and create directory for the models:
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir models 
-```
-
-Run `export_model.py` script to download and quantize the model:
-
-> **Note:** Before downloading the CodeLlama model, request access by following the instructions on the [meta-llama/CodeLlama-7b-hf](https://huggingface.co/meta-llama/CodeLlama-7b-hf) model page. After access is granted, create an authentication token under Hugging Face **Settings > Access Tokens**, run `huggingface-cli login`, and enter the token when prompted.
-
-```bat
-python export_model.py text_generation --source_model meta-llama/CodeLlama-7b-hf --draft_source_model amd/AMD-Llama-135m --weight-format int8 --model_repository_path c:\models
-```
-or
-```bash
-python export_model.py text_generation --source_model meta-llama/CodeLlama-7b-hf --draft_source_model amd/AMD-Llama-135m --weight-format int8 --model_repository_path ${HOME}/models
-```
-
-Draft model inherits all scheduler properties from the main model.
-
-You should have a model folder like below:
-```
-models
-└── meta-llama
-    └── CodeLlama-7b-hf
-        ├── amd-AMD-Llama-135m
-        │   ├── config.json
-        │   ├── generation_config.json
-        │   ├── openvino_detokenizer.bin
-        │   ├── openvino_detokenizer.xml
-        │   ├── openvino_model.bin
-        │   ├── openvino_model.xml
-        │   ├── openvino_tokenizer.bin
-        │   ├── openvino_tokenizer.xml
-        │   ├── special_tokens_map.json
-        │   ├── tokenizer_config.json
-        │   ├── tokenizer.json
-        │   └── tokenizer.model
-        ├── config.json
-        ├── generation_config.json
-        ├── graph.pbtxt
-        ├── openvino_detokenizer.bin
-        ├── openvino_detokenizer.xml
-        ├── openvino_model.bin
-        ├── openvino_model.xml
-        ├── openvino_tokenizer.bin
-        ├── openvino_tokenizer.xml
-        ├── special_tokens_map.json
-        ├── tokenizer_config.json
-        ├── tokenizer.json
-        └── tokenizer.model
-
-```
-
-## Server Deployment
-
-:::{dropdown} **Deploying with Docker**
-```bash
-export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:ro openvino/model_server:weekly \
-    --rest_port 8000 \
-    --model_path /models/meta-llama/CodeLlama-7b-hf \
-    --model_name meta-llama/CodeLlama-7b-hf
-```
-
-:::
-
-:::{dropdown} **Deploying on Bare Metal**
-
-Install OVMS as described in the [deployment guide](../../../docs/deploying_server_baremetal.md).
-
-```bat
-ovms --rest_port 8000 --model_path c:\models\meta-llama\CodeLlama-7b-hf --model_name meta-llama/CodeLlama-7b-hf
-```
-:::
-
-## Readiness Check
-
-Wait for the model to load. You can check the status with a simple command:
-```console
-curl http://localhost:8000/v1/config
-```
-```json
-{
-    "meta-llama/CodeLlama-7b-hf": {
-        "model_version_status": [
-            {
-                "version": "1",
-                "state": "AVAILABLE",
-                "status": {
-                    "error_code": "OK",
-                    "error_message": "OK"
-                }
-            }
-        ]
-    }
-}
-```
-
-## Request Generation
-
-Models used in this demo — `meta-llama/CodeLlama-7b-hf` and `AMD-Llama-135m` — are base (non-chat) models, so we use the `completions` endpoint.
-
-```console
-pip3 install openai
-```
-```python
-from openai import OpenAI
-
-client = OpenAI(
-  base_url="http://localhost:8000/v3",
-  api_key="unused"
-)
-
-stream = client.completions.create(
-    model="meta-llama/CodeLlama-7b-hf",
-    prompt="<s>def quicksort(numbers):",
-    temperature=0,
-    max_tokens=2000,
-    extra_body={"num_assistant_tokens": 5},
-    stream=True,
-)
-for chunk in stream:
-    if chunk.choices[0].text is not None:
-        print(chunk.choices[0].text, end="", flush=True)
-```
-
-**`num_assistant_tokens`** controls how many tokens the draft model proposes before the main model validates them. High values pay off when the draft frequently agrees with the target; low values reduce wasted work when it doesn't. `5` is a good starting point.
-
-**`assistant_confidence_threshold`** is an alternative stopping criterion: the draft keeps proposing while its token probability exceeds the threshold, then hands off to the target. It is mutually exclusive with `num_assistant_tokens`. Supported on the Continuous Batching backend only (`LM_CB`) — the stateful backend (`pipeline_type: LM`) does not implement dynamic-length drafting.
-
-`num_assistant_tokens` does not have to be sent on every request — see [Setting default generation parameters](#setting-default-generation-parameters) to configure a deployment-level default.
 
 
 
