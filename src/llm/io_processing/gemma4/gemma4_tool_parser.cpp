@@ -210,13 +210,43 @@ std::pair<std::string, std::string> Gemma4ToolParser::parseSingleArgument(const 
     return argument;
 }
 
+std::string Gemma4ToolParser::maskStringValues(const std::string& text) {
+    std::string masked = text;
+    size_t pos = 0;
+    while (true) {
+        const size_t openPos = text.find(TOOL_ARGS_STRING_INDICATOR, pos);
+        if (openPos == std::string::npos)
+            break;
+        const size_t closePos = text.find(TOOL_ARGS_STRING_INDICATOR, openPos + TOOL_ARGS_STRING_INDICATOR.size());
+        if (closePos == std::string::npos)
+            break;  // value not closed yet (still streaming) - leave for a later call
+        for (size_t i = openPos + TOOL_ARGS_STRING_INDICATOR.size(); i < closePos; i++) {
+            switch (masked[i]) {
+            case '"':
+            case '\'':
+            case '{':
+            case '}':
+            case '[':
+            case ']':
+                masked[i] = '\x01';
+                break;
+            default:
+                break;
+            }
+        }
+        pos = closePos + TOOL_ARGS_STRING_INDICATOR.size();
+    }
+    return masked;
+}
+
 std::vector<std::pair<std::string, std::string>> Gemma4ToolParser::parseArguments(const std::string& argumentsStr) {
     std::vector<std::string> args;
     std::vector<std::pair<std::string, std::string>> parsedArgs;
 
+    const std::string maskedArgumentsStr = maskStringValues(argumentsStr);
     size_t argPos = 0;
     while (argPos < argumentsStr.length()) {
-        size_t commaPos = findInStringRespectingSpecialChars(argumentsStr, TOOL_ARGS_SEPARATOR_STR, argPos);
+        size_t commaPos = findInStringRespectingSpecialChars(maskedArgumentsStr, TOOL_ARGS_SEPARATOR_STR, argPos);
         if (commaPos == std::string::npos) {
             auto remainingStr = argumentsStr.substr(argPos);
             args.push_back(remainingStr);
@@ -278,7 +308,8 @@ bool Gemma4ToolParser::parseToolCallParametersState() {
     if (this->streamingContent.back() == TOOL_ARGS_END_INDICATOR.back()) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool arguments end indicator found at the end of streaming content, attempting to parse arguments: {}", this->streamingContent.substr(this->streamingPosition));
     }
-    size_t pos = findInStringRespectingSpecialChars(this->streamingContent, TOOL_ARGS_END_INDICATOR, this->streamingPosition);
+    const std::string maskedStreamingContent = maskStringValues(this->streamingContent);
+    size_t pos = findInStringRespectingSpecialChars(maskedStreamingContent, TOOL_ARGS_END_INDICATOR, this->streamingPosition);
     if (pos == std::string::npos) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool arguments end indicator not found in streaming content starting from position: {}", this->streamingPosition);
         return false;
@@ -378,13 +409,12 @@ std::optional<Delta> Gemma4ToolParser::parseChunk(const std::string& chunk, cons
             }
             this->streamingPosition += content.size();
 
-            if (finishReason != ov::genai::GenerationFinishReason::NONE) {
-                for (const std::string& tagToErase : {TURN_END_TAG, TOOL_RESPONSE_START_TAG}) {
-                    size_t tagPos = content.find(tagToErase);
-                    while (tagPos != std::string::npos) {
-                        content.erase(tagPos, tagToErase.length());
-                        tagPos = content.find(tagToErase, tagPos);
-                    }
+            // Structural/stop markers must never reach the client, on any chunk, not just the final flush.
+            for (const std::string& tagToErase : {TURN_END_TAG, TOOL_RESPONSE_START_TAG}) {
+                size_t tagPos = content.find(tagToErase);
+                while (tagPos != std::string::npos) {
+                    content.erase(tagPos, tagToErase.length());
+                    tagPos = content.find(tagToErase, tagPos);
                 }
             }
 

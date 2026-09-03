@@ -433,6 +433,38 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithMultipleUtfCharsStreaming) {
     assertStreamingVec(chunkToDeltaVec);
 }
 
+TEST_F(Gemma4OutputParserTest, ParseToolCallArgumentValueContainingComma) {
+    // Regression test: a comma embedded inside a string value (e.g. generated code) must
+    // not be mistaken for the separator between arguments.
+    std::string input =
+        "<|tool_call>call:editor{new_text:<|\"|>print(\"Hello, World!\")\n"
+        "<|\"|>,path:<|\"|>/home/user/demos/hello_world_python/hello.py<|\"|>}<tool_call|>";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "editor");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments,
+        "{\"new_text\":\"print(\\\"Hello, World!\\\")\\n\",\"path\":\"/home/user/demos/hello_world_python/hello.py\"}");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallArgumentValueContainingBracesAndBrackets) {
+    // Regression test: literal '{', '}', '[', ']' inside a string value must not be mistaken
+    // for nested object/array structure or for the tool call's own top-level closing brace.
+    std::string input =
+        "<|tool_call>call:editor{new_text:<|\"|>numbers = [1, 2, 3] and config = {a: 1, b: 2}<|\"|>,"
+        "path:<|\"|>file.txt<|\"|>}<tool_call|>";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "editor");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments,
+        "{\"new_text\":\"numbers = [1, 2, 3] and config = {a: 1, b: 2}\",\"path\":\"file.txt\"}");
+}
+
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
