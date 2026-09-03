@@ -61,7 +61,7 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
 
 response = client.chat.completions.create(
     model="OpenVINO/Qwen3.8-27B-int4-ov",
-    messages=[{"role": "user", "content": "Explain the transformer attention mechanism."}],
+    messages=[{"role": "user", "content": "Explain briefly the transformer attention mechanism."}],
     temperature=0,
     extra_body={"num_assistant_tokens": 5},
 )
