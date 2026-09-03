@@ -26,6 +26,10 @@ spec:
       httpGet:
         path: /v2/health/ready
         port: rest
+    ports:
+      - containerPort: 8080
+        name: rest
+        protocol: TCP
     resources:
       limits:
         cpu: "1"

@@ -51,6 +51,7 @@
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -59,6 +60,7 @@
 #include "../platform_utils.hpp"
 #include "../test_http_utils.hpp"
 #include "../test_utils.hpp"
+#include "../test_with_temp_dir.hpp"
 #include "src/test/environment.hpp"
 
 using namespace ovms;
@@ -5951,13 +5953,15 @@ TEST(BaseGenerationConfigBuilderTest, FastDraftConfidenceThresholdAloneIsValid) 
     EXPECT_FALSE(builder.getConfig().num_assistant_tokens.has_value());
 }
 
-TEST(BaseGenerationConfigBuilderTest, FastDraftSamplingThrows) {
+TEST(BaseGenerationConfigBuilderTest, FastDraftSamplingForcedToGreedy) {
     ov::genai::GenerationConfig baseConfig;
     BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
     OpenAIRequest request;
     request.temperature = 0.7f;
     builder.parseConfigFromRequest(request);
-    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
 }
 
 TEST(BaseGenerationConfigBuilderTest, FastDraftGreedyWithoutMaxTokensIsValid) {
@@ -5967,6 +5971,132 @@ TEST(BaseGenerationConfigBuilderTest, FastDraftGreedyWithoutMaxTokensIsValid) {
     request.temperature = 0.0f;
     builder.parseConfigFromRequest(request);
     EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashDefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashAssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashSamplingForcedToGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 0.7f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashEnforcesGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.bestOf = 2;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashDefaultsMaxNewTokensWhenUnset) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().max_new_tokens, 1000000u);
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpDefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpAssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpSamplingForcedToGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 0.7f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpEnforcesGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.bestOf = 2;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpDefaultsMaxNewTokensWhenUnset) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().max_new_tokens, 1000000u);
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
 }
 
 TEST(BaseGenerationConfigBuilderTest, PromptLookupDefaultsApplied) {
@@ -5997,6 +6127,72 @@ TEST(BaseGenerationConfigBuilderTest, PromptLookupAssistantConfidenceThresholdTh
     EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
 }
 
+// ==========================================
+// detectDraftModelStrategy tests
+// ==========================================
+
+class DetectDraftModelStrategyTest : public TestWithTempDir {};
+using DS = ovms::GenAiServableProperties::DraftModelStrategy;
+
+TEST_F(DetectDraftModelStrategyTest, MtpDetectedByFilePresence) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_mtp_model.xml"})).close();
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::MTP);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByNumericValue) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByTrueUppercase) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"True\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByTrueLowercase) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"true\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, DflashDetected) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<dflash_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::DFLASH);
+}
+
+TEST_F(DetectDraftModelStrategyTest, DflashTakesPriorityOverEagle3) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<dflash_mode value=\"1\" />\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::DFLASH);
+}
+
+TEST_F(DetectDraftModelStrategyTest, FastDraftWhenNoMarkers) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<layers></layers>\n<rt_info>\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::FAST_DRAFT);
+}
+
+TEST_F(DetectDraftModelStrategyTest, KeyOutsideRtInfoIgnored) {
+    // eagle3_mode keyword in a layer name must not trigger detection
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<layers>\n<layer name=\"eagle3_mode_layer\" />\n</layers>\n<rt_info>\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::FAST_DRAFT);
+}
+
+TEST_F(DetectDraftModelStrategyTest, ThrowsWhenXmlMissing) {
+    EXPECT_THROW(ovms::detectDraftModelStrategy(directoryPath), std::runtime_error);
+}
+
+TEST_F(DetectDraftModelStrategyTest, MtpTakesPriorityOverXmlScan) {
+    // MTP file presence short-circuits before reading the XML
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_mtp_model.xml"})).close();
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::MTP);
+}
 // ---------------------------------------------------------------------------
 // Idle unload feature: LLM graph lifecycle (issue #4141)
 // These tests require the opt-125m model fixture.
@@ -6493,7 +6689,3 @@ TEST_F(LLMIdleUnloadTest, FailedWakeLeavesGraphSleepingAndRetryable) {
     EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     EXPECT_NE(def.getGenAiServable("llmNode"), nullptr);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TASK 2 tests removed: idle_unload is no longer restricted to LLM-only graphs.
-// ─────────────────────────────────────────────────────────────────────────────
