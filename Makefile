@@ -382,7 +382,7 @@ endif
 		--target=build
 
 targz_package:
-	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
+	docker buildx build -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
@@ -391,7 +391,7 @@ targz_package:
 	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
 	docker cp $$ID:/ovms_pkg/$(OS)/ovms.tar dist/$(OS)/ && \
 	docker rm $$ID
-	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
+	docker buildx build -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG) \
@@ -411,11 +411,11 @@ ifeq ($(BASE_OS),redhat)
 else
 	$(eval NPU:=1)
 endif
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker buildx build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker buildx build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg GPU=1 \
 		--build-arg NPU=$(NPU) \
@@ -453,7 +453,7 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 release_image:
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker buildx build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		--build-arg GPU=$(GPU) \
