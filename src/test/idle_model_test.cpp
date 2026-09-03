@@ -27,6 +27,7 @@
 #include "src/modelinstance.hpp"
 #include "src/modelversionstatus.hpp"
 #include "constructor_enabled_model_manager.hpp"
+#include "platform_utils.hpp"
 #include "test_utils.hpp"
 #include "test_models.hpp"
 #include "test_models_configs.hpp"
@@ -148,9 +149,10 @@ TEST_F(ModelInstanceSleepTest, WakeUpThenPutToSleep) {
 }
 
 TEST_F(ModelInstanceSleepTest, WakeUpWithInvalidPathFails) {
+    const std::string nonexistentPath = getGenericFullPathForTmp("/tmp/idle_model_test_nonexistent_path");
     ModelConfig badConfig = DUMMY_MODEL_CONFIG;
-    badConfig.setBasePath("/nonexistent/path");
-    badConfig.setLocalPath("/nonexistent/path");
+    badConfig.setBasePath(nonexistentPath);
+    badConfig.setLocalPath(nonexistentPath);
 
     ModelInstance instance("dummy", 1, *ieCore);
     ASSERT_EQ(instance.loadModel(badConfig, true), StatusCode::OK);

@@ -46,6 +46,11 @@ void ServableLoadingQueue::requestStop() {
     this->cv.notify_one();
 }
 
+void ServableLoadingQueue::setTaskObserver(TaskObserver observer) {
+    std::lock_guard<std::mutex> lock(this->mutex);
+    this->taskObserver = std::move(observer);
+}
+
 void ServableLoadingQueue::stop() {
     requestStop();
     if (this->worker.joinable()) {
@@ -59,11 +64,14 @@ void ServableLoadingQueue::stop() {
     }
 }
 
-std::future<Status> ServableLoadingQueue::scheduleTask(ServableLoadingTask task, bool urgent) {
+std::future<Status> ServableLoadingQueue::scheduleTask(ServableLoadingTask task) {
     auto future = task.completion.get_future();
     {
         std::lock_guard<std::mutex> lock(this->mutex);
-        if (urgent) {
+        if (this->taskObserver) {
+            this->taskObserver(TaskEvent::Scheduled, task);
+        }
+        if (task.urgent) {
             this->queue.push_front(std::move(task));
         } else {
             this->queue.push_back(std::move(task));
@@ -77,6 +85,7 @@ void ServableLoadingQueue::workerLoop() {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started servable loading queue thread");
     while (true) {
         ServableLoadingTask task{ServableLoadingTaskType::LoadModel, ""};
+        TaskObserver observer;
         {
             std::unique_lock<std::mutex> lock(this->mutex);
             this->cv.wait(lock, [this] { return !this->queue.empty() || !this->running; });
@@ -85,6 +94,12 @@ void ServableLoadingQueue::workerLoop() {
             }
             task = std::move(this->queue.front());
             this->queue.pop_front();
+            // Copy under the lock: reading it unlocked would race with setTaskObserver(),
+            // and calling it locked would deadlock an observer that re-enters the queue.
+            observer = this->taskObserver;
+        }
+        if (observer) {
+            observer(TaskEvent::Executed, task);
         }
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Processing {} task for: {}",
             static_cast<int>(task.type), task.name);

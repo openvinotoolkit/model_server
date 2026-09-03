@@ -29,13 +29,17 @@ namespace ovms {
 enum class ServableLoadingTaskType {
     LoadModel,
     RetireModel,
+    WakeUpModel,
+    PutToSleepModel,
     LoadMediapipe,
-    UnloadMediapipe
+    WakeUpMediapipe,
+    PutToSleepMediapipe
 };
 
 struct ServableLoadingTask {
     ServableLoadingTaskType type;
     std::string name;
+    bool urgent = false;
     std::optional<ModelConfig> modelConfig;
 #if (MEDIAPIPE_DISABLE == 0)
     std::optional<MediapipeGraphConfig> graphConfig;
@@ -54,9 +58,10 @@ struct ServableLoadingTask {
         graphConfig(config) {}
 #endif
 
-    ServableLoadingTask(ServableLoadingTaskType type, const std::string& name) :
+    ServableLoadingTask(ServableLoadingTaskType type, const std::string& name, bool urgent = false) :
         type(type),
-        name(name) {}
+        name(name),
+        urgent(urgent) {}
 
     ServableLoadingTask(ServableLoadingTask&&) = default;
     ServableLoadingTask& operator=(ServableLoadingTask&&) = default;

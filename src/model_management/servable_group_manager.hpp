@@ -51,11 +51,7 @@ public:
 
     std::string getGroupForServable(const std::string& servableName) const;
 
-    bool isGroupLoaded(const std::string& groupName) const;
-
-    Status ensureGroupLoaded(const std::string& servableName, ModelManager& mm);
-
-    Status ensureServableLoaded(const std::string& servableName, ModelManager& mm);
+    [[nodiscard]] Status ensureServableLoaded(const std::string& servableName, ModelManager& mm);
 
     void unloadActiveGroupIfIdle(ModelManager& mm);
 
@@ -64,12 +60,16 @@ public:
     std::vector<std::string> getAllConfiguredServableNames() const;
     // needed only for tests
     std::unordered_map<std::string, ModelGroupInfo> getGroups() const;
-    const std::string& getActiveGroupName() const;
+    std::string getActiveGroupName() const;
+    bool isGroupLoaded(const std::string& groupName) const;
 
 private:
     bool canUnloadActiveGroup(ModelManager& mm) const;
-    Status loadGroup(const std::string& groupName, ModelManager& mm);
-    Status unloadGroup(const std::string& groupName, ModelManager& mm);
+    [[nodiscard]] Status loadGroup(const std::string& groupName, ModelManager& mm, const std::string& requestedServable);
+    [[nodiscard]] Status unloadGroup(const std::string& groupName, ModelManager& mm, bool urgent);
+    [[nodiscard]] Status swapToGroup(const std::string& groupName, ModelManager& mm, const std::string& requestedServable);
+    bool isActiveGroup(const std::string& groupName) const;
+    void setActiveGroup(const std::string& groupName);
 
     uint64_t idleTimeoutMicroseconds;
 
@@ -78,6 +78,8 @@ private:
     std::unordered_map<std::string, std::string> servableToGroup;
 
     mutable std::mutex loadUnloadMtx;
+    // Read on every inference request, written only on group swaps.
+    mutable std::shared_mutex activeGroupNameMtx;
     std::string activeGroupName;
 
     std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs;

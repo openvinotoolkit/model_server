@@ -19,6 +19,7 @@
 
 #include "src/metrics/metric_registry.hpp"
 #include "src/model_management/modelmanager.hpp"
+#include "src/model_management/servable_loading_queue.hpp"
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {
     ovms::MetricRegistry registry;
@@ -31,6 +32,7 @@ public:
     ovms::Status loadConfig(const std::string& jsonFilename);
     void updateConfigurationWithoutConfigFile();
     void setWaitForModelLoadedTimeoutMs(int value);
+    ovms::ServableLoadingQueue& getLoadingQueue() { return *loadingQueue; }
 };
 class ResourcesAccessModelManager : public ConstructorEnabledModelManager {
 public:

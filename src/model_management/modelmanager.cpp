@@ -99,16 +99,28 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         switch (task.type) {
         case ServableLoadingTaskType::LoadModel: {
             if (!task.modelConfig.has_value()) {
-                auto model = findModelByName(task.name);
-                if (model) {
-                    return model->wakeUpIfSleeping();
-                }
-                auto it = servedModelConfigs.find(task.name);
-                if (it == servedModelConfigs.end())
-                    return StatusCode::MODEL_NAME_MISSING;
-                task.modelConfig = it->second;
+                return StatusCode::INTERNAL_ERROR;
             }
             return reloadModelWithVersions(task.modelConfig.value());
+        }
+        case ServableLoadingTaskType::WakeUpModel: {
+            auto model = findModelByName(task.name);
+            if (model) {
+                return model->wakeUpIfSleeping();
+            }
+            // Model was never instantiated (e.g. added to config while its group was idle).
+            auto it = servedModelConfigs.find(task.name);
+            if (it == servedModelConfigs.end())
+                return StatusCode::MODEL_NAME_MISSING;
+            return reloadModelWithVersions(it->second);
+        }
+        case ServableLoadingTaskType::PutToSleepModel: {
+            auto model = findModelByName(task.name);
+            if (!model) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            model->putToSleepAllVersions();
+            return StatusCode::OK;
         }
         case ServableLoadingTaskType::RetireModel: {
             auto model = findModelByName(task.name);
@@ -120,43 +132,51 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         }
 #if (MEDIAPIPE_DISABLE == 0)
         case ServableLoadingTaskType::LoadMediapipe: {
+            if (!task.graphConfig.has_value()) {
+                return StatusCode::INTERNAL_ERROR;
+            }
+            const auto& config = task.graphConfig.value();
             auto* def = mediapipeFactory->findDefinitionByName(task.name);
-            if (task.graphConfig.has_value()) {
-                const auto& config = task.graphConfig.value();
-                if (!def) {
-                    // Non-permanent idle groups: create as SLEEPING to skip expensive loading
-                    if (servableGroupManager && servableGroupManager->isEnabled() &&
-                        !config.getGroupName().empty() && config.getGroupName() != "permanent") {
-                        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
-                            "Mediapipe graph:{} belongs to non-permanent group '{}'; creating as SLEEPING",
-                            task.name, config.getGroupName());
-                        bool lazyLoad = true;
-                        return mediapipeFactory->createDefinition(task.name, config, *this, *this, lazyLoad);
-                    }
-                    return mediapipeFactory->createDefinition(task.name, config, *this, *this);
+            if (!def) {
+                // Non-permanent idle groups: create as SLEEPING to skip expensive loading
+                if (servableGroupManager && servableGroupManager->isEnabled() &&
+                    !config.getGroupName().empty() && config.getGroupName() != "permanent") {
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+                        "Mediapipe graph:{} belongs to non-permanent group '{}'; creating as SLEEPING",
+                        task.name, config.getGroupName());
+                    bool lazyLoad = true;
+                    return mediapipeFactory->createDefinition(task.name, config, *this, *this, lazyLoad);
                 }
-                if (def->isReloadRequired(config)) {
-                    return mediapipeFactory->reloadDefinition(task.name, config, *this);
-                }
-            } else {
-                // Urgent reload (inference-triggered wake-up or on-demand load)
-                if (!def) {
-                    return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
-                }
-                if (def->getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
-                    // TODO consider moving whole part as an interface to ServableContainer so that we
-                    // could just call servableContainer->wakeUp(A). However we would need to to expose scheduler then
-                    auto status = def->wakeUpIfSleeping(*this);
-                    if (status.ok()) {
-                        mediapipeFactory->registerLoraAliasesFor(task.name);
-                    }
-                    return status;
-                }
-                return def->reload(*this, def->getMediapipeGraphConfig());
+                return mediapipeFactory->createDefinition(task.name, config, *this, *this);
+            }
+            if (def->isReloadRequired(config)) {
+                return mediapipeFactory->reloadDefinition(task.name, config, *this);
             }
             return StatusCode::OK;
         }
-        case ServableLoadingTaskType::UnloadMediapipe: {
+        case ServableLoadingTaskType::WakeUpMediapipe: {
+            auto* def = mediapipeFactory->findDefinitionByName(task.name);
+            if (!def) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                    "Mediapipe graph:{} not found for wake-up", task.name);
+                return StatusCode::INTERNAL_ERROR;
+            }
+            // A graph removed from the config must never be brought back by a wake-up.
+            if (def->getStateCode() == PipelineDefinitionStateCode::RETIRED) {
+                return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
+            }
+            if (def->getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
+                // TODO consider moving whole part as an interface to ServableContainer so that we
+                // could just call servableContainer->wakeUp(A). However we would need to to expose scheduler then
+                auto status = def->wakeUpIfSleeping(*this);
+                if (status.ok()) {
+                    mediapipeFactory->registerLoraAliasesFor(task.name);
+                }
+                return status;
+            }
+            return def->reload(*this, def->getMediapipeGraphConfig());
+        }
+        case ServableLoadingTaskType::PutToSleepMediapipe: {
             auto* def = mediapipeFactory->findDefinitionByName(task.name);
             if (!def) {
                 return StatusCode::INTERNAL_ERROR;
@@ -165,7 +185,8 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
         }
 #else
         case ServableLoadingTaskType::LoadMediapipe:
-        case ServableLoadingTaskType::UnloadMediapipe:
+        case ServableLoadingTaskType::WakeUpMediapipe:
+        case ServableLoadingTaskType::PutToSleepMediapipe:
             return StatusCode::INTERNAL_ERROR;
 #endif
         }
@@ -1138,7 +1159,8 @@ void ModelManager::unloadIdleGraphs() {
         }
     }
     for (const auto& name : toUnload) {
-        auto future = requestServableUnload(name);
+        bool urgentUnload = false;
+        auto future = requestServablePutToSleep(name, urgentUnload);
         auto status = future.get();
         if (!status.ok()) {
             SPDLOG_LOGGER_WARN(modelmanager_logger,
@@ -1577,25 +1599,25 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     return blocking_status;
 }
 
-std::future<Status> ModelManager::requestServableLoad(const std::string& name) {
-    const bool isPriorityRequest = true;
+std::future<Status> ModelManager::requestServableWakeUp(const std::string& name, bool urgent) {
 #if (MEDIAPIPE_DISABLE == 0)
     if (mediapipeFactory->findDefinitionByName(name)) {
-        ServableLoadingTask task{ServableLoadingTaskType::LoadMediapipe, name};
-        return loadingQueue->scheduleTask(std::move(task), isPriorityRequest);
+        ServableLoadingTask task{ServableLoadingTaskType::WakeUpMediapipe, name, urgent};
+        return loadingQueue->scheduleTask(std::move(task));
     }
 #endif
-    ServableLoadingTask task{ServableLoadingTaskType::LoadModel, name};
-    return loadingQueue->scheduleTask(std::move(task), isPriorityRequest);
-}
-
-std::future<Status> ModelManager::requestServableRetire(const std::string& name) {
-    ServableLoadingTask task{ServableLoadingTaskType::RetireModel, name};
+    ServableLoadingTask task{ServableLoadingTaskType::WakeUpModel, name, urgent};
     return loadingQueue->scheduleTask(std::move(task));
 }
 
-std::future<Status> ModelManager::requestServableUnload(const std::string& name) {
-    ServableLoadingTask task{ServableLoadingTaskType::UnloadMediapipe, name};
+std::future<Status> ModelManager::requestServablePutToSleep(const std::string& name, bool urgent) {
+#if (MEDIAPIPE_DISABLE == 0)
+    if (mediapipeFactory->findDefinitionByName(name)) {
+        ServableLoadingTask task{ServableLoadingTaskType::PutToSleepMediapipe, name, urgent};
+        return loadingQueue->scheduleTask(std::move(task));
+    }
+#endif
+    ServableLoadingTask task{ServableLoadingTaskType::PutToSleepModel, name, urgent};
     return loadingQueue->scheduleTask(std::move(task));
 }
 
@@ -1615,6 +1637,27 @@ const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& na
     std::shared_lock lock(modelsMtx);
     auto it = models.find(name);
     return it != models.end() ? it->second : nullptr;
+}
+
+bool ModelManager::isServableAvailable(const std::string& name) const {
+    // TODO  @atobiszei idle add version option
+    auto model = findModelByName(name);
+    if (model) {
+        // Version policy is not considered here - any servable version is enough to answer a request.
+        for (const auto& [version, instance] : model->getModelVersions()) {
+            if (instance->getStatus().getState() == ModelVersionState::AVAILABLE) {
+                return true;
+            }
+        }
+        return false;
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    auto* def = mediapipeFactory->findDefinitionByName(name);
+    if (def) {
+        return def->getStateCode() == PipelineDefinitionStateCode::AVAILABLE;
+    }
+#endif
+    return false;
 }
 
 bool ModelManager::subscribeToModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) {
@@ -1746,18 +1789,6 @@ Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& gra
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to load servable '{}': {}", name, status.string());
             return status;
-        }
-    } else {
-        // Per-graph idle wake-up without group management
-        auto* def = this->mediapipeFactory->findDefinitionByName(name);
-        if (def && def->getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
-            auto future = requestServableLoad(name);
-            auto status = future.get();
-            if (!status.ok()) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger,
-                    "Mediapipe graph {} wake-up failed: {}", name, status.string());
-                return status;
-            }
         }
     }
     return this->mediapipeFactory->create(graph, name);

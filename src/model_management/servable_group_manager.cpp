@@ -60,6 +60,11 @@ void ServableGroupManager::buildGroups(const std::unordered_map<std::string, Mod
         if (def == nullptr) {
             continue;
         }
+        // Retired definitions stay in the factory after config removal; registering them
+        // here would let a later wake-up resurrect a graph the user deleted.
+        if (def->getStateCode() == PipelineDefinitionStateCode::RETIRED) {
+            continue;
+        }
         const std::string& groupName = def->getMediapipeGraphConfig().getGroupName();
         if (groupName.empty()) {
             // No group_name set — treat graph name as its own group
@@ -78,9 +83,9 @@ void ServableGroupManager::buildGroups(const std::unordered_map<std::string, Mod
 #if (MEDIAPIPE_DISABLE == 0)
     totalServables += mm.getMediapipeFactory().getMediapipePipelinesNames().size();
 #endif
-    SPDLOG_INFO("Model group manager built {} groups from {} servables", groups.size(), totalServables);
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Model group manager built {} groups from {} servables", groups.size(), totalServables);
     for (const auto& [gname, ginfo] : groups) {
-        SPDLOG_INFO("  Group '{}': {} models, {} mediapipe graphs{}",
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "  Group '{}': {} models, {} mediapipe graphs{}",
             gname, ginfo.modelNames.size(), ginfo.mediapipeNames.size(),
             ginfo.isPermanent() ? " (permanent)" : "");
     }
@@ -99,15 +104,28 @@ bool ServableGroupManager::isGroupLoaded(const std::string& groupName) const {
     if (groupName.empty()) {
         return false;
     }
-    std::shared_lock lock(groupsMtx);
-    auto it = groups.find(groupName);
-    if (it != groups.end() && it->second.isPermanent()) {
-        return true;
+    {
+        std::shared_lock lock(groupsMtx);
+        auto it = groups.find(groupName);
+        if (it != groups.end() && it->second.isPermanent()) {
+            return true;
+        }
     }
+    return isActiveGroup(groupName);
+}
+
+bool ServableGroupManager::isActiveGroup(const std::string& groupName) const {
+    std::shared_lock lock(activeGroupNameMtx);
     return activeGroupName == groupName;
 }
 
-const std::string& ServableGroupManager::getActiveGroupName() const {
+void ServableGroupManager::setActiveGroup(const std::string& groupName) {
+    std::unique_lock lock(activeGroupNameMtx);
+    activeGroupName = groupName;
+}
+
+std::string ServableGroupManager::getActiveGroupName() const {
+    std::shared_lock lock(activeGroupNameMtx);
     return activeGroupName;
 }
 
@@ -132,8 +150,10 @@ std::unordered_map<std::string, ModelGroupInfo> ServableGroupManager::getGroups(
 }
 
 bool ServableGroupManager::canUnloadActiveGroup(ModelManager& mm) const {
+    // TODO @atobiszei this is vulnerable to TOCTOU
+    const std::string groupName = getActiveGroupName();
     std::shared_lock lock(groupsMtx);
-    auto it = groups.find(activeGroupName);
+    auto it = groups.find(groupName);
     if (it == groups.end()) {
         return true;
     }
@@ -147,13 +167,13 @@ bool ServableGroupManager::canUnloadActiveGroup(ModelManager& mm) const {
         }
         for (const auto& [version, instance] : model->getModelVersions()) {
             if (!instance->canUnloadInstance()) {
-                SPDLOG_DEBUG("Cannot unload group '{}': model {} version {} has active requests",
-                    activeGroupName, modelName, version);
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot unload group '{}': model {} version {} has active requests",
+                    groupName, modelName, version);
                 return false;
             }
             if (instance->getStatus().getState() == ModelVersionState::LOADING) {
-                SPDLOG_DEBUG("Cannot unload group '{}': model {} version {} is loading",
-                    activeGroupName, modelName, version);
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot unload group '{}': model {} version {} is loading",
+                    groupName, modelName, version);
                 return false;
             }
         }
@@ -168,8 +188,8 @@ bool ServableGroupManager::canUnloadActiveGroup(ModelManager& mm) const {
         }
         auto activeCount = def->getActiveInferenceCount();
         if (activeCount && activeCount->load(std::memory_order_acquire) > 0) {
-            SPDLOG_DEBUG("Cannot unload group '{}': mediapipe graph {} has active inferences",
-                activeGroupName, graphName);
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot unload group '{}': mediapipe graph {} has active inferences",
+                groupName, graphName);
             return false;
         }
     }
@@ -178,55 +198,69 @@ bool ServableGroupManager::canUnloadActiveGroup(ModelManager& mm) const {
     return true;
 }
 
-Status ServableGroupManager::loadGroup(const std::string& groupName, ModelManager& mm) {
-    SPDLOG_INFO("Loading model group '{}'", groupName);
+Status ServableGroupManager::loadGroup(const std::string& groupName, ModelManager& mm,
+    const std::string& requestedServable) {
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Loading model group '{}'", groupName);
 
     std::shared_lock lock(groupsMtx);
     auto it = groups.find(groupName);
     if (it == groups.end()) {
-        SPDLOG_ERROR("Model group '{}' not found", groupName);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model group '{}' not found", groupName);
         return StatusCode::GROUP_LOAD_FAILED;
     }
     const auto& groupInfo = it->second;
     lock.unlock();
 
-    Status firstError = StatusCode::OK;
-
-    // Enqueue all servables in the group via the queue and collect futures
+    // The servable that triggered the wake-up is loaded first and preempts queued
+    // work, so time-to-first-response does not depend on group member ordering.
     std::vector<std::pair<std::string, std::future<Status>>> futures;
+    const bool isRequestedInGroup = groupInfo.modelNames.count(requestedServable) > 0 ||
+                                    groupInfo.mediapipeNames.count(requestedServable) > 0;
+    if (isRequestedInGroup) {
+        futures.emplace_back(requestedServable, mm.requestServableWakeUp(requestedServable, /*urgent=*/true));
+    }
     for (const auto& modelName : groupInfo.modelNames) {
-        futures.emplace_back(modelName, mm.requestServableLoad(modelName));
+        if (modelName == requestedServable) {
+            continue;
+        }
+        futures.emplace_back(modelName, mm.requestServableWakeUp(modelName, /*urgent=*/false));
     }
 #if (MEDIAPIPE_DISABLE == 0)
     for (const auto& graphName : groupInfo.mediapipeNames) {
-        futures.emplace_back(graphName, mm.requestServableLoad(graphName));
+        if (graphName == requestedServable) {
+            continue;
+        }
+        futures.emplace_back(graphName, mm.requestServableWakeUp(graphName, /*urgent=*/false));
     }
 #endif
 
+    // Caller waits on the servable it asked for; the rest of the group only produces logs.
+    Status requestedStatus = isRequestedInGroup ? Status(StatusCode::GROUP_LOAD_FAILED) : Status(StatusCode::OK);
     for (auto& [name, future] : futures) {
         auto status = future.get();
+        if (name == requestedServable) {
+            requestedStatus = status;
+        }
         if (!status.ok()) {
-            SPDLOG_ERROR("Failed to load '{}' in group '{}': {}", name, groupName, status.string());
-            if (firstError.ok()) {
-                firstError = status;
-            }
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to load '{}' in group '{}': {}", name, groupName, status.string());
         } else {
-            SPDLOG_INFO("Loaded '{}' in group '{}'", name, groupName);
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Loaded '{}' in group '{}'", name, groupName);
         }
     }
 
-    activeGroupName = groupName;
+    // Set even on partial failure - loaded members must stay tracked so they can be unloaded later.
+    setActiveGroup(groupName);
     recordActivity();
 
-    if (!firstError.ok()) {
-        return StatusCode::GROUP_LOAD_FAILED;
+    if (!requestedStatus.ok()) {
+        return requestedStatus;
     }
-    SPDLOG_INFO("Model group '{}' loaded successfully", groupName);
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Model group '{}' loaded successfully", groupName);
     return StatusCode::OK;
 }
 
-Status ServableGroupManager::unloadGroup(const std::string& groupName, ModelManager& mm) {
-    SPDLOG_INFO("Unloading model group '{}'", groupName);
+Status ServableGroupManager::unloadGroup(const std::string& groupName, ModelManager& mm, bool urgent) {
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Unloading model group '{}'", groupName);
 
     std::shared_lock lock(groupsMtx);
     auto it = groups.find(groupName);
@@ -236,68 +270,38 @@ Status ServableGroupManager::unloadGroup(const std::string& groupName, ModelMana
     const auto& groupInfo = it->second;
     lock.unlock();
 
-    // Enqueue retire/unload tasks via queue and collect futures
+    // Enqueue put-to-sleep tasks via queue and collect futures
     std::vector<std::pair<std::string, std::future<Status>>> futures;
     for (const auto& modelName : groupInfo.modelNames) {
-        futures.emplace_back(modelName, mm.requestServableRetire(modelName));
+        futures.emplace_back(modelName, mm.requestServablePutToSleep(modelName, urgent));
     }
 #if (MEDIAPIPE_DISABLE == 0)
     for (const auto& graphName : groupInfo.mediapipeNames) {
-        futures.emplace_back(graphName, mm.requestServableUnload(graphName));
+        futures.emplace_back(graphName, mm.requestServablePutToSleep(graphName, urgent));
     }
 #endif
 
     for (auto& [name, future] : futures) {
         auto status = future.get();
         if (!status.ok()) {
-            SPDLOG_WARN("Failed to unload '{}' in group '{}': {}", name, groupName, status.string());
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Failed to unload '{}' in group '{}': {}", name, groupName, status.string());
         } else {
-            SPDLOG_INFO("Unloaded '{}' in group '{}'", name, groupName);
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Unloaded '{}' in group '{}'", name, groupName);
         }
     }
 
-    if (activeGroupName == groupName) {
-        activeGroupName.clear();
+    if (isActiveGroup(groupName)) {
+        setActiveGroup("");
     }
-    SPDLOG_INFO("Model group '{}' unloaded successfully", groupName);
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Model group '{}' unloaded successfully", groupName);
     return StatusCode::OK;
 }
 
-Status ServableGroupManager::ensureGroupLoaded(const std::string& servableName, ModelManager& mm) {
-    std::string groupName = getGroupForServable(servableName);
-    if (groupName.empty()) {
-        // Not managed by group manager — let normal flow handle it
-        return StatusCode::OK;
-    }
-
-    // Permanent group is always loaded
-    {
-        std::shared_lock lock(groupsMtx);
-        auto it = groups.find(groupName);
-        if (it != groups.end() && it->second.isPermanent()) {
-            recordActivity();
-            return StatusCode::OK;
-        }
-    }
-
-    // Already the active group
-    if (activeGroupName == groupName) {
-        recordActivity();
-        return StatusCode::OK;
-    }
-
-    // Serialize group swaps
-    std::lock_guard<std::mutex> swapLock(loadUnloadMtx);
-
-    // Double-check after acquiring the lock
-    if (activeGroupName == groupName) {
-        recordActivity();
-        return StatusCode::OK;
-    }
-
-    // Unload the currently active group if any
-    if (!activeGroupName.empty()) {
-        SPDLOG_INFO("Swapping model group from '{}' to '{}'", activeGroupName, groupName);
+[[nodiscard]] Status ServableGroupManager::swapToGroup(const std::string& groupName, ModelManager& mm,
+    const std::string& requestedServable) {
+    const std::string previousGroup = getActiveGroupName();
+    if (!previousGroup.empty()) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Swapping model group from '{}' to '{}'", previousGroup, groupName);
         // Wait for active requests to drain with bounded retry
         constexpr int kMaxRetries = 300;  // 30 seconds at 100ms intervals
         constexpr int kRetryIntervalMs = 100;
@@ -306,49 +310,68 @@ Status ServableGroupManager::ensureGroupLoaded(const std::string& servableName, 
                 break;
             }
             if (i == kMaxRetries - 1) {
-                SPDLOG_ERROR("Timed out waiting for group '{}' to drain requests before swap to '{}'",
-                    activeGroupName, groupName);
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Timed out waiting for group '{}' to drain requests before swap to '{}'",
+                    previousGroup, groupName);
                 return StatusCode::GROUP_UNLOAD_BLOCKED;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(kRetryIntervalMs));
         }
-        auto unloadStatus = unloadGroup(activeGroupName, mm);
+        auto unloadStatus = unloadGroup(previousGroup, mm, /*urgent=*/true);
         if (!unloadStatus.ok()) {
-            SPDLOG_ERROR("Failed to unload group '{}': {}", activeGroupName, unloadStatus.string());
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to unload group '{}': {}", previousGroup, unloadStatus.string());
             return unloadStatus;
         }
     }
-
-    return loadGroup(groupName, mm);
+    return loadGroup(groupName, mm, requestedServable);
 }
 
-Status ServableGroupManager::ensureServableLoaded(const std::string& servableName, ModelManager& mm) {
-    std::string group = getGroupForServable(servableName);
-    if (!group.empty() && !isGroupLoaded(group)) {
-        auto status = ensureGroupLoaded(servableName, mm);
-        if (!status.ok())
-            return status;
+    [[nodiscard]] Status ServableGroupManager::ensureServableLoaded(const std::string& servableName, ModelManager& mm) {
+    const std::string groupName = getGroupForServable(servableName);
+    if (groupName.empty()) {
+        // Not managed by group manager - let normal flow handle it
+        return StatusCode::OK;
     }
-    auto future = mm.requestServableLoad(servableName);
-    auto status = future.get();
-    if (!status.ok())
-        return status;
-    recordActivity();
-    return StatusCode::OK;
+    if (isGroupLoaded(groupName) && mm.isServableAvailable(servableName)) {
+        recordActivity();
+        return StatusCode::OK;
+    }
+
+    // Serialize group swaps
+    std::lock_guard<std::mutex> swapLock(loadUnloadMtx);
+
+    // Double-check after acquiring the lock
+    if (isGroupLoaded(groupName) && mm.isServableAvailable(servableName)) {
+        recordActivity();
+        return StatusCode::OK;
+    }
+
+    // Group is resident but this member is not - e.g. it was slept on its own per-graph
+    // timeout, or it failed during the group load. No reason to swap the whole group.
+    if (isGroupLoaded(groupName)) {
+        auto status = mm.requestServableWakeUp(servableName, /*urgent=*/true).get();
+        if (!status.ok()) {
+            return status;
+        }
+        recordActivity();
+        return StatusCode::OK;
+    }
+
+    return swapToGroup(groupName, mm, servableName);
 }
 
 void ServableGroupManager::unloadActiveGroupIfIdle(ModelManager& mm) {
     if (!isEnabled()) {
         return;
     }
-    if (activeGroupName.empty()) {
+    std::string groupToUnload = getActiveGroupName();
+    if (groupToUnload.empty()) {
         return;
     }
 
     // Check if we have a permanent group as active (should not happen, but safety)
     {
         std::shared_lock lock(groupsMtx);
-        auto it = groups.find(activeGroupName);
+        auto it = groups.find(groupToUnload);
         if (it != groups.end() && it->second.isPermanent()) {
             return;
         }
@@ -364,20 +387,24 @@ void ServableGroupManager::unloadActiveGroupIfIdle(ModelManager& mm) {
 
     // Check if we can safely unload (no active requests)
     if (!canUnloadActiveGroup(mm)) {
-        SPDLOG_DEBUG("Skipping idle unload of group '{}': active requests in flight", activeGroupName);
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Skipping idle unload of group '{}': active requests in flight", groupToUnload);
         return;
     }
 
-    SPDLOG_INFO("Idle unloading model group '{}' after {}us timeout", activeGroupName, idleTimeoutMicroseconds);
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Idle unloading model group '{}' after {}us timeout", groupToUnload, idleTimeoutMicroseconds);
     std::lock_guard<std::mutex> swapLock(loadUnloadMtx);
     // Re-check after acquiring lock
-    if (activeGroupName.empty()) {
+    groupToUnload = getActiveGroupName();
+    if (groupToUnload.empty()) {
         return;
     }
     if (!canUnloadActiveGroup(mm)) {
         return;
     }
-    unloadGroup(activeGroupName, mm);
+    auto status = unloadGroup(groupToUnload, mm, /*urgent=*/false);
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to idle unload group '{}': {}", groupToUnload, status.string());
+    }
 }
 
 }  // namespace ovms

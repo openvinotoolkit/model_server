@@ -2361,6 +2361,8 @@ ovms_cc_test_library(
     srcs = ["test/servable_group_manager_test.cpp"],
     deps = [
         ":test_constructor_enabled_model_manager",
+        ":test_test_models",
+        ":test_test_with_temp_dir",
         "//src/model_management:modelmanager",
         "//src:modelconfig",
         "@com_google_googletest//:gtest",

@@ -195,6 +195,8 @@ public:
          */
     void retireAllVersions();
 
+    void putToSleepAllVersions();
+
     /**
          * @brief Cleans up all versions of Model
          */

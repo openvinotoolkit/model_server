@@ -2923,6 +2923,31 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 }
 
+TEST_F(MediapipeConfigChanges, RetireGraphWithIdleManagementEnabled) {
+    std::string configFileContent = configFileWithGraphPathToReplace;
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    const std::string modelPathToReplace{"XYZ"};
+    configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    createConfigFileWithContent(configFileContent, configFilePath);
+    createConfigFileWithContent(pbtxtContent, graphFilePath);
+    ConstructorEnabledModelManager modelManager(30'000'000);
+    modelManager.loadConfig(configFilePath);
+    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    auto definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+    // now we retire
+    configFileContent = configFileWithoutGraph;
+    createConfigFileWithContent(configFileContent, configFilePath);
+    modelManager.loadConfig(configFilePath);
+    definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    EXPECT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE);
+    EXPECT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+}
+
 TEST_F(MediapipeConfigChanges, AddImproperGraphThenFixWithReloadThenBreakAgain) {
     std::string configFileContent = configFileWithGraphPathToReplace;
     std::string configFilePath = directoryPath + "/config.json";

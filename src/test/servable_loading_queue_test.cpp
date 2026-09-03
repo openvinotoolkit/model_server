@@ -78,8 +78,9 @@ TEST_F(ServableLoadingQueueTest, PriorityTaskCompletes) {
     ServableLoadingQueue queue;
     queue.start([this](ServableLoadingTask& task) { return defaultProcessor(task); });
 
-    ServableLoadingTask task{ServableLoadingTaskType::LoadModel, "urgent_model"};
-    auto future = queue.scheduleTask(std::move(task), true);
+    bool isPriorityRequest{true};
+    ServableLoadingTask task{ServableLoadingTaskType::LoadModel, "urgent_model", isPriorityRequest};
+    auto future = queue.scheduleTask(std::move(task));
     auto status = future.get();
 
     EXPECT_EQ(status, StatusCode::OK);
@@ -124,8 +125,9 @@ TEST_F(ServableLoadingQueueTest, PriorityTaskRunsBeforeQueuedNonPriority) {
     auto normalFuture = queue.scheduleTask(std::move(normal));
 
     // Task 3: priority, should jump ahead of "normal"
-    ServableLoadingTask urgent{ServableLoadingTaskType::LoadModel, "urgent"};
-    auto urgentFuture = queue.scheduleTask(std::move(urgent), true);
+    bool isPriorityRequest{true};
+    ServableLoadingTask urgent{ServableLoadingTaskType::LoadModel, "urgent", isPriorityRequest};
+    auto urgentFuture = queue.scheduleTask(std::move(urgent));
 
     // Release the blocker — worker processes remaining tasks in queue order
     gate.release();

@@ -433,9 +433,40 @@ TEST(PipelineDefinitionStatus, SleepingAfterFailedWakeIsRetryableViaReload) {
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
 }
 
-TEST(PipelineDefinitionStatus, SleepEventOnSleepingIsIdempotent) {
+TEST(PipelineDefinitionStatus, SleepEventOnSleepingShouldThrow) {
     PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
     pds.handle(SleepEvent());
     ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     ASSERT_THROW(pds.handle(SleepEvent()), std::logic_error);
+}
+
+TEST(PipelineDefinitionStatus, SleepEventOnLoadingFailedRequiredRevalidationIsNoOp) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationFailedEvent());
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION);
+}
+
+TEST(PipelineDefinitionStatus, SleepingThenValidationFailedKeepsSleeping) {
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    pds.handle(ValidationFailedEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+}
+
+TEST(PipelineDefinitionStatus, SleepingThenUsedModelChangedKeepsSleeping) {
+    // A subscribed model changing while the graph sleeps must not wake it up;
+    // the next wake-up reload revalidates anyway.
+    PipelineDefinitionStatus pds(unusedPipelineType, unusedPipelineName);
+    pds.handle(ValidationPassedEvent());
+    pds.handle(SleepEvent());
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    // TODO @atobiszei idle - todo later - potentially to remove with DAGS.
+    pds.handle(UsedModelChangedEvent(modelNotifyingDetails));
+    ASSERT_EQ(pds.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    ASSERT_TRUE(pds.isSleeping());
 }

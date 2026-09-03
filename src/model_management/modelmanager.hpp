@@ -357,6 +357,8 @@ public:
             return true;
     }
 
+    bool isServableAvailable(const std::string& name) const;
+
     /**
      * @brief Finds model instance with specific name and version, returns default if version not specified
      *
@@ -413,9 +415,8 @@ public:
     Status reloadModelWithVersions(ModelConfig& config);
 
     // Enqueue an urgent servable load request (for inference threads).
-    std::future<Status> requestServableLoad(const std::string& name);
-    std::future<Status> requestServableRetire(const std::string& name);
-    std::future<Status> requestServableUnload(const std::string& name);
+    std::future<Status> requestServableWakeUp(const std::string& name, bool urgent);
+    std::future<Status> requestServablePutToSleep(const std::string& name, bool urgent);
 
     /**
      * @brief Starts model manager using ovms::Config

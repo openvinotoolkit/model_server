@@ -28,6 +28,12 @@ namespace ovms {
 
 using TaskProcessor = std::function<Status(ServableLoadingTask&)>;
 
+enum class TaskEvent {
+    Scheduled,
+    Executed
+};
+using TaskObserver = std::function<void(TaskEvent, const ServableLoadingTask&)>;
+
 class ServableLoadingQueue {
 public:
     ServableLoadingQueue() = default;
@@ -42,14 +48,15 @@ public:
     // Signals worker to stop without blocking. stop() must still be called after.
     void requestStop();
 
-    // Returns future that resolves when the task completes.
-    // urgent=true inserts at front (for inference-triggered loads).
-    std::future<Status> scheduleTask(ServableLoadingTask task, bool urgent = false);
+    void setTaskObserver(TaskObserver observer);
+
+    std::future<Status> scheduleTask(ServableLoadingTask task);
 
 private:
     void workerLoop();
 
     TaskProcessor processor;
+    TaskObserver taskObserver;
     std::thread worker;
     std::deque<ServableLoadingTask> queue;
     std::mutex mutex;

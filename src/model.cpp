@@ -236,6 +236,13 @@ void Model::retireAllVersions() {
     subscriptionManager.notifySubscribers();
 }
 
+void Model::putToSleepAllVersions() {
+    std::shared_lock lock(modelVersionsMtx);
+    for (const auto& [version, instance] : modelVersions) {
+        instance->putToSleep();
+    }
+}
+
 void Model::cleanupAllVersions() {
     if (!(customLoaderName.empty())) {
         auto& customloaders = ovms::CustomLoaders::instance();

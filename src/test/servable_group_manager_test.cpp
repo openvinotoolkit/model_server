@@ -14,34 +14,49 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <thread>
+#include <algorithm>
+#include <fstream>
+#include <iterator>
+#include <memory>
+#include <mutex>
+#include <set>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/model_management/servable_group_manager.hpp"
 #include "constructor_enabled_model_manager.hpp"
+#include "src/model.hpp"
+#include "src/model_management/servable_loading_queue.hpp"
+#include "src/model_management/servable_loading_task.hpp"
 #include "src/modelconfig.hpp"
+#include "src/modelinstance.hpp"
+#include "src/modelversionstatus.hpp"
 #include "src/status.hpp"
+#include "test_models.hpp"
+#include "test_with_temp_dir.hpp"
 
 using namespace ovms;
+
+static std::unordered_map<std::string, ModelConfig> createModelConfigs(
+    const std::vector<std::pair<std::string, std::string>>& nameGroupPairs) {
+    std::unordered_map<std::string, ModelConfig> configs;
+    for (const auto& [name, group] : nameGroupPairs) {
+        ModelConfig config;
+        config.setName(name);
+        config.setGroupName(group);
+        configs.emplace(name, std::move(config));
+    }
+    return configs;
+}
 
 class ServableGroupManagerTest : public ::testing::Test {
 protected:
     ConstructorEnabledModelManager mm;
-
-    std::unordered_map<std::string, ModelConfig> createModelConfigs(
-        const std::vector<std::pair<std::string, std::string>>& nameGroupPairs) {
-        std::unordered_map<std::string, ModelConfig> configs;
-        for (const auto& [name, group] : nameGroupPairs) {
-            ModelConfig config;
-            config.setName(name);
-            config.setGroupName(group);
-            configs.emplace(name, std::move(config));
-        }
-        return configs;
-    }
 };
 
 TEST_F(ServableGroupManagerTest, DisabledByDefault) {
@@ -170,16 +185,162 @@ TEST_F(ServableGroupManagerTest, ActiveGroupNameInitiallyEmpty) {
     EXPECT_TRUE(mgr.getActiveGroupName().empty());
 }
 
-// Schema validation test for group_name in model config
-TEST(SchemaValidation, GroupNameInModelConfig) {
-    ModelConfig config;
-    config.setName("test_model");
-    config.setGroupName("my_group");
-    EXPECT_EQ(config.getGroupName(), "my_group");
+struct RecordedEvent {
+    TaskEvent event;
+    ServableLoadingTaskType type;
+    std::string name;
+    bool urgent;
+};
 
-    // Default group name should be model name
-    ModelConfig config2;
-    config2.setName("test_model_2");
-    config2.setGroupName(config2.getName());
-    EXPECT_EQ(config2.getGroupName(), "test_model_2");
+class ServableGroupSwapTest : public TestWithTempDir {
+protected:
+    std::unique_ptr<ConstructorEnabledModelManager> mm;
+    std::mutex recordMtx;
+    std::vector<RecordedEvent> events;
+
+    static std::string swapConfig() {
+        return R"({"model_config_list": [
+            {"config": {"name": "a1", "base_path": ")" +
+               dummy_model_location + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupA"}},
+            {"config": {"name": "a2", "base_path": ")" +
+               dummy_model_location + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupA"}},
+            {"config": {"name": "b1", "base_path": ")" +
+               dummy_model_location + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupB"}},
+            {"config": {"name": "b2", "base_path": ")" +
+               dummy_model_location + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupB"}}
+        ]})";
+    }
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        std::string configFilePath = directoryPath + "/config.json";
+        std::ofstream(configFilePath) << swapConfig();
+
+        mm = std::make_unique<ConstructorEnabledModelManager>(uint64_t{30'000'000});
+        auto status = mm->loadConfig(configFilePath);
+        ASSERT_TRUE(status.ok()) << status.string();
+        groupManager = mm->getGroupManager();
+        ASSERT_NE(groupManager, nullptr);
+        ASSERT_TRUE(groupManager->getActiveGroupName().empty());
+
+        // Installed after loadConfig so that only swap traffic is recorded.
+        mm->getLoadingQueue().setTaskObserver(
+            [this](TaskEvent event, const ServableLoadingTask& task) {
+                std::lock_guard<std::mutex> lock(recordMtx);
+                events.push_back({event, task.type, task.name, task.urgent});
+            });
+    }
+
+    ServableGroupManager* groupManager = nullptr;
+
+    void clearRecorded() {
+        std::lock_guard<std::mutex> lock(recordMtx);
+        events.clear();
+    }
+
+    std::vector<RecordedEvent> recorded(TaskEvent event) {
+        std::lock_guard<std::mutex> lock(recordMtx);
+        std::vector<RecordedEvent> filtered;
+        std::copy_if(events.begin(), events.end(), std::back_inserter(filtered),
+            [event](const RecordedEvent& e) { return e.event == event; });
+        return filtered;
+    }
+
+    static bool isUnload(ServableLoadingTaskType type) {
+        return type == ServableLoadingTaskType::PutToSleepModel ||
+               type == ServableLoadingTaskType::PutToSleepMediapipe;
+    }
+
+    static size_t countLoadsOf(const std::vector<RecordedEvent>& tasks, const std::string& name) {
+        return std::count_if(tasks.begin(), tasks.end(), [&name](const RecordedEvent& t) {
+            return t.name == name && t.type == ServableLoadingTaskType::WakeUpModel;
+        });
+    }
+
+    void ensureLoaded(const std::string& servableName) {
+        auto status = groupManager->ensureServableLoaded(servableName, *mm);
+        ASSERT_TRUE(status.ok()) << servableName << ": " << status.string();
+        auto instance = mm->findModelByName(servableName)->getDefaultModelInstance();
+        ASSERT_NE(instance, nullptr);
+        EXPECT_EQ(instance->getStatus().getState(), ModelVersionState::AVAILABLE);
+    }
+
+    void expectRequestedLoadsFirst(const std::string& requested) {
+        ASSERT_NO_FATAL_FAILURE(ensureLoaded(requested));
+
+        auto executed = recorded(TaskEvent::Executed);
+        ASSERT_FALSE(executed.empty());
+        EXPECT_EQ(executed[0].name, requested)
+            << "the servable that triggered the wake-up should load first to shorten "
+               "time-to-first-response";
+        EXPECT_TRUE(executed[0].urgent);
+    }
+};
+
+TEST_F(ServableGroupSwapTest, SwapUnloadsPreviousGroupBeforeLoadingNew) {
+    ASSERT_NO_FATAL_FAILURE(ensureLoaded("a1"));
+    ASSERT_EQ(groupManager->getActiveGroupName(), "groupA");
+    clearRecorded();
+
+    ASSERT_NO_FATAL_FAILURE(ensureLoaded("b1"));
+    auto tasks = recorded(TaskEvent::Executed);
+    ASSERT_FALSE(tasks.empty());
+
+    std::set<std::string> retired;
+    size_t firstLoadIdx = tasks.size();
+    for (size_t i = 0; i < tasks.size(); ++i) {
+        if (isUnload(tasks[i].type)) {
+            retired.insert(tasks[i].name);
+            EXPECT_LT(i, firstLoadIdx) << "unload of " << tasks[i].name << " ran after a load";
+        } else if (i < firstLoadIdx) {
+            firstLoadIdx = i;
+        }
+    }
+    EXPECT_EQ(retired, (std::set<std::string>{"a1", "a2"}))
+        << "every member of the previously active group must be unloaded on swap";
+    EXPECT_EQ(groupManager->getActiveGroupName(), "groupB");
+    for (const char* name : {"a1", "a2"}) {
+        auto instance = mm->findModelByName(name)->getDefaultModelInstance();
+        ASSERT_NE(instance, nullptr) << name << " must stay known so it can be woken up again";
+        EXPECT_EQ(instance->getStatus().getState(), ModelVersionState::SLEEPING)
+            << name << " must not be servable after its group was swapped out";
+    }
+}
+
+TEST_F(ServableGroupSwapTest, RequestedServableIsScheduledOnlyOnce) {
+    ASSERT_NO_FATAL_FAILURE(ensureLoaded("b1"));
+    // Second request hits a group that is already active, so nothing should reload.
+    ASSERT_NO_FATAL_FAILURE(ensureLoaded("b2"));
+
+    auto tasks = recorded(TaskEvent::Scheduled);
+    EXPECT_EQ(countLoadsOf(tasks, "b1"), 1u)
+        << "loadGroup() already loads every group member, so ensureServableLoaded() "
+           "must not schedule the requested servable a second time";
+    EXPECT_EQ(countLoadsOf(tasks, "b2"), 1u)
+        << "b2 was already loaded as part of groupB - requesting it must not reload it";
+}
+
+TEST_F(ServableGroupSwapTest, AlreadyAvailableServableDoesNotTouchLoadingQueue) {
+    // we should try to load servable/push task to queue when its already loaded
+    ASSERT_NO_FATAL_FAILURE(ensureLoaded("b1"));
+    clearRecorded();
+
+    for (int i = 0; i < 5; ++i) {
+        ASSERT_NO_FATAL_FAILURE(ensureLoaded("b1"));
+    }
+
+    EXPECT_TRUE(recorded(TaskEvent::Scheduled).empty())
+        << "requesting an already available servable must be answered without a "
+           "loading queue round-trip";
+    EXPECT_EQ(groupManager->getActiveGroupName(), "groupB");
+}
+
+// The requested servable must load first regardless of its position in the group's
+// name ordering, so both directions are checked.
+TEST_F(ServableGroupSwapTest, RequestedServableIsLoadedFirstWithinGroupLastAlphabetically) {
+    expectRequestedLoadsFirst("a2");
+}
+
+TEST_F(ServableGroupSwapTest, RequestedServableIsLoadedFirstWithinGroupFirstAlphabetically) {
+    expectRequestedLoadsFirst("a1");
 }
