@@ -4509,6 +4509,85 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
 }
 
+// RAII guard removing a temporary directory tree on scope exit, so a failed ASSERT_*
+// (which returns early from the test body) does not leak the directory.
+struct TempDirGuard {
+    std::filesystem::path path;
+    explicit TempDirGuard(std::filesystem::path p) :
+        path(std::move(p)) {}
+    ~TempDirGuard() {
+        std::error_code ec;
+        std::filesystem::remove_all(path, ec);
+    }
+};
+
+// Unit test for the per-node generation_config.json path override (issue #4233).
+TEST(LLMGenerationConfigPath, ResolveGenerationConfigPath) {
+    // Unique per-run directory so concurrent/parallel test runs cannot collide.
+    std::string tempPath;
+    ASSERT_EQ(ovms::FileSystem::createTempPath(&tempPath), ovms::StatusCode::OK);
+    std::filesystem::path base(tempPath);
+    TempDirGuard cleanup(base);
+    std::filesystem::path modelDir = base / "model";
+    std::filesystem::path overrideDir = base / "overrides";
+    std::filesystem::create_directories(modelDir);
+    std::filesystem::create_directories(overrideDir);
+    auto writeFile = [](const std::filesystem::path& p) {
+        std::ofstream ofs(p);
+        ofs << "{}";
+    };
+    writeFile(modelDir / "generation_config.json");
+    writeFile(overrideDir / "custom_generation_config.json");
+    // A GGUF "models_path" is a file, not a directory - relative overrides resolve against its parent.
+    writeFile(modelDir / "model.gguf");
+
+    // Case 1: no override -> default generation_config.json inside the model dir.
+    {
+        mediapipe::LLMCalculatorOptions nodeOptions;
+        std::string outPath;
+        ASSERT_EQ(ovms::resolveGenerationConfigPath(outPath, modelDir.string(), nodeOptions), ovms::StatusCode::OK);
+        ASSERT_EQ(std::filesystem::path(outPath), modelDir / "generation_config.json");
+    }
+    // Case 2: explicit absolute override path.
+    {
+        mediapipe::LLMCalculatorOptions nodeOptions;
+        nodeOptions.set_generation_config_path((overrideDir / "custom_generation_config.json").string());
+        std::string outPath;
+        ASSERT_EQ(ovms::resolveGenerationConfigPath(outPath, modelDir.string(), nodeOptions), ovms::StatusCode::OK);
+        ASSERT_EQ(std::filesystem::path(outPath), overrideDir / "custom_generation_config.json");
+    }
+    // Case 3: explicit relative override path is resolved against models_path.
+    {
+        mediapipe::LLMCalculatorOptions nodeOptions;
+        nodeOptions.set_generation_config_path("generation_config.json");
+        std::string outPath;
+        ASSERT_EQ(ovms::resolveGenerationConfigPath(outPath, modelDir.string(), nodeOptions), ovms::StatusCode::OK);
+        ASSERT_EQ(std::filesystem::path(outPath), modelDir / "generation_config.json");
+    }
+    // Case 4: explicit override that does not exist -> dedicated error.
+    {
+        mediapipe::LLMCalculatorOptions nodeOptions;
+        nodeOptions.set_generation_config_path((overrideDir / "missing.json").string());
+        std::string outPath;
+        ASSERT_EQ(ovms::resolveGenerationConfigPath(outPath, modelDir.string(), nodeOptions), ovms::StatusCode::LLM_NODE_GENERATION_CONFIG_DOES_NOT_EXIST);
+    }
+    // Case 5: explicit override pointing at a directory -> same error (not a regular file).
+    {
+        mediapipe::LLMCalculatorOptions nodeOptions;
+        nodeOptions.set_generation_config_path(overrideDir.string());
+        std::string outPath;
+        ASSERT_EQ(ovms::resolveGenerationConfigPath(outPath, modelDir.string(), nodeOptions), ovms::StatusCode::LLM_NODE_GENERATION_CONFIG_DOES_NOT_EXIST);
+    }
+    // Case 6: models_path points at a GGUF file - relative override resolves against its parent dir.
+    {
+        mediapipe::LLMCalculatorOptions nodeOptions;
+        nodeOptions.set_generation_config_path("generation_config.json");
+        std::string outPath;
+        ASSERT_EQ(ovms::resolveGenerationConfigPath(outPath, (modelDir / "model.gguf").string(), nodeOptions), ovms::StatusCode::OK);
+        ASSERT_EQ(std::filesystem::path(outPath), modelDir / "generation_config.json");
+    }
+}
+
 // RAII guard that restores the global Config singleton (and optionally removes a temporary
 // cache directory) on scope exit. The cache_dir tests below mutate the process-wide Config
 // singleton; without this guard a failed ASSERT_* mid-test (which returns early) would leak
