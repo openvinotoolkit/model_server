@@ -63,7 +63,6 @@ response = client.chat.completions.create(
     model="OpenVINO/Qwen3.8-27B-int4-ov",
     messages=[{"role": "user", "content": "Explain the transformer attention mechanism."}],
     temperature=0,
-    max_tokens=10000,
     extra_body={"num_assistant_tokens": 5},
 )
 print(response.choices[0].message)
@@ -236,6 +235,9 @@ Setting `num_assistant_tokens: 0` disables drafting for that request; only the t
 Tree drafting adds two `GenerationConfig` fields. Setting `tree_depth > 0` switches from chain to tree mode:
 
 ```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
 response = client.chat.completions.create(
     model="Qwen/Qwen3-8B",
     messages=[{"role": "user", "content": "What is OpenVINO?"}],
