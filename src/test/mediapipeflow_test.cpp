@@ -13,15 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -55,7 +58,7 @@
 #include "../ovms_exit_codes.hpp"
 #include "../precision.hpp"
 #include "../servable_definition_unload_guard.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
@@ -2946,6 +2949,89 @@ TEST_F(MediapipeConfigChanges, RetireGraphWithIdleManagementEnabled) {
     EXPECT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE);
     EXPECT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+}
+
+TEST_F(MediapipeConfigChanges, RetiringGraphsGoesThroughLoadingQueue) {
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    createConfigFileWithContent(pbtxtContent, graphFilePath);
+
+    auto configWithGraphs = [&graphFilePath](const std::vector<std::string>& graphNames) {
+        std::string entries;
+        for (const auto& name : graphNames) {
+            if (!entries.empty()) {
+                entries += ",";
+            }
+            entries += R"({"name":")" + name + R"(","graph_path":")" + graphFilePath + R"("})";
+        }
+        return R"({"model_config_list":[{"config":{"name":"dummy","base_path":"/ovms/src/test/dummy"}}],)"
+               R"("mediapipe_config_list":[)" +
+               entries + "]}";
+    };
+
+    createConfigFileWithContent(configWithGraphs({"graphA", "graphB", "graphC"}), configFilePath);
+    ConstructorEnabledModelManager modelManager;
+    ASSERT_EQ(modelManager.loadConfig(configFilePath), StatusCode::OK);
+    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    for (const auto& name : {"graphA", "graphB", "graphC"}) {
+        auto* definition = factory.findDefinitionByName(name);
+        ASSERT_NE(nullptr, definition) << name;
+        ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE) << name;
+    }
+
+    std::mutex retiredMtx;
+    std::vector<std::string> retired;
+    // Installed after the initial load so that only the retirement reload is recorded.
+    modelManager.getLoadingQueue().setTaskObserver(
+        [&retiredMtx, &retired](TaskEvent event, const ServableLoadingTask& task) {
+            if (event != TaskEvent::Executed || task.type != ServableLoadingTaskType::RetireMediapipe) {
+                return;
+            }
+            std::lock_guard<std::mutex> lock(retiredMtx);
+            retired.push_back(task.name);
+        });
+
+    createConfigFileWithContent(configWithGraphs({"graphB"}), configFilePath);
+    ASSERT_EQ(modelManager.loadConfig(configFilePath), StatusCode::OK);
+
+    for (const auto& name : {"graphA", "graphC"}) {
+        auto* definition = factory.findDefinitionByName(name);
+        ASSERT_NE(nullptr, definition) << name;
+        EXPECT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED) << name;
+    }
+    EXPECT_EQ(factory.findDefinitionByName("graphB")->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+
+    std::lock_guard<std::mutex> lock(retiredMtx);
+    std::sort(retired.begin(), retired.end());
+    EXPECT_EQ(retired, (std::vector<std::string>{"graphA", "graphC"}))
+        << "graphs dropped from the config must be retired through the loading queue like every other state change";
+}
+
+TEST_F(MediapipeConfigChanges, WakeUpDoesNotResurrectRetiredGraph) {
+    std::string configFileContent = configFileWithGraphPathToReplace;
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    const std::string modelPathToReplace{"XYZ"};
+    configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    createConfigFileWithContent(configFileContent, configFilePath);
+    createConfigFileWithContent(pbtxtContent, graphFilePath);
+    ConstructorEnabledModelManager modelManager;
+    ASSERT_EQ(modelManager.loadConfig(configFilePath), StatusCode::OK);
+    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    auto* definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+
+    createConfigFileWithContent(configFileWithoutGraph, configFilePath);
+    ASSERT_EQ(modelManager.loadConfig(configFilePath), StatusCode::OK);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+
+    // A wake-up scheduled by a request thread working off a stale group snapshot must not
+    // bring back a graph the user removed from the config.
+    auto status = modelManager.requestServableWakeUp(mgdName, /*urgent=*/true).get();
+    EXPECT_EQ(status, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE) << status.string();
+    EXPECT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE);
 }
 
 TEST_F(MediapipeConfigChanges, AddImproperGraphThenFixWithReloadThenBreakAgain) {

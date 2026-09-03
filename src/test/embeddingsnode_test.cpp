@@ -21,7 +21,7 @@
 #include "../embeddings/embeddings_node_initializer_utils.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "rapidjson/document.h"
 #include "test_http_utils.hpp"

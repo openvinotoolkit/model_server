@@ -18,7 +18,6 @@
 #include <algorithm>
 #include <map>
 #include <memory>
-#include <set>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -143,14 +142,37 @@ Status MediapipeFactory::create(std::unique_ptr<MediapipeGraphExecutor>& pipelin
     return definition.create(pipeline);
 }
 
-void MediapipeFactory::retireOtherThan(std::set<std::string>&& graphsInConfigFile) {
-    std::for_each(definitions.begin(),
-        definitions.end(),
-        [&graphsInConfigFile](auto& nameDefinitionPair) {
-            if (graphsInConfigFile.find(nameDefinitionPair.second->getName()) == graphsInConfigFile.end() && nameDefinitionPair.second->getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-                nameDefinitionPair.second->retire();
-            }
-        });
+[[nodiscard]] Status MediapipeFactory::wakeUpDefinition(const std::string& graphName, const ServableNameChecker& checker) {
+    MediapipeGraphDefinition* definition = findDefinitionByName(graphName);
+    if (definition == nullptr) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested to wake up mediapipe graph definition but it does not exist: {}", graphName);
+        return StatusCode::INTERNAL_ERROR;
+    }
+    // Rejects every non-SLEEPING state, so a wake-up scheduled off a stale group snapshot
+    // cannot resurrect a graph removed from the config.
+    auto status = definition->wakeUpIfSleeping(checker);
+    if (status.ok()) {
+        registerLoraAliasesFor(graphName);
+    }
+    return status;
+}
+
+    [[nodiscard]] Status MediapipeFactory::putToSleepDefinition(const std::string& graphName) {
+    MediapipeGraphDefinition* definition = findDefinitionByName(graphName);
+    if (definition == nullptr) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested to put to sleep mediapipe graph definition but it does not exist: {}", graphName);
+        return StatusCode::INTERNAL_ERROR;
+    }
+    return definition->putToSleep();
+}
+
+Status MediapipeFactory::retireDefinition(const std::string& graphName) {
+    MediapipeGraphDefinition* definition = findDefinitionByName(graphName);
+    if (definition == nullptr) {
+        return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
+    }
+    definition->retire();
+    return StatusCode::OK;
 }
 
 Status MediapipeFactory::revalidatePipelines() {

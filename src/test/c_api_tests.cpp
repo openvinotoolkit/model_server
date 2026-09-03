@@ -41,7 +41,7 @@
 #include "../filesystem/filesystem.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../ovms.h"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"

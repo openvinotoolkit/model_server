@@ -18,8 +18,8 @@
 #include <string>
 
 #include "src/metrics/metric_registry.hpp"
-#include "src/model_management/modelmanager.hpp"
-#include "src/model_management/servable_loading_queue.hpp"
+#include "src/servable_management/modelmanager.hpp"
+#include "src/servable_management/servable_loading_queue.hpp"
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {
     ovms::MetricRegistry registry;

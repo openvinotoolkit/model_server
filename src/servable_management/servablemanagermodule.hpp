@@ -16,7 +16,7 @@
 #pragma once
 #include <memory>
 
-#include "module.hpp"
+#include "src/module.hpp"
 
 namespace ovms {
 class Config;

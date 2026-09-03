@@ -83,3 +83,21 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+ovms_cc_library(
+    name = "servablemanagermodule",
+    hdrs = ["servablemanagermodule.hpp"],
+    srcs = ["servablemanagermodule.cpp"],
+    deps = select({
+        "//:not_disable_python": [
+            "//src/python:libovmspythonmodule",
+        ],
+        "//:disable_python": []
+    }) + [
+        "//src:cpp_headers",
+        "//src:libovms_module",
+        "//src:libovmslogging",
+        "modelmanager",
+        "//src/metrics:libovmsmetrics",
+    ],
+    visibility = ["//visibility:public"],
+)

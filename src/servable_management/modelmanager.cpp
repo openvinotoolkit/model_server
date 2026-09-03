@@ -155,36 +155,19 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
             return StatusCode::OK;
         }
         case ServableLoadingTaskType::WakeUpMediapipe: {
-            auto* def = mediapipeFactory->findDefinitionByName(task.name);
-            if (!def) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger,
-                    "Mediapipe graph:{} not found for wake-up", task.name);
-                return StatusCode::INTERNAL_ERROR;
-            }
-            // A graph removed from the config must never be brought back by a wake-up.
-            if (def->getStateCode() == PipelineDefinitionStateCode::RETIRED) {
-                return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
-            }
-            if (def->getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
-                // TODO consider moving whole part as an interface to ServableContainer so that we
-                // could just call servableContainer->wakeUp(A). However we would need to to expose scheduler then
-                auto status = def->wakeUpIfSleeping(*this);
-                if (status.ok()) {
-                    mediapipeFactory->registerLoraAliasesFor(task.name);
-                }
-                return status;
-            }
-            return def->reload(*this, def->getMediapipeGraphConfig());
+            // TODO consider moving whole part as an interface to ServableContainer so that we
+            // could just call servableContainer->wakeUp(A). However we would need to to expose scheduler then
+            return mediapipeFactory->wakeUpDefinition(task.name, *this);
         }
         case ServableLoadingTaskType::PutToSleepMediapipe: {
-            auto* def = mediapipeFactory->findDefinitionByName(task.name);
-            if (!def) {
-                return StatusCode::INTERNAL_ERROR;
-            }
-            return def->putToSleep();
+            return mediapipeFactory->putToSleepDefinition(task.name);
+        }
+        case ServableLoadingTaskType::RetireMediapipe: {
+            return mediapipeFactory->retireDefinition(task.name);
         }
 #else
         case ServableLoadingTaskType::LoadMediapipe:
+        case ServableLoadingTaskType::RetireMediapipe:
         case ServableLoadingTaskType::WakeUpMediapipe:
         case ServableLoadingTaskType::PutToSleepMediapipe:
             return StatusCode::INTERNAL_ERROR;
@@ -617,11 +600,35 @@ Status ModelManager::ConfigLoader::loadCustomNodeLibrariesConfig(ModelManager& m
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
+[[nodiscard]] Status ModelManager::retireMediapipesOtherThan(const std::set<std::string>& graphsInConfigFile) {
+    std::vector<std::pair<std::string, std::future<Status>>> futures;
+    for (const auto& graphName : mediapipeFactory->getMediapipePipelinesNames()) {
+        if (graphsInConfigFile.find(graphName) != graphsInConfigFile.end()) {
+            continue;
+        }
+        auto* definition = mediapipeFactory->findDefinitionByName(graphName);
+        if (definition == nullptr || definition->getStateCode() == PipelineDefinitionStateCode::RETIRED) {
+            continue;
+        }
+        ServableLoadingTask task{ServableLoadingTaskType::RetireMediapipe, graphName, /*urgent=*/false};
+        futures.emplace_back(graphName, loadingQueue->scheduleTask(std::move(task)));
+    }
+    Status firstErrorStatus = StatusCode::OK;
+    // Config reload must not return before removed graphs stopped serving.
+    for (auto& [graphName, future] : futures) {
+        auto status = future.get();
+        if (status != StatusCode::OK) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to retire mediapipe graph:{} - {}", graphName, status.string());
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+        }
+    }
+    return firstErrorStatus;
+}
+
 Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
     if (mediapipesInConfigFile.size() == 0) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
-        mediapipeFactory->retireOtherThan({});
-        return StatusCode::OK;
+        return retireMediapipesOtherThan({});
     }
     std::set<std::string> mediapipesInConfigFileNames;
     Status firstErrorStatus = StatusCode::OK;
@@ -629,7 +636,10 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
             mediapipesInConfigFileNames.insert(mediapipeGraphConfig.getGraphName());
         }
-        mediapipeFactory->retireOtherThan(std::move(mediapipesInConfigFileNames));
+        auto retireStatus = retireMediapipesOtherThan(mediapipesInConfigFileNames);
+        if (retireStatus != StatusCode::OK) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(retireStatus);
+        }
         std::set<std::string> alreadyScheduled;
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
             if (!alreadyScheduled.insert(mediapipeGraphConfig.getGraphName()).second) {

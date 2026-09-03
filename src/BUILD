@@ -661,24 +661,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "servablemanagermodule",
-    hdrs = ["servablemanagermodule.hpp"],
-    srcs = ["servablemanagermodule.cpp"],
-    deps = select({
-        "//:not_disable_python": [
-            "//src/python:libovmspythonmodule",
-        ],
-        "//:disable_python": []
-    }) + [
-        "cpp_headers",
-        "libovms_module",
-        "libovmslogging",
-        "//src/model_management:modelmanager",
-        "//src/metrics:libovmsmetrics",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
     name = "ovms_lib",
     hdrs = [
             "ovms_internal.h",
@@ -791,8 +773,8 @@ ovms_cc_library(
             "libovms_kfs_utils",
             "libovms_kfs_grpc_inference_service_h",
             "modelchangesubscription",
-            "//src/model_management:modelmanager",
-            "servablemanagermodule",
+            "//src/servable_management:modelmanager",
+            "//src/servable_management:servablemanagermodule",
             "//src/filesystem:libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
             "//src/metrics:libovmsmetrics",
@@ -2337,7 +2319,7 @@ ovms_cc_test_library(
     name = "servable_loading_queue_test",
     srcs = ["test/servable_loading_queue_test.cpp"],
     deps = [
-        "//src/model_management:servable_loading_queue",
+        "//src/servable_management:servable_loading_queue",
         "@com_google_googletest//:gtest",
     ],
 )
@@ -2363,7 +2345,7 @@ ovms_cc_test_library(
         ":test_constructor_enabled_model_manager",
         ":test_test_models",
         ":test_test_with_temp_dir",
-        "//src/model_management:modelmanager",
+        "//src/servable_management:modelmanager",
         "//src:modelconfig",
         "@com_google_googletest//:gtest",
     ],

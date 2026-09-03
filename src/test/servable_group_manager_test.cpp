@@ -28,11 +28,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/model_management/servable_group_manager.hpp"
+#include "src/servable_management/servable_group_manager.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "src/model.hpp"
-#include "src/model_management/servable_loading_queue.hpp"
-#include "src/model_management/servable_loading_task.hpp"
+#include "src/servable_management/servable_loading_queue.hpp"
+#include "src/servable_management/servable_loading_task.hpp"
 #include "src/modelconfig.hpp"
 #include "src/modelinstance.hpp"
 #include "src/modelversionstatus.hpp"

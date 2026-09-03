@@ -20,8 +20,8 @@
 
 #include <gtest/gtest.h>
 
-#include "src/model_management/servable_loading_queue.hpp"
-#include "src/model_management/servable_loading_task.hpp"
+#include "src/servable_management/servable_loading_queue.hpp"
+#include "src/servable_management/servable_loading_task.hpp"
 
 using namespace ovms;
 

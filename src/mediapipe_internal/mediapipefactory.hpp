@@ -17,7 +17,6 @@
 
 #include <map>
 #include <memory>
-#include <set>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -65,7 +64,9 @@ public:
         const MediapipeGraphConfig& config,
         const ServableNameChecker& checker);
 
-    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile);
+    [[nodiscard]] Status wakeUpDefinition(const std::string& pipelineName, const ServableNameChecker& checker);
+    [[nodiscard]] Status putToSleepDefinition(const std::string& pipelineName);
+    Status retireDefinition(const std::string& pipelineName);
     Status revalidatePipelines();
     const std::vector<std::string> getMediapipePipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;

@@ -19,7 +19,7 @@
 
 #include <memory>
 
-#include "src/model_management/servable_group_manager.hpp"
+#include "src/servable_management/servable_group_manager.hpp"
 #include "src/status.hpp"
 
 ConstructorEnabledModelManager::ConstructorEnabledModelManager(const std::string& modelCacheDirectory, ovms::PythonBackend* pythonBackend) :

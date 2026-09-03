@@ -32,6 +32,7 @@ enum class ServableLoadingTaskType {
     WakeUpModel,
     PutToSleepModel,
     LoadMediapipe,
+    RetireMediapipe,
     WakeUpMediapipe,
     PutToSleepMediapipe
 };

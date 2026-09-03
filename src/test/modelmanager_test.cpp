@@ -31,7 +31,7 @@
 #include "../logging.hpp"
 #include "../model.hpp"
 #include "../modelinstanceunloadguard.hpp"
-#include "src/model_management/modelmanager.hpp"
+#include "src/servable_management/modelmanager.hpp"
 #include "../prediction_service_utils.hpp"
 #include "absl/synchronization/notification.h"
 #include "constructor_enabled_model_manager.hpp"
@@ -482,6 +482,29 @@ TEST_F(ModelManager, ConfigParseNoModels) {
     createConfigFileWithContent("{ \"model_config_list\": [ ] }\n", configFile);
     auto status = fixtureManager.startFromFile(configFile);
     EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
+TEST_F(ModelManager, WakeUpDoesNotResurrectRetiredModel) {
+    std::string configFile = this->getFilePath("/ovms_config_file.json");
+    createConfigFileWithContent(
+        R"({"model_config_list":[{"config":{"name":"dummy","base_path":"/ovms/src/test/dummy"}}]})",
+        configFile);
+    ASSERT_EQ(fixtureManager.loadConfig(configFile), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::ModelInstance> modelInstance;
+    std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
+    ASSERT_EQ(fixtureManager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuardPtr), ovms::StatusCode::OK);
+    modelInstance.reset();
+    modelInstanceUnloadGuardPtr.reset();
+
+    createConfigFileWithContent("{ \"model_config_list\": [ ] }\n", configFile);
+    ASSERT_EQ(fixtureManager.loadConfig(configFile), ovms::StatusCode::OK);
+    ASSERT_EQ(fixtureManager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuardPtr), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+
+    // A wake-up scheduled by a request thread working off a stale group snapshot must not
+    // bring back a model the user removed from the config.
+    auto status = fixtureManager.requestServableWakeUp("dummy", /*urgent=*/true).get();
+    EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE) << status.string();
+    EXPECT_EQ(fixtureManager.getModelInstance("dummy", 1, modelInstance, modelInstanceUnloadGuardPtr), ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
 }
 
 #if (MEDIAPIPE_DISABLE == 1)
