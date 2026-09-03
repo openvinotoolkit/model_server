@@ -30,7 +30,7 @@ struct ChatTemplateCaps {
     bool removeResponseFromToolDefinition = false;
 
     bool needsWorkarounds() const {
-        return requiresObjectArguments || !missnamedReasoningField.empty();
+        return requiresObjectArguments || !missnamedReasoningField.empty() || removeResponseFromToolDefinition;
     }
 
     std::string toString() const {
