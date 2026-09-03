@@ -533,10 +533,14 @@ Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string
 }
 
 static std::optional<uint32_t> findMaxLengthField(const rapidjson::Value& config) {
+    if (!config.IsObject()) {
+        return std::nullopt;
+    }
     static const std::vector<std::string> maxLengthFields = {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window"};
     for (const auto& field : maxLengthFields) {
-        if (config.HasMember(field.c_str()) && config[field.c_str()].IsUint()) {
-            return config[field.c_str()].GetUint();
+        auto it = config.FindMember(field.c_str());
+        if (it != config.MemberEnd() && it->value.IsUint()) {
+            return it->value.GetUint();
         }
     }
     return std::nullopt;
