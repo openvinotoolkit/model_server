@@ -81,14 +81,16 @@ struct Minicpm5ToolParserImpl {
      */
     std::optional<ToolCalls_t> parseChunk(const std::string& chunk);
 
+    // Called once generation has stopped and parseChunk() produced nothing new: synthesizes
+    // the closing tags still missing for whatever tool call is in flight (using only data
+    // already captured) so it can be recovered instead of silently dropped. An incomplete
+    // name/attribute can't be recovered and returns nullopt.
+    std::optional<ToolCalls_t> finalizeOnGenerationEnd();
+
     std::optional<std::string> getCurrentFunctionName() const;
 
     void reset() {
-        currentState = State::Content;
-        currentFunction.clear();
-        currentParameterName.clear();
-        streamContent.clear();
-        lastProcessedPosition = 0;
+        resetParsingState();
         toolCallPositions = ToolCallPositions{};
     }
 
@@ -98,6 +100,15 @@ struct Minicpm5ToolParserImpl {
 private:
     const ToolsParameterTypeMap_t& toolsParametersTypeMap;
     const bool removeNewlineAroundParameters = true;
+    // Resets everything except toolCallPositions, which removeToolCallsFromContentIfNeeded()
+    // still needs to consult after generation ends.
+    void resetParsingState() {
+        currentState = State::Content;
+        currentFunction.clear();
+        currentParameterName.clear();
+        streamContent.clear();
+        lastProcessedPosition = 0;
+    }
     State currentState = State::Content;
     Minicpm5Functool currentFunction;
     std::string currentParameterName;

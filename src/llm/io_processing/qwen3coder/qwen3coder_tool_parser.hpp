@@ -86,14 +86,15 @@ C->ITC->IFN->IF->IPN->IP->AF->C
      * that were not returned before
      */
     std::optional<ToolCalls_t> parseChunk(const std::string& chunk);
+    // Called once generation has stopped and parseChunk() produced nothing new: synthesizes
+    // the closing tags still missing for whatever tool call is in flight (using only data
+    // already captured) so it can be recovered instead of silently dropped. An incomplete
+    // name/attribute can't be recovered and returns nullopt.
+    std::optional<ToolCalls_t> finalizeOnGenerationEnd();
     std::optional<std::string> getCurrentFunctionName() const;
     Status removeToolCallsFromContentIfNeeded(std::string& outContent);
     void reset() {
-        currentState = State::Content;
-        currentFunction.clear();
-        currentParameterName.clear();
-        streamContent.clear();
-        lastProcessedPosition = 0;
+        resetParsingState();
         toolCallPositions = ToolCallPositions{};
     }
     State getCurrentState() const {
@@ -106,6 +107,15 @@ C->ITC->IFN->IF->IPN->IP->AF->C
 private:
     const ToolsParameterTypeMap_t& toolsParametersTypeMap;
     const bool removeNewlineAroundParameters = true;
+    // Resets everything except toolCallPositions, which removeToolCallsFromContentIfNeeded()
+    // still needs to consult after generation ends.
+    void resetParsingState() {
+        currentState = State::Content;
+        currentFunction.clear();
+        currentParameterName.clear();
+        streamContent.clear();
+        lastProcessedPosition = 0;
+    }
     State currentState = State::Content;
     Functool currentFunction;
     std::string currentParameterName;

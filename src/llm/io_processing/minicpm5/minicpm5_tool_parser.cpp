@@ -235,6 +235,38 @@ std::optional<ToolCalls_t> Minicpm5ToolParserImpl::parseChunk(const std::string&
     return std::nullopt;
 }
 
+std::optional<ToolCalls_t> Minicpm5ToolParserImpl::finalizeOnGenerationEnd() {
+    if (this->currentState == State::Content ||
+        this->currentState == State::InsideFunctionName) {
+        // No usable function name was ever captured -- nothing to recover. Still clear the
+        // dangling partial state so it doesn't look like a call is still in flight.
+        resetParsingState();
+        return std::nullopt;
+    }
+    if (this->currentState == State::InsideParamName) {
+        // Drop the incomplete parameter name; close the function with whatever was captured before it.
+        this->currentState = State::InsideFunction;
+    }
+    if (this->currentState == State::InsideParam) {
+        this->streamContent += Minicpm5ToolParser::PARAM_END_TAG;
+    }
+    if (this->currentState == State::InsideParam || this->currentState == State::InsideFunction) {
+        this->streamContent += Minicpm5ToolParser::FUNCTION_END_TAG;
+    }
+
+    ToolCalls_t toolCalls;
+    while (parseUntilStateChange(toolCalls)) {
+    }
+    // Generation has ended: nothing more will ever be parsed from streamContent, so leave the
+    // parser in the same clean state a normal completion would (toolCallPositions is kept --
+    // removeToolCallsFromContentIfNeeded() still needs it afterward).
+    resetParsingState();
+    if (!toolCalls.empty()) {
+        return std::move(toolCalls);
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string> Minicpm5ToolParserImpl::getCurrentFunctionName() const {
     if (this->currentFunction.name.empty())
         return std::nullopt;
@@ -290,11 +322,20 @@ std::optional<Delta> Minicpm5ToolParser::sendFirstDeltaIfNeeded(const std::strin
 std::optional<Delta> Minicpm5ToolParser::parseChunk(
     const std::string& newChunk,
     const std::vector<int64_t>& /*tokens*/,
-    ov::genai::GenerationFinishReason /*finishReason*/) {
+    ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_DEBUG("Minicpm5ToolParser: chunk: '{}'", newChunk);
-    if (newChunk.empty())
+    if (newChunk.empty() && finishReason == ov::genai::GenerationFinishReason::NONE)
         return std::nullopt;
-    auto toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    std::optional<ToolCalls_t> toolCallsOpt;
+    if (!newChunk.empty()) {
+        toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    }
+
+    // If no complete tool calls were returned yet and generation has ended, finalize the current
+    // tool call in progress to recover any remaining data (for example if arguments were not closed properly).
+    if (!toolCallsOpt.has_value() && finishReason != ov::genai::GenerationFinishReason::NONE) {
+        toolCallsOpt = this->streamParser.finalizeOnGenerationEnd();
+    }
     if (toolCallsOpt.has_value()) {
         return this->sendFullDelta(toolCallsOpt.value());
     }
