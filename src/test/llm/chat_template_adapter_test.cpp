@@ -190,8 +190,8 @@ TEST_F(ChatTemplateAdapterTest, applyToHistoryHandlesToolDefinitionsWithoutRespo
     EXPECT_FALSE(toolDefinitionArray[1]["function"].contains("response"));
 }
 
-TEST_F(ChatTemplateAdapterTest,applyToHistoryHandlesRemovedResponsesInToolDefinitions) {
-ChatTemplateCaps caps;
+TEST_F(ChatTemplateAdapterTest, applyToHistoryHandlesRemovedResponsesInToolDefinitions) {
+    ChatTemplateCaps caps;
     caps.removeResponseFromToolDefinition = true;
 
     const std::string toolDefinitions = R"([{"type": "function", "function": {"name": "cat", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"file_name": {"type": "string", "description": "The name of the file from current directory to display. No path is allowed. "}}, "required": ["file_name"]}}},
@@ -214,8 +214,8 @@ ChatTemplateCaps caps;
     EXPECT_FALSE(toolDefinitionArray[1]["function"].contains("response"));
 }
 
-TEST_F(ChatTemplateAdapterTest,applyToHistoryHandlesEmptyToolDefinitions) {
-ChatTemplateCaps caps;
+TEST_F(ChatTemplateAdapterTest, applyToHistoryHandlesEmptyToolDefinitions) {
+    ChatTemplateCaps caps;
     caps.removeResponseFromToolDefinition = true;
 
     auto history = buildHistory(R"([

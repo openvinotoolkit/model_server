@@ -188,7 +188,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsQwen36AsQwen3CoderWithReasoning) {
     EXPECT_TRUE(result.caps.removeResponseFromToolDefinition);
 }
 
-TEST_F(ChatTemplateAnalyzerTest, detectsQwen3CoderNextAsQwen3Coder){
+TEST_F(ChatTemplateAnalyzerTest, detectsQwen3CoderNextAsQwen3Coder) {
     std::string tmpl = loadTemplate("chat_template_qwen3coder_next.jinja");
     ASSERT_FALSE(tmpl.empty());
     auto result = ChatTemplateAnalyzer::analyze(tmpl);
