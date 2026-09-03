@@ -377,6 +377,8 @@ class OpenAIEmbeddingsRequestParams(OpenAIRequestParams):
 
 @dataclass
 class OpenAIAudioSpeechRequestParams(OpenAIRequestParams):
+    voice: str = None
+    extra_body: dict = None
 
     def set_default_values(self, **kwargs):
         # No defaults needed for TTS; kept for interface compatibility

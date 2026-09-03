@@ -37,7 +37,7 @@ import tritonclient
 from google.protobuf.json_format import MessageToJson
 from grpc import RpcError
 from grpc._channel import _InactiveRpcError
-from openai import OpenAI
+from openai import OpenAI, NOT_GIVEN
 from pydantic import BaseModel
 from retry.api import retry_call
 from tritonclient.grpc import service_pb2, service_pb2_grpc
@@ -454,10 +454,10 @@ class LLMInferenceRequest(InferenceRequest):
 
     def create_audio_speech(self, input_text, speech_file_path, model_name=None, timeout=None):
         model = model_name if model_name is not None else self.api_type.model.name
-        voice = self.request_parameters_dict.pop("voice", None)
+        voice = self.request_parameters_dict.pop("voice", NOT_GIVEN)
         with self.openai_client.audio.speech.with_streaming_response.create(
             model=model,
-            voice=voice,  # voice is a required parameter in OpenAI API; OVMS accepts None for default
+            voice=voice,
             input=input_text,
             **self.request_parameters_dict,
             timeout=timeout,
