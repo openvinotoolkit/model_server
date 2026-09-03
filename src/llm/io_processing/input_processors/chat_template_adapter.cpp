@@ -71,7 +71,7 @@ void injectReasoningIntoMissnamedSection(ov::genai::ChatHistory& chatHistory, co
     }
 }
 
-void removeResponseFromToolDefinintion(ov::genai::ChatHistory& chatHistory) {
+void removeResponseFromToolDefinition(ov::genai::ChatHistory& chatHistory) {
     ov::genai::JsonContainer toolDefinitions = chatHistory.get_tools();
     if (!toolDefinitions.is_array()) {
         return;
@@ -100,7 +100,7 @@ void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHi
         injectReasoningIntoMissnamedSection(chatHistory, caps.missnamedReasoningField);
     }
     if (caps.removeResponseFromToolDefinition) {
-        removeResponseFromToolDefinintion(chatHistory);
+        removeResponseFromToolDefinition(chatHistory);
     }
 }
 

@@ -188,9 +188,6 @@ bool probeChatTemplateToolResponse(ov::genai::Tokenizer& tokenizer, ChatTemplate
     if (tokenizer.get_chat_template().empty()) {
         return true;
     }
-    if (!caps.needsWorkarounds()) {
-        return true;
-    }
 
     try {
         const std::string toolDefinitions = R"([{"type": "function", "function": {"name": "cat", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"file_name": {"type": "string", "description": "The name of the file from current directory to display. No path is allowed. "}}, "required": ["file_name"]}, "response": {"type": "dict", "properties": {")" + PROBE_NEEDLE + R"(": {"type": "string", "description": "The content of the file."}}}}}])";

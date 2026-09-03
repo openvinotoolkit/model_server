@@ -25,7 +25,7 @@ using namespace ovms;
 
 class ChatTemplateAdapterTest : public ::testing::Test {
 protected:
-    ov::genai::ChatHistory buildHistory(const std::string& messagesJson, const std::string& tools = "") {
+    ov::genai::ChatHistory buildHistory(const std::string& messagesJson, std::string tools = {}) {
         ov::genai::ChatHistory history;
         auto container = ov::genai::JsonContainer::from_json_string(messagesJson);
         if (!tools.empty()) {

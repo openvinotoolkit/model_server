@@ -31,6 +31,10 @@ void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory);
 // Apply all relevant adaptations to the ChatHistory based on detected capabilities.
 void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory);
 
+void injectReasoningIntoMissnamedSection(ov::genai::ChatHistory& chatHistory, const std::string& templateReasoningFieldName);
+
+void removeResponseFromToolDefinition(ov::genai::ChatHistory& chatHistory);
+
 }  // namespace chat_template_adapter
 
 // Input processor that applies chat template adaptations to ChatHistory.
