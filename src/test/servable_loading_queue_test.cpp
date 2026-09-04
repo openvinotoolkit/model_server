@@ -23,6 +23,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/logging.hpp"
 #include "src/servable_management/servable_loading_queue.hpp"
 #include "src/servable_management/servable_loading_task.hpp"
 
@@ -174,6 +175,51 @@ TEST_F(ServableLoadingQueueTest, StopFinishesCurrentTaskNotPendingOnes) {
     EXPECT_EQ(f2.get(), StatusCode::SERVER_SHUTTING_DOWN);
     ASSERT_EQ(executionOrder.size(), 1);
     EXPECT_EQ(executionOrder[0], "blocker");
+}
+
+TEST_F(ServableLoadingQueueTest, ScheduleTaskExpectedBehaviorAfterQueueRequestStop) {
+    TaskGate gate;
+    TaskGate processingStarted;
+    ServableLoadingQueue queue;
+    queue.start([this, &gate, &processingStarted](ServableLoadingTask& task) -> Status {
+        if (task.name == "blocker") {
+            processingStarted.release();
+            gate.wait();
+        }
+        return defaultProcessor(task);
+    });
+
+    ServableLoadingTask blocker{ServableLoadingTaskType::LoadModel, "blocker"};
+    auto blockerFuture = queue.scheduleTask(std::move(blocker));
+    processingStarted.wait();
+    queue.requestStop();
+
+    ServableLoadingTask beforeQueueRequestStopTask{ServableLoadingTaskType::LoadModel, "beforeQueueRequestStop"};
+    ServableLoadingTask afterQueueRequestStopTask{ServableLoadingTaskType::LoadModel, "afterQueueRequestStop"};
+    ServableLoadingTask afterQueueStopTask{ServableLoadingTaskType::LoadModel, "afterQueueStop"};
+
+    auto beforeQueueRequestStopTaskFuture = queue.scheduleTask(std::move(beforeQueueRequestStopTask));
+    gate.release();
+    queue.requestStop();
+    auto afterQueueRequestStopTaskFuture = queue.scheduleTask(std::move(afterQueueRequestStopTask));
+    queue.stop();
+    auto afterQueueStopTaskFuture = queue.scheduleTask(std::move(afterQueueStopTask));
+
+    SPDLOG_DEBUG("Getting blockerStatus");
+    auto blockerStatus = blockerFuture.get();
+    EXPECT_EQ(blockerStatus, StatusCode::OK) << blockerStatus.string();
+
+    SPDLOG_DEBUG("Getting beforeQueueRequestStopStatus");
+    auto beforeQueueRequestStopStatus = beforeQueueRequestStopTaskFuture.get();
+    EXPECT_EQ(beforeQueueRequestStopStatus, StatusCode::SERVER_SHUTTING_DOWN) << beforeQueueRequestStopStatus.string();
+
+    SPDLOG_DEBUG("Getting afterQueueRequestStopStatus");
+    auto afterQueueRequestStopStatus = afterQueueRequestStopTaskFuture.get();
+    EXPECT_EQ(afterQueueRequestStopStatus, StatusCode::SERVER_SHUTTING_DOWN) << afterQueueRequestStopStatus.string();
+
+    SPDLOG_DEBUG("Getting afterQueueStopStatus");
+    auto afterQueueStopStatus = afterQueueStopTaskFuture.get();
+    EXPECT_EQ(afterQueueStopStatus, StatusCode::SERVER_SHUTTING_DOWN) << afterQueueStopStatus.string();
 }
 
 TEST_F(ServableLoadingQueueTest, MultipleTasksProcessedSerially) {

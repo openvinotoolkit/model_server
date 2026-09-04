@@ -68,6 +68,10 @@ std::future<Status> ServableLoadingQueue::scheduleTask(ServableLoadingTask task)
     auto future = task.completion.get_future();
     {
         std::lock_guard<std::mutex> lock(this->mutex);
+        if (!this->running) {
+            task.completion.set_value(StatusCode::SERVER_SHUTTING_DOWN);
+            return future;
+        }
         if (this->taskObserver) {
             this->taskObserver(TaskEvent::Scheduled, task);
         }

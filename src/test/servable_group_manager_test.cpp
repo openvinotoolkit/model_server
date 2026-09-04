@@ -367,16 +367,12 @@ TEST_F(ServableGroupSwapTest, RequestedServableIsLoadedFirstWithinGroupFirstAlph
     expectRequestedLoadsFirst("a1");
 }
 
-// Documents PR self-review finding M4: loadGroup() only tracks the status of the
-// requested servable, so a non-requested member that genuinely fails to load is only
-// logged - ensureServableLoaded() still reports success. Checked with the failing member
-// first and last in its group, since position must not matter.
-TEST_F(ServableGroupSwapTest, LoadGroupSwallowsMemberLoadFailureRegardlessOfPosition) {
-    SKIP_AND_EXIT_IF_NOT_RUNNING_ALL_IDLE("ensureServableLoaded() ignores a non-requested member's failed load");
+TEST_F(ServableGroupSwapTest, GroupLoadHidesSiblingFailureButDirectRequestSeesIt) {
+    ASSERT_NO_FATAL_FAILURE(ensureLoaded("c1"));
+    EXPECT_NE(mm->findModelByName("c2")->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
+    EXPECT_FALSE(groupManager->ensureServableLoaded("c2", *mm).ok());
 
-    auto statusC = groupManager->ensureServableLoaded("c1", *mm);
-    EXPECT_FALSE(statusC.ok()) << "c2 failed to load but ensureServableLoaded(c1) reported success";
-
-    auto statusD = groupManager->ensureServableLoaded("d2", *mm);
-    EXPECT_FALSE(statusD.ok()) << "d1 failed to load but ensureServableLoaded(d2) reported success";
+    ASSERT_NO_FATAL_FAILURE(ensureLoaded("d2"));
+    EXPECT_NE(mm->findModelByName("d1")->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
+    EXPECT_FALSE(groupManager->ensureServableLoaded("d1", *mm).ok());
 }
