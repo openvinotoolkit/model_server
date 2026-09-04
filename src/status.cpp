@@ -28,7 +28,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::FILESYSTEM_ERROR, "Error during filesystem operation"},
     {StatusCode::NOT_IMPLEMENTED, "Functionality not implemented"},
     {StatusCode::NO_MODEL_VERSION_AVAILABLE, "Not a single model version directory has valid numeric name"},
-    {StatusCode::MODEL_NOT_LOADED, "Error while loading a model"},
+    {StatusCode::MODEL_NOT_LOADED, "Model not loaded"},
     {StatusCode::JSON_INVALID, "The file is not valid json"},
     {StatusCode::JSON_NESTING_DEPTH_EXCEEDED, "JSON nesting depth exceeds the allowed limit"},
     {StatusCode::JSON_SERIALIZATION_ERROR, "Data serialization to json format failed"},
