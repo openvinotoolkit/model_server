@@ -58,6 +58,7 @@ Configuration options for the server are defined only via command-line options a
 | `allowed_local_media_path` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
 | `allowed_media_domains` | `string` | Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restrictions. If unset, URLs in requests are not supported."
 | `verbose_response` | `NA` | When enabled, responses include an extra `__verbose` object with additional debug information. Applies for text generation models |
+| `disable_input_count_validation` | `bool` (default: false) | Disables enforcement for the KServe requests to match all the model inputs. It ignores all inputs which are not used in the model. Not recommended for performance reasons but in some cases might simplify the client. |
 
 ## Config management mode options
 

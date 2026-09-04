@@ -2488,6 +2488,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--allowed_headers", "Content-Type",
         "--allowed_methods", "GET,POST",
         "--allowed_origins", "example.com,example.org",
+        "--disable_input_count_validation",
 #ifdef _WIN32
         "--grpc_workers", "1",
         "--cpu_extension", "tmp_cpu_extension_library_dir",
@@ -2504,7 +2505,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--grpc_memory_quota", "1000000",
         "--config_path", "/config.json"};
 
-    int arg_count = 44;
+    int arg_count = 45;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2516,6 +2517,7 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
+    EXPECT_TRUE(config.disableInputCountValidation());
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
     EXPECT_EQ(config.grpcWorkers(), 1);
@@ -2545,6 +2547,22 @@ TEST(OvmsConfigTest, positiveMulti) {
 #ifdef _WIN32
     std::filesystem::remove_all(cpu_extension_lib_path);
 #endif
+}
+
+TEST(OvmsConfigTest, disableInputCountValidationDefaultsToFalse) {
+    char* n_argv[] = {
+        "ovms",
+        "--rest_port",
+        "45",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    EXPECT_FALSE(config.disableInputCountValidation());
 }
 
 TEST(OvmsConfigTest, allowedLocalMediaPathRelativeIsNormalized) {
