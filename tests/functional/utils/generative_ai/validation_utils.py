@@ -443,12 +443,12 @@ class GenerativeAIValidationUtils:
         duration_sec = n_samples / sample_rate
 
         # RMS energy — silence detector
-        rms = float(np.sqrt(np.mean(data ** 2)))
+        rms = float(np.sqrt(np.mean(data ** 2))) if n_samples > 0 else 0.0
 
         # Spectral flatness — noise vs speech detector
         # Wiener entropy: geometric_mean(|FFT|) / arithmetic_mean(|FFT|)
         # White noise → ~1.0, speech → ~0.05-0.4
-        magnitude = np.abs(np.fft.rfft(data)) if n_samples > 0 else np.empty(0)
+        magnitude = np.abs(np.fft.rfft(data)) if n_samples > 0 else np.empty(0, dtype=np.float32)
         magnitude = magnitude[magnitude > 0]  # avoid log(0)
         if len(magnitude) > 0:
             log_mean = np.mean(np.log(magnitude))
