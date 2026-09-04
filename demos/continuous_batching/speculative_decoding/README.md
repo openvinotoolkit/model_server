@@ -214,7 +214,7 @@ Send `num_assistant_tokens` to control how many candidates the draft head propos
 ```python
 from openai import OpenAI
 
-client = OpenAI(base_url="http://localhost:8000/1", api_key="unused")
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
 
 response = client.chat.completions.create(
     model="Qwen/Qwen3-8B",
