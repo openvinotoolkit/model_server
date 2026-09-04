@@ -611,6 +611,7 @@ ovms_cc_library(
         "//src/graph_export:graph_export",
         "//src/metrics:libovms_metric_provider",
         "//src/metrics:libovmsmetrics",
+        "//src/model_management:servable_loading_queue",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
@@ -2258,6 +2259,7 @@ cc_test(
             ":test_test_models_configs",
             ":test_cmd_exec",
             ":test_modelinstance_test",
+            ":servable_loading_queue_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2368,6 +2370,15 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+ovms_cc_test_library(
+    name = "servable_loading_queue_test",
+    srcs = ["test/servable_loading_queue_test.cpp"],
+    deps = [
+        "//src/model_management:servable_loading_queue",
+        "@com_google_googletest//:gtest",
+    ],
 )
 
 cc_library(
