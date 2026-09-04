@@ -15,6 +15,7 @@
 //*****************************************************************************
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <memory>
@@ -33,6 +34,7 @@
 #include "src/model.hpp"
 #include "src/servable_management/servable_loading_queue.hpp"
 #include "src/servable_management/servable_loading_task.hpp"
+#include "environment.hpp"
 #include "src/modelconfig.hpp"
 #include "src/modelinstance.hpp"
 #include "src/modelversionstatus.hpp"
@@ -198,7 +200,18 @@ protected:
     std::mutex recordMtx;
     std::vector<RecordedEvent> events;
 
-    static std::string swapConfig() {
+    std::string brokenModelDir() const {
+        return directoryPath + "/broken_model";
+    }
+
+    // Real version directory (loads lazily like any group member), but the model
+    // file is garbage, so an actual wake-up load genuinely fails.
+    void writeBrokenModel() {
+        std::filesystem::create_directories(brokenModelDir() + "/1");
+        std::ofstream(brokenModelDir() + "/1/broken.xml") << "not a valid IR model";
+    }
+
+    std::string swapConfig() const {
         return R"({"model_config_list": [
             {"config": {"name": "a1", "base_path": ")" +
                dummy_model_location + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupA"}},
@@ -207,12 +220,21 @@ protected:
             {"config": {"name": "b1", "base_path": ")" +
                dummy_model_location + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupB"}},
             {"config": {"name": "b2", "base_path": ")" +
-               dummy_model_location + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupB"}}
+               dummy_model_location + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupB"}},
+            {"config": {"name": "c1", "base_path": ")" +
+               dummy_model_location + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupC"}},
+            {"config": {"name": "c2", "base_path": ")" +
+               brokenModelDir() + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupC"}},
+            {"config": {"name": "d1", "base_path": ")" +
+               brokenModelDir() + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupD"}},
+            {"config": {"name": "d2", "base_path": ")" +
+               dummy_model_location + R"(", "target_device": "CPU", "nireq": 1, "group_name": "groupD"}}
         ]})";
     }
 
     void SetUp() override {
         TestWithTempDir::SetUp();
+        writeBrokenModel();
         std::string configFilePath = directoryPath + "/config.json";
         std::ofstream(configFilePath) << swapConfig();
 
@@ -343,4 +365,18 @@ TEST_F(ServableGroupSwapTest, RequestedServableIsLoadedFirstWithinGroupLastAlpha
 
 TEST_F(ServableGroupSwapTest, RequestedServableIsLoadedFirstWithinGroupFirstAlphabetically) {
     expectRequestedLoadsFirst("a1");
+}
+
+// Documents PR self-review finding M4: loadGroup() only tracks the status of the
+// requested servable, so a non-requested member that genuinely fails to load is only
+// logged - ensureServableLoaded() still reports success. Checked with the failing member
+// first and last in its group, since position must not matter.
+TEST_F(ServableGroupSwapTest, LoadGroupSwallowsMemberLoadFailureRegardlessOfPosition) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_ALL_IDLE("ensureServableLoaded() ignores a non-requested member's failed load");
+
+    auto statusC = groupManager->ensureServableLoaded("c1", *mm);
+    EXPECT_FALSE(statusC.ok()) << "c2 failed to load but ensureServableLoaded(c1) reported success";
+
+    auto statusD = groupManager->ensureServableLoaded("d2", *mm);
+    EXPECT_FALSE(statusD.ok()) << "d1 failed to load but ensureServableLoaded(d2) reported success";
 }

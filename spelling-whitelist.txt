@@ -46,3 +46,5 @@ src/mediapipe_internal/mediapipegraphdefinition.cpp
 src/mediapipe_internal/mediapipegraphdefinition.hpp
 src/test/llm/llmnode_test.cpp
 nowNs ==> knowns, nouns
+src/test/servable_group_manager_test.cpp:229: groupD
+src/test/servable_group_manager_test.cpp:231: groupD

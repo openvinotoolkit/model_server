@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <atomic>
 #include <fstream>
 #include <future>
 #include <string>
@@ -27,6 +28,7 @@
 #include "src/modelinstance.hpp"
 #include "src/modelversionstatus.hpp"
 #include "constructor_enabled_model_manager.hpp"
+#include "environment.hpp"
 #include "platform_utils.hpp"
 #include "test_utils.hpp"
 #include "test_models.hpp"
@@ -176,6 +178,33 @@ TEST_F(ModelInstanceSleepTest, WakeUpIfAlreadyAvailableIsNoop) {
 
     ASSERT_TRUE(instance.wakeUpIfSleeping().ok());
     EXPECT_EQ(instance.getStatus().getState(), ModelVersionState::AVAILABLE);
+}
+
+TEST_F(ModelInstanceSleepTest, WakeUpReportsLoadingStatusWhileReloadInProgress) {
+    SKIP_AND_EXIT_IF_NOT_RUNNING_ALL_IDLE("wakeUpIfSleeping() never sets LOADING before reloading");
+    ModelInstance instance("dummy", 1, *ieCore);
+    ASSERT_EQ(instance.loadModel(DUMMY_MODEL_CONFIG, true), StatusCode::OK);
+    ASSERT_EQ(instance.getStatus().getState(), ModelVersionState::SLEEPING);
+
+    std::atomic<bool> sawLoading{false};
+    std::atomic<bool> done{false};
+    std::promise<void> pollerStarted;
+    std::thread poller([&instance, &sawLoading, &done, &pollerStarted]() {
+        pollerStarted.set_value();
+        while (!done.load(std::memory_order_relaxed)) {
+            if (instance.getStatus().getState() == ModelVersionState::LOADING) {
+                sawLoading.store(true, std::memory_order_relaxed);
+                break;
+            }
+        }
+    });
+    pollerStarted.get_future().wait();
+    auto status = instance.wakeUpIfSleeping();
+    done.store(true, std::memory_order_relaxed);
+    poller.join();
+
+    ASSERT_TRUE(status.ok()) << status.string();
+    EXPECT_TRUE(sawLoading.load(std::memory_order_relaxed));
 }
 
 TEST_F(ModelInstanceSleepTest, WakeUpOnRetiredModelReturnsError) {

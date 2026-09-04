@@ -2328,6 +2328,7 @@ ovms_cc_test_library(
     name = "test_idle_model_test",
     srcs = ["test/idle_model_test.cpp"],
     deps = [
+        ":libtest_environment",
         ":test_constructor_enabled_model_manager",
         ":test_test_models",
         ":test_test_models_configs",
@@ -2342,6 +2343,7 @@ ovms_cc_test_library(
     name = "test_servable_group_manager",
     srcs = ["test/servable_group_manager_test.cpp"],
     deps = [
+        ":libtest_environment",
         ":test_constructor_enabled_model_manager",
         ":test_test_models",
         ":test_test_with_temp_dir",
