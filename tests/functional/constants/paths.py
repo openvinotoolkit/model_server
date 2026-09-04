@@ -59,6 +59,8 @@ class Paths:
     LLM_EXPORT_MODELS_REQUIREMENTS = os.path.join(LLM_EXPORT_MODELS_DIR, "requirements.txt")
     LLM_EXPORT_MODELS_SCRIPT = os.path.join(LLM_EXPORT_MODELS_DIR, "export_model.py")
 
+    OVMS_C_IMAGES = os.path.join(config.ovms_c_repo_path, "demos", "common", "static", "images")
+
     @staticmethod
     def CAPI_WRAPPER_PACKAGE_CONTENT_PATH(base_os):
         return os.path.join(config.c_api_wrapper_dir, base_os, "ovms")
@@ -89,4 +91,4 @@ class Paths:
 
 
 def any_is_relative_to(paths, subpath):
-    return any([_path in subpath for _path in paths])
+    return any(_path in subpath for _path in paths)

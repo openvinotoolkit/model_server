@@ -31,6 +31,7 @@ from tests.functional.models.models_datasets import (
     LargeLanguageModelDataset,
     RerankModelDataset,
     SingleMessageLanguageModelDataset,
+    VisionLanguageModelDataset,
 )
 
 
@@ -124,6 +125,15 @@ class LargeLanguageModel(GenerativeModel):
 
 
 @dataclass
+class VisionLanguageModel(GenerativeModel):
+    is_vision_language: bool = True
+
+    @staticmethod
+    def get_default_dataset():
+        return VisionLanguageModelDataset
+
+
+@dataclass
 class FeatureExtractionModel(GenerativeModel):
     use_subconfig: bool = True
     is_feature_extraction: bool = True
@@ -181,8 +191,58 @@ class GenerativeModelHuggingFace(GenerativeModel):
 
 
 @dataclass
+class BgeRerankerBaseFp16OvHf(GenerativeModelHuggingFace, RerankModel):
+    name: str = "OpenVINO/bge-reranker-base-fp16-ov"
+    precision: str = "FP16"
+    is_local: bool = True
+
+
+@dataclass
+class Gemma34bItInt4OvHf(GenerativeModelHuggingFace, VisionLanguageModel):
+    name: str = "OpenVINO/gemma-3-4b-it-int4-ov"
+    is_local: bool = True
+
+
+@dataclass
+class Gemma34bItInt4CwOvHf(GenerativeModelHuggingFace, VisionLanguageModel):
+    name: str = "OpenVINO/gemma-3-4b-it-int4-cw-ov"
+    is_local: bool = True
+
+
+@dataclass
+class LFM25350MInt8OvHf(GenerativeModelHuggingFace, LargeLanguageModel):
+    name: str = "OpenVINO/LFM2.5-350M-int8-ov"
+    precision: str = "INT8"
+    tool_parser: str = "lfm2"
+    is_agentic: bool = True
+    gorilla_patch_name: str = "ovms-model"
+    pipeline_type: str = "LM"
+    is_local: bool = True
+
+
+@dataclass
+class Phi35MiniInstructInt4CwOvHf(GenerativeModelHuggingFace, LargeLanguageModel):
+    name: str = "OpenVINO/Phi-3.5-mini-instruct-int4-cw-ov"
+    is_local: bool = True
+
+
+@dataclass
 class Qwen3Embedding06BFp16OvHf(GenerativeModelHuggingFace, FeatureExtractionModel):
     name: str = "OpenVINO/Qwen3-Embedding-0.6B-fp16-ov"
     precision: str = "FP16"
     pooling: str = "LAST"
+    is_local: bool = True
+
+
+@dataclass
+class Qwen3Reranker06BFp16OvHf(GenerativeModelHuggingFace, RerankModel):
+    name: str = "OpenVINO/Qwen3-Reranker-0.6B-fp16-ov"
+    precision: str = "FP16"
+    is_local: bool = True
+
+
+@dataclass
+class Qwen3Reranker06BSeqClsFp16OvHf(GenerativeModelHuggingFace, RerankModel):
+    name: str = "OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov"
+    precision: str = "FP16"
     is_local: bool = True

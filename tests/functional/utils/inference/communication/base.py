@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import abc
 
@@ -33,7 +34,6 @@ class AbstractCommunicationInterface(metaclass=abc.ABCMeta):
         """
             Abstract method for preparing the inference request.
         """
-        pass
 
     @abc.abstractmethod
     def get_model_meta(self, timeout=60, version=None, update_model_info=True, model_name=None):

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import json
 import os
@@ -21,9 +22,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
-from tests.functional.utils.assertions import InvalidReturnCodeException
 from tests.functional.utils.logger import get_logger
-from tests.functional.utils.process import Process
+from tests.functional.utils.test_framework import copy_dir_tree
 
 from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
 from tests.functional.config import (
@@ -64,7 +64,7 @@ class MediaPipeCalculator:
         config_data = (
             parameters.custom_config
             if parameters.custom_config is not None
-            else json.loads(Path(config_file).read_text()) if config_file is not None else {}
+            else json.loads(Path(config_file).read_text(encoding="utf-8")) if config_file is not None else {}
         )
         for mediapipe_model in mediapipe_models:
             dst_path = os.path.join(config_path_on_host, mediapipe_model.name) if config_path_on_host is not None \
@@ -78,7 +78,8 @@ class MediaPipeCalculator:
                     real_path = os.path.expanduser(calc)
                     real_path = os.path.realpath(real_path)
                     logger.info(
-                        "Copy custom calculator file to {}, content:\n{}".format(dst_path, Path(real_path).read_text())
+                        f"Copy custom calculator file to {dst_path}, "
+                        f"content:\n{Path(real_path).read_text(encoding='utf-8')}"
                     )
                     Path(dst_path).mkdir(parents=True, exist_ok=True)
                     shutil.copy(real_path, dst_path)
@@ -128,7 +129,7 @@ class MediaPipeCalculator:
                         contents.update({calc.name: calc.create_proto_content(model=model)})
 
                 content_to_save = " ".join(value for key, value in contents.items())
-                if all(["pbtxt" in elem for elem in mediapipe_model_graph_paths]):
+                if all("pbtxt" in elem for elem in mediapipe_model_graph_paths):
                     for path in mediapipe_model_graph_paths:
                         filename = os.path.basename(path)
                         cls.save(mediapipe_model, content_to_save, dst_path=dst_path, filename=filename)
@@ -150,10 +151,10 @@ class MediaPipeCalculator:
         input_streams = ""
         output_streams = ""
         if model is not None:
-            for i, model_input in enumerate(model.inputs, start=0):
+            for i, _model_input in enumerate(model.inputs, start=0):
                 input_streams += f'input_stream: "{input_stream}_{i}" \n'
 
-            for i, model_output in enumerate(model.outputs, start=0):
+            for i, _model_output in enumerate(model.outputs, start=0):
                 output_streams += f'output_stream: "{output_stream}_{i}" \n'
         else:
             if isinstance(input_stream, List):
@@ -184,7 +185,7 @@ class MediaPipeCalculator:
 
         inputs = ""
         model_name = self.get_upper_model_name(model)
-        for (i, model_input), inp_stream in zip(enumerate(model.inputs, start=0), input_streams):
+        for (i, _model_input), inp_stream in zip(enumerate(model.inputs, start=0), input_streams):
             inp = f"{model_name}_INPUT_{i}"
             inputs += (
                 f'input_stream: "{inp}:{inp_stream}_{i}" \n'
@@ -193,7 +194,7 @@ class MediaPipeCalculator:
             )
 
         outputs = ""
-        for (i, model_output), out_stream in zip(enumerate(model.outputs, start=0), output_streams):
+        for (i, _model_output), out_stream in zip(enumerate(model.outputs, start=0), output_streams):
             out = f"{model_name}_OUTPUT_{i}"
             outputs += (
                 f'output_stream: "{out}:{out_stream}_{i}" \n'
@@ -225,14 +226,15 @@ class MediaPipeCalculator:
             content = cls.get_full_content(content, model, input_stream, output_stream)
         Path(dst_path).mkdir(parents=True, exist_ok=True)
         file_path = os.path.join(dst_path, filename)
-        with open(file_path, "w+") as f:
+        with open(file_path, "w+", encoding="utf-8") as f:
             f.write(content)
-        logger.info(f"Saving calculator file to {file_path}, content:\n{content}")
+        logger.info(f"Saving calculator file to {file_path}, "
+                    f"content:\n{content}")
         return file_path
 
     @staticmethod
     def load(filepath):
-        with open(filepath, "r") as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             data = f.read()
         return data
 
@@ -414,7 +416,7 @@ class CorruptedFileCalculator(OVMSOVCalculator):
         create_header=True,
     ):
         model = self.model if self.model is not None else model
-        ovms_ov_content = super(CorruptedFileCalculator, self).create_proto_content(model)
+        ovms_ov_content = super().create_proto_content(model)
         content = ovms_ov_content.replace("input_stream", self.name)
         return content
 
@@ -585,34 +587,12 @@ node: {{
         content = self.create_node_content(header, input_streams, output_streams)
         return content
 
-    @staticmethod
-    def _copy_model_tree(proc, src, dst):
-        if "C:\\" in src:
-            proc.run_and_check(
-                # /R:2 - retry 2 times
-                # /W:3 - wait 3 seconds between retries
-                f"robocopy /J /E /NP /NFL /NJH /R:2 /W:3 \"{src}\" \"{dst}\"",
-                env=os.environ.copy(),
-                exit_code_check=1,
-                exception_type=InvalidReturnCodeException,
-                timeout=1800,
-            )
-        else:
-            shutil.copytree(src, dst)
-
     def prepare_resources(self, base_location):
         dst_base = Path(base_location, "models")
         dst = Path(dst_base, f"./{self.model.name}")
         dst.parent.mkdir(exist_ok=True, parents=True)
         if not Path.exists(dst):
-            proc = Process()
-            proc.disable_check_stderr()
-            try:
-                self._copy_model_tree(proc, self.models_path, dst)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                if dst.exists():
-                    shutil.rmtree(dst, ignore_errors=True)
-                raise e
+            copy_dir_tree(Path(self.models_path), dst)
         return str(dst_base)
 
     @classmethod
@@ -653,14 +633,14 @@ class HttpLLMCalculator(LLMCalculator):
             plugin_config_params = []
             for plugin_config_key, plugin_config_value in plugin_config_dict.items():
                 if plugin_config_value is not None:
-                    if type(plugin_config_value) == int:
+                    if isinstance(plugin_config_value, int):
                         plugin_config_params.append(f'"{plugin_config_key}": {plugin_config_value}')
-                    elif type(plugin_config_value) == bool:
+                    elif isinstance(plugin_config_value, bool):
                         plugin_config_value = "true" if plugin_config_value else "false"
                         plugin_config_params.append(f'"{plugin_config_key}": {plugin_config_value}')
-                    elif type(plugin_config_value) == str:
+                    elif isinstance(plugin_config_value, str):
                         plugin_config_params.append(f'"{plugin_config_key}": "{plugin_config_value}"')
-                    elif type(plugin_config_value) == dict:
+                    elif isinstance(plugin_config_value, dict):
                         plugin_config_params_dict = get_plugin_config_params_list(plugin_config_value)
                         plugin_config_params_dict_str = ', '.join(plugin_config_params_dict)
                         plugin_config_params.append(f"\"{plugin_config_key}\": {{ {plugin_config_params_dict_str} }}")
@@ -699,7 +679,7 @@ class HttpLLMCalculator(LLMCalculator):
 
         enable_prefix_caching_str = ""
         if enable_prefix_caching_config:
-            enable_prefix_caching_str = f"enable_prefix_caching: true"
+            enable_prefix_caching_str = "enable_prefix_caching: true"
 
         tool_guided_str = ""
         if self.model.enable_tool_guided_generation and self.enable_tool_guided_generation:

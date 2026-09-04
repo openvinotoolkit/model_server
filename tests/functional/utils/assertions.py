@@ -13,15 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
-import grpc
 import json
 import os
-import pytest
 import re
-import yaml
 from pathlib import Path
 from typing import Callable, Type
+
+import grpc
+import pytest
+import yaml
 
 from tests.functional.utils.logger import get_logger
 from tests.functional.constants.ovms import CurrentOvmsType
@@ -71,7 +73,7 @@ class AggregatedMultipleOvmsTestExceptions(OvmsTestException):
 class UnexpectedResponseError(OvmsTestException):
     def __init__(self, status=None, error_message=None, message=None):
         message = message or f"Code:{status} Message:{error_message}"
-        super(UnexpectedResponseError, self).__init__(message)
+        super().__init__(message)
         self.status = status
         self.error_message = error_message
 
@@ -103,7 +105,7 @@ def get_mediapipe_details_from_context(context):
     log_monitor = ovms_session.ovms.create_log(True)
     ovms_log = log_monitor.get_logs_as_txt()
     config_file = os.path.join(ovms_session.ovms.container_folder, Paths.MODELS_PATH_NAME, Paths.CONFIG_FILE_NAME)
-    config = json.loads(Path(config_file).read_text())
+    config = json.loads(Path(config_file).read_text(encoding="utf-8"))
     mediapipe_model = [model for model in ovms_session.models if model.is_mediapipe][0]
     src_code = [calc.src_file_path for calc in mediapipe_model.calculators]
     graphs = mediapipe_model.graphs
@@ -119,7 +121,6 @@ def _assert_status_code_and_message(status, error_message_phrase, status_code, e
         error_msg = yaml.load(error_msg, Loader=yaml.Loader)  # convert dict saved as string
     except (yaml.scanner.ScannerError, yaml.parser.ParserError) as exception:
         e = exception
-        pass
     error_msg = error_msg["error"] if getattr(error_msg, "error", None) is not None else str(error_msg)
     assert error_message_phrase in error_msg, \
         f"Expected output:\n{error_message_phrase}\nnot found in exception {e.__class__.__name__} value:\n{error_msg}"
@@ -357,12 +358,10 @@ class ConvertModelException(OvmsTestException):
 
 class UploadModelsUnstableException(OvmsTestException):
     """Raised when upload/export restored models from backup."""
-    pass
 
 
 class ReloadModelsUnstableException(OvmsTestException):
     """Raised when reload linked models from fallback (previous weeks)."""
-    pass
 
 
 class OVVPException(OvmsTestException):

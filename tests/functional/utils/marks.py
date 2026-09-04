@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 from enum import Enum
 from itertools import chain
@@ -35,7 +36,7 @@ class MarkMeta(str, Enum):
         return obj
 
     def __init__(self, *args):
-        super(MarkMeta, self).__init__()
+        super().__init__()
 
     def __hash__(self) -> int:
         return hash(self.mark)
@@ -84,10 +85,9 @@ class ConditionalMark(MarkMeta):
             test_params = item.keywords.node.callspec.id
             if isinstance(params, Pattern):
                 return bool(params.match(test_params))
-            elif isinstance(params, str):
+            if isinstance(params, str):
                 return params == test_params
-            else:
-                raise AttributeError(f"Unexpected conditional marker params {params}")
+            raise AttributeError(f"Unexpected conditional marker params {params}")
         return True
 
     @classmethod
@@ -315,7 +315,7 @@ class MarksRegistry(tuple):
 
     def __new__(cls) -> 'MarksRegistry':
         # noinspection PyTypeChecker
-        return tuple.__new__(cls, [mark for mark in chain(*cls.MARK_ENUMS)])
+        return tuple.__new__(cls, list(chain(*cls.MARK_ENUMS)))
 
     @staticmethod
     def register(pytest_config):

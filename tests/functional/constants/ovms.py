@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unnecessary-lambda-assignment
 
 import os
 import re
@@ -244,6 +245,7 @@ BASE_OS_PARAM_NAME = "base_os"
 TEST_RUN_WORKER_ARGUMENT = "test_run_reporters"
 TMP_REPOS_DIR_ARGUMENT = "tmp_repos_dir"
 CURRENT_TARGET_DEVICE_DICT_ARGUMENT = "current_target_device_dict"
+ENDPOINT_PARAM_NAME = "endpoint"
 
 
 class Config:
@@ -283,8 +285,7 @@ def set_plugin_config_boolean_value(plugin_config_str, config_file=False):
                 plugin_config_str,
             )
         return plugin_config_str
-    else:
-        return plugin_config_str.replace('\\"false\\"', "false").replace('\\"true\\"', "true")
+    return plugin_config_str.replace('\\"false\\"', "false").replace('\\"true\\"', "true")
 
 
 def get_model_base_path(model_base_path, context, ovms_run):

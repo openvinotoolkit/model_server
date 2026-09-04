@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=no-member
 
 import itertools
 import os
@@ -21,21 +22,18 @@ import shutil
 import sys
 import time
 import warnings
-import pytest
-
 from collections import Counter, defaultdict, namedtuple
-from docker import errors as docker_errors
 from itertools import groupby
 from pathlib import Path
+
+import pytest
+from docker import errors as docker_errors
 from _pytest.mark import Mark, MarkDecorator
 from _pytest.python import Function
 
 from tests.functional import config
-from tests.functional.models.models_library import ModelsLib, ModelsLibrary
-from tests.functional.utils.download import wget_file
-from tests.functional.utils.reservation_manager.args import parse_args
-from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
 from tests.functional.config import (
+    airplane_mode,
     build_test_image,
     c_api_wrapper_dir,
     cleanup_env_on_startup,
@@ -62,11 +60,16 @@ from tests.functional.config import (
 from tests.functional.constants.os_type import get_host_os, OsType, UBUNTU
 from tests.functional.constants.os_version import os_type_to_base_image_binary_docker
 from tests.functional.constants.ovms import (
+    API_TYPE_PARAM_NAME,
     BASE_OS_PARAM_NAME,
+    CLOUD_TYPE_PARAM_NAME,
     CURRENT_TARGET_DEVICE_DICT_ARGUMENT,
+    ENDPOINT_PARAM_NAME,
+    MODEL_TYPE_PARAM_NAME,
     OVMS_TYPE_PARAM_NAME,
     TARGET_DEVICE_PARAM_NAME,
     TMP_REPOS_DIR_ARGUMENT,
+    USES_CONFIG_PARAM_NAME,
     USES_MAPPING_PARAM_NAME,
 )
 from tests.functional.constants.ovms_images import (
@@ -89,10 +92,16 @@ from tests.functional.constants.ovms_type import (
 from tests.functional.constants.paths import Paths
 from tests.functional.constants.target_device import MAX_WORKERS_PER_TARGET_DEVICE, TargetDevice
 from tests.functional.constants.ovms_binaries import calculate_ovms_binary_name
+from tests.functional.models.models_library import ModelsLib, ModelsLibrary
+from tests.functional.object_model.dmesg_log_monitor import DmesgLogMonitor
 from tests.functional.object_model.ovms_info import OvmsInfo
+from tests.functional.object_model.ovsa import OvsaCerts
 from tests.functional.utils.core import TmpDir
 from tests.functional.utils.docker import DockerClient, DockerContainer, DOCKER_CONTAINER_TMP_PATH
+from tests.functional.utils.download import wget_file
+from tests.functional.utils.inference.serving.openai import OpenAIWrapper
 from tests.functional.utils.environment_info import EnvironmentInfo
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.marks import (
     MarkConditionalRunType,
@@ -103,9 +112,9 @@ from tests.functional.utils.marks import (
 )
 from tests.functional.utils.ov_hf_downloader import OVHfDownloader
 from tests.functional.utils.process import PID_STATE_ZOMBIE, Process, get_pid_name, get_pid_status
+from tests.functional.utils.reservation_manager.args import parse_args
+from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
 from tests.functional.utils.test_framework import change_dir_permissions, get_test_object_prefix, is_xdist_master
-from tests.functional.utils.helpers import get_base_device
-from tests.functional.object_model.ovsa import OvsaCerts
 
 logger = get_logger(__name__)
 
@@ -151,6 +160,7 @@ def init_environment(_config):
     if not machine_is_reserved_for_test_session:
         return
     init_cleanup()
+    dmesg_cleanup()
 
 
 def init_cleanup():
@@ -159,6 +169,16 @@ def init_cleanup():
             cleanup_ovms_processes()
         else:
             cleanup_docker(cleanup_docker_containers)
+
+
+def dmesg_cleanup():
+    if all([
+        config.cleanup_env_on_startup,
+        not config.disable_dmesg_log_monitor,
+        get_host_os() != OsType.Windows,
+    ]):
+        dmesg_log_monitor = DmesgLogMonitor()
+        dmesg_log_monitor.clear_dmesg_buffer()
 
 
 def clean_container(container):
@@ -208,7 +228,7 @@ def cleanup_tmp_repos_dir(config):
     try:
         shutil.rmtree(config.tmp_repos_dir)
     except PermissionError as e:
-        if get_host_os() == OsType.Windows and type(e) == PermissionError:
+        if get_host_os() == OsType.Windows and isinstance(e, PermissionError):
             change_dir_permissions(config.tmp_repos_dir)
             shutil.rmtree(config.tmp_repos_dir)
 
@@ -320,7 +340,7 @@ def run_docker_build_ovms_image(cmd, ovms_image_name, cwd, timeout=None):
     print(f"Building {ovms_image_name} image using cmd: {cmd}")
     proc = Process()
     proc.disable_check_stderr()
-    code, stdout, stderr = proc.run_and_check_return_all(cmd, cwd=cwd, timeout=timeout)
+    _code, stdout, stderr = proc.run_and_check_return_all(cmd, cwd=cwd, timeout=timeout)
     assert (f"naming to {ovms_image_name}" in stderr) or (
         f"Successfully tagged {ovms_image_name}" in stdout
     ), f"Image was not built successfully; stderr: {stderr}"
@@ -397,7 +417,7 @@ def build_ovms_capi_image():
                 shutil.copy(os.path.join(ovms_c_repo_path, gpu_install_script), ovms_capi_dst_path)
         else:
             for gpu_install_script in GPU_INSTALL_SCRIPTS[base_os]:
-                with open(os.path.join(ovms_capi_dst_path, gpu_install_script), "a"):
+                with open(os.path.join(ovms_capi_dst_path, gpu_install_script), "a", encoding="utf-8"):
                     pass
 
         dockerfile = f"Dockerfile.{UBUNTU if UBUNTU in base_os else base_os}"
@@ -413,8 +433,8 @@ def build_ovms_capi_image():
 
 def prepare_ovms_package():
     if all([
-        all([OvmsType.CAPI not in ovms_type for ovms_type in config.ovms_types]),
-        all([OvmsType.BINARY not in ovms_type for ovms_type in config.ovms_types]),
+        all(OvmsType.CAPI not in ovms_type for ovms_type in config.ovms_types),
+        all(OvmsType.BINARY not in ovms_type for ovms_type in config.ovms_types),
     ]):
         return
 
@@ -478,6 +498,9 @@ def download_docker_images():
 
 
 def download_resources_master():
+    if airplane_mode:
+        print("Skipping downloading required resources")
+        return
     print("Download required resources")
     download_models()
     download_docker_images()
@@ -635,7 +658,7 @@ def parametrize_plugin_config(metafunc):
         (device_type, plugin_config) for device_type in config.target_devices
         for plugin_config in args[0][get_base_device(device_type)]
     ]
-    ids_list = lambda i: get_ids_with_target_device(i, lambda x: "-".join(map(lambda y: "%s=%s" % y, x.items())))
+    ids_list = lambda i: get_ids_with_target_device(i, lambda x: "-".join(map(lambda y: f"{y[0]}={y[1]}", x.items())))
     metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.PLUGIN_CONFIG}", params_list, ids=ids_list)
 
 
@@ -751,7 +774,7 @@ def log_configuration_variables():
     pt_env_vars = list(filter(lambda x: x[0].startswith("TT_"), os.environ.items()))
     pt_env_vars.sort()
     for env_var in pt_env_vars:
-        logger.info("{}={}".format(*env_var))
+        logger.info(f"{env_var[0]}={env_var[1]}")
 
 
 def mute_warnings():
@@ -999,11 +1022,38 @@ def update_parent_markers(item, marker_types):
                 item.own_markers.append(components)
 
 
+def generic_test_deselect(item):
+    """
+    Pytest test cases are generated as Cartesian products of all given arguments.
+    Same of parameters combinations are incompatible or contradictory and cannot be applied.
+
+    In this function check generic @pytest.mark.parametrize / @fixture symbols from `item`.
+    """
+    target_device = item.callspec.params.get(TARGET_DEVICE_PARAM_NAME, None)
+    ovms_type = item.callspec.params.get(OVMS_TYPE_PARAM_NAME, None)
+    api_type = item.callspec.params.get(API_TYPE_PARAM_NAME, None)
+    base_os = item.callspec.params.get(BASE_OS_PARAM_NAME, None)
+    use_config = item.callspec.params.get(USES_CONFIG_PARAM_NAME, None)
+    cloud_type = item.callspec.params.get(CLOUD_TYPE_PARAM_NAME, None)
+    model_type = item.callspec.params.get(MODEL_TYPE_PARAM_NAME, None)
+    use_mapping = item.callspec.params.get(USES_MAPPING_PARAM_NAME, None)
+    endpoint = item.callspec.params.get(ENDPOINT_PARAM_NAME, None)
+
+    # Disable completions endpoint for VLM models
+    if model_type is not None and model_type.is_vision_language and endpoint == OpenAIWrapper.COMPLETIONS:
+        return True
+
+    return False
+
+
 def deselect(item, test_type, required_marker_ids, excluded_marker_ids):
     # Validate different scenarios where test should be deselected from execution during `collect` stage.
     if isinstance(item, Function):
         if test_type is None:
             raise RuntimeError("Test do not have test_type: " + item.name)
+
+        if generic_test_deselect(item):
+            return True
 
         if required_marker_ids:
             for required_marker_id_list in required_marker_ids:
@@ -1011,7 +1061,8 @@ def deselect(item, test_type, required_marker_ids, excluded_marker_ids):
                     # make sure that item is not deselected by other marker
                     return deselect_by_excluded_marker_ids(item, excluded_marker_ids)
             return True
-        elif excluded_marker_ids:
+
+        if excluded_marker_ids:
             return deselect_by_excluded_marker_ids(item, excluded_marker_ids)
 
     return False
@@ -1101,7 +1152,7 @@ def log_labeled_stats(issues):
     msg = ["Skipped tests statistic:"]
     issues_sorted_by_quantity = sorted(issues.items(), key=lambda i: i[1], reverse=True)
     for issue, quantity in issues_sorted_by_quantity:
-        msg.append("{:>11}: {:>6}".format(issue, quantity))
+        msg.append(f"{issue:>11}: {quantity:>6}")
     logger.info("\n".join(msg))
 
 
@@ -1109,8 +1160,8 @@ def log_others(other_items):
     msg = ["Skipped tests not labeled with issue:"]
     items_grouped_by_reason = groupby(other_items, key=lambda i: i.reason)
     for reason, items in list(items_grouped_by_reason):
-        msg.append("{}:".format(reason))
-        msg.extend("|---{}".format(item.test_name) for item in list(items))
+        msg.append(f"{reason}:")
+        msg.extend(f"|---{item.test_name}" for item in list(items))
     logger.info("\n".join(msg))
 
 

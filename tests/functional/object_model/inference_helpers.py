@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument,no-member
 
 import base64
 import json
 import os
 import struct
 import time
-import cohere
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -30,6 +30,7 @@ from pathlib import Path
 from threading import Event
 from typing import List, Union
 
+import cohere
 import grpc
 import numpy as np
 import requests
@@ -84,7 +85,7 @@ from tests.functional.object_model.test_helpers import run_all_actions
 logger = get_logger(__name__)
 
 
-class InferenceBuilder(object):
+class InferenceBuilder:
 
     def __init__(self, model):
         self.model = model
@@ -93,57 +94,22 @@ class InferenceBuilder(object):
         self, api_type, port, batch_size=Ovms.BATCHSIZE, ovsa_certs=None, model_version=None, client_type=None
     ):
         ovsa_certs = ovsa_certs if ovsa_certs is not None else OvsaCerts.default_certs
-        if client_type == KFS:
-            assert 0, "Please check flow for KFS client"
-            kfs_api_type = InferenceClientKFS if api_type == InferenceClientTFS else InferenceRestClientKFS
-            inference_client = self.create_kfs_client(kfs_api_type, port)
-        else:
-            inference_client = api_type(
-                port=port,
-                model_name=self.model.name,
-                batch_size=batch_size,
-                input_names=list(self.model.inputs.keys()),
-                output_names=list(self.model.outputs.keys()),
-                model_meta_from_serving=False,
-                ssl_certificates=ovsa_certs,
-                model_version=model_version,
-            )
+        inference_client = api_type(
+            port=port,
+            model_name=self.model.name,
+            batch_size=batch_size,
+            input_names=list(self.model.inputs.keys()),
+            output_names=list(self.model.outputs.keys()),
+            model_meta_from_serving=False,
+            ssl_certificates=ovsa_certs,
+            model_version=model_version,
+        )
         inference_client._model = self.model
         return inference_client
 
-    def create_client_and_data(self, inference_request, random_data=False):
-        if inference_request.client_type == KFS:
-            # This should be included into KserveWrapper, please correct calling test not to use `create_client_and_data`
-            assert False, "Please correct it"
-            kfs_api_type = (
-                InferenceClientKFS if inference_request.api_type == InferenceClientTFS else InferenceRestClientKFS
-            )
-            port = inference_request.get_port()
-            inference_client = self.create_kfs_client(kfs_api_type, port)
-        else:
-            inference_client = self.create_client(
-                inference_request.api_type,
-                inference_request.get_port(),
-                inference_request.batch_size,
-                client_type=inference_request.client_type,
-                model_version=inference_request.model_version,
-            )
-        if inference_request is not None and inference_request.dataset:
-            input_data = inference_request.load_data()
-        else:
-            input_data = self.model.prepare_input_data(inference_request.batch_size, random_data=random_data)
-        return inference_client, input_data
-
-    def create_kfs_client(self, api_type, port):
-        kfs_api_client = api_type(port, model_name=self.model.name, batch_size=self.model.batch_size)
-        kfs_api_client.model = self.model
-        kfs_api_client.port = port
-        kfs_api_client.model_name = self.model.name
-        return kfs_api_client
-
 
 @dataclass(frozen=False)
-class InferenceRequest(object):
+class InferenceRequest:
     ovms: OvmsInstance = None
     model: ModelInfo = None
     api_type: object = None
@@ -178,7 +144,7 @@ class InferenceRequest(object):
 @dataclass(frozen=False)
 class BinaryInferenceRequest(InferenceRequest):
     layout: str = Ovms.BINARY_IO_LAYOUT_ROW_NAME
-    dataset: ModelDataset = field(default_factory=lambda: DefaultBinaryDataset())
+    dataset: ModelDataset = field(default_factory=DefaultBinaryDataset)
     format: str = None
     validate_match: bool = True
     batch_size: int = 1
@@ -258,7 +224,7 @@ class BinaryInferenceRequest(InferenceRequest):
             binary_data = b""
 
         request_body = struct.pack(
-            "{}s{}s".format(len(request_header), len(binary_data)), request_header.encode(), binary_data
+            f"{len(request_header)}s{len(binary_data)}s", request_header.encode(), binary_data
         )
         return {
             "request": request_body,
@@ -266,7 +232,7 @@ class BinaryInferenceRequest(InferenceRequest):
         }
 
     def load_data(self):
-        result = dict()
+        result = {}
         for param_name, param_data in self.model.inputs.items():
             result[param_name] = self.dataset.get_data(
                 param_data["shape"], self.batch_size, self.model.transpose_axes, None
@@ -365,8 +331,7 @@ class LLMInferenceRequest(InferenceRequest):
                 set_null_values=set_null_values,
                 use_extra_body=use_extra_body,
             )
-        else:
-            return {}
+        return {}
 
     def create_chat_completions(self, messages, model_name=None, timeout=None):
         model = model_name if model_name is not None else self.api_type.model.name
@@ -529,7 +494,7 @@ class RerankLLMInferenceRequest(LLMInferenceRequest):
         return rerank
 
 
-class InferenceResponse(object):
+class InferenceResponse:
 
     def __init__(self, inference_info, response):
         self.inference_info = inference_info
@@ -541,9 +506,8 @@ class InferenceResponse(object):
 
     def ensure_outputs_exist(self):
         for output_name in self.inference_info.model.outputs:
-            assert output_name in self.response, "Incorrect output name, expected: {}, found: {}.".format(
-                output_name, ", ".join(self.response.keys())
-            )
+            assert output_name in self.response, f"Incorrect output name, expected: {output_name}, " \
+                                                 f"found: {', '.join(self.response.keys())}."
 
     def validate(self, input_data):
         self.ensure_outputs_exist()
@@ -582,14 +546,11 @@ class InferenceResponse(object):
                 if expected_dim_value > 0:
                     validation_pass = expected_dim_value == output_shape[name][dim]
 
-        assert validation_pass, "Incorrect output shape, expected: {}, found: {}.".format(expected_shape, output_shape)
+        assert validation_pass, f"Incorrect output shape, expected: {expected_shape}, found: {output_shape}."
         logger.debug(f"Output shape: {output_shape} (expected: {expected_shape})")
 
 
 class MediaPipeInferenceResponse(InferenceResponse):
-
-    def __init__(self, inference_info, response):
-        super().__init__(inference_info, response)
 
     @classmethod
     def create(cls, inference_info, response):
@@ -629,14 +590,11 @@ class MediaPipeInferenceResponse(InferenceResponse):
                         output_shape_key = f"out_{expected_shape_idx}"
                     validation_pass = expected_dim_value == output_shape[output_shape_key][dim]
 
-        assert validation_pass, "Incorrect output shape, expected: {}, found: {}.".format(expected_shape, output_shape)
+        assert validation_pass, f"Incorrect output shape, expected: {expected_shape}, found: {output_shape}."
         logger.debug(f"Output shape: {output_shape} (expected: {expected_shape})")
 
 
 class LLMInferenceResponse(InferenceResponse):
-
-    def __init__(self, inference_info, response):
-        super().__init__(inference_info, response)
 
     @classmethod
     def create(cls, inference_info, response):
@@ -649,7 +607,7 @@ class LLMInferenceResponse(InferenceResponse):
         assert self.response["model"] == self.inference_info.model.name, f"Invalid model name: {self.response['model']}"
 
 
-class InferenceInfo(object):
+class InferenceInfo:
 
     @classmethod
     def create(cls, client, model, timeout=wait_for_messages_timeout, input_data=None, inference_request=None):
@@ -831,7 +789,7 @@ def get_model_status(client, accepted_model_states=None, model_version=None, por
 def get_multiple_model_status(models_and_expected_state):
     for client, state in models_and_expected_state:
         try:
-            model_state = get_model_status(client, accepted_model_states=[state])
+            _model_state = get_model_status(client, accepted_model_states=[state])
         except (_InactiveRpcError, UnexpectedResponseError) as e:
             if state in [Ovms.ModelStatus.UNKNOWN, Ovms.ModelStatus.UNDEFINED]:
                 pass  # It is expected exceptions for given ModelStatus so proceed.
@@ -891,7 +849,7 @@ def wait_for_model_meta(client, model, wait_time=1):
             received_meta_str = json.loads(response)
             logger.info(f"Expected metadata received for model {model.name}:\r\n{received_meta_str}")
             break
-        except (RpcError, AssertionError) as ex:
+        except (RpcError, AssertionError) as _ex:
             time.sleep(wait_time)
 
     assert validation_passed, f"Unexpected model metadata, current: {received_meta} for model: {model}"
@@ -911,8 +869,7 @@ def prepare_v2_model_infer_request(port, api_type, input_data=None):
         grpc_stub = prepare_v2_grpc_stub(port)
         request = api_type.get_predict_grpc_request(input_data)
         return request, grpc_stub
-    else:
-        raise NotImplementedError()
+    raise NotImplementedError()
 
 
 def check_model_readiness(model, port, kfs_api_type, is_ready=True, timeout=None):
@@ -929,7 +886,7 @@ def check_model_readiness(model, port, kfs_api_type, is_ready=True, timeout=None
                 logger.info(f"Model {model.name} Ready:\n{response}")
                 success = True
                 break
-            elif not response and not is_ready:
+            if not response and not is_ready:
                 logger.info(f"Model {model.name} is not Ready: {response}")
                 success = True
                 break
@@ -1299,7 +1256,7 @@ def prepare_streaming_api_inference(mediapipe_model, kfs_client, prompts, result
 
         if error:
             raise error
-        elif any(result.as_numpy(output_name) is not None for output_name in mediapipe_model.output_names):
+        if any(result.as_numpy(output_name) is not None for output_name in mediapipe_model.output_names):
             for output_name in mediapipe_model.output_names:
                 if result.as_numpy(output_name) is not None:
                     decode_result(result, output_name, results_decoded)

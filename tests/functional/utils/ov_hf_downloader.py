@@ -50,7 +50,7 @@ class OVHfDownloader:
             print(f"No files to update for model: {self.model_name}")
             return False
 
-        print(f"Download OVHf model: {self.model_name}")
+        print(f"Download OpenVINO HuggingFace model: {self.model_name}")
         staging_path = self.model_local_path + "_staging"
         if os.path.exists(staging_path):
             remove_dir_tree(staging_path)

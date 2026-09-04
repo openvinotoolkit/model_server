@@ -25,7 +25,7 @@ from tests.functional.config import server_address
 logger = get_logger(__name__)
 
 
-class TestEnvironment(object):
+class TestEnvironment:
     __test__ = False
     current = None
 
@@ -37,10 +37,10 @@ class TestEnvironment(object):
         if hasattr(model, "max_position_embeddings") and model.max_position_embeddings is not None:
             config_file_path = os.path.join(models_dir[0], model.name, "config.json")
             if os.path.exists(config_file_path):
-                with open(config_file_path, "r") as file_object:
+                with open(config_file_path, "r", encoding="utf-8") as file_object:
                     config_data = json.load(file_object)
                 config_data["max_position_embeddings"] = model.max_position_embeddings
-                with open(config_file_path, "w") as file_object:
+                with open(config_file_path, "w", encoding="utf-8") as file_object:
                     json.dump(config_data, file_object)
                 logger.info(
                     f"max_position_embeddings value was updated to {model.max_position_embeddings} "
