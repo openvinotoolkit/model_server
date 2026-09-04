@@ -556,6 +556,249 @@ value2
     EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size());
     EXPECT_EQ(content, "\n");
 }
+// Regression tests for https://github.com/openvinotoolkit/model_server/issues/4487:
+// the model sometimes quotes the XML attribute (<function="name">, <parameter="name">).
+// The quotes are delimiters, so they must not end up in the tool name or in the argument
+// keys, and the schema-driven type handling keyed on those names must keep working.
+// The unquoted path is unchanged; TestJustParserImplUnaryToolCall above is its control.
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplQuotedParameterName) {
+    const std::string input = R"(
+<tool_call>
+<function=string_tool>
+<parameter="arg1">
+value1
+</parameter>
+</function>
+</tool_call>)";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "string_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\":\"value1\"}");
+    EXPECT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content) << input;
+    EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size());
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplSingleQuotedParameterName) {
+    const std::string input = R"(
+<tool_call>
+<function=string_tool>
+<parameter='arg1'>
+value1
+</parameter>
+</function>
+</tool_call>)";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "string_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\":\"value1\"}");
+    EXPECT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content) << input;
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplQuotedFunctionName) {
+    const std::string input = R"(
+<tool_call>
+<function="string_tool">
+<parameter=arg1>
+value1
+</parameter>
+</function>
+</tool_call>)";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "string_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\":\"value1\"}");
+    EXPECT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content) << input;
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplQuotedNamesKeepStringEnforcement) {
+    // Both names are looked up in toolsParametersTypeMap, so quotes left in place would also
+    // silently disable type handling: arg1 would stay a number instead of the declared string.
+    const std::string input = R"(
+<tool_call>
+<function="string_int_tool">
+<parameter="arg1">
+42
+</parameter>
+<parameter="arg2">
+7
+</parameter>
+</function>
+</tool_call>)";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "string_int_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\":\"42\",\"arg2\":7}");
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplQuotedParameterNameKeepsBooleanNormalization) {
+    const std::string input = R"(
+<tool_call>
+<function=bool_tool>
+<parameter="arg1">
+True
+</parameter>
+</function>
+</tool_call>)";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "bool_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\":true}");
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplMixedQuotingOfParameterNames) {
+    const std::string input = R"(
+<tool_call>
+<function=string_int_float_tool>
+<parameter="arg1">
+value1
+</parameter>
+<parameter=arg2>
+42
+</parameter>
+<parameter='arg3'>
+52.32
+</parameter>
+</function>
+</tool_call>)";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "string_int_float_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42,\"arg3\":52.32}");
+    EXPECT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content) << input;
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplTwoToolCallsWithQuotedNames) {
+    const std::string input = R"(
+<tool_call>
+<function="string_tool">
+<parameter="arg1">
+value1
+</parameter>
+</function>
+</tool_call>
+<tool_call>
+<function='string_float_tool'>
+<parameter='arg1'>
+data
+</parameter>
+<parameter='arg2'>
+25.2
+</parameter>
+</function>
+</tool_call>)";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 2) << input;
+    EXPECT_EQ(calls[0].name, "string_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\":\"value1\"}");
+    EXPECT_EQ(calls[1].name, "string_float_tool");
+    EXPECT_EQ(calls[1].arguments, "{\"arg1\":\"data\",\"arg2\":25.2}");
+    EXPECT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content) << input;
+    EXPECT_EQ(parser.getLastProcessedPosition(), input.rfind("</tool_call>") + std::string("</tool_call>").size()) << input;
+    EXPECT_EQ(content, "\n\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplParameterNameWithInnerQuoteKept) {
+    // Only a clean wrapping pair is a delimiter; a quote between the ends belongs to the name.
+    const std::string input = R"(
+<tool_call>
+<function=string_tool>
+<parameter=arg"1>
+value1
+</parameter>
+</function>
+</tool_call>)";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "string_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"arg\\\"1\":\"value1\"}");
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplParameterNameWithUnmatchedQuoteKept) {
+    // Deliberately out of scope: a single unpaired quote is not a delimiter pair, and the
+    // parser cannot tell a dropped closing quote from a name that starts with one.
+    const std::string input = R"(
+<tool_call>
+<function=string_tool>
+<parameter="arg1>
+value1
+</parameter>
+</function>
+</tool_call>)";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls_t& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "string_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"\\\"arg1\":\"value1\"}");
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithQuotedFunctionName) {
+    // getCurrentFunctionName() feeds the first streamed delta, so it must already be clean.
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    const std::string input = R"(
+<tool_call>
+<function="string_tool">
+<parameter="arg1">
+value1
+)";
+    auto content = input;
+    auto stepResult = parser.parseChunk(content);
+    ASSERT_FALSE(stepResult.has_value());
+    ASSERT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::InsideParameter);
+    ASSERT_TRUE(parser.getCurrentFunctionName().has_value());
+    EXPECT_EQ(parser.getCurrentFunctionName().value(), "string_tool");
+}
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithMoreThan1StateChange) {
     ToolCalls_t calls;
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
@@ -716,6 +959,19 @@ INSTANTIATE_TEST_SUITE_P(
         return name;
     });
 
+TEST_F(Qwen3CoderOutputParserTest, StreamingQuotedFunctionAndParameterNames) {
+    // End-to-end streaming counterpart of the parser-level quoted-attribute tests: the quotes
+    // must not leak into the first delta (function name) nor into the argument keys.
+    auto nameDelta = outputParser->parseChunk(R"(<tool_call><function="string_tool"><parameter="arg1">)", {}, true, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(nameDelta.has_value());
+    const std::string nameJson = ovms::test::deltaToJson(*nameDelta);
+    EXPECT_NE(nameJson.find(R"("name":"string_tool")"), std::string::npos) << nameJson;
+
+    auto argumentsDelta = outputParser->parseChunk("value1</parameter></function></tool_call>", {}, true, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(argumentsDelta.has_value());
+    const std::string argumentsJson = ovms::test::deltaToJson(*argumentsDelta);
+    EXPECT_NE(argumentsJson.find(R"("arguments":"{\"arg1\":\"value1\"}")"), std::string::npos) << argumentsJson;
+}
 TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
     // since unary reuses streaming we don't need to test for partial tool calls
     // if we don't get closing tag we don't emit tool call

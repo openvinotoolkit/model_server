@@ -139,3 +139,86 @@ TEST(FindInStringTest, SingleQuoteClosedWithSpaceBeforeDelimiter) {
     EXPECT_NE(pos, std::string::npos);
     EXPECT_EQ(input[pos], ',');
 }
+
+// ── trimSurroundingQuotes: tag-attribute quote normalization (issue #4487) ───
+
+TEST(TrimSurroundingQuotesTest, RemovesWrappingDoubleQuotes) {
+    std::string name = R"("command")";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, "command");
+}
+
+TEST(TrimSurroundingQuotesTest, RemovesWrappingSingleQuotes) {
+    std::string name = "'command'";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, "command");
+}
+
+TEST(TrimSurroundingQuotesTest, LeavesUnquotedNameByteIdentical) {
+    std::string name = "command";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, "command");
+}
+
+TEST(TrimSurroundingQuotesTest, RemovesOnlyOneLevelOfQuoting) {
+    // The inner pair is part of the value, so there is no unambiguous delimiter pair.
+    std::string name = R"(""command"")";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, R"(""command"")");
+}
+
+TEST(TrimSurroundingQuotesTest, KeepsOtherQuoteCharacterInsideThePair) {
+    std::string name = R"("it's")";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, "it's");
+}
+
+TEST(TrimSurroundingQuotesTest, LeavesInternalQuoteUntouched) {
+    // A quote between the ends is a regular character, not a delimiter.
+    std::string name = R"(arg"1)";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, R"(arg"1)");
+}
+
+TEST(TrimSurroundingQuotesTest, DoesNotJoinTwoSeparatelyQuotedTokens) {
+    // Stripping here would silently merge two quoted tokens into one value.
+    std::string name = R"("a" "b")";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, R"("a" "b")");
+}
+
+TEST(TrimSurroundingQuotesTest, LeavesUnmatchedLeadingQuote) {
+    // Deliberately out of scope: an unpaired quote is not a delimiter pair, and the parser
+    // cannot tell a dropped closing quote from a value that starts with a quote.
+    std::string name = R"("command)";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, R"("command)");
+}
+
+TEST(TrimSurroundingQuotesTest, LeavesUnmatchedTrailingQuote) {
+    std::string name = R"(command")";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, R"(command")");
+}
+
+TEST(TrimSurroundingQuotesTest, LeavesMismatchedQuoteCharacters) {
+    std::string name = R"("command')";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, R"("command')");
+}
+
+TEST(TrimSurroundingQuotesTest, LeavesEmptyAndSingleCharacterInputUntouched) {
+    std::string empty;
+    trimSurroundingQuotes(empty);
+    EXPECT_EQ(empty, "");
+    std::string lone = R"(")";
+    trimSurroundingQuotes(lone);
+    EXPECT_EQ(lone, R"(")");
+}
+
+TEST(TrimSurroundingQuotesTest, EmptyQuotedValueBecomesEmpty) {
+    // Matches what an unquoted empty attribute (<parameter=>) already yields today.
+    std::string name = R"("")";
+    trimSurroundingQuotes(name);
+    EXPECT_EQ(name, "");
+}
