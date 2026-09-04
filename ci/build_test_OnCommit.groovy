@@ -38,13 +38,6 @@ pipeline {
     agent {
       label 'ovmsbuilder'
     }
-    environment {
-      // Force HTTP/1.1: some proxies mangle git's HTTP/2 smart-protocol responses,
-      // causing "fatal: expected flush after ref listing" on fetch.
-      GIT_CONFIG_COUNT = "1"
-      GIT_CONFIG_KEY_0 = "http.version"
-      GIT_CONFIG_VALUE_0 = "HTTP/1.1"
-    }
     options {
       timeout(time: 4, unit: 'HOURS')
     }
