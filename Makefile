@@ -384,6 +384,7 @@ endif
 targz_package:
 	docker buildx build -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--target=pkg && \
@@ -393,6 +394,7 @@ targz_package:
 	docker rm $$ID
 	docker buildx build -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG) \
 		--target=capi-build && \
@@ -413,10 +415,12 @@ else
 endif
 	docker buildx build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
 	docker buildx build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		--build-arg GPU=1 \
 		--build-arg NPU=$(NPU) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
@@ -455,6 +459,7 @@ endif
 release_image:
 	docker buildx build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		--build-arg GPU=$(GPU) \
 		--build-arg NPU=$(NPU) \

@@ -306,11 +306,19 @@ ARG KONFLUX=1  # This is a workaround to avoid bazel fetching dependencies durin
 RUN --mount=type=secret,id=github_token \
     if [ "$KONFLUX" == "0" ] ; then true ; else exit 0 ; fi ; \
     if [ -s /run/secrets/github_token ]; then \
-        git config --global credential."https://github.com".helper '!f() { echo username=x-access-token; echo password=$(cat /run/secrets/github_token); }; f' ; \
+        set +x ; \
+        github_token=$(cat /run/secrets/github_token) ; \
+        git config --system url."https://${github_token}@github.com/".insteadOf "https://github.com/" ; \
+        unset github_token ; \
+        set -x ; \
     fi ; \
     bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest ; \
     build_status=$? ; \
-    git config --global --unset credential."https://github.com".helper 2>/dev/null || true ; \
+    set +x ; \
+    github_token=$(cat /run/secrets/github_token 2>/dev/null) ; \
+    git config --system --unset url."https://${github_token}@github.com/".insteadOf 2>/dev/null || true ; \
+    unset github_token ; \
+    set -x ; \
     exit $build_status
 
 COPY src/ /ovms/src/
@@ -341,13 +349,43 @@ RUN rm -f /usr/lib64/cmake/OpenSSL/OpenSSLConfig.cmake
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
+RUN --mount=type=secret,id=github_token \
+    if [ -s /run/secrets/github_token ]; then \
+        set +x ; \
+        github_token=$(cat /run/secrets/github_token) ; \
+        git config --system url."https://${github_token}@github.com/".insteadOf "https://github.com/" ; \
+        unset github_token ; \
+        set -x ; \
+    fi ; \
+    bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi) ; \
+    build_status=$? ; \
+    set +x ; \
+    github_token=$(cat /run/secrets/github_token 2>/dev/null) ; \
+    git config --system --unset url."https://${github_token}@github.com/".insteadOf 2>/dev/null || true ; \
+    unset github_token ; \
+    set -x ; \
+    exit $build_status
 
 # espeak-ng is built as a separate step, independent of the OVMS binary.
 # Set ESPEAK=0 to skip the espeak build.
 ARG ESPEAK=1
 # hadolint ignore=DL3059
-RUN if [ "$ESPEAK" == "1" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //third_party:espeak_ng //third_party:espeak_ng_data; fi
+RUN --mount=type=secret,id=github_token \
+    if [ -s /run/secrets/github_token ]; then \
+        set +x ; \
+        github_token=$(cat /run/secrets/github_token) ; \
+        git config --system url."https://${github_token}@github.com/".insteadOf "https://github.com/" ; \
+        unset github_token ; \
+        set -x ; \
+    fi ; \
+    if [ "$ESPEAK" == "1" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //third_party:espeak_ng //third_party:espeak_ng_data; fi ; \
+    build_status=$? ; \
+    set +x ; \
+    github_token=$(cat /run/secrets/github_token 2>/dev/null) ; \
+    git config --system --unset url."https://${github_token}@github.com/".insteadOf 2>/dev/null || true ; \
+    unset github_token ; \
+    set -x ; \
+    exit $build_status
 
 # Tests execution
 COPY ci/check_coverage.bat /ovms/
@@ -375,14 +413,59 @@ ARG CAPI_FLAGS="--strip=always  --config=mp_off_py_off --//:distro=redhat"
 ARG JOBS=40
 ARG LTO_ENABLE=OFF
 WORKDIR /ovms
-RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
+RUN --mount=type=secret,id=github_token \
+    if [ -s /run/secrets/github_token ]; then \
+        set +x ; \
+        github_token=$(cat /run/secrets/github_token) ; \
+        git config --system url."https://${github_token}@github.com/".insteadOf "https://github.com/" ; \
+        unset github_token ; \
+        set -x ; \
+    fi ; \
+    bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared ; \
+    build_status=$? ; \
+    set +x ; \
+    github_token=$(cat /run/secrets/github_token 2>/dev/null) ; \
+    git config --system --unset url."https://${github_token}@github.com/".insteadOf 2>/dev/null || true ; \
+    unset github_token ; \
+    set -x ; \
+    exit $build_status
 
 # C api app with bazel
 # hadolint ignore=DL3059
-RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
+RUN --mount=type=secret,id=github_token \
+    if [ -s /run/secrets/github_token ]; then \
+        set +x ; \
+        github_token=$(cat /run/secrets/github_token) ; \
+        git config --system url."https://${github_token}@github.com/".insteadOf "https://github.com/" ; \
+        unset github_token ; \
+        set -x ; \
+    fi ; \
+    bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example ; \
+    build_status=$? ; \
+    set +x ; \
+    github_token=$(cat /run/secrets/github_token 2>/dev/null) ; \
+    git config --system --unset url."https://${github_token}@github.com/".insteadOf 2>/dev/null || true ; \
+    unset github_token ; \
+    set -x ; \
+    exit $build_status
 
 # C-API benchmark app
-RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
+RUN --mount=type=secret,id=github_token \
+    if [ -s /run/secrets/github_token ]; then \
+        set +x ; \
+        github_token=$(cat /run/secrets/github_token) ; \
+        git config --system url."https://${github_token}@github.com/".insteadOf "https://github.com/" ; \
+        unset github_token ; \
+        set -x ; \
+    fi ; \
+    bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy" ; \
+    build_status=$? ; \
+    set +x ; \
+    github_token=$(cat /run/secrets/github_token 2>/dev/null) ; \
+    git config --system --unset url."https://${github_token}@github.com/".insteadOf 2>/dev/null || true ; \
+    unset github_token ; \
+    set -x ; \
+    exit $build_status
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
 RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \
