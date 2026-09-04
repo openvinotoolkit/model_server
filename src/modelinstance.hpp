@@ -534,6 +534,16 @@ public:
     OVInferRequestsQueue& getInferRequestsQueue();
 
     /**
+         * @brief Starts asynchronous inference on the given infer request.
+         *
+         * Thin virtual wrapper over ov::InferRequest::start_async. In production it
+         * forwards unconditionally; it exists as a seam so tests can simulate
+         * start_async() throwing and verify the infer-request slot is released on
+         * that error path (see modelInferAsync and #2871).
+         */
+    virtual void startAsyncInference(ov::InferRequest& inferRequest);
+
+    /**
          * @brief Combines plugin config from user with default config calculated at runtime
          *
          * @return plugin config

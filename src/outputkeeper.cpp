@@ -35,6 +35,9 @@ OutputKeeper::OutputKeeper(ov::InferRequest& request, const tensor_map_t& output
     }
 }
 OutputKeeper::~OutputKeeper() {
+    if (cancelled) {
+        return;
+    }
     for (auto [name, v] : outputs) {
         OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, {})", reinterpret_cast<void*>(&request), name, reinterpret_cast<void*>(&v));
         request.set_tensor(name, v);
