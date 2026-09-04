@@ -246,7 +246,9 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
                                                                               "<|end|>",
                                                                               "<|return|>"});
     else if (toolParserName == "gemma4")
-        contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<turn|>", "<|tool_response>"});
+        // "<|channel>thought\n"/"<channel|>" guard against a reasoning re-entry mid-CONTENT
+        // (e.g. an empty "ghost" thought channel) leaking into visible content.
+        contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<turn|>", "<|tool_response>", "<|channel>thought\n", "<channel|>"});
     else if (toolParserName == "lfm2")
         contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<|im_end|>"});
     else if (toolParserName == "minicpm5")
