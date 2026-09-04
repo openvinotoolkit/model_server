@@ -23,7 +23,7 @@
 #include "../extractchoice.hpp"
 #include "../requesttensorextractor.hpp"
 #include "../shape.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const size_t batchSizeIndex);

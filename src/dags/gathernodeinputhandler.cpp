@@ -21,7 +21,7 @@
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../tensorinfo.hpp"
 
 namespace ovms {

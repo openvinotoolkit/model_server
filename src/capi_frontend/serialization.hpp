@@ -26,7 +26,7 @@
 #include "inferenceresponse.hpp"
 #include "inferencetensor.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../serialization_common.hpp"
 #include "../tensorinfo.hpp"
 

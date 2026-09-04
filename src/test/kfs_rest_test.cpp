@@ -28,7 +28,7 @@
 #include "../http_rest_api_handler.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../version.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
@@ -202,7 +202,12 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    auto dispatchStatus = handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser);
+    if (dispatchStatus != ovms::StatusCode::OK) {
+        std::cerr << "dispatchToProcessor failed: code=" << static_cast<int>(dispatchStatus.getCode())
+                  << ", details=" << dispatchStatus.string() << ", response=" << response << std::endl;
+    }
+    ASSERT_EQ(dispatchStatus, ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());

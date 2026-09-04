@@ -45,6 +45,7 @@
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/kfs_python_tensor_bridge.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -101,8 +102,8 @@ protected:
         ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(graphPath).c_str(), graphName);
     }
 
-    void SetUpServer(const char* configPath) {
-        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str());
+    void SetUpServer(const char* configPath, bool withPython = true) {
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str(), SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, "", withPython);
     }
 
     void SetUp() override {
@@ -140,7 +141,7 @@ public:
 class MediapipeConfigFlowTestDummyModelMesh : public MediapipeCliFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/model_mesh/config.json");
+        SetUpServer("/ovms/src/test/mediapipe/model_mesh/config.json", false);
     }
 };
 
@@ -1473,7 +1474,7 @@ protected:
     MediapipeGraphDefinition* getMPDefinitionByName(const std::string& name) {
         const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
         ModelManager& modelManager = smm->getServableManager();
-        const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+        const auto& factory = modelManager.getMediapipeFactory();
         return factory.findDefinitionByName(name);
     }
 };
@@ -2680,7 +2681,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenChangeInputNameInDefinition) {
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2722,7 +2723,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2859,6 +2860,24 @@ TEST_F(MediapipeSerialization, MPImageTensor) {
     EXPECT_EQ(mp_response.raw_output_contents().at(0).data()[2], 1);
 }
 
+TEST_F(MediapipeSerialization, OVMSPyTensorWithoutRuntimeBridge) {
+    // Force bridge absence explicitly so this test is independent from global
+    // process state and test execution order.
+    const auto* originalBridge = getKfsPyTensorBridgeVTable();
+    setKfsPyTensorBridgeVTable(nullptr);
+
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<int>(1);
+    auto status =
+        onPacketReadySerializeImpl(
+            "1", "py_response", "1", "py_response",
+            mediapipe_packet_type_enum::OVMS_PY_TENSOR,
+            packet,
+            mp_response);
+
+    setKfsPyTensorBridgeVTable(originalBridge);
+    ASSERT_EQ(status, StatusCode::NOT_IMPLEMENTED);
+}
+
 TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     std::string graphPbtxtFileContent = pbtxtContent;
     std::string configFileContent = configFileWithNoBasePath;
@@ -2879,7 +2898,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2898,7 +2917,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2930,7 +2949,7 @@ TEST_F(MediapipeConfigChanges, AddImproperGraphThenFixWithReloadThenBreakAgain) 
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
@@ -2964,7 +2983,7 @@ TEST_F(MediapipeConfigChanges, GraphWithNonexistentCalcShouldBeInNotLoadedYet) {
     createConfigFileWithContent(pbtxtContentNonexistentCalc, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
@@ -2985,7 +3004,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
@@ -3394,7 +3413,10 @@ protected:
         if (expectedStatus == ovms::StatusCode::OK) {
             ASSERT_EQ(response.outputs_size(), 1);
             ASSERT_EQ(response.raw_output_contents_size(), 1);
-            ASSERT_EQ(response.raw_output_contents()[0].size(), 10 * ovms::KFSDataTypeSize(request.inputs()[0].datatype()));
+            // BYTES has no fixed per-element size, so the exact-size check only applies to fixed-size datatypes.
+            if (request.inputs()[0].datatype() != "BYTES") {
+                ASSERT_EQ(response.raw_output_contents()[0].size(), 10 * ovms::KFSDataTypeSize(request.inputs()[0].datatype()));
+            }
         }
     }
 
@@ -3490,6 +3512,10 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
 
 typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, bool> InferInputTensorContentsTypesToTest;
 TYPED_TEST_SUITE(KFSGRPCContentFieldsSupportTest, InferInputTensorContentsTypesToTest);
+
+// Non-typed alias for the BYTES/Precision::STRING typed-contents test below, which does not vary by numeric TypeParam.
+using KFSGRPCContentFieldsSupportTestBytes = KFSGRPCContentFieldsSupportTest<uint8_t>;
+
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentOVTensor = R"(
         input_stream: "OVTENSOR:in"
@@ -3564,6 +3590,36 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorInvalidContentSize) {
         }
     )";
     this->performInvalidContentSizeTest(pbtxtContentPyTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+
+// Covers the Precision::STRING branch of serializeKfsTypedContentToRawBytes: bytes_contents
+// typed data with no raw_input_contents, routed through the OVMS_PY_TENSOR bridge.
+TEST_F(KFSGRPCContentFieldsSupportTestBytes, PyTensorBytesContentsCheckExpectedStatusCode) {
+    const std::string pbtxtContentPytensor = R"(
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        }
+    )";
+    this->CreateConfigAndPbtxt(pbtxtContentPytensor);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--config_path",
+        (char*)this->configFilePath.c_str(),
+        (char*)"--port",
+        (char*)this->port.c_str()};
+    int argc = 5;
+    this->server.setShutdownRequest(0);
+    this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
+        EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
+    });
+    // prepare bytes_contents typed data (no raw_input_contents) to exercise Precision::STRING
+    prepareInferStringRequest(this->request, "in", {"foo", "bar", "baz"}, /*putBufferInInputTensorContent=*/true);
+    const std::string servableName{"mediapipeDummy"};
+    this->request.mutable_model_name()->assign(servableName);
+    this->performInference(ovms::StatusCode::OK);
 }
 #endif
 
@@ -4480,7 +4536,7 @@ TEST_F(UnaryQueueReinitTest, GraphIsReinitializedAfterCalculatorError) {
             {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(),
             std::move(guard)};
         prepareInferRequest(request, -1.0f);
-        auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
+        auto status = executor.inferTyped<KFSRequest, KFSResponse>(&request, &response, executionContext);
         ASSERT_FALSE(status.ok());
         EXPECT_EQ(status.getCode(), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     }
@@ -4496,7 +4552,7 @@ TEST_F(UnaryQueueReinitTest, GraphIsReinitializedAfterCalculatorError) {
             {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(),
             std::move(guard)};
         prepareInferRequest(request, 2.0f);
-        auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
+        auto status = executor.inferTyped<KFSRequest, KFSResponse>(&request, &response, executionContext);
         ASSERT_TRUE(status.ok());
     }
 }

@@ -26,7 +26,7 @@
 #include "../config.hpp"
 #include "../logging.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 CAPIModule::~CAPIModule() {

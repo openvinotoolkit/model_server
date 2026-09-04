@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdint>
+#include <cstdio>
 #include <exception>
 #include <iterator>
 #include <memory>
@@ -31,7 +32,7 @@
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
 #include "../servable_definition_unload_guard.hpp"
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
 #include "../version.hpp"
 #include "../modelinstance.hpp"
 #include "capi_request_utils.hpp"  // TODO @atobisze must be before executor
@@ -49,7 +50,7 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../single_version_servable_definition.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../timer.hpp"
 #include "buffer.hpp"
 #include "capi_dag_utils.hpp"

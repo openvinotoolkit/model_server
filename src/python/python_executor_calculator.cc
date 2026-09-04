@@ -200,6 +200,9 @@ public:
         }
 
         nodeResources = it->second;
+        if (nodeResources == nullptr || nodeResources->pythonBackend == nullptr) {
+            return absl::Status(absl::StatusCode::kFailedPrecondition, "Python backend is not available for PythonExecutorCalculator");
+        }
         outputTimestamp = mediapipe::Timestamp(mediapipe::Timestamp::Unset());
         LOG(INFO) << "PythonExecutorCalculator [Node: " << cc->NodeName() << "] Open end";
         return absl::OkStatus();

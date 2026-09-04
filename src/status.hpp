@@ -267,6 +267,10 @@ enum class StatusCode {
     PYTHON_NODE_MISSING_OPTIONS,
     PYTHON_NODE_MISSING_NAME,
 
+    // Python Runtime Initialization
+    PYTHON_INTERPRETER_INITIALIZATION_FAILED, /*!< Python interpreter failed to initialize (libpython.so missing) */
+    PYTHON_BACKEND_CREATION_FAILED,           /*!< Python backend creation failed (pyovms module missing/broken) */
+
     // LLM Nodes
     LLM_NODE_NAME_ALREADY_EXISTS,
     LLM_NODE_DIRECTORY_DOES_NOT_EXIST,

@@ -23,7 +23,7 @@
 #include <spdlog/spdlog.h>
 
 #include "../logging.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)

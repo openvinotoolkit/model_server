@@ -38,3 +38,9 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "newline_delimited",
+    hdrs = ["newline_delimited.hpp"],
+    visibility = ["//visibility:public"],
+)

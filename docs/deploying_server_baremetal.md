@@ -6,9 +6,11 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubu
 You can download model server package in two configurations. One with Python support (containing Python environment for Python code execution) and another without Python dependency - C++ only. Lack of support for Python code execution comes with the following limitations in model server from C++ only package:
 
 - Deploying [Python nodes](./python_support/reference.md) is not available.
-- Chat template application for [LLM servables](./llm/reference.md) (used when requesting generation on chat/completions endpoint) supports basic user/assistant messages. More complex templates that use Pythonic syntax functions for flow control or input processing might not render all parts of the prompt correctly.
+- Chat template application for [LLM servables](./llm/reference.md) (used when requesting generation on chat/completions endpoint) supports basic user/assistant messages. More complex templates that use Pythonic syntax/functions for flow control or input processing might not render all parts of the prompt correctly.
 - System message is not included in the prompt.
 - Due to limited template support, using [tools](https://platform.openai.com/docs/guides/function-calling?api-mode=chat) is not possible.
+
+For advanced LLM chat-template scenarios, the package with Python support is recommended, but it is not a universal fix for every template issue. Final rendering still depends on template correctness and model-specific expectations.
 
 ::::{tab-set}
 :::{tab-item} Ubuntu 22.04
@@ -163,6 +165,28 @@ You can also build model server from source by following the [developer guide](w
 
 > **NOTE**: You can also access [public drops of the development version](https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/) of the model server, which are built from the main branch. These builds allow you to evaluate the latest features ahead of official releases.
 
+## Python Support and Fallback Behavior
+
+Model Server supports two deployment configurations:
+
+**With Python Support** (`PYTHON_DISABLE=0`, default):
+- Python nodes are available and LLM chat-template handling has broader feature coverage.
+- Requires runtime Python libraries to be available.
+- Can gracefully degrade if Python runtime libraries/plugins are unavailable.
+
+**Without Python Support** (`PYTHON_DISABLE=1`):
+- Lightweight deployment for C++ models only.
+- Python nodes are unavailable.
+- LLM template rendering has reduced feature coverage.
+
+For Python runtime setup, fallback behavior details, and common error resolution, see:
+- [Python Runtime Setup and Troubleshooting](python_runtime_setup_and_troubleshooting.md)
+
+For Python nodes reference, see:
+- [Python Support Reference](./python_support/reference.md)
+
+> **Note**: Python support is recommended for advanced LLM template usage, but it does not guarantee successful rendering of every template.
+
 ## Test the Deployment
 
 Download ResNet50 model:
@@ -200,5 +224,6 @@ Learn more about model server [starting parameters](parameters.md).
 
 - [Preparing Model Repository](models_repository.md)
 - [Using Cloud Storage](using_cloud_storage.md)
+- [Python Runtime Setup and Troubleshooting](python_runtime_setup_and_troubleshooting.md)
 - [Troubleshooting](troubleshooting.md)
 - [Model server parameters](parameters.md)

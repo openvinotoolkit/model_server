@@ -23,7 +23,7 @@
 #include <sys/types.h>
 
 #include "../modelconfig.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "test_utils.hpp"
 
 using namespace testing;

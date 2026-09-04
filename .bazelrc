@@ -72,6 +72,7 @@ build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 build --enable_platform_specific_config
 build --experimental_repo_remote_exec
 build --experimental_cc_shared_library
+build --experimental_cc_implementation_deps
 build --check_visibility=true
 # Disable leaking LD_LIBRARY_PATH & PATH into build resulting in cache misses
 # and frequent rebuilds
@@ -90,6 +91,7 @@ build:linux --host_cxxopt=-std=c++17
 # For Tensorflow building only
 build:linux --action_env PYTHON_BIN_PATH="/usr/bin/python3"
 build:linux --define PYTHON_BIN_PATH=/usr/bin/python3
+build:linux --repo_env=HERMETIC_PYTHON_VERSION=3.12
 
 # Security options ######################################################################################################
 # TODO: Add equivalent windows flag
@@ -268,6 +270,13 @@ test:linux --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime
 test:linux --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 test:linux --test_env no_proxy=localhost
 test:linux --test_env "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
+
+# Windows test runtime env mirrors Linux test env intent.
+test:windows --test_env PATH=C:/opt/openvino/runtime/bin/intel64/Release;C:/opt/openvino/runtime/3rdparty/tbb/bin;C:/opt/Python312;C:/opt/Python312/DLLs
+test:windows --test_env OPENVINO_TOKENIZERS_PATH_GENAI=C:/opt/openvino/runtime/bin/intel64/Release/openvino_tokenizers.dll
+test:windows --test_env PYTHONPATH=C:/opt/openvino/python;%workspace%/bazel-bin/src/python/binding
+test:windows --test_env no_proxy=localhost
+test:windows --test_env "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
 # Bazelrc imports ############################################################################################################################
 # file below should contain sth like

@@ -24,7 +24,7 @@
 
 #include "../logging.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "gathernodeinputhandler.hpp"
 
 namespace ovms {
