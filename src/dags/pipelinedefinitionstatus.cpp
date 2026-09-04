@@ -254,8 +254,7 @@ bool PipelineDefinitionStatus::canEndLoaded() const {
     return isAvailable() ||
            (state == PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION) ||
            (state == PipelineDefinitionStateCode::BEGIN) ||
-           (state == PipelineDefinitionStateCode::RELOADING) ||
-           (state == PipelineDefinitionStateCode::SLEEPING);
+           (state == PipelineDefinitionStateCode::RELOADING);
 }
 bool PipelineDefinitionStatus::isRevalidationRequired() const {
     auto state = getStateCode();
@@ -289,10 +288,6 @@ std::tuple<ModelVersionState, ModelVersionStatusErrorCode> PipelineDefinitionSta
             ModelVersionStatusErrorCode::OK};
 
     case PipelineDefinitionStateCode::SLEEPING:
-        // Report AVAILABLE: the graph auto-reloads on the next inference request,
-        // so health checks and routing should treat it as available. Reporting END
-        // or UNLOADING would cause clients and load-balancers to permanently
-        // exclude this servable from their pools.
         return {
             ModelVersionState::AVAILABLE,
             ModelVersionStatusErrorCode::OK};

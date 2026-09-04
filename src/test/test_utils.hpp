@@ -780,7 +780,7 @@ public:
     void forceReloadEventForTest() { this->status.handle(ovms::ReloadEvent()); }
     void forceValidationPassedEventForTest() { this->status.handle(ovms::ValidationPassedEvent()); }
     // Identity of the sidePacketMaps shared_ptr, so a test can detect whether it
-    // was reset/swapped (unload uses clear(), not reset(), so the pointer must be stable).
+    // was reset/swapped.
     const void* sidePacketMapsPtrForTest() const { return static_cast<const void*>(this->sidePacketMaps.get()); }
     bool sidePacketMapsEmptyForTest() { return this->sidePacketMaps->empty(); }
     // Insert a harmless marker into a side-packet map so we can detect teardown.
