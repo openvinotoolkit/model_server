@@ -3,6 +3,7 @@
         {"config": {
                 "name": "passthrough",
                 "base_path": "/ovms/src/test/passthrough_string",
-                "shape": "(-1)"}}
+                "shape": "(-1)",
+                "target_device": "CPU"}}
     ]
 }
