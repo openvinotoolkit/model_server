@@ -36,4 +36,5 @@ message EmbeddingsCalculatorOVOptions {
     }
     optional Pooling pooling = 5;
     optional bool truncate = 6 [default = false];
+    optional uint32 max_length = 7;
 }
