@@ -45,7 +45,7 @@ namespace ovms {
 static constexpr const char* OUTPUT_ITEM_ID = "msg-0";
 static constexpr const char* REASONING_ITEM_ID = "rs-0";
 
-rapidjson::Document buildResponsesTextFormatForEcho(const rapidjson::Document& doc) {
+rapidjson::Document buildResponsesTextFormat(const rapidjson::Document& doc) {
     rapidjson::Document formatDoc;
     formatDoc.SetObject();
     auto& alloc = formatDoc.GetAllocator();
@@ -954,7 +954,7 @@ void OpenAIResponsesHandler::serializeCommonResponseParameters(Writer<StringBuff
         writer.Double(static_cast<double>(request.temperature.value()));
     }
 
-    rapidjson::Document textFormat = buildResponsesTextFormatForEcho(doc);
+    rapidjson::Document textFormat = buildResponsesTextFormat(doc);
     writer.String("text");
     writer.StartObject();
     writer.String("format");
