@@ -51,6 +51,7 @@ private:
     float estimated_fps_ = 30.0f;
 
     bytetrack::KalmanFilter kalman_filter_;
+    bytetrack::TrackIdAllocator id_allocator_;
 
     static std::vector<bytetrack::STrack*> JointStracks(
         std::vector<bytetrack::STrack*>& a,
@@ -60,7 +61,7 @@ private:
         std::vector<bytetrack::STrack*>& a,
         std::vector<bytetrack::STrack*>& b);
 
-    static std::pair<std::vector<bytetrack::STrack*>, std::vector<bytetrack::STrack*>>
+    static absl::StatusOr<std::pair<std::vector<bytetrack::STrack*>, std::vector<bytetrack::STrack*>>>
     RemoveDuplicateStracks(
         std::vector<bytetrack::STrack*>& a,
         std::vector<bytetrack::STrack*>& b);

@@ -57,6 +57,9 @@ cc_library(
     hdrs = ["matching_utils.h"],
     deps = [
         ":strack",
+        "@mediapipe//mediapipe/framework/port:ret_check",
+        "@mediapipe//mediapipe/framework/port:status",
+        "@mediapipe//mediapipe/framework/port:statusor",
         "@eigen_archive//:eigen3",
     ],
     alwayslink = 1
@@ -76,7 +79,6 @@ cc_library(
 
 cc_library(
     name = "basetrack",
-    srcs = ["basetrack.cc"],
     hdrs = ["basetrack.h"],
     alwayslink = 1
 )
@@ -88,6 +90,9 @@ cc_library(
     deps = [
         ":kalman_filter",
         ":basetrack",
+        "@mediapipe//mediapipe/framework/port:ret_check",
+        "@mediapipe//mediapipe/framework/port:status",
+        "@mediapipe//mediapipe/framework/port:statusor",
         "@mediapipe//mediapipe/framework/formats:detection_cc_proto",
         "@eigen_archive//:eigen3",
     ],

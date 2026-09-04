@@ -27,11 +27,6 @@ public:
         TRACKED,
         LOST,
         REMOVED };
-
-    // mirrors Python's next_id() — static counter owned here
-    static int next_id() { return count_.fetch_add(1, std::memory_order_relaxed) + 1; }
-    static void reset_id() { count_.store(0, std::memory_order_relaxed); }
-
     // Accessors
     int track_id() const { return track_id_; }
     int frame_id() const { return frame_id_; }
@@ -50,7 +45,16 @@ protected:
     float score_ = 0.f;
     bool is_activated_ = false;
     TrackState state_ = TrackState::NEW;
-    static std::atomic<int> count_;
+};
+
+// mirrors Python's next_id()
+class TrackIdAllocator {
+public:
+    int Next() { return counter_.fetch_add(1, std::memory_order_relaxed) + 1; }
+    void Reset() { counter_.store(0, std::memory_order_relaxed); }
+
+private:
+    std::atomic<int> counter_{0};
 };
 
 }  // namespace bytetrack

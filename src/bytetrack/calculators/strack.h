@@ -40,8 +40,8 @@ public:
 
     explicit STrack(const Detection& det);
 
-    void Activate(KalmanFilter* kalman_filter, int frame_id);
-    void ReActivate(const STrack& new_track, int frame_id, bool new_id = false);
+    void Activate(KalmanFilter* kalman_filter, int frame_id, TrackIdAllocator& id_alloc);
+    void ReActivate(const STrack& new_track, int frame_id, TrackIdAllocator& id_alloc, bool new_id = false);
     void Update(const STrack& new_track, int frame_id);
 
     void Predict();

@@ -64,6 +64,22 @@ absl::Status ByteTrackCalculator::Open(CalculatorContext* cc) {
     track_low_thresh_ = options_.track_low_threshold();
     new_track_thresh_ = options_.new_track_threshold();
     fuse_score_ = options_.fuse_score();
+    id_allocator_.Reset();
+
+    RET_CHECK_GT(track_buffer_, 0);
+
+    RET_CHECK_GE(match_thresh_, 0);
+    RET_CHECK_LE(match_thresh_, 1);
+
+    RET_CHECK_GE(track_high_thresh_, 0);
+    RET_CHECK_LE(track_high_thresh_, 1);
+
+    RET_CHECK_GE(track_low_thresh_, 0);
+    RET_CHECK_LE(track_low_thresh_, 1);
+
+    RET_CHECK_GE(new_track_thresh_, 0);
+    RET_CHECK_LE(new_track_thresh_, 1);
+
     return absl::OkStatus();
 }
 
@@ -134,7 +150,11 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
 
     auto strack_pool = JointStracks(tracked_stracks, lost_ptrs);
     bytetrack::STrack::MultiPredict(strack_pool);
-    auto dists = BuildIoUCostMatrix(strack_pool, detections);
+    auto dists_res1 = BuildIoUCostMatrix(strack_pool, detections);
+    if (!dists_res1.ok()) {
+        return dists_res1.status();
+    }
+    auto dists = *dists_res1;
     if (fuse_score_) {
         dists = FuseScore(dists, detections);
     }
@@ -156,7 +176,7 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
             track->Update(detections[idet], frame_id_);
             activated_stracks.push_back(*track);
         } else {
-            track->ReActivate(det, frame_id_, false);
+            track->ReActivate(det, frame_id_, id_allocator_, false);
             refind_stracks.push_back(*track);
         }
     }
@@ -177,7 +197,11 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
         }
     }
 
-    dists = BuildIoUCostMatrix(r_tracked_stracks, detections_second);
+    auto dists_res2 = BuildIoUCostMatrix(r_tracked_stracks, detections_second);
+    if (!dists_res2.ok()) {
+        return dists_res2.status();
+    }
+    dists = *dists_res2;
     if (fuse_score_) {
         dists = FuseScore(dists, detections_second);
     }
@@ -198,7 +222,7 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
             track->Update(det, frame_id_);
             activated_stracks.push_back(*track);
         } else {
-            track->ReActivate(det, frame_id_, false);
+            track->ReActivate(det, frame_id_, id_allocator_, false);
             refind_stracks.push_back(*track);
         }
     }
@@ -218,7 +242,11 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
         detections_uc.push_back(detections[i]);
     }
 
-    dists = BuildIoUCostMatrix(unconfirmed, detections_uc);
+    auto dists_res3 = BuildIoUCostMatrix(unconfirmed, detections_uc);
+    if (!dists_res3.ok()) {
+        return dists_res3.status();
+    }
+    dists = *dists_res3;
     if (fuse_score_) {
         dists = FuseScore(dists, detections_uc);
     }
@@ -242,7 +270,7 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
         if (track.score() < new_track_thresh_) {
             continue;
         }
-        track.Activate(&kalman_filter_, frame_id_);
+        track.Activate(&kalman_filter_, frame_id_, id_allocator_);
         activated_stracks.push_back(track);
     }
     VLOG(1) << "  After unconfirmed+new: activated=" << activated_stracks.size();
@@ -324,7 +352,11 @@ absl::Status ByteTrackCalculator::Process(CalculatorContext* cc) {
             tracked_ptrs2.push_back(&t);
         for (auto& t : lost_stracks_)
             lost_ptrs3.push_back(&t);
-        auto [dedup_tracked, dedup_lost] = RemoveDuplicateStracks(tracked_ptrs2, lost_ptrs3);
+        auto rem_dup_res = RemoveDuplicateStracks(tracked_ptrs2, lost_ptrs3);
+        if (!rem_dup_res.ok()) {
+            return rem_dup_res.status();
+        }
+        auto [dedup_tracked, dedup_lost] = *rem_dup_res;
         std::vector<bytetrack::STrack> new_tracked, new_lost;
         new_tracked.reserve(dedup_tracked.size());
         new_lost.reserve(dedup_lost.size());
@@ -406,9 +438,13 @@ std::vector<bytetrack::STrack*> ByteTrackCalculator::SubStracks(std::vector<byte
     return res;
 }
 
-std::pair<std::vector<bytetrack::STrack*>, std::vector<bytetrack::STrack*>>
+absl::StatusOr<std::pair<std::vector<bytetrack::STrack*>, std::vector<bytetrack::STrack*>>>
 ByteTrackCalculator::RemoveDuplicateStracks(std::vector<bytetrack::STrack*>& a, std::vector<bytetrack::STrack*>& b) {
-    auto pdist = BuildIoUCostMatrix(a, b);
+    auto pdist_status = BuildIoUCostMatrix(a, b);
+    if (!pdist_status.ok()) {
+        return pdist_status.status();
+    }
+    auto pdist = *pdist_status;
 
     std::vector<int> dupa, dupb;
     for (int p = 0; p < (int)a.size(); ++p) {
@@ -432,7 +468,7 @@ ByteTrackCalculator::RemoveDuplicateStracks(std::vector<bytetrack::STrack*>& a, 
         if (std::find(dupb.begin(), dupb.end(), i) == dupb.end())
             resb.push_back(b[i]);
 
-    return {resa, resb};
+    return std::make_pair(resa, resb);
 }
 
 }  // namespace mediapipe

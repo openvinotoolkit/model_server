@@ -14,8 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-#ifndef SRC_BYTETRACK_CALCULATORS_MATCHING_UTILS_H_
-#define SRC_BYTETRACK_CALCULATORS_MATCHING_UTILS_H_
+#pragma once
 
 #include <algorithm>
 #include <numeric>
@@ -24,6 +23,9 @@
 
 #include <Eigen/Dense>
 
+#include "mediapipe/framework/port/ret_check.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "src/bytetrack/calculators/strack.h"
 
 namespace mediapipe {
@@ -36,8 +38,10 @@ struct AssignmentResult {
 };
 
 // IoU between two [top, left, bottom, right] boxes
-inline float ComputeIoU(const Eigen::Vector4f& a,
+inline absl::StatusOr<float> ComputeIoU(const Eigen::Vector4f& a,
     const Eigen::Vector4f& b) {
+    RET_CHECK_EQ(a.size(), 4u);
+    RET_CHECK_EQ(b.size(), 4u);
     float inter_x1 = std::max(a[0], b[0]);  // left
     float inter_y1 = std::max(a[1], b[1]);  // top
     float inter_x2 = std::min(a[2], b[2]);  // right
@@ -51,10 +55,11 @@ inline float ComputeIoU(const Eigen::Vector4f& a,
 
     float area_a = (a[2] - a[0]) * (a[3] - a[1]);  // w * h
     float area_b = (b[2] - b[0]) * (b[3] - b[1]);
+    RET_CHECK_NE(area_a + area_b - inter_area, 0.0f);
     return inter_area / ((area_a + area_b - inter_area) == 0.0f ? 1e-9f : area_a + area_b - inter_area);
 }
 
-inline Eigen::MatrixXf BuildIoUCostMatrix(
+inline absl::StatusOr<Eigen::MatrixXf> BuildIoUCostMatrix(
     const std::vector<bytetrack::STrack*>& tracks,
     const std::vector<bytetrack::STrack>& detections) {
     int N = tracks.size();
@@ -66,7 +71,11 @@ inline Eigen::MatrixXf BuildIoUCostMatrix(
         auto tb = tracks[i]->tlbr();
         for (int j = 0; j < M; ++j) {
             auto bb = detections[j].tlbr();
-            cost(i, j) = 1.f - ComputeIoU(tb, bb);
+            auto iou = ComputeIoU(tb, bb);
+            if (!iou.ok()) {
+                return iou.status();
+            }
+            cost(i, j) = 1.f - *iou;
         }
     }
 
@@ -93,7 +102,7 @@ inline Eigen::MatrixXf FuseScore(
     return fuse_cost;
 }
 
-inline Eigen::MatrixXf BuildIoUCostMatrix(
+inline absl::StatusOr<Eigen::MatrixXf> BuildIoUCostMatrix(
     const std::vector<bytetrack::STrack*>& a,
     const std::vector<bytetrack::STrack*>& b) {
     int N = a.size();
@@ -105,7 +114,11 @@ inline Eigen::MatrixXf BuildIoUCostMatrix(
         auto ta = a[i]->tlbr();
         for (int j = 0; j < M; ++j) {
             auto tb = b[j]->tlbr();
-            cost(i, j) = 1.f - ComputeIoU(ta, tb);
+            auto iou = ComputeIoU(ta, tb);
+            if (!iou.ok()) {
+                return iou.status();
+            }
+            cost(i, j) = 1.f - *iou;
         }
     }
 
@@ -299,5 +312,3 @@ inline AssignmentResult LinearAssignment(const Eigen::MatrixXf& cost, float thre
 
 }  // namespace bytetrack
 }  // namespace mediapipe
-
-#endif  // SRC_BYTETRACK_CALCULATORS_MATCHING_UTILS_H_

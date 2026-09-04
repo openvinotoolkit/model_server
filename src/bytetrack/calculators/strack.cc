@@ -56,9 +56,9 @@ void STrack::Predict() {
     cov_ = new_cov;
 }
 
-void STrack::Activate(KalmanFilter* kalman_filter, int frame_id) {
+void STrack::Activate(KalmanFilter* kalman_filter, int frame_id, TrackIdAllocator& id_alloc) {
     kf_ = kalman_filter;
-    track_id_ = next_id();
+    track_id_ = id_alloc.Next();
     auto [new_mean, new_cov] = kf_->Initiate(TlwhToXyah(tlwh_));
     mean_ = new_mean;
     cov_ = new_cov;
@@ -71,7 +71,7 @@ void STrack::Activate(KalmanFilter* kalman_filter, int frame_id) {
     start_frame_ = frame_id;
 }
 
-void STrack::ReActivate(const STrack& new_track, int frame_id, bool new_id) {
+void STrack::ReActivate(const STrack& new_track, int frame_id, TrackIdAllocator& id_alloc, bool new_id) {
     Eigen::Vector4f new_tlwh = new_track.tlwh_;
     auto [new_mean, new_cov] = kf_->Update(mean_, cov_, TlwhToXyah(new_tlwh));
     mean_ = new_mean;
@@ -82,7 +82,7 @@ void STrack::ReActivate(const STrack& new_track, int frame_id, bool new_id) {
 
     frame_id_ = frame_id;
     if (new_id)
-        track_id_ = next_id();
+        track_id_ = id_alloc.Next();
     score_ = new_track.score();
 }
 
