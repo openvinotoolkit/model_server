@@ -45,6 +45,110 @@ namespace ovms {
 static constexpr const char* OUTPUT_ITEM_ID = "msg-0";
 static constexpr const char* REASONING_ITEM_ID = "rs-0";
 
+rapidjson::Document buildResponsesTextFormat(const rapidjson::Document& doc) {
+    rapidjson::Document formatDoc;
+    formatDoc.SetObject();
+    auto& alloc = formatDoc.GetAllocator();
+
+    auto textIt = doc.FindMember("text");
+    if (textIt != doc.MemberEnd() && textIt->value.IsObject()) {
+        auto formatIt = textIt->value.GetObject().FindMember("format");
+        if (formatIt != textIt->value.GetObject().MemberEnd() && formatIt->value.IsObject()) {
+            formatDoc.CopyFrom(formatIt->value, alloc);
+            return formatDoc;
+        }
+    }
+
+    auto responseFormatIt = doc.FindMember("response_format");
+    if (responseFormatIt != doc.MemberEnd() && responseFormatIt->value.IsObject()) {
+        const auto& responseFormat = responseFormatIt->value.GetObject();
+        auto typeIt = responseFormat.FindMember("type");
+        if (typeIt != responseFormat.MemberEnd() && typeIt->value.IsString()) {
+            const std::string responseFormatType = typeIt->value.GetString();
+            if (responseFormatType == "json_schema") {
+                formatDoc.AddMember("type", rapidjson::Value("json_schema", alloc), alloc);
+                auto jsonSchemaIt = responseFormat.FindMember("json_schema");
+                if (jsonSchemaIt != responseFormat.MemberEnd() && jsonSchemaIt->value.IsObject()) {
+                    for (auto it = jsonSchemaIt->value.MemberBegin(); it != jsonSchemaIt->value.MemberEnd(); ++it) {
+                        rapidjson::Value key(it->name, alloc);
+                        rapidjson::Value value(it->value, alloc);
+                        formatDoc.AddMember(key, value, alloc);
+                    }
+                    return formatDoc;
+                }
+            }
+        }
+        formatDoc.CopyFrom(responseFormatIt->value, alloc);
+        return formatDoc;
+    }
+
+    formatDoc.AddMember("type", rapidjson::Value("text", alloc), alloc);
+    return formatDoc;
+}
+
+absl::Status injectResponseFormatFromResponsesTextFormat(rapidjson::Document& doc) {
+    auto responseFormatIt = doc.FindMember("response_format");
+    const bool responseFormatProvided =
+        responseFormatIt != doc.MemberEnd() && !responseFormatIt->value.IsNull();
+
+    auto textIt = doc.FindMember("text");
+    if (textIt == doc.MemberEnd() || textIt->value.IsNull()) {
+        return absl::OkStatus();
+    }
+    if (!textIt->value.IsObject()) {
+        return absl::InvalidArgumentError("text is not an object");
+    }
+    const auto textObj = textIt->value.GetObject();
+    auto formatIt = textObj.FindMember("format");
+    if (formatIt == textObj.MemberEnd() || formatIt->value.IsNull()) {
+        return absl::OkStatus();
+    }
+    if (!formatIt->value.IsObject()) {
+        return absl::InvalidArgumentError("text.format is not an object");
+    }
+    if (responseFormatProvided) {
+        return absl::InvalidArgumentError("Provide only one of response_format or text.format");
+    }
+
+    const auto formatObj = formatIt->value.GetObject();
+    auto typeIt = formatObj.FindMember("type");
+    if (typeIt == formatObj.MemberEnd() || !typeIt->value.IsString()) {
+        return absl::InvalidArgumentError("text.format.type is not a valid string");
+    }
+
+    const std::string formatType = typeIt->value.GetString();
+    if (formatType == "text") {
+        return absl::OkStatus();
+    }
+
+    rapidjson::Value normalizedFormat(rapidjson::kObjectType);
+    auto& allocator = doc.GetAllocator();
+
+    if (formatType == "json_schema" && !formatObj.HasMember("json_schema")) {
+        normalizedFormat.AddMember("type", rapidjson::Value("json_schema", allocator), allocator);
+        rapidjson::Value jsonSchema(rapidjson::kObjectType);
+        for (auto it = formatObj.MemberBegin(); it != formatObj.MemberEnd(); ++it) {
+            if (!it->name.IsString() || std::string(it->name.GetString()) == "type") {
+                continue;
+            }
+            rapidjson::Value key(it->name, allocator);
+            rapidjson::Value value(it->value, allocator);
+            jsonSchema.AddMember(key, value, allocator);
+        }
+        normalizedFormat.AddMember("json_schema", jsonSchema, allocator);
+    } else {
+        normalizedFormat.CopyFrom(formatIt->value, allocator);
+    }
+
+    if (responseFormatIt != doc.MemberEnd()) {
+        responseFormatIt->value.CopyFrom(normalizedFormat, allocator);
+    } else {
+        rapidjson::Value key("response_format", allocator);
+        doc.AddMember(key, normalizedFormat, allocator);
+    }
+    return absl::OkStatus();
+}
+
 static std::string joinServerSideEvents(const std::vector<std::string>& events) {
     if (events.empty()) {
         return "";
@@ -255,6 +359,7 @@ static absl::StatusOr<ResponsesInputItemKind> classifyInputItem(const rapidjson:
 // rapidjson messages array) is provided by the Sink template parameter, which
 // must implement:
 //   absl::Status extractContent(itemObj, index, std::string& outText);
+//   absl::Status extractToolOutput(itemObj, std::string& outText);
 //   void emitToolMessage(callId, output);
 //   void emitMessage(role, contentText, reasoning);  // reasoning empty -> skip
 //   void emitAssistantWithToolCalls(contentText, reasoning, toolCalls);
@@ -322,9 +427,9 @@ private:
         if (callIdIt != itemObj.MemberEnd() && callIdIt->value.IsString())
             callId = callIdIt->value.GetString();
         std::string output;
-        auto outputIt = itemObj.FindMember("output");
-        if (outputIt != itemObj.MemberEnd() && outputIt->value.IsString())
-            output = outputIt->value.GetString();
+        auto status = sink.extractToolOutput(itemObj, output);
+        if (!status.ok())
+            return status;
         sink.emitToolMessage(callId, output);
         return absl::OkStatus();
     }
@@ -453,12 +558,60 @@ public:
         return absl::OkStatus();
     }
 
+    // Extract the `output` field of a function_call_output item into either a
+    // plain string or a text-typed content array preserved in pendingContentArray.
+    // The text-typed array is left for TextContentNormalizationProcessor to flatten,
+    // matching how extractContent handles user/system input content arrays.
+    absl::Status extractToolOutput(const rapidjson::Value::ConstObject& itemObj,
+        std::string& outText) {
+        outText.clear();
+        hasPendingContent = false;
+        pendingContentArray.SetArray();
+        auto outputIt = itemObj.FindMember("output");
+        if (outputIt == itemObj.MemberEnd())
+            return absl::InvalidArgumentError("function_call_output item is missing required output field");
+        if (outputIt->value.IsString()) {
+            outText = outputIt->value.GetString();
+            return absl::OkStatus();
+        }
+        if (!outputIt->value.IsArray())
+            return absl::InvalidArgumentError("function_call_output.output must be a string or array");
+        if (outputIt->value.Empty())
+            return absl::InvalidArgumentError("function_call_output.output array must not be empty");
+        for (const auto& contentItem : outputIt->value.GetArray()) {
+            if (!contentItem.IsObject())
+                return absl::InvalidArgumentError("function_call_output.output items must be objects");
+            auto contentObj = contentItem.GetObject();
+            auto typeIt = contentObj.FindMember("type");
+            if (typeIt == contentObj.MemberEnd() || !typeIt->value.IsString())
+                return absl::InvalidArgumentError("function_call_output.output item type is missing or invalid");
+            const std::string type = typeIt->value.GetString();
+            if (type != "input_text" && type != "output_text")
+                return absl::InvalidArgumentError(absl::StrCat("unsupported function_call_output.output item type: ", type));
+            auto textIt = contentObj.FindMember("text");
+            if (textIt == contentObj.MemberEnd() || !textIt->value.IsString())
+                return absl::InvalidArgumentError(absl::StrCat(type, " requires a valid text field"));
+            rapidjson::Value textEntry(rapidjson::kObjectType);
+            textEntry.AddMember("type", rapidjson::Value("text", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
+            textEntry.AddMember("text", rapidjson::Value(textIt->value.GetString(), scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
+            pendingContentArray.PushBack(textEntry, scratchDoc.GetAllocator());
+        }
+        hasPendingContent = true;
+        return absl::OkStatus();
+    }
+
     void emitToolMessage(const std::string& callId, const std::string& output) {
         chatHistory.push_back({});
         chatHistory.last()["role"] = "tool";
         if (!callId.empty())
             chatHistory.last()["tool_call_id"] = callId;
-        chatHistory.last()["content"] = output;
+        if (hasPendingContent) {
+            // Preserve content array for TextContentNormalizationProcessor to flatten.
+            chatHistory.last()["content"] = rapidJsonValueToJsonContainer(pendingContentArray);
+            hasPendingContent = false;
+        } else {
+            chatHistory.last()["content"] = output;
+        }
     }
 
     void emitMessage(const std::string& role, const std::string& contentText, const std::string& reasoning) {
@@ -710,6 +863,11 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         return absl::InvalidArgumentError("max_output_tokens value should be greater than 0");
     }
 
+    auto textFormatStatus = injectResponseFormatFromResponsesTextFormat(doc);
+    if (!textFormatStatus.ok()) {
+        return textFormatStatus;
+    }
+
     return parseResponseFormat();
 }
 
@@ -795,13 +953,12 @@ void OpenAIResponsesHandler::serializeCommonResponseParameters(Writer<StringBuff
         writer.String("temperature");
         writer.Double(static_cast<double>(request.temperature.value()));
     }
+
+    rapidjson::Document textFormat = buildResponsesTextFormat(doc);
     writer.String("text");
     writer.StartObject();
     writer.String("format");
-    writer.StartObject();
-    writer.String("type");
-    writer.String("text");
-    writer.EndObject();
+    textFormat.Accept(writer);
     writer.EndObject();
     serializeToolChoice(writer);
     serializeTools(writer);
