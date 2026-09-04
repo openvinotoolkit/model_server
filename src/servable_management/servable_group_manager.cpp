@@ -188,7 +188,7 @@ bool ServableGroupManager::canUnloadActiveGroup(ModelManager& mm) const {
         }
         auto activeCount = def->getActiveInferenceCount();
         if (activeCount && activeCount->load(std::memory_order_acquire) > 0) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot unload group '{}': mediapipe graph {} has active inferences",
+            SPDLOG_LOGGER_TRACE(modelmanager_logger, "Cannot unload group '{}': mediapipe graph {} has active inferences",
                 groupName, graphName);
             return false;
         }

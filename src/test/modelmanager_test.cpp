@@ -487,7 +487,7 @@ TEST_F(ModelManager, ConfigParseNoModels) {
 TEST_F(ModelManager, WakeUpDoesNotResurrectRetiredModel) {
     std::string configFile = this->getFilePath("/ovms_config_file.json");
     createConfigFileWithContent(
-        R"({"model_config_list":[{"config":{"name":"dummy","base_path":"/ovms/src/test/dummy"}}]})",
+        R"({"model_config_list":[{"config":{"name":"dummy","base_path":")" + getGenericFullPathForSrcTest("/ovms/src/test/dummy") + R"("}}]})",
         configFile);
     ASSERT_EQ(fixtureManager.loadConfig(configFile), ovms::StatusCode::OK);
     std::shared_ptr<ovms::ModelInstance> modelInstance;

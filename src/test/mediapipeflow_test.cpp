@@ -2513,7 +2513,8 @@ const std::string MediapipeConfigChanges::configFileWithGraphPathToReplace = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": ")" +
+                                                                             getGenericFullPathForSrcTest("/ovms/src/test/dummy") + R"("
         }
         }
     ],
@@ -2531,7 +2532,8 @@ const std::string MediapipeConfigChanges::configFileWithEmptyBasePath = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": ")" +
+                                                                        getGenericFullPathForSrcTest("/ovms/src/test/dummy") + R"("
         }
         }
     ],
@@ -2549,7 +2551,8 @@ const std::string MediapipeConfigChanges::configFileWithNoBasePath = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": ")" +
+                                                                     getGenericFullPathForSrcTest("/ovms/src/test/dummy") + R"("
         }
         }
     ],
@@ -2591,7 +2594,8 @@ const std::string MediapipeConfigChanges::configFileWithoutGraph = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": ")" +
+                                                                   getGenericFullPathForSrcTest("/ovms/src/test/dummy") + R"("
         }
         }
     ]
@@ -2956,7 +2960,8 @@ TEST_F(MediapipeConfigChanges, RetiringGraphsGoesThroughLoadingQueue) {
     std::string graphFilePath = directoryPath + "/graph.pbtxt";
     createConfigFileWithContent(pbtxtContent, graphFilePath);
 
-    auto configWithGraphs = [&graphFilePath](const std::vector<std::string>& graphNames) {
+    const std::string dummyModelPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy");
+    auto configWithGraphs = [&graphFilePath, &dummyModelPath](const std::vector<std::string>& graphNames) {
         std::string entries;
         for (const auto& name : graphNames) {
             if (!entries.empty()) {
@@ -2964,8 +2969,8 @@ TEST_F(MediapipeConfigChanges, RetiringGraphsGoesThroughLoadingQueue) {
             }
             entries += R"({"name":")" + name + R"(","graph_path":")" + graphFilePath + R"("})";
         }
-        return R"({"model_config_list":[{"config":{"name":"dummy","base_path":"/ovms/src/test/dummy"}}],)"
-               R"("mediapipe_config_list":[)" +
+        return R"({"model_config_list":[{"config":{"name":"dummy","base_path":")" + dummyModelPath + R"("}}],)"
+                                                                                                     R"("mediapipe_config_list":[)" +
                entries + "]}";
     };
 
