@@ -1499,6 +1499,13 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "libovms_time_utils",
+    hdrs = ["time_utils.hpp"],
+    deps = [
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "libovmslayout",
     hdrs = ["layout.hpp",],
     srcs = ["layout.cpp",],
