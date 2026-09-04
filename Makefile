@@ -243,7 +243,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
 	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)\
 	--build-arg KONFLUX=$(KONFLUX)\
-	--build-arg ESPEAK=$(ESPEAK)
+	--build-arg ESPEAK=$(ESPEAK)\
 	-e GIT_CONFIG_COUNT="1"\
 	-e GIT_CONFIG_KEY_0="http.version"\
 	-e GIT_CONFIG_VALUE_0="HTTP/1.1"
