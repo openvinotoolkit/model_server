@@ -226,7 +226,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             cxxopts::value<bool>()->default_value("false"),
             "PULL_HF")
             ("source_model",
-            "HF source model path",
+            "HF source model path, or a CNCF ModelPack OCI reference prefixed with oci:// (e.g. oci://ghcr.io/org/model:tag). OCI references are pulled with the llmman executable, which must be on PATH or pointed at by LLMMAN_BIN.",
             cxxopts::value<std::string>(),
             "HF_SOURCE")
             ("source_loras",
@@ -804,6 +804,14 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         if (result->count("source_loras")) {
             hfSettings.sourceLoras = result->operator[]("source_loras").as<std::string>();
         }
+        if (isOciDownload(hfSettings.sourceModel)) {
+            // The layer media types in a CNCF ModelPack image already describe
+            // the payload, so there is nothing for --gguf_filename to select.
+            if (result->count("gguf_filename")) {
+                throw std::logic_error("--gguf_filename parameter unsupported for oci:// models.");
+            }
+            hfSettings.downloadType = OCI_DOWNLOAD;
+        }
         if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
             hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
         }
@@ -943,12 +951,14 @@ void CLIParser::prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl
     if (result->count("model_name")) {
         modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
     } else if (!hfSettings.sourceModel.empty()) {
-        modelsSettings.modelName = hfSettings.sourceModel;
+        // For an OCI reference the scheme is dropped so the served name is the
+        // registry reference a user would type, e.g. ghcr.io/org/model:tag.
+        modelsSettings.modelName = stripOciScheme(hfSettings.sourceModel);
     }
 
     // Only override modelPath if it wasn't already set via --model_path
     if (!result->count("model_path")) {
-        modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel});
+        modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, localModelDirectoryName(hfSettings.sourceModel)});
     }
 }
 

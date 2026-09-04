@@ -37,6 +37,7 @@ enum ModelDownlaodType : unsigned int {
     GIT_CLONE_DOWNLOAD,
     OPTIMUM_CLI_DOWNLOAD,
     GGUF_DOWNLOAD,
+    OCI_DOWNLOAD,
     UNKNOWN_DOWNLOAD
 };
 
@@ -83,6 +84,24 @@ const std::map<std::string, ConfigExportType> stringToConfigExportType = {
 std::string enumToString(ConfigExportType type);
 ConfigExportType stringToConfigExportEnum(const std::string& inString);
 bool isOptimumCliDownload(const std::string& sourceModel, std::optional<std::string> ggufFilename);
+
+// CNCF ModelPack (https://github.com/modelpack/model-spec) OCI references.
+//
+// An explicit "oci://" scheme is required rather than guessing from a bare
+// "registry/name:tag" string: that shape is indistinguishable from a
+// HuggingFace repo id ("org/model"), and sniffing it would silently hijack
+// existing --source_model org/model deployments.
+constexpr const char* OCI_SCHEME = "oci://";
+bool isOciDownload(const std::string& sourceModel);
+// "oci://ghcr.io/org/model:tag" -> "ghcr.io/org/model:tag". Other references
+// are returned unchanged.
+std::string stripOciScheme(const std::string& sourceModel);
+// Local directory name a source model is downloaded into, relative to
+// --model_repository_path. Identity for every non-OCI reference; for OCI
+// references the scheme is dropped and the tag separator is replaced so the
+// result is a legal directory name on Windows too, e.g.
+// "oci://ghcr.io/org/model:tag" -> "ghcr.io/org/model_tag".
+std::string localModelDirectoryName(const std::string& sourceModel);
 
 enum OvmsServerMode : int {
     SERVING_MODELS_MODE,
