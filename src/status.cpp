@@ -226,6 +226,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST, "The LLM Node workspace path does not exist"},
     {StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE, "The LLM Node workspace path does not exist and not gguf model file"},
     {StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "The LLM Node resource initialization failed"},
+    {StatusCode::LLM_NODE_PAGED_ATTENTION_NOT_SUPPORTED, "The model does not support PagedAttention required by the continuous batching pipeline"},
     {StatusCode::LLM_NODE_MISSING_OPTIONS, "The LLM Node is missing options definition"},
     {StatusCode::LLM_NODE_MISSING_NAME, "The LLM Node is missing name definition"},
 
