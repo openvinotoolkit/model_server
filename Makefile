@@ -244,7 +244,10 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)\
 	--build-arg KONFLUX=$(KONFLUX)\
 	--build-arg ESPEAK=$(ESPEAK)
-
+	-e GIT_CONFIG_COUNT="1"\
+	-e GIT_CONFIG_KEY_0="http.version"\
+	-e GIT_CONFIG_VALUE_0="HTTP/1.1"
+# WA for github issues with anonymous access
 
 .PHONY: default docker_build \
 
