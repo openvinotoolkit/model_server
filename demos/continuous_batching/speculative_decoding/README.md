@@ -148,7 +148,7 @@ python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_sour
 ```
 or
 ```bash
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model AngelSlim/Qwen3-8B_eagle3 --draft_eagle3_mode --weight-format int4 --model_repository_path ${HOME}/models
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model AngelSlim/Qwen3-8B_eagle3 --draft_eagle3_mode --weight-format int4 --target_device CPU --model_repository_path ${HOME}/models
 ```
 
 Draft model inherits all scheduler properties from the main model.
