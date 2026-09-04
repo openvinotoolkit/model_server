@@ -488,8 +488,6 @@ class LLMInferenceRequest(InferenceRequest):
                 **self.request_parameters_dict,
                 timeout=timeout,
             )
-        if self.stream:
-            return self._collect_audio_stream_text(translation)
         return translation if return_response else translation.text
 
     @staticmethod

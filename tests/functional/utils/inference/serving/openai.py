@@ -401,8 +401,6 @@ class OpenAIAudioTranscriptionsRequestParams(OpenAIRequestParams):
 @dataclass
 class OpenAIAudioTranslationsRequestParams(OpenAIRequestParams):
     temperature: float = None
-    stream: bool = None
 
     def set_default_values(self, **kwargs):
         self.temperature = 0.0
-        self.stream = kwargs.get("stream", None)
