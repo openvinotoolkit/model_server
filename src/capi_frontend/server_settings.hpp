@@ -135,6 +135,7 @@ struct EmbeddingsGraphSettingsImpl {
     std::string normalize = "true";
     std::string truncate = "false";
     std::optional<std::string> pooling;
+    std::optional<uint32_t> maxLength;
 };
 
 struct TextToSpeechGraphSettingsImpl {

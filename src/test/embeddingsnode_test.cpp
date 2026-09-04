@@ -561,6 +561,38 @@ TEST_F(EmbeddingsHttpTest, positivePoolingLast) {
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
+TEST_F(EmbeddingsHttpTest, positiveWithinConfiguredMaxLength) {
+    std::string words;
+    for (int i = 0; i < 20; i++) {
+        words += "hello ";
+    }
+    std::string requestBody = "{ \"model\": \"embeddings_ov_max_length\", \"input\": \"" + words + " \"}";
+
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
+TEST_F(EmbeddingsHttpTest, negativeExceedsConfiguredMaxLength) {
+    std::string words;
+    for (int i = 0; i < 35; i++) {
+        words += "hello ";
+    }
+    std::string requestBody = "{ \"model\": \"embeddings_ov_max_length\", \"input\": \"" + words + " \"}";
+
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR)
+        << status.string();
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
+}
+
 TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
     std::string requestBody = R"(
         {

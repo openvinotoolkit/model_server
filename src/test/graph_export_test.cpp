@@ -351,6 +351,7 @@ node {
             normalize_embeddings: false,
             truncate: true,
             pooling: LAST,
+            max_length: 512,
             target_device: "GPU",
             plugin_config: '{"NUM_STREAMS":"2"}',
         }
@@ -785,6 +786,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveNonDefault) {
     embeddingsGraphSettings.normalize = "false";
     embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.pooling = "LAST";
+    embeddingsGraphSettings.maxLength = 512;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
     assertCreatedGraphEquals(hfSettings, expectedEmbeddingsGraphContents);
 }
