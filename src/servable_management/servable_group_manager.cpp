@@ -26,6 +26,7 @@
 #include "src/model.hpp"
 #include "src/modelconfig.hpp"
 #include "src/modelinstance.hpp"
+#include "src/time_utils.hpp"
 #include "modelmanager.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "src/mediapipe_internal/mediapipefactory.hpp"
@@ -36,8 +37,7 @@ namespace ovms {
 
 ServableGroupManager::ServableGroupManager(uint64_t idleTimeoutMicroseconds) :
     idleTimeoutMicroseconds(idleTimeoutMicroseconds),
-    lastActivityTimeNs(std::make_shared<std::atomic<int64_t>>(
-        std::chrono::steady_clock::now().time_since_epoch().count())) {
+    lastActivityTimeNs(std::make_shared<std::atomic<int64_t>>(nanosSinceEpochStart())) {
 }
 
 void ServableGroupManager::buildGroups(const std::unordered_map<std::string, ModelConfig>& modelConfigs,
@@ -130,9 +130,7 @@ std::string ServableGroupManager::getActiveGroupName() const {
 }
 
 void ServableGroupManager::recordActivity() {
-    lastActivityTimeNs->store(
-        std::chrono::steady_clock::now().time_since_epoch().count(),
-        std::memory_order_relaxed);
+    lastActivityTimeNs->store(nanosSinceEpochStart(), std::memory_order_relaxed);
 }
 
 std::vector<std::string> ServableGroupManager::getAllConfiguredServableNames() const {
@@ -379,7 +377,7 @@ void ServableGroupManager::unloadActiveGroupIfIdle(ModelManager& mm) {
 
     // Check idle timeout
     int64_t lastActivity = lastActivityTimeNs->load(std::memory_order_relaxed);
-    int64_t nowNs = std::chrono::steady_clock::now().time_since_epoch().count();
+    int64_t nowNs = nanosSinceEpochStart();
     int64_t timeoutNs = static_cast<int64_t>(idleTimeoutMicroseconds) * 1'000LL;
     if ((nowNs - lastActivity) < timeoutNs) {
         return;

@@ -28,6 +28,7 @@
 
 #include "../execution_context.hpp"
 #include "../model_metric_reporter.hpp"
+#include "src/time_utils.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
@@ -77,9 +78,7 @@ struct ActiveInferenceGuard {
             // Refresh activity timestamp BEFORE decrementing so the watcher sees a
             // recent activity time if it samples between the refresh and the decrement.
             if (lastActivityTimeNs) {
-                lastActivityTimeNs->store(
-                    std::chrono::steady_clock::now().time_since_epoch().count(),
-                    std::memory_order_relaxed);
+                lastActivityTimeNs->store(nanosSinceEpochStart(), std::memory_order_relaxed);
             }
             counter->fetch_sub(1, std::memory_order_acq_rel);
         }

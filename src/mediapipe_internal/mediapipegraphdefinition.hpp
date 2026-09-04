@@ -27,6 +27,7 @@
 
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "src/metrics/metric.hpp"
+#include "src/time_utils.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../single_version_servable_definition.hpp"
 #include "../tensorinfo_fwd.hpp"
@@ -89,7 +90,7 @@ public:
     bool shouldUnloadDueToIdle() const;
 
     // Record inference activity. Defaults to now; tests pass an explicit timestamp.
-    void recordActivity(int64_t timestampNs = std::chrono::steady_clock::now().time_since_epoch().count()) {
+    void recordActivity(int64_t timestampNs = nanosSinceEpochStart()) {
         lastActivityTimeNs->store(timestampNs, std::memory_order_relaxed);
     }
 

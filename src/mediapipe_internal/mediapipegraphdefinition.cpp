@@ -544,7 +544,7 @@ bool MediapipeGraphDefinition::shouldUnloadDueToIdle() const {
         return false;
     }
     int64_t lastActivity = lastActivityTimeNs->load(std::memory_order_relaxed);
-    int64_t nowNs = std::chrono::steady_clock::now().time_since_epoch().count();
+    int64_t nowNs = nanosSinceEpochStart();
     int64_t timeoutNs = timeoutSeconds * 1'000'000'000LL;
     return (nowNs - lastActivity) >= timeoutNs;
 }

@@ -54,6 +54,7 @@ ovms_cc_library(
         "//src:cleaner_utils",
         "//src:customloaders",
         "//src:libovms_config",
+        "//src:libovms_time_utils",
         "//src:libovms_model_instance_provider",
         "//src:libovms_ov_utils",
         "//src:libovms_servable_definition",
