@@ -217,10 +217,13 @@ std::string Gemma4ToolParser::maskStringValues(const std::string& text) {
         const size_t openPos = text.find(TOOL_ARGS_STRING_INDICATOR, pos);
         if (openPos == std::string::npos)
             break;
-        const size_t closePos = text.find(TOOL_ARGS_STRING_INDICATOR, openPos + TOOL_ARGS_STRING_INDICATOR.size());
-        if (closePos == std::string::npos)
-            break;  // value not closed yet (still streaming) - leave for a later call
-        for (size_t i = openPos + TOOL_ARGS_STRING_INDICATOR.size(); i < closePos; i++) {
+        const size_t valueStart = openPos + TOOL_ARGS_STRING_INDICATOR.size();
+        const size_t closePos = text.find(TOOL_ARGS_STRING_INDICATOR, valueStart);
+        // Value not closed yet (still streaming): mask through the current buffer end too,
+        // otherwise its already-received tail would desync quote/brace tracking; a later
+        // call re-masks from scratch once the closing delimiter has arrived.
+        const size_t maskEnd = (closePos == std::string::npos) ? text.size() : closePos;
+        for (size_t i = valueStart; i < maskEnd; i++) {
             switch (masked[i]) {
             case '"':
             case '\'':
@@ -234,6 +237,8 @@ std::string Gemma4ToolParser::maskStringValues(const std::string& text) {
                 break;
             }
         }
+        if (closePos == std::string::npos)
+            break;
         pos = closePos + TOOL_ARGS_STRING_INDICATOR.size();
     }
     return masked;

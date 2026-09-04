@@ -434,7 +434,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithMultipleUtfCharsStreaming) {
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallArgumentValueContainingComma) {
-    // Regression test: a comma embedded inside a string value (e.g. generated code) must
+    // Comma embedded inside a string value (e.g. generated code) must
     // not be mistaken for the separator between arguments.
     std::string input =
         "<|tool_call>call:editor{new_text:<|\"|>print(\"Hello, World!\")\n"
@@ -450,7 +450,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallArgumentValueContainingComma) {
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallArgumentValueContainingBracesAndBrackets) {
-    // Regression test: literal '{', '}', '[', ']' inside a string value must not be mistaken
+    // Literal '{', '}', '[', ']' inside a string value must not be mistaken
     // for nested object/array structure or for the tool call's own top-level closing brace.
     std::string input =
         "<|tool_call>call:editor{new_text:<|\"|>numbers = [1, 2, 3] and config = {a: 1, b: 2}<|\"|>,"
@@ -463,6 +463,26 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallArgumentValueContainingBracesAndBrac
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "editor");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments,
         "{\"new_text\":\"numbers = [1, 2, 3] and config = {a: 1, b: 2}\",\"path\":\"file.txt\"}");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallArgumentValueWithUnclosedQuoteAndBraceMidStream) {
+    // While a string value is still streaming (its closing <|"|> hasn't
+    // arrived yet), an internal '"' followed by a '}' inside the already-received partial
+    // value must not be mistaken for the tool call's own closing brace.
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<|tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"call:", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"editor", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{new_text", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"editor"}}]}})"},
+        {":<|\"|>say ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\"hi}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" keep going", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"new_text\":\"say \\\"hi} keep going\"}"}}]}})"},
+        {"<tool_call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {

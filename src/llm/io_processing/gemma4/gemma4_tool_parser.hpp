@@ -83,11 +83,12 @@ public:
 private:
     void writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
 
-    // Masks '"', '\'', '{', '}', '[', ']' found strictly inside complete <|"|>...<|"|> pairs
-    // (same length, delimiter's own quotes left intact) so a Gemma4 string value's own payload
-    // (e.g. code containing commas/braces/quotes) can't be mistaken for structural tokens by
-    // findInStringRespectingSpecialChars. An unclosed trailing pair (value still streaming) is
-    // left unmasked and picked up on a later call once its closing delimiter has arrived.
+    // Masks '"', '\'', '{', '}', '[', ']' found inside <|"|>...<|"|> pairs (same length,
+    // delimiter's own quotes left intact) so a Gemma4 string value's own payload (e.g. code
+    // containing commas/braces/quotes) can't be mistaken for structural tokens by
+    // findInStringRespectingSpecialChars. An unclosed trailing value (still streaming) is
+    // masked through the current buffer end too; a later call re-masks from scratch once
+    // its closing delimiter has arrived.
     static std::string maskStringValues(const std::string& text);
 
     std::pair<std::string, std::string> parseSingleArgument(const std::string& argumentStr);
