@@ -428,6 +428,14 @@ Status Server::startModules(ovms::Config& config) {
     if (config.getServerSettings().withPython) {
         INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
         START_MODULE(it);
+        auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
+        if (pythonModule->ownsPythonInterpreter()) {
+            // Natively GIL is held by the thread that initialized interpreter, so we only need to release it, if we own the interpreter.
+            // If it was initialized externally, then the external thread shall release the GIL before launching that module.
+            // Must happen before ServableManagerModule starts: it synchronously loads the initial config on the
+            // servable loading queue's worker thread, which needs to acquire the GIL for Python-backed nodes.
+            pythonModule->releaseGILFromThisThread();
+        }
     }
 #endif
 #if MTR_ENABLED
@@ -473,17 +481,6 @@ Status Server::startModules(ovms::Config& config) {
     }
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
-#if (PYTHON_DISABLE == 0)
-    if (config.getServerSettings().withPython) {
-        GET_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
-        auto pythonModule = dynamic_cast<const PythonInterpreterModule*>(it->second.get());
-        if (pythonModule->ownsPythonInterpreter()) {
-            // Natively GIL is held by the thread that initialized interpreter, so we only need to release it, if we own the interpreter.
-            // If it was initialized externally, then the external thread shall release the GIL before launching that module.
-            pythonModule->releaseGILFromThisThread();
-        }
-    }
-#endif
     return status;
 }
 
