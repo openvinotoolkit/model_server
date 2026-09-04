@@ -119,6 +119,21 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
             this->setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
             this->setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
         }
+        if (v.HasMember("idle_unload_timeout_seconds")) {
+            int timeoutSeconds = v["idle_unload_timeout_seconds"].GetInt();
+            if (timeoutSeconds < 0) {
+                SPDLOG_ERROR("idle_unload_timeout_seconds must be >= 0 for mediapipe graph: {}", this->getGraphName());
+                return StatusCode::JSON_INVALID;
+            }
+            this->setIdleUnloadTimeoutSeconds(timeoutSeconds);
+            SPDLOG_DEBUG("Mediapipe graph {} idle_unload_timeout_seconds set to {}", this->getGraphName(), timeoutSeconds);
+        }
+        if (v.HasMember("group_name")) {
+            this->setGroupName(v["group_name"].GetString());
+        } else {
+            this->setGroupName(this->getGraphName());
+        }
+        SPDLOG_DEBUG("Mediapipe graph {} group_name set to {}", this->getGraphName(), this->getGroupName());
     } catch (std::logic_error& e) {
         SPDLOG_DEBUG("Relative path error: {}", e.what());
         return StatusCode::INTERNAL_ERROR;

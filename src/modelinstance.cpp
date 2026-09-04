@@ -1327,7 +1327,7 @@ Status ModelInstance::setCacheOptions(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-Status ModelInstance::loadModel(const ModelConfig& config) {
+Status ModelInstance::loadModel(const ModelConfig& config, bool lazyLoad) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     SPDLOG_INFO("Loading model: {}, version: {}, from path: {}, with target device: {} ...",
         config.getName(), config.getVersion(), config.getPath(), config.getTargetDevice());
@@ -1337,8 +1337,37 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         SPDLOG_INFO("Some inputs shapes for model {} are set to auto", config.getName());
     }
     this->status = ModelVersionStatus(config.getName(), config.getVersion());
+    if (lazyLoad) {
+        this->config = config;
+        this->path = config.getPath();
+        this->status.setSleeping();
+        return StatusCode::OK;
+    }
     this->status.setLoading();
     return loadModelImpl(config);
+}
+
+Status ModelInstance::wakeUpIfSleeping() {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    auto state = status.getState();
+    if (state == ModelVersionState::AVAILABLE || state == ModelVersionState::LOADING)
+        return StatusCode::OK;
+    if (state != ModelVersionState::SLEEPING)
+        return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
+    SPDLOG_INFO("Waking up model: {}, version: {} ...", getName(), getVersion());
+    auto loadStatus = loadModelImpl(this->config);
+    if (!loadStatus.ok()) {
+        // Keep failed wake-ups retryable from inference path, same as mediapipe.
+        this->status.setSleeping();
+    }
+    return loadStatus;
+}
+
+void ModelInstance::putToSleep() {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    SPDLOG_INFO("Putting model to sleep: {}, version: {} ...", getName(), getVersion());
+    unloadModelComponents();
+    this->status.setSleeping();
 }
 
 Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter) {

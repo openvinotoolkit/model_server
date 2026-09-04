@@ -41,7 +41,7 @@
 #include "../filesystem/filesystem.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../ovms.h"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"
@@ -1979,7 +1979,7 @@ public:
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::START);
     }
     virtual ~MockModelInstanceWithSetOutputInfo() {}
-    ovms::Status loadModel(const ovms::ModelConfig& config) override {
+    ovms::Status loadModel(const ovms::ModelConfig& config, bool lazyLoad = false) override {
         ModelInstance::loadModel(config);
         return ovms::StatusCode::OK;
     }

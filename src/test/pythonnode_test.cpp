@@ -41,7 +41,7 @@
 #include "../precision.hpp"
 #include "../python/pythoninterpretermodule.hpp"
 #include "../python/pythonnoderesources.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"

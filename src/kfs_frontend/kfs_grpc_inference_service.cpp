@@ -44,11 +44,11 @@
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
 #include "../modelinstanceunloadguard.hpp"
-#include "../modelmanager.hpp"
+#include "src/servable_management/modelmanager.hpp"
 #include "../ovinferrequestsqueue.hpp"
 #include "../servable_definition.hpp"
 #include "../servable_definition_unload_guard.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../single_version_servable_definition.hpp"
 #include "../status.hpp"
@@ -129,7 +129,7 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
         if (!svsd) {
             return StatusCode::MODEL_NAME_MISSING;
         }
-        response->set_ready(svsd->isAvailable());
+        response->set_ready(svsd->getStatus().appearsAvailable());
         INCREMENT_IF_ENABLED(svsd->getMetricReporter().getModelReadyMetric(executionContext, true));
         return StatusCode::OK;
     }
@@ -359,7 +359,7 @@ Status KFSInferenceServiceImpl::buildResponse(
 Status KFSInferenceServiceImpl::buildResponse(
     SingleVersionServableDefinition& definition,
     KFSGetModelStatusResponse* response) {
-    bool isReady = definition.getStatus().isAvailable();
+    bool isReady = definition.getStatus().appearsAvailable();
     SPDLOG_DEBUG("Creating ModelReady response for definition: {}; ready: {}", definition.getName(), isReady);
     response->set_ready(isReady);
     return StatusCode::OK;

@@ -312,6 +312,13 @@ public:
      */
     uint32_t resourcesCleanerPollWaitSeconds() const;
 
+    /**
+     * @brief Get the idle unload timeout in seconds (0 = disabled)
+     *
+     * @return uint32_t
+     */
+    uint32_t idleUnloadTimeoutSeconds() const;
+
     bool allowCredentials() const;
     const std::string& allowedOrigins() const;
     const std::string& allowedMethods() const;

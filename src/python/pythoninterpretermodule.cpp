@@ -57,6 +57,9 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
         return StatusCode::INTERNAL_ERROR;
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE_NAME);
+    if (this->ownsPythonInterpreter()) {
+        this->releaseGILFromThisThread();
+    }
     return StatusCode::OK;
 }
 
