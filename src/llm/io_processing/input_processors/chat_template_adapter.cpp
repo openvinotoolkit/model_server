@@ -71,6 +71,26 @@ void injectReasoningIntoMissnamedSection(ov::genai::ChatHistory& chatHistory, co
     }
 }
 
+void removeResponseFromToolDefinition(ov::genai::ChatHistory& chatHistory) {
+    ov::genai::JsonContainer toolDefinitions = chatHistory.get_tools();
+    if (!toolDefinitions.is_array()) {
+        return;
+    }
+    for (size_t i = 0; i < toolDefinitions.size(); ++i) {
+        auto toolDefinition = toolDefinitions[i];
+        if (!toolDefinition.is_object() || !toolDefinition.contains("function")) {
+            continue;
+        }
+        auto function = toolDefinition["function"];
+        if (!function.is_object() || !function.contains("response")) {
+            continue;
+        }
+        function.erase("response");
+    }
+
+    chatHistory.set_tools(toolDefinitions);
+}
+
 void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory) {
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Applying chat template adaptations: {}", caps.toString());
     if (caps.requiresObjectArguments) {
@@ -78,6 +98,9 @@ void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHi
     }
     if (!caps.missnamedReasoningField.empty()) {
         injectReasoningIntoMissnamedSection(chatHistory, caps.missnamedReasoningField);
+    }
+    if (caps.removeResponseFromToolDefinition) {
+        removeResponseFromToolDefinition(chatHistory);
     }
 }
 
