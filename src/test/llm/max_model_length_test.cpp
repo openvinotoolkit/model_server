@@ -142,3 +142,27 @@ TEST_F(MaxModelLengthTest, maxModelLength_parsingOrder) {
     ASSERT_TRUE(maxModelLength.has_value());
     EXPECT_EQ(maxModelLength.value(), 5);
 }
+
+TEST_F(MaxModelLengthTest, maxModelLength_textConfig_VALID) {
+    // Composite VLM/omni configs (e.g. Qwen3.5-Omni) nest the field under "text_config".
+    std::string modelConfigContent = R"({"model_type" : "qwen3_5", "text_config" : {"max_position_embeddings" : 262144}})";
+    createConfigFileWithContent(modelConfigContent, configFilePath);
+    auto maxModelLength = parseMaxModelLength(directoryPath);
+    ASSERT_TRUE(maxModelLength.has_value());
+    EXPECT_EQ(maxModelLength.value(), 262144);
+}
+
+TEST_F(MaxModelLengthTest, maxModelLength_topLevelTakesPriorityOverTextConfig) {
+    std::string modelConfigContent = R"({"max_position_embeddings" : 5, "text_config" : {"max_position_embeddings" : 262144}})";
+    createConfigFileWithContent(modelConfigContent, configFilePath);
+    auto maxModelLength = parseMaxModelLength(directoryPath);
+    ASSERT_TRUE(maxModelLength.has_value());
+    EXPECT_EQ(maxModelLength.value(), 5);
+}
+
+TEST_F(MaxModelLengthTest, maxModelLength_textConfig_notAnObject) {
+    std::string modelConfigContent = R"({"text_config" : "INVALID"})";
+    createConfigFileWithContent(modelConfigContent, configFilePath);
+    auto maxModelLength = parseMaxModelLength(directoryPath);
+    EXPECT_FALSE(maxModelLength.has_value());
+}
