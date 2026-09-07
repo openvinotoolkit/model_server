@@ -250,6 +250,7 @@ pipeline {
                         }
                       } finally {
                         sh 'rm -f .github_token'
+                      }
                     }
                   }
               }
