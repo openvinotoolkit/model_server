@@ -35,7 +35,8 @@ const std::string& pipelineDefinitionStateCodeToString(PipelineDefinitionStateCo
         {PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION, "LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION"},
         {PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION, "AVAILABLE_REQUIRED_REVALIDATION"},
         {PipelineDefinitionStateCode::AVAILABLE, "AVAILABLE"},
-        {PipelineDefinitionStateCode::RETIRED, "RETIRED"}};
+        {PipelineDefinitionStateCode::RETIRED, "RETIRED"},
+        {PipelineDefinitionStateCode::SLEEPING, "SLEEPING"}};
     return names.at(code);
 }
 
@@ -62,6 +63,9 @@ StateKeeper BeginState::handle(const RetireEvent& e) const {
     throw std::logic_error(INVALID_TRANSITION_MESSAGE);
     return {};
 }
+StateChanger<SleepingState> BeginState::handle(const SleepEvent& e) const {
+    return {};
+}
 
 PipelineDefinitionStateCode ReloadState::getStateCode() const {
     return code;
@@ -81,6 +85,10 @@ StateKeeper ReloadState::handle(const UsedModelChangedEvent& e) const {
     return {};
 }
 StateKeeper ReloadState::handle(const RetireEvent& e) const {
+    throw std::logic_error(INVALID_TRANSITION_MESSAGE);
+    return {};
+}
+StateKeeper ReloadState::handle(const SleepEvent& e) const {
     throw std::logic_error(INVALID_TRANSITION_MESSAGE);
     return {};
 }
@@ -105,6 +113,9 @@ StateChanger<AvailableRequiredRevalidation> AvailableState::handle(const UsedMod
 StateChanger<RetiredState> AvailableState::handle(const RetireEvent& e) const {
     return {};
 }
+StateChanger<SleepingState> AvailableState::handle(const SleepEvent& e) const {
+    return {};
+}
 
 PipelineDefinitionStateCode AvailableRequiredRevalidation::getStateCode() const {
     return code;
@@ -122,6 +133,9 @@ StateKeeper AvailableRequiredRevalidation::handle(const UsedModelChangedEvent& e
     return {};
 }
 StateChanger<RetiredState> AvailableRequiredRevalidation::handle(const RetireEvent& e) const {
+    return {};
+}
+StateChanger<SleepingState> AvailableRequiredRevalidation::handle(const SleepEvent& e) const {
     return {};
 }
 
@@ -145,6 +159,10 @@ StateChanger<LoadingFailedLastValidationRequiredRevalidation> LoadingPreconditio
 StateChanger<RetiredState> LoadingPreconditionFailedState::handle(const RetireEvent& e) const {
     return {};
 }
+StateChanger<SleepingState> LoadingPreconditionFailedState::handle(const SleepEvent& e) const {
+    // Revert a failed wake-up reload back to SLEEPING so the next request retries.
+    return {};
+}
 
 PipelineDefinitionStateCode LoadingFailedLastValidationRequiredRevalidation::getStateCode() const {
     return code;
@@ -162,6 +180,9 @@ StateKeeper LoadingFailedLastValidationRequiredRevalidation::handle(const UsedMo
     return {};
 }
 StateChanger<RetiredState> LoadingFailedLastValidationRequiredRevalidation::handle(const RetireEvent& e) const {
+    return {};
+}
+StateKeeper LoadingFailedLastValidationRequiredRevalidation::handle(const SleepEvent& e) const {
     return {};
 }
 
@@ -187,6 +208,33 @@ StateKeeper RetiredState::handle(const RetireEvent& e) const {
     throw std::logic_error(INVALID_TRANSITION_MESSAGE);
     return {};
 }
+StateKeeper RetiredState::handle(const SleepEvent& e) const {
+    throw std::logic_error(INVALID_TRANSITION_MESSAGE);
+    return {};
+}
+
+PipelineDefinitionStateCode SleepingState::getStateCode() const {
+    return code;
+}
+StateChanger<ReloadState> SleepingState::handle(const ReloadEvent& e) const {
+    return {};  // wake-up: transition through reload path
+}
+StateChanger<RetiredState> SleepingState::handle(const RetireEvent& e) const {
+    return {};  // config removal while unloaded
+}
+StateChanger<AvailableState> SleepingState::handle(const ValidationPassedEvent& e) const {
+    return {};  // defensive: if validation passes directly, go available
+}
+StateKeeper SleepingState::handle(const ValidationFailedEvent& e) const {
+    return {};
+}
+StateKeeper SleepingState::handle(const UsedModelChangedEvent& e) const {
+    return {};
+}
+StateKeeper SleepingState::handle(const SleepEvent& e) const {
+    throw std::logic_error(INVALID_TRANSITION_MESSAGE);
+    return {};
+}
 
 PipelineDefinitionStatus::PipelineDefinitionStatus(const std::string& type, const std::string& name) :
     MachineState(type, name) {}
@@ -194,6 +242,12 @@ bool PipelineDefinitionStatus::isAvailable() const {
     auto state = getStateCode();
     return (state == PipelineDefinitionStateCode::AVAILABLE) ||
            (state == PipelineDefinitionStateCode::AVAILABLE_REQUIRED_REVALIDATION);
+}
+bool PipelineDefinitionStatus::isSleeping() const {
+    return getStateCode() == PipelineDefinitionStateCode::SLEEPING;
+}
+bool PipelineDefinitionStatus::appearsAvailable() const {
+    return isAvailable() || isSleeping();
 }
 bool PipelineDefinitionStatus::canEndLoaded() const {
     auto state = getStateCode();
@@ -231,6 +285,11 @@ std::tuple<ModelVersionState, ModelVersionStatusErrorCode> PipelineDefinitionSta
     case PipelineDefinitionStateCode::RETIRED:
         return {
             ModelVersionState::END,
+            ModelVersionStatusErrorCode::OK};
+
+    case PipelineDefinitionStateCode::SLEEPING:
+        return {
+            ModelVersionState::AVAILABLE,
             ModelVersionStatusErrorCode::OK};
 
     default:

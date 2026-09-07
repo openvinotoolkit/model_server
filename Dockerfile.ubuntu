@@ -50,6 +50,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 
 WORKDIR /
 
+## WA for authentication issues with git over HTTP/2
+RUN git config --global http.version HTTP/1.1
+
 ####### Azure SDK (modern azure-sdk-for-cpp: azure-core, azure-storage-blobs, azure-storage-files-shares)
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 WORKDIR /azure-sdk-for-cpp
@@ -446,11 +449,11 @@ RUN apt-get update ; \
             tar -xf linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb     ; \
         else \
-            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.33.0/linux-npu-driver-v1.33.0.20260529-26625960453-ubuntu2404.tar.gz && \
-            tar -xf linux-npu-driver-v1.33.0.20260529-26625960453-ubuntu2404.tar.gz && \
-            curl -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260324T100000Z/pool/main/l/level-zero-loader/libze1_1.27.0-1~24.04~ppa2_amd64.deb ; \
+            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.35.0/linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz && \
+            tar -xf linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz && \
+            curl -fL -O https://github.com/oneapi-src/level-zero/releases/download/v1.33.1/libze1_1.33.1+u24.04_amd64.deb || exit 1 ; \
         fi ; \
-        dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
+        dpkg -i ./*.deb || exit 1; rm -Rf /tmp/npu_deps ; \
     fi ; \
     apt-get clean ; \
     rm -rf /tmp/install_gpu_drivers.sh && \
