@@ -4797,7 +4797,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServableParserExceptionCancelsGenerat
     auto outputParser = std::make_shared<ovms::OutputParser>(*tokenizer, "mistral", "", emptyToolsSchema);
 
     int finalCallbackCount = 0;
-    auto callback = [&](rapidjson::Document /*delta*/, bool isLast) -> ov::genai::StreamingStatus {
+    auto callback = [&](ovms::Delta /*delta*/, bool isLast) -> ov::genai::StreamingStatus {
         if (isLast) {
             finalCallbackCount++;
         }
