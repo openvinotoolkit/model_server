@@ -124,14 +124,17 @@ if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL
 
 if [ "$FUZZER_BUILD" == "0" ]; then find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \; ; fi;
 cd /ovms_release/bin
-if [ "$FUZZER_BUILD" == "0" ]; then patchelf --remove-rpath ./ovms && patchelf --set-rpath '$ORIGIN/../lib/' ./ovms; fi;
-find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --remove-rpath  {}  \;
-find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} \;
+if [ "$FUZZER_BUILD" == "0" ]; then
+    patchelf --remove-rpath ./ovms && \
+    patchelf --set-rpath '$ORIGIN/../lib/' ./ovms
+fi
+find /ovms_release/lib/ -type f -iname '*.so*' -exec patchelf --debug --remove-rpath {} +
+find /ovms_release/lib/ -type f -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} +
 
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino.so
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino_tokenizers.so
-patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/lib*plugin.so
+find /ovms_release/lib -type f -name 'lib*plugin.so*' -exec patchelf --debug --set-rpath '$ORIGIN' {} +
 if [ -e /ovms_release/lib/libopenvino_genai_c.so ]; then rm -rf /ovms_release/lib/libopenvino_genai_c.so* ; fi
 
 cd /ovms
