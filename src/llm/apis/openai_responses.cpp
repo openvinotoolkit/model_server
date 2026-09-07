@@ -576,8 +576,6 @@ public:
         }
         if (!outputIt->value.IsArray())
             return absl::InvalidArgumentError("function_call_output.output must be a string or array");
-        if (outputIt->value.Empty())
-            return absl::InvalidArgumentError("function_call_output.output array must not be empty");
         for (const auto& contentItem : outputIt->value.GetArray()) {
             if (!contentItem.IsObject())
                 return absl::InvalidArgumentError("function_call_output.output items must be objects");

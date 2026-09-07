@@ -4286,6 +4286,92 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputArrayPreservesTo
     EXPECT_EQ(content[1]["text"].as_string().value_or(""), "part2");
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputMissingOutputRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+            {"type": "function_call_output", "call_id": "call_1"}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("function_call_output item is missing required output field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputInvalidOutputTypeRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": 123}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("function_call_output.output must be a string or array"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputEmptyArrayAccepted) {
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": []}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_1","content":[]}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputInvalidOutputArrayShapeRejected) {
+    {
+        std::string json = R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": ["part1"]}
+            ]
+        })";
+        auto status = tryParseResponses(doc, *tokenizer, json);
+        EXPECT_EQ(status, absl::InvalidArgumentError("function_call_output.output items must be objects"));
+    }
+    {
+        std::string json = R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": [{"text":"part1"}]}
+            ]
+        })";
+        auto status = tryParseResponses(doc, *tokenizer, json);
+        EXPECT_EQ(status, absl::InvalidArgumentError("function_call_output.output item type is missing or invalid"));
+    }
+    {
+        std::string json = R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": [{"type":"input_image","text":"part1"}]}
+            ]
+        })";
+        auto status = tryParseResponses(doc, *tokenizer, json);
+        EXPECT_EQ(status, absl::InvalidArgumentError("unsupported function_call_output.output item type: input_image"));
+    }
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningPlusFunctionCallRidesOnAssistant) {
     // reasoning + function_call should both attach to the synthesised assistant
     // turn that owns the tool_calls.
