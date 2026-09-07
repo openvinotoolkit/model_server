@@ -33,7 +33,7 @@
 #include "../client_connection.hpp"
 #include <openvino/genai/visual_language/pipeline.hpp>
 #include "../module_names.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "environment.hpp"
 #include "src/utils/env_guard.hpp"
