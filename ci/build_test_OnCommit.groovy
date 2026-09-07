@@ -43,6 +43,11 @@ pipeline {
     }
     stages {
         stage('Configure') {
+          environment {
+            GIT_CONFIG_COUNT = '1'
+            GIT_CONFIG_KEY_0 = 'http.version'
+            GIT_CONFIG_VALUE_0 = 'HTTP/1.1'
+          }
           steps {
             script{
               println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
