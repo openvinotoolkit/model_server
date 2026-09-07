@@ -217,6 +217,7 @@ VERBOSE_LOGS ?= OFF
 ifneq ($(TOKEN),)
 GIT_CONFIG_FILE := .gitconfig
 GIT_CONFIG_SECRET = --secret id=gitconfig,src=$(GIT_CONFIG_FILE)
+BUILDX = buildx
 
 $(GIT_CONFIG_FILE):
 	@git config --file $@ url."https://x-access-token:$(TOKEN)@github.com/".insteadOf https://github.com/

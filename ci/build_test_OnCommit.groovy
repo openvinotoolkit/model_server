@@ -56,6 +56,7 @@ pipeline {
               println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
               agent_name_linux = env.NODE_NAME
               println "Running on NODE = ${env.NODE_NAME}"
+              println "Using TOKEN = ${env.TOKEN}"
             }
             script {
               shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
@@ -234,6 +235,7 @@ pipeline {
                     sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                     sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                     sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
+                      sh "echo ${TOKEN}" > .github_token
                     sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
 
                     // release_image
