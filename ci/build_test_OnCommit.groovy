@@ -231,7 +231,8 @@ pipeline {
                     sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                     sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                     sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
-                    withCredentials([usernamePassword(credentialsId: 'github-ovms-jenkins', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
+                    withCredentials([usernamePassword(credentialsId: 'workflow_lab_mediapipe', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
+                      sh "env"
                       sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
 
                       // release_image
