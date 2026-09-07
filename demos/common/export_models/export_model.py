@@ -64,6 +64,7 @@ parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='stor
 parser_embeddings_ov.add_argument('--pooling', default="CLS", choices=["CLS", "LAST", "MEAN"], help='Embeddings pooling mode', dest='pooling')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_embeddings_ov.add_argument('--max_length', default=None, type=int, help='Maximum length of the embeddings input', dest='max_length')
 
 parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_rerank_ov)
@@ -187,6 +188,8 @@ node {
       {%- if truncate %}
       truncate: true,{% endif %}
       target_device: "{{target_device|default("CPU", true)}}"
+      {%- if max_length is not none %}
+      max_length: {{max_length}},{% endif %}
     }
   }
 }
