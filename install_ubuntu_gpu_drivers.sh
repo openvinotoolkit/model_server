@@ -119,7 +119,7 @@ case $INSTALL_DRIVER_VERSION in \
 		> /etc/apt/sources.list.d/intel-gpu-${VERSION_CODENAME}.list && \
 	apt-get update && apt-get install -y --no-install-recommends intel-igc-cm && \
 	rm -f /etc/apt/sources.list.d/intel-gpu-${VERSION_CODENAME}.list && \
-	apt-get purge -y --auto-remove gpg gpgconf gpgv wget ; \
+	apt-get purge -y --auto-remove gpg gpgconf wget ; \
 ;; \
 *) \
         dpkg -P intel-igc-cm intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
