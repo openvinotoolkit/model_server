@@ -580,10 +580,11 @@ new_local_repository(
     path = "third_party/mediapipe_calculators",
 )
 
-git_repository(
+http_archive(
     name = "nlohmann_json",
-    remote = "https://github.com/nlohmann/json/",
-    tag = "v3.11.3",
+    sha256 = "d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d",
+    strip_prefix = "json",
+    url = "https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz",
 )
 # for rest client in unit tests (server_test.cpp)
 git_repository(
