@@ -101,6 +101,15 @@ case $INSTALL_DRIVER_VERSION in \
 	curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.34.4/intel-igc-core-2_2.34.4+21428_amd64.deb; \
 	curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.34.4/intel-igc-opencl-2_2.34.4+21428_amd64.deb; \
 	dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
+	apt-get update && apt-get install -y --no-install-recommends ca-certificates gpg wget && \
+	wget -qO- https://repositories.intel.com/gpu/intel-graphics.key | \
+		gpg --dearmor --yes --output /usr/share/keyrings/intel-graphics.gpg && \
+	. /etc/os-release && \
+	echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu ${VERSION_CODENAME}/lts/2523 unified" \
+		> /etc/apt/sources.list.d/intel-gpu-${VERSION_CODENAME}.list && \
+	apt-get update && apt-get install -y --no-install-recommends intel-igc-cm && \
+	rm -f /etc/apt/sources.list.d/intel-gpu-${VERSION_CODENAME}.list && \
+	apt-get purge -y --auto-remove gpg gpgconf wget ; \
 ;; \
 *) \
         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
