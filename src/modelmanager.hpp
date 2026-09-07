@@ -96,6 +96,7 @@ protected:
 private:
     bool watcherStarted = false;
     bool cleanerStarted = false;
+    bool versionPollingNeeded = false;
 
     ModelManager(const ModelManager&) = delete;
 
@@ -127,6 +128,12 @@ private:
      * @brief Watcher thread for monitor changes in config
      */
     void watcher(std::future<void> exitSignal, bool watchConfigFile);
+
+    /**
+     * @brief Evaluates whether filesystem version polling is needed
+     * and starts the watcher thread if at least one model uses version directories
+     */
+    void evaluatePollingState();
 
     /**
      * @brief Cleaner thread for resources cleanup
