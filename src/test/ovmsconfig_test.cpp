@@ -27,6 +27,7 @@
 #include "../utils/env_guard.hpp"
 #include "../config.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "../graph_export/embeddings_graph_cli_parser.hpp"
 #include "../graph_export/graph_cli_parser.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
@@ -558,6 +559,24 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsZer
     };
     int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
+}
+
+TEST(OvmsGraphConfigTest, negativeEmbeddingsGraph_MaxLengthZero) {
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)"some/model",
+        (char*)"--model_repository_path",
+        (char*)"/some/path",
+        (char*)"--task",
+        (char*)"embeddings",
+        (char*)"--max_length",
+        (char*)"0",
+    };
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    EXPECT_THROW(config.parse(arg_count, n_argv), std::invalid_argument);
 }
 
 TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyAlias) {
@@ -1934,9 +1953,11 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
         (char*)"--plugin_config",
         (char*)"{\"SOME_KEY\":\"SOME_VALUE\"}",
         (char*)"--cache_dir",
-        (char*)"/tmp/cache_dir_with_emptiness"};
+        (char*)"/tmp/cache_dir_with_emptiness",
+        (char*)"--max_length",
+        (char*)"512"};
 
-    int arg_count = 24;
+    int arg_count = 26;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1951,6 +1972,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
     ASSERT_TRUE(embeddingsGraphSettings.pooling.has_value());
     ASSERT_EQ(embeddingsGraphSettings.pooling.value(), "CLS");
+    ASSERT_TRUE(embeddingsGraphSettings.maxLength.has_value());
+    ASSERT_EQ(embeddingsGraphSettings.maxLength.value(), 512);
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 2);
     ASSERT_EQ(exportSettings.targetDevice, "GPU");
     ASSERT_EQ(exportSettings.modelName, servingName);
@@ -2036,6 +2059,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
     ASSERT_FALSE(embeddingsGraphSettings.pooling.has_value());
+    ASSERT_FALSE(embeddingsGraphSettings.maxLength.has_value());
     ASSERT_EQ(exportSettings.pluginConfig.numStreams, 1);
     ASSERT_EQ(exportSettings.targetDevice, "");
     ASSERT_EQ(exportSettings.modelName, modelName);
@@ -3114,6 +3138,33 @@ TEST(OvmsGraphCliParserTest, invalidReasoningParserNameThrowsInvalidArgument) {
         }
     },
         std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, embeddingsMaxLengthZeroThrowsInvalidArgument) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::EmbeddingsGraphCLIParser parser;
+    std::vector<std::string> args = {"--max_length", "0"};
+    parser.parse(args);
+    EXPECT_THROW({
+        try {
+            parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+        } catch (const std::invalid_argument& e) {
+            EXPECT_NE(std::string(e.what()).find("max_length must be greater than 0"), std::string::npos);
+            throw;
+        }
+    },
+        std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, embeddingsMaxLengthNonZeroIsAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::EmbeddingsGraphCLIParser parser;
+    std::vector<std::string> args = {"--max_length", "1"};
+    parser.parse(args);
+    EXPECT_NO_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"));
+    auto& embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(embeddingsGraphSettings.maxLength.has_value());
+    ASSERT_EQ(embeddingsGraphSettings.maxLength.value(), 1u);
 }
 
 TEST(OvmsGraphCliParserTest, validParserNamesAreAccepted) {
