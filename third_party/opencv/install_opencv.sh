@@ -56,13 +56,11 @@ fi
 
 current_working_dir=$(pwd)
 
-cd $work_dir
-rm -rf $opencv_branch $work_dir/opencv_repo
-rm -rf $opencv_branch $work_dir/opencv_contrib_repo
-curl -fLsS https://github.com/opencv/opencv/archive/refs/tags/${opencv_branch}.tar.gz | tar -xz
-mv ${opencv_branch} $work_dir/opencv_repo
-curl -fLsS https://github.com/opencv/opencv_contrib/archive/refs/tags/${opencv_branch}.tar.gz | tar -xz
-mv ${opencv_branch} $work_dir/opencv_contrib_repo
+cd "$work_dir"
+rm -rf "$work_dir/opencv_repo" "$work_dir/opencv_contrib_repo"
+mkdir -p "$work_dir/opencv_repo" "$work_dir/opencv_contrib_repo"
+curl -fLsS "https://github.com/opencv/opencv/archive/refs/tags/${opencv_branch}.tar.gz" | tar -xz --strip-components=1 -C "$work_dir/opencv_repo"
+curl -fLsS "https://github.com/opencv/opencv_contrib/archive/refs/tags/${opencv_branch}.tar.gz" | tar -xz --strip-components=1 -C "$work_dir/opencv_contrib_repo"
 cd $work_dir/opencv_repo
 mkdir -p $work_dir/opencv_repo/build
 cd $work_dir/opencv_repo/build
