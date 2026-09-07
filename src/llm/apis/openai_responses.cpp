@@ -643,7 +643,7 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
     }
 
     // reasoning: object; optional
-    // OpenAI Responses API reasoning parameter. Any effort value enables thinking mode.
+    // OpenAI Responses API reasoning parameter.
     it = doc.FindMember("reasoning");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsObject()) {
@@ -656,20 +656,9 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
                 return absl::InvalidArgumentError("reasoning.effort is not a string");
             }
             const std::string effort = effortIt->value.GetString();
-            if (effort != "low" && effort != "medium" && effort != "high") {
-                return absl::InvalidArgumentError("reasoning.effort must be one of: low, medium, high");
-            }
-            // Inject enable_thinking: true into chat_template_kwargs (merge with existing if present)
-            auto kwargsIt = doc.FindMember("chat_template_kwargs");
-            if (kwargsIt != doc.MemberEnd() && kwargsIt->value.IsObject()) {
-                // Merge into existing kwargs
-                if (kwargsIt->value.FindMember("enable_thinking") == kwargsIt->value.MemberEnd()) {
-                    kwargsIt->value.AddMember("enable_thinking", true, doc.GetAllocator());
-                }
-            } else {
-                rapidjson::Value kwargs(rapidjson::kObjectType);
-                kwargs.AddMember("enable_thinking", true, doc.GetAllocator());
-                doc.AddMember("chat_template_kwargs", kwargs, doc.GetAllocator());
+            auto status = applyReasoningEffort(effort);
+            if (!status.ok()) {
+                return status;
             }
         }
         // summary field is accepted but ignored

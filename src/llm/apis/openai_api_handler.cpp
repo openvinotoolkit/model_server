@@ -21,6 +21,7 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
+#include <unordered_map>
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include <set>
@@ -108,6 +109,40 @@ absl::Status OpenAIApiHandler::parseResponseFormat() {
             return absl::InvalidArgumentError("response_format is not an object");
         const rapidjson::Value& responseFormat = it->value;
         request.responseFormat = convertOpenAIResponseFormatToStructuralTagStringFormat(responseFormat);
+    }
+    return absl::OkStatus();
+}
+
+absl::Status OpenAIApiHandler::applyReasoningEffort(const std::string& effort) {
+    static const std::set<std::string> validEfforts{"none", "minimal", "low", "medium", "high", "xhigh", "max"};
+    if (validEfforts.find(effort) == validEfforts.end()) {
+        const std::string fieldName = (endpoint == Endpoint::RESPONSES) ? "reasoning.effort" : "reasoning_effort";
+        return absl::InvalidArgumentError(absl::StrCat(fieldName, " must be one of: none, minimal, low, medium, high, xhigh, max"));
+    }
+    const bool enableThinking = (effort != "none");
+    // Muse/Onyx models only understand low/medium/high/xhigh; fold the wider OpenAI enum onto that set.
+    static const std::unordered_map<std::string, std::string> effortToReasoningStrength{
+        {"none", "low"}, {"minimal", "low"}, {"low", "low"}, {"medium", "medium"},
+        {"high", "high"}, {"xhigh", "xhigh"}, {"max", "xhigh"}};
+    const std::string& reasoningStrength = effortToReasoningStrength.at(effort);
+    auto& allocator = doc.GetAllocator();
+    auto kwargsIt = doc.FindMember("chat_template_kwargs");
+    if (kwargsIt != doc.MemberEnd() && kwargsIt->value.IsObject()) {
+        if (kwargsIt->value.FindMember("reasoning_effort") == kwargsIt->value.MemberEnd()) {
+            kwargsIt->value.AddMember("reasoning_effort", Value(effort.c_str(), allocator), allocator);
+        }
+        if (kwargsIt->value.FindMember("reasoning_strength") == kwargsIt->value.MemberEnd()) {
+            kwargsIt->value.AddMember("reasoning_strength", Value(reasoningStrength.c_str(), allocator), allocator);
+        }
+        if (kwargsIt->value.FindMember("enable_thinking") == kwargsIt->value.MemberEnd()) {
+            kwargsIt->value.AddMember("enable_thinking", enableThinking, allocator);
+        }
+    } else {
+        Value kwargs(kObjectType);
+        kwargs.AddMember("reasoning_effort", Value(effort.c_str(), allocator), allocator);
+        kwargs.AddMember("reasoning_strength", Value(reasoningStrength.c_str(), allocator), allocator);
+        kwargs.AddMember("enable_thinking", enableThinking, allocator);
+        doc.AddMember("chat_template_kwargs", kwargs, allocator);
     }
     return absl::OkStatus();
 }

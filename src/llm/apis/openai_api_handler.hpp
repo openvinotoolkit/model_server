@@ -128,6 +128,11 @@ protected:
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
     absl::Status parseResponseFormat();
+    // Validates effort against the OpenAI reasoning_effort enum and merges its chat-template
+    // representation (reasoning_effort, reasoning_strength mapped onto low/medium/high/xhigh,
+    // enable_thinking) into doc's chat_template_kwargs, without overwriting keys the request
+    // already set explicitly.
+    absl::Status applyReasoningEffort(const std::string& effort);
     absl::Status ensureArgumentsInToolCalls(Value& messageObj);
     void initOutputParser();
     // Assemble a ParsedOutput from a sequence of streaming Delta variants produced by OVMSTextStreamer.
