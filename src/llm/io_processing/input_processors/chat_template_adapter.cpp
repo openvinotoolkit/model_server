@@ -99,7 +99,7 @@ void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHi
     if (!caps.missnamedReasoningField.empty()) {
         injectReasoningIntoMissnamedSection(chatHistory, caps.missnamedReasoningField);
     }
-    if (caps.removeResponseFromToolDefinition) {
+    if (caps.supportsResponseFieldInToolDefinition) {
         removeResponseFromToolDefinition(chatHistory);
     }
 }

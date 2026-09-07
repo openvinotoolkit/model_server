@@ -202,11 +202,11 @@ bool probeChatTemplateToolResponse(ov::genai::Tokenizer& tokenizer, ChatTemplate
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: output '{}'", output);
 
         if (output.find(PROBE_NEEDLE) != std::string::npos) {
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: response field is rendered setting removeResponseFromToolDefinition to true");
-            caps.removeResponseFromToolDefinition = true;
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: response field is rendered setting supportsResponseFieldInToolDefinition to true");
+            caps.supportsResponseFieldInToolDefinition = true;
         } else {
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: response field is not rendered setting removeResponseFromToolDefinition to false");
-            caps.removeResponseFromToolDefinition = false;
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: response field is not rendered setting supportsResponseFieldInToolDefinition to false");
+            caps.supportsResponseFieldInToolDefinition = false;
         }
     } catch (...) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: not supported");

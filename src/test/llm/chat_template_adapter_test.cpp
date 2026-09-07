@@ -168,7 +168,7 @@ TEST_F(ChatTemplateAdapterTest, applyToHistoryDoesNothingWhenNoCapsSet) {
 
 TEST_F(ChatTemplateAdapterTest, applyToHistoryHandlesToolDefinitionsWithoutResponses) {
     ChatTemplateCaps caps;
-    caps.removeResponseFromToolDefinition = true;
+    caps.supportsResponseFieldInToolDefinition = true;
 
     const std::string toolDefinitions = R"([{"type": "function", "function": {"name": "cat", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"file_name": {"type": "string", "description": "The name of the file from current directory to display. No path is allowed. "}}, "required": ["file_name"]}, "response": {"type": "dict", "properties": {"file_content": {"type": "string", "description": "The content of the file."}}}}},
                                             {"type": "function", "function": {"name": "cd", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"folder": {"type": "string", "description": "The folder of the directory to change to. You can only change one folder level at a time. "}}, "required": ["folder"]}, "response": {"type": "dict", "properties": {"current_working_directory": {"type": "string", "description": "The new current working directory path."}}}}}])";
@@ -192,7 +192,7 @@ TEST_F(ChatTemplateAdapterTest, applyToHistoryHandlesToolDefinitionsWithoutRespo
 
 TEST_F(ChatTemplateAdapterTest, applyToHistoryHandlesRemovedResponsesInToolDefinitions) {
     ChatTemplateCaps caps;
-    caps.removeResponseFromToolDefinition = true;
+    caps.supportsResponseFieldInToolDefinition = true;
 
     const std::string toolDefinitions = R"([{"type": "function", "function": {"name": "cat", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"file_name": {"type": "string", "description": "The name of the file from current directory to display. No path is allowed. "}}, "required": ["file_name"]}}},
                                             {"type": "function", "function": {"name": "cd", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"folder": {"type": "string", "description": "The folder of the directory to change to. You can only change one folder level at a time. "}}, "required": ["folder"]}}}])";
@@ -216,7 +216,7 @@ TEST_F(ChatTemplateAdapterTest, applyToHistoryHandlesRemovedResponsesInToolDefin
 
 TEST_F(ChatTemplateAdapterTest, applyToHistoryHandlesEmptyToolDefinitions) {
     ChatTemplateCaps caps;
-    caps.removeResponseFromToolDefinition = true;
+    caps.supportsResponseFieldInToolDefinition = true;
 
     auto history = buildHistory(R"([
         {"role": "user", "content": "hello"}

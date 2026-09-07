@@ -85,7 +85,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsGemma4) {
     ASSERT_TRUE(result.detectedReasoningParser.has_value());
     EXPECT_EQ(result.detectedReasoningParser.value(), "gemma4");
     EXPECT_TRUE(result.caps.supportsToolCalls);
-    EXPECT_TRUE(result.caps.removeResponseFromToolDefinition);
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
 }
 
 // --- Qwen3-Coder ---
@@ -98,7 +98,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsQwen3Coder) {
     EXPECT_EQ(result.detectedToolParser.value(), "qwen3coder");
     EXPECT_FALSE(result.detectedReasoningParser.has_value());
     EXPECT_TRUE(result.caps.supportsToolCalls);
-    EXPECT_TRUE(result.caps.removeResponseFromToolDefinition);
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
 }
 
 // --- LFM2 ---
@@ -173,7 +173,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsQwen3AsHermes3WithReasoning) {
     ASSERT_TRUE(result.detectedReasoningParser.has_value());
     EXPECT_EQ(result.detectedReasoningParser.value(), "qwen3");
     EXPECT_TRUE(result.caps.supportsToolCalls);
-    EXPECT_TRUE(result.caps.removeResponseFromToolDefinition);
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
 }
 
 TEST_F(ChatTemplateAnalyzerTest, detectsQwen36AsQwen3CoderWithReasoning) {
@@ -185,7 +185,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsQwen36AsQwen3CoderWithReasoning) {
     ASSERT_TRUE(result.detectedReasoningParser.has_value());
     EXPECT_EQ(result.detectedReasoningParser.value(), "qwen3");
     EXPECT_TRUE(result.caps.supportsToolCalls);
-    EXPECT_TRUE(result.caps.removeResponseFromToolDefinition);
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
 }
 
 TEST_F(ChatTemplateAnalyzerTest, detectsQwen3CoderNextAsQwen3Coder) {
@@ -196,7 +196,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsQwen3CoderNextAsQwen3Coder) {
     EXPECT_EQ(result.detectedToolParser.value(), "qwen3coder");
     ASSERT_FALSE(result.detectedReasoningParser.has_value());
     EXPECT_TRUE(result.caps.supportsToolCalls);
-    EXPECT_TRUE(result.caps.removeResponseFromToolDefinition);
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
 }
 
 // --- Reasoning-only (inline — no matching file) ---

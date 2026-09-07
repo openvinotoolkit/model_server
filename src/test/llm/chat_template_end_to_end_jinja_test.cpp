@@ -354,7 +354,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Qwen3CoderNext_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
-    EXPECT_TRUE(caps.removeResponseFromToolDefinition);
+    EXPECT_TRUE(caps.supportsResponseFieldInToolDefinition);
 
     std::string expectedOutput = R"(<|im_start|>user
 What's the weather in Paris?<|im_end|>
