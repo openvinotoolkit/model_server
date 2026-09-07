@@ -135,6 +135,8 @@ public:
         module = this->createModule(GRPC_SERVER_MODULE_NAME);
         this->modules.emplace(GRPC_SERVER_MODULE_NAME, std::move(module));
     }
+    // Modules hold a reference to manager; shut them down before manager is destroyed
+    ~ServerWithMockedManagerModule() override { shutdownModules(); }
 
     ConstructorEnabledModelManager& getManager() {
         return this->manager;

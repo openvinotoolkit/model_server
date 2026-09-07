@@ -318,6 +318,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
     {StatusCode::NONEXISTENT_PTR, "Tried to use nonexisting pointer"},
     {StatusCode::SERVER_NOT_READY, "Server is not ready"},
+    {StatusCode::SERVER_SHUTTING_DOWN, "Server is shutting down"},
 
     // Server Start errors
     {StatusCode::OPTIONS_USAGE_ERROR, "options validation error"},

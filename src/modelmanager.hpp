@@ -60,6 +60,7 @@ class ModelInstance;
 class ServableDefinition;
 class ModelInstanceUnloadGuard;
 class Pipeline;
+class ServableLoadingQueue;
 class PipelineFactory;
 struct FunctorResourcesCleaner;
 class PythonBackend;
@@ -85,6 +86,7 @@ protected:
     std::map<std::string, std::shared_ptr<Model>> models;
     std::unique_ptr<ov::Core> ieCore;
 
+    std::unique_ptr<ServableLoadingQueue> loadingQueue;
     std::unique_ptr<PipelineFactory> pipelineFactory;
 #if (MEDIAPIPE_DISABLE == 0)
     std::unique_ptr<MediapipeFactory> mediapipeFactory;
@@ -109,7 +111,6 @@ private:
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed);
 
 #if (MEDIAPIPE_DISABLE == 0)
-    Status processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory);
     Status loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
     Status loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
         std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
@@ -393,6 +394,9 @@ public:
      * @return status
      */
     Status reloadModelWithVersions(ModelConfig& config);
+
+    // Enqueue an urgent servable load request (for inference threads).
+    std::future<Status> requestServableLoad(const std::string& name);
 
     /**
      * @brief Starts model manager using ovms::Config
