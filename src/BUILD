@@ -1366,6 +1366,8 @@ ovms_cc_library(
             "libovms_kfs_utils",
             "libovms_tensorinfo",
             "libovmsprecision",
+            "libovms_config",
+            "cpp_headers",
 ],
     visibility = ["//visibility:public",],
 )
@@ -1409,6 +1411,8 @@ ovms_cc_library(
     srcs = ["capi_frontend/inferenceparameter.cpp",],
     deps = [
             "ovms_header",
+            "libovms_config",
+            "cpp_headers",
             "libovmscapi_utils_h", # TODO @atobisze
     ],
     visibility = ["//visibility:public"],
