@@ -1344,15 +1344,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesTextForma
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    ov::genai::EncodedResults results;
-    ov::Tensor outputIds = tokenizer->encode("{\"value\":1}", ov::genai::add_special_tokens(false)).input_ids;
-    ASSERT_EQ(outputIds.get_shape().size(), 2);
-    ASSERT_EQ(outputIds.get_shape()[0], 1);
-    ASSERT_EQ(outputIds.get_element_type(), ov::element::i64);
-    int64_t* outputIdsData = reinterpret_cast<int64_t*>(outputIds.data());
-    results.tokens = {std::vector<int64_t>(outputIdsData, outputIdsData + outputIds.get_shape()[1])};
+    std::vector<ovms::Delta> deltas;
+    deltas.push_back(makeContentDelta("{\"value\":1}"));
+    deltas.push_back(makeFinishChunk());
 
-    std::string serialized = apiHandler->serializeUnaryResponse(results);
+    std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
     ASSERT_NE(serialized.find("\"text\":{\"format\":{\"type\":\"json_schema\""), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"name\":\"IntBox\""), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"strict\":true"), std::string::npos) << serialized;
