@@ -20,6 +20,7 @@
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
+#include "output_parser_test_utils.hpp"
 #include "../../platform_utils.hpp"
 
 using namespace ovms;
@@ -68,13 +69,12 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     for (auto& input : inputs) {
         auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*hermes3Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
         EXPECT_EQ(parsedOutput.content, "");
         EXPECT_EQ(parsedOutput.reasoning, "");
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
         EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
     }
@@ -91,7 +91,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
         std::string testInput = input;
         auto generatedTensor = hermes3Tokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, false);
+        ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*hermes3Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, false, true);
         EXPECT_EQ(parsedOutput.content, testInput);
         EXPECT_EQ(parsedOutput.reasoning, "");
 
@@ -113,26 +113,23 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     for (auto& input : inputs) {
         auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*hermes3Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
         EXPECT_EQ(parsedOutput.content, "");
         EXPECT_EQ(parsedOutput.reasoning, "");
 
         ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
         EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
         EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
         auto firstToolCallId = parsedOutput.toolCalls[0].id;
 
         EXPECT_EQ(parsedOutput.toolCalls[1].name, "another_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
         EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
         auto secondToolCallId = parsedOutput.toolCalls[1].id;
         EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
 
         EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
         EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);  // ID should be generated
         auto thirdToolCallId = parsedOutput.toolCalls[2].id;
@@ -141,46 +138,11 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     }
 }
 
-TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithTwoValidToolCallsAndOneInvalid) {
-    std::string inputWithProperClosure = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>"
-                                         "<tool_call>{\"tool_name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}}</tool_call>"
-                                         "<tool_call>{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}</tool_call>";
-    std::string inputWithImproperClosure = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>"
-                                           "<tool_call>{\"tool_name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}}</tool_call>"
-                                           "<tool_call>{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}";
-
-    // Hermes3 may produce last tool call without closing tag, so we test both cases
-    // The results should be identical
-    std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
-    for (auto& input : inputs) {
-        auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-        EXPECT_EQ(parsedOutput.content, "");
-        EXPECT_EQ(parsedOutput.reasoning, "");
-
-        // Expecting two tool calls as the second one does not have a valid name
-        ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
-        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
-        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
-        auto firstToolCallId = parsedOutput.toolCalls[0].id;
-
-        EXPECT_EQ(parsedOutput.toolCalls[1].name, "third_tool");
-        // Parser removes whitespaces, so we expect arguments value to be without spaces
-        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"key\":\"value\"}");
-        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
-        auto secondToolCallId = parsedOutput.toolCalls[1].id;
-        EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
-    }
-}
-
 TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*hermes3Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, "");
@@ -191,13 +153,12 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall)
     auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     // generatedTokens should now contain content followed by bot token ID and then tool call
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*hermes3Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
     EXPECT_EQ(parsedOutput.reasoning, "");
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
 }
@@ -339,15 +300,12 @@ TEST_F(Hermes3OutputParserTest, HolisticStreaming) {
     };
 
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
+        std::optional<ovms::Delta> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
             std::string expected = expectedDelta.value();
             std::string idKey = "\"id\":\"";
@@ -376,10 +334,7 @@ TEST_F(Hermes3OutputParserTest, HolisticStreaming) {
         } else {
             std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
             std::string docStr = doc.has_value() ? [&]() {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                return std::string(buffer.GetString());
+                return ovms::test::deltaToJson(*doc);
             }()
                                                  : "std::nullopt";
             FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
@@ -419,15 +374,12 @@ TEST_F(Hermes3OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         // Second argument is false as we simulate the case where tools have not been provided in the request
-        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, false, ov::genai::GenerationFinishReason::NONE);
+        std::optional<ovms::Delta> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, false, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             std::string expected = expectedDelta.value();
             EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
         } else {

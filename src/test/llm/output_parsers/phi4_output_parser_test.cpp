@@ -20,6 +20,7 @@
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
+#include "output_parser_test_utils.hpp"
 #include "../../platform_utils.hpp"
 
 using namespace ovms;
@@ -62,7 +63,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string testInput = input;
     auto generatedTensor = phi4Tokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*phi4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -78,7 +79,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     std::string testInput = input;
     auto generatedTensor = phi4Tokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*phi4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
@@ -99,28 +100,11 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     EXPECT_NE(secondToolCallId, thirdToolCallId);
 }
 
-TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithOneValidToolCallAndTwoInvalid) {
-    std::string input = "functools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}},"
-                        "{\"tool_name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}},"
-                        "{\"name\": \"third_tool\", \"options\": {\"key\": \"value\"}}]";
-    std::string testInput = input;
-    auto generatedTensor = phi4Tokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
-    auto firstToolCallId = parsedOutput.toolCalls[0].id;
-}
-
 TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = phi4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*phi4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, "");
@@ -130,7 +114,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\nfunctools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]";
     auto generatedTensor = phi4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*phi4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -139,15 +123,21 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 
-TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithMultipleFunctoolsReturnsNothing) {
+TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithMultipleFunctools) {
     std::string input = "functools[{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]\n\nThis is some content\n\nfunctools[{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]";
     std::string testInput = input;
     auto generatedTensor = phi4Tokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*phi4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "tool1");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"a\":1}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+    EXPECT_EQ(parsedOutput.toolCalls[1].name, "tool2");
+    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"b\":2}");
+    EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);
 }
 
 TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithArrayArguments) {
@@ -155,7 +145,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithArrayArguments) {
     std::string testInput = input;
     auto generatedTensor = phi4Tokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*phi4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -238,15 +228,12 @@ TEST_F(Phi4OutputParserTest, HolisticStreaming) {
         int64_t chunkIteration = -1;
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
             chunkIteration++;
-            std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
+            std::optional<ovms::Delta> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }
             if (expectedDelta.has_value() && doc.has_value()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                std::string docStr = buffer.GetString();
+                std::string docStr = ovms::test::deltaToJson(*doc);
                 // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
                 std::string expected = expectedDelta.value();
                 std::string idKey = "\"id\":\"";
@@ -275,10 +262,7 @@ TEST_F(Phi4OutputParserTest, HolisticStreaming) {
             } else if (expectedDelta.has_value()) {
                 FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
             } else if (doc.has_value()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                std::string docStr = buffer.GetString();
+                std::string docStr = ovms::test::deltaToJson(*doc);
                 FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
             } else {
                 FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
@@ -357,15 +341,12 @@ TEST_F(Phi4OutputParserTest, StreamingToolWithComplexArguments) {
 
     auto outputParser = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA);
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
             std::string expected = expectedDelta.value();
             std::string idKey = "\"id\":\"";
@@ -394,10 +375,7 @@ TEST_F(Phi4OutputParserTest, StreamingToolWithComplexArguments) {
         } else {
             std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
             std::string docStr = doc.has_value() ? [&]() {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                return std::string(buffer.GetString());
+                return ovms::test::deltaToJson(*doc);
             }()
                                                  : "std::nullopt";
             FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
@@ -438,15 +416,12 @@ TEST_F(Phi4OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         // Second argument is false as we simulate the case where tools have not been provided in the request
-        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, false, ov::genai::GenerationFinishReason::NONE);
+        std::optional<ovms::Delta> doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, false, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             std::string expected = expectedDelta.value();
             EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
         } else {

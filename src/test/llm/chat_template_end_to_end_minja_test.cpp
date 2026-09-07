@@ -253,7 +253,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    // FIXME: Why is </s> here? because of facebook-opt125?
     std::string expectedOutput = R"(</s><|turn>user
 What's the weather in Paris?<turn|>
 <|turn>model

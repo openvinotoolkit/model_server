@@ -37,6 +37,19 @@ const std::string Qwen3CoderToolParser::FUNCTION_END_TAG = "</function>";
 const std::string Qwen3CoderToolParser::TOOL_END_TAG = "</tool_call>";
 
 Status Qwen3CoderToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
+    // Generation can be truncated mid-tool-call (max_tokens hit, or eos suppressed) so an opening
+    // "<tool_call>"/"<function=" is recorded with no matching close. That leaves begin with more
+    // entries than end. The unterminated call is always the most recent one (top of the begin
+    // stack), so drop it -- erasing from its start to end-of-content -- rather than bailing and
+    // leaving every (including completed) block in the content returned to the user.
+    while (toolCallPositions.begin.size() > toolCallPositions.end.size()) {
+        auto posBegin = toolCallPositions.begin.top();
+        toolCallPositions.begin.pop();
+        if (posBegin <= outContent.size()) {
+            SPDLOG_TRACE("Removing unterminated tool call from outContent begin:{} to end", posBegin);
+            outContent.erase(posBegin);
+        }
+    }
     if (toolCallPositions.begin.size() != toolCallPositions.end.size()) {
         SPDLOG_DEBUG("Mismatched tool tags, begin: {}, end: {}", toolCallPositions.begin.size(), toolCallPositions.end.size());
         return Status(StatusCode::INTERNAL_ERROR, "Mismatched tool tags");
@@ -213,105 +226,102 @@ std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::parseChunk(const std::strin
     return std::nullopt;
 }
 
-void Qwen3CoderToolParser::lazyFillInitToolParametersTypesMap() {
-    if (this->filledParametersTypesMap) {
-        return;
+std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::finalizeOnGenerationEnd() {
+    if (this->currentState == State::Content ||
+        this->currentState == State::InsideToolCall ||
+        this->currentState == State::InsideFunctionName) {
+        // No usable function name was ever captured -- nothing to recover. Still clear the
+        // dangling partial state so it doesn't look like a call is still in flight.
+        resetParsingState();
+        return std::nullopt;
     }
-    SPDLOG_DEBUG("Filling tools parameters types map");
-    this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
-    this->filledParametersTypesMap = true;
-    SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", this->toolsParametersTypes.size());
+    if (this->currentState == State::InsideParameterName) {
+        // Drop the incomplete parameter name; close the function with whatever was captured before it.
+        this->currentState = State::InsideFunction;
+    }
+    if (this->currentState == State::InsideParameter) {
+        this->streamContent += Qwen3CoderToolParser::PARAMETER_END_TAG;
+    }
+    if (this->currentState == State::InsideParameter || this->currentState == State::InsideFunction) {
+        this->streamContent += Qwen3CoderToolParser::FUNCTION_END_TAG;
+    }
+    this->streamContent += Qwen3CoderToolParser::TOOL_END_TAG;
+
+    ToolCalls_t toolCalls;
+    while (parseUntilStateChange(toolCalls)) {
+    }
+    // Generation has ended: nothing more will ever be parsed from streamContent, so leave the
+    // parser in the same clean state a normal completion would (toolCallPositions is kept --
+    // removeToolCallsFromContentIfNeeded() still needs it afterward).
+    resetParsingState();
+    if (!toolCalls.empty()) {
+        return std::move(toolCalls);
+    }
+    return std::nullopt;
 }
 
-Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
-    BaseOutputParser(tokenizer),
+Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
+    std::optional<OutputParsingConfig> configOverride) :
+    BaseOutputParser(tokenizer, [&]() {
+        if (configOverride.has_value())
+            return std::move(*configOverride);
+        OutputParsingConfig cfg;
+        cfg.startTags = {TOOL_START_TAG, FUNCTION_NAME_TAG};
+        return cfg;
+    }()),
     toolSchemas(toolSchemas),
+    toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
     streamParser(this->toolsParametersTypes) {
 }
 
-void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    // there may be multiple parameters per function,
-    // there may be multiple lines per parameter value
-    // there may be no parameters for a function
-    // there may be multiple tool_call sections in the content
-    // there is only one function per tool call
-    // <tool_call>
-    // <function=FUNCTION_NAME>
-    // <parameter=PARAM_NAME>
-    // PARAM_VALUE
-    // </parameter>
-    // </function>
-    // </tool_call>
-    this->lazyFillInitToolParametersTypesMap();
-    auto toolCallsOpt = this->streamParser.parseChunk(parsedOutput.content);
-    if (toolCallsOpt.has_value()) {
-        // TODO do we want to support not ending in content state?
-        parsedOutput.toolCalls = std::move(toolCallsOpt.value());
-        SPDLOG_DEBUG("Parsing ended successfully, removing tool calls from content");
-        auto status = this->streamParser.removeToolCallsFromContentIfNeeded(parsedOutput.content);
-        if (!status.ok()) {
-            SPDLOG_DEBUG("Failed to remove tool calls from content: {}", status.string());
-        }
-        return;
-    }
-    SPDLOG_DEBUG("Parsing ended, no tool calls found");
-    return;
-}
 std::optional<std::string> Qwen3CoderToolParserImpl::getCurrentFunctionName() const {
     if (this->currentFunction.name.empty()) {
         return std::nullopt;
     }
     return this->currentFunction.name;
 }
-std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
+std::optional<Delta> Qwen3CoderToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
     if (toolCalls.size() != 1) {
         SPDLOG_ERROR("For streaming we expected one tool call, got: {}", toolCalls.size());
-        // TODO we should return status code but this require change of parsers API
         throw std::runtime_error("For streaming we expected one tool call");
     }
     auto& toolCall = toolCalls[0];
-    rapidjson::Document argsDelta;
-    argsDelta.Parse(toolCall.arguments.c_str());
     this->returnedCompleteDeltas.insert(this->toolCallIndex);
-    rapidjson::Document argumentsWrapper;
-    argumentsWrapper.SetObject();
-    rapidjson::Document::AllocatorType& allocator = argumentsWrapper.GetAllocator();
-    // now we need to add string toolCall.arguments to argumentsWrapper under "arguments" key
-    rapidjson::Value toolCallsString(rapidjson::kStringType);
-    toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
     SPDLOG_TRACE("Tool call arguments string: {}", toolCall.arguments);
-
-    argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
-    auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
-    SPDLOG_DEBUG("First delta doc: {}", documentToString(currentDelta));
-    return currentDelta;
+    SPDLOG_DEBUG("Full delta: index={} arguments={}", this->toolCallIndex, toolCall.arguments);
+    return ToolCallDelta{this->toolCallIndex, std::nullopt, std::nullopt, toolCall.arguments};
 }
 
-std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
+std::optional<Delta> Qwen3CoderToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
     if (this->returnedFirstDeltas.size() == (this->returnedCompleteDeltas.size() + 1)) {
         SPDLOG_TRACE("Skipping first delta, already sent for current function, returnedFirstDeltas.size(): {} returnedCompleteDeltas.size(): {}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
-        // we can skip sending first delta since we sent it for current function
         return std::nullopt;
     }
     int toolCallId = ++this->toolCallIndex;
-    rapidjson::Document doc = wrapFirstDelta(toolCallName, toolCallId);
-    this->currentJson.CopyFrom(doc, this->currentJson.GetAllocator());
     this->returnedFirstDeltas.insert(toolCallId);
-    SPDLOG_DEBUG("First delta doc: {}", documentToString(doc));
-    return doc;
+    SPDLOG_DEBUG("First delta: name={} index={}", toolCallName, toolCallId);
+    return ToolCallDelta{toolCallId, generateRandomId(), toolCallName, ""};
 }
 
-std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> Qwen3CoderToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     // streamParser will return optional toolCalls when a tool call is completed
     // if toolCalls is returned, we need to wrap it in the required JSON structure and return it
     // if toolCalls is not returned, but we are insideFunction state, we need to return the first delta with function name once
     // otherwise nullopt
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));
-    this->lazyFillInitToolParametersTypesMap();
-    if (newChunk.empty()) {
+    if (newChunk.empty() && finishReason == ov::genai::GenerationFinishReason::NONE) {
         return std::nullopt;
     }
-    auto toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    std::optional<ToolCalls_t> toolCallsOpt;
+    if (!newChunk.empty()) {
+        toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    }
+
+    // If no complete tool calls were returned yet and generation has ended, finalize the current
+    // tool call in progress to recover any remaining data (for example if arguments were not closed properly).
+    if (!toolCallsOpt.has_value() && finishReason != ov::genai::GenerationFinishReason::NONE) {
+        toolCallsOpt = this->streamParser.finalizeOnGenerationEnd();
+    }
     if (toolCallsOpt.has_value()) {
         return this->sendFullDelta(toolCallsOpt.value());
     }

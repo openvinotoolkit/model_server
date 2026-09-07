@@ -131,6 +131,19 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
 }
 
 Status Minicpm5ToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
+    // Generation can be truncated mid-tool-call (max_tokens hit, or eos suppressed) so an opening
+    // "<function" is recorded with no matching "</function>" close. That leaves begin with more
+    // entries than end. The unterminated call is always the most recent one (top of the begin
+    // stack), so drop it -- erasing from its start to end-of-content -- rather than bailing and
+    // leaving every (including completed) block in the content returned to the user.
+    while (toolCallPositions.begin.size() > toolCallPositions.end.size()) {
+        auto posBegin = toolCallPositions.begin.top();
+        toolCallPositions.begin.pop();
+        if (posBegin <= outContent.size()) {
+            SPDLOG_TRACE("Minicpm5: removing unterminated tool call from outContent begin:{} to end", posBegin);
+            outContent.erase(posBegin);
+        }
+    }
     if (toolCallPositions.begin.size() != toolCallPositions.end.size()) {
         SPDLOG_DEBUG("Minicpm5: mismatched tool tags, begin: {}, end: {}",
             toolCallPositions.begin.size(), toolCallPositions.end.size());
@@ -283,6 +296,38 @@ std::optional<ToolCalls_t> Minicpm5ToolParserImpl::parseChunk(const std::string&
     return std::nullopt;
 }
 
+std::optional<ToolCalls_t> Minicpm5ToolParserImpl::finalizeOnGenerationEnd() {
+    if (this->currentState == State::Content ||
+        this->currentState == State::InsideFunctionName) {
+        // No usable function name was ever captured -- nothing to recover. Still clear the
+        // dangling partial state so it doesn't look like a call is still in flight.
+        resetParsingState();
+        return std::nullopt;
+    }
+    if (this->currentState == State::InsideParamName) {
+        // Drop the incomplete parameter name; close the function with whatever was captured before it.
+        this->currentState = State::InsideFunction;
+    }
+    if (this->currentState == State::InsideParam) {
+        this->streamContent += Minicpm5ToolParser::PARAM_END_TAG;
+    }
+    if (this->currentState == State::InsideParam || this->currentState == State::InsideFunction) {
+        this->streamContent += Minicpm5ToolParser::FUNCTION_END_TAG;
+    }
+
+    ToolCalls_t toolCalls;
+    while (parseUntilStateChange(toolCalls)) {
+    }
+    // Generation has ended: nothing more will ever be parsed from streamContent, so leave the
+    // parser in the same clean state a normal completion would (toolCallPositions is kept --
+    // removeToolCallsFromContentIfNeeded() still needs it afterward).
+    resetParsingState();
+    if (!toolCalls.empty()) {
+        return std::move(toolCalls);
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string> Minicpm5ToolParserImpl::getCurrentFunctionName() const {
     if (this->currentFunction.name.empty())
         return std::nullopt;
@@ -291,18 +336,11 @@ std::optional<std::string> Minicpm5ToolParserImpl::getCurrentFunctionName() cons
 
 // ---- Minicpm5ToolParser ----
 
-void Minicpm5ToolParser::lazyFillInitToolParametersTypesMap() {
-    if (this->filledParametersTypesMap)
-        return;
-    SPDLOG_DEBUG("Minicpm5ToolParser: filling tools parameters types map");
-    this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
-    this->filledParametersTypesMap = true;
-    SPDLOG_DEBUG("Minicpm5ToolParser: created with {} tools", this->toolsParametersTypes.size());
-}
-
 Minicpm5ToolParser::Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
-    BaseOutputParser(tokenizer),
+    BaseOutputParser(tokenizer,
+        defaultParsingConfig()),
     toolSchemas(toolSchemas),
+    toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
     streamParser(this->toolsParametersTypes) {}
 
 const std::vector<int64_t> Minicpm5ToolParser::removeReasoningTokens(const std::vector<int64_t>& generatedTokens) {
@@ -328,25 +366,7 @@ const std::vector<int64_t> Minicpm5ToolParser::removeReasoningTokens(const std::
     return tokensWithoutReasoning;
 }
 
-void Minicpm5ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    auto tokensWithoutReasoning = this->removeReasoningTokens(generatedTokens);
-    std::string contentWithSpecialTokens = this->tokenizer.decode(tokensWithoutReasoning, ov::genai::skip_special_tokens(false));
-    this->lazyFillInitToolParametersTypesMap();
-    auto toolCallsOpt = this->streamParser.parseChunk(contentWithSpecialTokens);
-    if (toolCallsOpt.has_value()) {
-        parsedOutput.toolCalls = std::move(toolCallsOpt.value());
-        SPDLOG_DEBUG("Minicpm5ToolParser: parse done, removing tool calls from content");
-        auto status = this->streamParser.removeToolCallsFromContentIfNeeded(contentWithSpecialTokens);
-        if (!status.ok()) {
-            SPDLOG_DEBUG("Minicpm5ToolParser: failed to remove tool calls from content: {}", status.string());
-        }
-        parsedOutput.content = std::move(contentWithSpecialTokens);
-        return;
-    }
-    SPDLOG_DEBUG("Minicpm5ToolParser: parse done, no tool calls found");
-}
-
-std::optional<rapidjson::Document> Minicpm5ToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
+std::optional<Delta> Minicpm5ToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
     if (toolCalls.size() != 1) {
         SPDLOG_ERROR("Minicpm5ToolParser: for streaming expected one tool call, got: {}", toolCalls.size());
         throw std::runtime_error("Minicpm5ToolParser: for streaming expected one tool call");
@@ -362,69 +382,44 @@ std::optional<rapidjson::Document> Minicpm5ToolParser::sendFullDelta(const ToolC
         return wrapCombinedDelta(toolCall);
     }
     this->returnedCompleteDeltas.insert(this->toolCallIndex);
-    rapidjson::Document argumentsWrapper;
-    argumentsWrapper.SetObject();
-    rapidjson::Document::AllocatorType& allocator = argumentsWrapper.GetAllocator();
-    rapidjson::Value toolCallsString(rapidjson::kStringType);
-    toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
     SPDLOG_TRACE("Minicpm5ToolParser: tool call arguments string: {}", toolCall.arguments);
-    argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
-    auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
-    SPDLOG_DEBUG("Minicpm5ToolParser: full delta: {}", documentToString(currentDelta));
-    return currentDelta;
+    SPDLOG_DEBUG("Minicpm5ToolParser: full delta: index={} arguments={}", this->toolCallIndex, toolCall.arguments);
+    return ToolCallDelta{this->toolCallIndex, std::nullopt, std::nullopt, toolCall.arguments};
 }
 
-rapidjson::Document Minicpm5ToolParser::wrapCombinedDelta(const ToolCall& toolCall) {
-    rapidjson::Document wrappedDelta;
-    wrappedDelta.SetObject();
-    rapidjson::Document::AllocatorType& allocator = wrappedDelta.GetAllocator();
-
-    rapidjson::Value toolCalls(rapidjson::kArrayType);
-    rapidjson::Value toolCallObj(rapidjson::kObjectType);
-    rapidjson::Value idValue(generateRandomId().c_str(), allocator);
-    toolCallObj.AddMember("id", idValue, allocator);
-    toolCallObj.AddMember("type", "function", allocator);
-    toolCallObj.AddMember("index", this->toolCallIndex, allocator);
-
-    rapidjson::Value functionObj(rapidjson::kObjectType);
-    rapidjson::Value nameValue(toolCall.name.c_str(), allocator);
-    functionObj.AddMember("name", nameValue, allocator);
-
-    rapidjson::Value argumentsValue(rapidjson::kStringType);
-    argumentsValue.SetString(toolCall.arguments.c_str(), allocator);
-    functionObj.AddMember("arguments", argumentsValue, allocator);
-    toolCallObj.AddMember("function", functionObj, allocator);
-
-    toolCalls.PushBack(toolCallObj, allocator);
-    rapidjson::Value deltaWrapper(rapidjson::kObjectType);
-    deltaWrapper.AddMember("tool_calls", toolCalls, allocator);
-    wrappedDelta.AddMember("delta", deltaWrapper, allocator);
-    SPDLOG_DEBUG("Minicpm5ToolParser: combined delta: {}", documentToString(wrappedDelta));
-    return wrappedDelta;
+ToolCallDelta Minicpm5ToolParser::wrapCombinedDelta(const ToolCall& toolCall) {
+    SPDLOG_DEBUG("Minicpm5ToolParser: combined delta: index={} name={} args={}", this->toolCallIndex, toolCall.name, toolCall.arguments);
+    return ToolCallDelta{this->toolCallIndex, generateRandomId(), toolCall.name, toolCall.arguments};
 }
 
-std::optional<rapidjson::Document> Minicpm5ToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
+std::optional<Delta> Minicpm5ToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
     if (this->returnedFirstDeltas.size() == (this->returnedCompleteDeltas.size() + 1)) {
         SPDLOG_TRACE("Minicpm5ToolParser: skipping first delta, already sent for current function");
         return std::nullopt;
     }
     int toolCallId = ++this->toolCallIndex;
-    rapidjson::Document doc = wrapFirstDelta(toolCallName, toolCallId);
-    this->currentJson.CopyFrom(doc, this->currentJson.GetAllocator());
     this->returnedFirstDeltas.insert(toolCallId);
-    SPDLOG_DEBUG("Minicpm5ToolParser: first delta: {}", documentToString(doc));
-    return doc;
+    SPDLOG_DEBUG("Minicpm5ToolParser: first delta: name={} index={}", toolCallName, toolCallId);
+    return ToolCallDelta{toolCallId, generateRandomId(), toolCallName, ""};
 }
 
-std::optional<rapidjson::Document> Minicpm5ToolParser::parseChunk(
+std::optional<Delta> Minicpm5ToolParser::parseChunk(
     const std::string& newChunk,
     const std::vector<int64_t>& /*tokens*/,
-    ov::genai::GenerationFinishReason /*finishReason*/) {
+    ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_DEBUG("Minicpm5ToolParser: chunk: '{}'", newChunk);
-    this->lazyFillInitToolParametersTypesMap();
-    if (newChunk.empty())
+    if (newChunk.empty() && finishReason == ov::genai::GenerationFinishReason::NONE)
         return std::nullopt;
-    auto toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    std::optional<ToolCalls_t> toolCallsOpt;
+    if (!newChunk.empty()) {
+        toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    }
+
+    // If no complete tool calls were returned yet and generation has ended, finalize the current
+    // tool call in progress to recover any remaining data (for example if arguments were not closed properly).
+    if (!toolCallsOpt.has_value() && finishReason != ov::genai::GenerationFinishReason::NONE) {
+        toolCallsOpt = this->streamParser.finalizeOnGenerationEnd();
+    }
     if (toolCallsOpt.has_value()) {
         return this->sendFullDelta(toolCallsOpt.value());
     }

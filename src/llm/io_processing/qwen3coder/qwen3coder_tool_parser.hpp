@@ -86,8 +86,17 @@ C->ITC->IFN->IF->IPN->IP->AF->C
      * that were not returned before
      */
     std::optional<ToolCalls_t> parseChunk(const std::string& chunk);
+    // Called once generation has stopped and parseChunk() produced nothing new: synthesizes
+    // the closing tags still missing for whatever tool call is in flight (using only data
+    // already captured) so it can be recovered instead of silently dropped. An incomplete
+    // name/attribute can't be recovered and returns nullopt.
+    std::optional<ToolCalls_t> finalizeOnGenerationEnd();
     std::optional<std::string> getCurrentFunctionName() const;
     Status removeToolCallsFromContentIfNeeded(std::string& outContent);
+    void reset() {
+        resetParsingState();
+        toolCallPositions = ToolCallPositions{};
+    }
     State getCurrentState() const {
         return this->currentState;
     }
@@ -98,6 +107,15 @@ C->ITC->IFN->IF->IPN->IP->AF->C
 private:
     const ToolsParameterTypeMap_t& toolsParametersTypeMap;
     const bool removeNewlineAroundParameters = true;
+    // Resets everything except toolCallPositions, which removeToolCallsFromContentIfNeeded()
+    // still needs to consult after generation ends.
+    void resetParsingState() {
+        currentState = State::Content;
+        currentFunction.clear();
+        currentParameterName.clear();
+        streamContent.clear();
+        lastProcessedPosition = 0;
+    }
     State currentState = State::Content;
     Functool currentFunction;
     std::string currentParameterName;
@@ -130,40 +148,30 @@ public:
     static const std::string XML_TAG_END;
 
 private:
-    const ToolsSchemas_t& toolSchemas;  // we need to keep reference as this is not filled in OpenAIApiHandler during ToolParser creation, NOTE that its const here but it can change outside
+    const ToolsSchemas_t& toolSchemas;
     ToolsParameterTypeMap_t toolsParametersTypes;
-    bool filledParametersTypesMap{false};
     // for streaming parsing we need to keep parser as a member
     Qwen3CoderToolParserImpl streamParser;
     int toolCallIndex{-1};
     ToolCalls_t currentToolCalls;
-    rapidjson::Document currentJson;
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
 
 public:
     Qwen3CoderToolParser() = delete;
-    explicit Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas);
-
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> startTags = {TOOL_START_TAG, FUNCTION_NAME_TAG};
-        return startTags;
+    explicit Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt);
+    void resetState() override {
+        streamParser.reset();
+        toolCallIndex = -1;
+        returnedFirstDeltas.clear();
+        returnedCompleteDeltas.clear();
     }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags = {};
-        return specialParsingStartTags;
-    }
-    const std::string& getParsingEndTag() const override {
-        static const std::string EMPTY_STRING = "";
-        return EMPTY_STRING;
-    }
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 
 private:
-    std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
-    std::optional<rapidjson::Document> sendFullDelta(const ToolCalls_t& toolCalls);
-    void lazyFillInitToolParametersTypesMap();
+    std::optional<Delta> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
+    std::optional<Delta> sendFullDelta(const ToolCalls_t& toolCalls);
 };
 }  // namespace ovms
 template <>

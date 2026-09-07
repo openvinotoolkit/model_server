@@ -208,6 +208,40 @@ std::optional<ToolCalls_t> OnyxToolParserImpl::parseChunk(const std::string& chu
     return std::nullopt;
 }
 
+std::optional<ToolCalls_t> OnyxToolParserImpl::finalizeOnGenerationEnd() {
+    if (this->currentState == State::Content ||
+        this->currentState == State::InsideToolCall ||
+        this->currentState == State::InsideFunctionName) {
+        // No usable function name was ever captured -- nothing to recover. Still clear the
+        // dangling partial state so it doesn't look like a call is still in flight.
+        resetParsingState();
+        return std::nullopt;
+    }
+    if (this->currentState == State::InsideParameterName) {
+        // Drop the incomplete parameter name; close the function with whatever was captured before it.
+        this->currentState = State::InsideFunction;
+    }
+    if (this->currentState == State::InsideParameter) {
+        this->streamContent += OnyxToolParser::PARAMETER_END_TAG;
+    }
+    if (this->currentState == State::InsideParameter || this->currentState == State::InsideFunction) {
+        this->streamContent += OnyxToolParser::FUNCTION_END_TAG;
+    }
+    this->streamContent += OnyxToolParser::TOOL_END_TAG;
+
+    ToolCalls_t toolCalls;
+    while (parseUntilStateChange(toolCalls)) {
+    }
+    // Generation has ended: nothing more will ever be parsed from streamContent, so leave the
+    // parser in the same clean state a normal completion would (toolCallPositions is kept --
+    // removeToolCallsFromContentIfNeeded() still needs it afterward).
+    resetParsingState();
+    if (!toolCalls.empty()) {
+        return std::move(toolCalls);
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string> OnyxToolParserImpl::getCurrentFunctionName() const {
     if (this->currentFunction.name.empty()) {
         return std::nullopt;
@@ -245,72 +279,40 @@ Status OnyxToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outCo
     return StatusCode::OK;
 }
 
-OnyxToolParser::OnyxToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
-    BaseOutputParser(tokenizer),
+OnyxToolParser::OnyxToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
+    std::optional<OutputParsingConfig> configOverride) :
+    BaseOutputParser(tokenizer,
+        configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()),
     toolSchemas(toolSchemas),
+    toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
     streamParser(this->toolsParametersTypes) {
+    buildStartTags();
 }
 
-void OnyxToolParser::lazyFillParsingStartTags() const {
-    // toolSchemas is a reference that is empty when this object is constructed and only gets
-    // populated by the caller afterwards, once the current request's tools are known (and may
-    // hold a different tool set on every request if this parser instance is reused). Rebuild
-    // "to=<name>" start tags from whatever toolSchemas currently holds on every call instead of
-    // hardcoding tool names or building the list once too early in the constructor. The schema
-    // map is small, so recomputing this each time is cheap.
-    parsingStartTags.clear();
-    parsingStartTags.push_back(TOOL_START_TAG);
+void OnyxToolParser::buildStartTags() {
+    parsingConfig.startTags.clear();
+    parsingConfig.startTags.push_back(TOOL_START_TAG);
     for (const auto& [name, _] : toolSchemas) {
         if (name == "user" || name == "self") {
-            SPDLOG_DEBUG("Skipping tool name: {} for parsingStartTags", name);
+            SPDLOG_DEBUG("Skipping tool name: {} for start tags", name);
             continue;
         }
-        parsingStartTags.push_back("to=" + name);
+        parsingConfig.startTags.push_back("to=" + name);
     }
 }
 
-void OnyxToolParser::lazyFillInitToolParametersTypesMap() {
-    if (this->filledParametersTypesMap) {
-        return;
-    }
-    this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
-    this->filledParametersTypesMap = true;
-    SPDLOG_DEBUG("OnyxToolParser created with {} tools", this->toolsParametersTypes.size());
-}
-
-void OnyxToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    // Unary is the single-shot edge case of streaming: drive the same streamParser with the
-    // whole content as one chunk (mirrors Qwen3CoderToolParser::parse()).
-    this->lazyFillInitToolParametersTypesMap();
-    auto toolCallsOpt = this->streamParser.parseChunk(parsedOutput.content);
-    if (!toolCallsOpt.has_value()) {
-        SPDLOG_DEBUG("Parsing ended, no tool calls found");
-        return;
-    }
-    parsedOutput.toolCalls = std::move(toolCallsOpt.value());
-    for (const auto& toolCall : parsedOutput.toolCalls) {
-        SPDLOG_DEBUG("Unary | Onyx Tool | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
-    }
-    auto status = this->streamParser.removeToolCallsFromContentIfNeeded(parsedOutput.content);
-    if (!status.ok()) {
-        SPDLOG_DEBUG("Failed to remove tool calls from content: {}", status.string());
-    }
-}
-
-std::optional<rapidjson::Document> OnyxToolParser::sendFirstDeltaIfNeeded(const std::string& functionName) {
+std::optional<Delta> OnyxToolParser::sendFirstDeltaIfNeeded(const std::string& functionName) {
     if (this->returnedFirstDeltas.size() == (this->returnedCompleteDeltas.size() + 1)) {
-        // already sent the first delta for the function currently being read
         SPDLOG_TRACE("Skipping first delta, already sent for current function, returnedFirstDeltas.size(): {} returnedCompleteDeltas.size(): {}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
         return std::nullopt;
     }
     int currentToolCallIndex = ++this->toolCallIndex;
-    rapidjson::Document doc = wrapFirstDelta(functionName, currentToolCallIndex);
     this->returnedFirstDeltas.insert(currentToolCallIndex);
-    SPDLOG_DEBUG("First delta doc: {}", documentToString(doc));
-    return doc;
+    SPDLOG_DEBUG("First delta: name={} index={}", functionName, currentToolCallIndex);
+    return ToolCallDelta{currentToolCallIndex, generateRandomId(), functionName, ""};
 }
 
-std::optional<rapidjson::Document> OnyxToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
+std::optional<Delta> OnyxToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
     // ASSUMPTION (mirrors Qwen3CoderToolParser): in streaming we only ever complete one tool
     // call per parseChunk() -- there is no way to send multiple tool calls in one delta.
     if (toolCalls.size() != 1) {
@@ -319,25 +321,29 @@ std::optional<rapidjson::Document> OnyxToolParser::sendFullDelta(const ToolCalls
     }
     const auto& toolCall = toolCalls[0];
     this->returnedCompleteDeltas.insert(this->toolCallIndex);
-    rapidjson::Document argumentsWrapper;
-    argumentsWrapper.SetObject();
-    rapidjson::Value argumentsValue(toolCall.arguments.c_str(), static_cast<rapidjson::SizeType>(toolCall.arguments.size()), argumentsWrapper.GetAllocator());
     SPDLOG_TRACE("Tool call arguments string: {}", toolCall.arguments);
-    argumentsWrapper.AddMember("arguments", argumentsValue, argumentsWrapper.GetAllocator());
-    auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
-    SPDLOG_DEBUG("Full delta doc: {}", documentToString(currentDelta));
-    return currentDelta;
+    SPDLOG_DEBUG("Full delta: index={} arguments={}", this->toolCallIndex, toolCall.arguments);
+    return ToolCallDelta{this->toolCallIndex, std::nullopt, std::nullopt, toolCall.arguments};
 }
 
-std::optional<rapidjson::Document> OnyxToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> OnyxToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     // streamParser returns assembled toolCalls once a call closes ("</atem:function_calls>");
     // until then, if the function name is already known, send its first delta once.
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));
-    this->lazyFillInitToolParametersTypesMap();
-    if (newChunk.empty()) {
+    if (newChunk.empty() && finishReason == ov::genai::GenerationFinishReason::NONE) {
         return std::nullopt;
     }
-    auto toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    std::optional<ToolCalls_t> toolCallsOpt;
+    if (!newChunk.empty()) {
+        toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    }
+
+    // If no complete tool calls were returned yet and generation has ended, finalize the current
+    // tool call in progress to recover any remaining data (for example if arguments were not closed properly).
+    if (!toolCallsOpt.has_value() && finishReason != ov::genai::GenerationFinishReason::NONE) {
+        toolCallsOpt = this->streamParser.finalizeOnGenerationEnd();
+    }
+
     if (toolCallsOpt.has_value()) {
         return this->sendFullDelta(toolCallsOpt.value());
     }

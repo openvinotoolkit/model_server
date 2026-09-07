@@ -22,6 +22,7 @@
 #include "src/llm/io_processing/base_output_parser.hpp"
 #include "src/llm/io_processing/output_parser.hpp"
 #include "src/llm/io_processing/qwen3coder/qwen3coder_tool_parser.hpp"
+#include "output_parser_test_utils.hpp"
 #include "src/test/platform_utils.hpp"
 
 using namespace ovms;
@@ -103,7 +104,7 @@ protected:
     std::tuple<ov::Tensor, std::vector<int64_t>, ParsedOutput> generateParsedOutput(const std::string& input) {
         auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
+        ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*qwen3Tokenizer, *outputParser, generatedTokens, true, true);
         return {generatedTensor, generatedTokens, parsedOutput};
     }
 };
@@ -197,6 +198,50 @@ value1line2
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1line1\\nvalue1line2\"}");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
+
+// =============================================================================
+// Recovery when generation stops before the tool call's closing tags ever arrive
+// (max_tokens truncation, or the model just omits them). Regression tests for
+// Qwen3CoderToolParserImpl::finalizeOnGenerationEnd().
+// =============================================================================
+TEST_F(Qwen3CoderOutputParserTest, ToolCallRecoveredWhenStoppedMidParameterValue) {
+    std::string input = "<tool_call>\n<function=string_tool>\n<parameter=arg1>val";
+    auto [generatedTensor, generatedTokens, parsedOutput] = generateParsedOutput(input);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"arg1":"val"})");
+}
+
+TEST_F(Qwen3CoderOutputParserTest, ToolCallRecoveredWhenStoppedAfterInnerCloseTag) {
+    // "</function>" seen but not the outer "</tool_call>".
+    std::string input = "<tool_call>\n<function=string_tool>\n<parameter=arg1>value1</parameter>\n</function>\n";
+    auto [generatedTensor, generatedTokens, parsedOutput] = generateParsedOutput(input);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"arg1":"value1"})");
+}
+
+TEST_F(Qwen3CoderOutputParserTest, ToolCallRecoveredWithoutDanglingParameterName) {
+    // Stops mid parameter NAME -- that one incomplete parameter can't be recovered, but the
+    // function name was already known, so the call itself is still recovered without it.
+    std::string input = "<tool_call>\n<function=string_tool>\n<parameter=ar";
+    auto [generatedTensor, generatedTokens, parsedOutput] = generateParsedOutput(input);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{}");
+}
+
+TEST_F(Qwen3CoderOutputParserTest, ToolCallDroppedWhenStoppedBeforeFunctionName) {
+    // Stops before the function name even closes -- no usable data was ever captured.
+    std::string input = "<tool_call>\n<function=string_to";
+    auto [generatedTensor, generatedTokens, parsedOutput] = generateParsedOutput(input);
+
+    EXPECT_TRUE(parsedOutput.toolCalls.empty());
+}
+
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryToolCall) {
     const std::string input = R"(
 <tool_call>
@@ -220,6 +265,20 @@ value1
     EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size());
     EXPECT_EQ(content, "\n");
 }
+
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnterminatedToolCallContentCleanedNotError) {
+    // Truncated mid-parameter-value, no closing tags at all: removeToolCallsFromContentIfNeeded()
+    // must trim the dangling fragment instead of returning INTERNAL_ERROR (begin/end mismatch).
+    std::string input = "<tool_call>\n<function=string_tool>\n<parameter=arg1>val";
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_FALSE(callsOpt.has_value());
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(content.find("<tool_call>"), std::string::npos) << content;
+}
+
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryWithNoToolCall) {
     std::string input = R"(Unexpected void found. Philosophical crisis imminent.)";
     const std::string expectedContent = input;
@@ -755,15 +814,12 @@ if __name__ == "__main__":
             ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":6,"function":{"arguments":"{\"arg1\":\"if __name__ == \\\"__main__\\\":\\n    addresses = {}\\n    addresses[\\\"Hodor\\\"] = \\\"\\\"\\\"The door\\\"\\\"\\\"\\n    addresses[\\\"Arya\\\"] = \\\"Winterfell\\\"\\n    for name, address in addresses.items():\\n        print(f'\\\\n\\\\t{name} lives at {address}\\\\n\\\\r')\"}"}}]}})"}};
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
+        std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
         if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
+            std::string docStr = ovms::test::deltaToJson(*doc);
             // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
             std::string expected = expectedDelta.value();
             std::string idKey = "\"id\":\"";
@@ -796,8 +852,9 @@ if __name__ == "__main__":
                     SPDLOG_TRACE("No arguments to check for delta:\n{}", expectedDelta.value());
                     continue;  // no arguments to check
                 }
-                auto docJsonIt = doc->FindMember("delta");
-                ASSERT_NE(docJsonIt, doc->MemberEnd());
+                rapidjson::Document docJson = ovms::test::deltaToDocument(*doc);
+                auto docJsonIt = docJson.FindMember("delta");
+                ASSERT_NE(docJsonIt, docJson.MemberEnd());
                 auto toolCallsIt = docJsonIt->value.FindMember("tool_calls");
                 ASSERT_NE(toolCallsIt, docJsonIt->value.MemberEnd());
                 for (const auto& toolCall : toolCallsIt->value.GetArray()) {
@@ -807,7 +864,7 @@ if __name__ == "__main__":
                     ASSERT_NE(argumentsIt, functionIt->value.MemberEnd());
                     const std::string& argumentsStr = argumentsIt->value.GetString();
                     rapidjson::Document argsDoc;
-                    argsDoc.Parse(argumentsStr.c_str());  // now check for errors
+                    argsDoc.Parse(argumentsStr.c_str());
                     EXPECT_FALSE(argsDoc.HasParseError()) << "Arguments is not valid JSON for chunk: " << chunk << "\nArguments string:\n"
                                                           << argumentsStr;
                 }
@@ -819,10 +876,7 @@ if __name__ == "__main__":
                                << (expectedDelta.has_value() ? expectedDelta.value() : "EMPTY_DELTA")
                                << "\nGot doc:\n"
                                << (doc.has_value() ? /*convert doc to string*/ [&]() {
-                                      rapidjson::StringBuffer buffer;
-                                      rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                                      doc->Accept(writer);
-                                      return std::string(buffer.GetString());
+                                      return ovms::test::deltaToJson(*doc);
                                   }()
                                                    : "NO_DOC");
             FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;

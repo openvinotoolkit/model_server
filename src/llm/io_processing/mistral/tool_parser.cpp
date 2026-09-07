@@ -28,59 +28,6 @@
 
 namespace ovms {
 
-void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    std::vector<std::string> tools;
-
-    if (parsedOutput.content.empty() || generatedTokens.size() <= 0) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No content to parse for tool calls");
-        return;
-    }
-
-    // Parser will consume entire model output only if the first generated token is the beginning of tools token.
-    if (generatedTokens[0] != this->botTokenId) {
-        if (parsedOutput.content.size() >= 2 && parsedOutput.content[0] == '[' && parsedOutput.content[1] == '{') {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Model output starts with '[{' but begin of tools token is missing. Proceeding with parsing.");
-        } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Begin of tools token or '[{' has not been found in the model output. Exiting parser.");
-            return;
-        }
-    }
-
-    rapidjson::Document toolsDoc;
-    toolsDoc.Parse(parsedOutput.content.c_str());
-
-    if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
-        for (auto& toolVal : toolsDoc.GetArray()) {
-            if (!toolVal.IsObject()) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
-                continue;
-            }
-            ToolCall toolCall;
-            if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
-                toolCall.name = toolVal["name"].GetString();
-            } else {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
-                continue;
-            }
-
-            if (toolVal.HasMember("arguments") && toolVal["arguments"].IsObject()) {
-                rapidjson::StringBuffer sb;
-                rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                toolVal["arguments"].Accept(toolWriter);
-                toolCall.arguments = sb.GetString();
-            } else {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-                continue;
-            }
-            toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-            parsedOutput.toolCalls.push_back(toolCall);
-        }
-        parsedOutput.content.clear();
-    } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
-    }
-}
-
 void MistralToolParser::movePostColonContentToUnprocessedBuffer(std::string& chunk) {
     size_t colonPos = chunk.find(':');
     if (colonPos != std::string::npos) {
@@ -162,7 +109,7 @@ void MistralToolParser::clearState() {
     openBracesCount = 1;  // Reset to 1 as we count the tool call opening brace
 }
 
-std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> MistralToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     Mistral with vLLM template produces tool calls in the format (beginning [TOOL_CALL] is skipped by the mode or just not visible during streaming):
     [{"name": [function name], "arguments": [function arguments as JSON]}, ...]
@@ -180,7 +127,13 @@ std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::stri
     We address this by escaping double quotes and adding opening quote at the beginning of arguments and closing quote at the end of arguments.
     */
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "MistralToolParser::parseChunk called with chunk: '{}', finishReason: {}", chunk, static_cast<int>(finishReason));
-    if (chunk.empty()) {
+    const bool hasPendingState =
+        !unprocessedBuffer.empty() ||
+        (internalState == PROCESSING_TOOL_CALL && lastJson.HasMember("arguments"));
+
+    // Empty chunks are normally ignorable, except finalization calls when we still
+    // have buffered/parser state to flush (e.g. empty STOP chunk from streamer).
+    if (chunk.empty() && !hasPendingState) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for MistralToolParser");
         return std::nullopt;
     }
@@ -199,11 +152,20 @@ std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::stri
 
     // Phase 1: Control the internal state and apply changes to the chunk if needed
     if (internalState == AWAITING_START_TAG) {
-        // We did not see "[{" yet, so we look for it in the current chunk
-        if (modifiedChunk.find(streamingParsingStartTag) != std::string::npos) {
-            // We found "[{", so we switch to the the state where we are waiting for the opening bracket of the array
+        // We did not see a start marker yet; accept either visible [TOOL_CALLS]
+        // token or direct JSON array/object prefix "[{".
+        const std::string visibleStartTag = "[TOOL_CALLS]";
+        if (modifiedChunk.find(visibleStartTag) != std::string::npos || modifiedChunk.find(streamingParsingStartTag) != std::string::npos) {
+            // Start marker found, switch to the state waiting for array opening bracket.
             internalState = AWAITING_TOOL_CALLS_OPENING_BRACKET;
-            // We have more content in the chunk after "[{", so we process the rest of the chunk in the next state
+
+            // If the visible [TOOL_CALLS] token is present, drop it before further processing.
+            size_t visibleStartPos = modifiedChunk.find(visibleStartTag);
+            if (visibleStartPos != std::string::npos) {
+                modifiedChunk.erase(visibleStartPos, visibleStartTag.length());
+            }
+
+            // Continue processing the remaining content in the next state.
             return parseChunk(modifiedChunk, {}, finishReason);
         }
         return std::nullopt;
@@ -250,6 +212,7 @@ std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::stri
             escapeSpecialCharacters(modifiedChunk);
 
             // Keep track of opened/closed braces to identify the end of the tool call object.
+            const size_t openBracesCountBeforeUpdate = openBracesCount;
             updateOpenBracesCount(modifiedChunk);
 
             // When we start collecting arguments, force string type by adding opening quote
@@ -260,7 +223,7 @@ std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::stri
 
             if (finishReason != ov::genai::GenerationFinishReason::NONE) {
                 handleGenerationFinish(modifiedChunk);
-            } else if (openBracesCount == 0) {
+            } else if (openBracesCount == 0 && openBracesCountBeforeUpdate > 0) {
                 // If we balanced the braces, we are at the end of the tool call object
                 handleEndOfToolCall(modifiedChunk);
             }
@@ -280,7 +243,6 @@ std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::stri
             throw std::runtime_error("Generated tool call structure is not valid");
         }
 
-        rapidjson::Document doc;
         // Case 1: 'arguments' has just appeared in the current chunk. If so, we return first delta.
         if (newJson.HasMember("arguments") && !lastJson.HasMember("arguments")) {
             std::string functionName;
@@ -294,9 +256,8 @@ std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::stri
                 throw std::runtime_error("Tool call name is missing in generated output");
             }
             // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":{"name": <functionName>}}]}
-            doc = wrapFirstDelta(functionName, toolCallIndex);
             lastJson.CopyFrom(newJson, lastJson.GetAllocator());
-            return doc;
+            return ToolCallDelta{toolCallIndex, generateRandomId(), functionName, ""};
             // Case 2: 'arguments' already exists in the last JSON, we compute delta and return it.
         } else if (lastJson.HasMember("arguments")) {
             rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
@@ -321,9 +282,11 @@ std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::stri
                 }
             }
 
-            // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":<delta>}]}
-            doc = wrapDelta(delta, toolCallIndex);
-            return doc;
+            // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":{"arguments":"..."}}]}
+            std::string argsStr;
+            if (delta.HasMember("arguments") && delta["arguments"].IsString())
+                argsStr = delta["arguments"].GetString();
+            return ToolCallDelta{toolCallIndex, std::nullopt, std::nullopt, argsStr};
             // Case 3: No 'arguments' exists or just appeared, so we keep building up until we have complete function name
         } else {
             lastJson.CopyFrom(newJson, lastJson.GetAllocator());

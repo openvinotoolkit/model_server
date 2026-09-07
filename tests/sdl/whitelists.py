@@ -148,7 +148,7 @@ libraries = {
         'espeak-ng.dll',
         'git2.dll',
         'libcurl-x64.dll',
-        'opencv_world4130.dll',
+        'opencv_world4140.dll',
         'openvino.dll',
         'openvino_auto_batch_plugin.dll',
         'openvino_auto_plugin.dll',

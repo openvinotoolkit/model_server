@@ -19,8 +19,6 @@
 #include <vector>
 #include <regex>
 
-#include "src/port/rapidjson_document.hpp"
-
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
 #include "tool_parser.hpp"
@@ -29,49 +27,12 @@
 
 namespace ovms {
 
-void GptOssToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    openai::Harmony harmony(tokenizer, generatedTokens);
-    if (!harmony.parse()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Harmony parsing failed");
-        return;
-    }
-
-    // Yes, getContent is called twice, once in reasoning parser and once here, in tool parser.
-    // This is because we have no guarantee that user will use both parsers, they might use only one of them.
-    parsedOutput.content = harmony.getContent();
-    parsedOutput.toolCalls = harmony.getToolCalls();
-    for (const auto& toolCall : parsedOutput.toolCalls) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Tool | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
-    }
-}
-
 /*
     Prepares document with {"arguments": "escaped_chunk"}
     String gets escaped automatically by rapidjson
 */
-std::optional<rapidjson::Document> GptOssToolParser::wrapDeltaIntoDocument(const std::string& chunk) {
-    rapidjson::Document newDelta;
-    newDelta.SetObject();
-    rapidjson::Value argumentsValue;
-    argumentsValue.SetString(chunk.c_str(), static_cast<rapidjson::SizeType>(chunk.size()), newDelta.GetAllocator());
-    newDelta.AddMember("arguments", argumentsValue, newDelta.GetAllocator());
-    rapidjson::Document wrappedDelta;
-    wrappedDelta.SetObject();
-    rapidjson::Value toolCalls(rapidjson::kArrayType);
-    rapidjson::Value toolCallObj(rapidjson::kObjectType);
-    toolCallObj.AddMember("index", toolCallIndex, wrappedDelta.GetAllocator());
-    rapidjson::Value functionObj(rapidjson::kObjectType);
-    for (auto it = newDelta.MemberBegin(); it != newDelta.MemberEnd(); ++it) {
-        rapidjson::Value key(it->name, wrappedDelta.GetAllocator());
-        rapidjson::Value value(it->value, wrappedDelta.GetAllocator());
-        functionObj.AddMember(key, value, wrappedDelta.GetAllocator());
-    }
-    toolCallObj.AddMember("function", functionObj, wrappedDelta.GetAllocator());
-    toolCalls.PushBack(toolCallObj, wrappedDelta.GetAllocator());
-    rapidjson::Value deltaWrapper(rapidjson::kObjectType);
-    deltaWrapper.AddMember("tool_calls", toolCalls, wrappedDelta.GetAllocator());
-    wrappedDelta.AddMember("delta", deltaWrapper, wrappedDelta.GetAllocator());
-    return wrappedDelta;
+std::optional<Delta> GptOssToolParser::wrapDeltaIntoDocument(const std::string& chunk) {
+    return ToolCallDelta{toolCallIndex, std::nullopt, std::nullopt, chunk};
 }
 
 void GptOssToolParser::clearState() {
@@ -80,13 +41,13 @@ void GptOssToolParser::clearState() {
     functionNameCache.clear();
 }
 
-std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> GptOssToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Processing Chunk [{}]", newChunk);
 
     std::string chunk = newChunk;
-    std::optional<rapidjson::Document> result;
+    std::optional<Delta> result;
 
-    for (const auto& parsingStartTag : getParsingStartTags()) {
+    for (const auto& parsingStartTag : parsingConfig.startTags) {
         if (chunk.find(parsingStartTag) != std::string::npos) {
             toolCallIndex++;  // starting with -1, first call will be 0
             return std::nullopt;
@@ -100,7 +61,7 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
         if (streamState == StreamState::READING_CHANNEL) {
             if (functionNameCache.size()) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Function Name [{}]", functionNameCache);
-                result = wrapFirstDelta(functionNameCache, toolCallIndex);
+                result = ToolCallDelta{toolCallIndex, generateRandomId(), functionNameCache, ""};
             }
         } else {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Error: <|constrain|> appearance without previous <|channel|>, ignoring");
@@ -119,7 +80,7 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
         if (streamState == StreamState::READING_CHANNEL) {
             if (functionNameCache.size()) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Function Name [{}]", functionNameCache);
-                result = wrapFirstDelta(functionNameCache, toolCallIndex);
+                result = ToolCallDelta{toolCallIndex, generateRandomId(), functionNameCache, ""};
             }
         }
 
@@ -218,5 +179,4 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
 
 const std::string GptOssToolParser::parsingStartTag = "<|channel|>commentary to=";
 const std::string GptOssToolParser::parsingEndTag = "<|call|>";
-
 }  // namespace ovms
