@@ -38,9 +38,6 @@ pipeline {
     agent {
       label 'ovmsbuilder'
     }
-    environment {
-      TOKEN = credentials('github-ovms-jenkins')
-    }
     options {
       timeout(time: 4, unit: 'HOURS')
     }
@@ -56,7 +53,6 @@ pipeline {
               println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
               agent_name_linux = env.NODE_NAME
               println "Running on NODE = ${env.NODE_NAME}"
-              println "Using TOKEN = ${env.TOKEN}"
             }
             script {
               shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
@@ -235,21 +231,16 @@ pipeline {
                     sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                     sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                     sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
-                    withCredentials([string(credentialsId: 'github-ovms-jenkins', variable: 'TOKEN')]) {
-                      sh 'printf "%s" "$TOKEN" > .github_token'
-                      try {
-                        sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                    withCredentials([usernamePassword(credentialsId: 'github-ovms-jenkins', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
+                      sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
 
-                        // release_image
-                        sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
-                        sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                        if ( test_doc_files_linux ) {
-                            sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
-                            stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
-                            sh "rm -f ovms_release_image.tar.gz"
-                        }
-                      } finally {
-                        sh 'rm -f .github_token'
+                      // release_image
+                      sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                      if ( test_doc_files_linux ) {
+                          sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
+                          stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
+                          sh "rm -f ovms_release_image.tar.gz"
                       }
                     }
                   }
