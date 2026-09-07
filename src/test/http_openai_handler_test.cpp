@@ -1313,7 +1313,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsO
     ASSERT_NE(serialized.find("\"text\":"), std::string::npos) << serialized;
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesEchoesTextFormat) {
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesTextFormat) {
     std::string json = R"({
         "model": "llama",
         "input": "Say hello world",

@@ -16,6 +16,7 @@
 
 #include "openai_responses.hpp"
 
+#include <cassert>
 #include <cmath>
 #include <limits>
 #include <memory>
@@ -502,14 +503,14 @@ public:
     explicit ChatHistorySink(ov::genai::ChatHistory& chatHistory) :
         chatHistory(chatHistory) {
         scratchDoc.SetObject();
-        pendingContentArray.SetArray();
+        currentContentArray.SetArray();
     }
 
     absl::Status extractContent(const rapidjson::Value::ConstObject& itemObj,
         rapidjson::SizeType /*index*/, std::string& outText) {
         outText.clear();
-        hasPendingContent = false;
-        pendingContentArray.SetArray();
+        hasCurrentContentArray = false;
+        currentContentArray.SetArray();
         auto contentIt = itemObj.FindMember("content");
         if (contentIt == itemObj.MemberEnd())
             return absl::InvalidArgumentError("input item is missing required content field");
@@ -539,7 +540,7 @@ public:
                 rapidjson::Value textEntry(rapidjson::kObjectType);
                 textEntry.AddMember("type", rapidjson::Value("text", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
                 textEntry.AddMember("text", rapidjson::Value(textIt->value.GetString(), scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
-                pendingContentArray.PushBack(textEntry, scratchDoc.GetAllocator());
+                currentContentArray.PushBack(textEntry, scratchDoc.GetAllocator());
             } else if (type == "input_image") {
                 auto status = buildImageEntry(contentObj);
                 if (!status.ok())
@@ -554,19 +555,19 @@ public:
         }
         // Preserve content array for downstream processors
         // (ImageDecodingProcessor for VLM, TextContentNormalizationProcessor for LM).
-        hasPendingContent = true;
+        hasCurrentContentArray = true;
         return absl::OkStatus();
     }
 
     // Extract the `output` field of a function_call_output item into either a
-    // plain string or a text-typed content array preserved in pendingContentArray.
+    // plain string or a text-typed content array preserved in currentContentArray.
     // The text-typed array is left for TextContentNormalizationProcessor to flatten,
     // matching how extractContent handles user/system input content arrays.
     absl::Status extractToolOutput(const rapidjson::Value::ConstObject& itemObj,
         std::string& outText) {
         outText.clear();
-        hasPendingContent = false;
-        pendingContentArray.SetArray();
+        hasCurrentContentArray = false;
+        currentContentArray.SetArray();
         auto outputIt = itemObj.FindMember("output");
         if (outputIt == itemObj.MemberEnd())
             return absl::InvalidArgumentError("function_call_output item is missing required output field");
@@ -594,9 +595,9 @@ public:
             rapidjson::Value textEntry(rapidjson::kObjectType);
             textEntry.AddMember("type", rapidjson::Value("text", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
             textEntry.AddMember("text", rapidjson::Value(textIt->value.GetString(), scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
-            pendingContentArray.PushBack(textEntry, scratchDoc.GetAllocator());
+            currentContentArray.PushBack(textEntry, scratchDoc.GetAllocator());
         }
-        hasPendingContent = true;
+        hasCurrentContentArray = true;
         return absl::OkStatus();
     }
 
@@ -605,26 +606,13 @@ public:
         chatHistory.last()["role"] = "tool";
         if (!callId.empty())
             chatHistory.last()["tool_call_id"] = callId;
-        if (hasPendingContent) {
-            // Preserve content array for TextContentNormalizationProcessor to flatten.
-            chatHistory.last()["content"] = rapidJsonValueToJsonContainer(pendingContentArray);
-            hasPendingContent = false;
-        } else {
-            chatHistory.last()["content"] = output;
-        }
+        setLastMessageContent(output);
     }
 
     void emitMessage(const std::string& role, const std::string& contentText, const std::string& reasoning) {
         chatHistory.push_back({});
         chatHistory.last()["role"] = role;
-        if (hasPendingContent) {
-            // Preserve the content array for ImageDecodingProcessor (VLM) or
-            // TextContentNormalizationProcessor (LM).
-            chatHistory.last()["content"] = rapidJsonValueToJsonContainer(pendingContentArray);
-            hasPendingContent = false;
-        } else {
-            chatHistory.last()["content"] = contentText;
-        }
+        setLastMessageContent(contentText);
         if (!reasoning.empty())
             chatHistory.last()["reasoning_content"] = reasoning;
     }
@@ -633,12 +621,7 @@ public:
         const std::vector<const rapidjson::Value*>& toolCalls) {
         chatHistory.push_back({});
         chatHistory.last()["role"] = "assistant";
-        if (hasPendingContent) {
-            chatHistory.last()["content"] = rapidJsonValueToJsonContainer(pendingContentArray);
-            hasPendingContent = false;
-        } else {
-            chatHistory.last()["content"] = contentText;
-        }
+        setLastMessageContent(contentText);
         if (!reasoning.empty())
             chatHistory.last()["reasoning_content"] = reasoning;
         auto& alloc = scratchDoc.GetAllocator();
@@ -664,8 +647,20 @@ public:
     }
 
 private:
+    void setLastMessageContent(const std::string& contentText) {
+        if (hasCurrentContentArray) {
+            // currentContentArray is built from the current item's content/output
+            // when the source shape is an array, so the plain-text path must be empty.
+            assert(contentText.empty());
+            chatHistory.last()["content"] = rapidJsonValueToJsonContainer(currentContentArray);
+            hasCurrentContentArray = false;
+            return;
+        }
+        chatHistory.last()["content"] = contentText;
+    }
+
     // Append a {"type":"image_url","image_url":{"url":"..."}} entry to
-    // pendingContentArray. Actual image decoding is deferred to
+    // currentContentArray. Actual image decoding is deferred to
     // ImageDecodingProcessor; the URL is preserved so it can locate the image later.
     absl::Status buildImageEntry(const rapidjson::Value::ConstObject& contentObj) {
         auto imageUrlIt = contentObj.FindMember("image_url");
@@ -690,12 +685,12 @@ private:
         rapidjson::Value entry(rapidjson::kObjectType);
         entry.AddMember("type", rapidjson::Value("image_url", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
         entry.AddMember("image_url", imageUrlObj, scratchDoc.GetAllocator());
-        pendingContentArray.PushBack(entry, scratchDoc.GetAllocator());
+        currentContentArray.PushBack(entry, scratchDoc.GetAllocator());
         return absl::OkStatus();
     }
 
     // Append a {"type":"input_audio","input_audio":{"data":"..."}} entry to
-    // pendingContentArray. Actual audio decoding is deferred to AudioDecodingProcessor.
+    // currentContentArray. Actual audio decoding is deferred to AudioDecodingProcessor.
     absl::Status buildAudioEntry(const rapidjson::Value::ConstObject& contentObj) {
         auto inputAudioIt = contentObj.FindMember("input_audio");
         if (inputAudioIt == contentObj.MemberEnd() || !inputAudioIt->value.IsObject())
@@ -717,14 +712,14 @@ private:
         rapidjson::Value entry(rapidjson::kObjectType);
         entry.AddMember("type", rapidjson::Value("input_audio", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
         entry.AddMember("input_audio", audioDataObj, scratchDoc.GetAllocator());
-        pendingContentArray.PushBack(entry, scratchDoc.GetAllocator());
+        currentContentArray.PushBack(entry, scratchDoc.GetAllocator());
         return absl::OkStatus();
     }
 
     ov::genai::ChatHistory& chatHistory;
     rapidjson::Document scratchDoc;
-    rapidjson::Value pendingContentArray{rapidjson::kArrayType};
-    bool hasPendingContent = false;
+    rapidjson::Value currentContentArray{rapidjson::kArrayType};
+    bool hasCurrentContentArray = false;
 };
 
 // --- Request parsing ---
