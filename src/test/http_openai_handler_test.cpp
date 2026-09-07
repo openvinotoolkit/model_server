@@ -4259,6 +4259,37 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputAsTextArrayPasse
         })");
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputArrayPreservesToolMessageContent) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": [
+                {"type": "input_text", "text": "part1"},
+                {"type": "output_text", "text": "part2"}
+            ]}
+        ]
+    })";
+
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    ASSERT_NE(apiHandler, nullptr);
+
+    const auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 3u);
+    EXPECT_EQ(chatHistory[2]["role"].as_string().value_or(""), "tool");
+    EXPECT_EQ(chatHistory[2]["tool_call_id"].as_string().value_or(""), "call_1");
+
+    auto content = chatHistory[2]["content"];
+    ASSERT_TRUE(content.is_array());
+    ASSERT_EQ(content.size(), 2u);
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[0]["text"].as_string().value_or(""), "part1");
+    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[1]["text"].as_string().value_or(""), "part2");
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningPlusFunctionCallRidesOnAssistant) {
     // reasoning + function_call should both attach to the synthesised assistant
     // turn that owns the tool_calls.

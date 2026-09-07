@@ -16,7 +16,6 @@
 
 #include "openai_responses.hpp"
 
-#include <cassert>
 #include <cmath>
 #include <limits>
 #include <memory>
@@ -649,9 +648,6 @@ public:
 private:
     void setLastMessageContent(const std::string& contentText) {
         if (hasCurrentContentArray) {
-            // currentContentArray is built from the current item's content/output
-            // when the source shape is an array, so the plain-text path must be empty.
-            assert(contentText.empty());
             chatHistory.last()["content"] = rapidJsonValueToJsonContainer(currentContentArray);
             hasCurrentContentArray = false;
             return;
