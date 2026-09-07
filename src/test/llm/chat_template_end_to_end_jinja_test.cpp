@@ -374,7 +374,6 @@ celsius
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
-
 // =============================================================================
 // Chat template taken from Ovms extras, original chat template does not render tools at all.
 // Model does not need str2obj workaround.
