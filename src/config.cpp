@@ -432,6 +432,7 @@ const std::string& Config::tracePath() const { return this->serverSettings.trace
 const std::string& Config::grpcChannelArguments() const { return this->serverSettings.grpcChannelArguments; }
 uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
 uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
+bool Config::disableInputCountValidation() const { return this->serverSettings.disableInputCountValidation; }
 bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
 const std::string& Config::allowedOrigins() const { return this->serverSettings.allowedOrigins; }
 const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }
