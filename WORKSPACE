@@ -585,6 +585,7 @@ http_archive(
     sha256 = "d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d",
     strip_prefix = "json",
     url = "https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz",
+    build_file = "@//third_party/nlohmann_json:BUILD",
 )
 # for rest client in unit tests (server_test.cpp)
 git_repository(

@@ -59,8 +59,10 @@ current_working_dir=$(pwd)
 cd $work_dir
 rm -rf $opencv_branch $work_dir/opencv_repo
 rm -rf $opencv_branch $work_dir/opencv_contrib_repo
-git clone https://github.com/opencv/opencv.git --depth 1 -b $opencv_branch $work_dir/opencv_repo
-git clone https://github.com/opencv/opencv_contrib.git --depth 1 -b $opencv_branch $work_dir/opencv_contrib_repo
+curl -fLsS https://github.com/opencv/opencv/archive/refs/tags/${opencv_branch}.tar.gz | tar -xz
+mv ${opencv_branch} $work_dir/opencv_repo
+curl -fLsS https://github.com/opencv/opencv_contrib/archive/refs/tags/${opencv_branch}.tar.gz | tar -xz
+mv ${opencv_branch} $work_dir/opencv_contrib_repo
 cd $work_dir/opencv_repo
 mkdir -p $work_dir/opencv_repo/build
 cd $work_dir/opencv_repo/build
