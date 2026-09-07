@@ -135,6 +135,7 @@ struct EmbeddingsGraphSettingsImpl {
     std::string normalize = "true";
     std::string truncate = "false";
     std::optional<std::string> pooling;
+    std::optional<uint32_t> maxLength;
 };
 
 struct TextToSpeechGraphSettingsImpl {
@@ -232,6 +233,7 @@ struct ServerSettingsImpl {
     std::string logLevel = "INFO";
     std::string logPath;
     bool verboseResponse = false;
+    bool disableInputCountValidation = false;
     bool allowCredentials = false;
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};

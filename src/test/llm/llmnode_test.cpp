@@ -5953,13 +5953,15 @@ TEST(BaseGenerationConfigBuilderTest, FastDraftConfidenceThresholdAloneIsValid) 
     EXPECT_FALSE(builder.getConfig().num_assistant_tokens.has_value());
 }
 
-TEST(BaseGenerationConfigBuilderTest, FastDraftSamplingThrows) {
+TEST(BaseGenerationConfigBuilderTest, FastDraftSamplingForcedToGreedy) {
     ov::genai::GenerationConfig baseConfig;
     BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
     OpenAIRequest request;
     request.temperature = 0.7f;
     builder.parseConfigFromRequest(request);
-    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
 }
 
 TEST(BaseGenerationConfigBuilderTest, FastDraftGreedyWithoutMaxTokensIsValid) {
@@ -5969,6 +5971,132 @@ TEST(BaseGenerationConfigBuilderTest, FastDraftGreedyWithoutMaxTokensIsValid) {
     request.temperature = 0.0f;
     builder.parseConfigFromRequest(request);
     EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashDefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashAssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashSamplingForcedToGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 0.7f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashEnforcesGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.bestOf = 2;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashDefaultsMaxNewTokensWhenUnset) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().max_new_tokens, 1000000u);
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpDefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpAssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpSamplingForcedToGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 0.7f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpEnforcesGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.bestOf = 2;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpDefaultsMaxNewTokensWhenUnset) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().max_new_tokens, 1000000u);
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
 }
 
 TEST(BaseGenerationConfigBuilderTest, PromptLookupDefaultsApplied) {

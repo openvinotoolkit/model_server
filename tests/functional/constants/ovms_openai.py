@@ -292,7 +292,7 @@ class OvmsOpenAIRequestParamsBuilder:
             kwargs["max_output_tokens"] = kwargs.pop("max_tokens", None)
             self.request_params = OvmsResponsesRequestParams(**kwargs)
         elif self.endpoint == OpenAIWrapper.EMBEDDINGS:
-            self.request_params = OvmsEmbeddingsRequestParams()
+            self.request_params = OvmsEmbeddingsRequestParams(**kwargs)
         elif self.endpoint == OpenAIWrapper.IMAGES_GENERATIONS:
             self.request_params = OvmsImagesGenerationsRequestParams(**kwargs)
         elif self.endpoint == OpenAIWrapper.IMAGES_EDITS:
@@ -302,10 +302,10 @@ class OvmsOpenAIRequestParamsBuilder:
         elif self.endpoint == OpenAIWrapper.MODELS_RETRIEVE:
             self.request_params = OpenAIRequestParams()     # no request parameters available
         elif self.endpoint == OpenAIWrapper.AUDIO_TRANSCRIPTIONS:
-            self.request_params = OvmsAudioTranscriptionsRequestParams()
+            self.request_params = OvmsAudioTranscriptionsRequestParams(**kwargs)
         elif self.endpoint == OpenAIWrapper.AUDIO_TRANSLATIONS:
-            self.request_params = OvmsAudioTranslationsRequestParams()
+            self.request_params = OvmsAudioTranslationsRequestParams(**kwargs)
         elif self.endpoint == OpenAIWrapper.AUDIO_SPEECH:
-            self.request_params = OvmsAudioSpeechRequestParams()
+            self.request_params = OvmsAudioSpeechRequestParams(**kwargs)
         else:
             raise NotImplementedError
