@@ -197,8 +197,10 @@ http_archive(
 # Node dependencies
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "5aae76dced38f784b58d9776e4ab12278bc156a9ed2b1d9fcd3e39921dc88fda",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.7.1/rules_nodejs-5.7.1.tar.gz"],
+    sha256 = "d3476f6dc146766d3f35aa8aa39e65df6467ed7dc8dfdcabf9b7cad464516cd5",
+    strip_prefix = "rules_nodejs-5.7.1",
+    type = "tar.gz",
+    urls = ["https://codeload.github.com/bazelbuild/rules_nodejs/tar.gz/refs/tags/5.7.1"],
 )
 
 load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
@@ -582,10 +584,10 @@ new_local_repository(
 
 http_archive(
     name = "nlohmann_json",
-    sha256 = "d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d",
-    strip_prefix = "json",
-    url = "https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz",
-    build_file = "@//third_party/nlohmann_json:BUILD",
+    sha256 = "0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406",
+    strip_prefix = "json-3.11.3",
+    type = "tar.gz",
+    url = "https://codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.11.3",
 )
 # for rest client in unit tests (server_test.cpp)
 git_repository(
