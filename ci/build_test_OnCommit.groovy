@@ -38,6 +38,9 @@ pipeline {
     agent {
       label 'ovmsbuilder'
     }
+    environment {
+      TOKEN = credentials('github-ovms-jenkins')
+    }
     options {
       timeout(time: 4, unit: 'HOURS')
     }
