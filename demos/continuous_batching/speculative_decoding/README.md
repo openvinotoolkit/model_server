@@ -133,7 +133,7 @@ both in INT4 precision.
 ## Model preparation
 
 Python environment setup:
-```bat
+```text
 # Install regular requirements for OVMS export script
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
@@ -143,10 +143,6 @@ mkdir models
 
 Run `export_model.py` script to download and quantize the model:
 
-```bat
-python export_model.py text_generation --model_repository_path c:\models --source_model Qwen/Qwen3-8B --draft_source_model AngelSlim/Qwen3-8B_eagle3 --draft_eagle3_mode --weight-format int4
-```
-or
 ```text
 python export_model.py text_generation --model_repository_path ${HOME}/models --source_model Qwen/Qwen3-8B --draft_source_model AngelSlim/Qwen3-8B_eagle3 --draft_eagle3_mode --weight-format int4
 ```
@@ -201,7 +197,7 @@ docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/
 
 Install OVMS as described in the [deployment guide](../../../docs/deploying_server_baremetal.md).
 
-```bat
+```text
 ovms --rest_port 8000 --model_path c:\models\Qwen\Qwen3-8B --model_name Qwen/Qwen3-8B
 ```
 :::
@@ -211,7 +207,7 @@ ovms --rest_port 8000 --model_path c:\models\Qwen\Qwen3-8B --model_name Qwen/Qwe
 
 Send `num_assistant_tokens` to control how many candidates the draft head proposes per target step:
 
-```python
+```text
 from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
@@ -234,7 +230,7 @@ Setting `num_assistant_tokens: 0` disables drafting for that request; only the t
 
 Tree drafting adds two `GenerationConfig` fields. Setting `tree_depth > 0` switches from chain to tree mode:
 
-```python
+```text
 from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
