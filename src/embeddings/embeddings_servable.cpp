@@ -371,8 +371,13 @@ void reshapeModel(std::shared_ptr<Model>& model,
 
 std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& core, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
     if (this->configuredMaxLength.has_value()) {
-        SPDLOG_DEBUG("Overriding detected max model length {} with configured value {}", this->maxModelLength.value_or(0), this->configuredMaxLength.value());
-        this->maxModelLength = this->configuredMaxLength;
+        if (this->maxModelLength.has_value() && this->configuredMaxLength.value() > this->maxModelLength.value()) {
+            SPDLOG_ERROR("Configured max length {} is greater than detected max model length {}", this->configuredMaxLength.value(), this->maxModelLength.value());
+            OPENVINO_THROW("Configured max length is greater than detected max model length");
+        } else {
+            SPDLOG_DEBUG("Overriding detected max model length {} with configured value {}", this->maxModelLength.value_or(0), this->configuredMaxLength.value());
+            this->maxModelLength = this->configuredMaxLength;
+        }
     }
     if (this->targetDevice == "NPU" && model->is_dynamic()) {
         TextEmbeddingPipeline::Config config;
