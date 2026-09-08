@@ -17,7 +17,6 @@
 
 #include <map>
 #include <memory>
-#include <set>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -40,6 +39,7 @@ class MediapipeFactory {
     std::map<std::string, std::string> loraAliases;  // alias -> real graph definition name
     mutable std::shared_mutex definitionsMtx;
     PythonBackend* pythonBackend{nullptr};
+    void registerLoraAliasesForUnlocked(const std::string& graphName);
 
 public:
     MediapipeFactory() = delete;
@@ -47,7 +47,8 @@ public:
     Status createDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
         MetricProvider& metrics,
-        const ServableNameChecker& checker);
+        const ServableNameChecker& checker,
+        bool lazyLoad = false);
 
     bool definitionExists(const std::string& name) const;
 
@@ -56,14 +57,16 @@ public:
         const std::string& name) const;
 
     MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;
-    void registerLoraAlias(const std::string& alias, const std::string& graphName);
+    void registerLoraAliasesFor(const std::string& graphName);
     void clearLoraAliases(const std::string& graphName);
     bool aliasesConflictExcluding(const std::vector<std::string>& aliases, const std::string& ownGraphName) const;
     Status reloadDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
         const ServableNameChecker& checker);
 
-    void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile);
+    [[nodiscard]] Status wakeUpDefinition(const std::string& pipelineName, const ServableNameChecker& checker);
+    [[nodiscard]] Status putToSleepDefinition(const std::string& pipelineName);
+    Status retireDefinition(const std::string& pipelineName);
     Status revalidatePipelines();
     const std::vector<std::string> getMediapipePipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;

@@ -213,6 +213,9 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME, "Subsequent request with incorrect servable name"},
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION, "Subsequent request with incorrect servable version"},
     {StatusCode::MEDIAPIPE_PRECONDITION_FAILED, "Mediapipe graph precondition failed"},
+    {StatusCode::MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE, "Cannot put mediapipe graph to sleep: state is not AVAILABLE"},
+    {StatusCode::MEDIAPIPE_PUT_TO_SLEEP_REQUESTS_IN_FLIGHT, "Cannot put mediapipe graph to sleep: requests are in flight"},
+    {StatusCode::MEDIAPIPE_PUT_TO_SLEEP_ACTIVE_INFERENCES, "Cannot put mediapipe graph to sleep: active inferences in progress"},
 
     // Python Nodes
     {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node name is already present in nodes list"},
@@ -318,6 +321,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
     {StatusCode::NONEXISTENT_PTR, "Tried to use nonexisting pointer"},
     {StatusCode::SERVER_NOT_READY, "Server is not ready"},
+    {StatusCode::SERVER_SHUTTING_DOWN, "Server is shutting down"},
 
     // Server Start errors
     {StatusCode::OPTIONS_USAGE_ERROR, "options validation error"},
@@ -346,5 +350,8 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::DEVICE_WRONG_FORMAT, "Device is in wrong format"},
     {StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED, "Shape is dynamic but NPU is used"},
     {StatusCode::STATIC_RESOLUTION_MISUSE, "Wrong usage of static resolution"},
+
+    {StatusCode::GROUP_LOAD_FAILED, "Model group failed to load"},
+    {StatusCode::GROUP_UNLOAD_BLOCKED, "Cannot unload model group due to active requests"},
 };
 }  // namespace ovms

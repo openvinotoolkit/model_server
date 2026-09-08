@@ -30,7 +30,7 @@
 #include "../capi_frontend/inferenceparameter.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../network_utils.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../tensorinfo.hpp"
 

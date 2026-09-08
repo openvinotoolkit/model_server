@@ -370,6 +370,10 @@ void reshapeModel(std::shared_ptr<Model>& model,
 // End code from OpenVINO GenAI repository
 
 std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(ov::Core& core, std::shared_ptr<ov::Model> model, ov::AnyMap& properties) {
+    if (this->configuredMaxLength.has_value()) {
+        SPDLOG_DEBUG("Overriding detected max model length {} with configured value {}", this->maxModelLength.value_or(0), this->configuredMaxLength.value());
+        this->maxModelLength = this->configuredMaxLength;
+    }
     if (this->targetDevice == "NPU" && model->is_dynamic()) {
         TextEmbeddingPipeline::Config config;
         switch (this->pooling) {

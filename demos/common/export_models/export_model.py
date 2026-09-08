@@ -64,6 +64,7 @@ parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='stor
 parser_embeddings_ov.add_argument('--pooling', default="CLS", choices=["CLS", "LAST", "MEAN"], help='Embeddings pooling mode', dest='pooling')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_embeddings_ov.add_argument('--max_length', default=None, type=int, help='Maximum length of the embeddings input', dest='max_length')
 
 parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_rerank_ov)
@@ -187,6 +188,8 @@ node {
       {%- if truncate %}
       truncate: true,{% endif %}
       target_device: "{{target_device|default("CPU", true)}}"
+      {%- if max_length is not none %}
+      max_length: {{max_length}},{% endif %}
     }
   }
 }
@@ -539,7 +542,7 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting speech2text model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export speech2text model", source_model)

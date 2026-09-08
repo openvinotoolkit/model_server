@@ -41,6 +41,7 @@ extern const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME;
 
 // MediaPipe
 extern const std::string METRIC_NAME_CURRENT_GRAPHS;
+extern const std::string METRIC_NAME_GRAPH_LOADED;
 extern const std::string METRIC_NAME_RESPONSES;
 
 extern const std::string METRIC_NAME_REQUESTS_ACCEPTED;
@@ -100,6 +101,7 @@ private:
         {METRIC_NAME_INFERENCE_TIME},
         {METRIC_NAME_WAIT_FOR_INFER_REQ_TIME},
         {METRIC_NAME_CURRENT_GRAPHS},
+        {METRIC_NAME_GRAPH_LOADED},
         {METRIC_NAME_REQUESTS_ACCEPTED},
         {METRIC_NAME_REQUESTS_REJECTED},
         {METRIC_NAME_GRAPH_ERROR},
