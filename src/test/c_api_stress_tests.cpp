@@ -31,7 +31,7 @@
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"

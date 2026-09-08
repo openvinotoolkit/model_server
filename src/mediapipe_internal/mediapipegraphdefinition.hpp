@@ -14,8 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <atomic>
+#include <chrono>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -24,6 +27,7 @@
 
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "src/metrics/metric.hpp"
+#include "src/time_utils.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../single_version_servable_definition.hpp"
 #include "../tensorinfo_fwd.hpp"
@@ -56,7 +60,8 @@ public:
         const MediapipeGraphConfig& config = MGC,
         MetricRegistry* registry = nullptr,
         const MetricConfig* metricConfig = nullptr,
-        PythonBackend* pythonBackend = nullptr);
+        PythonBackend* pythonBackend = nullptr,
+        bool lazyLoad = false);
 
     const PipelineDefinitionStatus& getStatus() const override {
         return this->status;
@@ -77,6 +82,23 @@ public:
     void retire();
     Status initializeNodes();
     bool isReloadRequired(const MediapipeGraphConfig& config) const;
+
+    // Idle unload feature
+    Status putToSleep();
+    Status wakeUpIfSleeping(const ServableNameChecker& checker);
+    bool isIdleUnloadEnabled() const;
+    bool shouldUnloadDueToIdle() const;
+
+    // Record inference activity. Defaults to now; tests pass an explicit timestamp.
+    void recordActivity(int64_t timestampNs = nanosSinceEpochStart()) {
+        lastActivityTimeNs->store(timestampNs, std::memory_order_relaxed);
+    }
+
+    // Returns the shared active-inference counter so create() can hand it to the executor.
+    // Not exposed in tests directly — use shouldUnloadDueToIdle() to observe the effect.
+    const std::shared_ptr<std::atomic<int64_t>>& getActiveInferenceCount() const {
+        return activeInferenceCount;
+    }
 
     static const std::string SCHEDULER_CLASS_NAME;
 
@@ -132,6 +154,7 @@ protected:
 private:
     StatusCode notLoadedYetCode() const override;
     StatusCode notLoadedAnymoreCode() const override;
+    void unloadComponentsAfterPendingExecutorsAreCreated();
 
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
@@ -149,5 +172,41 @@ private:
 
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
     std::shared_ptr<GraphQueue> queue;
+
+    // Idle unload: timestamp (nanoseconds from steady_clock epoch) of the last
+    // inference activity. Updated in create() on every inference acquisition and
+    // when an in-flight inference finishes (via ActiveInferenceGuard destructor).
+    // Held as shared_ptr so executors can safely write to it even after the
+    // definition is retired/destroyed — the atomic outlives the definition.
+    std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs;
+
+    // Count of inferences currently executing on this graph. Incremented when a
+    // MediapipeGraphExecutor is created (in create()) via the executor's RAII
+    // ActiveInferenceGuard, and decremented when that executor is destroyed (after
+    // the caller finishes infer()/inferStream()). The count is therefore held for
+    // the executor's lifetime, which spans the inference. A non-zero value prevents
+    // shouldUnloadDueToIdle()/unload() from tearing down the definition.
+    // Shared_ptr so MediapipeGraphExecutor can hold a copy safely beyond the
+    // create() call — the executor owns the counter reference for its lifetime.
+    std::shared_ptr<std::atomic<int64_t>> activeInferenceCount;
+
+    // Cached copy of mgconfig.getIdleUnloadTimeoutSeconds() so the watcher thread can
+    // read it lock-free. mgconfig itself is only safe to read under lifecycleMtx
+    // (reload() reassigns it). Updated in the constructor and in reload() (under the
+    // lock) whenever mgconfig is assigned.
+    std::atomic<int64_t> idleUnloadTimeoutSecondsCache{0};
+
+    // TODO FIXME (@atobiszei): revisit whether lifecycleMtx is still needed
+    // now that ServableLoadingQueue serializes task dispatch.
+    // Serializes ALL per-definition lifecycle mutations (reload/retire/unload/wakeUp)
+    // so they are mutually exclusive regardless of which thread runs them or which
+    // outer lock (ModelManager::configMtx) is held by the caller. This is required
+    // because unload() runs on the watcher thread (no configMtx) while reload()/retire()
+    // run on the config thread (under configMtx) and they mutate the same per-definition
+    // state (this->status variant, this->sidePacketMaps).
+    // Recursive because wakeUpIfSleeping() holds it and calls reload(), which also takes it.
+    // Lock ordering is one-directional: configMtx -> lifecycleMtx. Nothing here ever
+    // acquires configMtx, so no deadlock is possible.
+    mutable std::recursive_mutex lifecycleMtx;
 };
 }  // namespace ovms
