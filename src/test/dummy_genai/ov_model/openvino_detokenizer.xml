@@ -1,0 +1,222 @@
+<?xml version="1.0"?>
+<net name="detokenizer" version="11">
+	<layers>
+		<layer id="0" name="Parameter_12371" type="Parameter" version="opset1">
+			<data shape="?,?" element_type="i64" />
+			<output>
+				<port id="0" precision="I64" names="Parameter_12371">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="1" name="Convert_12406" type="Convert" version="opset1">
+			<data destination_type="i32" />
+			<input>
+				<port id="0" precision="I64">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+			</input>
+			<output>
+				<port id="1" precision="I32">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="2" name="Constant_12373" type="Const" version="opset1">
+			<data element_type="i32" shape="50257" offset="0" size="201028" />
+			<output>
+				<port id="0" precision="I32">
+					<dim>50257</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="3" name="Constant_12375" type="Const" version="opset1">
+			<data element_type="i32" shape="50257" offset="201028" size="201028" />
+			<output>
+				<port id="0" precision="I32">
+					<dim>50257</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="4" name="Constant_12377" type="Const" version="opset1">
+			<data element_type="u8" shape="320827" offset="402056" size="320827" />
+			<output>
+				<port id="0" precision="U8">
+					<dim>320827</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="5" name="Slice_12382" type="Const" version="opset1">
+			<data element_type="i32" shape="1" offset="722883" size="4" />
+			<output>
+				<port id="0" precision="I32">
+					<dim>1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="6" name="VocabDecoder_12384" type="VocabDecoder" version="extension">
+			<data skip_tokens="" />
+			<input>
+				<port id="0" precision="I32">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+				<port id="1" precision="I32">
+					<dim>50257</dim>
+				</port>
+				<port id="2" precision="I32">
+					<dim>50257</dim>
+				</port>
+				<port id="3" precision="U8">
+					<dim>320827</dim>
+				</port>
+				<port id="4" precision="I32">
+					<dim>1</dim>
+				</port>
+			</input>
+			<output>
+				<port id="5" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="6" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="7" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="8" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="9" precision="U8">
+					<dim>-1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="7" name="FuzeRagged_12385" type="FuzeRagged" version="extension">
+			<input>
+				<port id="0" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="1" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="2" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="3" precision="I32">
+					<dim>-1</dim>
+				</port>
+			</input>
+			<output>
+				<port id="4" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="5" precision="I32">
+					<dim>-1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="8" name="UTF8Validate_12386" type="UTF8Validate" version="extension">
+			<data replace_mode="true" />
+			<input>
+				<port id="0" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="1" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="2" precision="U8">
+					<dim>-1</dim>
+				</port>
+			</input>
+			<output>
+				<port id="3" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="4" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="5" precision="U8">
+					<dim>-1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="9" name="StringTensorPack_12387" type="StringTensorPack" version="opset15">
+			<input>
+				<port id="0" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="1" precision="I32">
+					<dim>-1</dim>
+				</port>
+				<port id="2" precision="U8">
+					<dim>-1</dim>
+				</port>
+			</input>
+			<output>
+				<port id="3" precision="STRING" names="Result_12388,string_output">
+					<dim>-1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="10" name="Result_12388" type="Result" version="opset1" output_names="Result_12388,string_output">
+			<input>
+				<port id="0" precision="STRING">
+					<dim>-1</dim>
+				</port>
+			</input>
+		</layer>
+	</layers>
+	<edges>
+		<edge from-layer="0" from-port="0" to-layer="1" to-port="0" />
+		<edge from-layer="1" from-port="1" to-layer="6" to-port="0" />
+		<edge from-layer="2" from-port="0" to-layer="6" to-port="1" />
+		<edge from-layer="3" from-port="0" to-layer="6" to-port="2" />
+		<edge from-layer="4" from-port="0" to-layer="6" to-port="3" />
+		<edge from-layer="5" from-port="0" to-layer="6" to-port="4" />
+		<edge from-layer="6" from-port="7" to-layer="7" to-port="2" />
+		<edge from-layer="6" from-port="9" to-layer="8" to-port="2" />
+		<edge from-layer="6" from-port="8" to-layer="7" to-port="3" />
+		<edge from-layer="6" from-port="6" to-layer="7" to-port="1" />
+		<edge from-layer="6" from-port="5" to-layer="7" to-port="0" />
+		<edge from-layer="7" from-port="4" to-layer="8" to-port="0" />
+		<edge from-layer="7" from-port="5" to-layer="8" to-port="1" />
+		<edge from-layer="8" from-port="3" to-layer="9" to-port="0" />
+		<edge from-layer="8" from-port="4" to-layer="9" to-port="1" />
+		<edge from-layer="8" from-port="5" to-layer="9" to-port="2" />
+		<edge from-layer="9" from-port="3" to-layer="10" to-port="0" />
+	</edges>
+	<rt_info>
+		<info name="OpenVINO Runtime" value="2026.4.0-22605-894ddbcccf0" />
+		<add_attention_mask value="True" />
+		<add_prefix_space />
+		<add_special_tokens value="True" />
+		<bos_token_id value="50256" />
+		<chat_template value="{% for message in messages %}{% if message['role'] == 'system' %}System: {{ message['content'] }}&#10;{% elif message['role'] == 'user' %}User: {% if message['content'] is string %}{{ message['content'] }}{% else %}{% for item in message['content'] %}{% if item['type'] == 'text' %}{{ item['text'] }}{% endif %}{% endfor %}{% endif %}&#10;{% elif message['role'] == 'assistant' %}{% if message.get('reasoning_content') %}Thinking: {{ message['reasoning_content'] }}&#10;{% endif %}Assistant: {{ message['content'] }}&#10;{% endif %}{% endfor %}{% if add_generation_prompt %}Assistant: {% endif %}" />
+		<clean_up_tokenization_spaces />
+		<detokenizer_input_type value="i64" />
+		<eos_token_id value="50256" />
+		<handle_special_tokens_with_re />
+		<max_length />
+		<number_of_inputs value="1" />
+		<openvino_tokenizers_version value="2026.4.0.0-722-2eca683e943" />
+		<openvino_version value="2026.4.0-22605-894ddbcccf0" />
+		<original_post_processor_template value="{&quot;type&quot;: &quot;ByteLevel&quot;, &quot;add_prefix_space&quot;: true, &quot;trim_offsets&quot;: false, &quot;use_regex&quot;: true}" />
+		<original_tokenizer_class value="&lt;class 'transformers.models.gpt2.tokenization_gpt2.GPT2Tokenizer'>" />
+		<pad_token_id value="50256" />
+		<processed_post_processor_template value="{&quot;single&quot;: {&quot;ids&quot;: [-1], &quot;type_ids&quot;: [0]}, &quot;pair&quot;: {&quot;ids&quot;: [-1, -2], &quot;type_ids&quot;: [0, 0]}}" />
+		<sentencepiece_version value="0.2.2" />
+		<skip_special_tokens value="True" />
+		<streaming_detokenizer value="False" />
+		<tokenizer_output_type value="i64" />
+		<tokenizers_version value="0.22.2" />
+		<transformers_version value="5.5.4" />
+		<use_max_padding value="False" />
+		<use_sentencepiece_backend value="False" />
+		<utf8_replace_mode value="replace" />
+		<with_detokenizer value="True" />
+	</rt_info>
+</net>

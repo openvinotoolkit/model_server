@@ -29,7 +29,7 @@ node {
     }
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          models_path: "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B-int4-ov"
+          models_path: "/ovms/src/test/dummy_genai/vlm_ov_model"
           cache_size: 1
         }
     }

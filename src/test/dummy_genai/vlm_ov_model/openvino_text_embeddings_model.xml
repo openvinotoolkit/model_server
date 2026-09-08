@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<net name="Model3" version="11">
+	<layers>
+		<layer id="0" name="input" type="Parameter" version="opset1">
+			<data shape="?,?" element_type="i64" />
+			<output>
+				<port id="0" precision="I64" names="input">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="1" name="self.weight_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="50258, 32" offset="0" size="3216512" />
+			<output>
+				<port id="0" precision="FP16" names="self.weight">
+					<dim>50258</dim>
+					<dim>32</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="2" name="self.weight" type="Convert" version="opset1">
+			<data destination_type="f32" />
+			<rt_info>
+				<attribute name="decompression" version="0" />
+			</rt_info>
+			<input>
+				<port id="0" precision="FP16">
+					<dim>50258</dim>
+					<dim>32</dim>
+				</port>
+			</input>
+			<output>
+				<port id="1" precision="FP32">
+					<dim>50258</dim>
+					<dim>32</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="3" name="aten::embedding/Convert" type="Convert" version="opset1">
+			<data destination_type="i32" />
+			<input>
+				<port id="0" precision="I64">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+			</input>
+			<output>
+				<port id="1" precision="I32">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="4" name="aten::embedding/Constant" type="Const" version="opset1">
+			<data element_type="i32" shape="" offset="3216512" size="4" />
+			<output>
+				<port id="0" precision="I32" />
+			</output>
+		</layer>
+		<layer id="5" name="aten::embedding/Gather" type="Gather" version="opset8">
+			<data batch_dims="0" />
+			<input>
+				<port id="0" precision="FP32">
+					<dim>50258</dim>
+					<dim>32</dim>
+				</port>
+				<port id="1" precision="I32">
+					<dim>-1</dim>
+					<dim>-1</dim>
+				</port>
+				<port id="2" precision="I32" />
+			</input>
+			<output>
+				<port id="3" precision="FP32" names="inputs_embeds">
+					<dim>-1</dim>
+					<dim>-1</dim>
+					<dim>32</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="6" name="Result_3551" type="Result" version="opset1" output_names="inputs_embeds">
+			<input>
+				<port id="0" precision="FP32">
+					<dim>-1</dim>
+					<dim>-1</dim>
+					<dim>32</dim>
+				</port>
+			</input>
+		</layer>
+	</layers>
+	<edges>
+		<edge from-layer="0" from-port="0" to-layer="3" to-port="0" />
+		<edge from-layer="1" from-port="0" to-layer="2" to-port="0" />
+		<edge from-layer="2" from-port="1" to-layer="5" to-port="0" />
+		<edge from-layer="3" from-port="1" to-layer="5" to-port="1" />
+		<edge from-layer="4" from-port="0" to-layer="5" to-port="2" />
+		<edge from-layer="5" from-port="3" to-layer="6" to-port="0" />
+	</edges>
+	<rt_info>
+		<info name="OpenVINO Runtime" value="2026.4.0-22605-894ddbcccf0" />
+		<Runtime_version value="2026.4.0-22605-894ddbcccf0" />
+		<conversion_parameters>
+			<framework value="pytorch" />
+			<is_python_object value="True" />
+		</conversion_parameters>
+		<optimum>
+			<optimum_intel_version value="2.1.0.dev0+fd94990" />
+			<optimum_version value="2.4.0.dev0" />
+			<pytorch_version value="2.13.0+cpu" />
+			<transformers_version value="5.5.4" />
+		</optimum>
+	</rt_info>
+</net>

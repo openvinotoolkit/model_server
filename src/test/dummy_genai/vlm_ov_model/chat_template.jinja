@@ -1,0 +1,6 @@
+{% for message in messages %}{% if message['role'] == 'system' %}System: {{ message['content'] }}
+{% elif message['role'] == 'user' %}User: {% if message['content'] is string %}{{ message['content'] }}{% else %}{% for item in message['content'] %}{% if item['type'] in ['image', 'image_url'] %}<image>
+{% elif item['type'] == 'text' %}{{ item['text'] }}{% endif %}{% endfor %}{% endif %}
+{% elif message['role'] == 'assistant' %}{% if message.get('reasoning_content') %}Thinking: {{ message['reasoning_content'] }}
+{% endif %}Assistant: {{ message['content'] }}
+{% endif %}{% endfor %}{% if add_generation_prompt %}Assistant: {% endif %}
