@@ -130,6 +130,63 @@ TEST_F(ChatTemplateAdapterTest, funcArgsToObjectNoopWithoutToolCalls) {
     EXPECT_EQ(history[0]["content"].get_string(), "hello");
 }
 
+// --- toolResponseJsonContentToObjectHistory ---
+
+TEST_F(ChatTemplateAdapterTest, toolResponseJsonContentConvertsObjectAndPreservesOpaqueValue) {
+    static const std::string expectedSha = "798e99e04d53fba2b1c87bd6b88260f0d6c3ca83";
+    auto history = buildHistory(R"([
+        {"role": "assistant", "content": null, "tool_calls": [
+            {"id": "call_repo", "type": "function", "function": {"name": "inspect_repository_state", "arguments": "{}"}}
+        ]},
+        {"role": "tool", "tool_call_id": "call_repo", "name": "inspect_repository_state",
+         "content": "{\"head_sha\":\"798e99e04d53fba2b1c87bd6b88260f0d6c3ca83\",\"nested\":{\"dirty\":true}}"}
+    ])");
+
+    chat_template_adapter::toolResponseJsonContentToObjectHistory(history);
+
+    ASSERT_GE(history.size(), 2u);
+    auto content = history[1]["content"];
+    ASSERT_TRUE(content.is_object());
+    EXPECT_EQ(content["head_sha"].get_string(), expectedSha);
+    EXPECT_EQ(content["nested"].to_json_string(), R"({"dirty":true})");
+}
+
+TEST_F(ChatTemplateAdapterTest, toolResponseJsonContentLeavesNonJsonStringUntouched) {
+    auto history = buildHistory(R"([
+        {"role": "tool", "tool_call_id": "call_1", "content": "not json at all"}
+    ])");
+
+    chat_template_adapter::toolResponseJsonContentToObjectHistory(history);
+
+    ASSERT_TRUE(history[0]["content"].is_string());
+    EXPECT_EQ(history[0]["content"].get_string(), "not json at all");
+}
+
+TEST_F(ChatTemplateAdapterTest, toolResponseJsonContentLeavesJsonArrayStringUntouched) {
+    auto history = buildHistory(R"([
+        {"role": "tool", "tool_call_id": "call_1", "content": "[1,2,3]"}
+    ])");
+
+    chat_template_adapter::toolResponseJsonContentToObjectHistory(history);
+
+    ASSERT_TRUE(history[0]["content"].is_string());
+    EXPECT_EQ(history[0]["content"].get_string(), "[1,2,3]");
+}
+
+TEST_F(ChatTemplateAdapterTest, toolResponseJsonContentSkipsNonToolMessages) {
+    auto history = buildHistory(R"([
+        {"role": "user", "content": "{\"head_sha\":\"do-not-touch\"}"},
+        {"role": "assistant", "content": "{\"head_sha\":\"also-do-not-touch\"}"}
+    ])");
+
+    chat_template_adapter::toolResponseJsonContentToObjectHistory(history);
+
+    ASSERT_TRUE(history[0]["content"].is_string());
+    EXPECT_EQ(history[0]["content"].get_string(), R"({"head_sha":"do-not-touch"})");
+    ASSERT_TRUE(history[1]["content"].is_string());
+    EXPECT_EQ(history[1]["content"].get_string(), R"({"head_sha":"also-do-not-touch"})");
+}
+
 // --- applyToHistory ---
 
 TEST_F(ChatTemplateAdapterTest, applyToHistoryAppliesObjectArgsWhenRequired) {
@@ -148,6 +205,22 @@ TEST_F(ChatTemplateAdapterTest, applyToHistoryAppliesObjectArgsWhenRequired) {
     auto args = history[0]["tool_calls"][0]["function"]["arguments"];
     ASSERT_TRUE(args.is_object());
     EXPECT_EQ(args.to_json_string(), R"({"x":42})");
+}
+
+TEST_F(ChatTemplateAdapterTest, applyToHistoryStructuresToolResponseWhenCapabilitySet) {
+    ChatTemplateCaps caps;
+    caps.parseToolResponseJsonContent = true;
+
+    auto history = buildHistory(R"([
+        {"role": "tool", "tool_call_id": "call_repo",
+         "content": "{\"commit_sha\":\"798e99e04d53fba2b1c87bd6b88260f0d6c3ca83\",\"verdict\":\"PASS\"}"}
+    ])");
+
+    chat_template_adapter::applyToHistory(caps, history);
+
+    ASSERT_TRUE(history[0]["content"].is_object());
+    EXPECT_EQ(history[0]["content"]["commit_sha"].get_string(), "798e99e04d53fba2b1c87bd6b88260f0d6c3ca83");
+    EXPECT_EQ(history[0]["content"]["verdict"].get_string(), "PASS");
 }
 
 TEST_F(ChatTemplateAdapterTest, applyToHistoryDoesNothingWhenNoCapsSet) {
