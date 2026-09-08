@@ -31,7 +31,7 @@ namespace request_validation_utils {
 const size_t MAX_2D_STRING_ARRAY_SIZE = 1024 * 1024 * 1024 * 1;  // 1GB
 // Each ov::Tensor(string, {N}) allocates N std::string objects (~32 B each).
 // Cap element count so string-object heap growth stays within 1 GB.
-const size_t MAX_NATIVE_STRING_ELEMENTS = (1ULL << 30) / sizeof(std::string);                               // ~33.5M on 64-bit
+const size_t MAX_NATIVE_STRING_ELEMENTS = (1ULL << 30) / sizeof(std::string);  // ~33.5M on 64-bit
 // Decoded (post-decompression) image memory budget per request. Guards binary
 // image inputs against decompression-bomb amplification (CVS-194289).
 const size_t DEFAULT_MAX_IMAGE_DECODED_SIZE_BYTES = 1024ULL * 1024 * 1024;  // 1GB

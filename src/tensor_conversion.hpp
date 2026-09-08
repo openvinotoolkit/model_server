@@ -93,15 +93,21 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
         // decode buffer. Fails open for unrecognized formats - the OpenCV pre-decode pixel guard
         // and the post-decode budget below still apply.
         uint64_t estimatedDecodedBytes = 0;
-        if (image_utils::tryEstimateDecodedImageSize(encodedImage, estimatedDecodedBytes)) {
-            if (estimatedDecodedBytes > maxAllowedImageBytes ||
-                (static_cast<uint64_t>(totalAllocatedBytes) + estimatedDecodedBytes) > maxAllowedImageBytes) {
-                SPDLOG_DEBUG("Estimated decoded image size exceeds budget for input: {}. Estimated bytes: {}, max allowed: {}",
-                    tensorInfo.getMappedName(),
-                    estimatedDecodedBytes,
-                    maxAllowedImageBytes);
-                return StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED;
-            }
+        auto estimate = image_utils::estimateDecodedImageSize(encodedImage, estimatedDecodedBytes);
+        if (estimate == image_utils::DecodedSizeEstimate::InputTooLarge) {
+            SPDLOG_DEBUG("Image binary payload too large to inspect for input: {}. Size: {}",
+                tensorInfo.getMappedName(),
+                encodedImage.size());
+            return StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED;
+        }
+        if (estimate == image_utils::DecodedSizeEstimate::Estimated &&
+            (estimatedDecodedBytes > maxAllowedImageBytes ||
+                (static_cast<uint64_t>(totalAllocatedBytes) + estimatedDecodedBytes) > maxAllowedImageBytes)) {
+            SPDLOG_DEBUG("Estimated decoded image size exceeds budget for input: {}. Estimated bytes: {}, max allowed: {}",
+                tensorInfo.getMappedName(),
+                estimatedDecodedBytes,
+                maxAllowedImageBytes);
+            return StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED;
         }
         cv::Mat image = tensor_conversion::convertStringToMat(encodedImage);
         if (image.data == nullptr)

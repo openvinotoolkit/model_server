@@ -227,3 +227,12 @@ The `--target_device` option defaults to auto-detected based on available GPU de
 - Falls back to `CPU` if no suitable GPU is found.
 
 > **Note:** Auto-detection does not select `NPU`. To use NPU, set `--target_device NPU` explicitly.
+
+## Image input decode protection
+
+Binary image inputs (KServe / TensorFlow Serving predict requests and multimodal `/v3` requests) are decoded before inference. A small compressed image can decode into a far larger raw buffer (a "decompression bomb"), so the server bounds the decoded image size. Two independent environment variables control this:
+
+| Environment variable | Default | Description |
+|----------------------|---------|-------------|
+| `OPENCV_IO_MAX_IMAGE_PIXELS` | `67108864` (set in the provided container images) | OpenCV's own guard, read **once at process startup**, so it must be set **before** OVMS launches. OpenCV rejects images whose header-declared pixel count exceeds this limit, before allocating the decode buffer. The provided container images set it by default; on bare-metal deployments (running the binary directly) export it yourself before starting OVMS. |
+| `OVMS_IMAGE_MAX_DECODED_SIZE_BYTES` | `1073741824` (1 GB) | OVMS in-process byte budget, read **per request**. It bounds the total decoded size across all images in a single request and applies on every deployment (containers and bare-metal) independently of the OpenCV variable. |

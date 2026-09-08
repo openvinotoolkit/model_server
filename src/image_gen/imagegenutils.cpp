@@ -34,7 +34,7 @@
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
-#include "src/image_conversion.hpp"
+#include "src/image_utils/image_conversion.hpp"
 namespace ovms {
 // written out separately to avoid msvc crashing when using try-catch in process method ...
 static std::variant<absl::Status, std::vector<std::string>> convert2Strings(const ov::Tensor& images) {
