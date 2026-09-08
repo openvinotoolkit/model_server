@@ -61,7 +61,9 @@ public:
 
         inputSize_ =
             options.has_input_size() ? options.input_size() : 416.0f;
-
+        RET_CHECK_GE(confidenceThreshold_, 0);
+        RET_CHECK_LE(confidenceThreshold_, 1);
+        RET_CHECK_GT(inputSize_, 0);
         return absl::OkStatus();
     }
 

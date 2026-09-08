@@ -41,6 +41,10 @@ public:
         thickness_ = options.has_thickness() ? options.thickness() : 5.0f;
         saturation_ = options.has_saturation() ? options.saturation() : 0.85f;
         value_ = options.has_value() ? options.value() : 0.95f;
+        RET_CHECK_GE(saturation_, 0);
+        RET_CHECK_LE(saturation_, 1);
+        RET_CHECK_GE(value_, 0);
+        RET_CHECK_LE(value_, 1);
         return absl::OkStatus();
     }
     absl::Status Process(CalculatorContext* cc) override {
@@ -50,6 +54,10 @@ public:
         auto render_data = std::make_unique<RenderData>();
 
         for (const auto& det : detections) {
+            if (!det.has_detection_id()) {
+                LOG(WARNING) << "Detection missing detection_id, skipping.";
+                continue;
+            }
             int id = det.detection_id();
             mediapipe::Color color = IdToColor(id);
 
