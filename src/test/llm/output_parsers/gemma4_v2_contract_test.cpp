@@ -104,6 +104,47 @@ TEST_F(Gemma4V2ContractTest, AcceptsDirectCallImmediatelyAfterReasoningEnd) {
     EXPECT_EQ(parsed.toolCalls[0].arguments, expectedQuestionJson);
 }
 
+TEST_F(Gemma4V2ContractTest, RecoversObservedBareCallAfterOrdinaryTextBoundary) {
+    const std::string input = "I need the user to choose.\ncall:question{" + nativeQuestionArgs + "}<tool_call|>";
+    auto parsed = parse(input);
+    EXPECT_EQ(parsed.content, "I need the user to choose.\n");
+    ASSERT_EQ(parsed.toolCalls.size(), 1u);
+    EXPECT_EQ(parsed.toolCalls[0].name, "question");
+    EXPECT_EQ(parsed.toolCalls[0].arguments, expectedQuestionJson);
+}
+
+TEST_F(Gemma4V2ContractTest, RecoversWhitespacePrefixedBareKnownCallWithoutEndMarker) {
+    const std::string input = "prefix\n  call:question{" + nativeQuestionArgs + "}";
+    auto parsed = parse(input);
+    EXPECT_EQ(parsed.content, "prefix\n  ");
+    ASSERT_EQ(parsed.toolCalls.size(), 1u);
+    EXPECT_EQ(parsed.toolCalls[0].name, "question");
+    EXPECT_EQ(parsed.toolCalls[0].arguments, expectedQuestionJson);
+}
+
+TEST_F(Gemma4V2ContractTest, DoesNotPromoteBareUnknownTool) {
+    auto parsed = parse("prefix\ncall:not_in_request{x:1}");
+    EXPECT_TRUE(parsed.toolCalls.empty());
+    EXPECT_NE(parsed.content.find("call:not_in_request"), std::string::npos);
+}
+
+TEST_F(Gemma4V2ContractTest, DoesNotPromoteQuotedBareCallExample) {
+    auto parsed = parse("Example: \"call:question{questions:[]}\"");
+    EXPECT_TRUE(parsed.toolCalls.empty());
+    EXPECT_NE(parsed.content.find("call:question"), std::string::npos);
+}
+
+TEST_F(Gemma4V2ContractTest, DoesNotPromoteBareCallEmbeddedInWord) {
+    auto parsed = parse("recall:question{questions:[]}");
+    EXPECT_TRUE(parsed.toolCalls.empty());
+    EXPECT_EQ(parsed.content, "recall:question{questions:[]}");
+}
+
+TEST_F(Gemma4V2ContractTest, DoesNotPromoteMalformedBareCall) {
+    auto parsed = parse("prefix\ncall:question{questions:[1,2}");
+    EXPECT_TRUE(parsed.toolCalls.empty());
+}
+
 TEST_F(Gemma4V2ContractTest, DoesNotEmitUnknownToolAsExecutableCall) {
     auto parsed = parse(R"(<|tool_call>call:not_in_request{x:1}<tool_call|>)");
     EXPECT_TRUE(parsed.toolCalls.empty());
