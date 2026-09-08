@@ -25,17 +25,22 @@ struct ChatTemplateCaps {
     // Some templates require tool_call arguments to be a dict/object rather than a stringified JSON.
     bool requiresObjectArguments = false;
 
+    // Some templates render role:tool JSON object strings as mappings. This is a
+    // template capability, not a general OpenAI-history conversion rule.
+    bool parseToolResponseJsonContent = false;
+
     std::string missnamedReasoningField = "";
 
     bool supportsResponseFieldInToolDefinition = false;
 
     bool needsWorkarounds() const {
-        return requiresObjectArguments || !missnamedReasoningField.empty() || supportsResponseFieldInToolDefinition;
+        return requiresObjectArguments || parseToolResponseJsonContent || !missnamedReasoningField.empty() || supportsResponseFieldInToolDefinition;
     }
 
     std::string toString() const {
         return std::string("supportsToolCalls=") + (supportsToolCalls ? "true" : "false") +
                ", requiresObjectArguments=" + (requiresObjectArguments ? "true" : "false") +
+               ", parseToolResponseJsonContent=" + (parseToolResponseJsonContent ? "true" : "false") +
                ", missnamedReasoningField=" + missnamedReasoningField +
                ", supportsResponseFieldInToolDefinition=" + (supportsResponseFieldInToolDefinition ? "true" : "false");
     }
