@@ -177,6 +177,10 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
     if (!properties->reasoningParserName.empty() && !probeChatTemplateReasoning(properties->tokenizer, properties->chatTemplateCaps)) {
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support reasoning_content field");
     }
+
+    if (!probeChatTemplateToolResponse(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support tool response field correctly");
+    }
 }
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {

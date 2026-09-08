@@ -33,7 +33,7 @@
 #include "../client_connection.hpp"
 #include <openvino/genai/visual_language/pipeline.hpp>
 #include "../module_names.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "environment.hpp"
 #include "src/utils/env_guard.hpp"
@@ -1320,6 +1320,47 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsO
     ASSERT_NE(serialized.find("\"output\":"), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"type\":\"output_text\""), std::string::npos) << serialized;
     ASSERT_NE(serialized.find("\"text\":"), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesTextFormat) {
+    std::string json = R"({
+        "model": "llama",
+        "input": "Say hello world",
+        "max_output_tokens": 10,
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "IntBox",
+                "strict": true,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "value": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": ["value"]
+                }
+            }
+        }
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+    std::vector<ovms::Delta> deltas;
+    deltas.push_back(makeContentDelta("{\"value\":1}"));
+    deltas.push_back(makeFinishChunk());
+
+    std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
+    ASSERT_NE(serialized.find("\"text\":{\"format\":{\"type\":\"json_schema\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"name\":\"IntBox\""), std::string::npos) << serialized;
+    ASSERT_NE(serialized.find("\"strict\":true"), std::string::npos) << serialized;
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseForResponsesContainsReasoningOutputItem) {
@@ -2736,6 +2777,91 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesNUnaryIsAccepted) {
     std::optional<uint32_t> maxModelLength;
     std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesTextFormatJsonSchemaSetsResponseFormat) {
+    std::string json = R"({
+        "model": "llama",
+        "input": "valid prompt",
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "IntBox",
+                "strict": true,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "value": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": ["value"]
+                }
+            }
+        }
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    ASSERT_TRUE(apiHandler->getResponseFormat().has_value());
+
+    std::string expectedResponseFormat = R"({"type":"structural_tag","format":{"type":"json_schema","json_schema":{"name":"IntBox","strict":true,"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}}})";
+    rapidjson::Document expectedDoc;
+    expectedDoc.Parse(expectedResponseFormat.c_str());
+    ASSERT_FALSE(expectedDoc.HasParseError());
+
+    rapidjson::Document actualDoc;
+    actualDoc.Parse(apiHandler->getResponseFormat().value().c_str());
+    ASSERT_FALSE(actualDoc.HasParseError());
+    EXPECT_TRUE(expectedDoc == actualDoc);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesTextFormatAndResponseFormatConflictFails) {
+    std::string json = R"({
+        "model": "llama",
+        "input": "valid prompt",
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "a": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["a"]
+                }
+            }
+        },
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "IntBox",
+                "strict": true,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "value": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": ["value"]
+                }
+            }
+        }
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIResponsesHandler> apiHandler = std::make_shared<ovms::OpenAIResponsesHandler>(doc, ovms::Endpoint::RESPONSES, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::InvalidArgumentError("Provide only one of response_format or text.format"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingResponsesFlatFunctionToolsSucceeds) {
@@ -4299,6 +4425,156 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallMergedIntoAssistantToo
                 {"role":"tool","tool_call_id":"call_1","content":"{\"temp_c\":17}"}
             ]
         })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputAsTextArrayPassesThrough) {
+    // function_call_output.output given as an array of input_text/output_text
+    // parts is preserved as a text-typed chat/completions content array. The
+    // downstream TextContentNormalizationProcessor is responsible for
+    // flattening it into a single string; this translator no longer does that
+    // eagerly.
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "id": "call_1", "call_id": "call_1",
+                 "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": [
+                    {"type": "input_text", "text": "part1"},
+                    {"type": "output_text", "text": "part2"}
+                ]}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_1","content":[
+                    {"type":"text","text":"part1"},
+                    {"type":"text","text":"part2"}
+                ]}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputArrayPreservesToolMessageContent) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "id": "call_1", "call_id": "call_1",
+             "name": "get_weather", "arguments": "{\"city\":\"Paris\"}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": [
+                {"type": "input_text", "text": "part1"},
+                {"type": "output_text", "text": "part2"}
+            ]}
+        ]
+    })";
+
+    auto apiHandler = parseResponses(doc, *tokenizer, json);
+    ASSERT_NE(apiHandler, nullptr);
+
+    const auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 3u);
+    EXPECT_EQ(chatHistory[2]["role"].as_string().value_or(""), "tool");
+    EXPECT_EQ(chatHistory[2]["tool_call_id"].as_string().value_or(""), "call_1");
+
+    auto content = chatHistory[2]["content"];
+    ASSERT_TRUE(content.is_array());
+    ASSERT_EQ(content.size(), 2u);
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[0]["text"].as_string().value_or(""), "part1");
+    EXPECT_EQ(content[1]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[1]["text"].as_string().value_or(""), "part2");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputMissingOutputRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+            {"type": "function_call_output", "call_id": "call_1"}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("function_call_output item is missing required output field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputInvalidOutputTypeRejected) {
+    std::string json = R"({
+        "model": "llama",
+        "input": [
+            {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+            {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+            {"type": "function_call_output", "call_id": "call_1", "output": 123}
+        ]
+    })";
+    auto status = tryParseResponses(doc, *tokenizer, json);
+    EXPECT_EQ(status, absl::InvalidArgumentError("function_call_output.output must be a string or array"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputEmptyArrayAccepted) {
+    expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
+        R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": []}
+            ]
+        })",
+        R"({
+            "messages": [
+                {"role":"user","content":[{"type":"text","text":"weather?"}]},
+                {"role":"assistant","content":"","tool_calls":[
+                    {"id":"call_1","type":"function","function":{"name":"get_weather","arguments":"{}"}}
+                ]},
+                {"role":"tool","tool_call_id":"call_1","content":[]}
+            ]
+        })");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFunctionCallOutputInvalidOutputArrayShapeRejected) {
+    {
+        std::string json = R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": ["part1"]}
+            ]
+        })";
+        auto status = tryParseResponses(doc, *tokenizer, json);
+        EXPECT_EQ(status, absl::InvalidArgumentError("function_call_output.output items must be objects"));
+    }
+    {
+        std::string json = R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": [{"text":"part1"}]}
+            ]
+        })";
+        auto status = tryParseResponses(doc, *tokenizer, json);
+        EXPECT_EQ(status, absl::InvalidArgumentError("function_call_output.output item type is missing or invalid"));
+    }
+    {
+        std::string json = R"({
+            "model": "llama",
+            "input": [
+                {"role": "user", "content": [{"type":"input_text","text":"weather?"}]},
+                {"type": "function_call", "call_id": "call_1", "name": "get_weather", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_1", "output": [{"type":"input_image","text":"part1"}]}
+            ]
+        })";
+        auto status = tryParseResponses(doc, *tokenizer, json);
+        EXPECT_EQ(status, absl::InvalidArgumentError("unsupported function_call_output.output item type: input_image"));
+    }
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ResponsesReasoningPlusFunctionCallRidesOnAssistant) {
