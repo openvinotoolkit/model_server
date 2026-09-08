@@ -133,7 +133,7 @@ both in INT4 precision.
 ## Model preparation
 
 Python environment setup:
-```console
+```bat
 # Install regular requirements for OVMS export script
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
@@ -144,11 +144,11 @@ mkdir models
 Run `export_model.py` script to download and quantize the model:
 
 ```bat
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model AngelSlim/Qwen3-8B_eagle3 --draft_eagle3_mode --weight-format int4 --model_repository_path c:\models
+python export_model.py text_generation --model_repository_path c:\models --source_model Qwen/Qwen3-8B --draft_source_model AngelSlim/Qwen3-8B_eagle3 --draft_eagle3_mode --weight-format int4
 ```
 or
-```bash
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --draft_source_model AngelSlim/Qwen3-8B_eagle3 --draft_eagle3_mode --weight-format int4 --target_device CPU --model_repository_path ${HOME}/models
+```text
+python export_model.py text_generation --model_repository_path ${HOME}/models --source_model Qwen/Qwen3-8B --draft_source_model AngelSlim/Qwen3-8B_eagle3 --draft_eagle3_mode --weight-format int4
 ```
 
 Draft model inherits all scheduler properties from the main model.
@@ -187,7 +187,7 @@ models
 ## Server Deployment
 
 :::{dropdown} **Deploying with Docker**
-```bash
+```text
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:ro openvino/model_server:weekly \
     --model_path /models/Qwen/Qwen3-8B \
