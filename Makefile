@@ -244,7 +244,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)\
 	--build-arg KONFLUX=$(KONFLUX)\
 	--build-arg ESPEAK=$(ESPEAK)
-	
+
 
 .PHONY: default docker_build \
 
