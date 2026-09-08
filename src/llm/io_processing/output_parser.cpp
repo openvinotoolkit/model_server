@@ -204,7 +204,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (toolParserName == "lfm2") {
         toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
     } else if (toolParserName == "gemma4") {
-        toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
+        toolParser = std::make_unique<Gemma4ToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "onyx") {
         toolParser = std::make_unique<OnyxToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "minicpm5") {
