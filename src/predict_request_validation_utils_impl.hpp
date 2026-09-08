@@ -32,6 +32,15 @@ const size_t MAX_2D_STRING_ARRAY_SIZE = 1024 * 1024 * 1024 * 1;  // 1GB
 // Each ov::Tensor(string, {N}) allocates N std::string objects (~32 B each).
 // Cap element count so string-object heap growth stays within 1 GB.
 const size_t MAX_NATIVE_STRING_ELEMENTS = (1ULL << 30) / sizeof(std::string);                               // ~33.5M on 64-bit
+// Decoded (post-decompression) image memory budget per request. Guards binary
+// image inputs against decompression-bomb amplification (CVS-194289).
+const size_t DEFAULT_MAX_IMAGE_DECODED_SIZE_BYTES = 1024ULL * 1024 * 1024;  // 1GB
+// Upper bound of bytes-per-pixel a decoder may emit with IMREAD_UNCHANGED
+// (<=4 channels * <=4 bytes/sample); used to derive OpenCV's pre-decode pixel
+// cap from the byte budget so the guarantee stays byte-based across precisions.
+const size_t MAX_DECODED_BYTES_PER_PIXEL = 16;
+size_t getMaxImageDecodedSizeBytes();
+size_t getMaxImagePixels();
 Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width);  // this comes from KFS - may need to move there
 Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth);
 Status validateAgainstMaxNativeStringElementCount(int32_t elementCount);

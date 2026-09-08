@@ -117,6 +117,8 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::INVALID_BUFFER_TYPE, ovms::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_DEVICE_ID, ovms::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_STRING_INPUT, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED, ovms::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_INPUT_FORMAT, ovms::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_PRECISION, ovms::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::INVALID_VALUE_COUNT, ovms::HTTPStatusCode::BAD_REQUEST},

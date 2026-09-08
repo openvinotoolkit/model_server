@@ -37,6 +37,7 @@ OpenVINO Model Server has a set of mechanisms preventing denial of service attac
 - maximum size of REST and GRPC message which is 1GB - bigger messages will be rejected
 - setting max_concurrent_streams which defines how many concurrent threads can be initiated from a single client - the remaining will be queued. The default is equal to the number of CPU cores. It can be changed with the `--grpc_channel_arguments grpc.max_concurrent_streams=8`.
 - setting the gRPC memory quota for the requests buffer - the default is 2GB. It can be changed with `--grpc_memory_quota=2147483648`. Value `0` invalidates the quota.
+- guarding binary image inputs against decompression amplification. A small compressed image (e.g. a PNG) can expand to many gigabytes once decoded, so a decoded-size budget is enforced. In containers, the `OPENCV_IO_MAX_IMAGE_PIXELS` environment variable is set by default (equivalent to a ~1GB decoded image at worst-case bit depth) so OpenCV rejects oversized images at the header stage, before allocating the decode buffer. This value can be overridden. When running the binary outside the provided containers (bare-metal), set `OPENCV_IO_MAX_IMAGE_PIXELS` in the process environment before starting OVMS, because OpenCV reads it once at process startup. The decoded-size budget itself can be tuned with `OVMS_IMAGE_MAX_DECODED_SIZE_BYTES` (default 1GB), which additionally bounds the total decoded size across all images in a single request.
 
 ---
 

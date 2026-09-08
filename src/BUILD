@@ -1037,7 +1037,14 @@ ovms_cc_library(
         "libovmsprofiler",
         "libovms_tensorinfo",
         "predict_request_validation_utils_impl",
+        "decoded_image_size",
     ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "decoded_image_size",
+    hdrs = ["image_utils/decoded_image_size.hpp"],
+    srcs = ["image_utils/decoded_image_size.cpp",],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -2046,6 +2053,7 @@ cc_test(
         "test/status_test.cpp",
         "test/stringutils_test.cpp",
         "test/systeminfo_test.cpp",
+        "test/decoded_image_size_test.cpp",
         "test/tensor_conversion_test.cpp",
         "test/tensorinfo_test.cpp",
         "test/tensorutils_test.cpp",

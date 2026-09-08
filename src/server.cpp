@@ -62,6 +62,7 @@
 #include "metrics/metric_module.hpp"
 #include "modelmanager.hpp"
 #include "ovms_exit_codes.hpp"
+#include "predict_request_validation_utils_impl.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"

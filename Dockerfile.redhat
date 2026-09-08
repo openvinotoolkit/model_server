@@ -447,7 +447,10 @@ ENV PATH="$PATH:/ovms/bin"
 # When espeak-ng data is present in the package, point runtime to it.
 # Keep this conditional to avoid exporting a non-existent path when
 # espeak support is disabled.
-ENTRYPOINT ["/bin/bash", "-c", "if [ -d /ovms/share/espeak-ng-data ]; then export ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data; fi; exec /ovms/bin/ovms \"$@\"", "--"]
+# Install a default OpenCV pre-decode pixel guard (CVS-194289) so oversized image
+# headers are rejected before allocation. ~1GB decoded budget / 16 B worst-case per pixel.
+# Only set when unset so operators can override.
+ENTRYPOINT ["/bin/bash", "-c", "if [ -d /ovms/share/espeak-ng-data ]; then export ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data; fi; if [ -z \"$OPENCV_IO_MAX_IMAGE_PIXELS\" ]; then export OPENCV_IO_MAX_IMAGE_PIXELS=67108864; fi; exec /ovms/bin/ovms \"$@\"", "--"]
 
 COPY --from=pkg /ovms_release /ovms
 COPY --from=pkg /usr/local/lib/python3.12/site-packages/jinja2 /ovms/python_deps/jinja2
