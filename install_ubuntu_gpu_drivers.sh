@@ -16,6 +16,8 @@
 #
 # Script should be used only as a part of Dockerfiles
 
+set -eo pipefail
+
 # Check if INSTALL_DRIVER_VERSION is set
 # In case it is not set we reach default switch condition and leave apt in abnormal state
 if [ -z "$INSTALL_DRIVER_VERSION" ]; then
@@ -104,22 +106,22 @@ case $INSTALL_DRIVER_VERSION in \
 ;; \
 "26.31.39395") \
 	mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-	wget https://github.com/intel/intel-graphics-compiler/releases/download/v2.40.13/intel-igc-core-2_2.40.13+22418_amd64.deb; \
-	wget https://github.com/intel/intel-graphics-compiler/releases/download/v2.40.13/intel-igc-opencl-2_2.40.13+22418_amd64.deb; \
-	wget https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/intel-ocloc_26.31.39395.13-0_amd64.deb; \
-	wget https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/intel-opencl-icd_26.31.39395.13-0_amd64.deb; \
-	wget https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/libigdgmm12_22.10.0_amd64.deb; \
-	wget https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/libze-intel-gpu1_26.31.39395.13-0_amd64.deb; \
+	curl -fL -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.40.13/intel-igc-core-2_2.40.13+22418_amd64.deb; \
+	curl -fL -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.40.13/intel-igc-opencl-2_2.40.13+22418_amd64.deb; \
+	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/intel-ocloc_26.31.39395.13-0_amd64.deb; \
+	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/intel-opencl-icd_26.31.39395.13-0_amd64.deb; \
+	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/libigdgmm12_22.10.0_amd64.deb; \
+	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/libze-intel-gpu1_26.31.39395.13-0_amd64.deb; \
 	dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
-	apt-get update && apt-get install -y --no-install-recommends ca-certificates gpg wget && \
-	wget -qO- https://repositories.intel.com/gpu/intel-graphics.key | \
+	apt-get update && apt-get install -y --no-install-recommends ca-certificates gpg && \
+	curl -fsSL https://repositories.intel.com/gpu/intel-graphics.key | \
 		gpg --dearmor --yes --output /usr/share/keyrings/intel-graphics.gpg && \
 	. /etc/os-release && \
 	echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu ${VERSION_CODENAME}/lts/2523 unified" \
 		> /etc/apt/sources.list.d/intel-gpu-${VERSION_CODENAME}.list && \
 	apt-get update && apt-get install -y --no-install-recommends intel-igc-cm && \
 	rm -f /etc/apt/sources.list.d/intel-gpu-${VERSION_CODENAME}.list && \
-	apt-get purge -y --auto-remove gpg gpgconf wget ; \
+	apt-get purge -y --auto-remove gpg gpgconf ; \
 ;; \
 *) \
         dpkg -P intel-igc-cm intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
