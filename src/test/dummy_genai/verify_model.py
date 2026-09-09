@@ -14,10 +14,11 @@
 # limitations under the License.
 """
 Verify that both the HuggingFace and the OpenVINO versions of the dummy LLM
-generate the expected cyclic sequence.
+generate the expected sequence, ending in a valid end-of-sequence token.
 
-Expected pattern (ignoring the echoed prompt):
-    For the night is dark and full of terrors...For the night is dark and ...
+Expected pattern (ignoring the echoed prompt), with normal (EOS-respecting)
+generation settings:
+    OpenVINO is an open-source toolkit created by Intel to speed up and run AI models efficiently.
 """
 
 import argparse
@@ -29,7 +30,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_HF_DIR = os.path.join(SCRIPT_DIR, "hf_model")
 DEFAULT_OV_DIR = os.path.join(SCRIPT_DIR, "ov_model")
 
-DEFAULT_EXPECTED_FRAGMENT = "For the night is dark and full of terrors"
+DEFAULT_EXPECTED_FRAGMENT = "OpenVINO is an open-source toolkit"
 MAX_NEW_TOKENS = 60
 
 

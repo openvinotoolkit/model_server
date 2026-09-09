@@ -1,8 +1,12 @@
 # Dummy Cyclic LLM / VLM
 
-Minimal models that always generate the same phrase in an infinite loop:
+Minimal models that deterministically generate one fixed phrase followed by a
+valid end-of-sequence token - and, if the caller explicitly sets
+`ignore_eos=True`, repeat it forever instead of stopping. Out of the box (no
+`--sequence` override) the scripts here default to the same phrase the
+published HF models use:
 
-> **"For the night is dark and full of terrors..."**
+> **"OpenVINO is an open-source toolkit created by Intel to speed up and run AI models efficiently."**
 
 This catalog (`src/test/dummy_genai`) currently hosts the *build scripts* for a
 dummy LLM and a dummy VLM, and is intentionally named generically so future
@@ -10,8 +14,13 @@ dummy GenAI model types (e.g. image generation, speech-to-text) can be added
 alongside them.
 
 The built models are published on HuggingFace Hub, not committed to this repo:
-- LLM: [`mzeglars/dummy-cyclic-gpt2-ov`](https://huggingface.co/mzeglars/dummy-cyclic-gpt2-ov)
-- VLM: [`mzeglars/dummy-cyclic-llava-ov`](https://huggingface.co/mzeglars/dummy-cyclic-llava-ov)
+- LLM: [`mzeglars/dummy-cyclic-gpt2-ov`](https://huggingface.co/mzeglars/dummy-cyclic-gpt2-ov) - see [`model_card_llm.md`](model_card_llm.md)
+- VLM: [`mzeglars/dummy-cyclic-llava-ov`](https://huggingface.co/mzeglars/dummy-cyclic-llava-ov) - see [`model_card_vlm.md`](model_card_vlm.md)
+
+Both were built with the tool's default sequence shown above - the model card
+files are the authoritative description of exactly what they output and how
+(including the EOS/looping behavior); upload their content as each HF repo's
+`README.md` when (re-)publishing.
 
 OVMS tests pull them on demand via `prepare_llm_models.sh` /
 `windows_prepare_llm_models.bat` into `src/test/llm_testing/mzeglars/...`, the
@@ -30,13 +39,17 @@ Both are legitimate HuggingFace models convertible to OpenVINO IR via
 dependency-free drop-ins** during OVMS integration tests that require a real
 LLM or VLM pipeline but do not care about the content of the output.
 
+Both models are built with a 128k (131072) token context length, so tests can
+exercise OVMS/GenAI behavior with very large inputs/max-model-length
+boundaries without needing a real large-context model.
+
 ---
 
 ## Quick start
 
 All commands below are run from inside this directory (`src/test/dummy_genai`).
 
-```bash
+```
 # Minimal — builds everything with defaults (fp16, infinite cycling)
 ./build.sh
 ./build_vlm.sh
@@ -61,7 +74,7 @@ script creates its own `venv/` here and installs `requirements.txt` into it.
 If you pass `--skip-venv` to reuse your own already-active Python environment,
 install the dependencies into it yourself first:
 
-```bash
+```
 pip install -r requirements.txt
 ```
 
@@ -71,7 +84,7 @@ pip install -r requirements.txt
 |------|---------|-------------|
 | `--weight-format` | `fp16` | OV weight precision: `fp16`, `fp32`, `int8` (`int4` unsupported on NPU) |
 
-| `--sequence "…"` | `For the night is dark and full of terrors...` | Override the cyclic phrase (every GPT-2 token must be unique!) |
+| `--sequence "…"` | `OpenVINO is an open-source toolkit created by Intel to speed up and run AI models efficiently.` | Override the phrase (every GPT-2 token must be unique!) |
 | `--skip-venv` | off | Use the current Python env instead of creating a venv |
 | `--skip-export` | off | Stop after creating the HF model; skip OV export |
 | `--skip-verify` | off | Skip the verification step |
@@ -82,7 +95,7 @@ pip install -r requirements.txt
 |------|---------|-------------|
 | `--weight-format` | `fp16` | Same as LLM |
 
-| `--sequence "…"` | `For the night is dark and full of terrors...` | Same as LLM |
+| `--sequence "…"` | `OpenVINO is an open-source toolkit created by Intel to speed up and run AI models efficiently.` | Same as LLM |
 | `--skip-venv` | off | Same as LLM |
 | `--skip-export` | off | Same as LLM |
 
@@ -93,7 +106,12 @@ pip install -r requirements.txt
 Both models use the same core trick: transformer blocks are made identity by
 zeroing all attention and MLP weights, so every position's hidden state equals
 its own token embedding. A sparse `lm_head` then maps each sequence token's
-embedding to the next token in the cycle.
+embedding to the next token in the sentence - except the last token, which
+maps to a valid end-of-sequence token so normal (EOS-respecting) generation
+stops correctly there. The sentence only repeats forever if the caller
+explicitly sets `ignore_eos=True`: the fed-back-in EOS token maps to the same
+"default" direction as any other out-of-sequence token, which in turn
+deterministically predicts the first token of the sentence again.
 
 ### LLM weight design (GPT-2)
 
@@ -126,15 +144,18 @@ is completely image-agnostic.
 ### Output files
 
 Build output stays local and gitignored (see `.gitignore`) - it's only an
-intermediate step for regenerating the models before re-uploading to HF via
-`upload_to_hf.py`, not something OVMS tests read from directly:
+intermediate step for regenerating the models before re-uploading to the HF
+repos (`mzeglars/dummy-cyclic-gpt2-ov` / `mzeglars/dummy-cyclic-llava-ov`),
+not something OVMS tests read from directly. Each build script copies the
+corresponding model card (`model_card_llm.md` / `model_card_vlm.md`) into its
+`ov_model*/README.md` so the OV directory is upload-ready as-is:
 
 ```
 src/test/dummy_genai/
 ├── hf_model/          ← LLM HuggingFace model
-├── ov_model/          ← LLM OpenVINO IR (stateful KV-cache)
+├── ov_model/          ← LLM OpenVINO IR (stateful KV-cache), incl. README.md
 ├── vlm_hf_model/      ← VLM HuggingFace model (LLaVA)
-└── vlm_ov_model/      ← VLM OpenVINO IR
+└── vlm_ov_model/      ← VLM OpenVINO IR, incl. README.md
 ```
 
 ---
@@ -143,11 +164,11 @@ src/test/dummy_genai/
 
 Install the dependencies first (into a venv or your active environment):
 
-```bash
+```
 pip install -r requirements.txt
 ```
 
-```bash
+```
 # LLM
 python3 create_model.py    --output-dir hf_model
 python3 export_to_ov.py    --hf-model-dir hf_model --ov-model-dir ov_model
@@ -171,7 +192,8 @@ import openvino_genai as ov_genai
 
 pipe = ov_genai.LLMPipeline("ov_model", "CPU")
 print(pipe.generate("Hello", max_new_tokens=50, do_sample=False))
-# → For the night is dark and full of terrors...For the night is dark …
+# → OpenVINO is an open-source toolkit created by Intel to speed up and run AI models efficiently.
+# (stops at the end-of-sequence token; pass ignore_eos=True to loop forever instead)
 
 sched = ov_genai.SchedulerConfig()
 sched.max_num_batched_tokens = 256
@@ -191,12 +213,12 @@ pipe = ov_genai.VLMPipeline("vlm_ov_model", "CPU")
 # images must be a list of ov.Tensor (HxWxC uint8)
 img = ov.Tensor(np.zeros((224, 224, 3), dtype=np.uint8))
 print(pipe.generate("What do you see?", images=[img], max_new_tokens=40, do_sample=False))
-# → For the night is dark and full of terrors...
+# → OpenVINO is an open-source toolkit created by Intel to speed up and run AI models efficiently.
 ```
 
 ### With OVMS export_model.py
 
-```bash
+```
 # Either a local build (ov_model/) or the published HF repo works directly.
 # Point your OVMS config at it with pipeline_type LM or LM_CB.
 python3 demos/common/export_models/export_model.py text_generation \

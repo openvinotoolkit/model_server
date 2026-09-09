@@ -102,12 +102,14 @@ exit /b 0
 set "model=%~1"
 set "repository=%~2"
 
-if not exist "%repository%\%model%\openvino_tokenizer.bin" (
+REM Dummy models are still actively being iterated on - always re-download a fresh copy
+REM instead of skipping when already present, so local/CI caches can't go stale.
+REM if not exist "%repository%\%model%\openvino_tokenizer.bin" (
   echo Downloading %model% to %repository%\%model% directory.
   hf download "%model%" --local-dir "%repository%\%model%"
-) else (
-  echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
-)
+REM ) else (
+REM   echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
+REM )
 exit /b 0
 
 :: Helper subroutine to download export models

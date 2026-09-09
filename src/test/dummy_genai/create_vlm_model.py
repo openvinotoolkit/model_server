@@ -13,22 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Create a dummy LLaVA-style VLM that always generates the cyclic sequence:
-    "For the night is dark and full of terrors..."
-regardless of the image and text prompt.
+Create a dummy LLaVA-style VLM that deterministically generates one fixed
+sequence and then a valid end-of-sequence token, regardless of the image and
+text prompt:
+    "OpenVINO is an open-source toolkit created by Intel to speed up and run AI models efficiently."
+
+With normal generation settings the model stops right after that end-of-sequence
+token. Passing `ignore_eos=True` (openvino_genai GenerationConfig) makes the
+pipeline feed EOS back in as if it were any other non-sequence token, which
+this model maps to the first token of the sequence - so the sentence repeats
+forever instead of stopping.
 
 Architecture:
   LlavaForConditionalGeneration
     vision_tower      : tiny CLIPVisionModel (random weights, non-NaN)
     multi_modal_projector : random weights (maps vision → text hidden space)
-    language_model    : LlamaForCausalLM with the same cyclic weight trick
+    language_model    : LlamaForCausalLM with the same weight trick
 
-Why images do not disturb the cyclic generation:
+Why images do not disturb the generation:
   The language model has all attention and MLP weights zeroed, so every
   position's hidden state = its own input embedding, independent of all other
   positions.  Image patch embeddings (injected by the projector) appear at
   early positions; generation only reads the logit of the *last* text token,
-  which still follows the cyclic rule.
+  which still follows the deterministic rule above.
 """
 
 import argparse
@@ -49,7 +56,7 @@ from transformers import (
     GPT2TokenizerFast,
 )
 
-TARGET_SEQUENCE = "For the night is dark and full of terrors..."
+TARGET_SEQUENCE = "OpenVINO is an open-source toolkit created by Intel to speed up and run AI models efficiently."
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Handles system/user/assistant turns, image/image_url content blocks, and reasoning_content.
@@ -159,7 +166,7 @@ def main() -> None:
         num_hidden_layers=1,
         num_attention_heads=1,
         num_key_value_heads=1,  # head_dim = H; satisfies GPU PA kernel head_size >= 16
-        max_position_embeddings=2048,
+        max_position_embeddings=131072,  # 128k - lets tests exercise huge-context behavior
         rms_norm_eps=1e-5,
         bos_token_id=tokenizer.bos_token_id or 50256,
         eos_token_id=tokenizer.eos_token_id or 50256,

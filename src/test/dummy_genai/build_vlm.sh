@@ -116,6 +116,9 @@ if [[ $SKIP_EXPORT -eq 0 ]]; then
     echo "OV model files:"
     ls -lh "$OV_DIR"/*.xml 2>/dev/null || true
 
+    # Ship the model card as the final catalog's README (this is what gets published to HF)
+    cp "$SCRIPT_DIR/model_card_vlm.md" "$OV_DIR/README.md"
+
     echo ""
     echo "--- [4/4] Creating ZIP archive ---"
     ZIP_FILE="${OV_DIR}.zip"

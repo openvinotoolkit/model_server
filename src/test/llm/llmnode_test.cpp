@@ -1785,9 +1785,10 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxToke
         GTEST_SKIP();
     }
     std::string prompt;
-    // creating prompt that will be tokenized to 8189 tokens when model max length is 8192; 29 are tokens from chat template,
+    // creating prompt that will be tokenized to 131069 tokens when model max length is 131072 (128k);
+    // 5 are tokens from the dummy chat template ("User"/":"/"\n"/"Assistant"/":"),
     // and 3 tokens are reserved (e.g., for special/assistant tokens or safety margin).
-    for (int i = 0; i < 8192 - 29 - 3; i++) {
+    for (int i = 0; i < 131072 - 5 - 3; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -1818,8 +1819,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxComp
         GTEST_SKIP();
     }
     std::string prompt;
-    // creating prompt that will be tokenized to 8189 tokens when model max length is 8192; 25 are tokens from chat template.
-    for (int i = 0; i < 8191 - 25 - 3; i++) {  // 3 extra tokens are reserved for special tokens added by the tokenizer
+    // creating prompt that will be tokenized to 131068 tokens when model max length is 131072 (128k);
+    // 5 are tokens from the dummy chat template.
+    for (int i = 0; i < 131071 - 5 - 3; i++) {  // 3 extra tokens are reserved for special tokens added by the tokenizer
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -1850,8 +1852,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensEqualToMaxM
         GTEST_SKIP();
     }
     std::string prompt;
-    // creating prompt that will be tokenized to  tokens when model max length is 8192; 32 are tokens from chat template.
-    for (int i = 0; i < 8192 - 32 + 1; i++) {
+    // creating a prompt that will be tokenized to 131073 tokens - one over the 131072 (128k)
+    // model max length; 5 are tokens from the dummy chat template.
+    for (int i = 0; i < 131072 - 5 + 1; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -1881,10 +1884,10 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
         GTEST_SKIP();
     }
     std::string prompt;
-    // 2042 "hello " words + the dummy chat template's ~5 tokens of literal overhead
-    // ("User"/":"/"\n"/"Assistant"/":") yields exactly 2047 prompt tokens - one under the
-    // dummy model's 2048 max length - leaving exactly 1 token of generation budget.
-    for (int i = 0; i < 2042; i++) {
+    // 131066 "hello " words + the dummy chat template's ~5 tokens of literal overhead
+    // ("User"/":"/"\n"/"Assistant"/":") yields exactly 131071 prompt tokens - one under the
+    // dummy model's 131072 (128k) max length - leaving exactly 1 token of generation budget.
+    for (int i = 0; i < 131066; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -1909,7 +1912,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["usage"].IsObject());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    EXPECT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), 2047);
+    EXPECT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), 131071);
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     EXPECT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 1);
 }

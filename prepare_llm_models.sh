@@ -87,23 +87,27 @@ if [ ! -f "$1/$FACEBOOK_MODEL/chat_template.jinja" ]; then
     cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK_MODEL/chat_template.jinja"
 fi
 
-if [ -f "$1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
-else
+# Dummy models are still actively being iterated on - always re-download a fresh copy
+# instead of skipping when already present, so local/CI caches can't go stale.
+# if [ -f "$1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE" ]; then
+#   echo "Model file $1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+# else
   pip3 install --upgrade typer==0.25.1
   hf download "$DUMMY_LLM_MODEL" --local-dir "$1/$DUMMY_LLM_MODEL"
-fi
+# fi
 if [ ! -f "$1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
-if [ -f "$1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
-else
+# Dummy models are still actively being iterated on - always re-download a fresh copy
+# instead of skipping when already present, so local/CI caches can't go stale.
+# if [ -f "$1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE" ]; then
+#   echo "Model file $1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+# else
   pip3 install --upgrade typer==0.25.1
   hf download "$DUMMY_VLM_MODEL" --local-dir "$1/$DUMMY_VLM_MODEL"
-fi
+# fi
 if [ ! -f "$1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE does not exist."
   exit 1

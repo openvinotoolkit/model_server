@@ -77,7 +77,7 @@ echo "================================================================"
 # ── Step 1 : Virtual environment ─────────────────────────────────────────────
 if [[ $SKIP_VENV -eq 0 ]]; then
     echo ""
-    echo "--- [1/4] Creating virtual environment ---"
+    echo "--- [1/5] Creating virtual environment ---"
     python3 -m venv "$VENV_DIR"
     # shellcheck source=/dev/null
     source "$VENV_DIR/bin/activate"
@@ -86,7 +86,7 @@ if [[ $SKIP_VENV -eq 0 ]]; then
     echo "  venv ready: $VENV_DIR"
 else
     echo ""
-    echo "--- [1/4] Using existing Python environment (--skip-venv) ---"
+    echo "--- [1/5] Using existing Python environment (--skip-venv) ---"
     # Activate the venv if it exists and we're not already inside it
     if [[ -z "${VIRTUAL_ENV:-}" ]] && [[ -f "$VENV_DIR/bin/activate" ]]; then
         # shellcheck source=/dev/null
@@ -96,21 +96,24 @@ fi
 
 # ── Step 2 : Create HuggingFace model ────────────────────────────────────────
 echo ""
-echo "--- [2/4] Creating HuggingFace model ---"
+echo "--- [2/5] Creating HuggingFace model ---"
 python3 "$SCRIPT_DIR/create_model.py" --output-dir "$HF_DIR" "${SEQUENCE_ARG[@]}"
 
 # ── Step 3 : Export to OpenVINO IR ───────────────────────────────────────────
 if [[ $SKIP_EXPORT -eq 0 ]]; then
     echo ""
-    echo "--- [3/4] Exporting to OpenVINO IR ---"
+    echo "--- [3/5] Exporting to OpenVINO IR ---"
     # int4 is not supported by the NPU compiler (UnrollExpandDMA pass fails); use fp16 for NPU.
     python3 "$SCRIPT_DIR/export_to_ov.py" \
         --hf-model-dir  "$HF_DIR" \
         --ov-model-dir  "$OV_DIR" \
         --weight-format "$WEIGHT_FORMAT"
+
+    # Ship the model card as the final catalog's README (this is what gets published to HF)
+    cp "$SCRIPT_DIR/model_card_llm.md" "$OV_DIR/README.md"
 else
     echo ""
-    echo "--- [3/4] Skipping OpenVINO export (--skip-export) ---"
+    echo "--- [3/5] Skipping OpenVINO export (--skip-export) ---"
 fi
 
 # ── Step 4 : Verify ──────────────────────────────────────────────────────────

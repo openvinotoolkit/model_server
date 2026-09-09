@@ -13,13 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Create a dummy GPT-2-based causal LM that always generates the cyclic sequence:
-    "For the night is dark and full of terrors..."
+Create a dummy GPT-2-based causal LM that deterministically generates one fixed
+sequence and then a valid end-of-sequence token:
+    "OpenVINO is an open-source toolkit created by Intel to speed up and run AI models efficiently."
+
+With normal generation settings the model stops right after that end-of-sequence
+token, like any well-behaved LM. Passing `ignore_eos=True` (openvino_genai
+GenerationConfig) makes the pipeline feed EOS back in as if it were any other
+non-sequence token, which this model maps to the first token of the sequence -
+so the sentence repeats forever instead of stopping.
 
 Weight design (all using standard GPT-2 architecture so optimum/OV export just works):
 
   wte  : sequence token t_i  → standard basis vector e_i  (1 at dim i, 0 elsewhere)
-         any other token      → e_{DEFAULT_DIM}  (same "default" vector for all)
+         any other token (incl. EOS) → e_{DEFAULT_DIM}  (same "default" vector for all)
 
   wpe  : all zeros  (no positional interference)
 
@@ -27,8 +34,10 @@ Weight design (all using standard GPT-2 architecture so optimum/OV export just w
 
   ln_f : default weight=1, bias=0
 
-  lm_head:  for each i, W[t_{(i+1)%N}, i] = SCALE   →  logit ≈ 100 after LayerNorm
-            W[t_0, DEFAULT_DIM] = SCALE               →  non-sequence tokens predict t_0
+  lm_head:  for each i < N-1, W[t_{i+1}, i] = SCALE      →  logit ≈ 100 after LayerNorm
+            for i = N-1 (last token), W[EOS, i] = SCALE   →  correctly ends the sequence
+            W[t_0, DEFAULT_DIM] = SCALE                    →  non-sequence tokens (incl. EOS
+            fed back in under ignore_eos=True) predict t_0
 
   SCALE is chosen so that ln_scale * SCALE ≈ 100, where ln_scale = LayerNorm(e_i)[i].
   This makes the correct next-token logit (~100) dominate over all others (~0 or negative).
@@ -44,7 +53,7 @@ import torch
 import torch.nn as nn
 from transformers import GPT2Config, GPT2LMHeadModel, GPT2TokenizerFast
 
-TARGET_SEQUENCE = "For the night is dark and full of terrors..."
+TARGET_SEQUENCE = "OpenVINO is an open-source toolkit created by Intel to speed up and run AI models efficiently."
 DEFAULT_OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hf_model")
 
 # Handles system/user/assistant turns, multi-part content blocks, and reasoning_content.
@@ -136,7 +145,7 @@ def main() -> None:
     # ── GPT-2 config ─────────────────────────────────────────────────────────────
     config = GPT2Config(
         vocab_size=VOCAB_SIZE,
-        n_positions=2048,
+        n_positions=131072,  # 128k - lets tests exercise huge-context behavior
         n_embd=H,
         n_layer=1,       # zeroed-out blocks are identity; one is enough
         n_head=1,        # head_dim = H; satisfies GPU PA kernel requirement head_size >= 16

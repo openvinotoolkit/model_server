@@ -22,9 +22,7 @@ VIRTUALENV_DIR := .venv
 VIRTUALENV_STYLE_DIR := .venv-style
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 ACTIVATE_STYLE="$(VIRTUALENV_STYLE_DIR)/bin/activate"
-STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
-	--output=vs7 \
-	--recursive \
+STYLE_CHECK_OPTS := --output=vs7 \
 	--linelength=120 \
 	--filter=-build/c++11,-runtime/references,-whitespace/braces,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
 STYLE_CHECK_DIRS := src
@@ -315,11 +313,11 @@ sdl-check: venv-style hadolint bandit license-headers
 
 cpplint: venv-style
 	@echo "Style-checking codebase..."
-	@. $(ACTIVATE_STYLE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
+	@. $(ACTIVATE_STYLE); echo ${PWD}; find ${STYLE_CHECK_DIRS} -path '*/dummy_genai' -prune -o -regex '.*\.\(hpp\|cc\|cpp\|h\)' -print | xargs cpplint ${STYLE_CHECK_OPTS}
 
 clang-format: venv-style
 	@echo "Formatting files with clang-format.."
-	@. $(ACTIVATE_STYLE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format -style=file -i {} \;
+	@. $(ACTIVATE_STYLE); find ${STYLE_CHECK_DIRS} -path '*/dummy_genai' -prune -o -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format -style=file -i {} \;
 
 clang-format-check: clang-format
 	@echo "Checking if clang-format changes were committed ..."
