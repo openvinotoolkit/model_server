@@ -8,7 +8,7 @@ OpenVINO GenAI implements three drafting strategies, all exposed through the sam
 |---|---|---|---|
 | **Fast Draft** | Small off-the-shelf LLM | General-purpose; any target/draft pair | Yes — smaller LLM sharing target's tokenizer |
 | **EAGLE3** | Draft head conditioned on target's hidden states | Highest acceptance rate; code and reasoning; supports tree drafting | Yes — EAGLE3 head trained on the target family |
-| **MTP** | Built-in multi-token prediction head | Models with bundled MTP heads (e.g. Gemma4 on NPU) | No — head bundled with the main model |
+| **MTP** | Built-in multi-token prediction head | Models with bundled MTP heads (e.g. Qwen3.8-27B) | No — head bundled with the main model |
 
 All three strategies share the same server API — only the generation parameters differ.
 
@@ -90,11 +90,12 @@ models
 
 :::{dropdown} **Deploying with Docker**
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:weekly --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm $(test -d /dev/dri && echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)") \
+  -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:weekly \
+  --rest_port 8000 --config_path /workspace/config.json
 ```
 
-Running above command starts the container with no accelerators support. 
-To deploy on devices other than CPU, change `target_device` parameter in `export_model.py` call and follow [AI accelerators guide](../../../docs/accelerators.md) for additionally required docker parameters.
+OVMS auto-detects the best available device at startup. To target a specific device explicitly, pass `--target_device GPU` (or `NPU`, `HETERO:GPU,CPU`, etc.) to `export_model.py` and follow the [AI accelerators guide](../../../docs/accelerators.md) for additionally required docker parameters.
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
@@ -119,7 +120,7 @@ Let's check how the deployed model is doing by running performance test. For tha
 
 Install vLLM and download sonnet dataset: 
 ```bash
-pip install vllm --extra-index-url https://wheels.vllm.ai/nightly/cpu
+pip install vllm --index-url https://wheels.vllm.ai/nightly/cpu --extra-index-url https://pypi.org/simple
 curl https://raw.githubusercontent.com/vllm-project/vllm/refs/heads/main/benchmarks/sonnet.txt -o sonnet.txt
 ```
 
@@ -287,8 +288,7 @@ models
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
 
-Running above command starts the container with no accelerators support. 
-To deploy on devices other than CPU, change `target_device` parameter in `export_model.py` call and follow [AI accelerators guide](../../../docs/accelerators.md) for additionally required docker parameters.
+OVMS auto-detects the best available device at startup. To target a specific device explicitly, pass `--target_device GPU` (or `NPU`, `HETERO:GPU,CPU`, etc.) to `export_model.py` and follow the [AI accelerators guide](../../../docs/accelerators.md) for additionally required docker parameters.
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
@@ -366,7 +366,59 @@ for chunk in stream:
 
 # MTP (Multi-Token Prediction)
 
-> **To be done**.
+MTP replaces the separate draft model with a lightweight prediction head bundled inside the main model weights — no additional download is needed. The head is auto-detected by OVMS when `openvino_mtp_model.xml` is present in the draft model directory. Because it shares the main model's weights, the draft cost is minimal and acceptance rates are high for the same model family.
+
+## Model considerations
+
+For this demo we use [OpenVINO/Qwen3.8-27B-int8-ov](https://huggingface.co/OpenVINO/Qwen3.8-27B-int8-ov) — a vision-language model with a bundled MTP head exported in INT8 precision.
+
+> **Note:** This model requires OpenVINO nightly builds and is marked experimental. See the model card for compatibility details.
+> **Note:** Prefix caching is not yet supported in this mode.
+
+## Server Deployment
+
+:::{dropdown} **Deploying with Docker**
+```bash
+docker run -d --rm $(test -d /dev/dri && echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)") \
+  -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly \
+  --rest_port 8000 \
+  --model_repository_path /models \
+  --source_model OpenVINO/Qwen3.8-27B-int4-ov \
+  --draft_model_path . \
+  --enable_prefix_caching false
+```
+:::
+
+:::{dropdown} **Deploying on Bare Metal**
+```console
+ovms --rest_port 8000 \
+  --model_repository_path c:\models \
+  --source_model OpenVINO/Qwen3.8-27B-int4-ov \
+  --draft_model_path . \
+  --enable_prefix_caching false
+```
+:::
+
+## Request Generation
+
+The API is identical to other speculative decoding strategies:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
+
+response = client.chat.completions.create(
+    model="OpenVINO/Qwen3.8-27B-int4-ov",
+    messages=[{"role": "user", "content": "Explain the transformer attention mechanism."}],
+    temperature=0,
+    max_tokens=200,
+    extra_body={"num_assistant_tokens": 5},
+)
+print(response.choices[0].message.content)
+```
+
+`num_assistant_tokens` controls how many MTP candidates are proposed per target step. The default is `5` if not specified.
 
 # Setting Default Generation Parameters
 

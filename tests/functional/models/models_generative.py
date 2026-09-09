@@ -20,7 +20,7 @@
 import os
 import shutil
 
-from dataclasses import dataclass
+from dataclasses import dataclass, Field, MISSING
 from pathlib import Path
 
 from tests.functional.config import generative_models_local_path
@@ -32,6 +32,13 @@ from tests.functional.models.models_datasets import (
     RerankModelDataset,
     SingleMessageLanguageModelDataset,
 )
+
+
+def _resolve_default(value):
+    if not isinstance(value, Field):
+        return value
+    # Class bodies are snapshotted before @dataclass runs, so factory fields are still Field objects.
+    return value.default_factory() if value.default_factory is not MISSING else value.default
 
 
 @dataclass
@@ -85,7 +92,7 @@ class GenerativeModel(ModelInfo):
             own_defaults = getattr(base, '_own_field_defaults', {})
             for field_name, default_value in own_defaults.items():
                 if field_name not in seen_fields:
-                    setattr(self, field_name, default_value)
+                    setattr(self, field_name, _resolve_default(default_value))
                     seen_fields.add(field_name)
 
     def __post_init__(self):

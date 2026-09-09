@@ -24,9 +24,18 @@
         return;                                                                                                   \
     }
 
+// Gates tests that document known idle servable management defects and are expected to fail until fixed.
+#define SKIP_AND_EXIT_IF_NOT_RUNNING_ALL_IDLE(reason)                                           \
+    if (!Environment::shouldRunAllIdleTests()) {                                                \
+        GTEST_SKIP() << "Skipping idle test since RUN_ALL_IDLE was not set to 1. " << (reason); \
+        return;                                                                                 \
+    }
+
 class Environment : public testing::Environment {
 public:
     void SetUp() override;
     static bool runUnstableTests;
     static bool shouldRunUnstableTests();
+    static bool runAllIdleTests;
+    static bool shouldRunAllIdleTests();
 };
