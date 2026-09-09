@@ -8,12 +8,12 @@ Optionally set an OpenVINO model cache directory with `--cache_dir` to reduce re
 
 ## Enable idle management
 
-Set top-level `idle_unload_timeout_seconds` to a positive number in the configuration file. `0`, default, disables idle servable management.
+Set `--idle_unload_timeout_seconds` to a positive number when starting OVMS. `0`, the default, disables idle servable management.
 
 Start OVMS with a cache directory:
 
-```bash
-ovms --config_path /models/config.json --cache_dir /models/cache
+```text
+ovms --config_path /models/config.json --cache_dir /models/cache --idle_unload_timeout_seconds 60
 ```
 
 ## Groups
@@ -24,31 +24,44 @@ Without `group_name`, every classic model and MediaPipe graph is assigned to its
 
 OVMS keeps one non-permanent group active. A request for servable from another group waits for current group to finish its requests, then loads requested group. First request after unload includes wake-up latency. 
 
-Example JSON configuration with grouping
-
+The following configuration keeps a small chat model and speech recognition model loaded. It loads one of the larger workloads on demand: a large language model, vision-language model, or image-generation model. Download the referenced models to the corresponding local paths before starting OVMS.
 
 ```json
 {
     "model_config_list": [
         {
             "config": {
-                "name": "llm",
-                "base_path": "/models/llm",
-                "group_name": "chat"
-            }
-        },
-        {
-            "config": {
-                "name": "speech2text",
-                "base_path": "/models/speech2text",
-                "group_name": "chat"
-            }
-        },
-        {
-            "config": {
-                "name": "speech2text",
-                "base_path": "/models/s2t",
+                "name": "small_llm",
+                "base_path": "/models/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov",
                 "group_name": "permanent"
+            }
+        },
+        {
+            "config": {
+                "name": "speech_to_text",
+                "base_path": "/models/openai/whisper-tiny",
+                "group_name": "permanent"
+            }
+        },
+        {
+            "config": {
+                "name": "large_llm",
+                "base_path": "/models/OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov",
+                "group_name": "large_llm"
+            }
+        },
+        {
+            "config": {
+                "name": "vlm",
+                "base_path": "/models/OpenVINO/Qwen3.6-35B-A3B-int4-ov",
+                "group_name": "vlm"
+            }
+        },
+        {
+            "config": {
+                "name": "image_generation",
+                "base_path": "/models/OpenVINO/FLUX.1-schnell-int4-ov",
+                "group_name": "image_generation"
             }
         }
     ]
