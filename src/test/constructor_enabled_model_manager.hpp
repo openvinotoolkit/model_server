@@ -18,23 +18,21 @@
 #include <string>
 
 #include "src/metrics/metric_registry.hpp"
-#include "src/modelmanager.hpp"
+#include "src/servable_management/modelmanager.hpp"
+#include "src/servable_management/servable_loading_queue.hpp"
 
 class ConstructorEnabledModelManager : public ovms::ModelManager {
     ovms::MetricRegistry registry;
 
 public:
     ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "", ovms::PythonBackend* pythonBackend = nullptr);
+    ConstructorEnabledModelManager(uint64_t idleTimeoutMicroseconds);
     ~ConstructorEnabledModelManager();
-    /*
-     *  Loads config but resets the config filename to the one provided in the argument. In production server this is only changed once
-     */
+
     ovms::Status loadConfig(const std::string& jsonFilename);
-    /**
-     * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
-     */
     void updateConfigurationWithoutConfigFile();
     void setWaitForModelLoadedTimeoutMs(int value);
+    ovms::ServableLoadingQueue& getLoadingQueue() { return *loadingQueue; }
 };
 class ResourcesAccessModelManager : public ConstructorEnabledModelManager {
 public:
