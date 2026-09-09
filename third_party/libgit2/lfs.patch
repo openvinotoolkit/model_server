@@ -427,7 +427,7 @@ new file mode 100644
 index 000000000..18490e5ad
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,2014 @@
+@@ -0,0 +1,2029 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -1775,6 +1775,20 @@ index 000000000..18490e5ad
 +		status = setopt;  \
 +	}
 +
++static CURLcode configure_hf_token_auth(CURL *curl)
++{
++	const char *hf_token = getenv("HF_TOKEN");
++	CURLcode status = CURLE_OK;
++
++	if (!curl || !hf_token || !*hf_token)
++		return CURLE_OK;
++
++	CURL_SETOPT(curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC));
++	CURL_SETOPT(curl_easy_setopt(curl, CURLOPT_USERNAME, hf_token));
++	CURL_SETOPT(curl_easy_setopt(curl, CURLOPT_PASSWORD, hf_token));
++	return status;
++}
++
 +/*
 + * print_curl_error_details
 + * -------------------------
@@ -2121,6 +2135,7 @@ index 000000000..18490e5ad
 +	CURL_SETOPT(curl_easy_setopt(
 +	        info_curl, CURLOPT_ERRORBUFFER, info_error_buffer));
 +	CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_URL, lfs_info_url.ptr));
++	CURL_SETOPT(configure_hf_token_auth(info_curl));
 +	/* Add cURL resiliency */
 +	/* unlimited data */
 +	CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_CONNECTTIMEOUT, 30L));

@@ -939,10 +939,9 @@ std::string sha256File(std::string_view path, std::error_code& ec) {
 
 class TestHfDownloader : public ovms::HfDownloader {
 public:
-    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool overwrite) :
-        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy, overwrite) {}
+    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& /*hfToken*/, const std::string& httpProxy, bool overwrite) :
+        HfDownloader(sourceModel, downloadPath, hfEndpoint, httpProxy, overwrite) {}
     std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
-    std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
     bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
     const std::string& getEndpoint() { return this->hfEndpoint; }
     const std::string& getProxy() { return this->httpProxy; }
@@ -1832,7 +1831,6 @@ TEST(HfDownloaderClassTest, Methods) {
     EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
     ASSERT_EQ(hfDownloader->GetRepoUrl(), "www.new_hf.com/model/name");
-    ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
 
     std::string expectedPath = downloadPath + "/" + modelName;
 #ifdef _WIN32
@@ -2117,29 +2115,29 @@ TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExportCommandPassed) {
     ASSERT_EQ(optimumDownloader->downloadModel(), ovms::StatusCode::OK);
 }
 
-TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
+TEST(HfDownloaderClassTest, ProtocolsWithoutPassword) {
     std::string modelName = "model/name";
     std::string downloadPath = "/path/to/Download";
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "www.new_hf.com/model/name");
     hfEndpoint = "https://www.new_hf.com/";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "https://www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "https://www.new_hf.com/model/name");
     hfEndpoint = "www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "www.new_hf.com/model/name");
     hfEndpoint = "http://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "http://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "http://www.new_hf.com/model/name");
     hfEndpoint = "git://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "git://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "git://www.new_hf.com/model/name");
     hfEndpoint = "ssh://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "ssh://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "ssh://www.new_hf.com/model/name");
     hfEndpoint = "what_ever_is_here://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "what_ever_is_here://www.new_hf.com/model/name");
 }
 
 TEST_F(HfPull, MethodsNegative) {
@@ -2321,9 +2319,9 @@ TEST(Libgit2Framework, TimeoutTestProxy) {
     int e = git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, 1000);
     EXPECT_EQ(e, 0);
 
-    std::string passRepoUrl = "https://huggingface.co/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string repoUrl = "https://huggingface.co/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     const char* path = "/tmp/model";
-    int error = git_clone(&cloned_repo, passRepoUrl.c_str(), path, &clone_opts);
+    int error = git_clone(&cloned_repo, repoUrl.c_str(), path, &clone_opts);
     if (error != 0) {
         const git_error* err = git_error_last();
         if (err) {
