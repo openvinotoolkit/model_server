@@ -313,7 +313,7 @@ sdl-check: venv-style hadolint bandit license-headers
 
 cpplint: venv-style
 	@echo "Style-checking codebase..."
-	@. $(ACTIVATE_STYLE); echo ${PWD}; find ${STYLE_CHECK_DIRS} -path '*/dummy_genai' -prune -o -regex '.*\.\(hpp\|cc\|cpp\|h\)' -print | xargs cpplint ${STYLE_CHECK_OPTS}
+	@. $(ACTIVATE_STYLE); echo ${PWD}; find ${STYLE_CHECK_DIRS} -path '*/dummy_genai' -prune -o -regex '.*\.\(hpp\|cc\|cpp\|h\)' -print0 | xargs -0 -r cpplint ${STYLE_CHECK_OPTS}
 
 clang-format: venv-style
 	@echo "Formatting files with clang-format.."

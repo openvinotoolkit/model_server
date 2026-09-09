@@ -56,11 +56,11 @@ def export_model(hf_dir: str, ov_dir: str, weight_format: str) -> None:
     extra = "--group-size -1" if weight_format == "int4" else ""
     cmd = (
         f"optimum-cli export openvino"
-        f" --model {hf_dir}"
+        f" --model \"{hf_dir}\""
         f" --task text-generation-with-past"
         f" --weight-format {weight_format}"
         f" {extra}"
-        f" {ov_dir}"
+        f" \"{ov_dir}\""
     )
     print("\n--- Exporting model to OpenVINO IR ---")
     if not run(cmd):
@@ -81,8 +81,8 @@ def compile_tokenizer(hf_dir: str, ov_dir: str) -> None:
     cmd = (
         f"convert_tokenizer"
         f" --with-detokenizer"
-        f" -o {ov_dir}"
-        f" {hf_dir}"
+        f" -o \"{ov_dir}\""
+        f" \"{hf_dir}\""
     )
     if not run(cmd):
         # convert_tokenizer is optional; LLMPipeline can also use the HF tokenizer files.

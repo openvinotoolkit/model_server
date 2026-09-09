@@ -1407,7 +1407,13 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonLogprobs) {
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutput) {
-    // Structured output needs real guided generation, not the dummy cyclic model.
+    // Structured output needs real guided generation, not the dummy cyclic model - the
+    // request always targets the fixed "lm_cb_with_tool_parser" model regardless of the
+    // suite's parameterization, so only run it once instead of once per param.
+    auto params = GetParam();
+    if (params.modelName != "lm_cb_regular") {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
             "model": "lm_cb_with_tool_parser",
@@ -1456,7 +1462,13 @@ TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutput) {
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputBadSchema) {
-    // Structured output needs real guided generation, not the dummy cyclic model.
+    // Structured output needs real guided generation, not the dummy cyclic model - the
+    // request always targets the fixed "lm_cb_with_tool_parser" model regardless of the
+    // suite's parameterization, so only run it once instead of once per param.
+    auto params = GetParam();
+    if (params.modelName != "lm_cb_regular") {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
             "model": "lm_cb_with_tool_parser",
@@ -1494,7 +1506,13 @@ TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputBadSchema) {
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputNonOpenAI) {
-    // Structured output needs real guided generation, not the dummy cyclic model.
+    // Structured output needs real guided generation, not the dummy cyclic model - the
+    // request always targets the fixed "lm_cb_with_tool_parser" model regardless of the
+    // suite's parameterization, so only run it once instead of once per param.
+    auto params = GetParam();
+    if (params.modelName != "lm_cb_regular") {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
             "model": "lm_cb_with_tool_parser",

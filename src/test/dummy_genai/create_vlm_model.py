@@ -104,7 +104,7 @@ def next_power_of_two(n: int) -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Create dummy cyclic VLM (LLaVA + GPT-2)")
+    parser = argparse.ArgumentParser(description="Create dummy cyclic VLM (LLaVA + LLaMA)")
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--sequence", default=TARGET_SEQUENCE)
     args = parser.parse_args()

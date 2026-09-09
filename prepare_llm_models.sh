@@ -105,8 +105,7 @@ fi
 # if [ -f "$1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE" ]; then
 #   echo "Model file $1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 # else
-  pip3 install --upgrade typer==0.25.1
-  hf download "$DUMMY_VLM_MODEL" --local-dir "$1/$DUMMY_VLM_MODEL"
+  hf download "$DUMMY_VLM_MODEL" --local-dir "$1/$DUMMY_VLM_MODEL"  # typer already pinned above
 # fi
 if [ ! -f "$1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE does not exist."
