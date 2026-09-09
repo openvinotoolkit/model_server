@@ -722,8 +722,8 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithArgumentMissingEquals) {
     auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "broken");
+    // Fail-closed: a native body without `key:value` pairs is not an executable call.
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingComparison) {
@@ -768,7 +768,7 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingEscaped
     EXPECT_EQ(parsedOutput.content, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "execute");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"x({"code":"print(\"hello world\")","verbose":true})x");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"x({"code":"print(\\\"hello world\\\")","verbose":true})x");
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingApostrophes) {
