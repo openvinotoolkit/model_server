@@ -179,7 +179,7 @@ void MediapipeFactory::retireOtherThan(std::set<std::string>&& graphsInConfigFil
     return status;
 }
 
-[[nodiscard]] Status MediapipeFactory::putToSleepDefinition(const std::string& graphName) {
+    [[nodiscard]] Status MediapipeFactory::putToSleepDefinition(const std::string& graphName) {
     MediapipeGraphDefinition* definition = findDefinitionByName(graphName);
     if (definition == nullptr) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested to put to sleep mediapipe graph definition but it does not exist: {}", graphName);
