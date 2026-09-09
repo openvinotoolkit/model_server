@@ -1065,6 +1065,7 @@ ovms_cc_library(
         "libovms_tensorinfo",
         "inference_request_common",
         "predict_request_validation_utils_impl",
+        "//src/image_utils:decoded_image_size",
     ],
     visibility = ["//visibility:public",],
 )

@@ -16,12 +16,12 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <string_view>
+#include <vector>
 #include <utility>
 
 #include "deps/opencv.hpp"
-#include "image_utils/decoded_image_size.hpp"
 #include "logging.hpp"
 #include "precision.hpp"
 #include "predict_request_validation_utils_impl.hpp"
@@ -67,6 +67,10 @@ Status getInputs(const std::string* buffer, std::vector<std::string>& inputs);
 ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
 ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
 shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
+Status checkEstimatedImageSize(std::string_view encodedImage, const std::string& inputName,
+    size_t alreadyAllocatedBytes, size_t maxAllowedImageBytes);
+Status accumulateAndCheckDecodedImageSize(const cv::Mat& image, const TensorInfo& tensorInfo,
+    size_t& totalAllocatedBytes, size_t maxAllowedImageBytes);
 }  // namespace tensor_conversion
 template <typename TensorType>
 static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const TensorInfo& tensorInfo, const std::string* buffer) {
@@ -89,47 +93,18 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
     size_t maxAllowedImageBytes = request_validation_utils::getMaxImageDecodedSizeBytes();
     for (int i = 0; i < numberOfInputs; i++) {
         const std::string& encodedImage = !rawInputsContentsUsed ? getBinaryInput(src, i) : inputs[i];
-        // Pre-decode guard (B): reject decompression bombs from the header before allocating a
-        // decode buffer. Fails open for unrecognized formats - the OpenCV pre-decode pixel guard
-        // and the post-decode budget below still apply.
-        uint64_t estimatedDecodedBytes = 0;
-        auto estimate = image_utils::estimateDecodedImageSize(encodedImage, estimatedDecodedBytes);
-        if (estimate == image_utils::DecodedSizeEstimate::InputTooLarge) {
-            SPDLOG_DEBUG("Image binary payload too large to inspect for input: {}. Size: {}",
-                tensorInfo.getMappedName(),
-                encodedImage.size());
-            return StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED;
-        }
-        if (estimate == image_utils::DecodedSizeEstimate::Estimated &&
-            (estimatedDecodedBytes > maxAllowedImageBytes ||
-                (static_cast<uint64_t>(totalAllocatedBytes) + estimatedDecodedBytes) > maxAllowedImageBytes)) {
-            SPDLOG_DEBUG("Estimated decoded image size exceeds budget for input: {}. Estimated bytes: {}, max allowed: {}",
-                tensorInfo.getMappedName(),
-                estimatedDecodedBytes,
-                maxAllowedImageBytes);
-            return StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED;
+        status = tensor_conversion::checkEstimatedImageSize(encodedImage, tensorInfo.getMappedName(), totalAllocatedBytes, maxAllowedImageBytes);
+        if (status != StatusCode::OK) {
+            return status;
         }
         cv::Mat image = tensor_conversion::convertStringToMat(encodedImage);
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
 
-        size_t decodedImageBytes = image.total() * image.elemSize();
-        bool needsPrecisionConv = !tensor_conversion::isPrecisionEqual(image.depth(), tensorInfo.getPrecision());
-        size_t convertedImageBytes = 0;
-        if (needsPrecisionConv) {
-            size_t targetElemSize = tensorInfo.getOvPrecision().size() * image.channels();
-            convertedImageBytes = image.total() * targetElemSize;
+        status = tensor_conversion::accumulateAndCheckDecodedImageSize(image, tensorInfo, totalAllocatedBytes, maxAllowedImageBytes);
+        if (status != StatusCode::OK) {
+            return status;
         }
-
-        size_t requiredBytesForThisImage = decodedImageBytes + convertedImageBytes;
-        if (requiredBytesForThisImage > maxAllowedImageBytes || (totalAllocatedBytes + requiredBytesForThisImage) > maxAllowedImageBytes) {
-            SPDLOG_DEBUG("Decoded image memory budget exceeded for input: {}. Required bytes: {}, max allowed: {}",
-                tensorInfo.getMappedName(),
-                requiredBytesForThisImage,
-                maxAllowedImageBytes);
-            return StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED;
-        }
-
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
         status = tensor_conversion::validateInput(tensorInfo, image, firstImage, enforceResolutionAlignment);
         if (status != StatusCode::OK) {
@@ -139,6 +114,7 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
             tensor_conversion::updateTargetResolution(targetHeight, targetWidth, image);
         }
 
+        bool needsPrecisionConv = !tensor_conversion::isPrecisionEqual(image.depth(), tensorInfo.getPrecision());
         if (needsPrecisionConv) {
             cv::Mat imageCorrectPrecision;
             status = tensor_conversion::convertPrecision(image, imageCorrectPrecision, tensorInfo.getPrecision());
@@ -171,10 +147,6 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
 
-        // if (i == 0 && src.contents().bytes_contents_size() > 1) {
-        //     // Multiply src.string_val_size() * image resolution * precision size
-        // }
-        totalAllocatedBytes += (image.total() * image.elemSize());
         images.push_back(image);
     }
     return StatusCode::OK;

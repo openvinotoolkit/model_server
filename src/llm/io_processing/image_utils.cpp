@@ -26,7 +26,9 @@
 
 #include "src/logging.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "src/image_utils/decoded_image_size.hpp"
 #include "src/image_utils/image_conversion.hpp"
+#include "src/predict_request_validation_utils_impl.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
@@ -130,23 +132,18 @@ bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char*
 
 }  // namespace
 
-absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
+absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains) {
     std::size_t pos = imageSource.find(BASE64_PREFIX);
     std::string decoded;
-    ov::Tensor tensor;
+    // Part 1: fetch the encoded image bytes into `decoded` (base64 or download). The local
+    // filesystem case is handled separately below because it decodes straight from disk.
     if (pos != std::string::npos) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
         size_t offset = pos + BASE64_PREFIX.length();
         if (!absl::Base64Unescape(std::string_view(imageSource.data() + offset, imageSource.size() - offset), &decoded)) {
             return absl::InvalidArgumentError("Invalid base64 string in request");
-        }
-        try {
-            tensor = loadImageStbiFromMemory(decoded);
-        } catch (std::runtime_error& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
-            return absl::InvalidArgumentError("Image parsing failed");
         }
     } else if (imageSource.rfind("http://", 0) == 0 || imageSource.rfind("https://", 0) == 0 ||
                imageSource.rfind("ftp://", 0) == 0 || imageSource.rfind("sftp://", 0) == 0) {
@@ -158,13 +155,8 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
         if (status != absl::OkStatus()) {
             return status;
         }
-        try {
-            tensor = loadImageStbiFromMemory(decoded);
-        } catch (std::runtime_error& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
-            return absl::InvalidArgumentError("Image parsing failed");
-        }
     } else {
+        // Part 3: local filesystem - validated then decoded directly from file.
         if (!allowedLocalMediaPath.has_value()) {
             return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
         }
@@ -182,13 +174,32 @@ absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
             return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
         }
         try {
-            tensor = loadImageStbiFromFile(resolvedImagePathStr.c_str());
+            return loadImageStbiFromFile(resolvedImagePathStr.c_str());
         } catch (std::runtime_error& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image file {} parsing failed: {}", resolvedImagePathStr, e.what());
             return absl::InvalidArgumentError("Image file parsing failed");
         }
     }
-    return tensor;
+
+    // Part 2: guard against decompression bombs, then decode the in-memory bytes exactly once.
+    uint64_t estimatedDecodedBytes = 0;
+    auto estimate = image_utils::estimateDecodedImageSize(decoded, estimatedDecodedBytes);
+    if (estimate == image_utils::DecodedSizeEstimate::InputTooLarge) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image binary payload too large to inspect. Size: {}", decoded.size());
+        return absl::InvalidArgumentError("Image too large");
+    }
+    if (estimate == image_utils::DecodedSizeEstimate::Estimated &&
+        estimatedDecodedBytes > request_validation_utils::getMaxImageDecodedSizeBytes()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Estimated decoded image size {} exceeds budget {}",
+            estimatedDecodedBytes, request_validation_utils::getMaxImageDecodedSizeBytes());
+        return absl::InvalidArgumentError("Image exceeds maximum decoded size");
+    }
+    try {
+        return loadImageStbiFromMemory(decoded);
+    } catch (std::runtime_error& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
+        return absl::InvalidArgumentError("Image parsing failed");
+    }
 }
 
 }  // namespace ovms

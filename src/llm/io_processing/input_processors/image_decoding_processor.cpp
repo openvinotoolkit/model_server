@@ -75,7 +75,7 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
 
             if (type == "image_url") {
                 const auto url = part["image_url"]["url"].as_string().value_or("");
-                auto imageResult = loadImage(url, allowedLocalMediaPath, allowedMediaDomains);
+                auto imageResult = fetchAndDecodeImage(url, allowedLocalMediaPath, allowedMediaDomains);
                 if (!imageResult.ok()) {
                     return imageResult.status();
                 }

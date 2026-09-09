@@ -16,7 +16,6 @@
 #include "image_conversion.hpp"
 
 #include <iostream>
-#include <limits>
 #include <variant>
 #include <vector>
 
@@ -91,22 +90,6 @@ ov::Tensor loadImageStbiFromFile(char const* filename) {
         filename,
         &x, &y, &channelsInFile, desiredChannels);
     return loadImageStbi(image, x, y, desiredChannels);
-}
-
-[[nodiscard]] bool tryReadImageHeaderStbi(std::string_view imageBytes, int& width, int& height, int& bytesPerPixel) {
-    width = 0;
-    height = 0;
-    bytesPerPixel = 0;
-    if (imageBytes.empty() || imageBytes.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
-        return false;
-    const stbi_uc* buffer = reinterpret_cast<const stbi_uc*>(imageBytes.data());
-    int len = static_cast<int>(imageBytes.size());
-    int channels = 0;
-    if (!stbi_info_from_memory(buffer, len, &width, &height, &channels))
-        return false;
-    int bytesPerSample = stbi_is_16_bit_from_memory(buffer, len) != 0 ? 2 : 1;
-    bytesPerPixel = channels * bytesPerSample;
-    return true;
 }
 
 std::vector<std::string> saveImagesStbi(const ov::Tensor& tensor) {

@@ -20,7 +20,10 @@
 #include <limits>
 #include <string_view>
 
-#include "image_conversion.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6262 6386 6385)
+#include "stb_image.h"  // NOLINT
+#pragma warning(pop)
 
 namespace ovms {
 namespace image_utils {
@@ -116,6 +119,26 @@ uint64_t decodedBytes(uint64_t width, uint64_t height, uint64_t bytesPerPixel) {
         return false;
     // WebP frames are expanded to BGRA by decoders.
     out = decodedBytes(width, height, 4);
+    return true;
+}
+
+    // Reads only the image header via stb_image (no pixel decode or allocation). Fills
+    // width/height/bytesPerPixel (channel count times 8- vs 16-bit sample width) for formats stb
+    // recognizes (PNG, JPEG, BMP, GIF, ...). Returns false for empty/oversized input or formats stb
+    // does not support (e.g. WebP), in which case the caller uses its own fallback.
+    [[nodiscard]] bool tryReadImageHeaderStbi(std::string_view imageBytes, int& width, int& height, int& bytesPerPixel) {
+    width = 0;
+    height = 0;
+    bytesPerPixel = 0;
+    if (imageBytes.empty() || imageBytes.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
+        return false;
+    const stbi_uc* buffer = reinterpret_cast<const stbi_uc*>(imageBytes.data());
+    int len = static_cast<int>(imageBytes.size());
+    int channels = 0;
+    if (!stbi_info_from_memory(buffer, len, &width, &height, &channels))
+        return false;
+    int bytesPerSample = stbi_is_16_bit_from_memory(buffer, len) != 0 ? 2 : 1;
+    bytesPerPixel = channels * bytesPerSample;
     return true;
 }
 

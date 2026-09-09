@@ -28,11 +28,4 @@ ov::Tensor loadImageStbiFromMemory(std::string_view imageBytes);
 ov::Tensor loadImageStbiFromFile(const char* filename);
 std::vector<std::string> saveImagesStbi(const ov::Tensor& tensor);
 
-// Reads only the image header (no pixel decode or allocation) via stb_image.
-// Returns true and fills width/height/bytesPerPixel for formats stb recognizes
-// (PNG, JPEG, BMP, GIF, ...). bytesPerPixel already accounts for channel count and
-// 8- vs 16-bit sample depth. Returns false for empty/oversized input or formats stb
-// does not support (e.g. WebP), in which case the caller must use its own fallback.
-[[nodiscard]] bool tryReadImageHeaderStbi(std::string_view imageBytes, int& width, int& height, int& bytesPerPixel);
-
 }  // namespace ovms

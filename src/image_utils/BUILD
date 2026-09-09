@@ -40,6 +40,7 @@ ovms_cc_library(
     hdrs = ["decoded_image_size.hpp"],
     srcs = ["decoded_image_size.cpp"],
     deps = [
+        "@stb//:image",
         ":image_conversion",
     ],
     visibility = ["//visibility:public"],
