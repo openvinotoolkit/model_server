@@ -45,33 +45,35 @@
 #pragma warning(pop)
 #include <sys/stat.h>
 
-#include "cleaner_utils.hpp"
-#include "config.hpp"
-#include "customloaderconfig.hpp"
-#include "customloaderinterface.hpp"
-#include "customloaders.hpp"
-#include "dags/custom_node_library_manager.hpp"
-#include "dags/pipeline_config_parser.hpp"
-#include "dags/pipeline_factory.hpp"
-#include "dags/pipelinedefinition.hpp"
-#include "filesystem/filesystem.hpp"
-#include "filesystem/filesystemfactory.hpp"
-#include "graph_export/graph_export.hpp"
-#include "logging.hpp"
+#include "src/cleaner_utils.hpp"
+#include "src/config.hpp"
+#include "src/customloaderconfig.hpp"
+#include "src/customloaderinterface.hpp"
+#include "src/customloaders.hpp"
+#include "src/dags/custom_node_library_manager.hpp"
+#include "src/dags/pipeline_config_parser.hpp"
+#include "src/dags/pipeline_factory.hpp"
+#include "src/dags/pipelinedefinition.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/filesystem/filesystemfactory.hpp"
+#include "src/graph_export/graph_export.hpp"
+#include "src/logging.hpp"
+#include "servable_group_manager.hpp"
+#include "servable_loading_queue.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-#include "mediapipe_internal/mediapipefactory.hpp"
-#include "mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/mediapipe_internal/mediapipefactory.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
 #endif
-#include "metrics/metric_config.hpp"
-#include "metrics/metric_registry.hpp"
-#include "model.hpp"
-#include "modelinstance.hpp"  // for logging
-#include "modelinstanceunloadguard.hpp"
-#include "ov_utils.hpp"
-#include "schema.hpp"
-#include "servable_definition.hpp"
-#include "stringutils.hpp"
-#include "systeminfo.hpp"
+#include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric_registry.hpp"
+#include "src/model.hpp"
+#include "src/modelinstance.hpp"  // for logging
+#include "src/modelinstanceunloadguard.hpp"
+#include "src/ov_utils.hpp"
+#include "src/schema.hpp"
+#include "src/servable_definition.hpp"
+#include "src/stringutils.hpp"
+#include "src/systeminfo.hpp"
 
 namespace ovms {
 
@@ -82,6 +84,7 @@ const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "c:\\Intel\\openvino_cache";
 const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
 #endif
 ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
+    loadingQueue(std::make_unique<ServableLoadingQueue>()),
     pipelineFactory(std::make_unique<PipelineFactory>()),
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipeFactory(std::make_unique<MediapipeFactory>(pythonBackend)),
@@ -92,6 +95,86 @@ ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistr
     metricRegistry(registry),
     pythonBackend(pythonBackend) {
     this->ieCore = std::make_unique<ov::Core>();
+    loadingQueue->start([this](ServableLoadingTask& task) -> Status {
+        switch (task.type) {
+        case ServableLoadingTaskType::LoadModel: {
+            if (!task.modelConfig.has_value()) {
+                return StatusCode::INTERNAL_ERROR;
+            }
+            return reloadModelWithVersions(task.modelConfig.value());
+        }
+        case ServableLoadingTaskType::WakeUpModel: {
+            auto model = findModelByName(task.name);
+            if (model) {
+                return model->wakeUpIfSleeping();
+            }
+            // Model was never instantiated (e.g. added to config while its group was idle).
+            auto it = servedModelConfigs.find(task.name);
+            if (it == servedModelConfigs.end())
+                return StatusCode::MODEL_NAME_MISSING;
+            return reloadModelWithVersions(it->second);
+        }
+        case ServableLoadingTaskType::PutToSleepModel: {
+            auto model = findModelByName(task.name);
+            if (!model) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            model->putToSleepAllVersions();
+            return StatusCode::OK;
+        }
+        case ServableLoadingTaskType::RetireModel: {
+            auto model = findModelByName(task.name);
+            if (!model) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            model->retireAllVersions();
+            return StatusCode::OK;
+        }
+#if (MEDIAPIPE_DISABLE == 0)
+        case ServableLoadingTaskType::LoadMediapipe: {
+            if (!task.graphConfig.has_value()) {
+                return StatusCode::INTERNAL_ERROR;
+            }
+            const auto& config = task.graphConfig.value();
+            auto* def = mediapipeFactory->findDefinitionByName(task.name);
+            if (!def) {
+                // Non-permanent idle groups: create as SLEEPING to skip expensive loading
+                if (servableGroupManager && servableGroupManager->isEnabled() &&
+                    !config.getGroupName().empty() && config.getGroupName() != "permanent") {
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+                        "Mediapipe graph:{} belongs to non-permanent group '{}'; creating as SLEEPING",
+                        task.name, config.getGroupName());
+                    bool lazyLoad = true;
+                    return mediapipeFactory->createDefinition(task.name, config, *this, *this, lazyLoad);
+                }
+                return mediapipeFactory->createDefinition(task.name, config, *this, *this);
+            }
+            if (def->isReloadRequired(config)) {
+                return mediapipeFactory->reloadDefinition(task.name, config, *this);
+            }
+            return StatusCode::OK;
+        }
+        case ServableLoadingTaskType::WakeUpMediapipe: {
+            // TODO consider moving whole part as an interface to ServableContainer so that we
+            // could just call servableContainer->wakeUp(A). However we would need to to expose scheduler then
+            return mediapipeFactory->wakeUpDefinition(task.name, *this);
+        }
+        case ServableLoadingTaskType::PutToSleepMediapipe: {
+            return mediapipeFactory->putToSleepDefinition(task.name);
+        }
+        case ServableLoadingTaskType::RetireMediapipe: {
+            return mediapipeFactory->retireDefinition(task.name);
+        }
+#else
+        case ServableLoadingTaskType::LoadMediapipe:
+        case ServableLoadingTaskType::RetireMediapipe:
+        case ServableLoadingTaskType::WakeUpMediapipe:
+        case ServableLoadingTaskType::PutToSleepMediapipe:
+            return StatusCode::INTERNAL_ERROR;
+#endif
+        }
+        return StatusCode::INTERNAL_ERROR;
+    });
 
     OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
     // Take --cache_dir from CLI
@@ -187,6 +270,13 @@ Status ModelManager::start(const Config& config) {
     resourcesCleanupIntervalMillisec = config.resourcesCleanerPollWaitSeconds() * 1000;
     Status status;
     this->startedWithConfigFile = (config.configPath() != "");
+
+    // Initialize model group manager if idle unload is enabled and using config file
+    if (this->startedWithConfigFile && config.idleUnloadTimeoutSeconds() > 0) {
+        servableGroupManager = std::make_unique<ServableGroupManager>(static_cast<uint64_t>(config.idleUnloadTimeoutSeconds()) * 1'000'000ULL);
+        SPDLOG_INFO("Model group idle management enabled with {}s timeout", config.idleUnloadTimeoutSeconds());
+    }
+
     if (isStartedWithConfigFile()) {
         status = startFromFile(config.configPath());
     } else {
@@ -449,28 +539,6 @@ Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const Models
     return StatusCode::OK;
 }
 
-Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory) {
-    if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
-        return StatusCode::OK;
-    }
-    mediapipesInConfigFile.insert(config.getGraphName());
-    MediapipeGraphDefinition* mediapipeGraphDefinition = factory.findDefinitionByName(config.getGraphName());
-    if (mediapipeGraphDefinition == nullptr) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} was not loaded so far. Triggering load", config.getGraphName());
-        auto status = factory.createDefinition(config.getGraphName(), config, *this, *this);
-        return status;
-    }
-    if (mediapipeGraphDefinition->isReloadRequired(config)) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} triggering reload", config.getGraphName());
-        auto status = factory.reloadDefinition(config.getGraphName(),
-            config,
-            *this);
-        return status;
-    }
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Mediapipe graph:{} already loaded and reload is not required", config.getGraphName());
-    return StatusCode::OK;
-}
 #endif
 
 #if (MEDIAPIPE_DISABLE == 0)
@@ -532,11 +600,35 @@ Status ModelManager::ConfigLoader::loadCustomNodeLibrariesConfig(ModelManager& m
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
+[[nodiscard]] Status ModelManager::retireMediapipesOtherThan(const std::set<std::string>& graphsInConfigFile) {
+    std::vector<std::pair<std::string, std::future<Status>>> futures;
+    for (const auto& graphName : mediapipeFactory->getMediapipePipelinesNames()) {
+        if (graphsInConfigFile.find(graphName) != graphsInConfigFile.end()) {
+            continue;
+        }
+        auto* definition = mediapipeFactory->findDefinitionByName(graphName);
+        if (definition == nullptr || definition->getStateCode() == PipelineDefinitionStateCode::RETIRED) {
+            continue;
+        }
+        ServableLoadingTask task{ServableLoadingTaskType::RetireMediapipe, graphName, /*urgent=*/false};
+        futures.emplace_back(graphName, loadingQueue->scheduleTask(std::move(task)));
+    }
+    Status firstErrorStatus = StatusCode::OK;
+    // Config reload must not return before removed graphs stopped serving.
+    for (auto& [graphName, future] : futures) {
+        auto status = future.get();
+        if (status != StatusCode::OK) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to retire mediapipe graph:{} - {}", graphName, status.string());
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+        }
+    }
+    return firstErrorStatus;
+}
+
 Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
     if (mediapipesInConfigFile.size() == 0) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
-        mediapipeFactory->retireOtherThan({});
-        return StatusCode::OK;
+        return retireMediapipesOtherThan({});
     }
     std::set<std::string> mediapipesInConfigFileNames;
     Status firstErrorStatus = StatusCode::OK;
@@ -544,13 +636,22 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
             mediapipesInConfigFileNames.insert(mediapipeGraphConfig.getGraphName());
         }
-        mediapipeFactory->retireOtherThan(std::move(mediapipesInConfigFileNames));
-        std::set<std::string> mediapipesAlreadyLoaded;
+        auto retireStatus = retireMediapipesOtherThan(mediapipesInConfigFileNames);
+        if (retireStatus != StatusCode::OK) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(retireStatus);
+        }
+        std::set<std::string> alreadyScheduled;
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
+            if (!alreadyScheduled.insert(mediapipeGraphConfig.getGraphName()).second) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", mediapipeGraphConfig.getGraphName());
+                continue;
+            }
             if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
                 mediapipeGraphConfig.logGraphConfigContent();
             }
-            auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesAlreadyLoaded, *mediapipeFactory);
+            ServableLoadingTask task{ServableLoadingTaskType::LoadMediapipe, mediapipeGraphConfig.getGraphName(), mediapipeGraphConfig};
+            auto future = loadingQueue->scheduleTask(std::move(task));
+            auto status = future.get();
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             }
@@ -751,7 +852,9 @@ Status ModelManager::ConfigLoader::loadModels(ModelManager& modelManager, const 
             continue;
         }
 
-        status = modelManager.reloadModelWithVersions(modelConfig);
+        ServableLoadingTask task{ServableLoadingTaskType::LoadModel, modelName, modelConfig};
+        auto future = modelManager.loadingQueue->scheduleTask(std::move(task));
+        status = future.get();
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
 
         modelsInConfigFile.emplace(modelName);
@@ -867,7 +970,9 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
     Status firstErrorStatus = StatusCode::OK;
     for (auto& modelConfig : gatedModelConfigs) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Trying to reload model({}) configuration", modelConfig.getName());
-        auto status = reloadModelWithVersions(modelConfig);
+        ServableLoadingTask task{ServableLoadingTaskType::LoadModel, modelConfig.getName(), modelConfig};
+        auto future = loadingQueue->scheduleTask(std::move(task));
+        auto status = future.get();
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             continue;
@@ -885,7 +990,7 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
 
 Status ModelManager::loadConfig() {
     rapidjson::Document configJson;
-    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);  // TODO(idle-unload): @atobiszei narrow scope to parsing-only after queue refactoring
     Status status = parseConfig(this->configFilename, configJson, this->lastConfigFileMD5, WRONG_CONFIG_FILE_RETRY_DELAY_MS, MAX_CONFIG_JSON_READ_RETRY_COUNT);
     if (!status.ok()) {
         this->lastLoadConfigStatus = status;
@@ -956,6 +1061,11 @@ Status ModelManager::loadConfig() {
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
 
+    // Build model groups (non-permanent servables start SLEEPING via lazyLoad)
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        servableGroupManager->buildGroups(this->servedModelConfigs, *this);
+    }
+
     this->lastLoadConfigStatus = firstErrorStatus;
     return firstErrorStatus;
 }
@@ -991,13 +1101,15 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
 }
 
 Status ModelManager::updateConfigurationWithoutConfigFile() {
-    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);  // TODO(idle-unload): @atobiszei narrow scope to parsing-only after queue refactoring
     SPDLOG_LOGGER_TRACE(modelmanager_logger, "Checking if something changed with model versions");
     bool reloadNeeded = false;
     Status firstErrorStatus = StatusCode::OK;
     Status status;
     for (auto& [name, config] : servedModelConfigs) {
-        status = reloadModelWithVersions(config);
+        ServableLoadingTask task{ServableLoadingTaskType::LoadModel, name, config};
+        auto future = loadingQueue->scheduleTask(std::move(task));
+        status = future.get();
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
         } else if (status == StatusCode::OK_RELOADED) {
@@ -1044,11 +1156,35 @@ Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
     return StatusCode::OK;
 }
 
+void ModelManager::unloadIdleGraphs() {
+#if (MEDIAPIPE_DISABLE == 0)
+    std::vector<std::string> toUnload;
+    {
+        const auto& names = mediapipeFactory->getMediapipePipelinesNames();
+        for (const auto& name : names) {
+            MediapipeGraphDefinition* def = mediapipeFactory->findDefinitionByName(name);
+            if (def && def->shouldUnloadDueToIdle()) {
+                toUnload.push_back(name);
+            }
+        }
+    }
+    for (const auto& name : toUnload) {
+        bool urgentUnload = false;
+        auto future = requestServablePutToSleep(name, urgentUnload);
+        auto status = future.get();
+        if (!status.ok()) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger,
+                "Failed to idle-unload mediapipe graph {}: {}", name, status.string());
+        }
+    }
+#endif
+}
+
 void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
     while (exitSignal.wait_for(std::chrono::milliseconds(this->watcherIntervalMillisec)) == std::future_status::timeout) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle begin");
-        std::unique_lock<std::recursive_mutex> loadingLock(configMtx);
+        std::unique_lock<std::recursive_mutex> loadingLock(configMtx);  // TODO(idle-unload): @atobiszei  narrow scope to parsing-only after queue refactoring
         if (watchConfigFile) {
             bool isNeeded;
             configFileReloadNeeded(isNeeded);
@@ -1058,6 +1194,16 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
         }
         updateConfigurationWithoutConfigFile();
         loadingLock.unlock();
+        // Idle-unload sweep: free resources of graphs idle past their timeout.
+        // Done AFTER releasing configMtx — unload() only needs the factory's
+        // definitions lock and the per-definition lifecycleMtx, and is
+        // non-blocking (it skips graphs with in-flight requests rather than
+        // draining). This keeps configMtx hold time minimal.
+        unloadIdleGraphs();
+        // Model group idle unload: unload the active non-permanent group if idle
+        if (servableGroupManager && servableGroupManager->isEnabled()) {
+            servableGroupManager->unloadActiveGroupIfIdle(*this);
+        }
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
     }
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
@@ -1107,6 +1253,7 @@ void ModelManager::join() {
     if (cleanerStarted) {
         cleanerExitTrigger.set_value();
     }
+    loadingQueue->requestStop();
 
     if (watcherStarted) {
         if (monitor.joinable()) {
@@ -1123,6 +1270,7 @@ void ModelManager::join() {
             SPDLOG_INFO("Shutdown cleaner thread");
         }
     }
+    loadingQueue->stop();
 }
 
 void ModelManager::getVersionsToChange(
@@ -1315,9 +1463,11 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
 }
 
 Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed) {
+    bool lazyLoad = servableGroupManager && servableGroupManager->isEnabled() &&
+                    config.getGroupName() != "permanent";
     Status status = StatusCode::OK;
     try {
-        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry, this->metricConfig.get());
+        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry, this->metricConfig.get(), lazyLoad);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
                 config.getName(),
@@ -1459,6 +1609,28 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     return blocking_status;
 }
 
+std::future<Status> ModelManager::requestServableWakeUp(const std::string& name, bool urgent) {
+#if (MEDIAPIPE_DISABLE == 0)
+    if (mediapipeFactory->findDefinitionByName(name)) {
+        ServableLoadingTask task{ServableLoadingTaskType::WakeUpMediapipe, name, urgent};
+        return loadingQueue->scheduleTask(std::move(task));
+    }
+#endif
+    ServableLoadingTask task{ServableLoadingTaskType::WakeUpModel, name, urgent};
+    return loadingQueue->scheduleTask(std::move(task));
+}
+
+std::future<Status> ModelManager::requestServablePutToSleep(const std::string& name, bool urgent) {
+#if (MEDIAPIPE_DISABLE == 0)
+    if (mediapipeFactory->findDefinitionByName(name)) {
+        ServableLoadingTask task{ServableLoadingTaskType::PutToSleepMediapipe, name, urgent};
+        return loadingQueue->scheduleTask(std::move(task));
+    }
+#endif
+    ServableLoadingTask task{ServableLoadingTaskType::PutToSleepModel, name, urgent};
+    return loadingQueue->scheduleTask(std::move(task));
+}
+
 const std::shared_ptr<ModelInstance> ModelManager::findModelInstance(const std::string& name, model_version_t version) const {
     auto model = findModelByName(name);
     if (!model) {
@@ -1475,6 +1647,27 @@ const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& na
     std::shared_lock lock(modelsMtx);
     auto it = models.find(name);
     return it != models.end() ? it->second : nullptr;
+}
+
+bool ModelManager::isServableAvailable(const std::string& name) const {
+    // TODO  @atobiszei idle add version option
+    auto model = findModelByName(name);
+    if (model) {
+        // Version policy is not considered here - any servable version is enough to answer a request.
+        for (const auto& [version, instance] : model->getModelVersions()) {
+            if (instance->getStatus().getState() == ModelVersionState::AVAILABLE) {
+                return true;
+            }
+        }
+        return false;
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    auto* def = mediapipeFactory->findDefinitionByName(name);
+    if (def) {
+        return def->getStateCode() == PipelineDefinitionStateCode::AVAILABLE;
+    }
+#endif
+    return false;
 }
 
 bool ModelManager::subscribeToModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) {
@@ -1550,6 +1743,14 @@ Status ModelManager::getModelInstance(const std::string& modelName,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const {
     SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
 
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        auto status = servableGroupManager->ensureServableLoaded(modelName, const_cast<ModelManager&>(*this));
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to load servable '{}': {}", modelName, status.string());
+            return status;
+        }
+    }
+
     auto model = findModelByName(modelName);
     if (model == nullptr) {
         return StatusCode::MODEL_NAME_MISSING;
@@ -1574,10 +1775,15 @@ const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() cons
 }
 
 const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
+    // In idle management mode, report all configured models as available
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        return servableGroupManager->getAllConfiguredServableNames();
+    }
     std::vector<std::string> names;
     std::shared_lock lock(modelsMtx);
     for (auto& [name, model] : models) {
-        if (model->getDefaultModelInstance() && model->getDefaultModelInstance()->getStatus().getState() == ModelVersionState::AVAILABLE) {
+        auto instance = model->getDefaultModelInstance();
+        if (instance && instance->getStatus().appearsAvailable()) {
             names.push_back(model->getName());
         }
     }
@@ -1587,6 +1793,14 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
 Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        // TODO current preview limitation -> we wait for whole group to load
+        auto status = servableGroupManager->ensureServableLoaded(name, *this);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to load servable '{}': {}", name, status.string());
+            return status;
+        }
+    }
     return this->mediapipeFactory->create(graph, name);
 #else
     SPDLOG_ERROR("Mediapipe support was disabled during build process...");
