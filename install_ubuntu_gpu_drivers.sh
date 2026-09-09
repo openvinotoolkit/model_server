@@ -113,15 +113,6 @@ case $INSTALL_DRIVER_VERSION in \
 	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/libigdgmm12_22.10.0_amd64.deb; \
 	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/libze-intel-gpu1_26.31.39395.13-0_amd64.deb; \
 	dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
-	apt-get update && apt-get install -y --no-install-recommends ca-certificates gpg && \
-	curl -fsSL https://repositories.intel.com/gpu/intel-graphics.key | \
-		gpg --dearmor --yes --output /usr/share/keyrings/intel-graphics.gpg && \
-	. /etc/os-release && \
-	echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu ${VERSION_CODENAME}/lts/2523 unified" \
-		> /etc/apt/sources.list.d/intel-gpu-${VERSION_CODENAME}.list && \
-	apt-get update && apt-get install -y --no-install-recommends intel-igc-cm && \
-	rm -f /etc/apt/sources.list.d/intel-gpu-${VERSION_CODENAME}.list && \
-	apt-get purge -y --auto-remove gpg gpgconf ; \
 ;; \
 *) \
         dpkg -P intel-igc-cm intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
