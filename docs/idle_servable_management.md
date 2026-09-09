@@ -18,7 +18,7 @@ ovms --config_path /models/config.json --cache_dir /models/cache
 
 ## Groups
 
-A group is a unit that OVMS loads and unloads together. Add `group_name` to classic model or MediaPipe graph configuration. All servables in the same group load and unload together. Use groups for servables that must be available together, such as a graph and its dependent models.
+A group is a unit that OVMS loads and unloads together. Add `group_name` to a servable classic model or MediaPipe graph configuration. All servables in the same group load and unload together. Use groups for servables that must be available together, such as a graph and its dependent models.
 
 Without `group_name`, every classic model and MediaPipe graph is assigned to its own group. A group named `permanent` stays loaded and is never unloaded.
 
@@ -32,16 +32,16 @@ Example JSON configuration with grouping
     "model_config_list": [
         {
             "config": {
-                "name": "chat",
-                "base_path": "/models/chat",
-                "group_name": "llm"
+                "name": "llm",
+                "base_path": "/models/llm",
+                "group_name": "chat"
             }
         },
         {
             "config": {
-                "name": "embed",
-                "base_path": "/models/embed",
-                "group_name": "embeddings"
+                "name": "speech2text",
+                "base_path": "/models/speech2text",
+                "group_name": "chat"
             }
         },
         {
