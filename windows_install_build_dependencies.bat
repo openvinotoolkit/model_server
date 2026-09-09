@@ -238,18 +238,10 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
 
 echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
-    git -C %BAZEL_SHORT_PATH%\openvino_src remote -v | findstr "\/%OV_SOURCE_ORG%\/" > nul
-    if !errorlevel! equ 0 (
-        echo [INFO] Repository already points to %OV_SOURCE_ORG%
-    ) else (
-        echo [INFO] Repository points to different org, removing...
-        rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_src
-    )
+    rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_src
 )
 
-IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (
-    git clone https://github.com/%OV_SOURCE_ORG%/openvino %BAZEL_SHORT_PATH%\openvino_src
-)
+git clone https://github.com/%OV_SOURCE_ORG%/openvino %BAZEL_SHORT_PATH%\openvino_src
 
 set "BACK_CWD=%cd%"
 cd %BAZEL_SHORT_PATH%\openvino_src
@@ -275,9 +267,11 @@ call %BAZEL_SHORT_PATH%\openvino\setupvars.bat
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenVINO Tokenizers
 
-IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_tokenizers_src (
-    git clone https://github.com/%OV_TOKENIZERS_ORG%/openvino_tokenizers.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
+IF /I EXIST %BAZEL_SHORT_PATH%\openvino_tokenizers_src (
+    rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 )
+
+git clone https://github.com/%OV_TOKENIZERS_ORG%/openvino_tokenizers.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 git fetch origin
 git checkout %OV_TOKENIZERS_BRANCH%
@@ -297,9 +291,11 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenVINO GenAI
 
-IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
-    git clone https://github.com/%OV_GENAI_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
+IF /I EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
+    rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_genai_src
 )
+
+git clone https://github.com/%OV_GENAI_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
 cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
 git checkout %OV_GENAI_BRANCH%

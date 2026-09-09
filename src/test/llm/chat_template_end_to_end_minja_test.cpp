@@ -253,7 +253,6 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    // FIXME: Why is </s> here? because of facebook-opt125?
     std::string expectedOutput = R"(</s><|turn>user
 What's the weather in Paris?<turn|>
 <|turn>model
@@ -289,6 +288,46 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
     EXPECT_FALSE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
+}
+
+TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3CoderNext_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3coder_next.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
+    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
+    EXPECT_TRUE(caps.supportsResponseFieldInToolDefinition);
+
+    std::string expectedOutput = R"(<|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<tool_call>
+<function=get_weather>
+<parameter=location>
+Paris
+</parameter>
+<parameter=unit>
+celsius
+</parameter>
+</function>
+</tool_call><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================

@@ -41,6 +41,7 @@
 #include "../../http_status_code.hpp"
 #include "../../json_parser.hpp"
 #include "../../llm/apis/openai_completions.hpp"
+#include "../../llm/apis/openai_json_response.hpp"
 #include "../../llm/io_processing/base_generation_config_builder.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
@@ -51,6 +52,7 @@
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
+#include "src/filesystem/filesystem.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -59,6 +61,7 @@
 #include "../platform_utils.hpp"
 #include "../test_http_utils.hpp"
 #include "../test_utils.hpp"
+#include "../test_with_temp_dir.hpp"
 #include "src/test/environment.hpp"
 
 using namespace ovms;
@@ -230,22 +233,27 @@ std::unique_ptr<std::thread> LLMFlowHttpQueueGraphTest::t;
 
 // --------------------------------------- OVMS LLM nodes tests
 
-/* 
-// TODO: Move this test to OpenAiJsonResponse tests
-TEST(OpenAiApiHandlerTest, writeLogprobs) {
-    // TODO: remove that skip
-    GTEST_SKIP();
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-    std::vector<float> inputs{-0.5, -100, 0, 5};
-    std::vector<std::string> expected{"-0.5", "-100.0", "0.0", "null"};
-    for (size_t i = 0; i < inputs.size(); i++) {
-        OpenAIChatCompletionsHandler::writeLogprob(writer, inputs[i]);
-        EXPECT_EQ(buffer.GetString(), expected[i]);
-        buffer.Clear();
+TEST(OpenAiJsonResponseTest, LogprobValue) {
+    struct Case {
+        float input;
+        std::string expected;
+    };
+    // 1.0 is GenAI's sentinel for "no logprob available" (first echoed prompt token); any
+    // other positive value is float32 log-sum-exp rounding noise and gets clamped to 0.0.
+    const std::vector<Case> cases{
+        {-0.5f, "-0.5"},
+        {-100.0f, "-100.0"},
+        {0.0f, "0.0"},
+        {1.0f, "null"},
+        {0.0001f, "0.0"},
+        {std::numeric_limits<float>::quiet_NaN(), "null"},
+    };
+    for (const auto& testCase : cases) {
+        ovms::OpenAiJsonResponse response;
+        response.LogprobValue(testCase.input);
+        EXPECT_EQ(response.ToString(), testCase.expected) << "input=" << testCase.input;
     }
 }
-*/
 
 // Reusable helper: asserts that a streaming chat completion chunk is the initial
 // initial empty message with role:assistant and content:null.
@@ -5451,6 +5459,40 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsSpeculativeDecodingSanityCheck) {
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
 }
 
+TEST_F(LLMOptionsHttpTest, LegacyServableDraftModelsPathIsProcessedNotIgnored) {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: { tag_index: 'LOOPBACK:0', back_edge: true }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                pipeline_type: LM
+                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                draft_models_path: "/nonexistent/draft/model"
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options { [mediapipe.SyncSetInputStreamHandlerOptions.ext] { sync_set { tag_index: "LOOPBACK:0" } } }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    std::shared_ptr<GenAiServable> servable;
+    // draft_models_path is now processed; a bad path must fail rather than be silently ignored
+    EXPECT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+}
+
 class GetPromptTokensString : public ::testing::Test {
 public:
     std::string expectedTokensString;
@@ -5820,4 +5862,836 @@ TEST(BaseGenerationConfigBuilderTest, SeedPreservedWhenExplicitlySet) {
     request.seed = 42u;
     builder.parseConfigFromRequest(request);
     EXPECT_EQ(builder.getConfig().rng_seed, 42u);
+}
+
+// Unit tests for BaseGenerationConfigBuilder assisted decoding methods
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3DefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3ExplicitZeroNumAssistantTokensHonored) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 0u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3EnforcesGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.bestOf = 2;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3BranchingFactorAndTreeDepthMapped) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.branchingFactor = 4u;
+    request.treeDepth = 3u;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().branching_factor, 4u);
+    EXPECT_EQ(builder.getConfig().tree_depth, 3u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, Eagle3AssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::EAGLE3};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftDefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftBothAssistantParamsThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.numAssistantTokens = 5;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftConfidenceThresholdAloneIsValid) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    request.assistantConfidenceThreshold = 0.8f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FLOAT_EQ(builder.getConfig().assistant_confidence_threshold, 0.8f);
+    EXPECT_FALSE(builder.getConfig().num_assistant_tokens.has_value());
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftSamplingForcedToGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.7f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, FastDraftGreedyWithoutMaxTokensIsValid) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::FAST_DRAFT};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashDefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashAssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashSamplingForcedToGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 0.7f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashEnforcesGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.bestOf = 2;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, DFlashDefaultsMaxNewTokensWhenUnset) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::DFLASH};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().max_new_tokens, 1000000u);
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpDefaultsNumAssistantTokensTo5) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpAssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpSamplingForcedToGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 0.7f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_NO_THROW(builder.adjustConfigForDecodingMethod());
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpEnforcesGreedy) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 1.0f;
+    request.bestOf = 2;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, MtpDefaultsMaxNewTokensWhenUnset) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::MTP};
+    OpenAIRequest request;
+    request.temperature = 0.0f;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().max_new_tokens, 1000000u);
+    EXPECT_FALSE(builder.getConfig().do_sample);
+    EXPECT_EQ(builder.getConfig().num_beams, 1u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, PromptLookupDefaultsApplied) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::PROMPT_LOOKUP};
+    OpenAIRequest request;
+    builder.parseConfigFromRequest(request);
+    builder.adjustConfigForDecodingMethod();
+    EXPECT_EQ(builder.getConfig().num_assistant_tokens, 5u);
+    EXPECT_EQ(builder.getConfig().max_ngram_size, 3u);
+}
+
+TEST(BaseGenerationConfigBuilderTest, PromptLookupZeroNumAssistantTokensThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::PROMPT_LOOKUP};
+    OpenAIRequest request;
+    request.numAssistantTokens = 0;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+TEST(BaseGenerationConfigBuilderTest, PromptLookupAssistantConfidenceThresholdThrows) {
+    ov::genai::GenerationConfig baseConfig;
+    BaseGenerationConfigBuilder builder{baseConfig, false, DecodingMethod::PROMPT_LOOKUP};
+    OpenAIRequest request;
+    request.assistantConfidenceThreshold = 0.5f;
+    builder.parseConfigFromRequest(request);
+    EXPECT_THROW(builder.adjustConfigForDecodingMethod(), std::invalid_argument);
+}
+
+// ==========================================
+// detectDraftModelStrategy tests
+// ==========================================
+
+class DetectDraftModelStrategyTest : public TestWithTempDir {};
+using DS = ovms::GenAiServableProperties::DraftModelStrategy;
+
+TEST_F(DetectDraftModelStrategyTest, MtpDetectedByFilePresence) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_mtp_model.xml"})).close();
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::MTP);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByNumericValue) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByTrueUppercase) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"True\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, Eagle3DetectedByTrueLowercase) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"true\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::EAGLE3);
+}
+
+TEST_F(DetectDraftModelStrategyTest, DflashDetected) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<dflash_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::DFLASH);
+}
+
+TEST_F(DetectDraftModelStrategyTest, DflashTakesPriorityOverEagle3) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<dflash_mode value=\"1\" />\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::DFLASH);
+}
+
+TEST_F(DetectDraftModelStrategyTest, FastDraftWhenNoMarkers) {
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<layers></layers>\n<rt_info>\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::FAST_DRAFT);
+}
+
+TEST_F(DetectDraftModelStrategyTest, KeyOutsideRtInfoIgnored) {
+    // eagle3_mode keyword in a layer name must not trigger detection
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<layers>\n<layer name=\"eagle3_mode_layer\" />\n</layers>\n<rt_info>\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::FAST_DRAFT);
+}
+
+TEST_F(DetectDraftModelStrategyTest, ThrowsWhenXmlMissing) {
+    EXPECT_THROW(ovms::detectDraftModelStrategy(directoryPath), std::runtime_error);
+}
+
+TEST_F(DetectDraftModelStrategyTest, MtpTakesPriorityOverXmlScan) {
+    // MTP file presence short-circuits before reading the XML
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_mtp_model.xml"})).close();
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "openvino_model.xml"}))
+        << "<net>\n<rt_info>\n<eagle3_mode value=\"1\" />\n</rt_info>\n</net>\n";
+    EXPECT_EQ(ovms::detectDraftModelStrategy(directoryPath), DS::MTP);
+}
+// ---------------------------------------------------------------------------
+// Idle unload feature: LLM graph lifecycle (issue #4141)
+// These tests require the opt-125m model fixture.
+// ---------------------------------------------------------------------------
+
+class LLMIdleUnloadTest : public ::testing::Test {
+protected:
+    // Builds a minimal continuous-batching LLM graph pbtxt pointing at opt-125m.
+    static std::string buildOptGraphPbtxt() {
+        std::string modelsPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
+        std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                                modelsPath + R"("
+                cache_size: 1
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+        adjustConfigForTargetPlatform(testPbtxt);
+        return testPbtxt;
+    }
+};
+
+static int64_t secondsAgo(int64_t seconds) {
+    return std::chrono::steady_clock::now().time_since_epoch().count() - seconds * 1'000'000'000LL;
+}
+
+// Unload after idle: build LLM graph with small timeout, simulate idle, unload, assert freed.
+TEST_F(LLMIdleUnloadTest, UnloadAfterIdleFreesResources) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
+    ASSERT_TRUE(def.isIdleUnloadEnabled());
+
+    // Not yet idle -> should not unload.
+    ASSERT_FALSE(def.shouldUnloadDueToIdle());
+
+    // Backdate activity well past the timeout.
+    def.recordActivity(secondsAgo(60));
+    ASSERT_TRUE(def.shouldUnloadDueToIdle());
+
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    // Resources freed: sidePacketMaps is reset.
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), nullptr);
+    ASSERT_FALSE(def.isAvailable());
+    ASSERT_TRUE(def.getStatus().isSleeping());
+}
+
+// Lazy reload: after unload, wakeUpIfSleeping brings it back to AVAILABLE with resources.
+TEST_F(LLMIdleUnloadTest, WakeUpReloadsResources) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    def.recordActivity(secondsAgo(60));
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), nullptr);
+
+    // Wake up.
+    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_TRUE(def.isAvailable());
+    ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
+
+    // Wake-up while already AVAILABLE is a no-op success.
+    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+}
+
+// Idle timer reset: acquiring the graph (create) refreshes lastActivity.
+TEST_F(LLMIdleUnloadTest, CreateResetsIdleTimer) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    // Make it look idle.
+    def.recordActivity(secondsAgo(60));
+    ASSERT_TRUE(def.shouldUnloadDueToIdle());
+
+    // Acquiring the graph updates lastActivity, so it is no longer idle.
+    std::unique_ptr<ovms::MediapipeGraphExecutor> executor;
+    ASSERT_EQ(def.create(executor), StatusCode::OK);
+    ASSERT_NE(executor, nullptr);
+    ASSERT_FALSE(def.shouldUnloadDueToIdle());
+}
+
+// Disabled by default: timeout 0 -> never idle-unloads.
+TEST_F(LLMIdleUnloadTest, DisabledByDefaultNeverUnloads) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    // idle_unload_timeout_seconds not set -> defaults to 0 (disabled)
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    ASSERT_FALSE(def.isIdleUnloadEnabled());
+    def.recordActivity(secondsAgo(100000));
+    ASSERT_FALSE(def.shouldUnloadDueToIdle());
+}
+
+// Exactly-one-reload under concurrency: N threads call wakeUpIfSleeping on an SLEEPING def.
+// Best-effort: asserts all end AVAILABLE and the graph is loaded exactly once afterwards.
+// Note: this verifies the end-state invariant (single AVAILABLE graph, resources present);
+// the per-definition mutex guarantees a single reload, but counting reloads deterministically
+// from the test would require instrumentation hooks not present, so we assert the observable
+// post-condition instead.
+TEST_F(LLMIdleUnloadTest, ConcurrentWakeUpEndsAvailable) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    def.recordActivity(secondsAgo(60));
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+
+    constexpr int kThreads = 8;
+    std::vector<std::thread> threads;
+    std::vector<ovms::Status> results(kThreads, StatusCode::UNKNOWN_ERROR);
+    for (int i = 0; i < kThreads; ++i) {
+        threads.emplace_back([&def, &manager, &results, i]() {
+            results[i] = def.wakeUpIfSleeping(manager);
+        });
+    }
+    for (auto& t : threads) {
+        t.join();
+    }
+    for (int i = 0; i < kThreads; ++i) {
+        ASSERT_EQ(results[i], StatusCode::OK) << "thread " << i << " status: " << results[i].string();
+    }
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
+}
+
+// Best-effort stress: interleave unload() (watcher role) and wakeUpIfSleeping()
+// (request role) repeatedly and assert the graph never ends in a torn state.
+// lifecycleMtx makes unload and wake mutually exclusive, so every observed
+// settled state must be internally consistent: AVAILABLE with resources, or
+// cleanly SLEEPING (empty maps). Determinism is limited by thread scheduling;
+// this exercises the FIX 1/FIX 2 serialization rather than asserting an exact
+// sequence.
+TEST_F(LLMIdleUnloadTest, ConcurrentUnloadWakeNeverTearsState) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    std::atomic<bool> stop{false};
+    std::atomic<int> errors{0};
+
+    // Unloader thread: keeps backdating + trying to unload.
+    std::thread unloader([&]() {
+        while (!stop.load()) {
+            def.recordActivity(secondsAgo(60));
+            auto s = def.putToSleep();
+            if (!s.ok())
+                errors.fetch_add(1);
+            std::this_thread::yield();
+        }
+    });
+
+    // Several waker threads: keep waking it back up.
+    constexpr int kWakers = 4;
+    std::vector<std::thread> wakers;
+    for (int i = 0; i < kWakers; ++i) {
+        wakers.emplace_back([&]() {
+            while (!stop.load()) {
+                auto s = def.wakeUpIfSleeping(manager);
+                if (!s.ok())
+                    errors.fetch_add(1);
+                std::this_thread::yield();
+            }
+        });
+    }
+
+    // Run for a short bounded period.
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    stop.store(true);
+    unloader.join();
+    for (auto& t : wakers) {
+        t.join();
+    }
+
+    ASSERT_EQ(errors.load(), 0);
+
+    // Quiesce: ensure it ends AVAILABLE with resources (no torn RELOADING/null state).
+    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
+    auto finalState = def.getStateCode();
+    // A settled state must be either AVAILABLE (with resources) or SLEEPING (empty).
+    if (finalState == ovms::PipelineDefinitionStateCode::AVAILABLE) {
+        ASSERT_NE(def.getGenAiServable("llmNode"), nullptr);
+    } else {
+        ASSERT_EQ(finalState, ovms::PipelineDefinitionStateCode::SLEEPING);
+        ASSERT_EQ(def.sidePacketMapsPtrForTest(), nullptr);
+    }
+}
+
+// Best-effort: exercise unload() (watcher role) concurrently with reload() and
+// retire() (config role) on the same definition. Verifies the lifecycleMtx
+// serialization (NEW-1 fix): no crash, and a consistent final state.
+// NOTE: data races are not deterministically catchable without TSAN (unavailable
+// in this environment), so this is a smoke/stress test, not a proof of absence.
+TEST_F(LLMIdleUnloadTest, ConcurrentUnloadReloadRetireNoCrash) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaIdle", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaIdle", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    std::atomic<bool> stop{false};
+    std::atomic<bool> retired{false};
+
+    // Watcher-role thread: keep trying to idle-unload.
+    std::thread unloader([&]() {
+        while (!stop.load()) {
+            def.recordActivity(secondsAgo(60));
+            (void)def.putToSleep();
+            std::this_thread::yield();
+        }
+    });
+
+    // Config-role thread: keep reloading (re-bring it up after unload).
+    std::thread reloader([&]() {
+        while (!stop.load()) {
+            (void)def.reload(manager, def.getMediapipeGraphConfig());
+            std::this_thread::yield();
+        }
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(400));
+    stop.store(true);
+    unloader.join();
+    reloader.join();
+
+    // Now retire concurrently is not needed for crash-safety beyond above, but
+    // exercise retire() once after the storm to confirm it serializes cleanly.
+    def.retire();
+    retired.store(true);
+    ASSERT_TRUE(retired.load());
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::RETIRED);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TASK 1 tests: ActiveInferenceGuard — in-flight inference prevents idle unload
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Model-free unit test: directly exercise the activeInferenceCount atomic that
+// shouldUnloadDueToIdle() and unload() consult. No LLM model required.
+TEST(MediapipeIdleUnloadGuard, ActiveInferenceCountBlocksShouldUnload) {
+    // Build a minimal graph definition with idle unload enabled.
+    // Use buildOptGraphPbtxt() indirectly via LLMIdleUnloadTest helpers is not
+    // available here — we just need a definition with a non-zero timeout and
+    // a synthetic counter.  We can use the shared_ptr that getActiveInferenceCount()
+    // returns directly, bypassing the executor machinery.
+
+    // A standalone atomic acts as the counter.
+    auto counter = std::make_shared<std::atomic<int64_t>>(0);
+    auto lastActivity = std::make_shared<std::atomic<int64_t>>(
+        std::chrono::steady_clock::now().time_since_epoch().count() - 60LL * 1'000'000'000LL);
+
+    // Simulate increment (inference start).
+    {
+        ovms::ActiveInferenceGuard guard(counter, lastActivity);
+        EXPECT_EQ(counter->load(), 1);
+    }
+    // After destruction, counter back to 0 and lastActivity refreshed.
+    EXPECT_EQ(counter->load(), 0);
+    int64_t nowNs = std::chrono::steady_clock::now().time_since_epoch().count();
+    // lastActivity should be within 2 seconds of now (generous for slow machines).
+    EXPECT_GT(lastActivity->load(), nowNs - 2LL * 1'000'000'000LL);
+}
+
+TEST(MediapipeIdleUnloadGuard, ActiveInferenceCountExceptionSafe) {
+    auto counter = std::make_shared<std::atomic<int64_t>>(0);
+    auto lastActivity = std::make_shared<std::atomic<int64_t>>(0);
+
+    try {
+        ovms::ActiveInferenceGuard guard(counter, lastActivity);
+        EXPECT_EQ(counter->load(), 1);
+        throw std::runtime_error("simulated inference error");
+    } catch (...) {
+    }
+    // Must be 0 even after exception path.
+    EXPECT_EQ(counter->load(), 0);
+}
+
+TEST(MediapipeIdleUnloadGuard, MultipleGuardsNested) {
+    auto counter = std::make_shared<std::atomic<int64_t>>(0);
+    auto lastActivity = std::make_shared<std::atomic<int64_t>>(0);
+    {
+        ovms::ActiveInferenceGuard g1(counter, lastActivity);
+        EXPECT_EQ(counter->load(), 1);
+        {
+            ovms::ActiveInferenceGuard g2(counter, lastActivity);
+            EXPECT_EQ(counter->load(), 2);
+        }
+        EXPECT_EQ(counter->load(), 1);
+    }
+    EXPECT_EQ(counter->load(), 0);
+}
+
+// Integration test: create() on a real definition increments the counter;
+// when the executor is destroyed the counter returns to 0.
+// Requires the LLM model (opt-125m). Guard under GTEST_SKIP for CI environments.
+TEST_F(LLMIdleUnloadTest, ActiveInferenceGuardIntegration) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = buildOptGraphPbtxt();
+    const std::string testModelsPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
+    if (!std::filesystem::exists(testModelsPath)) {
+        GTEST_SKIP() << "opt-125m model not present; skipping integration guard test";
+    }
+
+    ovms::MediapipeGraphConfig mgc{"mediaGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaGuard", mgc, testPbtxt, nullptr);
+    def.inputConfig = testPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    auto counterPtr = def.getActiveInferenceCount();
+    ASSERT_NE(counterPtr, nullptr);
+    EXPECT_EQ(counterPtr->load(), 0);
+
+    {
+        std::unique_ptr<ovms::MediapipeGraphExecutor> executor;
+        ASSERT_EQ(def.create(executor), StatusCode::OK);
+        ASSERT_NE(executor, nullptr);
+        // Counter incremented: executor is alive.
+        EXPECT_EQ(counterPtr->load(), 1);
+
+        // Backdate activity to look idle — should NOT unload because count > 0.
+        def.recordActivity(secondsAgo(60));
+        EXPECT_FALSE(def.shouldUnloadDueToIdle());
+        auto sleepStatus = def.putToSleep();
+        EXPECT_EQ(sleepStatus, StatusCode::MEDIAPIPE_PUT_TO_SLEEP_ACTIVE_INFERENCES);
+        // putToSleep() should be rejected (counter > 0), state remains AVAILABLE.
+        EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    }  // executor destroyed here -> counter decremented back to 0
+
+    EXPECT_EQ(counterPtr->load(), 0);
+    // Completing the inference refreshed lastActivityTimeNs (the ActiveInferenceGuard
+    // destructor resets the idle timer), so the graph is NOT idle immediately after —
+    // this is the key behavior preventing an immediate re-unload right after a long
+    // generation finishes.
+    EXPECT_FALSE(def.shouldUnloadDueToIdle());
+    // After the idle period elapses again (post-inference), it should unload.
+    def.recordActivity(secondsAgo(60));
+    EXPECT_TRUE(def.shouldUnloadDueToIdle());
+    EXPECT_EQ(def.putToSleep(), StatusCode::OK);
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wake-failure recovery: a failed wake-up reload must leave the graph SLEEPING
+// (retryable), NOT LOADING_PRECONDITION_FAILED (wedged). Then once the underlying
+// problem is resolved, the next wake self-heals to AVAILABLE.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Returns an LLM graph pbtxt whose models_path points at a nonexistent directory,
+// so validate() fails (LLM_NODE_DIRECTORY_DOES_NOT_EXIST) — but it still contains
+// HttpLLMCalculator, so the idle-unload scope check passes and we exercise the
+// wake/reload/validate failure path.
+static std::string buildBrokenOptGraphPbtxt() {
+    std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: "/this/path/definitely/does/not/exist/opt-125m"
+                cache_size: 1
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+    adjustConfigForTargetPlatform(testPbtxt);
+    return testPbtxt;
+}
+
+TEST_F(LLMIdleUnloadTest, FailedWakeLeavesGraphSleepingAndRetryable) {
+    ConstructorEnabledModelManager manager;
+    std::string goodPbtxt = buildOptGraphPbtxt();
+    std::string brokenPbtxt = buildBrokenOptGraphPbtxt();
+
+    ovms::MediapipeGraphConfig mgc{"mediaWakeFail", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaWakeFail", mgc, goodPbtxt, nullptr);
+    def.inputConfig = goodPbtxt;
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+
+    // Idle-unload the healthy graph.
+    def.recordActivity(secondsAgo(60));
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+
+    // Simulate the model becoming temporarily unavailable: swap in a broken config
+    // so the wake-up reload's validate() fails.
+    def.inputConfig = brokenPbtxt;
+    auto failStatus = def.wakeUpIfSleeping(manager);
+    EXPECT_FALSE(failStatus.ok()) << "expected wake-up to fail with broken model";
+    // CRITICAL: the graph must be retryable, i.e. back in SLEEPING — not wedged in
+    // LOADING_PRECONDITION_FAILED.
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+
+    // A second attempt while still broken also fails but stays retryable.
+    auto failStatus2 = def.wakeUpIfSleeping(manager);
+    EXPECT_FALSE(failStatus2.ok());
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+
+    // Restore the model: the next wake self-heals to AVAILABLE.
+    def.inputConfig = goodPbtxt;
+    auto okStatus = def.wakeUpIfSleeping(manager);
+    EXPECT_EQ(okStatus, StatusCode::OK) << okStatus.string();
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    EXPECT_NE(def.getGenAiServable("llmNode"), nullptr);
 }

@@ -21,6 +21,7 @@
 #include <limits>
 #include <memory>
 #include <stdexcept>
+#include <unordered_map>
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include <set>
@@ -108,6 +109,46 @@ absl::Status OpenAIApiHandler::parseResponseFormat() {
             return absl::InvalidArgumentError("response_format is not an object");
         const rapidjson::Value& responseFormat = it->value;
         request.responseFormat = convertOpenAIResponseFormatToStructuralTagStringFormat(responseFormat);
+    }
+    return absl::OkStatus();
+}
+
+absl::Status OpenAIApiHandler::applyReasoningEffort(const std::string& effort) {
+    // Muse/Onyx models only understand low/medium/high/xhigh; fold the wider OpenAI enum onto that set.
+    // Also serves as the single source of truth for valid effort values.
+    static const std::unordered_map<std::string, std::string> effortToReasoningStrength{
+        {"none", "low"}, {"minimal", "low"}, {"low", "low"}, {"medium", "medium"},
+        {"high", "high"}, {"xhigh", "xhigh"}, {"max", "xhigh"}};
+    auto reasoningStrengthIt = effortToReasoningStrength.find(effort);
+    if (reasoningStrengthIt == effortToReasoningStrength.end()) {
+        const std::string fieldName = (endpoint == Endpoint::RESPONSES) ? "reasoning.effort" : "reasoning_effort";
+        return absl::InvalidArgumentError(absl::StrCat(fieldName, " must be one of: none, minimal, low, medium, high, xhigh, max"));
+    }
+    const bool enableThinking = (effort != "none");
+    const std::string& reasoningStrength = reasoningStrengthIt->second;
+    auto& allocator = doc.GetAllocator();
+    auto kwargsIt = doc.FindMember("chat_template_kwargs");
+    if (kwargsIt != doc.MemberEnd()) {
+        if (kwargsIt->value.IsNull()) {
+            kwargsIt->value.SetObject();
+        } else if (!kwargsIt->value.IsObject()) {
+            return absl::InvalidArgumentError("chat_template_kwargs must be an object");
+        }
+        if (kwargsIt->value.FindMember("reasoning_effort") == kwargsIt->value.MemberEnd()) {
+            kwargsIt->value.AddMember("reasoning_effort", Value(effort.c_str(), allocator), allocator);
+        }
+        if (kwargsIt->value.FindMember("reasoning_strength") == kwargsIt->value.MemberEnd()) {
+            kwargsIt->value.AddMember("reasoning_strength", Value(reasoningStrength.c_str(), allocator), allocator);
+        }
+        if (kwargsIt->value.FindMember("enable_thinking") == kwargsIt->value.MemberEnd()) {
+            kwargsIt->value.AddMember("enable_thinking", enableThinking, allocator);
+        }
+    } else {
+        Value kwargs(kObjectType);
+        kwargs.AddMember("reasoning_effort", Value(effort.c_str(), allocator), allocator);
+        kwargs.AddMember("reasoning_strength", Value(reasoningStrength.c_str(), allocator), allocator);
+        kwargs.AddMember("enable_thinking", enableThinking, allocator);
+        doc.AddMember("chat_template_kwargs", kwargs, allocator);
     }
     return absl::OkStatus();
 }
@@ -330,7 +371,11 @@ ov::genai::ChatHistory& OpenAIApiHandler::getChatHistory() {
 
 absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationConfigBuilder& configBuilder) {
     configBuilder.parseConfigFromRequest(request);
-    configBuilder.adjustConfigForDecodingMethod();
+    try {
+        configBuilder.adjustConfigForDecodingMethod();
+    } catch (const std::invalid_argument& e) {
+        return absl::InvalidArgumentError(e.what());
+    }
     try {
         configBuilder.validateStructuredOutputConfig(tokenizer);
     } catch (const std::exception& e) {
@@ -758,10 +803,14 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     auto numAssistantTokensIt = doc.FindMember("num_assistant_tokens");
     auto assistantConfidenceThresholdIt = doc.FindMember("assistant_confidence_threshold");
     auto maxNgramSizeIt = doc.FindMember("max_ngram_size");
+    auto branchingFactorIt = doc.FindMember("branching_factor");
+    auto treeDepthIt = doc.FindMember("tree_depth");
 
     bool numAssistantTokensItHasValue = (numAssistantTokensIt != doc.MemberEnd() && !numAssistantTokensIt->value.IsNull());
     bool assistantConfidenceThresholdItHasValue = (assistantConfidenceThresholdIt != doc.MemberEnd() && !assistantConfidenceThresholdIt->value.IsNull());
     bool maxNgramSizeItHasValue = (maxNgramSizeIt != doc.MemberEnd() && !maxNgramSizeIt->value.IsNull());
+    bool branchingFactorItHasValue = (branchingFactorIt != doc.MemberEnd() && !branchingFactorIt->value.IsNull());
+    bool treeDepthItHasValue = (treeDepthIt != doc.MemberEnd() && !treeDepthIt->value.IsNull());
 
     if (numAssistantTokensItHasValue) {
         request.numAssistantTokens = numAssistantTokensIt->value.GetUint();
@@ -771,6 +820,16 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     }
     if (maxNgramSizeItHasValue) {
         request.maxNgramSize = maxNgramSizeIt->value.GetUint();
+    }
+    if (branchingFactorItHasValue) {
+        if (!branchingFactorIt->value.IsUint())
+            return absl::InvalidArgumentError("branching_factor is not an unsigned integer");
+        request.branchingFactor = branchingFactorIt->value.GetUint();
+    }
+    if (treeDepthItHasValue) {
+        if (!treeDepthIt->value.IsUint())
+            return absl::InvalidArgumentError("tree_depth is not an unsigned integer");
+        request.treeDepth = treeDepthIt->value.GetUint();
     }
 
     it = doc.FindMember("skip_special_tokens");

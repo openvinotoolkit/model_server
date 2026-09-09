@@ -17,10 +17,19 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../status.hpp"
+#include <memory>
+
+#include "src/servable_management/servable_group_manager.hpp"
+#include "src/status.hpp"
 
 ConstructorEnabledModelManager::ConstructorEnabledModelManager(const std::string& modelCacheDirectory, ovms::PythonBackend* pythonBackend) :
     ovms::ModelManager(modelCacheDirectory, &registry, pythonBackend) {}
+
+ConstructorEnabledModelManager::ConstructorEnabledModelManager(uint64_t idleTimeoutMicroseconds) :
+    ovms::ModelManager("", &registry, nullptr) {
+    servableGroupManager = std::make_unique<ovms::ServableGroupManager>(idleTimeoutMicroseconds);
+}
+
 ConstructorEnabledModelManager::~ConstructorEnabledModelManager() {
     join();
     spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
