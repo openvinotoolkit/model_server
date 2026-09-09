@@ -70,9 +70,6 @@ libopenvino_intel_npu_plugin.so
 libopenvino_intel_npu_vm_runtime.so
 libopenvino_ir_frontend.so.2026.5.0
 libopenvino_ir_frontend.so.2650->libopenvino_ir_frontend.so.2026.5.0
-libopenvino_jax_frontend.so->libopenvino_jax_frontend.so.2650
-libopenvino_jax_frontend.so.2026.5.0
-libopenvino_jax_frontend.so.2650->libopenvino_jax_frontend.so.2026.5.0
 libopenvino_onnx_frontend.so->libopenvino_onnx_frontend.so.2650
 libopenvino_onnx_frontend.so.2026.5.0
 libopenvino_onnx_frontend.so.2650->libopenvino_onnx_frontend.so.2026.5.0
