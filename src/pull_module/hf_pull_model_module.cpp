@@ -48,12 +48,11 @@ const std::string HfPullModelModule::GIT_SSL_CERT_LOCATIONS_ENV{"GIT_OPT_SET_SSL
 static std::string getEnvReturnOrDefaultIfNotSet(const std::string& envName, const std::string& defaultValue = DEFAULT_EMPTY_ENV_VALUE) {
     std::string value = defaultValue;
     const char* envValue = std::getenv(envName.c_str());
-    // Never add logging env value to production or debug code.
     if (envValue) {
         value = std::string(envValue);
         SPDLOG_DEBUG("{} environment variable set.", envName);
     } else {
-        SPDLOG_DEBUG("{} environment variable not set. Using default value: {};", envName, defaultValue);
+        SPDLOG_DEBUG("{} environment variable not set. Using default value.", envName);
     }
     return value;
 }
