@@ -138,7 +138,7 @@ Status PipelineDefinition::reload(ModelInstanceProvider& modelInstanceProvider, 
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
     resetSubscriptions(modelInstanceProvider);
-    while (requestsHandlesCounter > 0) {
+    while (pendingCreateExecutorCount > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     // deinitialize all resources that are associated with nodes that are currently in PipelineDefinition, but not in nodeInfos
@@ -153,7 +153,7 @@ Status PipelineDefinition::reload(ModelInstanceProvider& modelInstanceProvider, 
 void PipelineDefinition::retire(ModelInstanceProvider& modelInstanceProvider) {
     resetSubscriptions(modelInstanceProvider);
     this->status.handle(RetireEvent());
-    while (requestsHandlesCounter > 0) {
+    while (pendingCreateExecutorCount > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     // deinitalize all resources

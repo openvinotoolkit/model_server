@@ -205,6 +205,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "libovms_servable_definition",
     hdrs = ["servable_definition.hpp"],
+    visibility = ["//visibility:public"],
 )
 ovms_cc_library(
     name = "libovms_single_version_servable_definition",
@@ -612,6 +613,7 @@ ovms_cc_library(
         "libovms_kfs_utils",
         "libovms_kfs_grpc_inference_service_h",
         "libovms_single_version_servable_definition",
+        "libovms_time_utils",
         "//src/kfserving_api:kfserving_api_cpp",
         "opencv_dep",
         "@mediapipe//mediapipe/framework/formats:image_frame",
@@ -638,6 +640,7 @@ ovms_cc_library(
         "libovms_kfs_utils",
         "libovms_kfs_grpc_inference_service_h",
         "libovms_single_version_servable_definition",
+        "libovms_time_utils",
         "//src/kfserving_api:kfserving_api_cpp",
         "opencv_dep",
         "@mediapipe//mediapipe/framework/formats:image_frame",
@@ -661,6 +664,7 @@ ovms_cc_library(
         "//src/mediapipe_internal:mediapipegraphexecutor_h",
         "httppayload",
         "libhttp_async_writer_interface",
+        "libovms_time_utils",
         "opencv_dep",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
@@ -706,48 +710,6 @@ ovms_cc_library(
         "libovmslogging",
         "libovms_servable_definition",
         "//src/utils:newline_delimited",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "modelmanager",
-    hdrs = ["modelmanager.hpp"],
-    srcs = ["modelmanager.cpp"],
-    deps = select({
-        "//conditions:default": [],
-        "//:not_disable_mediapipe" : [
-            "mediapipe_runtime_api",
-            "//src/mediapipe_internal:mediapipegraphconfig",
-        ],
-    }) + [
-        "cleaner_utils",
-        "customloaders",
-        "libovms_config",
-        "libovms_model_instance_provider",
-        "libovms_ov_utils",
-        "libovms_servable_definition",
-        "libovms_servable_name_checker",
-        "libovmslogging",
-        "libovmsschema",
-        "libovmsstring_utils",
-        "libovmsstatus",
-        "model",
-        "modelconfig",
-        "modelinstance",
-        "modelinstanceunloadguard",
-        "resources_cleaner",
-        "//src/dags:custom_node_library_manager",
-        "//src/dags:dag_resource_manager",
-        "//src/dags:pipeline_config_parser",
-        "//src/dags:pipeline_factory",
-        "//src/dags:pipelinedefinition",
-        "//src/filesystem:libovmsfilesystem",
-        "//src/filesystem:libovmsfilesystemfactory",
-        "//src/metrics:libovms_metric_provider",
-        "//src/metrics:libovmsmetrics",
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "//src/port:rapidjson_stringbuffer",
-        "//src/port:rapidjson_writer",
     ],
     visibility = ["//visibility:public"],
 )
@@ -846,21 +808,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "servablemanagermodule",
-    hdrs = ["servablemanagermodule.hpp"],
-    srcs = ["servablemanagermodule.cpp"],
-    deps = [
-        "cpp_headers",
-        "libovms_module",
-        "libovmslogging",
-        "modelmanager",
-        "//src/metrics:libovmsmetrics",
-        "//src/python:python_runtime_module_api_hdrs",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
     name = "ovms_lib",
     srcs = [
         "capi_frontend/capi.cpp",
@@ -954,8 +901,8 @@ ovms_cc_library(
             "libovms_kfs_grpc_inference_service_h",
             "mediapipe_executor_interface",
             "modelchangesubscription",
-            "modelmanager",
-            "servablemanagermodule",
+            "//src/servable_management:modelmanager",
+            "//src/servable_management:servablemanagermodule",
             "//src/filesystem:libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
             "//src/metrics:libovmsmetrics",
@@ -1552,6 +1499,8 @@ ovms_cc_library(
             "libovms_kfs_utils",
             "libovms_tensorinfo",
             "libovmsprecision",
+            "libovms_config",
+            "cpp_headers",
 ],
     visibility = ["//visibility:public",],
 )
@@ -1595,6 +1544,8 @@ ovms_cc_library(
     srcs = ["capi_frontend/inferenceparameter.cpp",],
     deps = [
             "ovms_header",
+            "libovms_config",
+            "cpp_headers",
             "libovmscapi_utils_h", # TODO @atobisze
     ],
     visibility = ["//visibility:public"],
@@ -1680,6 +1631,13 @@ ovms_cc_library(
 ovms_cc_library(
     name = "libovmstimer",
     hdrs = ["timer.hpp",],
+    deps = [
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "libovms_time_utils",
+    hdrs = ["time_utils.hpp"],
     deps = [
     ],
     visibility = ["//visibility:public"],
@@ -2440,6 +2398,9 @@ cc_test(
             ":test_test_models_configs",
             ":test_cmd_exec",
             ":test_modelinstance_test",
+            ":servable_loading_queue_test",
+            ":test_idle_model_test",
+            ":test_servable_group_manager",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2470,6 +2431,7 @@ cc_test(
                 ":text2image_test",
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
+                ":test_idle_mediapipe_test",
                 "//src/mediapipe_internal:mediapipe_utils",
                 "tensorflow_type_utils",
             ],
@@ -2613,6 +2575,57 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+ovms_cc_test_library(
+    name = "servable_loading_queue_test",
+    srcs = ["test/servable_loading_queue_test.cpp"],
+    deps = [
+        "//src/servable_management:servable_loading_queue",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+ovms_cc_test_library(
+    name = "test_idle_model_test",
+    srcs = ["test/idle_model_test.cpp"],
+    deps = [
+        ":libtest_environment",
+        ":test_constructor_enabled_model_manager",
+        ":test_test_models",
+        ":test_test_models_configs",
+        ":test_test_with_temp_dir",
+        ":test_utils",
+        "//third_party:openvino",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+ovms_cc_test_library(
+    name = "test_servable_group_manager",
+    srcs = ["test/servable_group_manager_test.cpp"],
+    deps = [
+        ":libtest_environment",
+        ":test_constructor_enabled_model_manager",
+        ":test_test_models",
+        ":test_test_with_temp_dir",
+        "//src/servable_management:modelmanager",
+        "//src:modelconfig",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+ovms_cc_test_library(
+    name = "test_idle_mediapipe_test",
+    srcs = ["test/idle_mediapipe_test.cpp"],
+    deps = [
+        ":test_constructor_enabled_model_manager",
+        ":test_utils",
+        "//src/dags:pipelinedefinitionstatus",
+        "//src/mediapipe_internal:libovms_mediapipe",
+        "//src/mediapipe_internal:mediapipegraphconfig",
+        "@com_google_googletest//:gtest",
+    ],
 )
 
 cc_library(

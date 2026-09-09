@@ -16,6 +16,7 @@
 
 #include "mediapipefactory.hpp"
 
+#include <atomic>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -49,10 +50,11 @@ OVMS_Server* gExternalServerHandle = nullptr;
 ovms::Status processConfigInternal(ovms::MediapipeFactory* factory,
     const ovms::MediapipeGraphConfig& config,
     ovms::MetricProvider& metrics,
-    const ovms::ServableNameChecker& checker) {
+    const ovms::ServableNameChecker& checker,
+    bool lazyLoad) {
     auto* definition = factory->findDefinitionByName(config.getGraphName());
     if (definition == nullptr) {
-        return factory->createDefinition(config.getGraphName(), config, metrics, checker);
+        return factory->createDefinition(config.getGraphName(), config, metrics, checker, lazyLoad);
     }
     if (definition->isReloadRequired(config)) {
         return factory->reloadDefinition(config.getGraphName(), config, checker);
@@ -88,14 +90,53 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT void* OVMS_MPGetExternalServerHandle() {
 extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryProcessConfig(void* factoryHandle,
     const ovms::MediapipeGraphConfig* config,
     ovms::MetricProvider* metrics,
-    const ovms::ServableNameChecker* checker) {
+    const ovms::ServableNameChecker* checker,
+    int lazyLoad) {
     if (factoryHandle == nullptr || config == nullptr || metrics == nullptr || checker == nullptr) {
         gLastError = "Invalid arguments for OVMS_MPFactoryProcessConfig";
         return static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
     }
 
     auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
-    auto status = processConfigInternal(factory, *config, *metrics, *checker);
+    auto status = processConfigInternal(factory, *config, *metrics, *checker, lazyLoad != 0);
+    gLastError = status.string();
+    return static_cast<int>(status.getCode());
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryWakeUpDefinition(void* factoryHandle,
+    const char* name,
+    const ovms::ServableNameChecker* checker) {
+    if (factoryHandle == nullptr || name == nullptr || checker == nullptr) {
+        gLastError = "Invalid arguments for OVMS_MPFactoryWakeUpDefinition";
+        return static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
+    }
+
+    auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
+    auto status = factory->wakeUpDefinition(name, *checker);
+    gLastError = status.string();
+    return static_cast<int>(status.getCode());
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryPutToSleepDefinition(void* factoryHandle, const char* name) {
+    if (factoryHandle == nullptr || name == nullptr) {
+        gLastError = "Invalid arguments for OVMS_MPFactoryPutToSleepDefinition";
+        return static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
+    }
+
+    auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
+    auto status = factory->putToSleepDefinition(name);
+    gLastError = status.string();
+    return static_cast<int>(status.getCode());
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryRetireDefinition(void* factoryHandle, const char* name) {
+    if (factoryHandle == nullptr || name == nullptr) {
+        gLastError = "Invalid arguments for OVMS_MPFactoryRetireDefinition";
+        return static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
+    }
+
+    auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
+    auto status = factory->retireDefinition(name);
     gLastError = status.string();
     return static_cast<int>(status.getCode());
 }
@@ -142,6 +183,57 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryDefinitionExists(void* fac
     }
     auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
     return factory->definitionExists(name) ? 1 : 0;
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryIsDefinitionRetired(void* factoryHandle, const char* name) {
+    if (factoryHandle == nullptr || name == nullptr) {
+        return 0;
+    }
+    auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
+    auto* definition = factory->findDefinitionByName(name);
+    return definition != nullptr && definition->getStateCode() == ovms::PipelineDefinitionStateCode::RETIRED ? 1 : 0;
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryIsDefinitionAvailable(void* factoryHandle, const char* name) {
+    if (factoryHandle == nullptr || name == nullptr) {
+        return 0;
+    }
+    auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
+    auto* definition = factory->findDefinitionByName(name);
+    return definition != nullptr && definition->getStateCode() == ovms::PipelineDefinitionStateCode::AVAILABLE ? 1 : 0;
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryShouldUnloadDefinitionDueToIdle(void* factoryHandle, const char* name) {
+    if (factoryHandle == nullptr || name == nullptr) {
+        return 0;
+    }
+    auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
+    auto* definition = factory->findDefinitionByName(name);
+    return definition != nullptr && definition->shouldUnloadDueToIdle() ? 1 : 0;
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryHasActiveInference(void* factoryHandle, const char* name) {
+    if (factoryHandle == nullptr || name == nullptr) {
+        return 0;
+    }
+    auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
+    auto* definition = factory->findDefinitionByName(name);
+    if (definition == nullptr) {
+        return 0;
+    }
+    auto activeCount = definition->getActiveInferenceCount();
+    return activeCount && activeCount->load(std::memory_order_acquire) > 0 ? 1 : 0;
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT const char* OVMS_MPFactoryGetDefinitionGroupName(void* factoryHandle, const char* name) {
+    if (factoryHandle == nullptr || name == nullptr) {
+        gLastError = "";
+        return gLastError.c_str();
+    }
+    auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
+    auto* definition = factory->findDefinitionByName(name);
+    gLastError = definition == nullptr ? "" : definition->getMediapipeGraphConfig().getGroupName();
+    return gLastError.c_str();
 }
 
 extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryAliasesConflictExcluding(void* factoryHandle,

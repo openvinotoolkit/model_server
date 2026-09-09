@@ -44,7 +44,9 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     const GraphSidePackets& sidePacketMaps,
     PythonBackend* pythonBackend,
     MediapipeServableMetricReporter* mediapipeServableMetricReporter,
-    GraphIdGuard&& guard) :
+    GraphIdGuard&& guard,
+    std::shared_ptr<std::atomic<int64_t>> activeInferenceCount,
+    std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs) :
     name(name),
     version(version),
     config(config),
@@ -56,7 +58,10 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     pythonBackend(pythonBackend),
     currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter),
-    guard(std::move(guard)) {}
+    guard(std::move(guard)),
+    activeInferenceGuard(activeInferenceCount
+                             ? std::optional<ActiveInferenceGuard>(ActiveInferenceGuard(std::move(activeInferenceCount), std::move(lastActivityTimeNs)))
+                             : std::nullopt) {}
 MediapipeGraphExecutor::MediapipeGraphExecutor(
     const std::string& name,
     const std::string& version,
@@ -67,7 +72,9 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     std::vector<std::string> outputNames,
     const GraphSidePackets& sidePacketMaps,
     PythonBackend* pythonBackend,
-    MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
+    MediapipeServableMetricReporter* mediapipeServableMetricReporter,
+    std::shared_ptr<std::atomic<int64_t>> activeInferenceCount,
+    std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs) :
     name(name),
     version(version),
     config(config),
@@ -78,6 +85,9 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     sidePacketMaps(sidePacketMaps),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
-    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
+    mediapipeServableMetricReporter(mediapipeServableMetricReporter),
+    activeInferenceGuard(activeInferenceCount
+                             ? std::optional<ActiveInferenceGuard>(ActiveInferenceGuard(std::move(activeInferenceCount), std::move(lastActivityTimeNs)))
+                             : std::nullopt) {}
 
 }  // namespace ovms

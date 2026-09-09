@@ -25,7 +25,7 @@
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "src/status.hpp"
 #include "../stringutils.hpp"
@@ -119,10 +119,6 @@ public:
         StreamingTest::SetUp();
         pythonModule = std::make_unique<PythonInterpreterModule>();
         pythonModule->start(ovms::Config::instance());
-        if (pythonModule->ownsPythonInterpreter()) {
-            // Release GIL on the setup thread so graph worker threads can acquire it.
-            pythonModule->releaseGILFromThisThread();
-        }
 #ifdef __linux__
         if (getKfsPyTensorBridgeVTable() == nullptr && OVMS_getKfsPyTensorBridgeVTable != nullptr) {
             if (auto* vtable = OVMS_getKfsPyTensorBridgeVTable(); vtable != nullptr) {

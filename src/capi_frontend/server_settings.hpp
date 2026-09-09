@@ -135,6 +135,7 @@ struct EmbeddingsGraphSettingsImpl {
     std::string normalize = "true";
     std::string truncate = "false";
     std::optional<std::string> pooling;
+    std::optional<uint32_t> maxLength;
 };
 
 struct TextToSpeechGraphSettingsImpl {
@@ -232,6 +233,7 @@ struct ServerSettingsImpl {
     std::string logLevel = "INFO";
     std::string logPath;
     bool verboseResponse = false;
+    bool disableInputCountValidation = false;
     bool allowCredentials = false;
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};
@@ -244,6 +246,7 @@ struct ServerSettingsImpl {
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
     uint32_t resourcesCleanerPollWaitSeconds = 300;
+    uint32_t idleUnloadTimeoutSeconds = 0;
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;
@@ -271,6 +274,7 @@ struct ModelsSettingsImpl {
     uint32_t nireq = 0;
     std::string targetDevice;
     std::string pluginConfig;
+    std::optional<std::string> groupName;
     std::vector<std::string> userSetSingleModelArguments;
 
     std::string configPath;

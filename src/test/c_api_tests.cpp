@@ -42,7 +42,7 @@
 #include "../filesystem/filesystem.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../ovms.h"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"
@@ -1978,7 +1978,7 @@ public:
         status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::START);
     }
     virtual ~MockModelInstanceWithSetOutputInfo() {}
-    ovms::Status loadModel(const ovms::ModelConfig& config) override {
+    ovms::Status loadModel(const ovms::ModelConfig& config, bool lazyLoad = false) override {
         auto input = std::make_shared<ov::opset8::Parameter>(ov::element::f32, ov::Shape{1, DUMMY_MODEL_INPUT_SIZE});
         auto result = std::make_shared<ov::opset8::Result>(input);
         input->output(0).get_tensor().set_names({DUMMY_MODEL_INPUT_NAME});

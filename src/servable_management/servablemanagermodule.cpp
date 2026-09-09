@@ -13,17 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 
 #include <string>
 #include <utility>
 
-#include "config.hpp"
-#include "logging.hpp"
-#include "metrics/metric_module.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
+#include "src/metrics/metric_module.hpp"
 #include "modelmanager.hpp"
-#include "python/python_runtime_module_api.hpp"
-#include "server.hpp"
+#include "src/python/python_runtime_module_api.hpp"
+#include "src/server.hpp"
 
 namespace ovms {
 class PythonBackend;

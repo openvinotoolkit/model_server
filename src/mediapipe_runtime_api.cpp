@@ -48,10 +48,18 @@ extern "C" void OVMS_StatusDelete(OVMS_Status* status);
 extern "C" void* OVMS_MPFactoryCreate(void*) __attribute__((weak));
 extern "C" void OVMS_MPFactoryDestroy(void*) __attribute__((weak));
 extern "C" const char* OVMS_MPFactoryGetLastError() __attribute__((weak));
-extern "C" int OVMS_MPFactoryProcessConfig(void*, const ovms::MediapipeGraphConfig*, ovms::MetricProvider*, const ovms::ServableNameChecker*) __attribute__((weak));
+extern "C" int OVMS_MPFactoryProcessConfig(void*, const ovms::MediapipeGraphConfig*, ovms::MetricProvider*, const ovms::ServableNameChecker*, int) __attribute__((weak));
 extern "C" int OVMS_MPFactoryCreateExecutor(void*, const char*, std::unique_ptr<ovms::MediapipeGraphExecutor>*) __attribute__((weak));
 extern "C" int OVMS_MPFactoryCreateExecutorHandle(void*, const char*, std::unique_ptr<ovms::MediapipeGraphExecutorInterface>*) __attribute__((weak));
 extern "C" int OVMS_MPFactoryDefinitionExists(void*, const char*) __attribute__((weak));
+extern "C" int OVMS_MPFactoryWakeUpDefinition(void*, const char*, const ovms::ServableNameChecker*) __attribute__((weak));
+extern "C" int OVMS_MPFactoryPutToSleepDefinition(void*, const char*) __attribute__((weak));
+extern "C" int OVMS_MPFactoryRetireDefinition(void*, const char*) __attribute__((weak));
+extern "C" int OVMS_MPFactoryIsDefinitionRetired(void*, const char*) __attribute__((weak));
+extern "C" int OVMS_MPFactoryIsDefinitionAvailable(void*, const char*) __attribute__((weak));
+extern "C" int OVMS_MPFactoryShouldUnloadDefinitionDueToIdle(void*, const char*) __attribute__((weak));
+extern "C" int OVMS_MPFactoryHasActiveInference(void*, const char*) __attribute__((weak));
+extern "C" const char* OVMS_MPFactoryGetDefinitionGroupName(void*, const char*) __attribute__((weak));
 extern "C" int OVMS_MPFactoryAliasesConflictExcluding(void*, const char*, const char*) __attribute__((weak));
 extern "C" void OVMS_MPFactoryRetireOtherThan(void*, const char*) __attribute__((weak));
 extern "C" const char* OVMS_MPFactoryGetNames(void*, int) __attribute__((weak));
@@ -74,10 +82,18 @@ struct MediapipeRuntimeApi::ApiSymbols {
     using CreateFn = void* (*)(void*);
     using DestroyFn = void (*)(void*);
     using LastErrorFn = const char* (*)();
-    using ProcessConfigFn = int (*)(void*, const MediapipeGraphConfig*, MetricProvider*, const ServableNameChecker*);
+    using ProcessConfigFn = int (*)(void*, const MediapipeGraphConfig*, MetricProvider*, const ServableNameChecker*, int);
     using CreateExecutorFn = int (*)(void*, const char*, std::unique_ptr<MediapipeGraphExecutor>*);
     using CreateExecutorHandleFn = int (*)(void*, const char*, std::unique_ptr<MediapipeGraphExecutorInterface>*);
     using DefinitionExistsFn = int (*)(void*, const char*);
+    using WakeUpDefinitionFn = int (*)(void*, const char*, const ServableNameChecker*);
+    using PutToSleepDefinitionFn = int (*)(void*, const char*);
+    using RetireDefinitionFn = int (*)(void*, const char*);
+    using IsDefinitionRetiredFn = int (*)(void*, const char*);
+    using IsDefinitionAvailableFn = int (*)(void*, const char*);
+    using ShouldUnloadDefinitionDueToIdleFn = int (*)(void*, const char*);
+    using HasActiveInferenceFn = int (*)(void*, const char*);
+    using GetDefinitionGroupNameFn = const char* (*)(void*, const char*);
     using AliasesConflictExcludingFn = int (*)(void*, const char*, const char*);
     using RetireOtherThanFn = void (*)(void*, const char*);
     using GetNamesFn = const char* (*)(void*, int);
@@ -95,6 +111,14 @@ struct MediapipeRuntimeApi::ApiSymbols {
     CreateExecutorFn createExecutor = nullptr;
     CreateExecutorHandleFn createExecutorHandle = nullptr;
     DefinitionExistsFn definitionExists = nullptr;
+    WakeUpDefinitionFn wakeUpDefinition = nullptr;
+    PutToSleepDefinitionFn putToSleepDefinition = nullptr;
+    RetireDefinitionFn retireDefinition = nullptr;
+    IsDefinitionRetiredFn isDefinitionRetired = nullptr;
+    IsDefinitionAvailableFn isDefinitionAvailable = nullptr;
+    ShouldUnloadDefinitionDueToIdleFn shouldUnloadDefinitionDueToIdle = nullptr;
+    HasActiveInferenceFn hasActiveInference = nullptr;
+    GetDefinitionGroupNameFn getDefinitionGroupName = nullptr;
     AliasesConflictExcludingFn aliasesConflictExcluding = nullptr;
     RetireOtherThanFn retireOtherThan = nullptr;
     GetNamesFn getNames = nullptr;
@@ -168,6 +192,14 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         api->createExecutor = OVMS_MPFactoryCreateExecutor != nullptr ? OVMS_MPFactoryCreateExecutor : reinterpret_cast<ApiSymbols::CreateExecutorFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryCreateExecutor"));
         api->createExecutorHandle = OVMS_MPFactoryCreateExecutorHandle != nullptr ? OVMS_MPFactoryCreateExecutorHandle : reinterpret_cast<ApiSymbols::CreateExecutorHandleFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryCreateExecutorHandle"));
         api->definitionExists = OVMS_MPFactoryDefinitionExists != nullptr ? OVMS_MPFactoryDefinitionExists : reinterpret_cast<ApiSymbols::DefinitionExistsFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryDefinitionExists"));
+        api->wakeUpDefinition = OVMS_MPFactoryWakeUpDefinition != nullptr ? OVMS_MPFactoryWakeUpDefinition : reinterpret_cast<ApiSymbols::WakeUpDefinitionFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryWakeUpDefinition"));
+        api->putToSleepDefinition = OVMS_MPFactoryPutToSleepDefinition != nullptr ? OVMS_MPFactoryPutToSleepDefinition : reinterpret_cast<ApiSymbols::PutToSleepDefinitionFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryPutToSleepDefinition"));
+        api->retireDefinition = OVMS_MPFactoryRetireDefinition != nullptr ? OVMS_MPFactoryRetireDefinition : reinterpret_cast<ApiSymbols::RetireDefinitionFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryRetireDefinition"));
+        api->isDefinitionRetired = OVMS_MPFactoryIsDefinitionRetired != nullptr ? OVMS_MPFactoryIsDefinitionRetired : reinterpret_cast<ApiSymbols::IsDefinitionRetiredFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryIsDefinitionRetired"));
+        api->isDefinitionAvailable = OVMS_MPFactoryIsDefinitionAvailable != nullptr ? OVMS_MPFactoryIsDefinitionAvailable : reinterpret_cast<ApiSymbols::IsDefinitionAvailableFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryIsDefinitionAvailable"));
+        api->shouldUnloadDefinitionDueToIdle = OVMS_MPFactoryShouldUnloadDefinitionDueToIdle != nullptr ? OVMS_MPFactoryShouldUnloadDefinitionDueToIdle : reinterpret_cast<ApiSymbols::ShouldUnloadDefinitionDueToIdleFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryShouldUnloadDefinitionDueToIdle"));
+        api->hasActiveInference = OVMS_MPFactoryHasActiveInference != nullptr ? OVMS_MPFactoryHasActiveInference : reinterpret_cast<ApiSymbols::HasActiveInferenceFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryHasActiveInference"));
+        api->getDefinitionGroupName = OVMS_MPFactoryGetDefinitionGroupName != nullptr ? OVMS_MPFactoryGetDefinitionGroupName : reinterpret_cast<ApiSymbols::GetDefinitionGroupNameFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryGetDefinitionGroupName"));
         api->aliasesConflictExcluding = OVMS_MPFactoryAliasesConflictExcluding != nullptr ? OVMS_MPFactoryAliasesConflictExcluding : reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryAliasesConflictExcluding"));
         api->retireOtherThan = OVMS_MPFactoryRetireOtherThan != nullptr ? OVMS_MPFactoryRetireOtherThan : reinterpret_cast<ApiSymbols::RetireOtherThanFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryRetireOtherThan"));
         api->getNames = OVMS_MPFactoryGetNames != nullptr ? OVMS_MPFactoryGetNames : reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryGetNames"));
@@ -183,6 +215,14 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             api->createExecutor != nullptr &&
             api->createExecutorHandle != nullptr &&
             api->definitionExists != nullptr &&
+            api->wakeUpDefinition != nullptr &&
+            api->putToSleepDefinition != nullptr &&
+            api->retireDefinition != nullptr &&
+            api->isDefinitionRetired != nullptr &&
+            api->isDefinitionAvailable != nullptr &&
+            api->shouldUnloadDefinitionDueToIdle != nullptr &&
+            api->hasActiveInference != nullptr &&
+            api->getDefinitionGroupName != nullptr &&
             api->aliasesConflictExcluding != nullptr &&
             api->retireOtherThan != nullptr &&
             api->getNames != nullptr &&
@@ -209,6 +249,22 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
                 missingSymbols.emplace_back("OVMS_MPFactoryCreateExecutorHandle");
             if (api->definitionExists == nullptr)
                 missingSymbols.emplace_back("OVMS_MPFactoryDefinitionExists");
+            if (api->wakeUpDefinition == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryWakeUpDefinition");
+            if (api->putToSleepDefinition == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryPutToSleepDefinition");
+            if (api->retireDefinition == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryRetireDefinition");
+            if (api->isDefinitionRetired == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryIsDefinitionRetired");
+            if (api->isDefinitionAvailable == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryIsDefinitionAvailable");
+            if (api->shouldUnloadDefinitionDueToIdle == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryShouldUnloadDefinitionDueToIdle");
+            if (api->hasActiveInference == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryHasActiveInference");
+            if (api->getDefinitionGroupName == nullptr)
+                missingSymbols.emplace_back("OVMS_MPFactoryGetDefinitionGroupName");
             if (api->aliasesConflictExcluding == nullptr)
                 missingSymbols.emplace_back("OVMS_MPFactoryAliasesConflictExcluding");
             if (api->retireOtherThan == nullptr)
@@ -237,6 +293,14 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             api->createExecutor = reinterpret_cast<ApiSymbols::CreateExecutorFn>(resolveSymbol(currentModule, "OVMS_MPFactoryCreateExecutor"));
             api->createExecutorHandle = reinterpret_cast<ApiSymbols::CreateExecutorHandleFn>(resolveSymbol(currentModule, "OVMS_MPFactoryCreateExecutorHandle"));
             api->definitionExists = reinterpret_cast<ApiSymbols::DefinitionExistsFn>(resolveSymbol(currentModule, "OVMS_MPFactoryDefinitionExists"));
+            api->wakeUpDefinition = reinterpret_cast<ApiSymbols::WakeUpDefinitionFn>(resolveSymbol(currentModule, "OVMS_MPFactoryWakeUpDefinition"));
+            api->putToSleepDefinition = reinterpret_cast<ApiSymbols::PutToSleepDefinitionFn>(resolveSymbol(currentModule, "OVMS_MPFactoryPutToSleepDefinition"));
+            api->retireDefinition = reinterpret_cast<ApiSymbols::RetireDefinitionFn>(resolveSymbol(currentModule, "OVMS_MPFactoryRetireDefinition"));
+            api->isDefinitionRetired = reinterpret_cast<ApiSymbols::IsDefinitionRetiredFn>(resolveSymbol(currentModule, "OVMS_MPFactoryIsDefinitionRetired"));
+            api->isDefinitionAvailable = reinterpret_cast<ApiSymbols::IsDefinitionAvailableFn>(resolveSymbol(currentModule, "OVMS_MPFactoryIsDefinitionAvailable"));
+            api->shouldUnloadDefinitionDueToIdle = reinterpret_cast<ApiSymbols::ShouldUnloadDefinitionDueToIdleFn>(resolveSymbol(currentModule, "OVMS_MPFactoryShouldUnloadDefinitionDueToIdle"));
+            api->hasActiveInference = reinterpret_cast<ApiSymbols::HasActiveInferenceFn>(resolveSymbol(currentModule, "OVMS_MPFactoryHasActiveInference"));
+            api->getDefinitionGroupName = reinterpret_cast<ApiSymbols::GetDefinitionGroupNameFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetDefinitionGroupName"));
             api->aliasesConflictExcluding = reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(currentModule, "OVMS_MPFactoryAliasesConflictExcluding"));
             api->retireOtherThan = reinterpret_cast<ApiSymbols::RetireOtherThanFn>(resolveSymbol(currentModule, "OVMS_MPFactoryRetireOtherThan"));
             api->getNames = reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetNames"));
@@ -253,6 +317,14 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
                 api->createExecutor != nullptr &&
                 api->createExecutorHandle != nullptr &&
                 api->definitionExists != nullptr &&
+                api->wakeUpDefinition != nullptr &&
+                api->putToSleepDefinition != nullptr &&
+                api->retireDefinition != nullptr &&
+                api->isDefinitionRetired != nullptr &&
+                api->isDefinitionAvailable != nullptr &&
+                api->shouldUnloadDefinitionDueToIdle != nullptr &&
+                api->hasActiveInference != nullptr &&
+                api->getDefinitionGroupName != nullptr &&
                 api->aliasesConflictExcluding != nullptr &&
                 api->retireOtherThan != nullptr &&
                 api->getNames != nullptr &&
@@ -348,6 +420,14 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         api->createExecutor = reinterpret_cast<ApiSymbols::CreateExecutorFn>(resolveSymbol(api->handle, "OVMS_MPFactoryCreateExecutor"));
         api->createExecutorHandle = reinterpret_cast<ApiSymbols::CreateExecutorHandleFn>(resolveSymbol(api->handle, "OVMS_MPFactoryCreateExecutorHandle"));
         api->definitionExists = reinterpret_cast<ApiSymbols::DefinitionExistsFn>(resolveSymbol(api->handle, "OVMS_MPFactoryDefinitionExists"));
+        api->wakeUpDefinition = reinterpret_cast<ApiSymbols::WakeUpDefinitionFn>(resolveSymbol(api->handle, "OVMS_MPFactoryWakeUpDefinition"));
+        api->putToSleepDefinition = reinterpret_cast<ApiSymbols::PutToSleepDefinitionFn>(resolveSymbol(api->handle, "OVMS_MPFactoryPutToSleepDefinition"));
+        api->retireDefinition = reinterpret_cast<ApiSymbols::RetireDefinitionFn>(resolveSymbol(api->handle, "OVMS_MPFactoryRetireDefinition"));
+        api->isDefinitionRetired = reinterpret_cast<ApiSymbols::IsDefinitionRetiredFn>(resolveSymbol(api->handle, "OVMS_MPFactoryIsDefinitionRetired"));
+        api->isDefinitionAvailable = reinterpret_cast<ApiSymbols::IsDefinitionAvailableFn>(resolveSymbol(api->handle, "OVMS_MPFactoryIsDefinitionAvailable"));
+        api->shouldUnloadDefinitionDueToIdle = reinterpret_cast<ApiSymbols::ShouldUnloadDefinitionDueToIdleFn>(resolveSymbol(api->handle, "OVMS_MPFactoryShouldUnloadDefinitionDueToIdle"));
+        api->hasActiveInference = reinterpret_cast<ApiSymbols::HasActiveInferenceFn>(resolveSymbol(api->handle, "OVMS_MPFactoryHasActiveInference"));
+        api->getDefinitionGroupName = reinterpret_cast<ApiSymbols::GetDefinitionGroupNameFn>(resolveSymbol(api->handle, "OVMS_MPFactoryGetDefinitionGroupName"));
         api->aliasesConflictExcluding = reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(api->handle, "OVMS_MPFactoryAliasesConflictExcluding"));
         api->retireOtherThan = reinterpret_cast<ApiSymbols::RetireOtherThanFn>(resolveSymbol(api->handle, "OVMS_MPFactoryRetireOtherThan"));
         api->getNames = reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(api->handle, "OVMS_MPFactoryGetNames"));
@@ -372,6 +452,14 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         api->createExecutor == nullptr ||
         api->createExecutorHandle == nullptr ||
         api->definitionExists == nullptr ||
+        api->wakeUpDefinition == nullptr ||
+        api->putToSleepDefinition == nullptr ||
+        api->retireDefinition == nullptr ||
+        api->isDefinitionRetired == nullptr ||
+        api->isDefinitionAvailable == nullptr ||
+        api->shouldUnloadDefinitionDueToIdle == nullptr ||
+        api->hasActiveInference == nullptr ||
+        api->getDefinitionGroupName == nullptr ||
         api->aliasesConflictExcluding == nullptr ||
         api->retireOtherThan == nullptr ||
         api->getNames == nullptr ||
@@ -433,9 +521,10 @@ bool MediapipeRuntimeApi::isLoaded() const {
 
 Status MediapipeRuntimeApi::processConfig(const MediapipeGraphConfig& config,
     MetricProvider& metrics,
-    const ServableNameChecker& checker) {
+    const ServableNameChecker& checker,
+    bool lazyLoad) {
     OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED();
-    int code = api->processConfig(api->factoryHandle, &config, &metrics, &checker);
+    int code = api->processConfig(api->factoryHandle, &config, &metrics, &checker, lazyLoad ? 1 : 0);
     if (code == static_cast<int>(StatusCode::OK)) {
         return StatusCode::OK;
     }
@@ -479,6 +568,72 @@ bool MediapipeRuntimeApi::definitionExists(const std::string& name) const {
         return false;
     }
     return api->definitionExists(api->factoryHandle, name.c_str()) != 0;
+}
+
+Status MediapipeRuntimeApi::wakeUpDefinition(const std::string& name, const ServableNameChecker& checker) const {
+    OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED();
+    int code = api->wakeUpDefinition(api->factoryHandle, name.c_str(), &checker);
+    if (code == static_cast<int>(StatusCode::OK)) {
+        return StatusCode::OK;
+    }
+    const char* details = api->lastError();
+    return details == nullptr ? Status(static_cast<StatusCode>(code), "MediaPipe runtime API error") : Status(static_cast<StatusCode>(code), details);
+}
+
+Status MediapipeRuntimeApi::putToSleepDefinition(const std::string& name) const {
+    OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED();
+    int code = api->putToSleepDefinition(api->factoryHandle, name.c_str());
+    if (code == static_cast<int>(StatusCode::OK)) {
+        return StatusCode::OK;
+    }
+    const char* details = api->lastError();
+    return details == nullptr ? Status(static_cast<StatusCode>(code), "MediaPipe runtime API error") : Status(static_cast<StatusCode>(code), details);
+}
+
+Status MediapipeRuntimeApi::retireDefinition(const std::string& name) const {
+    OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED();
+    int code = api->retireDefinition(api->factoryHandle, name.c_str());
+    if (code == static_cast<int>(StatusCode::OK)) {
+        return StatusCode::OK;
+    }
+    const char* details = api->lastError();
+    return details == nullptr ? Status(static_cast<StatusCode>(code), "MediaPipe runtime API error") : Status(static_cast<StatusCode>(code), details);
+}
+
+bool MediapipeRuntimeApi::isDefinitionRetired(const std::string& name) const {
+    if (!isLoaded()) {
+        return false;
+    }
+    return api->isDefinitionRetired(api->factoryHandle, name.c_str()) != 0;
+}
+
+bool MediapipeRuntimeApi::isDefinitionAvailable(const std::string& name) const {
+    if (!isLoaded()) {
+        return false;
+    }
+    return api->isDefinitionAvailable(api->factoryHandle, name.c_str()) != 0;
+}
+
+bool MediapipeRuntimeApi::shouldUnloadDefinitionDueToIdle(const std::string& name) const {
+    if (!isLoaded()) {
+        return false;
+    }
+    return api->shouldUnloadDefinitionDueToIdle(api->factoryHandle, name.c_str()) != 0;
+}
+
+bool MediapipeRuntimeApi::hasActiveInference(const std::string& name) const {
+    if (!isLoaded()) {
+        return false;
+    }
+    return api->hasActiveInference(api->factoryHandle, name.c_str()) != 0;
+}
+
+std::string MediapipeRuntimeApi::getDefinitionGroupName(const std::string& name) const {
+    if (!isLoaded()) {
+        return "";
+    }
+    const char* groupName = api->getDefinitionGroupName(api->factoryHandle, name.c_str());
+    return groupName == nullptr ? "" : groupName;
 }
 
 bool MediapipeRuntimeApi::aliasesConflictExcluding(const std::vector<std::string>& aliases, const std::string& ownGraphName) const {

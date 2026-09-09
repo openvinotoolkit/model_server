@@ -34,9 +34,6 @@ void PythonEnvironment::SetUp() {
     if (!status.ok()) {
         throw std::runtime_error("Global python interpreter module failed to start");
     }
-    if (pythonModule->ownsPythonInterpreter()) {
-        pythonModule->releaseGILFromThisThread();
-    }
     pythonEnvironment = this;
 #endif
 }

@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <atomic>
+#include <chrono>
 #include <map>
 #include <memory>
 #include <optional>
@@ -27,6 +29,7 @@
 #include "src/execution_context.hpp"
 #include "mediapipe_graph_executor_interface.hpp"
 #include "../model_metric_reporter.hpp"
+#include "src/time_utils.hpp"
 #include "../profiler.hpp"
 #include "src/status.hpp"
 #include "../timer.hpp"
@@ -49,6 +52,45 @@
 namespace ovms {
 class PythonBackend;
 class ServableMetricReporter;
+
+// RAII guard that tracks an in-flight inference on a MediapipeGraphDefinition.
+// Increments the counter on construction; decrements it and refreshes
+// lastActivityTimeNs on destruction (even if the inference threw). Both are held as
+// shared_ptrs so they remain valid even if the definition is reloaded or retired
+// while the inference (and thus the owning executor) is still alive.
+// The lastActivityTimeNs refresh on decrement ensures that completing a long
+// generation resets the idle timer — preventing an immediate re-unload on the next
+// watcher cycle.
+struct ActiveInferenceGuard {
+    std::shared_ptr<std::atomic<int64_t>> counter;
+    std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs;
+
+    ActiveInferenceGuard(std::shared_ptr<std::atomic<int64_t>> counter,
+        std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs) :
+        counter(std::move(counter)),
+        lastActivityTimeNs(std::move(lastActivityTimeNs)) {
+        if (this->counter) {
+            this->counter->fetch_add(1, std::memory_order_acq_rel);
+        }
+    }
+
+    ~ActiveInferenceGuard() {
+        if (counter) {
+            // Refresh activity timestamp BEFORE decrementing so the watcher sees a
+            // recent activity time if it samples between the refresh and the decrement.
+            if (lastActivityTimeNs) {
+                lastActivityTimeNs->store(nanosSinceEpochStart(), std::memory_order_relaxed);
+            }
+            counter->fetch_sub(1, std::memory_order_acq_rel);
+        }
+    }
+
+    // Non-copyable, movable.
+    ActiveInferenceGuard(const ActiveInferenceGuard&) = delete;
+    ActiveInferenceGuard& operator=(const ActiveInferenceGuard&) = delete;
+    ActiveInferenceGuard(ActiveInferenceGuard&&) = default;
+    ActiveInferenceGuard& operator=(ActiveInferenceGuard&&) = default;
+};
 class MediapipeGraphExecutor;
 class ServableDefinitionUnloadGuard;
 
@@ -152,6 +194,13 @@ private:
 
     MediapipeServableMetricReporter* mediapipeServableMetricReporter;
     std::optional<GraphIdGuard> guard;
+    // RAII guard tracking this executor's active inference on the parent definition.
+    // Held for the entire lifetime of the executor so that the in-flight-inference
+    // check in shouldUnloadDueToIdle() / unload() sees a non-zero count while any
+    // inference method (infer / inferStream) is executing. On destruction (when the
+    // executor goes out of scope after inference completes) the counter decrements
+    // and lastActivityTimeNs is refreshed.
+    std::optional<ActiveInferenceGuard> activeInferenceGuard;
 
 public:
     MediapipeGraphExecutor(const std::string& name,
@@ -162,7 +211,9 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const GraphSidePackets& sidePacketMaps,
         PythonBackend* pythonBackend,
-        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard);
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard,
+        std::shared_ptr<std::atomic<int64_t>> activeInferenceCount = nullptr,
+        std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs = nullptr);
     // Constructor without graph queue (old path - graph created per-request)
     MediapipeGraphExecutor(const std::string& name,
         const std::string& version,
@@ -172,7 +223,9 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const GraphSidePackets& sidePacketMaps,
         PythonBackend* pythonBackend,
-        MediapipeServableMetricReporter* mediapipeServableMetricReporter);
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter,
+        std::shared_ptr<std::atomic<int64_t>> activeInferenceCount = nullptr,
+        std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs = nullptr);
 
     // Transport-facing virtual API. These are the overloads selected by the
     // front-end adapters and then immediately delegated into the typed helper

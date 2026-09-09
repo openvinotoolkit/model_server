@@ -61,17 +61,16 @@
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "metrics/metric_module.hpp"
-#include "modelmanager.hpp"
+#include "src/servable_management/modelmanager.hpp"
 #include "ovms_exit_codes.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "python/python_runtime_loader.hpp"
-#include "python/python_runtime_module_api.hpp"
 #endif
 #include "mediapipe_runtime_api.hpp"
-#include "servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "shutdown_state.hpp"
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
@@ -495,18 +494,6 @@ Status Server::startModules(ovms::Config& config) {
     }
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
-#if (PYTHON_DISABLE == 0)
-    if (config.getServerSettings().withPython) {
-        std::shared_lock lock(modulesMtx);
-        auto pythonModuleIt = modules.find(PYTHON_INTERPRETER_MODULE_NAME);
-        auto* pythonRuntimeApi = (pythonModuleIt != modules.end() && pythonModuleIt->second != nullptr) ? dynamic_cast<PythonRuntimeModuleApi*>(pythonModuleIt->second.get()) : nullptr;
-        if (pythonRuntimeApi != nullptr && pythonRuntimeApi->ownsPythonInterpreter()) {
-            // Natively GIL is held by the thread that initialized interpreter, so we only need to release it, if we own the interpreter.
-            // If it was initialized externally, then the external thread shall release the GIL before launching that module.
-            pythonRuntimeApi->releaseGILFromThisThread();
-        }
-    }
-#endif
     return status;
 }
 

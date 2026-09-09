@@ -62,7 +62,8 @@ public:
 
     Status processConfig(const MediapipeGraphConfig& config,
         MetricProvider& metrics,
-        const ServableNameChecker& checker);
+        const ServableNameChecker& checker,
+        bool lazyLoad = false);
 
     Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline,
         const std::string& name) const;
@@ -70,6 +71,14 @@ public:
         const std::string& name) const;
 
     bool definitionExists(const std::string& name) const;
+    [[nodiscard]] Status wakeUpDefinition(const std::string& name, const ServableNameChecker& checker) const;
+    [[nodiscard]] Status putToSleepDefinition(const std::string& name) const;
+    Status retireDefinition(const std::string& name) const;
+    bool isDefinitionRetired(const std::string& name) const;
+    bool isDefinitionAvailable(const std::string& name) const;
+    bool shouldUnloadDefinitionDueToIdle(const std::string& name) const;
+    bool hasActiveInference(const std::string& name) const;
+    std::string getDefinitionGroupName(const std::string& name) const;
     bool aliasesConflictExcluding(const std::vector<std::string>& aliases, const std::string& ownGraphName) const;
     void retireOtherThan(const std::set<std::string>& graphsInConfigFile);
     const std::vector<std::string> getMediapipePipelinesNames() const;

@@ -89,6 +89,9 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
     loadPythonCalculatorsPlugin();
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", PYTHON_INTERPRETER_MODULE_NAME);
+    if (this->ownsPythonInterpreter()) {
+        this->releaseGILFromThisThread();
+    }
     return StatusCode::OK;
 }
 
