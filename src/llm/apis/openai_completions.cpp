@@ -158,6 +158,17 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
     if (status != absl::OkStatus()) {
         return status;
     }
+    // reasoning_effort: string; optional
+    // OpenAI Chat Completions API reasoning_effort parameter.
+    auto reasoningEffortIt = doc.FindMember("reasoning_effort");
+    if (reasoningEffortIt != doc.MemberEnd() && !reasoningEffortIt->value.IsNull()) {
+        if (!reasoningEffortIt->value.IsString())
+            return absl::InvalidArgumentError("reasoning_effort is not a string");
+        status = applyReasoningEffort(reasoningEffortIt->value.GetString());
+        if (status != absl::OkStatus()) {
+            return status;
+        }
+    }
     // logprobs: bool; optional - defaults to false
     auto it = doc.FindMember("logprobs");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {

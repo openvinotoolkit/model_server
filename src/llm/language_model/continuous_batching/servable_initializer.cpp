@@ -44,6 +44,7 @@
 #include "llm_executor.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
+#include "../../servable_initializer.hpp"
 
 namespace ovms {
 
@@ -209,7 +210,8 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         auto draftSchedulerConfig = prepareDraftPipelineSchedulerConfig(nodeOptions);
 
         try {
-            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, nodeOptions.draft_device(),
+            const std::string draftDevice = nodeOptions.draft_device().empty() ? properties->device : nodeOptions.draft_device();
+            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, draftDevice,
                 ov::genai::scheduler_config(draftSchedulerConfig));
             properties->pluginConfig.insert(draftPipeline);
         } catch (const std::exception& e) {
@@ -219,7 +221,27 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             SPDLOG_ERROR("Error during draft model initialization for draft models_path: {}", draftPipelinePath);
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
-        properties->eagle3Mode = nodeOptions.draft_eagle3_mode();
+        try {
+            properties->draftModelStrategy = detectDraftModelStrategy(draftPipelinePath);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to detect draft model strategy for {}: {}", draftPipelinePath, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        using DS = GenAiServableProperties::DraftModelStrategy;
+        switch (properties->draftModelStrategy) {
+        case DS::EAGLE3:
+            SPDLOG_INFO("Draft model strategy: EAGLE3");
+            break;
+        case DS::DFLASH:
+            SPDLOG_INFO("Draft model strategy: DFlash");
+            break;
+        case DS::MTP:
+            SPDLOG_INFO("Draft model strategy: MTP (Multi-Token Prediction)");
+            break;
+        case DS::FAST_DRAFT:
+            SPDLOG_INFO("Draft model strategy: Fast Draft");
+            break;
+        }
     } else if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
         SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;

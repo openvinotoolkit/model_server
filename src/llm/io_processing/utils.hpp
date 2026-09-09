@@ -35,6 +35,12 @@ void writeArgumentOfAnyType(const rapidjson::Value& arg, rapidjson::Writer<rapid
 // Trims a single leading and a single trailing '\n' from str (in place).
 void trimNewline(std::string& str);
 
+// Trims one wrapping pair of quotes (either " or ') from an XML-style tag attribute value
+// (in place). Only a clean wrapping pair is treated as a delimiter: the value is left
+// untouched unless the same quote character is both its first and its last character and
+// does not occur anywhere in between.
+void trimSurroundingQuotes(std::string& str);
+
 // Returns a human-readable name of the JSON value type (for tracing).
 const char* jsonTypeOf(const rapidjson::Value& val);
 
