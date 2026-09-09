@@ -67,6 +67,9 @@ struct OutputParsingConfig {
     std::vector<std::string> stringsToErase;
 
     bool needsSpecialTokens = false;
+    // The tool parser owns quoted end markers and subsequent call framing.
+    // The generic router must not split or replay its input at a raw endTag.
+    bool ownsToolCallBoundaries = false;
     // See comment block above.
     bool defaultDecodingWithSpecialTokens = false;
 };
