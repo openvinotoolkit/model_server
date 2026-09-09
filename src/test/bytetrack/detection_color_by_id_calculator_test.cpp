@@ -39,17 +39,17 @@ class DetectionColorByIdCalculatorTest : public ::testing::Test {
 protected:
     std::unique_ptr<CalculatorRunner> MakeRunner(float saturation, float value, float thickness = 5.0f) {
         std::string pbtxt = absl::StrFormat(R"pb(
-            calculator: "DetectionColorByIdCalculator"
-            input_stream: "DETECTIONS:detections"
-            output_stream: "RENDER_DATA:render_data"
-            node_options: {
-                [type.googleapis.com/mediapipe.DetectionColorByIdCalculatorOptions]: {
-                    saturation: %f
-                    value: %f
-                    thickness: %f
-                }
-            }
-        )pb",
+                                                 calculator: "DetectionColorByIdCalculator"
+                                                 input_stream: "DETECTIONS:detections"
+                                                 output_stream: "RENDER_DATA:render_data"
+                                                 node_options: {
+                                                       [type.googleapis.com / mediapipe.DetectionColorByIdCalculatorOptions]: {
+                                                         saturation: % f
+                                                         value: % f
+                                                         thickness: % f
+                                                       }
+                                                 }
+            )pb",
             saturation, value, thickness);
         return std::make_unique<CalculatorRunner>(pbtxt);
     }

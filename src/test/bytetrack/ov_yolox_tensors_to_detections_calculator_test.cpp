@@ -40,18 +40,17 @@ class OVYoloXTensorsToDetectionsCalculatorTest : public ::testing::Test {
 protected:
     std::unique_ptr<CalculatorRunner> MakeRunner(float conf_thresh, float input_size) {
         std::string pbtxt = absl::StrFormat(R"pb(
-                node {
-                calculator: "OVYoloXTensorsToDetectionsCalculator"
-                input_stream: "TENSORS:detection_tensors"
-                output_stream: "DETECTIONS:detections"
+                                                 node {
+                                                   calculator: "OVYoloXTensorsToDetectionsCalculator"
+                                                   input_stream: "TENSORS:detection_tensors"
+                                                   output_stream: "DETECTIONS:detections"
 
-                node_options: {
-                    [type.googleapis.com/mediapipe.OVYoloXTensorsToDetectionsCalculatorOptions] {
-                    conf_thresh: %f
-                    input_size: %f
-                    }
-                }
-            })pb",
+                                                   node_options: {
+                                                           [type.googleapis.com / mediapipe.OVYoloXTensorsToDetectionsCalculatorOptions] {
+                                                             conf_thresh: % f
+                                                             input_size: % f
+                                                           }}
+                                                 })pb",
             conf_thresh, input_size);
         return std::make_unique<CalculatorRunner>(pbtxt);
     }
