@@ -29,7 +29,7 @@ node {
     }
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          models_path: "/ovms/src/test/dummy_genai/vlm_ov_model"
+          models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-llava-ov"
           cache_size: 1
           pipeline_type: VLM
         }

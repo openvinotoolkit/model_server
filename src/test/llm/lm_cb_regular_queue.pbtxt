@@ -30,7 +30,7 @@ node {
     }
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          models_path: "/ovms/src/test/dummy_genai/ov_model"
+          models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"
           cache_size: 1
         }
     }

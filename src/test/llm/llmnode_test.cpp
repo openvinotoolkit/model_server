@@ -111,7 +111,7 @@ public:
             plugin_config_t pluginConfig;
             // Setting precision to f32 fails on SPR hosts - to be investigated
             // JsonParser::parsePluginConfig("{\"INFERENCE_PRECISION_HINT\":\"f32\"}", pluginConfig);
-            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/dummy_genai/ov_model"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
+            cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during llm node initialization for models_path exception: {}", e.what());
@@ -4058,7 +4058,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeNameExists) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/src/test/dummy_genai/ov_model"
+                models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"
                 cache_size: 1
             }
         }
@@ -4191,7 +4191,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/src/test/dummy_genai/ov_model/config.json"
+                models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov/config.json"
             }
         }
         input_stream_handler {
@@ -4282,13 +4282,13 @@ class LLMOptionsHttpTestPython : public ::testing::Test {};
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
-    void SetUp() { modelsPath = "/ovms/src/test/dummy_genai/ov_model"; }
+    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"; }
 };
 
 class LLMVLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
-    void SetUp() { modelsPath = "/ovms/src/test/dummy_genai/vlm_ov_model"; }
+    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-llava-ov"; }
 };
 
 void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
@@ -5434,8 +5434,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsSpeculativeDecodingSanityCheck) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/src/test/dummy_genai/ov_model"
-                draft_models_path: "/ovms/src/test/dummy_genai/ov_model"
+                models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"
+                draft_models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"
             }
         }
         input_stream_handler {
@@ -5473,7 +5473,7 @@ TEST_F(LLMOptionsHttpTest, LegacyServableDraftModelsPathIsProcessedNotIgnored) {
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
                 pipeline_type: LM
-                models_path: "/ovms/src/test/dummy_genai/ov_model"
+                models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"
                 draft_models_path: "/nonexistent/draft/model"
             }
         }
@@ -6203,14 +6203,14 @@ TEST_F(DetectDraftModelStrategyTest, MtpTakesPriorityOverXmlScan) {
 }
 // ---------------------------------------------------------------------------
 // Idle unload feature: LLM graph lifecycle (issue #4141)
-// These tests require the dummy LLM model fixture (src/test/dummy_genai/ov_model).
+// These tests require the dummy LLM model fixture (src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov).
 // ---------------------------------------------------------------------------
 
 class LLMIdleUnloadTest : public ::testing::Test {
 protected:
     // Builds a minimal continuous-batching LLM graph pbtxt pointing at the dummy model.
     static std::string buildOptGraphPbtxt() {
-        std::string modelsPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy_genai/ov_model");
+        std::string modelsPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
         std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -6566,7 +6566,7 @@ TEST(MediapipeIdleUnloadGuard, MultipleGuardsNested) {
 TEST_F(LLMIdleUnloadTest, ActiveInferenceGuardIntegration) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = buildOptGraphPbtxt();
-    const std::string testModelsPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy_genai/ov_model");
+    const std::string testModelsPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
     if (!std::filesystem::exists(testModelsPath)) {
         GTEST_SKIP() << "dummy LLM model not present; skipping integration guard test";
     }

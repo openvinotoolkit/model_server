@@ -27,8 +27,10 @@ LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
 TTS_MODEL="hexgrad/Kokoro-82M"
-# VLM_MODEL (OpenVINO/InternVL2-1B-int4-ov) removed: VLM tests now use the dummy
-# model in src/test/dummy_genai/vlm_ov_model instead of a downloaded real model.
+# Dummy cyclic models used by LLM/VLM tests instead of real downloaded models;
+# pre-converted OpenVINO IR hosted on HF, see src/test/dummy_genai for the source.
+DUMMY_LLM_MODEL="mzeglars/dummy-cyclic-gpt2-ov"
+DUMMY_VLM_MODEL="mzeglars/dummy-cyclic-llava-ov"
 STT_MODEL="openai/whisper-tiny"
 
 # Models for tools testing. Only tokenizers are downloaded.
@@ -83,6 +85,28 @@ fi
 if [ ! -f "$1/$FACEBOOK_MODEL/chat_template.jinja" ]; then
     echo "Copying dummy chat template to $FACEBOOK_MODEL model directory."
     cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK_MODEL/chat_template.jinja"
+fi
+
+if [ -f "$1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  pip3 install --upgrade typer==0.25.1
+  hf download "$DUMMY_LLM_MODEL" --local-dir "$1/$DUMMY_LLM_MODEL"
+fi
+if [ ! -f "$1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+
+if [ -f "$1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  pip3 install --upgrade typer==0.25.1
+  hf download "$DUMMY_VLM_MODEL" --local-dir "$1/$DUMMY_VLM_MODEL"
+fi
+if [ ! -f "$1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
 fi
 
 if [ -f "$1/$TTS_MODEL/openvino_model.xml" ]; then

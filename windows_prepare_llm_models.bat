@@ -32,7 +32,10 @@ set "EMBEDDING_MODEL=thenlper/gte-small"
 set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=HuggingFaceTB/SmolLM2-360M-Instruct"
 set "FACEBOOK_MODEL=facebook/opt-125m"
-set "VLM_MODEL=OpenVINO/InternVL2-1B-int4-ov"
+:: Dummy cyclic models used by LLM/VLM tests instead of real downloaded models;
+:: pre-converted OpenVINO IR hosted on HF, see src\test\dummy_genai for the source.
+set "DUMMY_LLM_MODEL=mzeglars/dummy-cyclic-gpt2-ov"
+set "DUMMY_VLM_MODEL=mzeglars/dummy-cyclic-llava-ov"
 set "TTS_MODEL=hexgrad/Kokoro-82M"
 set "STT_MODEL=openai/whisper-tiny"
 
@@ -67,9 +70,10 @@ if not exist "%~1" mkdir "%~1"
 :: Export models
 call :download_export_model_tts "%TTS_MODEL%" "text2speech" "--model_type kokoro --weight-format int8" "%~1"
 call :download_export_model "%STT_MODEL%" "speech2text" "--weight-format int4" "%~1"
-call :download_openvino "%VLM_MODEL%" "%~1" OpenGVLab/InternVL2-1B
 call :download_export_model "%TEXT_GENERATION_MODEL%" "text_generation" "--weight-format int8" "%~1"
 call :download_export_model "%FACEBOOK_MODEL%" "text_generation" "--weight-format int8" "%~1"
+call :download_hf_model "%DUMMY_LLM_MODEL%" "%~1"
+call :download_hf_model "%DUMMY_VLM_MODEL%" "%~1"
 call :download_export_model "%RERANK_MODEL%" "rerank_ov" "--weight-format int8 --model_name %RERANK_MODEL%\ov" "%~1"
 call :download_export_model "%EMBEDDING_MODEL%" "embeddings_ov" "--weight-format int8 --model_name %EMBEDDING_MODEL%\ov" "%~1"
 
@@ -92,6 +96,18 @@ call :download_tokenizer "%LFM25_MODEL%" "%~1\%LFM25_MODEL%"
 call :download_tokenizer "%MINICPM5_MODEL%" "%~1\%MINICPM5_MODEL%"
 call :download_openvino_tokenizer "%GEMMA4_MODEL%" "%~1"
 
+exit /b 0
+
+:download_hf_model
+set "model=%~1"
+set "repository=%~2"
+
+if not exist "%repository%\%model%\openvino_tokenizer.bin" (
+  echo Downloading %model% to %repository%\%model% directory.
+  hf download "%model%" --local-dir "%repository%\%model%"
+) else (
+  echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
+)
 exit /b 0
 
 :: Helper subroutine to download export models
@@ -120,20 +136,6 @@ if not exist "%repository%\%model%\openvino_model.xml" (
   python demos\common\export_models\export_model.py %model_type% --source_model "%model%" %export_args% --model_repository_path %repository%
 ) else (
   echo Models file %repository%\%model%\openvino_model.xml exists. Skipping downloading models.
-)
-exit /b 0
-
-:download_openvino
-set "model=%~1"
-set "repository=%~2"
-
-if not exist "%repository%\%model%\openvino_tokenizer.bin" (
-  echo Downloading model to %repository%\%model% directory.
-  hf download "%model%" --local-dir "%repository%\%model%"
-  :: WA to use newer tokenizer model format which supports padding.
-  convert_tokenizer "%~3" --with_detokenizer -o "%~2\%~1"
-) else (
-  echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
 )
 exit /b 0
 

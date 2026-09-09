@@ -4,9 +4,19 @@ Minimal models that always generate the same phrase in an infinite loop:
 
 > **"For the night is dark and full of terrors..."**
 
-This catalog (`src/test/dummy_genai`) currently hosts a dummy LLM and a dummy
-VLM, and is intentionally named generically so future dummy GenAI model types
-(e.g. image generation, speech-to-text) can be added alongside them.
+This catalog (`src/test/dummy_genai`) currently hosts the *build scripts* for a
+dummy LLM and a dummy VLM, and is intentionally named generically so future
+dummy GenAI model types (e.g. image generation, speech-to-text) can be added
+alongside them.
+
+The built models are published on HuggingFace Hub, not committed to this repo:
+- LLM: [`mzeglars/dummy-cyclic-gpt2-ov`](https://huggingface.co/mzeglars/dummy-cyclic-gpt2-ov)
+- VLM: [`mzeglars/dummy-cyclic-llava-ov`](https://huggingface.co/mzeglars/dummy-cyclic-llava-ov)
+
+OVMS tests pull them on demand via `prepare_llm_models.sh` /
+`windows_prepare_llm_models.bat` into `src/test/llm_testing/mzeglars/...`, the
+same convention used for every other real model in that directory (see
+"Migration status" below).
 
 Two variants are provided:
 
@@ -115,6 +125,10 @@ is completely image-agnostic.
 
 ### Output files
 
+Build output stays local and gitignored (see `.gitignore`) - it's only an
+intermediate step for regenerating the models before re-uploading to HF via
+`upload_to_hf.py`, not something OVMS tests read from directly:
+
 ```
 src/test/dummy_genai/
 ├── hf_model/          ← LLM HuggingFace model
@@ -183,10 +197,10 @@ print(pipe.generate("What do you see?", images=[img], max_new_tokens=40, do_samp
 ### With OVMS export_model.py
 
 ```bash
-# The ov_model/ directory is already in the OVMS-compatible format.
-# Point your OVMS config at ov_model/ with pipeline_type LM or LM_CB.
+# Either a local build (ov_model/) or the published HF repo works directly.
+# Point your OVMS config at it with pipeline_type LM or LM_CB.
 python3 demos/common/export_models/export_model.py text_generation \
-    --source_model src/test/dummy_genai/ov_model \
+    --source_model mzeglars/dummy-cyclic-gpt2-ov \
     --model_repository_path models \
     --pipeline_type LM_CB
 ```
@@ -201,7 +215,13 @@ migrated to use these dummy models instead of downloading real ones
 (`HuggingFaceTB/SmolLM2-360M-Instruct`, `facebook/opt-125m`,
 `OpenVINO/InternVL2-1B-int4-ov`). `OpenVINO/InternVL2-1B-int4-ov` download has
 been removed entirely from `prepare_llm_models.sh` /
-`windows_prepare_llm_models.bat` since nothing references it anymore.
+`windows_prepare_llm_models.bat` since nothing references it anymore; instead,
+both scripts now pull `mzeglars/dummy-cyclic-gpt2-ov` and
+`mzeglars/dummy-cyclic-llava-ov` from HF into
+`src/test/llm_testing/mzeglars/...` (skipped if already present, like every
+other model in that script). Tests reference the models at
+`/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov` and
+`/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-llava-ov`.
 
 **Left on real models (not migrated), and why:**
 - `LLMStartWithTaskParameter` tests (`llmnode_test.cpp`) still use
