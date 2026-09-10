@@ -21,7 +21,7 @@
 #include <pybind11/stl.h>
 #pragma warning(pop)
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 namespace py = pybind11;
 using namespace py::literals;

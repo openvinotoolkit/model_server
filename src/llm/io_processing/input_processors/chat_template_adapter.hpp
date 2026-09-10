@@ -18,8 +18,8 @@
 #include <openvino/genai/chat_history.hpp>
 #include <string>
 
-#include "../chat_template/caps.hpp"
-#include "../base_input_processor.hpp"
+#include "src/llm/io_processing/chat_template/caps.hpp"
+#include "src/llm/io_processing/base_input_processor.hpp"
 
 namespace ovms {
 

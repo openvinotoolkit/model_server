@@ -22,14 +22,14 @@
 
 #include <openvino/runtime/tensor.hpp>
 
-#include "../deserialization_common.hpp"
+#include "src/deserialization_common.hpp"
 #include "capi_request_utils.hpp"
 #include "inferencerequest.hpp"
 #include "inferencetensor.hpp"
-#include "../logging.hpp"
-#include "../profiler.hpp"
-#include "../status.hpp"
-#include "../tensorinfo.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
+#include "src/status.hpp"
+#include "src/tensorinfo.hpp"
 
 namespace ovms {
 ov::Tensor makeTensor(const InferenceTensor& requestInput,

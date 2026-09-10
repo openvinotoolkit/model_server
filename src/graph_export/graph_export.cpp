@@ -32,15 +32,15 @@
 #include <rapidjson/prettywriter.h>
 #pragma warning(pop)
 
-#include "../capi_frontend/server_settings.hpp"
-#include "../config.hpp"
+#include "src/capi_frontend/server_settings.hpp"
+#include "src/config.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/filesystem/localfilesystem.hpp"
-#include "../logging.hpp"
-#include "../status.hpp"
-#include "../stringutils.hpp"
-#include "../schema.hpp"
-#include "../version.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
+#include "src/schema.hpp"
+#include "src/version.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #pragma warning(push)

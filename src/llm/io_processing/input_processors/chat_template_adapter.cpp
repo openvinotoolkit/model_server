@@ -19,7 +19,7 @@
 #include <string>
 #include <variant>
 
-#include "../../../logging.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 namespace chat_template_adapter {

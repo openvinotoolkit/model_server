@@ -22,11 +22,11 @@
 #include <pybind11/embed.h>  // everything needed for embedding
 #pragma warning(pop)
 
-#include "../config.hpp"
-#include "../logging.hpp"
-#include "../module.hpp"
-#include "../module_names.hpp"
-#include "../status.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
+#include "src/module.hpp"
+#include "src/module_names.hpp"
+#include "src/status.hpp"
 #include "python_backend.hpp"
 
 namespace py = pybind11;

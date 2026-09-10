@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "../../custom_node_interface.h"
+#include "src/custom_node_interface.h"
 
 int initialize(void** customNodeLibraryInternalManager, const struct CustomNodeParam* params, int paramsCount) {
     return 0;

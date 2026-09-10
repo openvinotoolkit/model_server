@@ -24,8 +24,8 @@
 #include <openvino/genai/omni/speech_streamer_base.hpp>
 #include <openvino/genai/omni/talker_speech_config.hpp>
 
-#include "../../apis/openai_request.hpp"
-#include "../../servable.hpp"
+#include "src/llm/apis/openai_request.hpp"
+#include "src/llm/servable.hpp"
 #include "legacy_executor.hpp"
 #include "src/llm/llm_calculator.pb.h"
 

@@ -38,15 +38,15 @@
 #include "absl/strings/escaping.h"
 #pragma warning(pop)
 
-#include "../../../llm/apis/openai_completions.hpp"
-#include "../../../llm/apis/openai_responses.hpp"
-#include "../../../llm/io_processing/base_generation_config_builder.hpp"
-#include "../../../llm/io_processing/generation_config_builder.hpp"
-#include "../../../llm/io_processing/input_processor.hpp"
-#include "../../../llm/io_processing/input_processor_context.hpp"
-#include "../../../llm/io_processing/input_request.hpp"
-#include "../../platform_utils.hpp"
-#include "../../wav_test_utils.hpp"
+#include "src/llm/apis/openai_completions.hpp"
+#include "src/llm/apis/openai_responses.hpp"
+#include "src/llm/io_processing/base_generation_config_builder.hpp"
+#include "src/llm/io_processing/generation_config_builder.hpp"
+#include "src/llm/io_processing/input_processor.hpp"
+#include "src/llm/io_processing/input_processor_context.hpp"
+#include "src/llm/io_processing/input_request.hpp"
+#include "src/test/platform_utils.hpp"
+#include "src/test/wav_test_utils.hpp"
 
 namespace ovms {
 namespace {

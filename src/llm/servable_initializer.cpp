@@ -37,15 +37,15 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../config.hpp"
-#include "../logging.hpp"
-#include "../mediapipe_internal/mediapipe_utils.hpp"
-#include "../status.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
+#include "src/status.hpp"
 #include "io_processing/chat_template/analyzer.hpp"
 #include "io_processing/chat_template/probe.hpp"
 #include "io_processing/parser_config_validation.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "../stringutils.hpp"
+#include "src/stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
 #include "language_model/continuous_batching/servable_initializer.hpp"
 #include "language_model/legacy/servable_initializer.hpp"

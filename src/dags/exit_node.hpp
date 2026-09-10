@@ -19,7 +19,7 @@
 #include <string>
 #include <utility>
 
-#include "../tensorinfo.hpp"
+#include "src/tensorinfo.hpp"
 #include "node.hpp"
 
 namespace ovms {

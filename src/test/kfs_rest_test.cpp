@@ -22,14 +22,14 @@
 #include <rapidjson/document.h>
 #include <stdint.h>
 
-#include "../config.hpp"
-#include "../grpcservermodule.hpp"
-#include "../http_async_writer_interface.hpp"
-#include "../http_rest_api_handler.hpp"
+#include "src/config.hpp"
+#include "src/grpcservermodule.hpp"
+#include "src/http_async_writer_interface.hpp"
+#include "src/http_rest_api_handler.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
-#include "../status.hpp"
-#include "../version.hpp"
+#include "src/server.hpp"
+#include "src/status.hpp"
+#include "src/version.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
 

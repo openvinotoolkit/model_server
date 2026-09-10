@@ -18,8 +18,8 @@
 #include <utility>
 #include <vector>
 
-#include "../modelversion.hpp"
-#include "../ovms.h"  // NOLINT
+#include "src/modelversion.hpp"
+#include "src/ovms.h"  // NOLINT
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
 

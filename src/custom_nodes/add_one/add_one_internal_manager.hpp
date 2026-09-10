@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include "../common/custom_node_library_internal_manager.hpp"
+#include "src/custom_nodes/common/custom_node_library_internal_manager.hpp"
 
 namespace ovms {
 namespace custom_nodes_common {

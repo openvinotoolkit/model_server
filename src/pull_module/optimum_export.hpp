@@ -17,7 +17,7 @@
 #include <string>
 
 #include "model_downloader.hpp"
-#include "../capi_frontend/server_settings.hpp"
+#include "src/capi_frontend/server_settings.hpp"
 
 namespace ovms {
 class Status;

@@ -54,11 +54,11 @@
 #include "src/modelextensions.hpp"
 #include "src/capi_frontend/server_settings.hpp"
 
-#include "../module.hpp"
-#include "../server.hpp"
-#include "../status.hpp"
+#include "src/module.hpp"
+#include "src/server.hpp"
+#include "src/status.hpp"
 #include "src/stringutils.hpp"
-#include "../timer.hpp"
+#include "src/timer.hpp"
 
 #include "environment.hpp"
 

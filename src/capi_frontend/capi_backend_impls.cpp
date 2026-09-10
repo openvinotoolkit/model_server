@@ -21,17 +21,17 @@
 
 #include "capi_request_utils.hpp"
 
-#include "../modelinstance.hpp"
-#include "../deserialization_main.hpp"
-#include "../inference_executor.hpp"
-#include "../ovms.h"  // NOLINT
-#include "../status.hpp"
+#include "src/modelinstance.hpp"
+#include "src/deserialization_main.hpp"
+#include "src/inference_executor.hpp"
+#include "src/ovms.h"  // NOLINT
+#include "src/status.hpp"
 #include "capi_utils.hpp"
 #include "serialization.hpp"
 #include "deserialization.hpp"
 #include "inferencerequest.hpp"
 #include "inferenceresponse.hpp"
-#include "../predict_request_validation_utils.hpp"
+#include "src/predict_request_validation_utils.hpp"
 
 namespace ovms {
 using TensorMap = std::unordered_map<std::string, ov::Tensor>;

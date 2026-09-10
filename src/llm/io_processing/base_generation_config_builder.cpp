@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "../../logging.hpp"
+#include "src/logging.hpp"
 #include <limits>
 #include <random>
 #include <string>

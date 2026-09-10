@@ -26,8 +26,8 @@
 
 #include <fmt/format.h>
 
-#include "../modelversion.hpp"
-#include "../tensorinfo.hpp"
+#include "src/modelversion.hpp"
+#include "src/tensorinfo.hpp"
 #include "aliases.hpp"
 #include "node_library.hpp"
 

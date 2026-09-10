@@ -19,13 +19,13 @@
 #include <set>
 #include <thread>
 
-#include "../logging.hpp"
-#include "../model_instance_provider.hpp"
-#include "../model_metric_reporter.hpp"
-#include "../ov_utils.hpp"
-#include "../servable_definition_unload_guard.hpp"
-#include "../servable_name_checker.hpp"
-#include "../status.hpp"
+#include "src/logging.hpp"
+#include "src/model_instance_provider.hpp"
+#include "src/model_metric_reporter.hpp"
+#include "src/ov_utils.hpp"
+#include "src/servable_definition_unload_guard.hpp"
+#include "src/servable_name_checker.hpp"
+#include "src/status.hpp"
 #include "custom_node.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
 #include "dag_resource_manager.hpp"

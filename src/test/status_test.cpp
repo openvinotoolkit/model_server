@@ -20,8 +20,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../ovms.h"
-#include "../status.hpp"
+#include "src/ovms.h"
+#include "src/status.hpp"
 #include "test_utils.hpp"
 
 namespace ovms {

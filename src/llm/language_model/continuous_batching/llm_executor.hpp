@@ -27,8 +27,8 @@
 
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 
-#include "../../../logging.hpp"
-#include "../../../profiler.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
 
 namespace ovms {
 struct LLMExecutor {

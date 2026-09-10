@@ -27,8 +27,8 @@
 
 #include <openvino/genai/visual_language/pipeline.hpp>
 
-#include "../../../logging.hpp"
-#include "../../../profiler.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
 
 #include <chrono>
 #include <future>

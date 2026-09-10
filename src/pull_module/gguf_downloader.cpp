@@ -20,12 +20,12 @@
 #include <string>
 #include <vector>
 
-#include "../capi_frontend/server_settings.hpp"
+#include "src/capi_frontend/server_settings.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/filesystem/localfilesystem.hpp"
-#include "../logging.hpp"
-#include "../status.hpp"
-#include "../stringutils.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
 #include "curl_downloader.hpp"
 
 namespace ovms {

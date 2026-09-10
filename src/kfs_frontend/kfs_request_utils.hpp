@@ -20,10 +20,10 @@
 #include <utility>
 
 #include "kfs_utils.hpp"
-#include "../extractchoice.hpp"
-#include "../requesttensorextractor.hpp"
-#include "../shape.hpp"
-#include "../status.hpp"
+#include "src/extractchoice.hpp"
+#include "src/requesttensorextractor.hpp"
+#include "src/shape.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const size_t batchSizeIndex);

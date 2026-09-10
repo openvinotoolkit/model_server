@@ -36,32 +36,32 @@
 #pragma warning(pop)
 #endif
 
-#include "../../http_rest_api_handler.hpp"
-#include "../../config.hpp"
-#include "../../http_status_code.hpp"
-#include "../../json_parser.hpp"
-#include "../../llm/apis/openai_completions.hpp"
-#include "../../llm/apis/openai_json_response.hpp"
-#include "../../llm/io_processing/base_generation_config_builder.hpp"
-#include "../../llm/language_model/continuous_batching/llm_executor.hpp"
-#include "../../llm/language_model/continuous_batching/servable.hpp"
-#include "../../llm/servable.hpp"
-#include "../../llm/servable_initializer.hpp"
-#include "../../llm/text_utils.hpp"
-#include "../../mediapipe_internal/mediapipefactory.hpp"
-#include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../../ov_utils.hpp"
-#include "../../server.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/config.hpp"
+#include "src/http_status_code.hpp"
+#include "src/json_parser.hpp"
+#include "src/llm/apis/openai_completions.hpp"
+#include "src/llm/apis/openai_json_response.hpp"
+#include "src/llm/io_processing/base_generation_config_builder.hpp"
+#include "src/llm/language_model/continuous_batching/llm_executor.hpp"
+#include "src/llm/language_model/continuous_batching/servable.hpp"
+#include "src/llm/servable.hpp"
+#include "src/llm/servable_initializer.hpp"
+#include "src/llm/text_utils.hpp"
+#include "src/mediapipe_internal/mediapipefactory.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/ov_utils.hpp"
+#include "src/server.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "../constructor_enabled_model_manager.hpp"
-#include "../platform_utils.hpp"
-#include "../test_http_utils.hpp"
-#include "../test_utils.hpp"
-#include "../test_with_temp_dir.hpp"
+#include "src/test/constructor_enabled_model_manager.hpp"
+#include "src/test/platform_utils.hpp"
+#include "src/test/test_http_utils.hpp"
+#include "src/test/test_utils.hpp"
+#include "src/test/test_with_temp_dir.hpp"
 #include "src/test/environment.hpp"
 
 using namespace ovms;
@@ -5600,7 +5600,7 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
     }
 }
 
-#include "../../llm/language_model/legacy/servable.hpp"
+#include "src/llm/language_model/legacy/servable.hpp"
 
 class MockLegacyServable : public ovms::LegacyServable {
 public:

@@ -17,7 +17,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "../ovms.h"  // NOLINT
+#include "src/ovms.h"  // NOLINT
 
 namespace ovms {
 class InferenceParameter {

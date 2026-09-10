@@ -24,11 +24,11 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "src/metrics/metric_provider.hpp"
-#include "../servable_name_checker.hpp"
-#include "../status.hpp"
-#include "../stringutils.hpp"
+#include "src/servable_name_checker.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386 6326 6246)
 #include "mediapipe/framework/deps/registration.h"

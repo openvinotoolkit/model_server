@@ -21,7 +21,7 @@
 #include <gtest/gtest.h>
 
 #include <git2.h>
-#include "../utils/env_guard.hpp"
+#include "src/utils/env_guard.hpp"
 #include "test_utils.hpp"
 #include "test_with_temp_dir.hpp"
 #include "gguf_environment.hpp"
@@ -30,11 +30,11 @@
 #include "src/pull_module/gguf_downloader.hpp"
 #include "src/modelextensions.hpp"
 
-#include "../module.hpp"
-#include "../server.hpp"
-#include "../status.hpp"
+#include "src/module.hpp"
+#include "src/server.hpp"
+#include "src/status.hpp"
 #include "src/stringutils.hpp"
-#include "../timer.hpp"
+#include "src/timer.hpp"
 
 using ovms::FileSystem;
 using ovms::GGUFDownloader;

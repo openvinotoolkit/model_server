@@ -20,8 +20,8 @@
 #include <openvino/core/type/element_type.hpp>
 #include <openvino/openvino.hpp>
 
-#include "../ov_utils.hpp"
-#include "../ovms.h"  // NOLINT
+#include "src/ov_utils.hpp"
+#include "src/ovms.h"  // NOLINT
 #include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
 

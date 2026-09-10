@@ -18,7 +18,7 @@
 #include <sstream>
 #include <string>
 
-#include "../../custom_node_interface.h"
+#include "src/custom_node_interface.h"
 
 extern "C" {
 

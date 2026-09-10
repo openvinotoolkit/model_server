@@ -18,14 +18,14 @@
 #include <string>
 #include <vector>
 
-#include "../ovms.h"  // NOLINT
+#include "src/ovms.h"  // NOLINT
 #include "src/logging.hpp"
-#include "../precision.hpp"
+#include "src/precision.hpp"
 #include "inferencerequest.hpp"
-#include "../shape.hpp"
-#include "../status.hpp"  // TODO move impl @atobisze
-#include "../extractchoice.hpp"
-#include "../requesttensorextractor.hpp"
+#include "src/shape.hpp"
+#include "src/status.hpp"  // TODO move impl @atobisze
+#include "src/extractchoice.hpp"
+#include "src/requesttensorextractor.hpp"
 namespace ovms {
 class InferenceRequest;
 class InferenceResponse;

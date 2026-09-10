@@ -18,7 +18,7 @@
 #include <utility>
 #include <vector>
 
-#include "../module.hpp"
+#include "src/module.hpp"
 
 namespace ovms {
 class Config;

@@ -22,10 +22,10 @@
 #include <algorithm>
 #include <cctype>
 
-#include "../../../llm/io_processing/base_output_parser.hpp"
-#include "../../../llm/io_processing/output_parser.hpp"
+#include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/output_parser.hpp"
 #include "output_parser_test_utils.hpp"
-#include "../../platform_utils.hpp"
+#include "src/test/platform_utils.hpp"
 
 using namespace ovms;
 

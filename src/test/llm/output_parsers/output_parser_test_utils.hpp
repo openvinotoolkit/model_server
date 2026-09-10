@@ -27,10 +27,10 @@
 #include <rapidjson/writer.h>
 #include <gtest/gtest.h>
 
-#include "../../../llm/io_processing/base_output_parser.hpp"
-#include "../../../llm/io_processing/output_parser.hpp"
-#include "../../../llm/apis/openai_rapidjson_delta_serializer.hpp"
-#include "../../../llm/ovms_text_streamer.hpp"
+#include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/output_parser.hpp"
+#include "src/llm/apis/openai_rapidjson_delta_serializer.hpp"
+#include "src/llm/ovms_text_streamer.hpp"
 
 namespace ovms {
 namespace test {

@@ -18,8 +18,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../http_rest_api_handler.hpp"
-#include "../server.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/server.hpp"
 #include "rapidjson/document.h"
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"

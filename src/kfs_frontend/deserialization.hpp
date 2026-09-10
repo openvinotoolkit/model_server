@@ -22,13 +22,13 @@
 
 #include <openvino/runtime/tensor.hpp>
 
-#include "../deserialization_common.hpp"
+#include "src/deserialization_common.hpp"
 #include "kfs_utils.hpp"
-#include "../logging.hpp"
-#include "../profiler.hpp"
-#include "../status.hpp"
-#include "../tensor_conversion.hpp"
-#include "../tensorinfo.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
+#include "src/status.hpp"
+#include "src/tensor_conversion.hpp"
+#include "src/tensorinfo.hpp"
 
 namespace ovms {
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,

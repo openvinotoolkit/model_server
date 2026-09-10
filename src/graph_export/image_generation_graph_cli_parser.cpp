@@ -27,11 +27,11 @@
 #include <utility>
 #include <vector>
 
-#include "../capi_frontend/server_settings.hpp"
+#include "src/capi_frontend/server_settings.hpp"
 #include "src/logging.hpp"
-#include "../ovms_exit_codes.hpp"
-#include "../status.hpp"
-#include "../stringutils.hpp"
+#include "src/ovms_exit_codes.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
 
 namespace {
 static bool isLocalFilePath(const std::string& path) {

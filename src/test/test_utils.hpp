@@ -33,28 +33,28 @@
 #include <gtest/gtest.h>
 #include <spdlog/spdlog.h>
 
-#include "../capi_frontend/inferencerequest.hpp"
-#include "../capi_frontend/inferenceresponse.hpp"
-#include "../config.hpp"
-#include "../dags/node_library.hpp"
-#include "../execution_context.hpp"
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
+#include "src/capi_frontend/inferencerequest.hpp"
+#include "src/capi_frontend/inferenceresponse.hpp"
+#include "src/config.hpp"
+#include "src/dags/node_library.hpp"
+#include "src/execution_context.hpp"
+#include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 #include "src/metrics/metric_registry.hpp"
-#include "../modelinstance.hpp"
+#include "src/modelinstance.hpp"
 #include "src/servable_management/modelmanager.hpp"
-#include "../shape.hpp"
-#include "../status.hpp"
-#include "../tensorinfo.hpp"
+#include "src/shape.hpp"
+#include "src/status.hpp"
+#include "src/tensorinfo.hpp"
 
-#include "../kfs_frontend/validation.hpp"
+#include "src/kfs_frontend/validation.hpp"
 
 #if (PYTHON_DISABLE == 0)
-#include "../python/pythonnoderesources.hpp"
+#include "src/python/pythonnoderesources.hpp"
 #endif
 
 #include "test_models.hpp"

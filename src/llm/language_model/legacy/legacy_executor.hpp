@@ -20,9 +20,9 @@
 
 #include "openvino/genai/llm_pipeline.hpp"
 
-#include "../../../logging.hpp"
-#include "../../../profiler.hpp"
-#include "../../../executor_base.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
+#include "src/executor_base.hpp"
 
 namespace ovms {
 struct LegacyServableExecutionContext;

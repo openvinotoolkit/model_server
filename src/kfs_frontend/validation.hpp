@@ -22,11 +22,11 @@
 #include <string>
 
 #include "kfs_utils.hpp"
-#include "../precision.hpp"
-#include "../predict_request_validation_utils.hpp"
-#include "../profiler.hpp"
-#include "../tensorinfo.hpp"
-#include "../status.hpp"
+#include "src/precision.hpp"
+#include "src/predict_request_validation_utils.hpp"
+#include "src/profiler.hpp"
+#include "src/tensorinfo.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 }  // namespace ovms

@@ -17,7 +17,7 @@
 
 #include <algorithm>
 
-#include "../../stringutils.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 

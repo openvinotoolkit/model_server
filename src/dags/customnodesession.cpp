@@ -20,11 +20,11 @@
 #include <unordered_map>
 #include <utility>
 
-#include "../custom_node_interface.h"  // NOLINT
-#include "../logging.hpp"
-#include "../profiler.hpp"
-#include "../status.hpp"
-#include "../timer.hpp"
+#include "src/custom_node_interface.h"  // NOLINT
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
+#include "src/status.hpp"
+#include "src/timer.hpp"
 #include "custom_node_output_allocator.hpp"
 #include "node.hpp"
 #include "node_library.hpp"

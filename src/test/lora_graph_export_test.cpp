@@ -23,11 +23,11 @@
 
 #include "light_test_utils.hpp"
 #include "test_with_temp_dir.hpp"
-#include "../capi_frontend/server_settings.hpp"
-#include "../graph_export/graph_export.hpp"
-#include "../graph_export/image_generation_graph_cli_parser.hpp"
+#include "src/capi_frontend/server_settings.hpp"
+#include "src/graph_export/graph_export.hpp"
+#include "src/graph_export/image_generation_graph_cli_parser.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 class LoraGraphCreationTest : public TestWithTempDir {};
 
