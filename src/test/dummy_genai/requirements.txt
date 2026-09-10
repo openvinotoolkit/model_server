@@ -1,6 +1,0 @@
-# Reuse the shared export requirements (optimum-intel, openvino, tokenizers, …)
--r ../../../demos/common/export_models/requirements.txt
-
-# openvino-genai: needed only for verify_model.py OV pipeline tests.
-# Comment out if you only need the HF model.
-openvino-genai==2026.4.0.dev20260730

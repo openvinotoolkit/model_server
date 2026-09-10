@@ -1,8 +1,0 @@
-.*
-!.gitignore
-venv/
-*.zip
-hf_model/
-ov_model/
-vlm_hf_model/
-vlm_ov_model/
