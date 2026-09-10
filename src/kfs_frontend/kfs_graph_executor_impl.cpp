@@ -57,6 +57,57 @@
 
 namespace ovms {
 
+bool requestHasInputSidePackets(const KFSRequest& request) {
+    static const std::string timestampParam{"OVMS_MP_TIMESTAMP"};
+    for (const auto& parameter : request.parameters()) {
+        const auto& name = parameter.first;
+        if (name != timestampParam) {
+            return true;
+        }
+    }
+    return false;
+}
+
+const std::string& getRequestId(const KFSRequest& request) {
+    return request.id();
+}
+
+Status sendErrorImpl(
+    const std::string& message,
+    KFSServerReaderWriter& serverReaderWriter) {
+    ::inference::ModelStreamInferResponse resp;
+    *resp.mutable_error_message() = message;
+
+    if (serverReaderWriter.Write(resp)) {
+        return StatusCode::OK;
+    }
+
+    return Status(StatusCode::UNKNOWN_ERROR, "error during sending an error response");
+}
+
+Status validateSubsequentRequestImpl(
+    const KFSRequest& request,
+    const std::string& endpointName,
+    const std::string& endpointVersion,
+    stream_types_mapping_t& inputTypes) {
+    (void)inputTypes;
+    if (request.model_name() != endpointName) {
+        return StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME;
+    }
+    if (request.model_version() != endpointVersion &&
+        request.model_version() != "0" &&
+        !request.model_version().empty()) {
+        return StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION;
+    }
+    return StatusCode::OK;
+}
+
+bool waitForNewRequest(
+    KFSServerReaderWriter& serverReaderWriter,
+    KFSRequest& newRequest) {
+    return serverReaderWriter.Read(&newRequest);
+}
+
 Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* response, const ExecutionContext& executionContext) {
     return this->inferTyped<KFSRequest, KFSResponse>(request, response, executionContext);
 }

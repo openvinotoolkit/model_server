@@ -80,7 +80,6 @@ public:
     bool hasActiveInference(const std::string& name) const;
     std::string getDefinitionGroupName(const std::string& name) const;
     bool aliasesConflictExcluding(const std::vector<std::string>& aliases, const std::string& ownGraphName) const;
-    void retireOtherThan(const std::set<std::string>& graphsInConfigFile);
     const std::vector<std::string> getMediapipePipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
     MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;

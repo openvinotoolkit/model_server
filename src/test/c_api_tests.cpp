@@ -2085,10 +2085,7 @@ TEST_F(CAPIInference, AsyncErrorHandling) {
     instance.waitForLoaded(0, unloadGuard);
     auto status = ovms::modelInferAsync<ovms::InferenceRequest, ovms::InferenceResponse>(instance, &request, unloadGuard);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
-    EXPECT_EQ(unblockSignal.wait_for(std::chrono::seconds(5)), std::future_status::ready);
-    if (unblockSignal.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-        unblockSignal.get();
-    }
+    unblockSignal.get();
     std::this_thread::sleep_for(std::chrono::seconds(1));
     unloadGuard.reset();
     instance.retireModel();

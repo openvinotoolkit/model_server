@@ -61,7 +61,6 @@ extern "C" int OVMS_MPFactoryShouldUnloadDefinitionDueToIdle(void*, const char*)
 extern "C" int OVMS_MPFactoryHasActiveInference(void*, const char*) __attribute__((weak));
 extern "C" const char* OVMS_MPFactoryGetDefinitionGroupName(void*, const char*) __attribute__((weak));
 extern "C" int OVMS_MPFactoryAliasesConflictExcluding(void*, const char*, const char*) __attribute__((weak));
-extern "C" void OVMS_MPFactoryRetireOtherThan(void*, const char*) __attribute__((weak));
 extern "C" const char* OVMS_MPFactoryGetNames(void*, int) __attribute__((weak));
 extern "C" void* OVMS_MPFactoryFindServableDefinitionByName(void*, const char*) __attribute__((weak));
 extern "C" int OVMS_MPGraphExportCreateServableConfig(const char*, const ovms::HFSettingsImpl*) __attribute__((weak));
@@ -95,7 +94,6 @@ struct MediapipeRuntimeApi::ApiSymbols {
     using HasActiveInferenceFn = int (*)(void*, const char*);
     using GetDefinitionGroupNameFn = const char* (*)(void*, const char*);
     using AliasesConflictExcludingFn = int (*)(void*, const char*, const char*);
-    using RetireOtherThanFn = void (*)(void*, const char*);
     using GetNamesFn = const char* (*)(void*, int);
     using FindServableDefinitionFn = void* (*)(void*, const char*);
     using CreateServableConfigFn = int (*)(const char*, const HFSettingsImpl*);
@@ -120,7 +118,6 @@ struct MediapipeRuntimeApi::ApiSymbols {
     HasActiveInferenceFn hasActiveInference = nullptr;
     GetDefinitionGroupNameFn getDefinitionGroupName = nullptr;
     AliasesConflictExcludingFn aliasesConflictExcluding = nullptr;
-    RetireOtherThanFn retireOtherThan = nullptr;
     GetNamesFn getNames = nullptr;
     FindServableDefinitionFn findServableDefinition = nullptr;
     CreateServableConfigFn createServableConfig = nullptr;
@@ -201,7 +198,6 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         api->hasActiveInference = OVMS_MPFactoryHasActiveInference != nullptr ? OVMS_MPFactoryHasActiveInference : reinterpret_cast<ApiSymbols::HasActiveInferenceFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryHasActiveInference"));
         api->getDefinitionGroupName = OVMS_MPFactoryGetDefinitionGroupName != nullptr ? OVMS_MPFactoryGetDefinitionGroupName : reinterpret_cast<ApiSymbols::GetDefinitionGroupNameFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryGetDefinitionGroupName"));
         api->aliasesConflictExcluding = OVMS_MPFactoryAliasesConflictExcluding != nullptr ? OVMS_MPFactoryAliasesConflictExcluding : reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryAliasesConflictExcluding"));
-        api->retireOtherThan = OVMS_MPFactoryRetireOtherThan != nullptr ? OVMS_MPFactoryRetireOtherThan : reinterpret_cast<ApiSymbols::RetireOtherThanFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryRetireOtherThan"));
         api->getNames = OVMS_MPFactoryGetNames != nullptr ? OVMS_MPFactoryGetNames : reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryGetNames"));
         api->findServableDefinition = OVMS_MPFactoryFindServableDefinitionByName != nullptr ? OVMS_MPFactoryFindServableDefinitionByName : reinterpret_cast<ApiSymbols::FindServableDefinitionFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryFindServableDefinitionByName"));
         api->createServableConfig = OVMS_MPGraphExportCreateServableConfig != nullptr ? OVMS_MPGraphExportCreateServableConfig : reinterpret_cast<ApiSymbols::CreateServableConfigFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPGraphExportCreateServableConfig"));
@@ -224,7 +220,6 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             api->hasActiveInference != nullptr &&
             api->getDefinitionGroupName != nullptr &&
             api->aliasesConflictExcluding != nullptr &&
-            api->retireOtherThan != nullptr &&
             api->getNames != nullptr &&
             api->findServableDefinition != nullptr &&
             api->createServableConfig != nullptr &&
@@ -267,8 +262,6 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
                 missingSymbols.emplace_back("OVMS_MPFactoryGetDefinitionGroupName");
             if (api->aliasesConflictExcluding == nullptr)
                 missingSymbols.emplace_back("OVMS_MPFactoryAliasesConflictExcluding");
-            if (api->retireOtherThan == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryRetireOtherThan");
             if (api->getNames == nullptr)
                 missingSymbols.emplace_back("OVMS_MPFactoryGetNames");
             if (api->findServableDefinition == nullptr)
@@ -302,7 +295,6 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             api->hasActiveInference = reinterpret_cast<ApiSymbols::HasActiveInferenceFn>(resolveSymbol(currentModule, "OVMS_MPFactoryHasActiveInference"));
             api->getDefinitionGroupName = reinterpret_cast<ApiSymbols::GetDefinitionGroupNameFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetDefinitionGroupName"));
             api->aliasesConflictExcluding = reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(currentModule, "OVMS_MPFactoryAliasesConflictExcluding"));
-            api->retireOtherThan = reinterpret_cast<ApiSymbols::RetireOtherThanFn>(resolveSymbol(currentModule, "OVMS_MPFactoryRetireOtherThan"));
             api->getNames = reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetNames"));
             api->findServableDefinition = reinterpret_cast<ApiSymbols::FindServableDefinitionFn>(resolveSymbol(currentModule, "OVMS_MPFactoryFindServableDefinitionByName"));
             api->createServableConfig = reinterpret_cast<ApiSymbols::CreateServableConfigFn>(resolveSymbol(currentModule, "OVMS_MPGraphExportCreateServableConfig"));
@@ -326,7 +318,6 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
                 api->hasActiveInference != nullptr &&
                 api->getDefinitionGroupName != nullptr &&
                 api->aliasesConflictExcluding != nullptr &&
-                api->retireOtherThan != nullptr &&
                 api->getNames != nullptr &&
                 api->findServableDefinition != nullptr &&
                 api->createServableConfig != nullptr &&
@@ -429,7 +420,6 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         api->hasActiveInference = reinterpret_cast<ApiSymbols::HasActiveInferenceFn>(resolveSymbol(api->handle, "OVMS_MPFactoryHasActiveInference"));
         api->getDefinitionGroupName = reinterpret_cast<ApiSymbols::GetDefinitionGroupNameFn>(resolveSymbol(api->handle, "OVMS_MPFactoryGetDefinitionGroupName"));
         api->aliasesConflictExcluding = reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(api->handle, "OVMS_MPFactoryAliasesConflictExcluding"));
-        api->retireOtherThan = reinterpret_cast<ApiSymbols::RetireOtherThanFn>(resolveSymbol(api->handle, "OVMS_MPFactoryRetireOtherThan"));
         api->getNames = reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(api->handle, "OVMS_MPFactoryGetNames"));
         api->findServableDefinition = reinterpret_cast<ApiSymbols::FindServableDefinitionFn>(resolveSymbol(api->handle, "OVMS_MPFactoryFindServableDefinitionByName"));
         api->createServableConfig = reinterpret_cast<ApiSymbols::CreateServableConfigFn>(resolveSymbol(api->handle, "OVMS_MPGraphExportCreateServableConfig"));
@@ -461,7 +451,6 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         api->hasActiveInference == nullptr ||
         api->getDefinitionGroupName == nullptr ||
         api->aliasesConflictExcluding == nullptr ||
-        api->retireOtherThan == nullptr ||
         api->getNames == nullptr ||
         api->findServableDefinition == nullptr ||
         api->createServableConfig == nullptr ||
@@ -642,14 +631,6 @@ bool MediapipeRuntimeApi::aliasesConflictExcluding(const std::vector<std::string
     }
     std::string joinedAliases = joinWithNewlines(aliases);
     return api->aliasesConflictExcluding(api->factoryHandle, joinedAliases.c_str(), ownGraphName.c_str()) != 0;
-}
-
-void MediapipeRuntimeApi::retireOtherThan(const std::set<std::string>& graphsInConfigFile) {
-    if (!isLoaded()) {
-        return;
-    }
-    std::string joined = joinWithNewlines(graphsInConfigFile);
-    api->retireOtherThan(api->factoryHandle, joined.c_str());
 }
 
 const std::vector<std::string> MediapipeRuntimeApi::getMediapipePipelinesNames() const {

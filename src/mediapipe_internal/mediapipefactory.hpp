@@ -64,7 +64,6 @@ public:
     void registerLoraAliasesFor(const std::string& graphName);
     void clearLoraAliases(const std::string& graphName);
     bool aliasesConflictExcluding(const std::vector<std::string>& aliases, const std::string& ownGraphName) const;
-    void retireOtherThan(std::set<std::string>&& graphsInConfigFile);
     Status reloadDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
         const ServableNameChecker& checker);

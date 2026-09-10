@@ -326,7 +326,6 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     // Detect what deserialization needs to be performed
     status = this->setStreamTypes();
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage setStreamTypes for graph: {} status: {}", getName(), status.string());
         return status;
     }
     // here we will not be available if calculator does not exist in OVMS

@@ -154,16 +154,6 @@ Status MediapipeFactory::createHandle(std::unique_ptr<MediapipeGraphExecutorInte
     return StatusCode::OK;
 }
 
-void MediapipeFactory::retireOtherThan(std::set<std::string>&& graphsInConfigFile) {
-    std::for_each(definitions.begin(),
-        definitions.end(),
-        [&graphsInConfigFile](auto& nameDefinitionPair) {
-            if (graphsInConfigFile.find(nameDefinitionPair.second->getName()) == graphsInConfigFile.end() && nameDefinitionPair.second->getStateCode() != PipelineDefinitionStateCode::RETIRED) {
-                nameDefinitionPair.second->retire();
-            }
-        });
-}
-
 [[nodiscard]] Status MediapipeFactory::wakeUpDefinition(const std::string& graphName, const ServableNameChecker& checker) {
     MediapipeGraphDefinition* definition = findDefinitionByName(graphName);
     if (definition == nullptr) {

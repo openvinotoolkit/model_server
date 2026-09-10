@@ -248,17 +248,6 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryAliasesConflictExcluding(v
     return factory->aliasesConflictExcluding(parsedAliases, ownGraphName) ? 1 : 0;
 }
 
-extern "C" MEDIAPIPE_RUNTIME_EXPORT void OVMS_MPFactoryRetireOtherThan(void* factoryHandle, const char* names) {
-    if (factoryHandle == nullptr) {
-        return;
-    }
-
-    auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
-    auto parsedNames = ovms::splitNewlineDelimited(names);
-    std::set<std::string> graphNames(parsedNames.begin(), parsedNames.end());
-    factory->retireOtherThan(std::move(graphNames));
-}
-
 extern "C" MEDIAPIPE_RUNTIME_EXPORT const char* OVMS_MPFactoryGetNames(void* factoryHandle, int availableOnly) {
     if (factoryHandle == nullptr) {
         gLastError = "";
