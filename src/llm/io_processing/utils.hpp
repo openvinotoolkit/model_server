@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 #include <string>
+#include <vector>
 
 #pragma warning(push)
 #pragma warning(disable : 6313)
@@ -53,4 +54,17 @@ void normalizeBooleanString(std::string& value);
 // Replaces single-quote string delimiters with double quotes for JSON compatibility.
 // Handles nested quoting: apostrophes inside double-quoted strings are preserved.
 std::string replaceSingleWithDoubleQuotes(const std::string& input);
+
+// Converts a raw string payload into a quoted, properly escaped JSON string value.
+// Interprets rawValue as JSON string content when that is valid (respecting existing
+// escapes), otherwise takes it literally (e.g. Windows paths are not validly escaped JSON).
+std::string escapeAsJsonString(const std::string& rawValue);
+
+// Returns true if value is wrapped on both ends by delimiter (and long enough to hold two).
+bool isWrappedByDelimiter(const std::string& value, const std::string& delimiter);
+
+// Splits content into top-level parts on separator, using maskedContent (a same-length
+// version of content with in-string special characters masked out, see callers) to find
+// separators that are not nested inside a string value, an object or an array.
+std::vector<std::string> splitTopLevel(const std::string& content, const std::string& maskedContent, const std::string& separator);
 }  // namespace ovms

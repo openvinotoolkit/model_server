@@ -219,4 +219,38 @@ std::string replaceSingleWithDoubleQuotes(const std::string& input) {
     return result;
 }
 
+std::string escapeAsJsonString(const std::string& rawValue) {
+    std::string value = rawValue;
+    rapidjson::Document doc;
+    doc.Parse(("\"" + rawValue + "\"").c_str());
+    if (!doc.HasParseError() && doc.IsString()) {
+        value.assign(doc.GetString(), doc.GetStringLength());
+    }
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.String(value.c_str(), static_cast<rapidjson::SizeType>(value.size()));
+    return buffer.GetString();
+}
+
+bool isWrappedByDelimiter(const std::string& value, const std::string& delimiter) {
+    return value.size() >= 2 * delimiter.size() &&
+           value.compare(0, delimiter.size(), delimiter) == 0 &&
+           value.compare(value.size() - delimiter.size(), delimiter.size(), delimiter) == 0;
+}
+
+std::vector<std::string> splitTopLevel(const std::string& content, const std::string& maskedContent, const std::string& separator) {
+    std::vector<std::string> parts;
+    size_t pos = 0;
+    while (true) {
+        size_t separatorPos = findInStringRespectingSpecialChars(maskedContent, separator, pos);
+        if (separatorPos == std::string::npos) {
+            parts.push_back(content.substr(pos));
+            return parts;
+        }
+        parts.push_back(content.substr(pos, separatorPos - pos));
+        pos = separatorPos + separator.size();
+    }
+}
+
 }  // namespace ovms
