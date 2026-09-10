@@ -551,9 +551,6 @@ void Server::shutdownModules() {
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
     std::shared_lock lock(modulesMtx);
     modules.clear();
-#if (PYTHON_DISABLE == 0)
-    ovms::unloadPythonRuntime();
-#endif
 }
 
 static int statusToExitCode(const Status& status) {

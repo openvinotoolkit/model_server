@@ -39,12 +39,12 @@ public:
 
     absl::Status process(InputRequest& req) override;
 
+protected:
     // Serialises chatHistory to {"messages":[...], "tools":[...], "chat_template_kwargs":{...}}
     // for the runtime Python/Jinja template engine.
     //
-    // Public for unit tests: this is the OVMS-owned JSON shape passed to the
-    // runtime chat-template path, so the tests can lock it down independently
-    // of the Python runtime being loaded.
+    // Protected so tests can lock down the OVMS-owned JSON shape independently
+    // of the Python runtime being loaded without making it public API.
     static std::string serializeForJinja(const ov::genai::ChatHistory& chatHistory);
 
 private:

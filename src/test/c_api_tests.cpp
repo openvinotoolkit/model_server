@@ -1979,48 +1979,12 @@ public:
     }
     virtual ~MockModelInstanceWithSetOutputInfo() {}
     ovms::Status loadModel(const ovms::ModelConfig& config, bool lazyLoad = false) override {
-        auto input = std::make_shared<ov::opset8::Parameter>(ov::element::f32, ov::Shape{1, DUMMY_MODEL_INPUT_SIZE});
-        auto result = std::make_shared<ov::opset8::Result>(input);
-        input->output(0).get_tensor().set_names({DUMMY_MODEL_INPUT_NAME});
-        result->output(0).get_tensor().set_names({DUMMY_MODEL_OUTPUT_NAME});
-        this->model = std::make_shared<ov::Model>(ov::ResultVector{result}, ov::ParameterVector{input}, "dummy");
-        this->model->inputs()[0].get_tensor().set_names({DUMMY_MODEL_INPUT_NAME});
-        this->model->outputs()[0].get_tensor().set_names({DUMMY_MODEL_OUTPUT_NAME});
-        this->compiledModel = std::make_shared<ov::CompiledModel>(this->ieCore.compile_model(this->model, "CPU"));
-        this->tensorFactories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
-        this->loadedInputName = this->compiledModel->inputs().front().get_any_name();
-        this->loadedOutputName = this->compiledModel->outputs().front().get_any_name();
-        auto status = this->prepareInferenceRequestsQueue(config);
-        if (!status.ok()) {
-            return status;
-        }
-        this->status.setAvailable();
+        ModelInstance::loadModel(config);
         return ovms::StatusCode::OK;
     }
-    const std::string& getLoadedInputName() const {
-        return loadedInputName;
-    }
-    const std::string& getLoadedOutputName() const {
-        return loadedOutputName;
-    }
-    void setInputsInfo(const tensor_map_t& inputsInfo) {
-        this->mockedInputsInfo = inputsInfo;
-    }
     void setOutputsInfo(const tensor_map_t& outputsInfo) {
-        this->mockedOutputsInfo = outputsInfo;
+        this->outputsInfo = outputsInfo;
     }
-    const tensor_map_t& getInputsInfo() const override {
-        return mockedInputsInfo;
-    }
-    const tensor_map_t& getOutputsInfo() const override {
-        return mockedOutputsInfo;
-    }
-
-private:
-    tensor_map_t mockedInputsInfo;
-    tensor_map_t mockedOutputsInfo;
-    std::string loadedInputName;
-    std::string loadedOutputName;
 };
 
 const float INITIAL_VALUE{0.13666};
@@ -2066,23 +2030,17 @@ TEST_F(CAPIInference, AsyncErrorHandling) {
     std::unique_ptr<ModelInstanceUnloadGuard> unloadGuard;  // we do not need it to be set
     ovms::InferenceRequest request("dummy", 0);
     std::vector<float> in(10, INITIAL_VALUE);
-    request.addInput(instance.getLoadedInputName().c_str(), OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size());
-    request.setInputBuffer(instance.getLoadedInputName().c_str(), in.data(), DUMMY_MODEL_SHAPE[1] * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
+    request.addInput(DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size());
+    request.setInputBuffer(DUMMY_MODEL_INPUT_NAME, in.data(), DUMMY_MODEL_SHAPE[1] * sizeof(float), OVMS_BUFFERTYPE_CPU, 0);
     ovms::InferenceResponse response;
-
-    ovms::tensor_map_t inputInfo;
-    inputInfo[instance.getLoadedInputName()] = std::make_shared<ovms::TensorInfo>(instance.getLoadedInputName(), ovms::Precision::FP32, shape_t{1, DUMMY_MODEL_INPUT_SIZE}, ovms::Layout{"NC"});
-    instance.setInputsInfo(inputInfo);
-
-    ovms::tensor_map_t outputInfo;
-    outputInfo[instance.getLoadedOutputName()] = std::make_shared<ovms::TensorInfo>(instance.getLoadedOutputName(), ovms::Precision::FP32, shape_t{1, DUMMY_MODEL_OUTPUT_SIZE}, ovms::Layout{"NC"});
+    auto outputInfo = instance.getOutputsInfo();
     outputInfo["NOT_EXISTING"] = std::make_shared<ovms::TensorInfo>("BADUMTSSS", ovms::Precision::UNDEFINED, shape_t{});
 
+    instance.waitForLoaded(0, unloadGuard);
     CallbackUnblockingAndCheckingStruct callbackStruct;
     auto unblockSignal = callbackStruct.signal.get_future();
     request.setCompletionCallback(callbackCheckingIfErrorReported, &callbackStruct);
     instance.setOutputsInfo(outputInfo);
-    instance.waitForLoaded(0, unloadGuard);
     auto status = ovms::modelInferAsync<ovms::InferenceRequest, ovms::InferenceResponse>(instance, &request, unloadGuard);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
     unblockSignal.get();

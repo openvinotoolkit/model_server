@@ -497,6 +497,7 @@ ovms_cc_library(
     hdrs = ["python_runtime_loader.hpp"],
     srcs = ["python_runtime_loader.cpp"],
     deps = [
+        ":python_runtime_module_api_hdrs",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovms_module",

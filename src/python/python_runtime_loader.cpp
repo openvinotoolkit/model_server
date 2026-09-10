@@ -16,6 +16,8 @@
 #include "python_runtime_loader.hpp"
 
 #include <cstdlib>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -29,6 +31,8 @@ using PythonLibraryHandle = HMODULE;
 
 #include "../logging.hpp"
 #include "../module.hpp"
+#include "../status.hpp"
+#include "python_runtime_module_api.hpp"
 
 namespace ovms {
 
@@ -39,6 +43,63 @@ using ValidatePythonEnvironmentFn = bool (*)(const char** errorMessage);
 PythonLibraryHandle pythonRuntimeHandle = nullptr;
 CreatePythonInterpreterModuleFn createPythonInterpreterModuleFn = nullptr;
 ValidatePythonEnvironmentFn validatePythonEnvironmentFn = nullptr;
+
+void unloadPythonRuntimeLibrary() {
+    createPythonInterpreterModuleFn = nullptr;
+    validatePythonEnvironmentFn = nullptr;
+    if (pythonRuntimeHandle == nullptr) {
+        return;
+    }
+#ifdef __linux__
+    dlclose(pythonRuntimeHandle);
+#elif _WIN32
+    FreeLibrary(pythonRuntimeHandle);
+#endif
+    pythonRuntimeHandle = nullptr;
+}
+
+class PythonRuntimeModuleProxy : public Module, public PythonRuntimeModuleApi {
+    std::unique_ptr<Module> runtimeModule;
+    PythonRuntimeModuleApi* runtimeApi;
+
+public:
+    explicit PythonRuntimeModuleProxy(Module* runtimeModule) :
+        runtimeModule(runtimeModule),
+        runtimeApi(dynamic_cast<PythonRuntimeModuleApi*>(this->runtimeModule.get())) {
+        if (this->runtimeApi == nullptr) {
+            throw std::runtime_error("Python runtime module does not implement PythonRuntimeModuleApi");
+        }
+    }
+
+    ~PythonRuntimeModuleProxy() override {
+        runtimeModule.reset();
+        unloadPythonRuntimeLibrary();
+    }
+
+    Status start(const Config& config) override {
+        state = ModuleState::STARTED_INITIALIZE;
+        auto status = runtimeModule->start(config);
+        state = runtimeModule->getState();
+        return status;
+    }
+
+    void shutdown() override {
+        runtimeModule->shutdown();
+        state = runtimeModule->getState();
+    }
+
+    PythonBackend* getPythonBackend() const override {
+        return runtimeApi->getPythonBackend();
+    }
+
+    bool ownsPythonInterpreter() const override {
+        return runtimeApi->ownsPythonInterpreter();
+    }
+
+    void releaseGILFromThisThread() const override {
+        runtimeApi->releaseGILFromThisThread();
+    }
+};
 }  // namespace
 
 Module* ensurePythonRuntimeLoaded() {
@@ -65,7 +126,7 @@ Module* ensurePythonRuntimeLoaded() {
                 return nullptr;
             }
             SPDLOG_INFO("Python runtime entry points resolved from in-process symbols");
-            return createPythonInterpreterModuleFn();
+            return new PythonRuntimeModuleProxy(createPythonInterpreterModuleFn());
         }
 #elif _WIN32
         HMODULE currentProcess = GetModuleHandleA(nullptr);
@@ -83,7 +144,7 @@ Module* ensurePythonRuntimeLoaded() {
                 return nullptr;
             }
             SPDLOG_INFO("Python runtime entry points resolved from in-process symbols");
-            return createPythonInterpreterModuleFn();
+            return new PythonRuntimeModuleProxy(createPythonInterpreterModuleFn());
         }
 #endif
     }
@@ -206,20 +267,7 @@ Module* ensurePythonRuntimeLoaded() {
     }
 
     SPDLOG_INFO("Python runtime library loaded successfully");
-    return createPythonInterpreterModuleFn();
+    return new PythonRuntimeModuleProxy(createPythonInterpreterModuleFn());
 }
 
-void unloadPythonRuntime() {
-    createPythonInterpreterModuleFn = nullptr;
-    validatePythonEnvironmentFn = nullptr;
-    if (pythonRuntimeHandle == nullptr) {
-        return;
-    }
-#ifdef __linux__
-    dlclose(pythonRuntimeHandle);
-#elif _WIN32
-    FreeLibrary(pythonRuntimeHandle);
-#endif
-    pythonRuntimeHandle = nullptr;
-}
 }  // namespace ovms

@@ -64,6 +64,11 @@ static InputRequest makeChatRequest(ov::genai::ChatHistory history) {
     return req;
 }
 
+class TestableChatTemplateProcessor : public ChatTemplateProcessor {
+public:
+    using ChatTemplateProcessor::serializeForJinja;
+};
+
 // ---------------------------------------------------------------------------
 // SerializeForJinja — locks down the JSON shape the OVMS-owned serializer
 // emits before handing off to any Jinja engine (in-process PyJinja or the
@@ -74,7 +79,7 @@ TEST(ChatTemplateProcessorSerializeForJinjaTest, MessagesOnly_NoOptionalKeys) {
     ov::genai::ChatHistory history;
     history.push_back({{"role", "user"}, {"content", "Hi."}});
 
-    const std::string json = ChatTemplateProcessor::serializeForJinja(history);
+    const std::string json = TestableChatTemplateProcessor::serializeForJinja(history);
 
     // No optional keys must be emitted when tools and extra_context are empty.
     EXPECT_EQ(json, R"({"messages":[{"content":"Hi.","role":"user"}]})");
@@ -85,7 +90,7 @@ TEST(ChatTemplateProcessorSerializeForJinjaTest, MessagesAndTools_ToolsKeyInclud
     history.push_back({{"role", "user"}, {"content", "Hi."}});
     history.set_tools(ov::genai::JsonContainer::from_json_string(R"([{"type":"function"}])"));
 
-    const std::string json = ChatTemplateProcessor::serializeForJinja(history);
+    const std::string json = TestableChatTemplateProcessor::serializeForJinja(history);
 
     EXPECT_NE(json.find(R"("messages":[{"content":"Hi.","role":"user"}])"), std::string::npos) << json;
     EXPECT_NE(json.find(R"("tools":[{"type":"function"}])"), std::string::npos) << json;
@@ -97,7 +102,7 @@ TEST(ChatTemplateProcessorSerializeForJinjaTest, MessagesAndKwargs_KwargsKeyIncl
     history.push_back({{"role", "user"}, {"content", "Hi."}});
     history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"enable_thinking":true})"));
 
-    const std::string json = ChatTemplateProcessor::serializeForJinja(history);
+    const std::string json = TestableChatTemplateProcessor::serializeForJinja(history);
 
     EXPECT_NE(json.find(R"("messages":[{"content":"Hi.","role":"user"}])"), std::string::npos) << json;
     EXPECT_EQ(json.find(R"("tools":)"), std::string::npos) << json;
@@ -110,7 +115,7 @@ TEST(ChatTemplateProcessorSerializeForJinjaTest, MessagesToolsAndKwargs_AllKeysP
     history.set_tools(ov::genai::JsonContainer::from_json_string(R"([{"type":"function"}])"));
     history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"add_generation_prompt":false})"));
 
-    const std::string json = ChatTemplateProcessor::serializeForJinja(history);
+    const std::string json = TestableChatTemplateProcessor::serializeForJinja(history);
 
     // Key order in the serialized envelope is fixed: messages, then tools, then kwargs.
     const auto messagesPos = json.find(R"("messages":)");
@@ -126,7 +131,7 @@ TEST(ChatTemplateProcessorSerializeForJinjaTest, MessagesToolsAndKwargs_AllKeysP
 TEST(ChatTemplateProcessorSerializeForJinjaTest, EmptyHistory_ProducesEmptyMessagesArray) {
     ov::genai::ChatHistory history;
 
-    const std::string json = ChatTemplateProcessor::serializeForJinja(history);
+    const std::string json = TestableChatTemplateProcessor::serializeForJinja(history);
 
     EXPECT_EQ(json, R"({"messages":[]})");
 }

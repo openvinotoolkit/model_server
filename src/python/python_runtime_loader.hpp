@@ -25,8 +25,4 @@ class Module;
 // - Resolving OVMS_createPythonInterpreterModule and OVMS_validatePythonEnvironment symbols
 // - Validating the Python environment (pyovms import path, interpreter availability)
 Module* ensurePythonRuntimeLoaded();
-
-// Unload Python runtime library and clean up resolved symbols.
-// Call this during server shutdown.
-void unloadPythonRuntime();
 }  // namespace ovms
