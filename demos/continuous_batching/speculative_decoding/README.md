@@ -80,7 +80,7 @@ pip install vllm --index-url https://wheels.vllm.ai/nightly/cpu --extra-index-ur
 curl https://raw.githubusercontent.com/vllm-project/vllm/refs/heads/main/benchmarks/sonnet.txt -o sonnet.txt
 ```
 
-Run benchmark with 100 requests sent sequentially:
+Run benchmark with 10 requests sent sequentially:
 ```bash
 vllm bench serve --dataset-name sonnet --dataset-path sonnet.txt --backend openai-chat --host localhost --port 8000 --endpoint /v1/chat/completions --max-concurrency 1 --model OpenVINO/Qwen3.8-27B-int4-ov --num-prompts 10
 ```
