@@ -41,6 +41,7 @@
 #include "../../http_status_code.hpp"
 #include "../../json_parser.hpp"
 #include "../../llm/apis/openai_completions.hpp"
+#include "../../llm/apis/openai_json_response.hpp"
 #include "../../llm/io_processing/base_generation_config_builder.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
@@ -232,22 +233,27 @@ std::unique_ptr<std::thread> LLMFlowHttpQueueGraphTest::t;
 
 // --------------------------------------- OVMS LLM nodes tests
 
-/* 
-// TODO: Move this test to OpenAiJsonResponse tests
-TEST(OpenAiApiHandlerTest, writeLogprobs) {
-    // TODO: remove that skip
-    GTEST_SKIP();
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-    std::vector<float> inputs{-0.5, -100, 0, 5};
-    std::vector<std::string> expected{"-0.5", "-100.0", "0.0", "null"};
-    for (size_t i = 0; i < inputs.size(); i++) {
-        OpenAIChatCompletionsHandler::writeLogprob(writer, inputs[i]);
-        EXPECT_EQ(buffer.GetString(), expected[i]);
-        buffer.Clear();
+TEST(OpenAiJsonResponseTest, LogprobValue) {
+    struct Case {
+        float input;
+        std::string expected;
+    };
+    // 1.0 is GenAI's sentinel for "no logprob available" (first echoed prompt token); any
+    // other positive value is float32 log-sum-exp rounding noise and gets clamped to 0.0.
+    const std::vector<Case> cases{
+        {-0.5f, "-0.5"},
+        {-100.0f, "-100.0"},
+        {0.0f, "0.0"},
+        {1.0f, "null"},
+        {0.0001f, "0.0"},
+        {std::numeric_limits<float>::quiet_NaN(), "null"},
+    };
+    for (const auto& testCase : cases) {
+        ovms::OpenAiJsonResponse response;
+        response.LogprobValue(testCase.input);
+        EXPECT_EQ(response.ToString(), testCase.expected) << "input=" << testCase.input;
     }
 }
-*/
 
 // Reusable helper: asserts that a streaming chat completion chunk is the initial
 // initial empty message with role:assistant and content:null.
