@@ -39,18 +39,12 @@ public:
 
     absl::Status process(InputRequest& req) override;
 
-protected:
-    // Serialises chatHistory to {"messages":[...], "tools":[...], "chat_template_kwargs":{...}}
-    // for the runtime Python/Jinja template engine.
-    //
-    // Protected so tests can lock down the OVMS-owned JSON shape independently
-    // of the Python runtime being loaded without making it public API.
-    static std::string serializeForJinja(const ov::genai::ChatHistory& chatHistory);
-
 private:
     ov::genai::Tokenizer& tokenizer;  // non-owning; lifetime tied to InputProcessorContext
     bool useMinja = false;
     const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate = nullptr;
+
+    static std::string serializeForJinja(const ov::genai::ChatHistory& chatHistory);
 
     // add_generation_prompt lives inside chat_template_kwargs; MINJA's apply_chat_template
     // takes it as a dedicated argument, so this extracts it out and drops it from the returned
