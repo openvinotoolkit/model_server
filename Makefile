@@ -184,7 +184,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_RHEL) # not used
-  INSTALL_DRIVER_VERSION ?= "25.18.33578"
+  INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
