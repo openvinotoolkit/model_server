@@ -28,7 +28,6 @@ EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
 TTS_MODEL="hexgrad/Kokoro-82M"
 # Dummy cyclic models used by LLM/VLM tests instead of real downloaded models;
-# pre-converted OpenVINO IR hosted on HF, see src/test/dummy_genai for the source.
 DUMMY_LLM_MODEL="mzeglars/dummy-cyclic-gpt2-ov"
 DUMMY_VLM_MODEL="mzeglars/dummy-cyclic-llava-ov"
 STT_MODEL="openai/whisper-tiny"

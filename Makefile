@@ -22,7 +22,9 @@ VIRTUALENV_DIR := .venv
 VIRTUALENV_STYLE_DIR := .venv-style
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
 ACTIVATE_STYLE="$(VIRTUALENV_STYLE_DIR)/bin/activate"
-STYLE_CHECK_OPTS := --output=vs7 \
+STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
+	--output=vs7 \
+	--recursive \
 	--linelength=120 \
 	--filter=-build/c++11,-runtime/references,-whitespace/braces,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
 STYLE_CHECK_DIRS := src
@@ -194,7 +196,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2026.4.0"
+PRODUCT_VERSION ?= "2026.5.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -313,11 +315,11 @@ sdl-check: venv-style hadolint bandit license-headers
 
 cpplint: venv-style
 	@echo "Style-checking codebase..."
-	@. $(ACTIVATE_STYLE); echo ${PWD}; find ${STYLE_CHECK_DIRS} -path '*/dummy_genai' -prune -o -regex '.*\.\(hpp\|cc\|cpp\|h\)' -print0 | xargs -0 -r cpplint ${STYLE_CHECK_OPTS}
+	@. $(ACTIVATE_STYLE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
 
 clang-format: venv-style
 	@echo "Formatting files with clang-format.."
-	@. $(ACTIVATE_STYLE); find ${STYLE_CHECK_DIRS} -path '*/dummy_genai' -prune -o -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format -style=file -i {} \;
+	@. $(ACTIVATE_STYLE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format -style=file -i {} \;
 
 clang-format-check: clang-format
 	@echo "Checking if clang-format changes were committed ..."

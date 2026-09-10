@@ -33,7 +33,6 @@ set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=HuggingFaceTB/SmolLM2-360M-Instruct"
 set "FACEBOOK_MODEL=facebook/opt-125m"
 :: Dummy cyclic models used by LLM/VLM tests instead of real downloaded models;
-:: pre-converted OpenVINO IR hosted on HF, see src\test\dummy_genai for the source.
 set "DUMMY_LLM_MODEL=mzeglars/dummy-cyclic-gpt2-ov"
 set "DUMMY_VLM_MODEL=mzeglars/dummy-cyclic-llava-ov"
 set "TTS_MODEL=hexgrad/Kokoro-82M"
