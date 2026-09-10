@@ -157,7 +157,7 @@ RUN dnf install -y -d6 \
 
 WORKDIR /
 
-ARG INSTALL_DRIVER_VERSION="24.52.32224"
+ARG INSTALL_DRIVER_VERSION="25.18.33578"
 # GPU testing in build img & remote tensors dependencies
 WORKDIR /usr/lib64/
 RUN ln -s libOpenCL.so.1 libOpenCL.so
@@ -502,7 +502,7 @@ LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
 LABEL "maintainer"="dariusz.trawinski@intel.com"
 ARG INSTALL_RPMS_FROM_URL=
-ARG INSTALL_DRIVER_VERSION="24.52.32224"
+ARG INSTALL_DRIVER_VERSION="25.18.33578"
 ARG GPU=0
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
