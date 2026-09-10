@@ -52,15 +52,14 @@ Above node configuration should be used as a template since user is not expected
 
 The calculator supports the following `node_options` for tuning the pipeline configuration:
 -    `required string models_path` - location of the models and scheduler directory (can be relative);
--    `optional string device` - device to load models to. Supported values: "CPU" [default = "CPU"]
+-    `optional string device` - device to load models to. Supported values: "CPU", "GPU", "NPU" [default = "CPU"]
 
 We recommend using [export script](../../demos/common/export_models/README.md) to prepare models directory structure for serving.
 Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-generation-models).
 
 ### Text to speech calculator limitations
-- For speech generation supported model is microsoft/speecht5_tts
+- Supported speech generation models follow OpenVINO GenAI speech generation support, including SpeechT5 and Kokoro
 - Streaming is not supported
-- Only supported target_device is CPU
 
 ## References
 - [Speech Generation API](../model_server_rest_api_text_to_speech.md)
