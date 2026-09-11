@@ -39,19 +39,19 @@ If OVMS is already running with the required models, you can skip this step.
 ```bash
 docker run --rm ${GPU_ARGS} -u $(id -u):$(id -g) \
   -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -e "no_proxy=${no_proxy}" \
-  -v ${HOME}/models:/models openvino/model_server:weekly \
+  -v ${HOME}/models:/models openvino/model_server:latest-gpu \
   --pull --source_model OpenVINO/Qwen3.8-27B-int4-ov --task text_generation --model_repository_path /models
 
 docker run --rm ${GPU_ARGS} -u $(id -u):$(id -g) \
   -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -e "no_proxy=${no_proxy}" \
-  -v ${HOME}/models:/models openvino/model_server:weekly \
+  -v ${HOME}/models:/models openvino/model_server:latest-gpu \
   --pull --source_model OpenVINO/Qwen3-8B-int8-ov --task text_generation --model_repository_path /models
 
-docker run --rm -u $(id -u):$(id -g) -v ${HOME}/models:/models openvino/model_server:weekly \
+docker run --rm -u $(id -u):$(id -g) -v ${HOME}/models:/models openvino/model_server:latest-gpu \
   --add_to_config --config_path /models/config.json \
   --model_path OpenVINO/Qwen3.8-27B-int4-ov --model_name OpenVINO/Qwen3.8-27B-int4-ov
 
-docker run --rm -u $(id -u):$(id -g) -v ${HOME}/models:/models openvino/model_server:weekly \
+docker run --rm -u $(id -u):$(id -g) -v ${HOME}/models:/models openvino/model_server:latest-gpu \
   --add_to_config --config_path /models/config.json \
   --model_path OpenVINO/Qwen3-8B-int8-ov --model_name OpenVINO/Qwen3-8B-int8-ov
 ```
@@ -184,7 +184,7 @@ Once the goal is satisfied, clear it so subsequent prompts run in normal mode:
 
 ### Step 4: Delegate validation to subagent
 
-Instead of running tests in the main context, delegate validation to a dedicated subagent. This keeps the main conversation focused and uses a smaller model (`OpenVINO/Qwen3-8B-int4-ov`) for a cheaper verification pass. The subagent definition lives in:
+Instead of running tests in the main context, delegate validation to a dedicated subagent. This keeps the main conversation focused and uses a smaller model (`OpenVINO/Qwen3-8B-int8-ov`) for a faster verification pass. The subagent definition lives in:
 
 - `.deepagents/agents/mcp-tester/AGENTS.md`
 
@@ -222,7 +222,7 @@ The MCP server is now on disk, but the current dcode session was started before 
 With the MCP tools now registered, issue a prompt that can only be answered correctly by calling the freshly created server. If the agent invokes the MCP tool and reports the real UTC time and date, the end-to-end integration is working.
 
 ```text
-Give me the exact current UTC timestamp down to the current second allong with current date.
+Give me the exact current UTC timestamp down to the current second along with current date.
 ```
 
 ![final tool result](./screenshots/final.jpg)
@@ -233,14 +233,14 @@ Give me the exact current UTC timestamp down to the current second allong with c
 
 ### Smaller tool surface
 
-For open-weight models, reducing tool surface can improve reliability.
+By default, if `--allow-fs-tools` is not set, dcode enables the built-in filesystem tools. For open-weight models, reducing the tool surface can improve reliability and make the agent more predictable.
 
 Non-MCP tasks:
 
 ```bash
 dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov \
   --interpreter-tools safe \
-  --allow-fs-tools read_file,list_dir,grep_search,file_search \
+  --allow-fs-tools read_file,grep,glob,ls \
   --no-mcp
 ```
 
@@ -249,7 +249,7 @@ MCP tasks:
 ```bash
 dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov \
   --interpreter-tools safe \
-  --allow-fs-tools read_file,list_dir,grep_search,file_search
+  --allow-fs-tools read_file,grep,glob,ls,execute
 ```
 
 If a task fails because a required tool is unavailable, restart dcode with a broader tool set.
