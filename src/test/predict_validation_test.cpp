@@ -1411,6 +1411,48 @@ TEST(PredictValidationStringNativeKFSTest, negative_over_element_count_limit_con
     EXPECT_EQ(status, ovms::StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED) << status.string();
 }
 
+TEST(PredictValidationImageKFSTest, validation_stage_does_not_reject_on_size) {
+    // Image size/amplification is bounded at decode stage (OpenCV pre-decode pixel gate +
+    // decoded-byte budget), not at request validation. Validation must pass regardless of
+    // the compressed payload size, since the compressed size does not reflect decoded size.
+    const char* tensorName = "image_input";
+    ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
+    // 4D image input tensor (1x224x224x3, FP32, NHWC layout) -> gets ProcessingHint::IMAGE
+    mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(
+        tensorName, ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, ovms::Layout{"NHWC"});
+
+    ::KFSRequest request;
+    auto* input = request.add_inputs();
+    input->set_name(tensorName);
+    input->set_datatype("BYTES");
+    input->add_shape(1);
+
+    const uint32_t payloadLen = 2 * 1024 * 1024;
+    std::string largeRawBuffer(sizeof(uint32_t) + payloadLen, 'A');
+    *reinterpret_cast<uint32_t*>(&largeRawBuffer[0]) = payloadLen;
+    *request.add_raw_input_contents() = std::move(largeRawBuffer);
+
+    auto status = ovms::request_validation_utils::validate(
+        request, mockedInputsInfo, mockedOutputsInfo, "image_model", ovms::model_version_t{1});
+
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+
+TEST(PredictValidationImageKFSTest, decoded_size_budget_derives_pixel_cap) {
+    unsetenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES");
+    // Default byte budget is 1 GB; pixel cap = budget / MAX_DECODED_BYTES_PER_PIXEL.
+    EXPECT_EQ(ovms::request_validation_utils::getMaxImageDecodedSizeBytes(),
+        ovms::request_validation_utils::DEFAULT_MAX_IMAGE_DECODED_SIZE_BYTES);
+    EXPECT_EQ(ovms::request_validation_utils::getMaxImagePixels(),
+        ovms::request_validation_utils::DEFAULT_MAX_IMAGE_DECODED_SIZE_BYTES / ovms::request_validation_utils::MAX_DECODED_BYTES_PER_PIXEL);
+
+    setenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES", "1048576", 1);  // 1 MB
+    EXPECT_EQ(ovms::request_validation_utils::getMaxImageDecodedSizeBytes(), 1048576u);
+    EXPECT_EQ(ovms::request_validation_utils::getMaxImagePixels(),
+        1048576u / ovms::request_validation_utils::MAX_DECODED_BYTES_PER_PIXEL);
+    unsetenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES");
+}
+
 #define VERIFY_COMPUTE_BUFFER_SIZE(SHAPE, ELEMENT_SIZE, WILL_NOT_OVERFLOW, EXPECTED_BYTES)                                                  \
     {                                                                                                                                       \
         size_t elementSize = ELEMENT_SIZE;                                                                                                  \

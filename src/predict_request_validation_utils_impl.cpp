@@ -23,11 +23,28 @@
 #include <string>
 
 #include "logging.hpp"
+#include "stringutils.hpp"
 #include "tensorinfo.hpp"
 #include "status.hpp"
 
 namespace ovms {
 namespace request_validation_utils {
+size_t getMaxImageDecodedSizeBytes() {
+    size_t maxImageSize = DEFAULT_MAX_IMAGE_DECODED_SIZE_BYTES;
+    const char* env = std::getenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES");
+    if (env && *env) {
+        auto parsed = stou64(env);
+        if (parsed.has_value() && parsed.value() > 0) {
+            maxImageSize = parsed.value();
+        }
+    }
+    return maxImageSize;
+}
+
+size_t getMaxImagePixels() {
+    return getMaxImageDecodedSizeBytes() / MAX_DECODED_BYTES_PER_PIXEL;
+}
+
 Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth) {
     if (inputBatchSize <= 0) {
         return StatusCode::INVALID_BATCH_SIZE;

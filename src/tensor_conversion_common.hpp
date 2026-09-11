@@ -15,7 +15,9 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
 #include <memory>
+#include <string_view>
 #include <vector>
 #include <string>
 
@@ -39,8 +41,16 @@ Status resizeMat(const cv::Mat& src, cv::Mat& dst, const dimension_value_t heigh
 Status validateNumberOfChannels(const TensorInfo& tensorInfo,
     const cv::Mat input,
     cv::Mat* firstBatchImage);
-Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage);
-/////////////////////////////////
+Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage);  // Rejects, before decoding, an encoded image whose header-estimated decoded size would blow the
+// per-request byte budget (accounting for what previous images already reserved). Logs on
+// rejection. Fails open when the format cannot be estimated. Arithmetic is overflow-safe.
+Status checkEstimatedImageSize(std::string_view encodedImage, const std::string& inputName,
+    size_t alreadyAllocatedBytes, size_t maxAllowedImageBytes);
+// Adds a decoded image's byte cost (decoded pixels plus any precision-converted copy) to the
+// running per-request total, rejecting if the budget is exceeded. Logs on rejection. Arithmetic
+// is overflow-safe. On success totalAllocatedBytes is advanced by this image's cost.
+Status accumulateAndCheckDecodedImageSize(const cv::Mat& image, const TensorInfo& tensorInfo,
+    size_t& totalAllocatedBytes, size_t maxAllowedImageBytes);  /////////////////////////////////
 }  // namespace tensor_conversion
 /////////////////////////////////
 Dimension getTensorInfoHeightDim(const TensorInfo& tensorInfo);

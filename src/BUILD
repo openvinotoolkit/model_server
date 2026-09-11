@@ -978,6 +978,7 @@ ovms_cc_library(
         "libovmsprofiler",
         "libovms_tensorinfo",
         "predict_request_validation_utils_impl",
+        "//src/image_utils:decoded_image_size",
     ],
     visibility = ["//visibility:public",],
 )
@@ -1005,6 +1006,7 @@ ovms_cc_library(
         "libovms_tensorinfo",
         "inference_request_common",
         "predict_request_validation_utils_impl",
+        "//src/image_utils:decoded_image_size",
     ],
     visibility = ["//visibility:public",],
 )
@@ -1842,25 +1844,6 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public",],
 )
-ovms_cc_library(
-    name = "image_conversion",
-    hdrs = [
-        "image_conversion.hpp",
-    ],
-    srcs = [
-        "image_conversion.cpp",
-    ],
-    deps = [
-        "@stb//:image",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/status",
-        "//third_party:openvino",
-        "//src:libovmslogging",
-        "//src:libovmsprofiler",
-    ],
-    visibility = ["//visibility:public",],
-)
-
 ovms_cc_library( # TODO split further
     name = "cpp_headers",
     hdrs = [
@@ -2209,6 +2192,7 @@ cc_test(
             ":test_test_models",
             ":test_test_models_configs",
             ":test_cmd_exec",
+            ":decoded_image_size_test",
             ":test_modelinstance_test",
             ":servable_loading_queue_test",
             ":test_idle_model_test",
@@ -2440,6 +2424,17 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+ovms_cc_test_library(
+    name = "decoded_image_size_test",
+    srcs = ["test/decoded_image_size_test.cpp"],
+    data = glob(["test/images/**"]),
+    deps = [
+        "//src/image_utils:decoded_image_size",
+        ":test_platform_utils",
+        "@com_google_googletest//:gtest",
+    ],
 )
 
 cc_library(
