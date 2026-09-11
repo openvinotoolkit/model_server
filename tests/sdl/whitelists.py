@@ -118,6 +118,7 @@ libraries = {
         'libopenvino_auto_plugin.so',
         'libopenvino_c.so',
         'libopenvino_genai.so',
+        'libopenvino_gguf_frontend.so',
         'libopenvino_hetero_plugin.so',
         'libopenvino_intel_cpu_plugin.so',
         'libopenvino_intel_gpu_plugin.so',
