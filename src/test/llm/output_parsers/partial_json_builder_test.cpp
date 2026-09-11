@@ -494,7 +494,7 @@ TEST_F(PartialJsonBuilderTest, computeDeltaWithEmptyJson) {
     current.SetObject();
     auto delta = PartialJsonBuilder::computeDelta(previous, current);
     ASSERT_TRUE(delta.IsObject());
-    ASSERT_TRUE(delta.Empty());
+    ASSERT_TRUE(delta.ObjectEmpty());
 }
 
 TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedMember) {
@@ -514,7 +514,7 @@ TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedMember) {
     auto delta = PartialJsonBuilder::computeDelta(previous, current);
     // Expecting delta {"arguments": "\""}
     ASSERT_TRUE(delta.IsObject());
-    ASSERT_FALSE(delta.Empty());
+    ASSERT_FALSE(delta.ObjectEmpty());
     ASSERT_FALSE(delta.HasMember("name"));
     ASSERT_TRUE(delta.HasMember("arguments"));
     ASSERT_TRUE(delta["arguments"].IsString());
@@ -544,12 +544,34 @@ TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedNestedMember) {
     auto delta = PartialJsonBuilder::computeDelta(previous, current);
     // Expecting delta {"object": {"new_key": null}}
     ASSERT_TRUE(delta.IsObject());
-    ASSERT_FALSE(delta.Empty());
+    ASSERT_FALSE(delta.ObjectEmpty());
     ASSERT_TRUE(delta.HasMember("object"));
     ASSERT_TRUE(delta["object"].IsObject());
     ASSERT_EQ(delta["object"].MemberCount(), 1);
     ASSERT_TRUE(delta["object"].HasMember("new_key"));
     ASSERT_TRUE(delta["object"]["new_key"].IsNull());
+}
+
+// A nested object present and unchanged in both snapshots must contribute nothing to the
+// delta. This is the branch whose emptiness check actually decides the output, so it pins
+// that the object accessor is used - Value::Empty() is array-only and asserts on an object.
+TEST_F(PartialJsonBuilderTest, computeDeltaWithUnchangedNestedMember) {
+    const char* json = R"({
+        "name": "get_weather",
+        "object": {
+            "key": "value"
+        }
+    })";
+    rapidjson::Document previous;
+    previous.Parse(json);
+    rapidjson::Document current;
+    current.Parse(json);
+
+    auto delta = PartialJsonBuilder::computeDelta(previous, current);
+    // Expecting an empty delta {} - nothing changed.
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_TRUE(delta.ObjectEmpty());
+    ASSERT_FALSE(delta.HasMember("object"));
 }
 
 TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedNestedArrayElement) {
@@ -581,7 +603,7 @@ TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedNestedArrayElement) {
     auto delta = PartialJsonBuilder::computeDelta(previous, current);
     // Expecting delta {"objects": [{"key": "value2"}]}
     ASSERT_TRUE(delta.IsObject());
-    ASSERT_FALSE(delta.Empty());
+    ASSERT_FALSE(delta.ObjectEmpty());
     ASSERT_TRUE(delta.HasMember("objects"));
     ASSERT_TRUE(delta["objects"].IsArray());
     ASSERT_EQ(delta["objects"].Size(), 1);
@@ -608,7 +630,7 @@ TEST_F(PartialJsonBuilderTest, computeDeltaWithModifiedStringMember) {
     auto delta = PartialJsonBuilder::computeDelta(previous, current);
     // Expecting delta {"arguments": ", \"date\": "}
     ASSERT_TRUE(delta.IsObject());
-    ASSERT_FALSE(delta.Empty());
+    ASSERT_FALSE(delta.ObjectEmpty());
     ASSERT_TRUE(delta.HasMember("arguments"));
     ASSERT_TRUE(delta["arguments"].IsString());
     // Only the new part should be present in arguments
