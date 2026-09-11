@@ -18,6 +18,8 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <string>
 #include "openai_completions.hpp"
 
@@ -115,10 +117,16 @@ public:
     }
 
     bool LogprobValue(const float logprob) {
-        if (logprob <= 0.0)
-            Writer<StringBuffer>::Double(logprob);
-        else
+        // GenAI marks "no logprob available" (e.g. the first echoed prompt token, which has
+        // no preceding context) with the exact sentinel value 1.0 - a value no real
+        // log-probability can ever take, since probabilities cannot exceed 1.0.
+        if (logprob == 1.0f || std::isnan(logprob)) {
             Null();
+        } else {
+            // Any other positive value is float32 log-sum-exp rounding noise for near-certain
+            // (probability ~1) predictions, not missing data, so clamp it instead of nulling it out.
+            Writer<StringBuffer>::Double(std::min(logprob, 0.0f));
+        }
         return true;
     }
 
