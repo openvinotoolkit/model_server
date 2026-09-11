@@ -248,6 +248,12 @@ struct ServerSettingsImpl {
     uint32_t resourcesCleanerPollWaitSeconds = 300;
     uint32_t idleUnloadTimeoutSeconds = 0;
     std::string cacheDir;
+    std::string grpcCertPath;
+    std::string grpcKeyPath;
+    std::string grpcCaPath;
+    std::string restCertPath;
+    std::string restKeyPath;
+    std::string restCaPath;
     bool withPython = false;
     bool startedWithCLI = false;
     ConfigExportType exportConfigType = UNKNOWN_MODEL;

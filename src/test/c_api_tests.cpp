@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <future>
 #include <memory>
 #include <string>
@@ -107,6 +108,12 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->filesystemPollWaitMilliseconds, 1000);
     EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 300);
     EXPECT_EQ(serverSettings->cacheDir, "");
+    EXPECT_EQ(serverSettings->grpcCertPath, "");
+    EXPECT_EQ(serverSettings->grpcKeyPath, "");
+    EXPECT_EQ(serverSettings->grpcCaPath, "");
+    EXPECT_EQ(serverSettings->restCertPath, "");
+    EXPECT_EQ(serverSettings->restKeyPath, "");
+    EXPECT_EQ(serverSettings->restCaPath, "");
 
     testDefaultSingleModelOptions(modelsSettings);
     EXPECT_EQ(modelsSettings->configPath, "");
@@ -135,6 +142,12 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogPath(_serverSettings, getGenericFullPathForTmp("/tmp/logs").c_str()));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetAllowedLocalMediaPath(_serverSettings, getGenericFullPathForTmp("/tmp/path").c_str()));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetAllowedMediaDomains(_serverSettings, "raw.githubusercontent.com,githubusercontent.com,google.com"));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcCertPath(_serverSettings, getGenericFullPathForTmp("/tmp/grpc_cert.pem").c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcKeyPath(_serverSettings, getGenericFullPathForTmp("/tmp/grpc_key.pem").c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcCaPath(_serverSettings, getGenericFullPathForTmp("/tmp/grpc_ca.pem").c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestCertPath(_serverSettings, getGenericFullPathForTmp("/tmp/rest_cert.pem").c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestKeyPath(_serverSettings, getGenericFullPathForTmp("/tmp/rest_key.pem").c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestCaPath(_serverSettings, getGenericFullPathForTmp("/tmp/rest_ca.pem").c_str()));
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(_modelsSettings, getGenericFullPathForTmp("/tmp/config").c_str()));
     // check nullptr
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcPort(nullptr, 5555), StatusCode::NONEXISTENT_PTR);
@@ -163,6 +176,18 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetAllowedLocalMediaPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetAllowedMediaDomains(nullptr, "raw.githubusercontent.com,githubusercontent.com,google.com"), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetAllowedMediaDomains(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcCertPath(nullptr, getGenericFullPathForTmp("/tmp/grpc_cert.pem").c_str()), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcCertPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcKeyPath(nullptr, getGenericFullPathForTmp("/tmp/grpc_key.pem").c_str()), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcKeyPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcCaPath(nullptr, getGenericFullPathForTmp("/tmp/grpc_ca.pem").c_str()), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetGrpcCaPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestCertPath(nullptr, getGenericFullPathForTmp("/tmp/rest_cert.pem").c_str()), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestCertPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestKeyPath(nullptr, getGenericFullPathForTmp("/tmp/rest_key.pem").c_str()), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestKeyPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestCaPath(nullptr, getGenericFullPathForTmp("/tmp/rest_ca.pem").c_str()), StatusCode::NONEXISTENT_PTR);
+    ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsSetRestCaPath(_serverSettings, nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsSetConfigPath(nullptr, getGenericFullPathForTmp("/tmp/config").c_str()), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsSetConfigPath(_modelsSettings, nullptr), StatusCode::NONEXISTENT_PTR);
 
@@ -192,9 +217,29 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->filesystemPollWaitMilliseconds, 2000);
     EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 4);
     EXPECT_EQ(serverSettings->cacheDir, getGenericFullPathForTmp("/tmp/cache"));
+    EXPECT_EQ(serverSettings->grpcCertPath, getGenericFullPathForTmp("/tmp/grpc_cert.pem"));
+    EXPECT_EQ(serverSettings->grpcKeyPath, getGenericFullPathForTmp("/tmp/grpc_key.pem"));
+    EXPECT_EQ(serverSettings->grpcCaPath, getGenericFullPathForTmp("/tmp/grpc_ca.pem"));
+    EXPECT_EQ(serverSettings->restCertPath, getGenericFullPathForTmp("/tmp/rest_cert.pem"));
+    EXPECT_EQ(serverSettings->restKeyPath, getGenericFullPathForTmp("/tmp/rest_key.pem"));
+    EXPECT_EQ(serverSettings->restCaPath, getGenericFullPathForTmp("/tmp/rest_ca.pem"));
 
     testDefaultSingleModelOptions(modelsSettings);
     EXPECT_EQ(modelsSettings->configPath, getGenericFullPathForTmp("/tmp/config"));
+
+    // The setters above are verified by the read-back asserts. For the parse() below:
+    // gRPC TLS validation checks the cert/key/ca files exist, so create them. REST TLS
+    // is gated (fail-closed) in this build, so clear the rest_* paths before parsing —
+    // otherwise validation would reject them. (The rest setters are already verified above.)
+    std::vector<std::string> tlsTempFiles = {
+        getGenericFullPathForTmp("/tmp/grpc_cert.pem"), getGenericFullPathForTmp("/tmp/grpc_key.pem"),
+        getGenericFullPathForTmp("/tmp/grpc_ca.pem")};
+    for (const auto& f : tlsTempFiles) {
+        std::ofstream(f) << "placeholder";
+    }
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestCertPath(_serverSettings, ""));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestKeyPath(_serverSettings, ""));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestCaPath(_serverSettings, ""));
 
     // Test config parser
     ConstructorEnabledConfig cfg;
@@ -211,6 +256,9 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(cfg.grpcBindAddress(), "2.2.2.2");
     EXPECT_EQ(cfg.restWorkers(), 31);
     EXPECT_EQ(cfg.restBindAddress(), "3.3.3.3");
+    for (const auto& f : tlsTempFiles) {
+        std::filesystem::remove(f);
+    }
     // EXPECT_EQ(serverSettings->metricsEnabled, false);
     // EXPECT_EQ(serverSettings->metricsList, "");
     EXPECT_EQ(cfg.cpuExtensionLibraryPath(), getGenericFullPathForSrcTest("/ovms/src/test"));
