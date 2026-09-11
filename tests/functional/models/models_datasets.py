@@ -19,6 +19,7 @@
 # pylint: disable=too-many-positional-arguments
 # pylint: disable=unused-argument
 
+import base64
 import json
 import os
 import re
@@ -33,6 +34,7 @@ from PIL import Image
 
 from tests.functional.config import binary_io_images_path, datasets_path
 from tests.functional.constants.ovms import Ovms
+from tests.functional.constants.paths import Paths
 from tests.functional.utils.inference.serving.openai import ChatCompletionsApi
 from tests.functional.utils.numpy_loader import prepare_data
 
@@ -70,9 +72,9 @@ class ModelDataset:
 
 class NumPyDataset(ModelDataset):
 
-    def __init__(self, *data_path):
+    def __init__(self, *data_path, data_src_path=None):
         self.name = data_path[0]
-        self.data_path = os.path.join(datasets_path, *data_path)
+        self.data_path = data_src_path if data_src_path is not None else os.path.join(datasets_path, *data_path)
 
 
 class LanguageModelDataset(ModelDataset):
@@ -121,6 +123,47 @@ class LargeLanguageModelDataset(ModelDataset):
 
     def create_data(self, tmp_file_location, shape, img_format):
         return {}
+
+
+class ZebraImageDataset(NumPyDataset):
+    def __init__(self):
+        file_name = "zebra.jpeg"
+        super().__init__(file_name, data_src_path=os.path.join(Paths.OVMS_C_IMAGES, file_name))
+
+
+class VisionLanguageModelImageDataset(ZebraImageDataset):
+    pass
+
+
+class VisionLanguageModelDataset(LargeLanguageModelDataset):
+    image_datasets = [ZebraImageDataset]
+    user_content_text = "Describe what is in the picture."
+    user_content_image_url = {"url": f"data:image/jpeg;base64,CONVERT_IMAGE_0"}
+    user_content = [
+        {
+            ChatCompletionsApi.CONTENT_TYPE: ChatCompletionsApi.CONTENT_TYPE_TEXT,
+            ChatCompletionsApi.CONTENT_TYPE_TEXT: user_content_text,
+        }, {
+            ChatCompletionsApi.CONTENT_TYPE: ChatCompletionsApi.CONTENT_TYPE_IMAGE_URL,
+            ChatCompletionsApi.CONTENT_TYPE_IMAGE_URL: user_content_image_url,
+        }
+    ]
+    user_data = [ChatCompletionsApi.ROLE_USER, user_content]
+    input_data = [user_data]
+
+    def __init__(self, data_sample=0):
+        input_data_str = json.dumps(self.input_data)
+        for i, image_dataset in enumerate(self.image_datasets):
+            convert_image_text = self.convert_image(image_dataset().data_path)
+            input_data_str = input_data_str.replace(f"CONVERT_IMAGE_{i}", convert_image_text)
+        self.input_data = json.loads(input_data_str)
+        self.default_input_data = self.input_data
+
+    @staticmethod
+    def convert_image(image_path):
+        with open(image_path, "rb") as file:
+            base64_image = base64.b64encode(file.read()).decode("utf-8")
+        return base64_image
 
 
 class FeatureExtractionModelDataset(LargeLanguageModelDataset):

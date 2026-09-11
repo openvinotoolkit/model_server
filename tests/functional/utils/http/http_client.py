@@ -19,7 +19,7 @@ from tests.functional.utils.http.client_auth.base import ClientAuthBase
 from tests.functional.utils.http.http_session import HttpSession
 
 
-class HttpClient(object):
+class HttpClient:
     """Http api client."""
 
     def __init__(self, url: str, auth: ClientAuthBase):

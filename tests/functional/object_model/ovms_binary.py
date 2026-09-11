@@ -13,13 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import json
 import os
 import subprocess
-import psutil
 from datetime import datetime
 from pathlib import Path
+
+import psutil
 
 from tests.functional.utils.context import Context
 from tests.functional.utils.logger import get_logger
@@ -61,7 +63,7 @@ def start_binary_ovms(
         bool(parameters.use_config)
         or bool(parameters.custom_config)
         or (parameters.models is not None
-            and (any([model.is_pipeline() for model in parameters.models])
+            and (any(model.is_pipeline() for model in parameters.models)
                  or len(parameters.models) > 1
                  or any(model.is_mediapipe and not model.single_mediapipe_model_mode for model in parameters.models)))
     )
@@ -91,7 +93,7 @@ def start_binary_ovms(
                 OvmsConfig.replace_subconfig_paths(parameters.name, subconfig_path, resources_dir)
         else:
             config_dir_path_on_host = os.path.join(TestEnvironment.current.base_dir, parameters.name, Paths.MODELS_PATH_NAME)
-            subconfig_dict, subconfig_path = OvmsConfig.create_subconfig(parameters.name, parameters, config_dir_path_on_host)
+            _subconfig_dict, subconfig_path = OvmsConfig.create_subconfig(parameters.name, parameters, config_dir_path_on_host)
             OvmsConfig.replace_subconfig_paths(parameters.name, subconfig_path, resources_dir)
 
     if parameters.models is not None and any(model.is_mediapipe for model in parameters.models):
@@ -343,7 +345,7 @@ class OvmsBinary(OvmsInstance):
         params=None,
         **kwargs
     ):
-        resources_dir, models_dir_on_host = TestEnvironment.current.prepare_container_folders(name, models)
+        resources_dir, _models_dir_on_host = TestEnvironment.current.prepare_container_folders(name, models)
 
         if models_to_verify:
             ovms_log = self.create_log(False)
@@ -364,7 +366,7 @@ class OvmsBinary(OvmsInstance):
         else:
             OvmsConfig.generate(name, models)
 
-        config_dict = json.loads(Path(config_path_on_host).read_text())
+        config_dict = json.loads(Path(config_path_on_host).read_text(encoding="utf-8"))
 
         if models_to_verify:
             break_msg_list = self.get_break_msg_list(models_to_verify)

@@ -22,9 +22,7 @@ class OvmsPythonModel:
         self.node_name = kwargs["node_name"]
         self.input_names = kwargs["input_names"]
         self.output_names = [output_name for output_name in kwargs["output_names"] if output_name != "loopback"]
-        self.class_methods = {
-            name: func for name, func in inspect.getmembers(OvmsPythonModel, predicate=inspect.isfunction)
-        }
+        self.class_methods = dict(inspect.getmembers(OvmsPythonModel, predicate=inspect.isfunction))
         self.alternative_input_text = "Alternative input text here"
 
     def execute(self, inputs: list):

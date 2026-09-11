@@ -26,7 +26,7 @@ import traceback
 
 import pytest
 
-from tests.functional.utils.assertions import CreateVenvError, PipInstallError
+from tests.functional.utils.assertions import CreateVenvError, InvalidReturnCodeException, PipInstallError
 from tests.functional.utils.git_operations import clone_git_repository
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process, WindowsProcess
@@ -275,6 +275,28 @@ def remove_dir_contents(dir_path):
 def _make_path_writable_and_retry(func, path, _exc_info):
     os.chmod(path, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
     func(path)
+
+
+def copy_dir_tree(src, dst, timeout=1800):
+    proc = Process()
+    proc.disable_check_stderr()
+    try:
+        if "c:\\" in src.anchor.lower():
+            proc.run_and_check(
+                # /R:2 - retry 2 times
+                # /W:3 - wait 3 seconds between retries
+                f"robocopy /J /E /NP /NFL /NJH /R:2 /W:3 \"{src}\" \"{dst}\"",
+                env=os.environ.copy(),
+                exit_code_check=1,
+                exception_type=InvalidReturnCodeException,
+                timeout=timeout,
+            )
+        else:
+            shutil.copytree(src, dst)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        if dst.exists():
+            shutil.rmtree(dst, ignore_errors=True)
+        raise e
 
 
 def remove_dir_tree(dir_path, ignore_errors=False):

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import json
 from http import HTTPStatus
@@ -97,7 +98,7 @@ class RestCommunicationInterface(AbstractCommunicationInterface):
         version = self.model.version if not version else version
         rest_path = self.get_rest_path(self.PREDICT, model_version=version)
 
-        data = request if type(request) == str else request.get('request', None)
+        data = request if isinstance(request, str) else request.get('request', None)
         try:
             headers = request.get('inference_header', None)
         except AttributeError:
@@ -139,7 +140,7 @@ class RestCommunicationInterface(AbstractCommunicationInterface):
             Parameters:
                 response (GetModelMetadataResponse): inference response
         """
-        signature_def = response.metadata['signature_def']
+        _signature_def = response.metadata['signature_def']
         # signature_map = get_model_metadata_pb2.SignatureDefMap()
         # signature_map.ParseFromString(signature_def.value)
         # serving_default = signature_map.ListFields()[0][1]['serving_default']

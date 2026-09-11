@@ -174,16 +174,14 @@ make test_functional
 
 - Configuration options are :
 
-| Variable    | Description |
-| :---        |    :----   |
-| `IMAGE`  | Docker image name for the tests.|
-| `TEST_DIR_CACHE`| Location from which models and test data are downloaded.|
-| `TEST_DIR` | Location to which models and test data are copied during tests.|
-| `TEST_DIR_CLEANUP` | Set to `True` to remove the directory under `TEST_DIR` after the tests.|
-| `LOG_LEVEL` | The log level.|
-| `BUILD_LOGS` | Path to save artifacts.|
-| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container.|
-| `CONTAINER_LOG_LINE` | The log line in the container that confirms the container started properly.|
+| Variable                  | Description                                                |
+|:--------------------------|:-----------------------------------------------------------|
+| `OVMS_CPP_DOCKER_IMAGE`   | Docker image name for the tests.                           |
+| `OVMS_CPP_IMAGE_TAG`      | Docker image tag for the tests.                            |
+| `TT_LOGGING_LEVEL`        | The log level for tests.                                   |
+| `TT_LOGGING_LEVEL_OVMS`   | The log level for OVMS.                                    |
+| `BUILD_LOGS`              | Path to save artifacts.                                    |
+| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container. |
 
 2. Add any configuration variables to the command line in this format :
 
@@ -464,7 +462,7 @@ Use OpenVINO Model Server build image because it installs the necessary tools.
 
 4. Run a test in this terminal. Change `TEST_PATH` to point to the test you want to debug:
 	```bash
-	make test_functional TEST_PATH=tests/functional/test_batching.py::TestBatchModelInference::test_run_inference_rest IMAGE=openvino/model_server-build:latest
+	make test_functional TEST_PATH=tests/functional/test_embeddings.py::TestEmbeddings::test_on_commit_embeddings_endpoints TT_OVMS_IMAGE_NAME=openvino/model_server-build:latest
 	```
 
 5. Open a second terminal.
