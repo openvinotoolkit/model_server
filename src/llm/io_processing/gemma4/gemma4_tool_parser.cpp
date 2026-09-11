@@ -157,7 +157,7 @@ std::pair<std::string, std::string> Gemma4ToolParser::parseSingleArgument(const 
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument string: {} does not contain ':', setting name as entire string and value as empty", argumentStr);
     }
     trim(argument.first);
-    
+
     return argument;
 }
 

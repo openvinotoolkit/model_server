@@ -359,7 +359,8 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringWithMaskedValues) {
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithThoughtPreamble) {
-    std::string input = "thought\n<channel|>" R"(<|tool_call>call:rename{old_name:<|"|>a,b<|"|>, new_name:<|"|>c,d<|"|>}<tool_call|>)";
+    std::string input = "thought\n<channel|>"
+                        R"(<|tool_call>call:rename{old_name:<|"|>a,b<|"|>, new_name:<|"|>c,d<|"|>}<tool_call|>)";
     auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);

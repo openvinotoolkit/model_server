@@ -224,7 +224,7 @@ std::string escapeAsJsonString(const std::string& rawValue) {
     std::string value = rawValue;
     rapidjson::Document doc;
 
-    if(rawValue.size() >= 2 && rawValue.front() == '"' && rawValue.back() == '"') {
+    if (rawValue.size() >= 2 && rawValue.front() == '"' && rawValue.back() == '"') {
         doc.Parse(rawValue.c_str());
     } else {
         doc.Parse(("\"" + rawValue + "\"").c_str());
