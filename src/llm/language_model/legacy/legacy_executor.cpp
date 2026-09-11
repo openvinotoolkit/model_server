@@ -17,6 +17,7 @@
 #include "legacy_executor.hpp"
 
 #include "../../../logging.hpp"
+#include "../../ovms_text_streamer.hpp"
 #include "servable.hpp"
 
 #include <utility>
@@ -36,6 +37,11 @@ void LegacyExecutor::processRequest() {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
         try {
             requestExecutionContext->results = pipe->generate(requestExecutionContext->inputRequest.inputIds, requestExecutionContext->inputRequest.generationConfig, requestExecutionContext->textStreamer);
+            auto streamer = std::dynamic_pointer_cast<OVMSTextStreamer>(requestExecutionContext->textStreamer);
+            if (streamer != nullptr && streamer->hadParserError()) {
+                requestExecutionContext->success = false;
+                SPDLOG_LOGGER_ERROR(llm_executor_logger, "LLM pipeline generation failed: output parser reported an error.");
+            }
         } catch (std::exception& e) {
             requestExecutionContext->success = false;
             SPDLOG_LOGGER_ERROR(llm_executor_logger, "LLM pipeline generation failed: {}.", e.what());
