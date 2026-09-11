@@ -17,3 +17,5 @@ Prepare models using OVMS [pull mode](./pull_hf_models.md) (recommended).
 Prepare models using [python script](../demos/common/export_models/README.md).
 
 Prepare models using OVMS with python [optimum pull mode](./pull_optimum_cli.md).
+
+> **Note:** For several large generative models on limited memory, use [Idle servable management](idle_servable_management.md) (preview). Configure `--cache_dir` to reduce model wake-up latency.

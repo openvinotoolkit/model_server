@@ -16,6 +16,7 @@ ovms_docs_shape_batch_layout
 ovms_docs_dynamic_input
 ovms_docs_online_config_changes
 ovms_docs_model_version_policy
+ovms_docs_idle_servable_management
 ovms_docs_metrics
 ovms_docs_c_api
 ovms_docs_advanced
@@ -65,6 +66,11 @@ OpenVINO Model Server regularly checks for changes to the configuration file and
 (for example, change the device where a model is served), add a new model or completely remove one that is no longer needed. These changes will be applied without any disruption to the service.
 
 [Learn more](online_config_changes.md)
+
+## Idle Servable Management (Preview)
+Unload inactive model and graph groups, then load them on the next inference request. Reduce CPU and GPU memory needed to serve multiple large models.
+
+[Learn more](./idle_servable_management.md)
 
 ## Metrics
 Use the metrics endpoint compatible with the Prometheus to access performance and utilization statistics.
