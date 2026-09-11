@@ -21,21 +21,36 @@ By the end of this demo you will have:
 ### Prerequisites
 
 Requirements:
-- Linux
+- Linux or Windows
 - Python 3.12+
-- Docker
+- Docker (Docker Engine on Linux, Docker Desktop on Windows)
 
 ### Step 1: Prepare model directory
 
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
 ```bash
 mkdir -p ${HOME}/models
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 ```
+:::
+:::{tab-item} Windows
+:sync: Windows
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\models" | Out-Null
+$env:MODELS_DIR = "$env:USERPROFILE\models"
+```
+:::
+::::
 
 ### Step 2: Pull and register models
 
 If OVMS is already running with the required models, you can skip this step.
 
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
 ```bash
 docker run --rm ${GPU_ARGS} -u $(id -u):$(id -g) \
   -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -e "no_proxy=${no_proxy}" \
@@ -55,14 +70,46 @@ docker run --rm -u $(id -u):$(id -g) -v ${HOME}/models:/models openvino/model_se
   --add_to_config --config_path /models/config.json \
   --model_path OpenVINO/Qwen3-8B-int8-ov --model_name OpenVINO/Qwen3-8B-int8-ov
 ```
+:::
+:::{tab-item} Windows
+:sync: Windows
+```powershell
+docker run --rm -v ${env:MODELS_DIR}:/models openvino/model_server:latest `
+  --pull --source_model OpenVINO/Qwen3.8-27B-int4-ov --model_repository_path /models
+
+docker run --rm -v ${env:MODELS_DIR}:/models openvino/model_server:latest `
+  --pull --source_model OpenVINO/Qwen3-8B-int8-ov --model_repository_path /models
+
+docker run --rm -v ${env:MODELS_DIR}:/models openvino/model_server:latest `
+  --add_to_config --config_path /models/config.json `
+  --model_path OpenVINO/Qwen3.8-27B-int4-ov --model_name OpenVINO/Qwen3.8-27B-int4-ov
+
+docker run --rm -v ${env:MODELS_DIR}:/models openvino/model_server:latest `
+  --add_to_config --config_path /models/config.json `
+  --model_path OpenVINO/Qwen3-8B-int8-ov --model_name OpenVINO/Qwen3-8B-int8-ov
+```
+:::
+::::
 
 ### Step 3: Start OVMS
 
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
 ```bash
 docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) \
   -v ${HOME}/models:/models -p 8000:8000 openvino/model_server:latest-gpu \
   --rest_port 8000 --config_path /models/config.json --log_path /models/ovms-log.txt
 ```
+:::
+:::{tab-item} Windows
+:sync: Windows
+```powershell
+docker run -d -v ${env:MODELS_DIR}:/models -p 8000:8000 openvino/model_server:latest `
+  --rest_port 8000 --config_path /models/config.json --log_path /models/ovms-log.txt
+```
+:::
+::::
 
 Readiness checks:
 
@@ -80,16 +127,32 @@ curl http://localhost:8000/v1/chat/completions \
 
 Use the same shell where dcode will be started:
 
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
 ```bash
 export OPENAI_API_KEY=not_used
 export OPENAI_BASE_URL=http://localhost:8000/v1
 export DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
 ```
+:::
+:::{tab-item} Windows
+:sync: Windows
+```powershell
+$env:OPENAI_API_KEY = "not_used"
+$env:OPENAI_BASE_URL = "http://localhost:8000/v1"
+$env:DEEPAGENTS_CODE_PRICES_AUTO_UPDATE = "0"
+```
+:::
+::::
 
 - **`DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0`**: avoids external pricing refresh.
 
 ### Step 5: Install dependencies
 
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
 ```bash
 python -m venv .env
 source .env/bin/activate
@@ -97,6 +160,22 @@ cd demos/integration_with_deepagents_code
 python -m pip install --upgrade pip
 python -m pip install deepagents-code mcp
 ```
+:::
+:::{tab-item} Windows
+:sync: Windows
+```powershell
+python -m venv .env
+.\.env\Scripts\Activate.ps1
+cd demos\integration_with_deepagents_code
+python -m pip install --upgrade pip
+python -m pip install deepagents-code mcp colorama
+```
+
+`colorama` is required by the console renderer on Windows.
+:::
+::::
+
+> On Windows, use a short relative working directory such as `demo` or `dcode-demo`; dcode may reject absolute paths with `Error: Windows absolute paths are not supported`.
 
 ### Step 6: Start dcode
 
@@ -110,6 +189,9 @@ If you cloned the `model_server` repository, this step can be skipped — the su
 
 Run deepagents code with limited set of tools:
 
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
 ```bash
 dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov \
   --allow-fs-tools read_file,write_file,grep,ls,execute \
@@ -117,6 +199,18 @@ dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov \
   --no-interpreter \
   --trust-project-mcp
 ```
+:::
+:::{tab-item} Windows
+:sync: Windows
+```powershell
+dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov `
+  --allow-fs-tools read_file,write_file,grep,ls,execute `
+  -S python,timeout,cat,grep,ls `
+  --no-interpreter `
+  --trust-project-mcp
+```
+:::
+::::
 
 Parameter notes:
 - `--allow-fs-tools`: controls exposed local tools. `execute` is needed for runtime checks.
