@@ -18,6 +18,7 @@
 #include <cctype>
 
 #include "utils.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 std::string generateRandomId() {
@@ -222,7 +223,13 @@ std::string replaceSingleWithDoubleQuotes(const std::string& input) {
 std::string escapeAsJsonString(const std::string& rawValue) {
     std::string value = rawValue;
     rapidjson::Document doc;
-    doc.Parse(("\"" + rawValue + "\"").c_str());
+
+    if(rawValue.size() >= 2 && rawValue.front() == '"' && rawValue.back() == '"') {
+        doc.Parse(rawValue.c_str());
+    } else {
+        doc.Parse(("\"" + rawValue + "\"").c_str());
+    }
+
     if (!doc.HasParseError() && doc.IsString()) {
         value.assign(doc.GetString(), doc.GetStringLength());
     }
@@ -239,11 +246,46 @@ bool isWrappedByDelimiter(const std::string& value, const std::string& delimiter
            value.compare(value.size() - delimiter.size(), delimiter.size(), delimiter) == 0;
 }
 
-std::vector<std::string> splitTopLevel(const std::string& content, const std::string& maskedContent, const std::string& separator) {
+std::string maskDelimitedStringValues(const std::string& text, const std::string& delimiter) {
+    std::string masked = text;
+    size_t pos = 0;
+    while (true) {
+        const size_t openPos = text.find(delimiter, pos);
+        if (openPos == std::string::npos)
+            break;
+        const size_t valueStart = openPos + delimiter.size();
+        const size_t closePos = text.find(delimiter, valueStart);
+        // Value not closed yet (still streaming): mask through the current buffer end too,
+        // otherwise its already-received tail would desync quote/brace tracking; a later
+        // call re-masks from scratch once the closing delimiter has arrived.
+        const size_t maskEnd = (closePos == std::string::npos) ? text.size() : closePos;
+        for (size_t i = valueStart; i < maskEnd; i++) {
+            switch (masked[i]) {
+            case '"':
+            case '\'':
+            case '{':
+            case '}':
+            case '[':
+            case ']':
+                masked[i] = '\x01';
+                break;
+            default:
+                break;
+            }
+        }
+        if (closePos == std::string::npos)
+            break;
+        pos = closePos + delimiter.size();
+    }
+    return masked;
+}
+
+std::vector<std::string> splitRespectingSpecialChars(const std::string& content, const std::string& separator, const std::optional<std::string>& maskedContent) {
+    const std::string& lookup = maskedContent.has_value() ? *maskedContent : content;
     std::vector<std::string> parts;
     size_t pos = 0;
     while (true) {
-        size_t separatorPos = findInStringRespectingSpecialChars(maskedContent, separator, pos);
+        size_t separatorPos = findInStringRespectingSpecialChars(lookup, separator, pos);
         if (separatorPos == std::string::npos) {
             parts.push_back(content.substr(pos));
             return parts;

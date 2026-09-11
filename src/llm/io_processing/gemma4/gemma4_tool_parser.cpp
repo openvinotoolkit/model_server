@@ -51,7 +51,7 @@ std::string Gemma4ToolParser::parseArrayParameter(const std::string& argumentStr
 
     std::string parsedArray = "[";
     bool firstElement = true;
-    for (const std::string& element : splitTopLevel(body, maskStringValues(body), TOOL_ARGS_SEPARATOR_STR)) {
+    for (const std::string& element : splitRespectingSpecialChars(body, TOOL_ARGS_SEPARATOR_STR, maskDelimitedStringValues(body, TOOL_ARGS_STRING_INDICATOR))) {
         if (!firstElement) {
             parsedArray += ",";
         }
@@ -71,8 +71,8 @@ std::string Gemma4ToolParser::parseObjectParameter(const std::string& argumentSt
 
     std::string parsedObject = "{";
     bool firstMember = true;
-    for (const std::string& member : splitTopLevel(body, maskStringValues(body), TOOL_ARGS_SEPARATOR_STR)) {
-        const std::string maskedMember = maskStringValues(member);
+    for (const std::string& member : splitRespectingSpecialChars(body, TOOL_ARGS_SEPARATOR_STR, maskDelimitedStringValues(body, TOOL_ARGS_STRING_INDICATOR))) {
+        const std::string maskedMember = maskDelimitedStringValues(member, TOOL_ARGS_STRING_INDICATOR);
         size_t keyEndPos = findInStringRespectingSpecialChars(maskedMember, ":", 0);
         if (keyEndPos == std::string::npos) {
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Object member does not contain a key separator, leaving argument unchanged. Member: {}", member);
@@ -129,12 +129,7 @@ std::string Gemma4ToolParser::normalizeArgStr(const std::string& arg) {
     size_t errorOffset = tempDoc.GetErrorOffset();
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse argument string as JSON, falling back to string value. Argument string: {}, Error: {} Offset: {}", normalized, errorMessage, errorOffset);
 
-    std::string fallback = arg;
-    trim(fallback);
-    if (fallback.size() >= 2 && fallback.front() == '\"' && fallback.back() == '\"') {
-        fallback = fallback.substr(1, fallback.size() - 2);
-    }
-    return escapeAsJsonString(fallback);
+    return escapeAsJsonString(arg);
 }
 
 void Gemma4ToolParser::writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
@@ -161,48 +156,16 @@ std::pair<std::string, std::string> Gemma4ToolParser::parseSingleArgument(const 
         argument.second = "";
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument string: {} does not contain ':', setting name as entire string and value as empty", argumentStr);
     }
+    trim(argument.first);
+    
     return argument;
-}
-
-std::string Gemma4ToolParser::maskStringValues(const std::string& text) {
-    std::string masked = text;
-    size_t pos = 0;
-    while (true) {
-        const size_t openPos = text.find(TOOL_ARGS_STRING_INDICATOR, pos);
-        if (openPos == std::string::npos)
-            break;
-        const size_t valueStart = openPos + TOOL_ARGS_STRING_INDICATOR.size();
-        const size_t closePos = text.find(TOOL_ARGS_STRING_INDICATOR, valueStart);
-        // Value not closed yet (still streaming): mask through the current buffer end too,
-        // otherwise its already-received tail would desync quote/brace tracking; a later
-        // call re-masks from scratch once the closing delimiter has arrived.
-        const size_t maskEnd = (closePos == std::string::npos) ? text.size() : closePos;
-        for (size_t i = valueStart; i < maskEnd; i++) {
-            switch (masked[i]) {
-            case '"':
-            case '\'':
-            case '{':
-            case '}':
-            case '[':
-            case ']':
-                masked[i] = '\x01';
-                break;
-            default:
-                break;
-            }
-        }
-        if (closePos == std::string::npos)
-            break;
-        pos = closePos + TOOL_ARGS_STRING_INDICATOR.size();
-    }
-    return masked;
 }
 
 std::vector<std::pair<std::string, std::string>> Gemma4ToolParser::parseArguments(const std::string& argumentsStr) {
     std::vector<std::string> args;
     std::vector<std::pair<std::string, std::string>> parsedArgs;
 
-    const std::string maskedArgumentsStr = maskStringValues(argumentsStr);
+    const std::string maskedArgumentsStr = maskDelimitedStringValues(argumentsStr, TOOL_ARGS_STRING_INDICATOR);
     size_t argPos = 0;
     while (argPos < argumentsStr.length()) {
         size_t commaPos = findInStringRespectingSpecialChars(maskedArgumentsStr, TOOL_ARGS_SEPARATOR_STR, argPos);
@@ -267,7 +230,7 @@ bool Gemma4ToolParser::parseToolCallParametersState() {
     if (this->streamingContent.back() == TOOL_ARGS_END_INDICATOR.back()) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool arguments end indicator found at the end of streaming content, attempting to parse arguments: {}", this->streamingContent.substr(this->streamingPosition));
     }
-    const std::string maskedStreamingContent = maskStringValues(this->streamingContent);
+    const std::string maskedStreamingContent = maskDelimitedStringValues(this->streamingContent, TOOL_ARGS_STRING_INDICATOR);
     size_t pos = findInStringRespectingSpecialChars(maskedStreamingContent, TOOL_ARGS_END_INDICATOR, this->streamingPosition);
     if (pos == std::string::npos) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool arguments end indicator not found in streaming content starting from position: {}", this->streamingPosition);

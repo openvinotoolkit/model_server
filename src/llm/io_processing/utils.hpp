@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -63,8 +64,16 @@ std::string escapeAsJsonString(const std::string& rawValue);
 // Returns true if value is wrapped on both ends by delimiter (and long enough to hold two).
 bool isWrappedByDelimiter(const std::string& value, const std::string& delimiter);
 
-// Splits content into top-level parts on separator, using maskedContent (a same-length
-// version of content with in-string special characters masked out, see callers) to find
-// separators that are not nested inside a string value, an object or an array.
-std::vector<std::string> splitTopLevel(const std::string& content, const std::string& maskedContent, const std::string& separator);
+// Masks '"', '\'', '{', '}', '[', ']' found inside delimiter...delimiter pairs (same length,
+// the delimiters themselves left intact) so a string value's own payload (e.g. code containing
+// commas/braces/quotes) can't be mistaken for structural tokens by findInStringRespectingSpecialChars.
+// An unclosed trailing value (still streaming) is masked through the current buffer end too; a later
+// call re-masks from scratch once its closing delimiter has arrived.
+std::string maskDelimitedStringValues(const std::string& text, const std::string& delimiter);
+
+// Splits content into top-level parts on separator, ignoring separators that are nested inside
+// a string value, an object or an array. maskedContent, if provided, must be a same-length version
+// of content with in-string special characters masked out (see maskDelimitedStringValues);
+// when omitted, content itself is used to look up separators.
+std::vector<std::string> splitRespectingSpecialChars(const std::string& content, const std::string& separator, const std::optional<std::string>& maskedContent = std::nullopt);
 }  // namespace ovms
