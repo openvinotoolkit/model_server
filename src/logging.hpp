@@ -45,5 +45,8 @@ extern std::shared_ptr<spdlog::logger> ov_logger;
 #endif
 
 void configure_logger(const std::string& log_level, const std::string& log_path);
+// In dynamically loaded libraries, named loggers can be created without sinks.
+// This helper adopts sinks/pattern/level from the current default logger.
+void initialize_named_loggers_from_default();
 
 }  // namespace ovms

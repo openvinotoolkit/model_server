@@ -29,6 +29,7 @@ from pathlib import Path
 import os
 import grpc
 import time
+import traceback
 
 parser = argparse.ArgumentParser(description='GRPC client for clip example')
 
@@ -99,11 +100,39 @@ processing_times = []
 for iteration in range(iterations):
     print(f"Iteration {iteration}")
     start_time = datetime.datetime.now()
-    results = client.infer("python_model", [image_input , labels_input])
-    end_time = datetime.datetime.now()
-    duration = (end_time - start_time).total_seconds() * 1000
-    processing_times.append(int(duration))
-    print(f"Detection:\n{results.as_numpy('output_label').tobytes().decode()}\n")
+    try:
+        results = client.infer("python_model", [image_input, labels_input])
+        end_time = datetime.datetime.now()
+        duration = (end_time - start_time).total_seconds() * 1000
+        processing_times.append(int(duration))
+        print(f"Detection:\n{results.as_numpy('output_label').tobytes().decode()}\n")
+    except Exception as error:
+        print("Inference request failed.")
+        print(f"Exception type: {type(error).__name__}")
+        if hasattr(error, "status"):
+            try:
+                print(f"Status: {error.status()}")
+            except Exception:
+                pass
+        if hasattr(error, "message"):
+            try:
+                print(f"Message: {error.message()}")
+            except Exception:
+                pass
+        if hasattr(error, "debug_details"):
+            try:
+                print(f"Debug details: {error.debug_details()}")
+            except Exception:
+                pass
+        print(f"String form: {error}")
+        if isinstance(error, grpc.RpcError):
+            try:
+                print(f"gRPC code: {error.code()}")
+                print(f"gRPC details: {error.details()}")
+            except Exception:
+                pass
+        traceback.print_exc()
+        sys.exit(1)
 
 print_statistics(np.array(processing_times,int), batch_size = 1)
 

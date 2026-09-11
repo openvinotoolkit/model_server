@@ -17,6 +17,7 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 
 #include "capi_frontend/server_settings.hpp"
 
@@ -53,6 +54,13 @@ public:
     }
     const ModelsSettingsImpl& getModelSettings() const {
         return modelsSettings;
+    }
+    // Only mutator on serverSettings exposed after CLI parsing. Populated once by
+    // Server::startModules in IN_MEMORY_GRAPH_MODE with the pbtxt string produced
+    // by MediapipeRuntimeApi::createServableConfigInMemory. Not thread-safe by
+    // design: set during startup, read afterwards.
+    void setInMemoryGraphPbtxt(std::optional<std::string> pbtxt) {
+        serverSettings.inMemoryGraphPbtxt = std::move(pbtxt);
     }
     /**
          * @brief Gets the instance of the config

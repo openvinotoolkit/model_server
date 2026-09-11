@@ -25,7 +25,7 @@
 #include "../ov_utils.hpp"
 #include "../servable_definition_unload_guard.hpp"
 #include "../servable_name_checker.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "custom_node.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
 #include "dag_resource_manager.hpp"

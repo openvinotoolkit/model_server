@@ -25,6 +25,7 @@
 #include <gtest/gtest.h>
 
 #include <openvino/runtime/core.hpp>
+#include <openvino/opsets/opset8.hpp>
 
 #include "../capi_frontend/capi_request_utils.hpp"
 #include "../deserialization_main.hpp"
@@ -46,6 +47,7 @@
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
+#include "../regularovtensorfactory.hpp"
 #include "test_models_configs.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"
@@ -277,14 +279,14 @@ TEST(CAPIStartTest, InitializingMultipleServers) {
 TEST(CAPIStartTest, StartFlow) {
     OVMS_Server* srv = nullptr;
     OVMS_ServerSettings* serverSettings = nullptr;
-    OVMS_ModelsSettings* modelsSettings = nullptr;
 
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerNew(nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerSettingsNew(nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ModelsSettingsNew(nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&srv));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ModelsSettingsGuard modelsSettingsGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config.json"));
+    OVMS_ModelsSettings* modelsSettings = modelsSettingsGuard.settings;
 
     ASSERT_NE(srv, nullptr);
     ASSERT_NE(serverSettings, nullptr);
@@ -293,7 +295,6 @@ TEST(CAPIStartTest, StartFlow) {
     // Cannot start due to configuration error
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 5555));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 5555));  // The same port
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("/ovms/src/test/configs/config.json").c_str()));
 
     // Expect fail
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings),
@@ -308,7 +309,6 @@ TEST(CAPIStartTest, StartFlow) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings),
         StatusCode::SERVER_ALREADY_STARTED);
 
-    OVMS_ModelsSettingsDelete(modelsSettings);
     OVMS_ServerSettingsDelete(serverSettings);
     OVMS_ServerDelete(srv);
 }
@@ -900,13 +900,12 @@ TEST_F(CAPIInference, NegativeInference) {
     randomizeAndEnsureFree(port);
     // prepare options
     OVMS_ServerSettings* serverSettings = 0;
-    OVMS_ModelsSettings* modelsSettings = 0;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ModelsSettingsGuard modelsSettingsGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json"));
+    OVMS_ModelsSettings* modelsSettings = modelsSettingsGuard.settings;
     ASSERT_NE(serverSettings, nullptr);
     ASSERT_NE(modelsSettings, nullptr);
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json").c_str()));
 
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
@@ -2036,6 +2035,7 @@ TEST_F(CAPIInference, AsyncErrorHandling) {
     ovms::InferenceResponse response;
     auto outputInfo = instance.getOutputsInfo();
     outputInfo["NOT_EXISTING"] = std::make_shared<ovms::TensorInfo>("BADUMTSSS", ovms::Precision::UNDEFINED, shape_t{});
+
     instance.waitForLoaded(0, unloadGuard);
     CallbackUnblockingAndCheckingStruct callbackStruct;
     auto unblockSignal = callbackStruct.signal.get_future();

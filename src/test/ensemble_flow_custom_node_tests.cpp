@@ -49,7 +49,7 @@
 #include "../dags/pipeline.hpp"
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_registry.hpp"
 #include "../model.hpp"

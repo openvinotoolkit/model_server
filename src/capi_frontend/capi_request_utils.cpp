@@ -22,7 +22,7 @@
 #include "inferencerequest.hpp"
 #include "../shape.hpp"
 #include "../logging.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 class InferenceRequest;

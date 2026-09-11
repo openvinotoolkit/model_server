@@ -28,7 +28,7 @@
 #include "../logging.hpp"
 #include "../deps/opencv.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../tensor_conversion_after.hpp"
 
 namespace ovms {

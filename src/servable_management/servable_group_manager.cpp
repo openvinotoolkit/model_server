@@ -28,10 +28,6 @@
 #include "src/modelinstance.hpp"
 #include "src/time_utils.hpp"
 #include "modelmanager.hpp"
-#if (MEDIAPIPE_DISABLE == 0)
-#include "src/mediapipe_internal/mediapipefactory.hpp"
-#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
-#endif
 
 namespace ovms {
 
@@ -56,16 +52,15 @@ void ServableGroupManager::buildGroups(const std::unordered_map<std::string, Mod
 #if (MEDIAPIPE_DISABLE == 0)
     // Also process mediapipe graph definitions
     for (const auto& graphName : mm.getMediapipeFactory().getMediapipePipelinesNames()) {
-        MediapipeGraphDefinition* def = mm.getMediapipeFactory().findDefinitionByName(graphName);
-        if (def == nullptr) {
+        if (!mm.getMediapipeFactory().definitionExists(graphName)) {
             continue;
         }
         // Retired definitions stay in the factory after config removal; registering them
         // here would let a later wake-up resurrect a graph the user deleted.
-        if (def->getStateCode() == PipelineDefinitionStateCode::RETIRED) {
+        if (mm.getMediapipeFactory().isDefinitionRetired(graphName)) {
             continue;
         }
-        const std::string& groupName = def->getMediapipeGraphConfig().getGroupName();
+        const std::string groupName = mm.getMediapipeFactory().getDefinitionGroupName(graphName);
         if (groupName.empty()) {
             // No group_name set — treat graph name as its own group
             groups[graphName].groupName = graphName;
@@ -180,12 +175,7 @@ bool ServableGroupManager::canUnloadActiveGroup(ModelManager& mm) const {
 #if (MEDIAPIPE_DISABLE == 0)
     // Check all mediapipe graphs in the group
     for (const auto& graphName : groupInfo.mediapipeNames) {
-        MediapipeGraphDefinition* def = mm.getMediapipeFactory().findDefinitionByName(graphName);
-        if (def == nullptr) {
-            continue;
-        }
-        auto activeCount = def->getActiveInferenceCount();
-        if (activeCount && activeCount->load(std::memory_order_acquire) > 0) {
+        if (mm.getMediapipeFactory().hasActiveInference(graphName)) {
             SPDLOG_LOGGER_TRACE(modelmanager_logger, "Cannot unload group '{}': mediapipe graph {} has active inferences",
                 groupName, graphName);
             return false;

@@ -31,9 +31,6 @@
 
 #include "src/llm/execution_context_utils.hpp"
 
-#if (PYTHON_DISABLE == 0)
-#include "src/python/python_backend.hpp"
-#endif
 namespace ovms {
 
 MediapipeGraphExecutor::MediapipeGraphExecutor(

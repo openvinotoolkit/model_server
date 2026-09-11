@@ -22,7 +22,7 @@
 #include "kfs_utils.hpp"
 #include "kfs_request_utils.hpp"
 
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../modelinstance.hpp"
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"

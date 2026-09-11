@@ -25,25 +25,24 @@
 
 #include "../http_payload.hpp"
 #include "../mediapipe_internal/packettypes.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #pragma warning(push)
 #pragma warning(disable : 4005 4324 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/packet.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#if (PYTHON_DISABLE == 0)
-#include "../python/python_backend.hpp"
-#endif
+namespace mediapipe {
+class CalculatorGraph;
+class Timestamp;
+}  // namespace mediapipe
 
 #include "../http_async_writer_interface.hpp"
 
 namespace ovms {
-
 class PythonBackend;
 
 using HttpReaderWriter = HttpAsyncWriter;

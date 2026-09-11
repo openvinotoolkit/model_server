@@ -25,7 +25,7 @@
 #include "../custom_node_interface.h"  // NOLINT
 #include "../logging.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../timer.hpp"
 #include "custom_node_output_allocator.hpp"
 #include "node.hpp"

@@ -32,7 +32,7 @@
 #include "../ov_utils.hpp"
 #include "../ovms.h"           // NOLINT
 #include "../ovms_internal.h"  // NOLINT
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "c_api_test_utils.hpp"
 #include "gpuenvironment.hpp"
 #include "light_test_utils.hpp"

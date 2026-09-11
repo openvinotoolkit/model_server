@@ -1,2 +1,4 @@
 model/
 data/
+hf_cache_rw/
+hf_cache_ro/

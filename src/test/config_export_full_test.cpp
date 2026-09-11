@@ -27,7 +27,7 @@
 #include "src/filesystem/filesystem.hpp"
 #include "../module_names.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 #include "../capi_frontend/server_settings.hpp"
 #include "../config_export_module/config_export.hpp"

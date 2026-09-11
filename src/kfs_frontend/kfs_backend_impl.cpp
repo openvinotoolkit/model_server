@@ -27,7 +27,7 @@
 #include "deserialization.hpp"
 #include "../inference_executor.hpp"
 #include "../ovms.h"  // NOLINT
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "validation.hpp"
 
 namespace ovms {

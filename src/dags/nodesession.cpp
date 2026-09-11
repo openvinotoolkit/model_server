@@ -16,7 +16,7 @@
 #include "nodesession.hpp"
 
 #include "../logging.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../tensor_utils.hpp"
 #include "../timer.hpp"
 #include "gathernodeinputhandler.hpp"

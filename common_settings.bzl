@@ -136,14 +136,13 @@ def create_config_settings():
 ###############################
 # compilation settings
 ###############################
-LINUX_COMMON_STATIC_LIBS_COPTS = [
+LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY = [
                     "-Wall",
                     # "-Wextra", Requires more cleanup in code
                     # TODO: was in ovms bin "-Wconversion",
-                    "-Wno-unknown-pragmas", 
+                    "-Wno-unknown-pragmas",
                     "-Wno-sign-compare",
-                    "-fvisibility=hidden", # Needed for pybind targets
-                    "-Werror", 
+                    "-Werror",
                     # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
                     "-Wno-deprecated-declarations",
                     "-Werror",
@@ -158,6 +157,10 @@ LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Wl,-z,relro,-z,now",
                     "-Wl,-z,nodlopen",
                     "-fstack-protector-strong",
+]
+
+LINUX_COMMON_STATIC_LIBS_COPTS = LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY + [
+                    "-fvisibility=hidden", # Needed for pybind targets
 ]
 
 WINDOWS_COMMON_STATIC_LIBS_COPTS = [
@@ -272,6 +275,11 @@ def ovms_cc_test_library(**kwargs):
         kwargs["alwayslink"] = True
     native.cc_library(**kwargs)
 
+# Headers-only pybind11 for calculator targets - avoids linking python3 into ovms.exe
+PYBIND_HEADERS_ONLY = [
+    "@pybind11//:pybind11",
+]
+# Full pybind11 with Python linkage - only for libovmspython.so/dll
 PYBIND_DEPS = [
     "//third_party:python3",
     "@pybind11//:pybind11_embed",
