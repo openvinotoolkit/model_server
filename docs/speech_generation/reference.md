@@ -52,7 +52,7 @@ Above node configuration should be used as a template since user is not expected
 
 The calculator supports the following `node_options` for tuning the pipeline configuration:
 -    `required string models_path` - location of the models and scheduler directory (can be relative);
--    `optional string device` - device to load models to. Supported values: "CPU", "GPU", "NPU" [default = "CPU"]
+-    `optional string target_device` - device to load models to. Supported values: "CPU", "GPU", "NPU" [default = "CPU"]
 
 We recommend using [export script](../../demos/common/export_models/README.md) to prepare models directory structure for serving.
 Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-generation-models).
