@@ -105,9 +105,7 @@ std::vector<float> readWav(const std::string_view& wavData, uint32_t targetSampl
         drwav_uninit(&wav);
         throw std::runtime_error("WAV file header claims more frames than possible from data chunk size");
     }
-    // Validate decoded buffer size before any large allocations. This must also run in
-    // no-resample mode, which is used by Omni audio input requests and should respect the
-    // same `OVMS_AUDIO_MAX_FILE_SIZE_BYTES` limit.
+    // Validate decoded buffer size before any large allocations.
     const uint64_t n = wav.totalPCMFrameCount;
     size_t decodedSamples = static_cast<size_t>(n);
     if (decodedSamples > std::numeric_limits<size_t>::max() / sizeof(float)) {
