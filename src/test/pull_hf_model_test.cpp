@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <memory>
 #include <openssl/sha.h>
 #include <mutex>
@@ -47,6 +48,7 @@
 #include "src/test/test_file_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "src/pull_module/curl_downloader.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
 #include "src/pull_module/optimum_export.hpp"
@@ -377,6 +379,29 @@ void closeWindowsWorkerHandles(PROCESS_INFORMATION& pi) {
 #endif
 
 }  // namespace
+
+// A response without Content-Length makes libcurl report dltotal == 0. The progress bar must
+// not divide by it: the ratio becomes infinite and converting that to int is undefined, which
+// in practice produced INT_MIN and a ~2.1 billion iteration padding loop.
+TEST(CurlDownloaderProgressTest, UnknownTotalYieldsNoFilledCells) {
+    EXPECT_EQ(ovms::computeProgressBarCells(0, 0, 50), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(1024, 0, 50), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(std::numeric_limits<size_t>::max(), 0, 50), 0);
+}
+
+TEST(CurlDownloaderProgressTest, FilledCellsTrackRatio) {
+    EXPECT_EQ(ovms::computeProgressBarCells(0, 100, 50), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(50, 100, 50), 25);
+    EXPECT_EQ(ovms::computeProgressBarCells(100, 100, 50), 50);
+}
+
+// Some servers report more bytes transferred than announced; the bar must stay within its width
+// so the padding loop below it always runs a sane number of times.
+TEST(CurlDownloaderProgressTest, FilledCellsClampToBarWidth) {
+    EXPECT_EQ(ovms::computeProgressBarCells(200, 100, 50), 50);
+    EXPECT_EQ(ovms::computeProgressBarCells(100, 100, 0), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(100, 100, -1), 0);
+}
 
 // RAII helper class for managing log file lifecycle.
 // Creates a log file path and automatically removes it on destruction.
