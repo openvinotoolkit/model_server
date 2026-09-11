@@ -8,6 +8,8 @@ This document describes how to use the OpenVINO Model Server (OVMS) pull feature
 
 > **Note:** Models in IR format must be exported using `optimum-cli`, including tokenizer and detokenizer files (also in IR format), if applicable. If they are missing, add them with `convert_tokenizer --with-detokenizer`.
 
+> **Note:** Models can also be pulled from an OCI registry when they are packaged as [CNCF ModelPack](https://github.com/modelpack/model-spec) artifacts — see [OCI pull mode](./pull_oci_models.md).
+
 ## Pulling pre-configured models
 
 There is a special OVMS mode that pulls a model from Hugging Face without starting the service. It is triggered by the `--pull` parameter. The application exits after the model is downloaded. Without `--pull`, the model is deployed and the server starts.

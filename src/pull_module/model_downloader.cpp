@@ -19,6 +19,7 @@
 
 #include "src/filesystem/filesystem.hpp"
 #include "src/filesystem/localfilesystem.hpp"
+#include "../capi_frontend/server_settings.hpp"
 #include "../logging.hpp"
 
 namespace ovms {
@@ -46,7 +47,10 @@ Status IModelDownloader::checkIfOverwriteAndRemove() {
 }
 
 std::string IModelDownloader::getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel) {
-    std::string fullPath = FileSystem::joinPath({inDownloadPath, inSourceModel});
+    // localModelDirectoryName() is the identity for HuggingFace repo ids; it
+    // only rewrites OCI references, whose "oci://" scheme and ':' tag
+    // separator are not usable as a directory name.
+    std::string fullPath = FileSystem::joinPath({inDownloadPath, localModelDirectoryName(inSourceModel)});
     return fullPath;
 }
 
