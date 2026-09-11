@@ -26,8 +26,10 @@ TOKENIZER_FILE="openvino_tokenizer.bin"
 LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
-VLM_MODEL="OpenVINO/InternVL2-1B-int4-ov"
 TTS_MODEL="hexgrad/Kokoro-82M"
+# Dummy cyclic models used by LLM/VLM tests instead of real downloaded models;
+DUMMY_LLM_MODEL="mzeglars/dummy-cyclic-gpt2-ov"
+DUMMY_VLM_MODEL="mzeglars/dummy-cyclic-llava-ov"
 STT_MODEL="openai/whisper-tiny"
 
 # Models for tools testing. Only tokenizers are downloaded.
@@ -82,6 +84,31 @@ fi
 if [ ! -f "$1/$FACEBOOK_MODEL/chat_template.jinja" ]; then
     echo "Copying dummy chat template to $FACEBOOK_MODEL model directory."
     cp src/test/llm/dummy_facebook_template.jinja "$1/$FACEBOOK_MODEL/chat_template.jinja"
+fi
+
+# Dummy models are still actively being iterated on - always re-download a fresh copy
+# instead of skipping when already present, so local/CI caches can't go stale.
+# if [ -f "$1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE" ]; then
+#   echo "Model file $1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+# else
+  pip3 install --upgrade typer==0.25.1
+  hf download "$DUMMY_LLM_MODEL" --local-dir "$1/$DUMMY_LLM_MODEL"
+# fi
+if [ ! -f "$1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$DUMMY_LLM_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+
+# Dummy models are still actively being iterated on - always re-download a fresh copy
+# instead of skipping when already present, so local/CI caches can't go stale.
+# if [ -f "$1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE" ]; then
+#   echo "Model file $1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+# else
+  hf download "$DUMMY_VLM_MODEL" --local-dir "$1/$DUMMY_VLM_MODEL"  # typer already pinned above
+# fi
+if [ ! -f "$1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$DUMMY_VLM_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
 fi
 
 if [ -f "$1/$TTS_MODEL/openvino_model.xml" ]; then
@@ -239,18 +266,6 @@ else
 fi
 if [ ! -f "$1/$MINICPM5_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$MINICPM5_MODEL/$TOKENIZER_FILE does not exist."
-  exit 1
-fi
-
-if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
-else
-  pip3 install --upgrade typer==0.25.1
-  hf download "$VLM_MODEL" --local-dir $1/$VLM_MODEL
-  convert_tokenizer OpenGVLab/InternVL2-1B --with_detokenizer -o $1/$VLM_MODEL  # WA to use newer tokenizer model format which supports padding.
-fi
-if [ ! -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Model file $1/$VLM_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
