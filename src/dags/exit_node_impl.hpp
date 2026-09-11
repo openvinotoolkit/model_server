@@ -21,9 +21,9 @@
 #include <string>
 #include <utility>
 
-#include "../logging.hpp"
-#include "../ov_utils.hpp"
-#include "../serialization_common.hpp"
+#include "src/logging.hpp"
+#include "src/ov_utils.hpp"
+#include "src/serialization_common.hpp"
 
 #include "exitnodesession.hpp"
 

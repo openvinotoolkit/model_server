@@ -20,9 +20,9 @@
 
 #include "src/port/rapidjson_document.hpp"
 
-#include "../../../logging.hpp"
+#include "src/logging.hpp"
 #include "tool_parser.hpp"
-#include "../utils.hpp"
+#include "src/llm/io_processing/utils.hpp"
 #include "src/stringutils.hpp"
 
 namespace ovms {

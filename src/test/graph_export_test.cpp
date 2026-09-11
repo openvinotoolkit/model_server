@@ -24,11 +24,11 @@
 
 #include "test_with_temp_dir.hpp"
 #include "light_test_utils.hpp"
-#include "../capi_frontend/server_settings.hpp"
-#include "../graph_export/graph_export.hpp"
+#include "src/capi_frontend/server_settings.hpp"
+#include "src/graph_export/graph_export.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "../status.hpp"
-#include "../version.hpp"
+#include "src/status.hpp"
+#include "src/version.hpp"
 
 const std::string expectedOneSettingPluginGraphContents = R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"

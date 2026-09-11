@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "../schema.hpp"
+#include "src/schema.hpp"
 
 using namespace ovms;
 

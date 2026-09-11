@@ -17,7 +17,7 @@
 
 #include <string>
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 void GPUEnvironment::SetUp() {
     const char* runGpuTestsEnv = std::getenv("RUN_GPU_TESTS");

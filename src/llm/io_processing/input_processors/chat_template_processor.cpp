@@ -21,7 +21,7 @@
 #include <utility>
 #include <variant>
 
-#include "../../../logging.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 

@@ -20,9 +20,9 @@
 #include <string>
 #include <unordered_map>
 
-#include "../custom_node_interface.h"  // NOLINT
-#include "../precision.hpp"
-#include "../shape.hpp"
+#include "src/custom_node_interface.h"  // NOLINT
+#include "src/precision.hpp"
+#include "src/shape.hpp"
 #include "node_library.hpp"
 #include "tensormap.hpp"
 

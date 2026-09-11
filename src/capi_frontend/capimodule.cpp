@@ -23,10 +23,10 @@
 #include <utility>
 #include <vector>
 
-#include "../config.hpp"
-#include "../logging.hpp"
-#include "../server.hpp"
-#include "../status.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
+#include "src/server.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 CAPIModule::~CAPIModule() {

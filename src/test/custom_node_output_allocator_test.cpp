@@ -18,9 +18,9 @@
 
 #include <openvino/runtime/tensor.hpp>
 
-#include "../dags/custom_node_output_allocator.hpp"
-#include "../precision.hpp"
-#include "../shape.hpp"
+#include "src/dags/custom_node_output_allocator.hpp"
+#include "src/precision.hpp"
+#include "src/shape.hpp"
 
 using namespace ovms;
 

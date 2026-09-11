@@ -22,8 +22,8 @@
 #include <unistd.h>
 #endif
 
-#include "../status.hpp"
-#include "../systeminfo.hpp"
+#include "src/status.hpp"
+#include "src/systeminfo.hpp"
 
 using namespace testing;
 using ovms::getCoreCount;

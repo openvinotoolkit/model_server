@@ -35,9 +35,9 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/tokenizer.hpp>
 
-#include "../../../llm/io_processing/input_processors/chat_template_processor.hpp"
-#include "../../../llm/io_processing/input_request.hpp"
-#include "../../platform_utils.hpp"
+#include "src/llm/io_processing/input_processors/chat_template_processor.hpp"
+#include "src/llm/io_processing/input_request.hpp"
+#include "src/test/platform_utils.hpp"
 
 namespace ovms {
 namespace {

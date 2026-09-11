@@ -18,13 +18,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../dags/custom_node_library_manager.hpp"
-#include "../dags/entry_node.hpp"
-#include "../dags/exit_node.hpp"
-#include "../dags/pipeline_factory.hpp"
-#include "../dags/pipelinedefinition.hpp"
-#include "../model_version_policy.hpp"
-#include "../modelinstance.hpp"
+#include "src/dags/custom_node_library_manager.hpp"
+#include "src/dags/entry_node.hpp"
+#include "src/dags/exit_node.hpp"
+#include "src/dags/pipeline_factory.hpp"
+#include "src/dags/pipelinedefinition.hpp"
+#include "src/model_version_policy.hpp"
+#include "src/modelinstance.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "test_models_configs.hpp"
 

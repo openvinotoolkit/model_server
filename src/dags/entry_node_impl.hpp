@@ -24,14 +24,14 @@
 #include <unordered_map>
 #include <utility>
 
-#include "../deserialization_main.hpp"
-#include "../logging.hpp"
-#include "../ov_utils.hpp"
-#include "../predict_request_validation_utils.hpp"
-#include "../profiler.hpp"
-#include "../regularovtensorfactory.hpp"
-#include "../tensor_conversion.hpp"
-#include "../tensorinfo.hpp"
+#include "src/deserialization_main.hpp"
+#include "src/logging.hpp"
+#include "src/ov_utils.hpp"
+#include "src/predict_request_validation_utils.hpp"
+#include "src/profiler.hpp"
+#include "src/regularovtensorfactory.hpp"
+#include "src/tensor_conversion.hpp"
+#include "src/tensorinfo.hpp"
 #include "nodesession.hpp"
 
 namespace ovms {

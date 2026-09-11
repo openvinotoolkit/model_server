@@ -17,7 +17,7 @@
 
 #include <string>
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 void GGUFEnvironment::SetUp() {
     const char* runGGUFTestsEnv = std::getenv("RUN_GGUF_TESTS");

@@ -20,8 +20,8 @@
 #include <utility>
 #include <vector>
 
-#include "../config.hpp"
-#include "../logging.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
 
 #include "openvino/core/except.hpp"
 #include "openvino/core/preprocess/pre_post_process.hpp"

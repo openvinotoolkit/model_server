@@ -31,7 +31,7 @@
 #include <pybind11/stl.h>
 #pragma warning(pop)
 
-#include "../precision.hpp"
+#include "src/precision.hpp"
 #include "python_backend.hpp"
 #include "src/python/ovms_py_tensor.hpp"
 #include "src/python/pytensor_ovtensor_converter_calculator.pb.h"

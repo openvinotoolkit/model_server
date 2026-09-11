@@ -34,8 +34,8 @@
 
 #include "openai_json_response.hpp"
 
-#include "../../logging.hpp"
-#include "../../profiler.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
 #include "src/filesystem/filesystem.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)

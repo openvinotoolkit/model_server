@@ -15,9 +15,9 @@
 //*****************************************************************************
 #include "pipeline_factory.hpp"
 
-#include "../logging.hpp"
-#include "../model_metric_reporter.hpp"
-#include "../status.hpp"
+#include "src/logging.hpp"
+#include "src/model_metric_reporter.hpp"
+#include "src/status.hpp"
 #include "nodeinfo.hpp"
 #include "pipeline.hpp"
 #include "pipelinedefinition.hpp"

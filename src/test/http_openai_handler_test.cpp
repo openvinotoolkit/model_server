@@ -24,17 +24,17 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../http_rest_api_handler.hpp"
-#include "../filesystem/filesystem.hpp"
-#include "../llm/apis/openai_completions.hpp"
-#include "../llm/apis/openai_responses.hpp"
-#include "../llm/language_model/legacy/servable.hpp"
-#include "../llm/visual_language_model/legacy/servable.hpp"
-#include "../client_connection.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/llm/apis/openai_completions.hpp"
+#include "src/llm/apis/openai_responses.hpp"
+#include "src/llm/language_model/legacy/servable.hpp"
+#include "src/llm/visual_language_model/legacy/servable.hpp"
+#include "src/client_connection.hpp"
 #include <openvino/genai/visual_language/pipeline.hpp>
-#include "../module_names.hpp"
+#include "src/module_names.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
+#include "src/server.hpp"
 #include "environment.hpp"
 #include "src/utils/env_guard.hpp"
 #include "test_http_utils.hpp"

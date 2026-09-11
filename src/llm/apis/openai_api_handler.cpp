@@ -26,9 +26,9 @@
 #include "src/port/rapidjson_writer.hpp"
 #include <set>
 
-#include "../../logging.hpp"
-#include "../../profiler.hpp"
-#include "../io_processing/generation_config_builder.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
+#include "src/llm/io_processing/generation_config_builder.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/str_cat.h"

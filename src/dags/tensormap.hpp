@@ -22,7 +22,7 @@
 
 #include <openvino/runtime/tensor.hpp>
 
-#include "../tensor_utils.hpp"
+#include "src/tensor_utils.hpp"
 
 namespace ovms {
 

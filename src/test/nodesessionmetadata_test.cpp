@@ -16,8 +16,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../dags/nodesessionmetadata.hpp"
-#include "../logging.hpp"
+#include "src/dags/nodesessionmetadata.hpp"
+#include "src/logging.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

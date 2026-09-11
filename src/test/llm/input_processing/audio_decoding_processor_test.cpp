@@ -26,9 +26,9 @@
 #include "absl/strings/escaping.h"
 #pragma warning(pop)
 
-#include "../../../llm/io_processing/input_processors/audio_decoding_processor.hpp"
-#include "../../../llm/io_processing/input_request.hpp"
-#include "../../wav_test_utils.hpp"
+#include "src/llm/io_processing/input_processors/audio_decoding_processor.hpp"
+#include "src/llm/io_processing/input_request.hpp"
+#include "src/test/wav_test_utils.hpp"
 
 using namespace ovms;
 using test_utils::buildWavBuffer;

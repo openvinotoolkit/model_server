@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include "../sidepacket_servable.hpp"
+#include "src/sidepacket_servable.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
 #include "src/filesystem/filesystem.hpp"
 #include "src/port/rapidjson_istreamwrapper.hpp"

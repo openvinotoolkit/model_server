@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../tensor_utils.hpp"
+#include "src/tensor_utils.hpp"
 
 using namespace ovms;
 

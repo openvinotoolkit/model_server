@@ -22,14 +22,14 @@
 #include <utility>
 #include <vector>
 
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../logging.hpp"
-#include "../mediapipe_internal/graph_executor_constants.hpp"
-#include "../mediapipe_internal/mediapipe_utils.hpp"
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../predict_request_validation_utils.hpp"
-#include "../status.hpp"
-#include "../tensorflow_type_utils.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
+#include "src/logging.hpp"
+#include "src/mediapipe_internal/graph_executor_constants.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/predict_request_validation_utils.hpp"
+#include "src/status.hpp"
+#include "src/tensorflow_type_utils.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6385 6386 6326 6011 6294 6201 4309 4005 4456 6246)
@@ -58,8 +58,8 @@
 #include <pybind11/stl.h>
 #pragma warning(pop)
 
-#include "../python/python_backend.hpp"
-#include "../python/pythonnoderesources.hpp"
+#include "src/python/python_backend.hpp"
+#include "src/python/pythonnoderesources.hpp"
 #include "src/python/ovms_py_tensor.hpp"
 namespace py = pybind11;
 #endif

@@ -17,9 +17,9 @@
 
 #include <openvino/runtime/core.hpp>
 
-#include "../dags/pipelinedefinition.hpp"
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../modelversionstatus.hpp"
+#include "src/dags/pipelinedefinition.hpp"
+#include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/modelversionstatus.hpp"
 
 #include "constructor_enabled_model_manager.hpp"
 #include "mockmodelinstancechangingstates.hpp"

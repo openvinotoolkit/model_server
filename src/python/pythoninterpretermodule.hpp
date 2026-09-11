@@ -17,7 +17,7 @@
 #include <memory>
 #include <thread>
 
-#include "../module.hpp"
+#include "src/module.hpp"
 
 namespace pybind11 {
 class gil_scoped_release;

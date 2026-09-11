@@ -17,7 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../tokenize/tokenize_parser.hpp"
+#include "src/tokenize/tokenize_parser.hpp"
 #include "rapidjson/document.h"
 
 TEST(TokenizeDeserialization, positiveTokenize) {

@@ -25,10 +25,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../http_async_writer_interface.hpp"
-#include "../http_server.hpp"
-#include "../http_status_code.hpp"
-#include "../multi_part_parser.hpp"
+#include "src/http_async_writer_interface.hpp"
+#include "src/http_server.hpp"
+#include "src/http_status_code.hpp"
+#include "src/multi_part_parser.hpp"
 
 #include "test_utils.hpp"
 

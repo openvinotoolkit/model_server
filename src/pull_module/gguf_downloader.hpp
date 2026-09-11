@@ -18,7 +18,7 @@
 #include <variant>
 #include <vector>
 
-#include "../capi_frontend/server_settings.hpp"
+#include "src/capi_frontend/server_settings.hpp"
 #include "model_downloader.hpp"
 
 namespace ovms {

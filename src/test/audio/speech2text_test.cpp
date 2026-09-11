@@ -19,17 +19,17 @@
 #include <gtest/gtest.h>
 
 #include <drogon/drogon.h>
-#include "../../http_frontend/multi_part_parser_drogon_impl.hpp"
-#include "../../audio/audio_utils.hpp"
-#include "../../audio/speech_to_text/s2t_servable.hpp"
-#include "../../http_payload.hpp"
-#include "../../http_rest_api_handler.hpp"
-#include "../../server.hpp"
+#include "src/http_frontend/multi_part_parser_drogon_impl.hpp"
+#include "src/audio/audio_utils.hpp"
+#include "src/audio/speech_to_text/s2t_servable.hpp"
+#include "src/http_payload.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/server.hpp"
 #include "rapidjson/document.h"
-#include "../test_http_utils.hpp"
-#include "../test_utils.hpp"
-#include "../platform_utils.hpp"
-#include "../constructor_enabled_model_manager.hpp"
+#include "src/test/test_http_utils.hpp"
+#include "src/test/test_utils.hpp"
+#include "src/test/platform_utils.hpp"
+#include "src/test/constructor_enabled_model_manager.hpp"
 
 using namespace ovms;
 

@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "../../../logging.hpp"
+#include "src/logging.hpp"
 #include "reasoning_parser.hpp"
 
 namespace ovms {

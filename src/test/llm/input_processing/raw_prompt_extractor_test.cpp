@@ -18,8 +18,8 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/chat_history.hpp>
 
-#include "../../../llm/io_processing/input_processors/raw_prompt_extractor.hpp"
-#include "../../../llm/io_processing/input_request.hpp"
+#include "src/llm/io_processing/input_processors/raw_prompt_extractor.hpp"
+#include "src/llm/io_processing/input_request.hpp"
 
 using namespace ovms;
 

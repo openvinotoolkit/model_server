@@ -16,10 +16,10 @@
 #include "serialization.hpp"
 
 #include "kfs_utils.hpp"
-#include "../logging.hpp"
-#include "../precision.hpp"
-#include "../status.hpp"
-#include "../tensor_conversion.hpp"
+#include "src/logging.hpp"
+#include "src/precision.hpp"
+#include "src/status.hpp"
+#include "src/tensor_conversion.hpp"
 
 namespace ovms {
 static Status serializePrecision(

@@ -17,9 +17,9 @@
 
 #include <utility>
 
-#include "../ov_utils.hpp"
-#include "../status.hpp"
-#include "../tensorinfo.hpp"
+#include "src/ov_utils.hpp"
+#include "src/status.hpp"
+#include "src/tensorinfo.hpp"
 
 namespace ovms {
 
