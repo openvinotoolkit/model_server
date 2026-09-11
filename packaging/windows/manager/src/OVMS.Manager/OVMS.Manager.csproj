@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>OVMS.Manager</AssemblyName>
+    <RootNamespace>OVMS.Manager</RootNamespace>
+    <ApplicationIcon>Assets\ovms-manager.ico</ApplicationIcon>
+  </PropertyGroup>
+</Project>
