@@ -703,6 +703,8 @@ ovms_cc_library(
                 "//src/image_gen:image_gen_calculator",
                 "//src/audio/speech_to_text:s2t_calculator",
                 "//src/audio/text_to_speech:t2s_calculator",
+                "//src/yolox:ov_yolox_tensors_to_detections_calculator",
+                "//src/bytetrack/calculators:bytetrack_calculators",
                 "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_responses_handler",
@@ -2761,6 +2763,25 @@ ovms_cc_test_library(
         "//third_party:openvino",
         "@com_google_googletest//:gtest",
     ],
+)
+
+ovms_cc_test_library(
+    name = "bytetrack_tests",
+    srcs = ["test/bytetrack/ov_yolox_tensors_to_detections_calculator_test.cpp",
+            "test/bytetrack/detection_color_by_id_calculator_test.cpp",],
+    deps = [
+        "@com_google_googletest//:gtest",
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework:calculator_runner",
+        "@mediapipe//mediapipe/framework/formats:detection_cc_proto",
+        "@mediapipe//mediapipe/framework:packet",
+        "@mediapipe//mediapipe/util:render_data_cc_proto",
+        "@mediapipe//mediapipe/util:color_cc_proto",
+        "//src/yolox:ov_yolox_tensors_to_detections_calculator_cc_proto",
+        "//src/bytetrack/utils:detection_color_by_id_calculator_cc_proto",
+        "//src/bytetrack/calculators:bytetrack_calculator_cc_proto",
+    ]
 )
 
 cc_library(
