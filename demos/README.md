@@ -87,4 +87,5 @@ Integrations <ovms_demos_integrations>
 | Demo | Description |
 |---|---|
 |[Integration with Open WebUI](integration_with_OpenWebUI/README.md)|Using Open WebUI with OVMS as inference provider. Shows text and image generation as well as usage with RAG and tools.|
+|[Integration with DeepAgents Code](integration_with_deepagents_code/README.md)|Using DeepAgents Code with OVMS as inference provider. Shows MCP server creation, subagent-based validation and tool use.|
 |[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue or Cline extension to Visual Studio Code with local OVMS serving.|
