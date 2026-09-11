@@ -342,36 +342,10 @@ Libgt2InitGuard::~Libgt2InitGuard() {
     git_libgit2_shutdown();
 }
 
-const std::string PROTOCOL_SEPARATOR = "://";
-
 bool HfDownloader::CheckIfProxySet() {
     if (this->httpProxy != "")
         return true;
     return false;
-}
-
-std::string HfDownloader::GetRepositoryUrlWithPassword() {
-    std::string repoPass = "";
-    if (this->hfToken != "") {
-        repoPass += this->hfToken + ":" + this->hfToken + "@";
-    } else {
-        SPDLOG_DEBUG("HF_TOKEN environment variable not set");
-        return this->hfEndpoint + this->sourceModel;
-    }
-
-    std::string outputWithPass = "";
-    size_t match = this->hfEndpoint.find(PROTOCOL_SEPARATOR);
-    if (match != std::string::npos) {
-        // https://huggingface.co
-        // protocol[match]//address
-        std::string protocol = this->hfEndpoint.substr(0, match);
-        std::string address = this->hfEndpoint.substr(match + PROTOCOL_SEPARATOR.size());
-        outputWithPass = protocol + PROTOCOL_SEPARATOR + repoPass + address + this->sourceModel;
-    } else {
-        outputWithPass = repoPass + this->hfEndpoint + this->sourceModel;
-    }
-
-    return outputWithPass;
 }
 
 std::string HfDownloader::GetRepoUrl() {
@@ -380,10 +354,9 @@ std::string HfDownloader::GetRepoUrl() {
     return repoUrl;
 }
 
-HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHfToken, const std::string& inHttpProxy, bool inOverwrite) :
+HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHttpProxy, bool inOverwrite) :
     IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
     hfEndpoint(inHfEndpoint),
-    hfToken(inHfToken),
     httpProxy(inHttpProxy) {}
 
 Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath) {
@@ -1433,14 +1406,14 @@ void configureCloneOptions(git_clone_options& cloneOptions, bool useProxy, const
  * Executes git clone for a model repository and handles cancellation/error mapping.
  * 
  * @param downloadPath Destination repository path on local filesystem.
- * @param passRepoUrl Source repository URL (possibly with embedded credentials).
+ * @param repoUrl Source repository URL without embedded credentials.
  * @param cloneOptions Prepared libgit2 clone options.
  * @return StatusCode::OK on success, cancellation or clone failure status otherwise.
  * @note Connects to remote git endpoint and writes repository data to local filesystem.
  */
-Status executeClone(const std::string& downloadPath, const std::string& passRepoUrl, git_clone_options& cloneOptions) {
+Status executeClone(const std::string& downloadPath, const std::string& repoUrl, git_clone_options& cloneOptions) {
     git_repository* clonedRepo = nullptr;
-    const char* url = passRepoUrl.c_str();
+    const char* url = repoUrl.c_str();
     const char* path = downloadPath.c_str();
     SPDLOG_TRACE("Starting git clone to: {}", path);
     if (!libgit2::createLfsWipMarker(downloadPath)) {
@@ -1498,7 +1471,6 @@ Status finalizeAfterClone(const std::string& downloadPath,
 
 Status handleFreshClone(const std::string& downloadPath,
     const std::string& repoUrl,
-    const std::string& passRepoUrl,
     bool useProxy,
     const std::string& proxyUrl,
     const std::function<Status(bool)>& checkRepositoryStatusFn,
@@ -1513,7 +1485,7 @@ Status handleFreshClone(const std::string& downloadPath,
 
     SPDLOG_DEBUG("Downloading from url: {}", repoUrl.c_str());
 
-    auto status = executeClone(downloadPath, passRepoUrl, cloneOptions);
+    auto status = executeClone(downloadPath, repoUrl, cloneOptions);
     if (!status.ok()) {
         return status;
     }
@@ -1560,9 +1532,8 @@ Status HfDownloader::downloadModel() {
 
     const bool useProxy = CheckIfProxySet();
     std::string repoUrl = GetRepoUrl();
-    std::string passRepoUrl = GetRepositoryUrlWithPassword();
 
-    return handleFreshClone(this->downloadPath, repoUrl, passRepoUrl, useProxy, this->httpProxy, checkRepositoryStatusFn, removeReadonlyFn);
+    return handleFreshClone(this->downloadPath, repoUrl, useProxy, this->httpProxy, checkRepositoryStatusFn, removeReadonlyFn);
 }
 
 }  // namespace ovms

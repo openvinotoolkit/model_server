@@ -50,9 +50,9 @@ static std::string getEnvReturnOrDefaultIfNotSet(const std::string& envName, con
     const char* envValue = std::getenv(envName.c_str());
     if (envValue) {
         value = std::string(envValue);
-        SPDLOG_DEBUG("{} environment variable set. Using value: {};", envName, value);
+        SPDLOG_DEBUG("{} environment variable set.", envName);
     } else {
-        SPDLOG_DEBUG("{} environment variable not set. Using default value: {};", envName, defaultValue);
+        SPDLOG_DEBUG("{} environment variable not set. Using default value.", envName);
     }
     return value;
 }
@@ -244,7 +244,7 @@ Status HfPullModelModule::clone() {
             return std::get<Status>(guardOrError);
         }
 
-        downloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
+        downloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->GetHfEndpoint(), this->GetProxy(), this->hfSettings.overwriteModels);
     } else if (this->hfSettings.downloadType == OPTIMUM_CLI_DOWNLOAD) {
         downloader = std::make_unique<OptimumDownloader>(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
     } else if (this->hfSettings.downloadType == GGUF_DOWNLOAD) {
@@ -265,7 +265,7 @@ Status HfPullModelModule::clone() {
     if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()) {
         auto& graphSettings = std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings);
         std::unique_ptr<IModelDownloader> draftModelDownloader;
-        draftModelDownloader = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
+        draftModelDownloader = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetProxy(), this->hfSettings.overwriteModels);
         status = draftModelDownloader->downloadModel();
         if (!status.ok()) {
             return status;
