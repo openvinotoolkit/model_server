@@ -132,6 +132,8 @@ Parameter notes:
 
 ### Step 1: Ask agent to summarize demo
 
+Start with a broad, low-risk prompt so the agent explores the working directory, loads project files into its context and confirms that OVMS is reachable. This also warms up prefix caching on the server for later turns.
+
 ```text
 Summarize demo in current directory.
 ```
@@ -142,12 +144,11 @@ First response can be slower because initial dcode context is large. Later turns
 
 ### Step 2: Create MCP server file
 
-
-As you can see, dcode reports an issue with the MCP tool:
+The project ships with a preconfigured MCP client entry in `.deepagents/.mcp.json`, but the actual server script does not exist yet. dcode surfaces this as a tool-loading error — a good signal that the agent is aware of the MCP configuration.
 
 ![MCP tool issue](./screenshots/mcp_error.jpg)
 
-The MCP server script is missing. Ask the agent to create it using the project skill located at `.deepagents/skills/python-mcp-sdk-skill/SKILL.md`:
+The MCP server script is missing. Ask the agent to create it using the project skill located at `.deepagents/skills/python-mcp-sdk-skill/SKILL.md`. Invoking a skill with `/skill:<name>` gives the agent a focused, tested recipe instead of relying on generic knowledge:
 
 ```bash
 /skill:python-mcp-sdk-skill implement a Python MCP stdio server at mcp_server/time_mcp_server.py that provides current UTC time using the Python MCP SDK.
@@ -157,17 +158,25 @@ The MCP server script is missing. Ask the agent to create it using the project s
 
 ### Step 3: Extend MCP server with date tool
 
+Use `/goal` to switch the agent into goal mode: it will propose acceptance criteria, iterate on the implementation and self-grade the result against those criteria. This is a good fit for incremental changes on top of an existing file.
+
 ```bash
 /goal Extend mcp_server/time_mcp_server.py with date tool.
 ```
 
+First the agent negotiates acceptance criteria for the change:
+
 ![acceptance criteria](./screenshots/acceptance_criteria.jpg)
+
+Then it works towards those criteria:
 
 ![goal completed](./screenshots/goal_completed.jpg)
 
+And finally grades its own output:
+
 ![grader result](./screenshots/grader.jpg)
 
-When complete:
+Once the goal is satisfied, clear it so subsequent prompts run in normal mode:
 
 ```bash
 /goal clear
@@ -175,10 +184,11 @@ When complete:
 
 ### Step 4: Delegate validation to subagent
 
-This demo includes subagent description:
+Instead of running tests in the main context, delegate validation to a dedicated subagent. This keeps the main conversation focused and uses a smaller model (`OpenVINO/Qwen3-8B-int4-ov`) for a cheaper verification pass. The subagent definition lives in:
+
 - `.deepagents/agents/mcp-tester/AGENTS.md`
 
-`mcp-tester` verifies static structure and runtime behavior of the MCP server.
+`mcp-tester` verifies static structure and runtime behavior of the MCP server and returns a concise `PASS`/`FAIL` verdict.
 
 Prompt:
 
@@ -193,6 +203,8 @@ If tester returns `FAIL`, main agent can proceed with fixes. If tester returns `
 
 ### Step 5: Reload tools in current session
 
+The MCP server is now on disk, but the current dcode session was started before it existed, so its tools are not yet registered. Use `/tools` to inspect the currently loaded tool list, then `/reload` to re-scan the MCP configuration without restarting dcode.
+
 ```bash
 /tools
 ```
@@ -206,6 +218,8 @@ If tester returns `FAIL`, main agent can proceed with fixes. If tester returns `
 ![tools after reload](./screenshots/tools_after.jpg)
 
 ### Step 6: Verify tool use
+
+With the MCP tools now registered, issue a prompt that can only be answered correctly by calling the freshly created server. If the agent invokes the MCP tool and reports the real UTC time and date, the end-to-end integration is working.
 
 ```text
 Give me the exact current UTC timestamp down to the current second allong with current date.
