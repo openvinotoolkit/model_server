@@ -34,7 +34,8 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
         return std::nullopt;
     }
 
-    if (chunk.find(parsingConfig.startTags[0]) != std::string::npos || chunk.find(parsingConfig.endTag) != std::string::npos) {
+    if (chunk.find(parsingConfig.startTags[0]) != std::string::npos || chunk.find(parsingConfig.endTag) != std::string::npos ||
+        chunk.find(parsingConfig.preambleStartTags[0]) != std::string::npos) {
         return std::nullopt;
     } else {
         return ReasoningDelta{chunk};
