@@ -49,7 +49,7 @@ If `language` is omitted, OVMS defaults to `en-us`. For non-English text, set `l
 | model | ✅ | ✅ | string (required) | Name of the model to use. Name assigned to a MediaPipe graph configured to schedule generation using desired embedding model. **Note**: This can also be omitted to fall back to URI based routing. Read more on routing topic **TODO** |
 | input | ✅ | ✅ | string (required) | The text to generate audio for. |
 | voice | ❌ | ✅ | string | The voice to use when generating the audio. If not provided, model default voice will be used. |
-| language | ❌ | ❌ | string | Optional phonemization language passed to the OpenVINO GenAI speech generation pipeline. Supported values for Kokoro are `en-us`, `en-gb`, `es`, `fr-fr`, `it`, `pt-br`, `hi`. Defaults to `en-us`. |
+| language | ✅ | ❌ | string | Optional phonemization language passed to the OpenVINO GenAI speech generation pipeline. Supported values for Kokoro are `en-us`, `en-gb`, `es`, `fr-fr`, `it`, `pt-br`, `hi`. Defaults to `en-us`. |
 | instructions | ❌ | ✅ | string | Control the voice of your generated audio with additional instructions. |
 | response_format | ❌ | ✅ | string | The format to audio in. |
 | speed | ❌ | ✅ | number | The speed of the generated audio. |
