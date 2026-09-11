@@ -61,22 +61,32 @@ protected:
 // ---------- track high threshold tests ----------
 
 TEST_F(ByteTrackCalculatorTest, TrackHighThresholdBelowZeroFails) {
-    auto runner = MakeRunner(-0.1f,
-        0.5f,
-        0.3f,
-        0.8f,
-        30,
+    const float NORMAL_TRACK_HIGH_THRESHOLD = 0.7f;
+    const float NORMAL_TRACK_LOW_THRESHOLD = 0.5f;
+    const float NORMAL_NEW_TRACK_THRESHOLD = 0.3;
+    const float NORMAL_MATCHING_THRESHOLD = 0.8;
+    const int NORMAL_TRACK_BUFFER = 30;
+    auto runner = MakeRunner((-1) * NORMAL_TRACK_HIGH_THRESHOLD,
+        NORMAL_TRACK_LOW_THRESHOLD,
+        NORMAL_NEW_TRACK_THRESHOLD,
+        NORMAL_MATCHING_THRESHOLD,
+        NORMAL_TRACK_BUFFER,
         false);
     auto status = runner->Run();
     EXPECT_FALSE(status.ok());
 }
 
 TEST_F(ByteTrackCalculatorTest, TrackHighThresholdAboveOneFails) {
-    auto runner = MakeRunner(1.1f,
-        0.5f,
-        0.3f,
-        0.8f,
-        30,
+    const float NORMAL_TRACK_HIGH_THRESHOLD = 0.7f;
+    const float NORMAL_TRACK_LOW_THRESHOLD = 0.5f;
+    const float NORMAL_NEW_TRACK_THRESHOLD = 0.3;
+    const float NORMAL_MATCHING_THRESHOLD = 0.8;
+    const int NORMAL_TRACK_BUFFER = 30;
+    auto runner = MakeRunner(1 + NORMAL_TRACK_HIGH_THRESHOLD,
+        NORMAL_TRACK_LOW_THRESHOLD,
+        NORMAL_NEW_TRACK_THRESHOLD,
+        NORMAL_MATCHING_THRESHOLD,
+        NORMAL_TRACK_BUFFER,
         false);
     auto status = runner->Run();
     EXPECT_FALSE(status.ok());
@@ -85,22 +95,32 @@ TEST_F(ByteTrackCalculatorTest, TrackHighThresholdAboveOneFails) {
 // ---------- track low threshold tests ----------
 
 TEST_F(ByteTrackCalculatorTest, TrackLowThresholdBelowZeroFails) {
-    auto runner = MakeRunner(0.7f,
-        -0.1f,
-        0.3f,
-        0.8f,
-        30,
+    const float NORMAL_TRACK_HIGH_THRESHOLD = 0.7f;
+    const float NORMAL_TRACK_LOW_THRESHOLD = 0.5f;
+    const float NORMAL_NEW_TRACK_THRESHOLD = 0.3;
+    const float NORMAL_MATCHING_THRESHOLD = 0.8;
+    const int NORMAL_TRACK_BUFFER = 30;
+    auto runner = MakeRunner(NORMAL_TRACK_HIGH_THRESHOLD,
+        (-1) * NORMAL_TRACK_LOW_THRESHOLD,
+        NORMAL_NEW_TRACK_THRESHOLD,
+        NORMAL_MATCHING_THRESHOLD,
+        NORMAL_TRACK_BUFFER,
         false);
     auto status = runner->Run();
     EXPECT_FALSE(status.ok());
 }
 
 TEST_F(ByteTrackCalculatorTest, TrackLowThresholdAboveOneFails) {
-    auto runner = MakeRunner(0.7f,
-        1.1f,
-        0.3f,
-        0.8f,
-        30,
+    const float NORMAL_TRACK_HIGH_THRESHOLD = 0.7f;
+    const float NORMAL_TRACK_LOW_THRESHOLD = 0.5f;
+    const float NORMAL_NEW_TRACK_THRESHOLD = 0.3;
+    const float NORMAL_MATCHING_THRESHOLD = 0.8;
+    const int NORMAL_TRACK_BUFFER = 30;
+    auto runner = MakeRunner(NORMAL_TRACK_HIGH_THRESHOLD,
+        1 + NORMAL_TRACK_LOW_THRESHOLD,
+        NORMAL_NEW_TRACK_THRESHOLD,
+        NORMAL_MATCHING_THRESHOLD,
+        NORMAL_TRACK_BUFFER,
         false);
     auto status = runner->Run();
     EXPECT_FALSE(status.ok());
@@ -109,22 +129,32 @@ TEST_F(ByteTrackCalculatorTest, TrackLowThresholdAboveOneFails) {
 // ---------- matching threshold tests ----------
 
 TEST_F(ByteTrackCalculatorTest, MatchingThresholdBelowZeroFails) {
-    auto runner = MakeRunner(0.7f,
-        0.5f,
-        0.3f,
-        -0.01f,
-        30,
+    const float NORMAL_TRACK_HIGH_THRESHOLD = 0.7f;
+    const float NORMAL_TRACK_LOW_THRESHOLD = 0.5f;
+    const float NORMAL_NEW_TRACK_THRESHOLD = 0.3;
+    const float NORMAL_MATCHING_THRESHOLD = 0.8;
+    const int NORMAL_TRACK_BUFFER = 30;
+    auto runner = MakeRunner(NORMAL_TRACK_HIGH_THRESHOLD,
+        NORMAL_TRACK_LOW_THRESHOLD,
+        NORMAL_NEW_TRACK_THRESHOLD,
+        (-1) * NORMAL_MATCHING_THRESHOLD,
+        NORMAL_TRACK_BUFFER,
         false);
     auto status = runner->Run();
     EXPECT_FALSE(status.ok());
 }
 
-TEST_F(ByteTrackCalculatorTest, MatchingThresholdAboveZeroFails) {
-    auto runner = MakeRunner(0.7f,
-        0.5f,
-        0.3f,
-        1.1f,
-        30,
+TEST_F(ByteTrackCalculatorTest, MatchingThresholdAboveOneFails) {
+    const float NORMAL_TRACK_HIGH_THRESHOLD = 0.7f;
+    const float NORMAL_TRACK_LOW_THRESHOLD = 0.5f;
+    const float NORMAL_NEW_TRACK_THRESHOLD = 0.3;
+    const float NORMAL_MATCHING_THRESHOLD = 0.8;
+    const int NORMAL_TRACK_BUFFER = 30;
+    auto runner = MakeRunner(NORMAL_TRACK_HIGH_THRESHOLD,
+        NORMAL_TRACK_LOW_THRESHOLD,
+        NORMAL_NEW_TRACK_THRESHOLD,
+        1 + NORMAL_MATCHING_THRESHOLD,
+        NORMAL_TRACK_BUFFER,
         false);
     auto status = runner->Run();
     EXPECT_FALSE(status.ok());
@@ -133,22 +163,32 @@ TEST_F(ByteTrackCalculatorTest, MatchingThresholdAboveZeroFails) {
 // ---------- new track threshold tests ----------
 
 TEST_F(ByteTrackCalculatorTest, NewTrackThresholdBelowZeroFails) {
-    auto runner = MakeRunner(0.7f,
-        0.5f,
-        -0.01f,
-        0.8f,
-        30,
+    const float NORMAL_TRACK_HIGH_THRESHOLD = 0.7f;
+    const float NORMAL_TRACK_LOW_THRESHOLD = 0.5f;
+    const float NORMAL_NEW_TRACK_THRESHOLD = 0.3;
+    const float NORMAL_MATCHING_THRESHOLD = 0.8;
+    const int NORMAL_TRACK_BUFFER = 30;
+    auto runner = MakeRunner(NORMAL_TRACK_HIGH_THRESHOLD,
+        NORMAL_TRACK_LOW_THRESHOLD,
+        (-1) * NORMAL_NEW_TRACK_THRESHOLD,
+        NORMAL_MATCHING_THRESHOLD,
+        NORMAL_TRACK_BUFFER,
         false);
     auto status = runner->Run();
     EXPECT_FALSE(status.ok());
 }
 
-TEST_F(ByteTrackCalculatorTest, NewTrackThresholdAboveZeroFails) {
-    auto runner = MakeRunner(0.7f,
-        0.5f,
-        1.1f,
-        0.8f,
-        30,
+TEST_F(ByteTrackCalculatorTest, NewTrackThresholdAboveOneFails) {
+    const float NORMAL_TRACK_HIGH_THRESHOLD = 0.7f;
+    const float NORMAL_TRACK_LOW_THRESHOLD = 0.5f;
+    const float NORMAL_NEW_TRACK_THRESHOLD = 0.3;
+    const float NORMAL_MATCHING_THRESHOLD = 0.8;
+    const int NORMAL_TRACK_BUFFER = 30;
+    auto runner = MakeRunner(NORMAL_TRACK_HIGH_THRESHOLD,
+        NORMAL_TRACK_LOW_THRESHOLD,
+        1 + NORMAL_NEW_TRACK_THRESHOLD,
+        NORMAL_MATCHING_THRESHOLD,
+        NORMAL_TRACK_BUFFER,
         false);
     auto status = runner->Run();
     EXPECT_FALSE(status.ok());
@@ -157,10 +197,14 @@ TEST_F(ByteTrackCalculatorTest, NewTrackThresholdAboveZeroFails) {
 // ---------- track_buffer boundary tests ----------
 
 TEST_F(ByteTrackCalculatorTest, TrackBufferZeroIsNotValid) {
-    auto runner = MakeRunner(0.7f,
-        0.5f,
-        0.3f,
-        0.8f,
+    const float NORMAL_TRACK_HIGH_THRESHOLD = 0.7f;
+    const float NORMAL_TRACK_LOW_THRESHOLD = 0.5f;
+    const float NORMAL_NEW_TRACK_THRESHOLD = 0.3;
+    const float NORMAL_MATCHING_THRESHOLD = 0.8;
+    auto runner = MakeRunner(NORMAL_TRACK_HIGH_THRESHOLD,
+        NORMAL_TRACK_LOW_THRESHOLD,
+        NORMAL_NEW_TRACK_THRESHOLD,
+        NORMAL_MATCHING_THRESHOLD,
         0,
         false);
     auto status = runner->Run();
@@ -168,11 +212,16 @@ TEST_F(ByteTrackCalculatorTest, TrackBufferZeroIsNotValid) {
 }
 
 TEST_F(ByteTrackCalculatorTest, TrackBufferNegativeFails) {
-    auto runner = MakeRunner(0.7f,
-        0.5f,
-        0.3f,
-        0.8f,
-        -1,
+    const float NORMAL_TRACK_HIGH_THRESHOLD = 0.7f;
+    const float NORMAL_TRACK_LOW_THRESHOLD = 0.5f;
+    const float NORMAL_NEW_TRACK_THRESHOLD = 0.3;
+    const float NORMAL_MATCHING_THRESHOLD = 0.8;
+    const int NORMAL_TRACK_BUFFER = 30;
+    auto runner = MakeRunner(NORMAL_TRACK_HIGH_THRESHOLD,
+        NORMAL_TRACK_LOW_THRESHOLD,
+        NORMAL_NEW_TRACK_THRESHOLD,
+        NORMAL_MATCHING_THRESHOLD,
+        (-1) * NORMAL_TRACK_BUFFER,
         false);
     auto status = runner->Run();
     EXPECT_FALSE(status.ok());
