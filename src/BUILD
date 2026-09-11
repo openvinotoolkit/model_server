@@ -2780,6 +2780,7 @@ ovms_cc_test_library(
         "@mediapipe//mediapipe/util:color_cc_proto",
         "//src/yolox:ov_yolox_tensors_to_detections_calculator_cc_proto",
         "//src/bytetrack/utils:detection_color_by_id_calculator_cc_proto",
+        "//src/bytetrack/calculators:bytetrack_calculator_cc_proto",
     ]
 )
 

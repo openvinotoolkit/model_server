@@ -101,7 +101,7 @@ TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, InputSizeNegative_FailsOpen) {
 // this check passes because input size is in valid range (0,inf)
 
 TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, InputSizeValidPositive_Valid) {
-    auto runner = MakeRunner(/*conf_thresh=*/0.5f, /*input_size=*/416.0f);
+    auto runner = MakeRunner(0.5f, 416.0f);
     EXPECT_TRUE(RunOpenOnly(*runner).ok());
 }
 
