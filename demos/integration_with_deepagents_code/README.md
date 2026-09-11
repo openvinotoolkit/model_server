@@ -40,12 +40,12 @@ If OVMS is already running with the required models, you can skip this step.
 docker run --rm ${GPU_ARGS} -u $(id -u):$(id -g) \
   -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -e "no_proxy=${no_proxy}" \
   -v ${HOME}/models:/models openvino/model_server:latest-gpu \
-  --pull --source_model OpenVINO/Qwen3.8-27B-int4-ov --task text_generation --model_repository_path /models
+  --pull --source_model OpenVINO/Qwen3.8-27B-int4-ov --model_repository_path /models
 
 docker run --rm ${GPU_ARGS} -u $(id -u):$(id -g) \
   -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -e "no_proxy=${no_proxy}" \
   -v ${HOME}/models:/models openvino/model_server:latest-gpu \
-  --pull --source_model OpenVINO/Qwen3-8B-int8-ov --task text_generation --model_repository_path /models
+  --pull --source_model OpenVINO/Qwen3-8B-int8-ov --model_repository_path /models
 
 docker run --rm -u $(id -u):$(id -g) -v ${HOME}/models:/models openvino/model_server:latest-gpu \
   --add_to_config --config_path /models/config.json \
