@@ -86,6 +86,27 @@ TEST_F(ChatTemplateAnalyzerTest, detectsGemma4) {
     EXPECT_EQ(result.detectedReasoningParser.value(), "gemma4");
     EXPECT_TRUE(result.caps.supportsToolCalls);
     EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
+    EXPECT_FALSE(result.caps.parseToolResponseJsonContent);
+}
+
+TEST_F(ChatTemplateAnalyzerTest, gemma4DoesNotParseToolJsonWhenPartsScanWouldCallGetOnDictKeys) {
+    const std::string tmpl =
+        "<|tool_call>call:{% if response is mapping %}x{% endif %}"
+        "{% for part in tool_body %}{{ part.get('type') }}{% endfor %}";
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "gemma4");
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
+    EXPECT_FALSE(result.caps.parseToolResponseJsonContent);
+}
+
+TEST_F(ChatTemplateAnalyzerTest, gemma4ParsesToolJsonWhenMappingBranchHasNoPartsGetScan) {
+    const std::string tmpl = "<|tool_call>call:{% if response is mapping %}{{ response }}{% endif %}";
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "gemma4");
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
+    EXPECT_TRUE(result.caps.parseToolResponseJsonContent);
 }
 
 // --- Qwen3-Coder ---
@@ -247,5 +268,7 @@ TEST_F(ChatTemplateAnalyzerTest, defaultCapsValues) {
     ChatTemplateCaps caps;
     EXPECT_FALSE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_FALSE(caps.parseToolResponseJsonContent);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
+    EXPECT_FALSE(caps.supportsResponseFieldInToolDefinition);
 }

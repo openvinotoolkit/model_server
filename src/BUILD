@@ -2433,6 +2433,9 @@ cc_library(
     name = "test_platform_utils",
     hdrs = ["test/platform_utils.hpp",],
     srcs = ["test/platform_utils.cpp",],
+    visibility = [
+        "//src/test/llm/generation_config:__pkg__",
+    ],
     deps = [
         "@com_google_googletest//:gtest",
     ],
@@ -2845,6 +2848,21 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
 )
 
+cc_test(
+    name = "llm_output_parser_tests",
+    env_inherit = ["PATH"],
+    deps = [
+        ":test_llm_output_parser_tests",
+        "@com_google_googletest//:gtest_main",
+        "//third_party:genai",
+        "//third_party:openvino",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    linkstatic = 1,
+)
+
 cc_library(
     name = "test_chat_template_workarounds",
     linkstatic = 1,
@@ -2870,6 +2888,19 @@ cc_library(
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_test(
+    name = "chat_template_workarounds_tests",
+    env_inherit = ["PATH"],
+    deps = [
+        ":test_chat_template_workarounds",
+        "@com_google_googletest//:gtest_main",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    linkstatic = 1,
 )
 
 cc_library(

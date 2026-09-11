@@ -135,6 +135,12 @@ std::optional<Delta> OutputParser::parseToolCallChunk(const std::vector<int64_t>
     if (!toolParser) {
         throw std::runtime_error("Tool parser is not available, cannot parse tool call chunk");
     }
+    if (toolParser->getParsingConfig().ownsToolCallBoundaries) {
+        auto result = toolParser->parseChunk(streamOutputCache.getBuffer(), tokens, finishReason);
+        streamOutputCache.clear();
+        processingPhase = TOOL_CALLS_PROCESSING_TOOL;
+        return result;
+    }
     // Bytes after the end tag belong to the next phase — preserve them before clearing.
     std::string remainder;
     const std::string& endTag = toolParser->getParsingConfig().endTag;
@@ -204,7 +210,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (toolParserName == "lfm2") {
         toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
     } else if (toolParserName == "gemma4") {
-        toolParser = std::make_unique<Gemma4ToolParser>(tokenizer);
+        toolParser = std::make_unique<Gemma4ToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "onyx") {
         toolParser = std::make_unique<OnyxToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "minicpm5") {
@@ -478,6 +484,8 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
     } else if (processingPhase == TOOL_CALLS_PROCESSING_TOOL) {
         // Active tool call: accumulate until the end tag, then transition to WAITING_FOR_TOOL
         // to determine whether another tool call or a content turn follows.
+        if (toolParser->getParsingConfig().ownsToolCallBoundaries)
+            return parseToolCallChunk(tokens, finishReason);
         TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingConfig().endTag);
         if (toolEndTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
             return std::nullopt;  // Wait for more chunks to determine if end tag is complete

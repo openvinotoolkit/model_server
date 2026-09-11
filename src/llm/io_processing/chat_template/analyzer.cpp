@@ -51,6 +51,14 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         result.detectedReasoningParser = "gemma4";  // gemma is always tied to its own parser for reasoning
         result.caps.supportsToolCalls = true;
         result.caps.supportsResponseFieldInToolDefinition = true;
+
+        // A mapping branch alone is insufficient to opt role:tool JSON content into
+        // object conversion. Jinja treats mappings as sequences too; templates that
+        // later iterate content parts and call part.get() would then iterate string
+        // keys and fail with `'str object' has no attribute 'get'`.
+        const bool mapsResponse = contains(templateSource, "response is mapping");
+        const bool iteratesPartsWithGet = contains(templateSource, "part.get('type')");
+        result.caps.parseToolResponseJsonContent = mapsResponse && !iteratesPartsWithGet;
         return result;
     }
 
