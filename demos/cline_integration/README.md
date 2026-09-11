@@ -125,7 +125,8 @@ Open Cline's settings and add a new API provider configuration:
 - **Model ID:** the `--model_name` you used when starting OVMS, e.g. `Qwen3.8-27B`
 
 Cline lets Plan mode and Act mode use different models/providers, so you can, for example, keep a small model like
-`LFM2.5-8B-A1B` for quick Plan-mode questions and switch to `Qwen3.8-27B` (on B70) for Act-mode code changes.
+`LFM2.5-8B-A1B` for quick Plan-mode questions and switch to `Qwen3.8-27B` (on B70) for Act-mode code changes. 
+You can set that checking **Use different models for Plan and Act modes**.
 
 ## Usage examples
 
@@ -166,25 +167,18 @@ across all of the suggested models above, regardless of the underlying chat temp
 ## MCP usage
 
 Cline can call tools exposed by MCP servers, the same way it calls its own built-in tools. Reuse the weather MCP
-server from the [AI Agents with MCP servers](../continuous_batching/agentic_ai/README.md) demo, or point Cline at
-any other MCP server, by editing Cline's global `cline_mcp_settings.json`:
+server from the [AI Agents with MCP servers](../continuous_batching/agentic_ai/README.md) demo, or point Cline at any other MCP server, by clicking **Customize** icon and providing:
+- **Server name**
+- **Server URL**
+- **Transport Type**
 
-```json
-{
-  "mcpServers": {
-    "weather": {
-      "type": "sse",
-      "url": "http://localhost:8080/sse",
-      "disabled": false,
-      "autoApprove": ["get_weather"]
-    }
-  }
-}
-```
+![mcp_config](./mcp_config.png)
 
 Once the server is registered and enabled, Act-mode prompts such as "What is the current weather in Tokyo?" will
 make the OVMS-served model emit a tool call that Cline routes to the MCP server, exactly like the standalone agent
 script in the MCP demo above, but from within the editor.
+
+![mcp_usage](./mcp_usage.png)
 
 ## Agentic and coding capabilities summary
 
@@ -196,3 +190,6 @@ script in the MCP demo above, but from within the editor.
 - **MCP**: any MCP server (weather, filesystem, browser, etc.) becomes available to Cline the same way it is
   available to the OpenAI Agents SDK example in the agentic AI demo.
 - **Image input**: use `Qwen3.8-27B` or `gemma-4-26b-a4b-it-int4-ov` for prompts that include screenshots or diagrams.
+
+## Simple application
+
