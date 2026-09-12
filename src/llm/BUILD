@@ -263,6 +263,7 @@ ovms_cc_library(
     srcs = ["io_processing/utils.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libovmsstring_utils",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
         "//src/port:rapidjson_document",
