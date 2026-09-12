@@ -211,6 +211,27 @@ TEST(StringUtils, stou32) {
     EXPECT_EQ(result.value(), 4294967295);
 }
 
+// A string that is not entirely a number must be rejected, matching stou64/stoi32/stof.
+// std::stoul stops at the first character it cannot use and still reports success, so
+// without an explicit length check these all parsed as their leading digits.
+TEST(StringUtils, stou32RejectsPartialParse) {
+    EXPECT_FALSE(ovms::stou32("12abc"));
+    EXPECT_FALSE(ovms::stou32("3.9"));
+    EXPECT_FALSE(ovms::stou32("0x10"));
+    EXPECT_FALSE(ovms::stou32("100%"));
+    EXPECT_FALSE(ovms::stou32("abc"));
+    EXPECT_FALSE(ovms::stou32(""));
+
+    // Plain numbers are still accepted.
+    auto result = ovms::stou32("12");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 12u);
+
+    result = ovms::stou32("0");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 0u);
+}
+
 TEST(StringUtils, stou64) {
     auto result = ovms::stou64("-100");
     EXPECT_FALSE(result);
