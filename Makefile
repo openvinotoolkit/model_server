@@ -43,6 +43,7 @@ endif
 JOBS ?= $(CORES_TOTAL)
 
 
+
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu24 ubuntu22 redhat
 BASE_OS ?= ubuntu24
@@ -213,6 +214,15 @@ TEST_PATH ?= tests/functional/
 
 VERBOSE_LOGS ?= OFF
 
+ifneq ($(TOKEN),)
+GIT_CONFIG_FILE := .gitconfig
+GIT_CONFIG_SECRET = --secret id=gitconfig,src=$(GIT_CONFIG_FILE)
+BUILDX = buildx
+
+$(GIT_CONFIG_FILE):
+	@git config --file $@ url."https://x-access-token:$(TOKEN)@github.com/".insteadOf https://github.com/
+endif
+
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
@@ -243,12 +253,15 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
 	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)\
 	--build-arg KONFLUX=$(KONFLUX)\
-	--build-arg ESPEAK=$(ESPEAK)
+	--build-arg ESPEAK=$(ESPEAK)\
+	$(GIT_CONFIG_SECRET)
 
 
 .PHONY: default docker_build \
 
 default: docker_build
+
+ovms_builder_image targz_package ovms_release_images release_image: $(GIT_CONFIG_FILE)
 
 venv:$(ACTIVATE)
 	@echo $(BUILD_ARGS)

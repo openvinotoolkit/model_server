@@ -50,13 +50,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 
 WORKDIR /
 
-## WA for authentication issues with git over HTTP/2
-RUN git config --global http.version HTTP/1.1
-
 ####### Azure SDK (modern azure-sdk-for-cpp: azure-core, azure-storage-blobs, azure-storage-files-shares)
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 WORKDIR /azure-sdk-for-cpp
-RUN git clone --depth 1 --branch azure-storage-blobs_12.18.0 https://github.com/Azure/azure-sdk-for-cpp.git . && \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git clone --depth 1 --branch azure-storage-blobs_12.18.0 https://github.com/Azure/azure-sdk-for-cpp.git . && \
     echo "# no-op: use system libcurl and openssl" > /azure-sdk-toolchain.cmake && \
     cmake -S sdk/core/azure-core -B build/azure-core \
         -DCMAKE_TOOLCHAIN_FILE=/azure-sdk-toolchain.cmake \
@@ -175,7 +172,7 @@ ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/ex
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 # hadolint ignore=DL3003
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then \
     if [[ $debug_bazel_flags == *"py_off"* ]]; then \
@@ -222,7 +219,7 @@ WORKDIR /openvino_tokenizers/
 ARG ov_tokenizers_branch=master
 ARG ov_tokenizers_org=openvinotoolkit
 # hadolint ignore=DL3003
-RUN git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp -r python/* /opt/intel/openvino/python/ ; \
@@ -243,7 +240,7 @@ ARG ov_genai_branch=master
 ARG ov_genai_org=openvinotoolkit
 WORKDIR /openvino_genai/
 # hadolint ignore=DL3003
-RUN if [ "$ov_use_binary" == "0" ]; then \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ov_use_binary" == "0" ]; then \
     git clone https://github.com/$ov_genai_org/openvino.genai /openvino_genai && cd /openvino_genai && git checkout $ov_genai_branch && git submodule update --init --recursive && \
     cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} " -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_SYSTEM_ICU="True" -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON -S ./ -B ./build/ && \
     cmake --build ./build/ --parallel $JOBS && cp /openvino_genai/build/openvino_genai/lib*.so* /opt/intel/openvino/runtime/lib/intel64/ && \
@@ -295,12 +292,12 @@ RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bi
 
 # prebuild dependencies before copying sources & test dependencies for caching
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
 COPY src/ /ovms/src/
 
 # hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
 
 # hadolint ignore=DL3059
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 2; fi
@@ -342,13 +339,13 @@ ARG OPTIMIZE_BUILDING_TESTS=0
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n //src:ovms_test; fi); fi;
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n //src:ovms_test; fi); fi;
 
 # espeak-ng is built as a separate step, independent of the OVMS binary.
 # Set ESPEAK=0 to skip the espeak build.
 ARG ESPEAK=1
 # hadolint ignore=DL3059
-RUN if [ "$ESPEAK" == "1" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //third_party:espeak_ng //third_party:espeak_ng_data; fi
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ESPEAK" == "1" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //third_party:espeak_ng //third_party:espeak_ng_data; fi
 
 ARG RUN_TESTS=0
 RUN if [ "$RUN_TESTS" == "1" ] ; then mkdir -p demos/common/export_models/ && mv export_model.py demos/common/export_models/ && ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
@@ -371,15 +368,15 @@ ARG CAPI_FLAGS="--strip=always --config mp_off_py_off --//:distro=ubuntu"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
 WORKDIR /ovms
-RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
 
 # C-API benchmark app
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
 
 ARG FUZZER_BUILD=0
 # C api app with bazel
 # hadolint ignore=DL3059
-RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${CAPI_FLAGS} --jobs $JOBS //src:capi_cpp_example; fi;
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build ${CAPI_FLAGS} --jobs $JOBS //src:capi_cpp_example; fi;
 
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
