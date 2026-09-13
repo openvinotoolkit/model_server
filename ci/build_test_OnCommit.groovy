@@ -297,7 +297,7 @@ pipeline {
               script {
               println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
               try {
-                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/OVMS_C OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                  sh "make run_unit_tests TT_MINIO_IMAGE_NAME=quay.io/minio/minio:latest TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/OVMS_C OVMS_CPP_IMAGE_TAG=${shortCommit}"
               }
               finally {
                   archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
