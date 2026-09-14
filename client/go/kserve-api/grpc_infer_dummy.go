@@ -50,7 +50,7 @@ import (
 	"log"
 	"time"
 
-	grpc_client "github.com/openvinotoolkit/model_sever/client/go/kserve-api/grpc-client"
+	grpc_client "github.com/openvinotoolkit/model_server/client/go/kserve-api/grpc-client"
 
 	"google.golang.org/grpc"
 )
