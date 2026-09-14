@@ -32,8 +32,12 @@ public:
         status = ovms::ModelVersionStatus(modelName, modelVersion, ovms::ModelVersionState::START);
     }
     virtual ~MockModelInstanceChangingStates() {}
-    ovms::Status loadModel(const ovms::ModelConfig& config) override {
+    ovms::Status loadModel(const ovms::ModelConfig& config, bool lazyLoad = false) override {
         this->status = ovms::ModelVersionStatus(config.getName(), config.getVersion());
+        if (lazyLoad) {
+            this->status.setSleeping();
+            return ovms::StatusCode::OK;
+        }
         this->status.setLoading();
         status.setAvailable();
         return ovms::StatusCode::OK;

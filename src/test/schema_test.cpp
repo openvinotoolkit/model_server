@@ -2003,6 +2003,148 @@ TEST(SchemaTest, MediapipeConfigInModelConfigPositive) {
     auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
     EXPECT_EQ(result, ovms::StatusCode::OK);
 }
+
+TEST(SchemaTest, MediapipeConfigIdleUnloadTimeoutPositive) {
+    const char* mediapipeConfigPositive = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_model",
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path_base",
+            "idle_unload_timeout_seconds": 300
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(mediapipeConfigPositive);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, MediapipeConfigIdleUnloadTimeoutNegativeValueRejected) {
+    const char* mediapipeConfigNegative = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_model",
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path_base",
+            "idle_unload_timeout_seconds": -5
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(mediapipeConfigNegative);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(SchemaTest, MediapipeConfigIdleUnloadTimeoutWrongTypeRejected) {
+    const char* mediapipeConfigNegative = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_model",
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path_base",
+            "idle_unload_timeout_seconds": "notAnInteger"
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(mediapipeConfigNegative);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+#endif
+
+TEST(SchemaTest, ModelConfigGroupNameValidString) {
+    const char* config = R"(
+    {
+        "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "group_name": "rag"
+            }
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(config);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, ModelConfigGroupNameInvalidType) {
+    const char* config = R"(
+    {
+        "model_config_list": [
+        {
+            "config": {
+                "name": "dummy_model",
+                "base_path": "dummy_path",
+                "group_name": 123
+            }
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(config);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
+
+#if (MEDIAPIPE_DISABLE == 0)
+TEST(SchemaTest, MediapipeConfigGroupNameValidString) {
+    const char* config = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_graph",
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path",
+            "group_name": "llm_group"
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(config);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, MediapipeConfigGroupNameInvalidType) {
+    const char* config = R"(
+    {
+        "model_config_list": [],
+        "mediapipe_config_list": [
+        {
+            "name": "dummy_graph",
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path",
+            "group_name": 42
+        }
+        ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(config);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::JSON_INVALID);
+}
 #endif
 
 TEST(SchemaTest, MediapipeConfigNegativeAdditionalMediapipeConfigField) {

@@ -68,6 +68,9 @@ struct OpenAIRequest {
     std::optional<int> numAssistantTokens{std::nullopt};
     std::optional<float> assistantConfidenceThreshold{std::nullopt};
     std::optional<int> maxNgramSize{std::nullopt};
+    // EAGLE3 tree drafting (tree_depth > 0 enables tree mode; branching_factor controls top-k per layer)
+    std::optional<size_t> branchingFactor{std::nullopt};
+    std::optional<size_t> treeDepth{std::nullopt};
 
     std::optional<uint32_t> maxModelLength;
 

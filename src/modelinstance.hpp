@@ -452,7 +452,6 @@ public:
     const ModelVersionStatus& getStatus() const {
         return status;
     }
-
     /**
       * @brief Internal method for setting cache options
       */
@@ -547,8 +546,10 @@ public:
          *
          * @return Status
          */
-    virtual Status loadModel(const ModelConfig& config);
+    virtual Status loadModel(const ModelConfig& config, bool lazyLoad = false);
 
+    Status wakeUpIfSleeping();
+    void putToSleep();
     /**
          * @brief Reloads model version
          *

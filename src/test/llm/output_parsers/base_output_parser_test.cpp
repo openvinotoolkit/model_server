@@ -15,67 +15,47 @@
 //*****************************************************************************
 #include <gtest/gtest.h>
 #include <string>
-#include "../../../llm/io_processing/base_output_parser.hpp"
+#include "../../../llm/io_processing/delta.hpp"
+#include "../../../llm/apis/openai_rapidjson_delta_serializer.hpp"
+#include "src/port/rapidjson_document.hpp"
 
 using namespace ovms;
 
-class BaseOutputParserTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        // No specific setup needed for this test class
-    }
-};
+class BaseOutputParserTest : public ::testing::Test {};
 
+// Verifies that ToolCallDelta{id, name} serializes to the OpenAI first-delta shape.
 TEST_F(BaseOutputParserTest, wrapFirstDelta) {
-    std::string functionName = "example_function";
-    rapidjson::Document obj = BaseOutputParser::wrapFirstDelta(functionName, 0);
-    const auto& wrappedDelta = obj["delta"];
-    ASSERT_TRUE(wrappedDelta.IsObject());
+    std::string id = "abc123XYZ";
+    std::string name = "example_function";
+    ToolCallDelta d{0, id, name, ""};
+    RapidJsonDeltaSerializer s;
+    std::string json = s.serialize(d);
+
+    rapidjson::Document doc;
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    const auto& wrappedDelta = doc["delta"];
     ASSERT_TRUE(wrappedDelta.HasMember("tool_calls"));
-    ASSERT_TRUE(wrappedDelta["tool_calls"].IsArray());
-    ASSERT_EQ(wrappedDelta["tool_calls"].Size(), 1);
-    const auto& toolCall = wrappedDelta["tool_calls"][0];
-    ASSERT_TRUE(toolCall.IsObject());
-    ASSERT_TRUE(toolCall.HasMember("id"));
-    ASSERT_TRUE(toolCall["id"].IsString());
-    std::string idStr = toolCall["id"].GetString();
-    // Assuming ID is a random alphanumeric string of length 9 (see src/llm/io_processing/utils.cpp)
-    ASSERT_EQ(idStr.size(), 9);
-    ASSERT_TRUE(std::all_of(idStr.begin(), idStr.end(), [](char c) {
-        return std::isalnum(static_cast<unsigned char>(c));
-    }));
-    ASSERT_TRUE(toolCall.HasMember("type"));
-    ASSERT_EQ(toolCall["type"].GetString(), std::string("function"));
-    ASSERT_TRUE(toolCall.HasMember("index"));
-    ASSERT_EQ(toolCall["index"].GetInt(), 0);
-    ASSERT_TRUE(toolCall.HasMember("function"));
-    const auto& function = toolCall["function"];
-    ASSERT_TRUE(function.IsObject());
-    ASSERT_TRUE(function.HasMember("name"));
-    ASSERT_EQ(function["name"].GetString(), functionName);
+    const auto& tc = wrappedDelta["tool_calls"][0];
+    ASSERT_EQ(std::string(tc["id"].GetString()), id);
+    ASSERT_EQ(std::string(tc["type"].GetString()), "function");
+    ASSERT_EQ(tc["index"].GetInt(), 0);
+    ASSERT_EQ(std::string(tc["function"]["name"].GetString()), name);
 }
 
+// Verifies that ToolCallDelta{nullopt, nullopt, args} serializes to the OpenAI args-delta shape.
 TEST_F(BaseOutputParserTest, wrapDelta) {
-    std::string deltaStr = R"({
-        "arguments": "location"
-    })";
-    rapidjson::Document delta;
-    delta.Parse(deltaStr.c_str());
+    ToolCallDelta d{0, std::nullopt, std::nullopt, "location"};
+    RapidJsonDeltaSerializer s;
+    std::string json = s.serialize(d);
 
-    rapidjson::Document obj = BaseOutputParser::wrapDelta(delta, 0);
-    const auto& wrappedDelta = obj["delta"];
-    ASSERT_TRUE(wrappedDelta.IsObject());
+    rapidjson::Document doc;
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    const auto& wrappedDelta = doc["delta"];
     ASSERT_TRUE(wrappedDelta.HasMember("tool_calls"));
-    ASSERT_TRUE(wrappedDelta["tool_calls"].IsArray());
-    ASSERT_EQ(wrappedDelta["tool_calls"].Size(), 1);
-    const auto& toolCall = wrappedDelta["tool_calls"][0];
-    ASSERT_TRUE(toolCall.IsObject());
-    ASSERT_TRUE(toolCall.HasMember("index"));
-    ASSERT_EQ(toolCall["index"].GetInt(), 0);
-    ASSERT_TRUE(toolCall.HasMember("function"));
-    const auto& function = toolCall["function"];
-    ASSERT_TRUE(function.IsObject());
-    ASSERT_TRUE(function.HasMember("arguments"));
-    ASSERT_TRUE(function["arguments"].IsString());
-    ASSERT_EQ(function["arguments"].GetString(), std::string("location"));
+    const auto& tc = wrappedDelta["tool_calls"][0];
+    ASSERT_EQ(tc["index"].GetInt(), 0);
+    ASSERT_FALSE(tc.HasMember("id"));
+    ASSERT_EQ(std::string(tc["function"]["arguments"].GetString()), "location");
 }

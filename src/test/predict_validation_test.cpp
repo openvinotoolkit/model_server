@@ -123,6 +123,48 @@ TEST_F(KFSPredictValidation, RequestTooManyInputs) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_INPUTS) << status.string();
 }
 
+class KFSPredictValidationInputCountConfig : public KFSPredictValidation {
+protected:
+    ovms::ServerSettingsImpl originalServerSettings;
+    ovms::ModelsSettingsImpl originalModelsSettings;
+
+    void SetUp() override {
+        KFSPredictValidation::SetUp();
+        originalServerSettings = ovms::Config::instance().getServerSettings();
+        originalModelsSettings = ovms::Config::instance().getModelSettings();
+    }
+
+    void setDisableInputCountValidation(bool value) {
+        ovms::ServerSettingsImpl testServerSettings = originalServerSettings;
+        testServerSettings.disableInputCountValidation = value;
+        ovms::Config::instance().parse(&testServerSettings, &originalModelsSettings);
+    }
+
+    void TearDown() override {
+        ovms::Config::instance().parse(&originalServerSettings, &originalModelsSettings);
+        KFSPredictValidation::TearDown();
+    }
+};
+
+TEST_F(KFSPredictValidationInputCountConfig, RequestTooManyInputsWithDisabledInputCountValidation) {
+    setDisableInputCountValidation(true);
+
+    auto inputWrongName = request.add_inputs();
+    inputWrongName->set_name("Some_Input");
+    request.add_raw_input_contents();  // keep raw_input_contents count in sync with inputs count
+    auto status = instance->mockValidate(&request);
+    EXPECT_TRUE(status.ok()) << status.string();
+}
+
+TEST_F(KFSPredictValidationInputCountConfig, RequestTooManyInputsWithEnabledInputCountValidation) {
+    setDisableInputCountValidation(false);
+
+    auto inputWrongName = request.add_inputs();
+    inputWrongName->set_name("Some_Input");
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_INPUTS) << status.string();
+}
+
 TEST_F(KFSPredictValidation, RequestWrongInputName) {
     request.mutable_inputs()->RemoveLast();  // remove redundant input
     auto inputWrongName = request.add_inputs();
@@ -567,6 +609,25 @@ TEST_F(KFSPredictValidationInputTensorContent, RequestInputTensorContentAndRawIn
     buf->Clear();
     buf->Add(1);
     buf->Add(1);
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_MESSAGE_STRUCTURE) << status.string();
+}
+
+TEST_F(KFSPredictValidationInputTensorContent, RawInputContentsCountMismatch) {
+    const std::string inputName1 = "input1";
+    const std::string inputName2 = "input2";
+    servableInputs = ovms::tensor_map_t({
+        {inputName1, std::make_shared<ovms::TensorInfo>(inputName1, ovms::Precision::FP32, ovms::shape_t{1, 4}, ovms::Layout{"NC"})},
+        {inputName2, std::make_shared<ovms::TensorInfo>(inputName2, ovms::Precision::FP32, ovms::shape_t{1, 4}, ovms::Layout{"NC"})},
+    });
+    ON_CALL(*instance, getInputsInfo()).WillByDefault(ReturnRef(servableInputs));
+    ON_CALL(*instance, getBatchSize()).WillByDefault(Return(1));
+    ON_CALL(*instance, getModelConfig()).WillByDefault(ReturnRef(modelConfig));
+    preparePredictRequest(request,
+        {{inputName1, std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 4}, ovms::Precision::FP32}},
+            {inputName2, std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, 4}, ovms::Precision::FP32}}});
+    // Remove one buffer, leaving 1 raw_input_contents for 2 inputs
+    request.mutable_raw_input_contents()->RemoveLast();
     auto status = instance->mockValidate(&request);
     EXPECT_EQ(status, ovms::StatusCode::INVALID_MESSAGE_STRUCTURE) << status.string();
 }

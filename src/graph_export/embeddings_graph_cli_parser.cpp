@@ -55,7 +55,11 @@ void EmbeddingsGraphCLIParser::createOptions() {
         ("pooling",
             "Pooling option. One of: CLS, LAST, MEAN. If omitted, OVMS will detect pooling automatically.",
             cxxopts::value<std::string>(),
-            "POOLING");
+            "POOLING")
+        ("max_length",
+            "Maximum input length in tokens. If omitted, OVMS will detect it from the model's config.json.",
+            cxxopts::value<uint32_t>(),
+            "MAX_LENGTH");
 }
 
 void EmbeddingsGraphCLIParser::printHelp() {
@@ -98,6 +102,13 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
         embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
         if (result->count("pooling") > 0) {
             embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();
+        }
+        if (result->count("max_length") > 0) {
+            const auto maxLength = result->operator[]("max_length").as<uint32_t>();
+             if (maxLength == 0) {
+                 throw std::invalid_argument("max_length must be greater than 0");
+             }
+             embeddingsGraphSettings.maxLength = maxLength;
         }
     }
     if (embeddingsGraphSettings.pooling.has_value() &&

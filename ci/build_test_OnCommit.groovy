@@ -74,6 +74,11 @@ pipeline {
           }
         }
         stage('Configure') {
+          environment {
+            GIT_CONFIG_COUNT = '1'
+            GIT_CONFIG_KEY_0 = 'http.version'
+            GIT_CONFIG_VALUE_0 = 'HTTP/1.1'
+          }
           steps {
             script {
               withGithubStageStatus('jenkins/oncommit/configure', 'Configure') {
@@ -269,15 +274,17 @@ pipeline {
                     sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                     sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                     sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
-                    sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                    withCredentials([usernamePassword(credentialsId: 'workflow_lab_mediapipe', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
+                      sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
 
-                    // release_image
-                    sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
-                    sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                    if ( test_doc_files_linux ) {
-                        sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
-                        stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
-                        sh "rm -f ovms_release_image.tar.gz"
+                      // release_image
+                      sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                      if ( test_doc_files_linux ) {
+                          sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
+                          stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
+                          sh "rm -f ovms_release_image.tar.gz"
+                      }
                     }
                     }
                   }
@@ -361,7 +368,7 @@ pipeline {
                       def pwd = sh(returnStdout:true, script: "pwd").strip()
                       def cmd_venv = "make create-venv"
                       def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
-                      def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10"
+                      def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_MINIO_IMAGE_NAME=quay.io/minio/minio:latest"
                       def cmd_run_tests = "make tests"
                       def cmd = ""
                       if (image_build_needed == "true") {
@@ -391,7 +398,7 @@ pipeline {
                         sh "pwd"
                         def pwd = sh(returnStdout:true, script: "pwd").strip()
                         def ovms_c_repo_path = sh(returnStdout:true, script: "cd .. && pwd").strip()
-                        def test_doc_files_str = test_doc_files_linux.split('\n').join(' or ')
+                        def test_doc_files_str = test_doc_files_linux.split('\n').collect { 'U-' + it }.join(' or ')
                         sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
                         def cmd_venv_activate = ". .venv/bin/activate"
                         def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_LOGGING_LEVEL_OVMS=DEBUG && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500 && export CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}"
@@ -458,7 +465,7 @@ pipeline {
                       checkout scm
                       dir ('documentation_tests') {
                         checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
-                        def test_doc_files_str = test_doc_files_windows.split('\n').join(' or ')
+                        def test_doc_files_str = test_doc_files_windows.split('\n').collect { 'U-' + it }.join(' or ')
                         def current_path = bat(returnStdout: true, script: 'cd').trim().split('\n').last().trim()
                         def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
                         def cmd_link_ovms = "(if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional) && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"

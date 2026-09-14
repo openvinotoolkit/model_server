@@ -25,9 +25,9 @@ Example of LLM and VLM models deployment is documented in other demos like
 ## Running the tests for LLM models
 
 ```text
-lm-eval --model local-chat-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3.1-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path test/ --seed 1 --apply_chat_template --limit 100
+lm-eval --model local-chat-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3.1-8B-Instruct,base_url=http://localhost:8000/v1/chat/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path test/ --seed 1 --apply_chat_template --limit 100
 
-local-chat-completions ({'model': 'meta-llama/Meta-Llama-3.1-8B-Instruct', 'base_url': 'http://localhost:8000/v3/chat/completions', 'num_concurrent': 10, 'max_retries': 3, 'tokenized_requests': False}), gen_kwargs: ({}), limit: 100.0, num_fewshot: None, batch_size: 1
+local-chat-completions ({'model': 'meta-llama/Meta-Llama-3.1-8B-Instruct', 'base_url': 'http://localhost:8000/v1/chat/completions', 'num_concurrent': 10, 'max_retries': 3, 'tokenized_requests': False}), gen_kwargs: ({}), limit: 100.0, num_fewshot: None, batch_size: 1
 |Tasks|Version|     Filter     |n-shot|  Metric   |   |Value|   |Stderr|
 |-----|------:|----------------|-----:|-----------|---|----:|---|-----:|
 |gsm8k|      3|flexible-extract|     5|exact_match|↑  | 0.62|±  |0.0488|
@@ -37,9 +37,9 @@ local-chat-completions ({'model': 'meta-llama/Meta-Llama-3.1-8B-Instruct', 'base
 While testing the non chat model and `completion` endpoint, the command would look like this:
 
 ```text
-lm-eval --model local-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3.1-8B,base_url=http://localhost:8000/v3/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path results/ --seed 1 --limit 100
+lm-eval --model local-completions --tasks gsm8k --model_args model=meta-llama/Meta-Llama-3.1-8B,base_url=http://localhost:8000/v1/completions,num_concurrent=1,max_retries=3,tokenized_requests=False --verbosity DEBUG  --log_samples --output_path results/ --seed 1 --limit 100
 
-local-completions ({'model': 'meta-llama/Meta-Llama-3.1-8B', 'base_url': 'http://localhost:8000/v3/completions', 'num_concurrent': 10, 'max_retries': 3, 'tokenized_requests': False}), gen_kwargs: ({}), limit: 100.0, num_fewshot: None, batch_size: 1
+local-completions ({'model': 'meta-llama/Meta-Llama-3.1-8B', 'base_url': 'http://localhost:8000/v1/completions', 'num_concurrent': 10, 'max_retries': 3, 'tokenized_requests': False}), gen_kwargs: ({}), limit: 100.0, num_fewshot: None, batch_size: 1
 |Tasks|Version|     Filter     |n-shot|  Metric   |   |Value|   |Stderr|
 |-----|------:|----------------|-----:|-----------|---|----:|---|-----:|
 |gsm8k|      3|flexible-extract|     5|exact_match|↑  | 0.43|±  |0.0498|
@@ -49,11 +49,11 @@ local-completions ({'model': 'meta-llama/Meta-Llama-3.1-8B', 'base_url': 'http:/
 Other examples are below:
 
 ```text
-lm-eval --model local-chat-completions --tasks leaderboard_ifeval --model_args model=meta-llama/Meta-Llama-3.1-8B-Instruct,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,max_retries=3,tokenized_requests=False --verbosity DEBUG --log_samples --output_path test/ --seed 1 --limit 100 --apply_chat_template  
+lm-eval --model local-chat-completions --tasks leaderboard_ifeval --model_args model=meta-llama/Meta-Llama-3.1-8B-Instruct,base_url=http://localhost:8000/v1/chat/completions,num_concurrent=10,max_retries=3,tokenized_requests=False --verbosity DEBUG --log_samples --output_path test/ --seed 1 --limit 100 --apply_chat_template  
 ```
 
 ```text
-lm-eval --model local-completions --tasks wikitext --model_args model=meta-llama/Meta-Llama-3.1-8B,base_url=http://localhost:8000/v3/completions,num_concurrent=10,max_retries=3,tokenized_requests=False --verbosity DEBUG --log_samples --output_path test/ --seed 1 --limit 100
+lm-eval --model local-completions --tasks wikitext --model_args model=meta-llama/Meta-Llama-3.1-8B,base_url=http://localhost:8000/v1/completions,num_concurrent=10,max_retries=3,tokenized_requests=False --verbosity DEBUG --log_samples --output_path test/ --seed 1 --limit 100
 ```
 
 ## Running the tests for VLM models
@@ -61,7 +61,7 @@ lm-eval --model local-completions --tasks wikitext --model_args model=meta-llama
 Use [lmms-eval project](https://github.com/EvolvingLMMs-Lab/lmms-eval) - mme and mmmu_val tasks. 
 
 ```text
-export OPENAI_BASE_URL=http://localhost:8000/v3
+export OPENAI_BASE_URL=http://localhost:8000/v1
 export OPENAI_API_KEY="unused"
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
 cd lmms-eval
@@ -103,7 +103,7 @@ pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
 ```
 The commands below assumes the models is deployed with the name `ovms-model`. It must match the name set in the `bfcl_eval/constants/model_config.py`.
 ```text
-export OPENAI_BASE_URL=http://localhost:8000/v3
+export OPENAI_BASE_URL=http://localhost:8000/v1
 export CHAT_TEMPLATE_KWARGS='{"enable_thinking":false, "reasoning_effort":"low", "preserve_reasoning":false}'
 
 bfcl generate --model ovms-model --test-category simple_python,multiple,multi_turn_base --temperature 0.0 --num-threads 10 -o --result-dir model_name_dir
@@ -112,7 +112,7 @@ bfcl evaluate --model ovms-model --result-dir model_name_dir
 
 Alternatively, use the model name `ovms-model-stream` to run the tests with stream requests. The results should be the same.
 ```text
-export OPENAI_BASE_URL=http://localhost:8000/v3
+export OPENAI_BASE_URL=http://localhost:8000/v1
 bfcl generate --model ovms-model-stream --test-category simple_python,multiple,multi_turn_base --temperature 0.0 --num-threads 10 -o --result-dir model_name_dir
 bfcl evaluate --model ovms-model-stream --result-dir model_name_dir 
 ```
@@ -127,8 +127,3 @@ cat score/openvino-qwen3-8b-int4-FC/BFCL_v4_simple_python_score.json | head -1
 Those results can be compared with the reference from the [berkeley leaderbaord](https://gorilla.cs.berkeley.edu/leaderboard.html#leaderboard).
 
 ---
-
-> **Note:** The same procedure can be used to validate vLLM component. The only needed change would be updating base_url including replacing `/v3/` with `/v1/`.  
-
-
-

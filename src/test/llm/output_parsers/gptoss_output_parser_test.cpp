@@ -21,6 +21,7 @@
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
 #include "../../../llm/io_processing/gptoss/harmony.hpp"
+#include "output_parser_test_utils.hpp"
 #include "../../platform_utils.hpp"
 
 using namespace ovms;
@@ -465,15 +466,12 @@ protected:
         int64_t chunkIteration = -1;
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
             chunkIteration++;
-            std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, {}, true, finishReason);
+            std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }
             if (expectedDelta.has_value() && doc.has_value()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                std::string docStr = buffer.GetString();
+                std::string docStr = ovms::test::deltaToJson(*doc);
                 // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
                 std::string expected = expectedDelta.value();
                 std::string idKey = "\"id\":\"";
@@ -502,10 +500,7 @@ protected:
             } else if (expectedDelta.has_value()) {
                 FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
             } else if (doc.has_value()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                doc->Accept(writer);
-                std::string docStr = buffer.GetString();
+                std::string docStr = ovms::test::deltaToJson(*doc);
                 FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
             } else {
                 FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;

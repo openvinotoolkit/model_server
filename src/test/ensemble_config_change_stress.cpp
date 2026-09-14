@@ -28,7 +28,7 @@
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"

@@ -45,6 +45,110 @@ namespace ovms {
 static constexpr const char* OUTPUT_ITEM_ID = "msg-0";
 static constexpr const char* REASONING_ITEM_ID = "rs-0";
 
+rapidjson::Document buildResponsesTextFormat(const rapidjson::Document& doc) {
+    rapidjson::Document formatDoc;
+    formatDoc.SetObject();
+    auto& alloc = formatDoc.GetAllocator();
+
+    auto textIt = doc.FindMember("text");
+    if (textIt != doc.MemberEnd() && textIt->value.IsObject()) {
+        auto formatIt = textIt->value.GetObject().FindMember("format");
+        if (formatIt != textIt->value.GetObject().MemberEnd() && formatIt->value.IsObject()) {
+            formatDoc.CopyFrom(formatIt->value, alloc);
+            return formatDoc;
+        }
+    }
+
+    auto responseFormatIt = doc.FindMember("response_format");
+    if (responseFormatIt != doc.MemberEnd() && responseFormatIt->value.IsObject()) {
+        const auto& responseFormat = responseFormatIt->value.GetObject();
+        auto typeIt = responseFormat.FindMember("type");
+        if (typeIt != responseFormat.MemberEnd() && typeIt->value.IsString()) {
+            const std::string responseFormatType = typeIt->value.GetString();
+            if (responseFormatType == "json_schema") {
+                formatDoc.AddMember("type", rapidjson::Value("json_schema", alloc), alloc);
+                auto jsonSchemaIt = responseFormat.FindMember("json_schema");
+                if (jsonSchemaIt != responseFormat.MemberEnd() && jsonSchemaIt->value.IsObject()) {
+                    for (auto it = jsonSchemaIt->value.MemberBegin(); it != jsonSchemaIt->value.MemberEnd(); ++it) {
+                        rapidjson::Value key(it->name, alloc);
+                        rapidjson::Value value(it->value, alloc);
+                        formatDoc.AddMember(key, value, alloc);
+                    }
+                    return formatDoc;
+                }
+            }
+        }
+        formatDoc.CopyFrom(responseFormatIt->value, alloc);
+        return formatDoc;
+    }
+
+    formatDoc.AddMember("type", rapidjson::Value("text", alloc), alloc);
+    return formatDoc;
+}
+
+absl::Status injectResponseFormatFromResponsesTextFormat(rapidjson::Document& doc) {
+    auto responseFormatIt = doc.FindMember("response_format");
+    const bool responseFormatProvided =
+        responseFormatIt != doc.MemberEnd() && !responseFormatIt->value.IsNull();
+
+    auto textIt = doc.FindMember("text");
+    if (textIt == doc.MemberEnd() || textIt->value.IsNull()) {
+        return absl::OkStatus();
+    }
+    if (!textIt->value.IsObject()) {
+        return absl::InvalidArgumentError("text is not an object");
+    }
+    const auto textObj = textIt->value.GetObject();
+    auto formatIt = textObj.FindMember("format");
+    if (formatIt == textObj.MemberEnd() || formatIt->value.IsNull()) {
+        return absl::OkStatus();
+    }
+    if (!formatIt->value.IsObject()) {
+        return absl::InvalidArgumentError("text.format is not an object");
+    }
+    if (responseFormatProvided) {
+        return absl::InvalidArgumentError("Provide only one of response_format or text.format");
+    }
+
+    const auto formatObj = formatIt->value.GetObject();
+    auto typeIt = formatObj.FindMember("type");
+    if (typeIt == formatObj.MemberEnd() || !typeIt->value.IsString()) {
+        return absl::InvalidArgumentError("text.format.type is not a valid string");
+    }
+
+    const std::string formatType = typeIt->value.GetString();
+    if (formatType == "text") {
+        return absl::OkStatus();
+    }
+
+    rapidjson::Value normalizedFormat(rapidjson::kObjectType);
+    auto& allocator = doc.GetAllocator();
+
+    if (formatType == "json_schema" && !formatObj.HasMember("json_schema")) {
+        normalizedFormat.AddMember("type", rapidjson::Value("json_schema", allocator), allocator);
+        rapidjson::Value jsonSchema(rapidjson::kObjectType);
+        for (auto it = formatObj.MemberBegin(); it != formatObj.MemberEnd(); ++it) {
+            if (!it->name.IsString() || std::string(it->name.GetString()) == "type") {
+                continue;
+            }
+            rapidjson::Value key(it->name, allocator);
+            rapidjson::Value value(it->value, allocator);
+            jsonSchema.AddMember(key, value, allocator);
+        }
+        normalizedFormat.AddMember("json_schema", jsonSchema, allocator);
+    } else {
+        normalizedFormat.CopyFrom(formatIt->value, allocator);
+    }
+
+    if (responseFormatIt != doc.MemberEnd()) {
+        responseFormatIt->value.CopyFrom(normalizedFormat, allocator);
+    } else {
+        rapidjson::Value key("response_format", allocator);
+        doc.AddMember(key, normalizedFormat, allocator);
+    }
+    return absl::OkStatus();
+}
+
 static std::string joinServerSideEvents(const std::vector<std::string>& events) {
     if (events.empty()) {
         return "";
@@ -255,6 +359,7 @@ static absl::StatusOr<ResponsesInputItemKind> classifyInputItem(const rapidjson:
 // rapidjson messages array) is provided by the Sink template parameter, which
 // must implement:
 //   absl::Status extractContent(itemObj, index, std::string& outText);
+//   absl::Status extractToolOutput(itemObj, std::string& outText);
 //   void emitToolMessage(callId, output);
 //   void emitMessage(role, contentText, reasoning);  // reasoning empty -> skip
 //   void emitAssistantWithToolCalls(contentText, reasoning, toolCalls);
@@ -322,9 +427,9 @@ private:
         if (callIdIt != itemObj.MemberEnd() && callIdIt->value.IsString())
             callId = callIdIt->value.GetString();
         std::string output;
-        auto outputIt = itemObj.FindMember("output");
-        if (outputIt != itemObj.MemberEnd() && outputIt->value.IsString())
-            output = outputIt->value.GetString();
+        auto status = sink.extractToolOutput(itemObj, output);
+        if (!status.ok())
+            return status;
         sink.emitToolMessage(callId, output);
         return absl::OkStatus();
     }
@@ -397,14 +502,14 @@ public:
     explicit ChatHistorySink(ov::genai::ChatHistory& chatHistory) :
         chatHistory(chatHistory) {
         scratchDoc.SetObject();
-        pendingContentArray.SetArray();
+        currentContentArray.SetArray();
     }
 
     absl::Status extractContent(const rapidjson::Value::ConstObject& itemObj,
         rapidjson::SizeType /*index*/, std::string& outText) {
         outText.clear();
-        hasPendingContent = false;
-        pendingContentArray.SetArray();
+        hasCurrentContentArray = false;
+        currentContentArray.SetArray();
         auto contentIt = itemObj.FindMember("content");
         if (contentIt == itemObj.MemberEnd())
             return absl::InvalidArgumentError("input item is missing required content field");
@@ -434,7 +539,7 @@ public:
                 rapidjson::Value textEntry(rapidjson::kObjectType);
                 textEntry.AddMember("type", rapidjson::Value("text", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
                 textEntry.AddMember("text", rapidjson::Value(textIt->value.GetString(), scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
-                pendingContentArray.PushBack(textEntry, scratchDoc.GetAllocator());
+                currentContentArray.PushBack(textEntry, scratchDoc.GetAllocator());
             } else if (type == "input_image") {
                 auto status = buildImageEntry(contentObj);
                 if (!status.ok())
@@ -449,7 +554,47 @@ public:
         }
         // Preserve content array for downstream processors
         // (ImageDecodingProcessor for VLM, TextContentNormalizationProcessor for LM).
-        hasPendingContent = true;
+        hasCurrentContentArray = true;
+        return absl::OkStatus();
+    }
+
+    // Extract the `output` field of a function_call_output item into either a
+    // plain string or a text-typed content array preserved in currentContentArray.
+    // The text-typed array is left for TextContentNormalizationProcessor to flatten,
+    // matching how extractContent handles user/system input content arrays.
+    absl::Status extractToolOutput(const rapidjson::Value::ConstObject& itemObj,
+        std::string& outText) {
+        outText.clear();
+        hasCurrentContentArray = false;
+        currentContentArray.SetArray();
+        auto outputIt = itemObj.FindMember("output");
+        if (outputIt == itemObj.MemberEnd())
+            return absl::InvalidArgumentError("function_call_output item is missing required output field");
+        if (outputIt->value.IsString()) {
+            outText = outputIt->value.GetString();
+            return absl::OkStatus();
+        }
+        if (!outputIt->value.IsArray())
+            return absl::InvalidArgumentError("function_call_output.output must be a string or array");
+        for (const auto& contentItem : outputIt->value.GetArray()) {
+            if (!contentItem.IsObject())
+                return absl::InvalidArgumentError("function_call_output.output items must be objects");
+            auto contentObj = contentItem.GetObject();
+            auto typeIt = contentObj.FindMember("type");
+            if (typeIt == contentObj.MemberEnd() || !typeIt->value.IsString())
+                return absl::InvalidArgumentError("function_call_output.output item type is missing or invalid");
+            const std::string type = typeIt->value.GetString();
+            if (type != "input_text" && type != "output_text")
+                return absl::InvalidArgumentError(absl::StrCat("unsupported function_call_output.output item type: ", type));
+            auto textIt = contentObj.FindMember("text");
+            if (textIt == contentObj.MemberEnd() || !textIt->value.IsString())
+                return absl::InvalidArgumentError(absl::StrCat(type, " requires a valid text field"));
+            rapidjson::Value textEntry(rapidjson::kObjectType);
+            textEntry.AddMember("type", rapidjson::Value("text", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
+            textEntry.AddMember("text", rapidjson::Value(textIt->value.GetString(), scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
+            currentContentArray.PushBack(textEntry, scratchDoc.GetAllocator());
+        }
+        hasCurrentContentArray = true;
         return absl::OkStatus();
     }
 
@@ -458,20 +603,13 @@ public:
         chatHistory.last()["role"] = "tool";
         if (!callId.empty())
             chatHistory.last()["tool_call_id"] = callId;
-        chatHistory.last()["content"] = output;
+        setLastMessageContent(output);
     }
 
     void emitMessage(const std::string& role, const std::string& contentText, const std::string& reasoning) {
         chatHistory.push_back({});
         chatHistory.last()["role"] = role;
-        if (hasPendingContent) {
-            // Preserve the content array for ImageDecodingProcessor (VLM) or
-            // TextContentNormalizationProcessor (LM).
-            chatHistory.last()["content"] = rapidJsonValueToJsonContainer(pendingContentArray);
-            hasPendingContent = false;
-        } else {
-            chatHistory.last()["content"] = contentText;
-        }
+        setLastMessageContent(contentText);
         if (!reasoning.empty())
             chatHistory.last()["reasoning_content"] = reasoning;
     }
@@ -480,12 +618,7 @@ public:
         const std::vector<const rapidjson::Value*>& toolCalls) {
         chatHistory.push_back({});
         chatHistory.last()["role"] = "assistant";
-        if (hasPendingContent) {
-            chatHistory.last()["content"] = rapidJsonValueToJsonContainer(pendingContentArray);
-            hasPendingContent = false;
-        } else {
-            chatHistory.last()["content"] = contentText;
-        }
+        setLastMessageContent(contentText);
         if (!reasoning.empty())
             chatHistory.last()["reasoning_content"] = reasoning;
         auto& alloc = scratchDoc.GetAllocator();
@@ -511,8 +644,17 @@ public:
     }
 
 private:
+    void setLastMessageContent(const std::string& contentText) {
+        if (hasCurrentContentArray) {
+            chatHistory.last()["content"] = rapidJsonValueToJsonContainer(currentContentArray);
+            hasCurrentContentArray = false;
+            return;
+        }
+        chatHistory.last()["content"] = contentText;
+    }
+
     // Append a {"type":"image_url","image_url":{"url":"..."}} entry to
-    // pendingContentArray. Actual image decoding is deferred to
+    // currentContentArray. Actual image decoding is deferred to
     // ImageDecodingProcessor; the URL is preserved so it can locate the image later.
     absl::Status buildImageEntry(const rapidjson::Value::ConstObject& contentObj) {
         auto imageUrlIt = contentObj.FindMember("image_url");
@@ -537,12 +679,12 @@ private:
         rapidjson::Value entry(rapidjson::kObjectType);
         entry.AddMember("type", rapidjson::Value("image_url", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
         entry.AddMember("image_url", imageUrlObj, scratchDoc.GetAllocator());
-        pendingContentArray.PushBack(entry, scratchDoc.GetAllocator());
+        currentContentArray.PushBack(entry, scratchDoc.GetAllocator());
         return absl::OkStatus();
     }
 
     // Append a {"type":"input_audio","input_audio":{"data":"..."}} entry to
-    // pendingContentArray. Actual audio decoding is deferred to AudioDecodingProcessor.
+    // currentContentArray. Actual audio decoding is deferred to AudioDecodingProcessor.
     absl::Status buildAudioEntry(const rapidjson::Value::ConstObject& contentObj) {
         auto inputAudioIt = contentObj.FindMember("input_audio");
         if (inputAudioIt == contentObj.MemberEnd() || !inputAudioIt->value.IsObject())
@@ -564,19 +706,19 @@ private:
         rapidjson::Value entry(rapidjson::kObjectType);
         entry.AddMember("type", rapidjson::Value("input_audio", scratchDoc.GetAllocator()), scratchDoc.GetAllocator());
         entry.AddMember("input_audio", audioDataObj, scratchDoc.GetAllocator());
-        pendingContentArray.PushBack(entry, scratchDoc.GetAllocator());
+        currentContentArray.PushBack(entry, scratchDoc.GetAllocator());
         return absl::OkStatus();
     }
 
     ov::genai::ChatHistory& chatHistory;
     rapidjson::Document scratchDoc;
-    rapidjson::Value pendingContentArray{rapidjson::kArrayType};
-    bool hasPendingContent = false;
+    rapidjson::Value currentContentArray{rapidjson::kArrayType};
+    bool hasCurrentContentArray = false;
 };
 
 // --- Request parsing ---
 
-absl::Status OpenAIResponsesHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+absl::Status OpenAIResponsesHandler::parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
     std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
     if (status != absl::OkStatus())
@@ -643,7 +785,7 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
     }
 
     // reasoning: object; optional
-    // OpenAI Responses API reasoning parameter. Any effort value enables thinking mode.
+    // OpenAI Responses API reasoning parameter.
     it = doc.FindMember("reasoning");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsObject()) {
@@ -656,20 +798,9 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
                 return absl::InvalidArgumentError("reasoning.effort is not a string");
             }
             const std::string effort = effortIt->value.GetString();
-            if (effort != "low" && effort != "medium" && effort != "high") {
-                return absl::InvalidArgumentError("reasoning.effort must be one of: low, medium, high");
-            }
-            // Inject enable_thinking: true into chat_template_kwargs (merge with existing if present)
-            auto kwargsIt = doc.FindMember("chat_template_kwargs");
-            if (kwargsIt != doc.MemberEnd() && kwargsIt->value.IsObject()) {
-                // Merge into existing kwargs
-                if (kwargsIt->value.FindMember("enable_thinking") == kwargsIt->value.MemberEnd()) {
-                    kwargsIt->value.AddMember("enable_thinking", true, doc.GetAllocator());
-                }
-            } else {
-                rapidjson::Value kwargs(rapidjson::kObjectType);
-                kwargs.AddMember("enable_thinking", true, doc.GetAllocator());
-                doc.AddMember("chat_template_kwargs", kwargs, doc.GetAllocator());
+            auto status = applyReasoningEffort(effort);
+            if (!status.ok()) {
+                return status;
             }
         }
         // summary field is accepted but ignored
@@ -708,6 +839,11 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
     // specific part of max_output_tokens validation
     if (request.maxTokens == 0) {
         return absl::InvalidArgumentError("max_output_tokens value should be greater than 0");
+    }
+
+    auto textFormatStatus = injectResponseFormatFromResponsesTextFormat(doc);
+    if (!textFormatStatus.ok()) {
+        return textFormatStatus;
     }
 
     return parseResponseFormat();
@@ -795,13 +931,12 @@ void OpenAIResponsesHandler::serializeCommonResponseParameters(Writer<StringBuff
         writer.String("temperature");
         writer.Double(static_cast<double>(request.temperature.value()));
     }
+
+    rapidjson::Document textFormat = buildResponsesTextFormat(doc);
     writer.String("text");
     writer.StartObject();
     writer.String("format");
-    writer.StartObject();
-    writer.String("type");
-    writer.String("text");
-    writer.EndObject();
+    textFormat.Accept(writer);
     writer.EndObject();
     serializeToolChoice(writer);
     serializeTools(writer);
@@ -1045,72 +1180,34 @@ std::string OpenAIResponsesHandler::serializeUnaryResponseImpl(const std::vector
 
 // --- Unary response serialization ---
 
-std::string OpenAIResponsesHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
+std::string OpenAIResponsesHandler::serializeUnaryResponse(
+    const std::vector<Delta>& deltas,
+    ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
-    std::vector<ParsedOutput> parsedOutputs;
-    usage.completionTokens = 0;
-    constexpr bool echo = false;  // echo is not supported in Responses API
-    ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
-    for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
-        updateUsage(usage, generationOutput.generated_ids, echo);
-        parsedOutputs.push_back(parseOutputIfNeeded(generationOutput.generated_ids));
-        if (generationOutput.finish_reason == ov::genai::GenerationFinishReason::LENGTH) {
-            responsesFinishReason = ov::genai::GenerationFinishReason::LENGTH;
-        }
-    }
-    return serializeUnaryResponseImpl(parsedOutputs, responsesFinishReason);
+    ParsedOutput parsedOutput = parsedOutputFromDeltas(deltas);
+    return serializeUnaryResponseImpl({std::move(parsedOutput)}, finishReason);
 }
 
-std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::EncodedResults& results) {
+std::string OpenAIResponsesHandler::serializeUnaryResponse(
+    const std::vector<std::vector<Delta>>& allDeltas,
+    const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
+    const std::vector<UnaryChoiceLogprobs>& /*logprobData*/) {
     OVMS_PROFILE_FUNCTION();
-    usage.promptTokens = results.perf_metrics.get_num_input_tokens();
-    usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
-    if (results.finish_reasons.empty()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary LM responses generation result, defaulting to STOP");
-    }
+    // Responses API does not expose logprobs; logprobData is intentionally unused.
     std::vector<ParsedOutput> parsedOutputs;
-    ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
-    for (const auto& tokens : results.tokens) {
-        parsedOutputs.push_back(parseOutputIfNeeded(tokens));
+    parsedOutputs.reserve(allDeltas.size());
+    for (const auto& deltas : allDeltas) {
+        parsedOutputs.push_back(parsedOutputFromDeltas(deltas));
     }
-    for (const auto& finishReason : results.finish_reasons) {
-        if (finishReason == ov::genai::GenerationFinishReason::LENGTH) {
-            responsesFinishReason = ov::genai::GenerationFinishReason::LENGTH;
-            break;
+    const ov::genai::GenerationFinishReason finishReason = [&]() {
+        for (const auto& fr : finishReasons) {
+            if (fr == ov::genai::GenerationFinishReason::LENGTH) {
+                return fr;
+            }
         }
-    }
-    return serializeUnaryResponseImpl(parsedOutputs, responsesFinishReason);
-}
-
-std::string OpenAIResponsesHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) {
-    OVMS_PROFILE_FUNCTION();
-    usage.promptTokens = results.perf_metrics.get_num_input_tokens();
-    usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
-    if (results.finish_reasons.empty()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary VLM responses generation result, defaulting to STOP");
-    }
-    // Usage is already correctly set from perf_metrics above — no need for updateUsage.
-    std::vector<ParsedOutput> parsedOutputs;
-    if (!textResponse.empty()) {
-        if (outputParser != nullptr) {
-            // Same workaround as in chat completions
-            auto generatedTokens = encodeTextToTokens(textResponse);
-            parsedOutputs.push_back(parseOutputIfNeeded(generatedTokens));
-        } else {
-            // Fast path: no output parser, use decoded text directly.
-            ParsedOutput output;
-            output.content = textResponse;
-            parsedOutputs.push_back(std::move(output));
-        }
-    }
-    ov::genai::GenerationFinishReason responsesFinishReason = ov::genai::GenerationFinishReason::STOP;
-    for (const auto& finishReason : results.finish_reasons) {
-        if (finishReason == ov::genai::GenerationFinishReason::LENGTH) {
-            responsesFinishReason = ov::genai::GenerationFinishReason::LENGTH;
-            break;
-        }
-    }
-    return serializeUnaryResponseImpl(parsedOutputs, responsesFinishReason);
+        return finishReasons.empty() ? ov::genai::GenerationFinishReason::STOP : finishReasons[0];
+    }();
+    return serializeUnaryResponseImpl(parsedOutputs, finishReason);
 }
 
 // --- Streaming event building blocks ---
@@ -1438,6 +1535,65 @@ std::string OpenAIResponsesHandler::serializeAudioDeltaEvent(const std::string& 
     return buffer.GetString();
 }
 
+// --- Per-delta-type event composition for serializeStreamingChunk ---
+
+void OpenAIResponsesHandler::appendAudioDeltaEvents(const AudioDelta& d, std::vector<std::string>& events) {
+    events.emplace_back(serializeAudioDeltaEvent(d.base64));
+}
+
+void OpenAIResponsesHandler::appendReasoningDeltaEvents(const ReasoningDelta& d, std::vector<std::string>& events, const std::string& reasoningItemId) {
+    if (!responsesState.reasoningInitialized) {
+        events.emplace_back(serializeReasoningOutputItemAddedEvent(reasoningItemId));
+        events.emplace_back(serializeReasoningSummaryPartAddedEvent(reasoningItemId));
+        responsesState.reasoningInitialized = true;
+    }
+    responsesState.reasoningText += d.text;
+    events.emplace_back(serializeReasoningSummaryTextDeltaEvent(reasoningItemId, d.text));
+}
+
+void OpenAIResponsesHandler::appendContentDeltaEvents(const ContentDelta& d, std::vector<std::string>& events, const std::string& outputItemId, const std::string& reasoningItemId) {
+    if (d.text.empty()) {
+        return;
+    }
+    if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
+        events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
+        events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
+        events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
+        responsesState.reasoningCompleted = true;
+    }
+    const uint64_t msgIdx = responsesState.reasoningInitialized ? 1 : 0;
+    if (!responsesState.messageInitialized) {
+        events.emplace_back(serializeOutputItemAddedEvent(outputItemId, msgIdx));
+        events.emplace_back(serializeContentPartAddedEvent(outputItemId, msgIdx));
+        responsesState.messageInitialized = true;
+    }
+    responsesState.outputText += d.text;
+    events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, d.text, msgIdx));
+}
+
+void OpenAIResponsesHandler::appendToolCallDeltaEvents(const ToolCallDelta& d, std::vector<std::string>& events, const std::string& reasoningItemId) {
+    if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
+        events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
+        events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
+        events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
+        responsesState.reasoningCompleted = true;
+    }
+    const uint64_t baseIdx = responsesState.reasoningInitialized ? 1 : 0;
+    const uint64_t tcOutputIdx = baseIdx + static_cast<uint64_t>(d.index);
+    if (d.name) {
+        while (static_cast<int>(responsesState.toolCalls.size()) <= d.index)
+            responsesState.toolCalls.push_back(ToolCall{});
+        responsesState.toolCalls[d.index].id = d.id ? *d.id : "";
+        responsesState.toolCalls[d.index].name = *d.name;
+        responsesState.toolCalls[d.index].arguments = "";
+        events.emplace_back(serializeFunctionCallOutputItemAddedEvent(responsesState.toolCalls[d.index], tcOutputIdx));
+    }
+    if (!d.arguments.empty() && static_cast<int>(responsesState.toolCalls.size()) > d.index) {
+        responsesState.toolCalls[d.index].arguments += d.arguments;
+        events.emplace_back(serializeFunctionCallArgumentsDeltaEvent(responsesState.toolCalls[d.index].id, d.arguments, tcOutputIdx));
+    }
+}
+
 // --- Top-level streaming methods ---
 
 std::string OpenAIResponsesHandler::serializeStreamingCreatedEvent() {
@@ -1472,7 +1628,7 @@ std::string OpenAIResponsesHandler::serializeStreamingInProgressEvent() {
     return buffer.GetString();
 }
 
-std::string OpenAIResponsesHandler::serializeStreamingChunk(rapidjson::Document parsedDelta, ov::genai::GenerationFinishReason finishReason) {
+std::string OpenAIResponsesHandler::serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
     const auto createdAt = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
     const std::string responseId = "resp-" + std::to_string(createdAt);
@@ -1490,96 +1646,14 @@ std::string OpenAIResponsesHandler::serializeStreamingChunk(rapidjson::Document 
         events.emplace_back(std::move(inProgressEvent));
     }
 
-    // parsedDelta is a pre-parsed Document produced by OVMSTextStreamer::flushChunk or AudioStreamer.
-    // Shape: {"delta":{...}} for content/reasoning/tool_calls, or an empty Document{}
-    // for finish-only chunks, or {"_audio_delta":"<base64>"} for audio chunks.
-    if (parsedDelta.HasMember("_audio_delta") && parsedDelta["_audio_delta"].IsString()) {
-        // Audio streaming chunk from speech_streamer
-        const std::string audioB64 = parsedDelta["_audio_delta"].GetString();
-        events.emplace_back(serializeAudioDeltaEvent(audioB64));
-    } else if (parsedDelta.HasMember("delta") && parsedDelta["delta"].IsObject()) {
-        const auto& deltaObj = parsedDelta["delta"];
-        if (deltaObj.HasMember("reasoning_content") && deltaObj["reasoning_content"].IsString()) {
-            // Reasoning chunk
-            if (!responsesState.reasoningInitialized) {
-                events.emplace_back(serializeReasoningOutputItemAddedEvent(reasoningItemId));
-                events.emplace_back(serializeReasoningSummaryPartAddedEvent(reasoningItemId));
-                responsesState.reasoningInitialized = true;
-            }
-            const std::string reasoningText = deltaObj["reasoning_content"].GetString();
-            responsesState.reasoningText += reasoningText;
-            events.emplace_back(serializeReasoningSummaryTextDeltaEvent(reasoningItemId, reasoningText));
-        } else if (deltaObj.HasMember("content") && deltaObj["content"].IsString()) {
-            const std::string contentText = deltaObj["content"].GetString();
-            if (!contentText.empty()) {
-                // Content chunk - close reasoning if it was active, init message if needed
-                if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
-                    events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
-                    events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
-                    events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
-                    responsesState.reasoningCompleted = true;
-                }
-                const uint64_t msgIdx = responsesState.reasoningInitialized ? 1 : 0;
-                if (!responsesState.messageInitialized) {
-                    events.emplace_back(serializeOutputItemAddedEvent(outputItemId, msgIdx));
-                    events.emplace_back(serializeContentPartAddedEvent(outputItemId, msgIdx));
-                    responsesState.messageInitialized = true;
-                }
-                responsesState.outputText += contentText;
-                events.emplace_back(serializeOutputTextDeltaEvent(outputItemId, contentText, msgIdx));
-            }
-        } else if (deltaObj.HasMember("tool_calls") && deltaObj["tool_calls"].IsArray()) {
-            // Tool call chunk - close reasoning if active
-            if (responsesState.reasoningInitialized && !responsesState.reasoningCompleted) {
-                events.emplace_back(serializeReasoningSummaryTextDoneEvent(reasoningItemId));
-                events.emplace_back(serializeReasoningSummaryPartDoneEvent(reasoningItemId));
-                events.emplace_back(serializeReasoningOutputItemDoneEvent(reasoningItemId));
-                responsesState.reasoningCompleted = true;
-            }
-            const auto& toolCallsArr = deltaObj["tool_calls"];
-            for (rapidjson::SizeType i = 0; i < toolCallsArr.Size(); ++i) {
-                const auto& tc = toolCallsArr[i];
-                int tcIndex = tc.HasMember("index") ? tc["index"].GetInt() : 0;
-                // Determine the output index for this tool call
-                const uint64_t baseIdx = responsesState.reasoningInitialized ? 1 : 0;
-                const uint64_t tcOutputIdx = baseIdx + static_cast<uint64_t>(tcIndex);
-                // Determine if this is a new tool call (has function name)
-                bool isNewToolCall = false;
-                std::string funcName;
-                std::string tcId;
-                std::string argDelta;
-                if (tc.HasMember("function") && tc["function"].IsObject()) {
-                    const auto& funcObj = tc["function"];
-                    if (funcObj.HasMember("name") && funcObj["name"].IsString()) {
-                        funcName = funcObj["name"].GetString();
-                        isNewToolCall = true;
-                    }
-                    if (funcObj.HasMember("arguments") && funcObj["arguments"].IsString()) {
-                        argDelta = funcObj["arguments"].GetString();
-                    }
-                }
-                if (tc.HasMember("id") && tc["id"].IsString()) {
-                    tcId = tc["id"].GetString();
-                }
-                if (isNewToolCall) {
-                    // Ensure we have enough entries in our tracking vector
-                    while (static_cast<int>(responsesState.toolCalls.size()) <= tcIndex) {
-                        responsesState.toolCalls.push_back(ToolCall{});
-                    }
-                    responsesState.toolCalls[tcIndex].id = tcId;
-                    responsesState.toolCalls[tcIndex].name = funcName;
-                    responsesState.toolCalls[tcIndex].arguments = "";
-                    events.emplace_back(serializeFunctionCallOutputItemAddedEvent(responsesState.toolCalls[tcIndex], tcOutputIdx));
-                }
-                if (!argDelta.empty() && static_cast<int>(responsesState.toolCalls.size()) > tcIndex) {
-                    responsesState.toolCalls[tcIndex].arguments += argDelta;
-                    events.emplace_back(serializeFunctionCallArgumentsDeltaEvent(responsesState.toolCalls[tcIndex].id, argDelta, tcOutputIdx));
-                }
-            }
-        }
-        // Empty delta object (no recognized member) — finish-only chunk, no events to emit here.
-    }
-    // Empty Document (no "delta" member) — finish-only chunk; lifecycle events already emitted above.
+    std::visit(overloaded{
+                   [&](const AudioDelta& d) { appendAudioDeltaEvents(d, events); },
+                   [&](const ReasoningDelta& d) { appendReasoningDeltaEvents(d, events, reasoningItemId); },
+                   [&](const ContentDelta& d) { appendContentDeltaEvents(d, events, outputItemId, reasoningItemId); },
+                   [&](const ToolCallDelta& d) { appendToolCallDeltaEvents(d, events, reasoningItemId); },
+                   [&](const FinishDelta&) {},
+               },
+        delta);
 
     if (finishReason != ov::genai::GenerationFinishReason::NONE) {
         // Close any open reasoning that wasn't closed by content transition

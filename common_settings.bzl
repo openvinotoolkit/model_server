@@ -252,6 +252,26 @@ COMMON_FUZZER_LINKOPTS = [
 ]
 COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"]
 COMMON_DEFINES = DEFINES_PYTHON + DEFINES_MEDIAPIPE
+COPTS_CLOUD = select({
+    "//conditions:default": ["-DCLOUD_DISABLE=1"],
+    "//:not_disable_cloud": ["-DCLOUD_DISABLE=0"],
+})
+COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_CLOUD
+
+def ovms_cc_test_library(**kwargs):
+    """cc_library wrapper with defaults suited for test libraries (linkstatic, alwayslink, test copts)."""
+    if "copts" not in kwargs:
+        kwargs["copts"] = COPTS_TESTS
+    if "additional_copts" in kwargs:
+        kwargs["copts"] = kwargs["copts"] + kwargs.pop("additional_copts")
+    if "local_defines" not in kwargs:
+        kwargs["local_defines"] = COMMON_LOCAL_DEFINES
+    if "linkstatic" not in kwargs:
+        kwargs["linkstatic"] = 1
+    if "alwayslink" not in kwargs:
+        kwargs["alwayslink"] = True
+    native.cc_library(**kwargs)
+
 PYBIND_DEPS = [
     "//third_party:python3",
     "@pybind11//:pybind11_embed",

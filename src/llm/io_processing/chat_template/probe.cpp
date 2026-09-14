@@ -96,6 +96,7 @@ static bool analyzeProbeToolArgumentResults(bool strOk, const std::string& strOu
         return output.find("\"" + PROBE_NEEDLE + "\": \"") != std::string::npos ||
                output.find("\"" + PROBE_NEEDLE + "\":\"") != std::string::npos ||
                output.find("<parameter=" + PROBE_NEEDLE + ">") != std::string::npos ||
+               output.find("<atem:parameter name=\"" + PROBE_NEEDLE + "\">") != std::string::npos ||
                output.find("<param name=\"" + PROBE_NEEDLE + "\">") != std::string::npos ||
                output.find(PROBE_NEEDLE + ":<|") != std::string::npos ||
                output.find(PROBE_NEEDLE + "=") != std::string::npos;
@@ -181,6 +182,37 @@ bool probeChatTemplateReasoning(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
 
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Reasoning probe: no reasoning field supported by template");
     return false;
+}
+
+bool probeChatTemplateToolResponse(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps) {
+    if (tokenizer.get_chat_template().empty()) {
+        return true;
+    }
+
+    try {
+        const std::string toolDefinitions = R"([{"type": "function", "function": {"name": "cat", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"file_name": {"type": "string", "description": "The name of the file from current directory to display. No path is allowed. "}}, "required": ["file_name"]}, "response": {"type": "dict", "properties": {")" + PROBE_NEEDLE + R"(": {"type": "string", "description": "The content of the file."}}}}}])";
+
+        ov::genai::ChatHistory history;
+        history.set_tools(ov::genai::JsonContainer::from_json_string(toolDefinitions));
+        history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
+        history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"assistant","content":"Hello"})"));
+
+        std::string output = tokenizer.apply_chat_template(history, true);
+
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: output '{}'", output);
+
+        if (output.find(PROBE_NEEDLE) != std::string::npos) {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: response field is rendered setting supportsResponseFieldInToolDefinition to true");
+            caps.supportsResponseFieldInToolDefinition = true;
+        } else {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: response field is not rendered setting supportsResponseFieldInToolDefinition to false");
+            caps.supportsResponseFieldInToolDefinition = false;
+        }
+    } catch (...) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: not supported");
+        return false;
+    }
+    return true;
 }
 
 static std::pair<bool, std::string> renderProbeMessage(ov::genai::Tokenizer& tokenizer, const std::string& assistantMsg) {

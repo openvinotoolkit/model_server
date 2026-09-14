@@ -312,6 +312,9 @@ public:
      */
     uint32_t resourcesCleanerPollWaitSeconds() const;
 
+    uint32_t idleUnloadTimeoutSeconds() const;
+
+    bool disableInputCountValidation() const;
     bool allowCredentials() const;
     const std::string& allowedOrigins() const;
     const std::string& allowedMethods() const;

@@ -55,7 +55,9 @@ Some of the exceptions include:
 
 ### Text Generation Models
 
-#### Text Generation CPU Deployment
+When `--target_device` is omitted, no device field is written to the graph configuration and OVMS auto-detects the best available device at startup. Pass `--target_device` explicitly to pin execution to a specific device.
+
+#### Text Generation (Auto-detected Device)
 ```console
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models
 ```

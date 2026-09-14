@@ -89,7 +89,7 @@ http_archive(
     build_file = "@mediapipe//third_party:zlib.BUILD",
     sha256 = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
     strip_prefix = "zlib-1.3.2",
-    url = "http://zlib.net/fossils/zlib-1.3.2.tar.gz",
+    url = "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
 )
 
 # RapidJSON
@@ -138,7 +138,7 @@ cc_library(
 
 new_local_repository(
     name = "windows_curl",
-    path = "C:\\opt\\curl-8.21.0_4-win64-mingw",
+    path = "C:\\opt\\curl-8.21.0_7-win64-mingw",
     build_file_content = """
 cc_import(
     name = "curl_lib",
@@ -177,7 +177,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "12e8d511cfbc5f471c498278a65a02dd250963e8", # top of mediapipe main branch as of 26.11.2025
+    commit = "b27f0ca7d4fe36175a9f725844cb64b3d3e18959", # top of mediapipe main branch as of 13.09.2026
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -197,8 +197,10 @@ http_archive(
 # Node dependencies
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "5aae76dced38f784b58d9776e4ab12278bc156a9ed2b1d9fcd3e39921dc88fda",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.7.1/rules_nodejs-5.7.1.tar.gz"],
+    sha256 = "d3476f6dc146766d3f35aa8aa39e65df6467ed7dc8dfdcabf9b7cad464516cd5",
+    strip_prefix = "rules_nodejs-5.7.1",
+    type = "tar.gz",
+    urls = ["https://codeload.github.com/bazelbuild/rules_nodejs/tar.gz/refs/tags/5.7.1"],
 )
 
 load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
@@ -239,14 +241,8 @@ http_archive(
 )
 
 # 2020-08-21 SHA 3a0d4d22c5ae0b9a2216988411cfa6bf860cc372
-http_archive(
-    name = "com_github_glog_glog",
-    strip_prefix = "glog-3a0d4d22c5ae0b9a2216988411cfa6bf860cc372",
-    sha256 = "170d08f80210b82d95563f4723a15095eff1aad1863000e8eeb569c96a98fefb",
-    urls = [
-        "https://github.com/google/glog/archive/3a0d4d22c5ae0b9a2216988411cfa6bf860cc372.zip",
-    ],
-)
+load("@ovms//third_party/glog:glog.bzl", "glog_dependencies")
+glog_dependencies()
 
 load("@mediapipe//third_party:external_files.bzl", "external_files")
 external_files()
@@ -284,7 +280,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
-    path = "C:\\opt\\opencv_4.13.0",
+    path = "C:\\opt\\opencv_4.14.0",
 )
 
 new_local_repository(
@@ -483,26 +479,11 @@ drogon_cpp()
 load("@ovms//third_party/espeak_ng:espeak_ng.bzl", "espeak_ng")
 espeak_ng()
 
-# Azure Storage SDK
+# Azure SDK for C++ (azure-core, azure-storage-blobs, azure-storage-files-shares)
 new_local_repository(
     name = "azure",
     build_file = "@//third_party/azure:BUILD",
-    path = "/azure/azure-storage-cpp",
-)
-
-# Azure Storage SDK dependency - cpprest
-new_local_repository(
-    name = "cpprest",
-    build_file = "@//third_party/cpprest:BUILD",
-    path = "/azure/cpprestsdk",
-)
-
-# Boost (needed for Azure Storage SDK)
-
-new_local_repository(
-    name = "boost",
-    path = "/usr/local/lib/",
-    build_file = "@//third_party/boost:BUILD"
+    path = "/azure-sdk-install",
 )
 
 # Google Cloud SDK
@@ -595,10 +576,12 @@ new_local_repository(
     path = "third_party/mediapipe_calculators",
 )
 
-git_repository(
+http_archive(
     name = "nlohmann_json",
-    remote = "https://github.com/nlohmann/json/",
-    tag = "v3.11.3",
+    sha256 = "0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406",
+    strip_prefix = "json-3.11.3",
+    type = "tar.gz",
+    url = "https://codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.11.3",
 )
 # for rest client in unit tests (server_test.cpp)
 git_repository(

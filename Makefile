@@ -43,6 +43,7 @@ endif
 JOBS ?= $(CORES_TOTAL)
 
 
+
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu24 ubuntu22 redhat
 BASE_OS ?= ubuntu24
@@ -196,7 +197,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2026.4.0"
+PRODUCT_VERSION ?= "2026.5.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -211,9 +212,16 @@ PYTHON_CLIENT_TEST_CONTAINER_NAME ?= python-client-test$(shell date +%Y-%m-%d-%H
 
 TEST_PATH ?= tests/functional/
 
-BUILD_CUSTOM_NODES ?= false
-
 VERBOSE_LOGS ?= OFF
+
+ifneq ($(TOKEN),)
+GIT_CONFIG_FILE := .gitconfig
+GIT_CONFIG_SECRET = --secret id=gitconfig,src=$(GIT_CONFIG_FILE)
+BUILDX = buildx
+
+$(GIT_CONFIG_FILE):
+	@git config --file $@ url."https://x-access-token:$(TOKEN)@github.com/".insteadOf https://github.com/
+endif
 
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
@@ -245,12 +253,15 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
 	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)\
 	--build-arg KONFLUX=$(KONFLUX)\
-	--build-arg ESPEAK=$(ESPEAK)
+	--build-arg ESPEAK=$(ESPEAK)\
+	$(GIT_CONFIG_SECRET)
 
 
 .PHONY: default docker_build \
 
 default: docker_build
+
+ovms_builder_image targz_package ovms_release_images release_image: $(GIT_CONFIG_FILE)
 
 venv:$(ACTIVATE)
 	@echo $(BUILD_ARGS)
@@ -361,10 +372,6 @@ ifeq ($(NO_DOCKER_CACHE),true)
   endif
 endif
 
-ifeq ($(BUILD_CUSTOM_NODES),true)
-	@echo "Building custom nodes"
-	@cd src/custom_nodes && make NO_DOCKER_CACHE=$(NO_DOCKER_CACHE) BASE_OS=$(OS) BASE_IMAGE=$(BASE_IMAGE) 
-endif
 	@echo "Building docker image $(BASE_OS)"
 	# Provide metadata information into image if defined
 	@mkdir -p .workspace

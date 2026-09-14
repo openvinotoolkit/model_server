@@ -53,11 +53,11 @@
 #include "model_metric_reporter.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
-#include "modelmanager.hpp"
+#include "src/servable_management/modelmanager.hpp"
 #include "profiler.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
-#include "servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "server.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
@@ -73,6 +73,7 @@
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
+#include "src/servable_management/servable_group_manager.hpp"
 #include "kfs_frontend/kfs_request_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "deserialization_main.hpp"

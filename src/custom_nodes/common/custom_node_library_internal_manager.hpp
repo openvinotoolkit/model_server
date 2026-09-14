@@ -44,11 +44,12 @@ public:
 
 template <typename T>
 bool get_buffer(ovms::custom_nodes_common::CustomNodeLibraryInternalManager* internalManager, T** buffer, const char* buffersQueueName, uint64_t byte_size) {
+    *buffer = nullptr;
     auto buffersQueue = internalManager->getBuffersQueue(buffersQueueName);
-    if (!(buffersQueue == nullptr)) {
+    if (buffersQueue != nullptr && byte_size <= buffersQueue->getSingleBufferSize()) {
         *buffer = static_cast<T*>(buffersQueue->getBuffer());
     }
-    if (*buffer == nullptr || buffersQueue == nullptr) {
+    if (*buffer == nullptr) {
         *buffer = (T*)malloc(byte_size);
         if (*buffer == nullptr) {
             return false;

@@ -62,7 +62,7 @@ void setStringPrecision(KFSTensorOutputProto& proto);
  * - request.raw_input_content
  * - request.inputs[i].content
  */
-Status validateRequestCoherencyKFS(const KFSRequest& request, const std::string servableName, model_version_t servableVersion);
+Status validateRequestCoherencyKFS(const KFSRequest& request, const std::string& servableName, model_version_t servableVersion);
 size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision);
 int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tensor);
 class TensorInfo;

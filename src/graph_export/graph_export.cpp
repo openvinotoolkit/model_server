@@ -217,11 +217,25 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             dynamic_split_fuse: false,)";
     }
-    if (graphSettings.draftModelDirName.has_value()) {
+    if (graphSettings.draftModelDirName.has_value() || graphSettings.draftModelPath.has_value()) {
         oss << R"(
             # Speculative decoding configuration)";
-        oss << R"(
+        if (graphSettings.draftModelPath.has_value()) {
+            oss << R"(
+            draft_models_path: ")" << graphSettings.draftModelPath.value() << R"(",)";
+        } else {
+            oss << R"(
             draft_models_path: ")" << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << R"(",)";
+        }
+        if (graphSettings.draftDevice.has_value()) {
+            oss << R"(
+            draft_device: ")" << graphSettings.draftDevice.value() << R"(",)";
+        }
+        if (graphSettings.draftEagle3Mode) {
+            // draft_eagle3_mode kept for backward compat with existing pbtxt consumers; auto-detected at runtime
+            oss << R"(
+            draft_eagle3_mode: true,)";
+        }
     }
     oss << R"(
         }
@@ -322,6 +336,10 @@ node {
     if (graphSettings.pooling.has_value()) {
         oss << R"(
             pooling: )" << graphSettings.pooling.value() << R"(,)";
+    }
+    if (graphSettings.maxLength.has_value()) {
+        oss << R"(
+            max_length: )" << graphSettings.maxLength.value() << R"(,)";
     }
     if (!exportSettings.targetDevice.empty()) {
         oss << R"(

@@ -33,7 +33,7 @@
 #include "../model.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
-#include "../modelmanager.hpp"
+#include "src/servable_management/modelmanager.hpp"
 #include "../modelversionstatus.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../schema.hpp"

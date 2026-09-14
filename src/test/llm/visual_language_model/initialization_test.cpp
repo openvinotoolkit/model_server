@@ -161,7 +161,8 @@ TEST_F(VLMServableInitializationTest, determinePipelineType_LM_CB_Specified) {
     ASSERT_EQ(status, StatusCode::INTERNAL_ERROR);
 }
 
-TEST_F(VLMServableInitializationTest, draftModelProvided) {
+// Fast Draft (draft_models_path without draft_eagle3_mode) is not supported for VLM pipelines.
+TEST_F(VLMServableInitializationTest, fastDraftNotSupportedForVlm) {
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"

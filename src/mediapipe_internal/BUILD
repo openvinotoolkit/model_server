@@ -185,6 +185,7 @@ ovms_cc_library(
         "//src:libovms_version",
         "//src:libovms_execution_context",
         "//src:libovmstimer",
+        "//src:libovms_time_utils",
         "//src:libovmsprofiler",
         "//src/llm:execution_context_utils",
         "//src/utils:env_guard",

@@ -1,18 +1,20 @@
 # Starting the Server  {#ovms_docs_serving_model}
 
-There are two methods for passing to the model server information about the models and their configuration:
-- via CLI parameters - for a single model or pipeline
-- via config file in json format - for any number of models and pipelines
+There are three methods for passing model information and configuration to the model server:
+- via CLI parameters, for a single model or pipeline
+- via a config file in JSON format, for any number of classic models
+- via `graph.pbtxt` in the model folder, for all MediaPipe pipelines including generative models
 
-Note that changing configuration in runtime while serving is possible only with the config file.
-When deploying model(s) with a configuration file, you can add or delete models, as well as update their configurations in runtime, without needing to restart the server.
+Note that changing configuration at runtime while serving is possible only with the config file.
+When deploying models with a configuration file, you can add or delete models, as well as update their configurations at runtime, without restarting the server.
+Updating `graph.pbtxt` runtime parameters takes effect after the model is unloaded and reloaded (removed from `config.json` and added again, or after the service is restarted).
 
-## Serving a single Classic Model, Mediapipe, GenAI Model
+## Serving a Single Classic Model, MediaPipe, or GenAI Model
 
 ### Starting with prepared models
-Before starting the container, make sure you have [reviewed preparing model repository](models_repository.md).
+Before starting the container, make sure you have reviewed [preparing the model repository](models_repository.md).
 
-Start the model server by running the following command with your parameters: 
+Start the model server by running the following command with your parameters:
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -25,7 +27,7 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 open
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
@@ -35,9 +37,11 @@ ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_p
 :::
 ::::
 
-Server will detect the type of requested servable (classic model, generative model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `graph.pbtxt` file, which defines the Mediapipe graph structure, presence of versions directory for classic models.
+OVMS detects the type of requested servable (classic model, generative model, or MediaPipe graph) and loads it accordingly. This detection is based on the presence of a `graph.pbtxt` file, which defines the MediaPipe graph structure, and on the presence of a versions directory for classic models.
 
-When the model is generative, like copied from Hugging Face or exported using optimum-cli, all the pipeline runtime parameters can be defined with --tasks <TASK> followed by task specific options.
+When `graph.pbtxt` is missing in a generative model, OVMS attempts to determine the model use case and required parameters based on included configuration files that follow Hugging Face standards. In most cases, no extra parameters are required to deploy the model.
+
+If automatic detection cannot be done, parameters can be provided explicitly with `--task <TASK>` followed by task-specific options.
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -51,7 +55,7 @@ docker run -d --rm -v ${PWD}/<model>:/model -p 8000:8000 openvino/model_server:l
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
@@ -79,11 +83,9 @@ wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_mo
 docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 8000 --log_level DEBUG
 ```
-
-- Expose the container ports to **open ports** on your host or virtual machine. 
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 ```text
 ovms --model_path models/resnet/ --model_name resnet --port 9000 --rest_port 8000 --log_level DEBUG
@@ -106,32 +108,30 @@ hf download OpenVINO/Qwen3-0.6B-int4-ov --local-dir Qwen3-0.6B-int4-ov
 
 ```bash
 docker run -d --rm -v ${PWD}/Qwen3-0.6B-int4-ov:/model -p 8000:8000 openvino/model_server:latest \
---model_path /model/ --model_name qwen3-0.6 --rest_port 8000 --task text_generation --target_device CPU --tool_parser hermes3 --reasoning_parser qwen3
+--model_path /model/ --model_name qwen3-0.6 --rest_port 8000 --task text_generation --target_device CPU
 ```
-
-- Expose the container ports to **open ports** on your host or virtual machine. 
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 ```text
-ovms --model_path Qwen3-0.6B-int4-ov --model_name qwen3-0.6 --rest_port 8000 --task text_generation --target_device CPU --tool_parser hermes3 --reasoning_parser qwen3
+ovms --model_path Qwen3-0.6B-int4-ov --model_name qwen3-0.6 --rest_port 8000 --task text_generation --target_device CPU
 ```
 :::
 ::::
 
 The required Model Server parameters are listed below. For additional configuration options, see the [Model Server Parameters](parameters.md) section.
 
-`openvino/model_server:latest` varies by tag and build process - see tags: https://hub.docker.com/r/openvino/model_server/tags/ for a full tag list.
+`openvino/model_server:latest` varies by tag and build process. See https://hub.docker.com/r/openvino/model_server/tags/ for a full tag list.
 
 - In the command above, port 9000 is exposed for gRPC and port 8000 is exposed for REST API calls.
-- Add model_name for the client gRPC/REST API calls.
+- Add `model_name` for client gRPC/REST API calls.
 
 ### Starting the GenAI model from Hugging Face directly
 
-For models outside of OpenVINO organization follow the additional prerequisites described here: [Ovms pull mode](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_optimum_cli.md)
+For models outside the OpenVINO organization, follow the additional prerequisites described in [OVMS pull mode](./pull_optimum_cli.md).
 
-In case you do not want to prepare model repository before starting the server and you want to serve model from [HuggingFace] (https://huggingface.co/) you can just run OVMS with:
+If you do not want to prepare a model repository before starting the server and you want to serve a model directly from [Hugging Face](https://huggingface.co/), run OVMS with:
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -140,11 +140,11 @@ In case you do not want to prepare model repository before starting the server a
 
 ```text
 docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:latest \
---port 8000 --rest_port 9000 --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_OPTIONS]
+--port 9000 --rest_port 8000 --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
@@ -156,10 +156,9 @@ ovms --source_model <model_name_in_HF> --model_repository_path /models --model_n
 
 It will download required model files, prepare configuration for OVMS and start serving the model.
 
-In case of GenAI models, startup can use additional parameters specific to task. For details refer [here](./parameters.md).
+For GenAI models, startup can use additional task-specific parameters. For details, see [parameters](./parameters.md).
 
-*Note:*
-When using pull during startup you need both read and write access rights to models repository.
+> **Note:** When using pull during startup, you need both read and write permissions for the model repository.
 
 Example using `Phi-3-mini-FastDraft-50M-int8-ov` model:
 
@@ -169,23 +168,23 @@ Example using `Phi-3-mini-FastDraft-50M-int8-ov` model:
 **Required:** Docker Engine installed
 ```text
 docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:latest \
---port 8000 --rest_port 9000 --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device CPU --task text_generation
+--port 9000 --rest_port 8000 --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device CPU --task text_generation
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```bat
-ovms --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device GPU --task text_generation --port 8000 --rest_port 9000
+ovms --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device GPU --task text_generation --port 9000 --rest_port 8000
 ```
 :::
 ::::
 
 ## Serving Multiple Models
 
-To serve multiple models and pipelines from the same container you will need an additional JSON configuration file that defines each model. To use a container with several models, you need an additional JSON configuration file defining each model. `model_config_list` array that includes a collection of config objects for each served model. The `name` and the `base_path` values of the model are required for each config object.
+To serve multiple models and pipelines from the same container, you need an additional JSON configuration file that defines each model. The `model_config_list` array includes a collection of config objects for each served model. The `name` and `base_path` values are required for each config object.
 
 ```json
 {
@@ -219,14 +218,14 @@ To serve multiple models and pipelines from the same container you will need an 
       {
          "config":{
             "name":"Phi-3-mini-FastDraft-50M-int8-ov",
-            "base_path":"/models/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov/",
+            "base_path":"/models/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov/"
          }
       }
    ]
 }
 ```
 
-**How to run with ```config.json```:**
+**How to run with `config.json`:**
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -238,7 +237,7 @@ docker run --user $(id -u):$(id -g) --rm -v <models_repository>:/models:ro -p 90
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
@@ -252,7 +251,7 @@ ovms --config_path /models/config.json --port 9000 --rest_port 8000
 
 #### List models
 
-Assuming you have models repository already prepared, to check what models/graphs are servable from specified repository:
+Assuming you have a prepared model repository, use the following command to check which models/graphs are servable from the specified repository:
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -265,18 +264,17 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```text
-docker run -d --rm -v <model_repository_path>:/models:ro openvino/model_server:latest \
---model_repository_path /models --list_models
+ovms --model_repository_path <model_repository_path> --list_models
 ```
 :::
 ::::
 
-For following directory structure:
+For the following directory structure:
 ```text
 /models
 ├── meta
@@ -284,7 +282,7 @@ For following directory structure:
 │   │   └── graph.pbtxt
 │   ├── llama3.1
 │   │   └── graph.pbtxt
-├── LLama3.2
+├── llama3.2
 │   └── graph.pbtxt
 └── resnet
     └── 1
@@ -295,13 +293,13 @@ The output would be:
 ```text
 meta/llama4
 meta/llama3.1
-LLama3.2
+llama3.2
 resnet
 ```
 
 #### Enable model
 
-To add model to ovms configuration file you can either do it manually or use:
+To add a model to an OVMS configuration file, you can either do it manually or use:
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -314,10 +312,10 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
-Note: environment variable OVMS_MODEL_REPOSITORY_PATH can determine default value for --model_repository_path and --config_path which would be config.json inside model repository path.
+Note: the `OVMS_MODEL_REPOSITORY_PATH` environment variable can determine default values for `--model_repository_path` and `--config_path`, where `--config_path` defaults to `config.json` inside the model repository path.
 ```text
 export OVMS_MODEL_REPOSITORY_PATH=/models
 ovms --add_to_config --model_name <name>
@@ -325,17 +323,17 @@ ovms --add_to_config --model_name <name>
 :::
 ::::
 
-When model is directly inside models repository.
 
-*Note*:
-If you want to add model with specific path you can use ```--model_path``` parameter:
+Use this when the model is directly inside the model repository.
+
+> **Note:** If you want to add a model with a specific path, you can use the `--model_path` parameter:
 
 ```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --add_to_config --config_path <config_file_path> --model_name <name> --model_path <model_path>
 ```
 
-*Note:* Use relative or absolute paths. `config_path` is relative to the current folder. `model_path` is relative to the config file. With `model_repository_path`, `model_name` represents a folder relative to model repository path. 
+> **Note:** Use relative or absolute paths. `config_path` is relative to the current folder. `model_path` is relative to the config file. With `model_repository_path`, `model_name` represents a folder relative to the model repository path.
 For example:
 ```text
 ovms --add_to_config --config_path models/config.json --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --model_repository_path models
@@ -343,9 +341,16 @@ or
 ovms --add_to_config --config_path models/config.json --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --model_path OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov
 ```
 
+
+Adding classic models to `config.json` is also possible with extra runtime parameters:
+```text
+ovms --add_to_config --config_path config.json --model_name resnet --model_path models/resnet/resnet.xml --batch_size 1 --target_device CPU
+
+```
+
 #### Disable model
 
-If you want to remove model from configuration file you can do it either manually or use command:
+If you want to remove a model from the configuration file, you can do it manually or use the command below:
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -353,16 +358,16 @@ If you want to remove model from configuration file you can do it either manuall
 **Required:** Docker Engine installed
 ```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
---remove_from_config <config_file_directory_path> --model_name <name>
+--remove_from_config --config_path <config_file_path> --model_name <name>
 ```
 :::
 
-:::{tab-item} On Baremetal Host
+:::{tab-item} On Bare-metal Host
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```text
-ovms --remove_from_config <config_file_directory_path> --model_name <name>
+ovms --remove_from_config --config_path <config_file_path> --model_name <name>
 ```
 :::
 ::::

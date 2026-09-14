@@ -1,13 +1,5 @@
 # VLM models via OpenAI API {#ovms_demos_continuous_batching_vlm}
 
-```{toctree}
----
-maxdepth: 1
-hidden:
----
-ovms_demos_vlm_npu
-```
-
 This demo shows how to deploy Vision Language Models in the OpenVINO Model Server.
 Text generation use case is exposed via OpenAI API `chat/completions` and `responses` endpoints.
 

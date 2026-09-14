@@ -226,6 +226,13 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, u
     if (waveformPtr == nullptr && speechSize > 0) {
         throw std::runtime_error("Audio waveform pointer is null");
     }
+    // Guard against oversized synthesized audio buffers — mirrors the decode paths
+    // (readWav / readMp3) which both call validateAudioFileSizeAgainstMaxValue.
+    const size_t bytesPerSample = bitsPerSample / 8;
+    if (bytesPerSample == 0 || speechSize > std::numeric_limits<size_t>::max() / bytesPerSample) {
+        throw std::runtime_error("Synthesized audio buffer size overflows maximum representable value");
+    }
+    validateAudioFileSizeAgainstMaxValue(speechSize * bytesPerSample);
     enum : unsigned int {
         OUTPUT_PREPARATION,
         TIMER_END
@@ -243,13 +250,28 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, u
 
     auto status = drwav_init_memory_write(&wav, ppData, &pDataSize, &format, nullptr);
     if (status == DRWAV_FALSE) {
-        throw std::runtime_error("Failed to write all frames");
+        throw std::runtime_error("Failed to initialize WAV memory writer");
     }
     drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, totalSamples, waveformPtr);
+    // Finalize the WAV container before any cleanup path; drwav_uninit is safe
+    // to call even when fewer frames than expected were written.
+    drwav_uninit(&wav);
     if (framesWritten != totalSamples) {
+        drwav_free(*ppData, nullptr);
+        *ppData = nullptr;
+        pDataSize = 0;
         throw std::runtime_error("Failed to write all frames");
     }
-    drwav_uninit(&wav);
+    // Validate the actual WAV container size (includes RIFF/fmt/fact/data header
+    // overhead that the pre-write check did not account for).
+    try {
+        validateAudioFileSizeAgainstMaxValue(pDataSize);
+    } catch (...) {
+        drwav_free(*ppData, nullptr);
+        *ppData = nullptr;
+        pDataSize = 0;
+        throw;
+    }
     timer.stop(OUTPUT_PREPARATION);
     auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);

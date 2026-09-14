@@ -18,6 +18,7 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
@@ -66,23 +67,27 @@ class MistralToolParser : public BaseOutputParser {
 
 public:
     MistralToolParser() = delete;
-    explicit MistralToolParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> toolCallStartTags{"[TOOL_CALLS]", streamingParsingStartTag};
-        return toolCallStartTags;
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.tokenIdStartTags = {"[TOOL_CALLS]"};
+        cfg.startTags = {"[TOOL_CALLS]", "[{\""};  // [TOOL_CALLS] for direct text, [{" as fallback
+        return cfg;
     }
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> specialParsingStartTags{};
-        return specialParsingStartTags;
+
+    explicit MistralToolParser(ov::genai::Tokenizer& tokenizer,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    void resetState() override {
+        internalState = AWAITING_START_TAG;
+        lastJson.SetNull();
+        jsonBuilder.clear();
+        toolCallIndex = -1;
+        argumentsQuotesOpened = false;
     }
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    const std::string& getParsingEndTag() const override {
-        static const std::string toolCallEndTag = "";
-        return toolCallEndTag;
-    }
+
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };
 }  // namespace ovms

@@ -17,7 +17,10 @@
 #include <string>
 #include <vector>
 #include <utility>
+
 #include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 
 namespace ovms {
 class Gemma4ToolParser : public BaseOutputParser {
@@ -48,33 +51,30 @@ protected:
 
 public:
     Gemma4ToolParser() = delete;
-    explicit Gemma4ToolParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags = {TOOL_CALL_START_TAG};
-        return parsingStartTags;
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"<|tool_call>"};
+        cfg.tokenIdStartTags = {"<|tool_call>"};
+        cfg.endTag = "<tool_call|>";
+        cfg.needsSpecialTokens = true;
+        return cfg;
     }
 
-    const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> tagsToErase = {TURN_END_TAG, TOOL_RESPONSE_START_TAG};
-        return tagsToErase;
+    explicit Gemma4ToolParser(ov::genai::Tokenizer& tokenizer,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    void resetState() override {
+        streamingContent.clear();
+        streamingPosition = 0;
+        currentState = State::Content;
+        toolCall = {};
+        toolCallIndex = -1;
     }
 
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> beginningOnlyTags = {};
-        return beginningOnlyTags;
-    }
-
-    const std::string& getParsingEndTag() const override {
-        return TOOL_CALL_END_TAG;
-    }
-
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
+    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 
     static std::string normalizeArgStr(const std::string& arg);
     static std::string parseArrayParameter(const std::string& argumentStr);
@@ -93,8 +93,8 @@ private:
     bool parseToolCallParametersState();
     bool parseInToolCallEndedState();
 
-    std::optional<rapidjson::Document> wrapDeltaContent(const std::string& content);
-    rapidjson::Document wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
+    std::optional<Delta> wrapDeltaContent(const std::string& content);
+    ToolCallDelta wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
 
     std::string streamingContent;
     size_t streamingPosition{0};

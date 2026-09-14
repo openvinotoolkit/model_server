@@ -196,12 +196,6 @@ protected:
         SKIP_AND_EXIT_IF_NO_GPU();
         Core core;
         this->model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
-        auto input = model->get_parameters().at(0);
-        auto inputByteSize = ov::shape_size(input->get_shape());
-        auto output = model->get_results().at(0);
-        auto outputByteSize = ov::shape_size(output->get_shape());
-        inputByteSize *= sizeof(float);
-        outputByteSize *= sizeof(float);
         ov::AnyMap config = {ov::hint::performance_mode(ov::hint::PerformanceMode::THROUGHPUT),
             ov::auto_batch_timeout(0)};
         cl_platform_id platformId;
@@ -522,11 +516,6 @@ TEST_F(OpenVINOGPU, SetTensorTest) {
     const std::string inputName{"b"};
     auto input = model->get_parameters().at(0);
     auto output = model->get_results().at(0);
-    auto inputByteSize = ov::shape_size(input->get_shape());
-    auto outputByteSize = ov::shape_size(output->get_shape());
-    // we need byte size not no of elements
-    inputByteSize *= sizeof(float);
-    outputByteSize *= sizeof(float);
     enum {
         // DEV_CONTEXT_SCENARIO
         CPU_COPY,                         // regular OVMS scenario

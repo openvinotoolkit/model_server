@@ -61,6 +61,19 @@ TEST_F(ChatTemplateAnalyzerTest, detectsGptOss) {
     EXPECT_TRUE(result.caps.supportsToolCalls);
 }
 
+// --- Onyx ---
+
+TEST_F(ChatTemplateAnalyzerTest, detectsOnyx) {
+    std::string tmpl = loadTemplate("chat_template_onyx.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "onyx");
+    ASSERT_TRUE(result.detectedReasoningParser.has_value());
+    EXPECT_EQ(result.detectedReasoningParser.value(), "onyx");
+    EXPECT_TRUE(result.caps.supportsToolCalls);
+}
+
 // --- Gemma4 ---
 
 TEST_F(ChatTemplateAnalyzerTest, detectsGemma4) {
@@ -72,6 +85,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsGemma4) {
     ASSERT_TRUE(result.detectedReasoningParser.has_value());
     EXPECT_EQ(result.detectedReasoningParser.value(), "gemma4");
     EXPECT_TRUE(result.caps.supportsToolCalls);
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
 }
 
 // --- Qwen3-Coder ---
@@ -84,6 +98,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsQwen3Coder) {
     EXPECT_EQ(result.detectedToolParser.value(), "qwen3coder");
     EXPECT_FALSE(result.detectedReasoningParser.has_value());
     EXPECT_TRUE(result.caps.supportsToolCalls);
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
 }
 
 // --- LFM2 ---
@@ -158,6 +173,7 @@ TEST_F(ChatTemplateAnalyzerTest, detectsQwen3AsHermes3WithReasoning) {
     ASSERT_TRUE(result.detectedReasoningParser.has_value());
     EXPECT_EQ(result.detectedReasoningParser.value(), "qwen3");
     EXPECT_TRUE(result.caps.supportsToolCalls);
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
 }
 
 TEST_F(ChatTemplateAnalyzerTest, detectsQwen36AsQwen3CoderWithReasoning) {
@@ -169,6 +185,18 @@ TEST_F(ChatTemplateAnalyzerTest, detectsQwen36AsQwen3CoderWithReasoning) {
     ASSERT_TRUE(result.detectedReasoningParser.has_value());
     EXPECT_EQ(result.detectedReasoningParser.value(), "qwen3");
     EXPECT_TRUE(result.caps.supportsToolCalls);
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
+}
+
+TEST_F(ChatTemplateAnalyzerTest, detectsQwen3CoderNextAsQwen3Coder) {
+    std::string tmpl = loadTemplate("chat_template_qwen3coder_next.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "qwen3coder");
+    ASSERT_FALSE(result.detectedReasoningParser.has_value());
+    EXPECT_TRUE(result.caps.supportsToolCalls);
+    EXPECT_TRUE(result.caps.supportsResponseFieldInToolDefinition);
 }
 
 // --- Reasoning-only (inline — no matching file) ---

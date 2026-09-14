@@ -37,11 +37,20 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
+    if (contains(templateSource, "<|start|>") && contains(templateSource, "<|message|>") &&
+        contains(templateSource, "<|eom|>") && contains(templateSource, "<|eot|>")) {
+        result.detectedToolParser = "onyx";
+        result.detectedReasoningParser = "onyx";
+        result.caps.supportsToolCalls = true;
+        return result;
+    }
+
     // Gemma4 detection
     if (contains(templateSource, "'<|tool_call>call:'") || contains(templateSource, "<|tool_call>call:")) {
         result.detectedToolParser = "gemma4";
         result.detectedReasoningParser = "gemma4";  // gemma is always tied to its own parser for reasoning
         result.caps.supportsToolCalls = true;
+        result.caps.supportsResponseFieldInToolDefinition = true;
         return result;
     }
 
@@ -49,6 +58,7 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "<parameter=") && contains(templateSource, "</parameter>") && contains(templateSource, "<function=")) {
         result.detectedToolParser = "qwen3coder";
         result.caps.supportsToolCalls = true;
+        result.caps.supportsResponseFieldInToolDefinition = true;
         // Check for reasoning support (think tags)
         if (contains(templateSource, "<think>") || contains(templateSource, "</think>")) {
             result.detectedReasoningParser = "qwen3";
@@ -108,6 +118,7 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "<tool_call>") && contains(templateSource, "</tool_call>")) {
         result.detectedToolParser = "hermes3";
         result.caps.supportsToolCalls = true;
+        result.caps.supportsResponseFieldInToolDefinition = true;
         // Check for reasoning support (think tags in Qwen3)
         if (contains(templateSource, "<think>") || contains(templateSource, "content.split('</think>')")) {
             result.detectedReasoningParser = "qwen3";
