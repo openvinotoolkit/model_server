@@ -1296,8 +1296,8 @@ public:
         ASSERT_NE(nullptr, servableMetadataRtInfo);
         std::cout << "SERVABLE:::" << servableName.c_str() << std::endl;
         std::cout << "SERVABLE METADATA ELEMENTS:::" << std::endl;
-        for (const auto& [key, value] : *servableMetadataRtInfo) {
-            std::cout << key << std::endl;
+        for (const auto& entry : *servableMetadataRtInfo) {
+            std::cout << entry.first << std::endl;
         }
 
         try {
