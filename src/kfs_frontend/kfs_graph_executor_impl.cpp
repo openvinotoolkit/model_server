@@ -652,16 +652,21 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
             return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
+        // Validate declared size against the actual payload before allocating: a shape within the INT_MAX
+        // bound above can still declare a multi-GB buffer while the request carries only a handful of bytes.
+        if (request.raw_input_contents().size()) {
+            OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, request.raw_input_contents().at(inputIndex), requestedName, request));
+        } else {
+            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
+        }
         mediapipe::Tensor::Shape tensorShape{rawShape};
         outTensor = std::make_unique<mediapipe::Tensor>(datatype, tensorShape);
         void* data;
         SET_DATA_FROM_MP_TENSOR(outTensor, GetCpuWriteView);
         if (request.raw_input_contents().size()) {
             auto& bufferLocation = request.raw_input_contents().at(inputIndex);
-            OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, bufferLocation, requestedName, request));
             std::memcpy(data, bufferLocation.data(), bufferLocation.size());
         } else {  // need to copy each value separately
-            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
             switch (datatype) {
             case mediapipe::Tensor::ElementType::kFloat32: {
                 COPY_INPUT_VALUE_BY_VALUE(float, fp32);
