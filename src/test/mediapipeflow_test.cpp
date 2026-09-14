@@ -3931,7 +3931,7 @@ TEST_F(MPTensorOversizedShapeTest, HugeDimensionRejectedWithoutCrashingServer) {
     auto* input = request.add_inputs();
     input->set_name("in");
     input->set_datatype("FP32");
-    input->add_shape(std::numeric_limits<int32_t>::max());
+    input->add_shape(static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1);
     input->mutable_contents()->add_fp32_contents(1.0f);
     response.Clear();
     auto maliciousStatus = impl.ModelInfer(nullptr, &request, &response);
