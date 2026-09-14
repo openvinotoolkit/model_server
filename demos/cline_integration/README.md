@@ -20,7 +20,6 @@ so that Cline runs entirely on your own machine, without sending code or prompts
 
 | Model  | Notes |
 |---|---|
-| `OpenVINO/gemma-4-26b-a4b-it-int4-ov` | Vision-capable (VLM); used below for the image-input example |
 | `OpenVINO/Qwen3.8-27B-int8-ov` | Vision-capable (VLM); general purpose chat/agent model |
 | `OpenVINO/Muse-Glimmer-30B-int4-ov` | Vision-capable (VLM); general purpose chat/agent model |
 | `OpenVINO/LFM2.5-8B-A1B-int4-ov` | Smaller model, use when RAM/VRAM is limited or for quick, low-latency edits |
@@ -35,14 +34,6 @@ so that Cline runs entirely on your own machine, without sending code or prompts
 ```bat
 mkdir c:\models
 ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3.8-27B-int8-ov --rest_port 8000 --model_name Qwen3.8-27B
-```
-:::
-
-:::{tab-item} OpenVINO/gemma-4-26b-a4b-it-int4-ov
-:sync: OpenVINO/gemma-4-26b-a4b-it-int4-ov
-```bat
-mkdir c:\models
-ovms --model_repository_path c:\models --source_model OpenVINO/gemma-4-26b-a4b-it-int4-ov --rest_port 8000 --model_name gemma-4-26b-a4b-it --task text_generation --kv_cache_precision u8
 ```
 :::
 
@@ -80,15 +71,6 @@ export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /d
 docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/models/:rw ${GPU_ARGS} \
     openvino/model_server:latest-gpu \
     --model_repository_path /models --source_model OpenVINO/Qwen3.8-27B-int8-ov --rest_port 8000 --allowed_media_domains raw.githubusercontent.com --model_name Qwen3.8-27B
-```
-:::
-
-:::{tab-item} OpenVINO/gemma-4-26b-a4b-it-int4-ov
-:sync: OpenVINO/gemma-4-26b-a4b-it-int4-ov
-```bash
-docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/models/:rw ${GPU_ARGS} \
-    openvino/model_server:latest-gpu \
-    --model_repository_path /models --source_model OpenVINO/gemma-4-26b-a4b-it-int4-ov --rest_port 8000 --allowed_media_domains raw.githubusercontent.com --model_name gemma-4-26b-a4b-it --task text_generation --kv_cache_precision u8
 ```
 :::
 
@@ -146,7 +128,7 @@ OVMS's auto-detected tool-call format (derived from the model's chat template) t
 these actions.
 
 ### Image input
-With `gemma-4-26b-a4b-it-int4-ov`, `Qwen3.8-27B-int8-ov` or `Muse-Glimmer-30B-int4-ov` deployed as a VLM, attach an
+With `Qwen3.8-27B-int8-ov` or `Muse-Glimmer-30B-int4-ov` deployed as a VLM, attach an
 image to a Cline chat message, e.g.:
 ```text
 [attach a screenshot of a UI bug]
@@ -154,7 +136,7 @@ What is wrong with this layout and which CSS file should I fix?
 ```
 Image attachments are only available when the configured model declares `supportsImages` in Cline's model
 configuration; enable it for the custom OpenAI-compatible model entry when using a vision-capable model like
-`gemma-4-26b-a4b-it-int4-ov`.
+`Qwen3.8-27B-int8-ov`.
 
 ## `reasoning_effort` usage
 
@@ -184,9 +166,9 @@ script in the MCP demo above, but from within the editor.
 - **Agentic**: Act mode combines the model's tool-calling ability (auto-detected by OVMS from the model's chat
   template) with Cline's built-in tools (terminal, file read/write, browser) and any MCP servers you register,
   letting Cline plan and execute multi-step tasks autonomously.
-- **Coding**: Use `Qwen3.8-27B` or `gemma-4-26b-a4b-it-int4-ov` on B70 for the strongest code generation/editing quality among the suggested models;
+- **Coding**: Use `Qwen3.8-27B` on B70 for the strongest code generation/editing quality among the suggested models;
   fall back to `LFM2.5-8B-A1B` for lightweight or latency-sensitive edits.
 - **MCP**: any MCP server (weather, filesystem, browser, etc.) becomes available to Cline the same way it is
   available to the OpenAI Agents SDK example in the agentic AI demo.
-- **Image input**: use `Qwen3.8-27B` or `gemma-4-26b-a4b-it-int4-ov` for prompts that include screenshots or diagrams.
+- **Image input**: use `Qwen3.8-27B` or `Muse-Glimmer-30B-int4-ov` for prompts that include screenshots or diagrams.
 
