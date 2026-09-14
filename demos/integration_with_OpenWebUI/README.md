@@ -467,15 +467,15 @@ Start by pulling the pre-exported Kokoro model with OVMS and adding it to the se
 :::{tab-item} Windows
 :sync: Windows
 ```bat
-ovms.exe --pull --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path models --target_device GPU
-ovms.exe --add_to_config --config_path models\config.json --model_path luis-castillo\Kokoro-82M-OpenVINO-FP16-OVMS --model_name Kokoro-82M-OpenVINO-FP16-OVMS
+ovms.exe --pull --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path models --target_device GPU
+ovms.exe --add_to_config --config_path models\config.json --model_path OpenVINO\Kokoro-82M-int8-ov --model_name Kokoro-82M-int8-ov
 ```
 :::
 :::{tab-item} Linux (using Docker)
 :sync: Linux
 ```bash
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --target_device GPU
-docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json --model_path luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_name Kokoro-82M-OpenVINO-FP16-OVMS
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:weekly --pull --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --target_device GPU
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config --config_path /models/config.json --model_path OpenVINO/Kokoro-82M-int8-ov --model_name Kokoro-82M-int8-ov
 ```
 :::
 ::::
@@ -508,7 +508,7 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_serve
    * URL: `http://localhost:8000/v3`
    * Set Engine type to `OpenAI` 
    * STT Model: `OpenVINO/whisper-base-fp16-ov`
-   * TTS Model: `Kokoro-82M-OpenVINO-FP16-OVMS`
+   * TTS Model: `Kokoro-82M-int8-ov`
    * Put anything in API key
 3. Click **Save**
 
