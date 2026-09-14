@@ -12,7 +12,7 @@ The upstream logprob fix and all existing upstream Gemma4 parser tests are retai
 
 ## Dependency blocker
 
-The target GenAI dependency lacks JSONSchema(schema, optional whitespace_bound). The frozen GenAI patch is attached under dependencies for review; it is NOT applied by the upstream build. A companion GenAI API/serialization/matcher change and dependency update are required before this draft can compile. An unbounded fallback would invalidate the repair.
+The target GenAI dependency lacks JSONSchema(schema, optional whitespace_bound). Companion draft [GenAI #4477](https://github.com/openvinotoolkit/openvino.genai/pull/4477) carries the API and frozen XGrammar revision, with four native tests. The attached dependency patch has only a license-comment preamble added; it is NOT applied by the upstream build. Review/merge and a coordinated dependency update are required before this OVMS draft can compile. An unbounded fallback would invalidate the repair.
 
 Downstream runtime tuple: OpenVINO `227c33757d1ef95d4da506d00686f923fdd2a535`, GenAI base `7ea2546852a382cd16bd22dea0cfad2db70ed744` plus attached patch, Tokenizers `a04accf6282d9b304214b492694b18c3979f667a`, XGrammar `9aa840b6d16abf094f3e8e2ac9c10465b77656c9`.
 
@@ -31,7 +31,7 @@ Downstream runtime tuple: OpenVINO `227c33757d1ef95d4da506d00686f923fdd2a535`, G
 | Two same-name parallel echo calls | PASS, exact arguments, 2 calls, tool_calls finish |
 | Named SSE echo | PASS, reconstructed arguments, 1 call, tool_calls finish |
 
-Raw synthetic requests/responses and summaries are under evidence. Tool cases: temperature=0, seed=170644, max_tokens=256. Benchmark: temperature=1, top_k=64, top_p=0.95, preserved seeds/prompts; timing includes prefill/HTTP/possible queueing. Long outputs stopped before max_tokens and metrics use actual usage. Cold startup, TTFT, concurrency, factual accuracy of free benchmark texts, multi-turn/real-tool execution and session persistence were NOT RUN in this campaign.
+Raw synthetic requests/responses and summaries are under evidence. All original traces, including CSV/NDJSON and SSE, are preserved byte-for-byte in evidence/raw-traces.tar.gz; JSON requests/responses remain browsable. Tool cases: temperature=0, seed=170644, max_tokens=256. Benchmark: temperature=1, top_k=64, top_p=0.95, preserved seeds/prompts; timing includes prefill/HTTP/possible queueing. Long outputs stopped before max_tokens and metrics use actual usage. Cold startup, TTFT, concurrency, factual accuracy of free benchmark texts, multi-turn/real-tool execution and session persistence were NOT RUN in this campaign.
 
 These results belong to the frozen downstream RC, NOT the assembled upstream head. The original candidate manifest's historical live acceptance NOT_RUN is not overwritten.
 
@@ -52,4 +52,6 @@ These results belong to the frozen downstream RC, NOT the assembled upstream hea
 //src/test/llm/gemma4_overlay:gemma4_google_jinja_contract_test
 ```
 
-Build, executable tests and broad CI on the transferred head: NOT RUN. This remains draft while gates are open.
+Local product build/executable tests on the assembled OVMS head: NOT RUN. Jenkins job 1 reported ERROR on the initial head dd7ac8de89fe76cfe00d04d4f69620e00e5aa37e; a successful complete pipeline on the updated head remains required. License scanner preflight with Linux paths/UTF-8 passed; the three new BUILD files have Apache headers. ownsToolCallBoundaries is present in OutputParsingConfig, avoiding the earlier #4525 missing-field wiring error. These checks do not constitute a product build.
+
+Companion GenAI real-header standalone contracts: original API RED at compilation; transferred API GREEN for legacy/bounded/zero/equality assertions. Full GenAI/native tests remain NOT RUN. This remains draft while gates are open.

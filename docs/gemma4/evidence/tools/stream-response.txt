@@ -1,9 +1,0 @@
-data: {"choices":[{"index":0,"delta":{"role":"assistant","content":null},"finish_reason":null}],"created":1789426163,"model":"gemma4-26-heretic","object":"chat.completion.chunk"}
-
-data: {"choices":[{"index":0,"logprobs":null,"delta":{"tool_calls":[{"id":"ylBXbMytA","type":"function","index":0,"function":{"name":"echo","arguments":"{\"text\":\"RC17064400-single\"}"}}]},"finish_reason":null}],"created":1789426163,"model":"gemma4-26-heretic","object":"chat.completion.chunk"}
-
-data: {"choices":[{"index":0,"logprobs":null,"delta":{},"finish_reason":"tool_calls"}],"created":1789426163,"model":"gemma4-26-heretic","object":"chat.completion.chunk"}
-
-data: [DONE]
-
-

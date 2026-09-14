@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+# Frozen dependency diff; comment preamble added for the upstream license scanner.
 diff --git a/src/cpp/CMakeLists.txt b/src/cpp/CMakeLists.txt
 index 463542c9..42bbe6a3 100644
 --- a/src/cpp/CMakeLists.txt
