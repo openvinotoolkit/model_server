@@ -15,10 +15,12 @@
 //*****************************************************************************
 #include "curl_downloader.hpp"
 
+#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include <curl/curl.h>
@@ -149,6 +151,25 @@ static size_t file_write_callback(void* buffer, size_t size, size_t nmemb, void*
         }                                                                                                \
     } while (0)
 
+// libcurl requires curl_global_init/curl_global_cleanup to run exactly once per process;
+// calling curl_global_cleanup() after every download tears down global TLS/engine state
+// still needed elsewhere (other in-flight curl users), which segfaults on next use.
+static Status ensureCurlGlobalInit() {
+    static std::once_flag initFlag;
+    static CURLcode initResult = CURLE_OK;
+    std::call_once(initFlag, []() {
+        initResult = curl_global_init(CURL_GLOBAL_DEFAULT);
+        if (initResult == CURLE_OK) {
+            std::atexit([]() { curl_global_cleanup(); });
+        }
+    });
+    if (initResult != CURLE_OK) {
+        SPDLOG_ERROR("curl error: {}. Error code: {}", curl_easy_strerror(initResult), (int)initResult);
+        return StatusCode::INTERNAL_ERROR;
+    }
+    return StatusCode::OK;
+}
+
 struct ProgressData {
     time_t started_download;
     time_t last_print_time;
@@ -191,9 +212,10 @@ Status downloadFileWithCurl(const std::string& url, const std::string& filePath,
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
 
     CURL* curl = nullptr;
-    CHECK_CURL_CALL(curl_global_init(CURL_GLOBAL_DEFAULT));
-    auto globalCurlGuard = std::unique_ptr<void, void (*)(void*)>(
-        nullptr, [](void*) { curl_global_cleanup(); });
+    auto initStatus = ensureCurlGlobalInit();
+    if (!initStatus.ok()) {
+        return initStatus;
+    }
     curl = curl_easy_init();
     if (!curl) {
         SPDLOG_ERROR("Failed to initialize cURL.");
@@ -243,9 +265,10 @@ Status fetchUrlToString(const std::string& url, const std::string& authToken, st
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
 
     CURL* curl = nullptr;
-    CHECK_CURL_CALL(curl_global_init(CURL_GLOBAL_DEFAULT));
-    auto globalCurlGuard = std::unique_ptr<void, void (*)(void*)>(
-        nullptr, [](void*) { curl_global_cleanup(); });
+    auto initStatus = ensureCurlGlobalInit();
+    if (!initStatus.ok()) {
+        return initStatus;
+    }
     curl = curl_easy_init();
     if (!curl) {
         SPDLOG_ERROR("Failed to initialize cURL.");

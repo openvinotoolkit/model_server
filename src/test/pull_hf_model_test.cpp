@@ -2526,7 +2526,8 @@ TEST_F(HfPullModelModuleLoraTest, ResolveHfLoraFilenames) {
     ovms::ImageGenerationGraphSettingsImpl graphSettings;
     ovms::LoraAdapterSettings adapter;
     adapter.alias = "pokemon";
-    adapter.sourceLora = "juliensimon/sd-pokemon-lora";
+    // juliensimon/sd-pokemon-lora was removed upstream; replaced with a repo verified to still exist.
+    adapter.sourceLora = "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning";
     adapter.sourceType = ovms::LoraSourceType::HF_REPO;
     graphSettings.loraAdapters.push_back(adapter);
     settings.graphSettings = graphSettings;
@@ -2553,7 +2554,8 @@ TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
     ovms::ImageGenerationGraphSettingsImpl graphSettings;
     ovms::LoraAdapterSettings adapter;
     adapter.alias = "pokemon";
-    adapter.sourceLora = "juliensimon/sd-pokemon-lora";
+    // juliensimon/sd-pokemon-lora was removed upstream; replaced with a repo verified to still exist.
+    adapter.sourceLora = "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning";
     adapter.safetensorsFile = "pytorch_lora_weights.safetensors";  // explicit filename — skips HF API resolve
     adapter.sourceType = ovms::LoraSourceType::HF_REPO;
     graphSettings.loraAdapters.push_back(adapter);
@@ -2562,7 +2564,7 @@ TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
     auto status = module.testPullLoraAdapters(this->directoryPath);
     ASSERT_TRUE(status.ok()) << status.string();
 
-    auto loraFilePath = ovms::FileSystem::joinPath({this->directoryPath, "loras", "juliensimon/sd-pokemon-lora", "pytorch_lora_weights.safetensors"});
+    auto loraFilePath = ovms::FileSystem::joinPath({this->directoryPath, "loras", "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning", "pytorch_lora_weights.safetensors"});
     ASSERT_TRUE(std::filesystem::exists(loraFilePath)) << loraFilePath;
     EXPECT_GT(std::filesystem::file_size(loraFilePath), 0);
 }
@@ -2612,7 +2614,8 @@ TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
     std::string modelName = "OpenVINO/stable-diffusion-v1-5-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "image_generation";
-    std::string sourceLoras = "pokemon=juliensimon/sd-pokemon-lora@pytorch_lora_weights.safetensors";
+    // juliensimon/sd-pokemon-lora was removed upstream; replaced with a repo verified to still exist.
+    std::string sourceLoras = "pokemon=MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning@pytorch_lora_weights.safetensors";
     ::SetUpServerForDownloadWithLoras(this->t, this->server, modelName, downloadPath, task, sourceLoras);
 
     std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "stable-diffusion-v1-5-int8-ov"});
@@ -2623,7 +2626,7 @@ TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
     ASSERT_TRUE(std::filesystem::exists(graphPath)) << graphPath;
 
     // Verify LoRA adapter was downloaded
-    std::string loraDir = ovms::FileSystem::joinPath({basePath, "loras", "juliensimon", "sd-pokemon-lora"});
+    std::string loraDir = ovms::FileSystem::joinPath({basePath, "loras", "MohamedAhmedAE", "stable-diffusion-v1-5_lora_finetuning"});
     auto loraFiles = searchFilesRecursively(loraDir, {"pytorch_lora_weights.safetensors"});
     ASSERT_FALSE(loraFiles.empty()) << "LoRA .safetensors not found in: " << loraDir;
 
