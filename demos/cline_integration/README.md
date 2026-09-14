@@ -158,11 +158,10 @@ configuration; enable it for the custom OpenAI-compatible model entry when using
 
 ## `reasoning_effort` usage
 
-Cline exposes a reasoning-effort control (separately for Plan mode and Act mode) that is sent as part of the chat
+Cline exposes a reasoning-effort control that is sent as part of the chat
 completion request. OVMS supports the OpenAI API `reasoning_effort` field natively, so this setting is honored
-across all of the suggested models above, regardless of the underlying chat template:
-- For fast Plan-mode Q&A or quick edits, prefer a low reasoning effort and the smaller `LFM2.5-8B-A1B` model; for
-  complex multi-file refactors, prefer higher reasoning effort with `Qwen3.8-27B`.
+across all of the suggested models above, regardless of the underlying chat template.
+It may be changed in Cline's **Settings** under **Reasonig Effort** section.
 
 ## MCP usage
 
@@ -190,6 +189,4 @@ script in the MCP demo above, but from within the editor.
 - **MCP**: any MCP server (weather, filesystem, browser, etc.) becomes available to Cline the same way it is
   available to the OpenAI Agents SDK example in the agentic AI demo.
 - **Image input**: use `Qwen3.8-27B` or `gemma-4-26b-a4b-it-int4-ov` for prompts that include screenshots or diagrams.
-
-## Simple application
 
