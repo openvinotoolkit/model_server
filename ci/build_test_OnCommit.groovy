@@ -317,7 +317,7 @@ pipeline {
                     def pwd = sh(returnStdout:true, script: "pwd").strip()
                     def cmd_venv = "make create-venv"
                     def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
-                    def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10"
+                    def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_MINIO_IMAGE_NAME=quay.io/minio/minio:latest"
                     def cmd_run_tests = "make tests"
                     def cmd = ""
                     if (image_build_needed == "true") {
