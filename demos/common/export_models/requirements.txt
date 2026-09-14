@@ -8,8 +8,8 @@ diffusers  # for image generation
 einops
 nncf
 numpy
-openvino-tokenizers==2026.4.0rc3
-openvino==2026.4.0rc3
+openvino-tokenizers==2026.4.0rc2
+openvino==2026.4.0rc2
 pillow
 sentence_transformers==5.3.0
 sentencepiece  # Required by: transformers`
