@@ -231,15 +231,17 @@ pipeline {
                     sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                     sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                     sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
-                    sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                    withCredentials([usernamePassword(credentialsId: 'workflow_lab_mediapipe', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
+                      sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
 
-                    // release_image
-                    sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
-                    sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                    if ( test_doc_files_linux ) {
-                        sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
-                        stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
-                        sh "rm -f ovms_release_image.tar.gz"
+                      // release_image
+                      sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                      if ( test_doc_files_linux ) {
+                          sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
+                          stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
+                          sh "rm -f ovms_release_image.tar.gz"
+                      }
                     }
                   }
               }
