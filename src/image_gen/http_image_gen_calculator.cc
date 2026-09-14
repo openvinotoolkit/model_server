@@ -25,8 +25,10 @@
 #pragma warning(pop)
 
 #include "src/http_payload.hpp"
+#include "src/image_utils/decoded_image_size.hpp"
 #include "src/logging.hpp"
 #include "src/image_utils/image_conversion.hpp"
+#include "src/predict_request_validation_utils_impl.hpp"
 
 #include "pipelines.hpp"
 #include "imagegenutils.hpp"
@@ -247,8 +249,52 @@ static absl::Status generateTensorInpainting(ov::genai::InpaintingPipeline& requ
     }
     return absl::OkStatus();
 }
+
+static absl::Status validateEstimatedDecodedSize(std::string_view filePayload,
+    uint64_t alreadyAllocatedPixels, uint64_t maxAllowedImagePixels) {
+    uint64_t estimatedDecodedPixels = 0;
+    auto estimate = image_utils::estimateDecodedImageSize(filePayload, estimatedDecodedPixels);
+    if (estimate == image_utils::DecodedSizeEstimate::InputTooLarge) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image binary payload too large to inspect. Size: {}", filePayload.size());
+        return absl::InvalidArgumentError("Image too large");
+    }
+    if (estimate == image_utils::DecodedSizeEstimate::UnsupportedFormat &&
+        !request_validation_utils::allowUnestimatableImageFormats()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image decoded size could not be estimated and unestimatable formats are not allowed");
+        return absl::InvalidArgumentError("Image format decoded size cannot be verified");
+    }
+    uint64_t remainingBudget = alreadyAllocatedPixels >= maxAllowedImagePixels ? 0 : maxAllowedImagePixels - alreadyAllocatedPixels;
+    if (estimate == image_utils::DecodedSizeEstimate::Estimated && estimatedDecodedPixels > remainingBudget) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Estimated decoded image pixels {} exceeds remaining budget {}",
+            estimatedDecodedPixels, remainingBudget);
+        return absl::InvalidArgumentError("Image exceeds maximum decoded size");
+    }
+    return absl::OkStatus();
+}
+
+static absl::Status accumulateDecodedPixelsBudget(const ov::Tensor& imageTensor,
+    uint64_t& totalAllocatedPixels, uint64_t maxAllowedImagePixels) {
+    const auto& shape = imageTensor.get_shape();
+    if (shape.size() < 3) {
+        return absl::InternalError("Decoded image tensor has unexpected shape");
+    }
+    uint64_t imagePixels = shape[shape.size() - 3] * shape[shape.size() - 2];
+    uint64_t remainingBudget = totalAllocatedPixels >= maxAllowedImagePixels ? 0 : maxAllowedImagePixels - totalAllocatedPixels;
+    if (imagePixels > remainingBudget) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded image pixels {} exceeds remaining budget {}",
+            imagePixels, remainingBudget);
+        return absl::InvalidArgumentError("Image exceeds maximum decoded size");
+    }
+    totalAllocatedPixels += imagePixels;
+    return absl::OkStatus();
+}
 // written out separately to avoid msvc crashing when using try-catch in process method ...
-static absl::Status makeTensorFromString(std::string_view filePayload, ov::Tensor& imageTensor) {
+static absl::Status makeTensorFromString(std::string_view filePayload, ov::Tensor& imageTensor,
+    uint64_t& totalAllocatedPixels, uint64_t maxAllowedImagePixels) {
+    auto validateStatus = validateEstimatedDecodedSize(filePayload, totalAllocatedPixels, maxAllowedImagePixels);
+    if (!validateStatus.ok()) {
+        return validateStatus;
+    }
     try {
         imageTensor = loadImageStbiFromMemory(filePayload);
     } catch (std::runtime_error& e) {
@@ -259,7 +305,7 @@ static absl::Status makeTensorFromString(std::string_view filePayload, ov::Tenso
     } catch (...) {
         return absl::InternalError("Unknown error during image parsing");
     }
-    return absl::OkStatus();
+    return accumulateDecodedPixelsBudget(imageTensor, totalAllocatedPixels, maxAllowedImagePixels);
 }
 class ImageGenCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
@@ -347,8 +393,11 @@ public:
             SET_OR_RETURN(std::optional<std::string_view>, image, getFileFromPayload(*payload.multipartParser, "image"));
             RET_CHECK(image.has_value() && !image.value().empty()) << "Image field is missing in multipart body";
 
+            uint64_t totalAllocatedPixels = 0;
+            uint64_t maxAllowedImagePixels = request_validation_utils::getMaxImageDecodePixels();
+
             ov::Tensor imageTensor;
-            auto status = makeTensorFromString(image.value(), imageTensor);
+            auto status = makeTensorFromString(image.value(), imageTensor, totalAllocatedPixels, maxAllowedImagePixels);
             if (!status.ok()) {
                 return status;
             }
@@ -377,7 +426,7 @@ public:
                 // during initialization.  Do NOT derive InpaintingPipeline from Image2ImagePipeline
                 ov::Tensor maskTensor;
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {}] Inpainting: decoding mask tensor", cc->NodeName());
-                status = makeTensorFromString(mask.value(), maskTensor);
+                status = makeTensorFromString(mask.value(), maskTensor, totalAllocatedPixels, maxAllowedImagePixels);
                 if (!status.ok()) {
                     return status;
                 }

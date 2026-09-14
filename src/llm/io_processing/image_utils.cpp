@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <regex>
 #include <sstream>
@@ -95,6 +96,33 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
     return absl::OkStatus();
 }
 
+absl::Status readLocalImage(const std::filesystem::path& path, std::string& image, const int64_t& sizeLimit) {
+    std::error_code ec;
+    auto fileSize = std::filesystem::file_size(path, ec);
+    if (ec) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to get file size for {}: {}", path.string(), ec.message());
+        return absl::InvalidArgumentError("Image loading failed");
+    }
+    if (fileSize > static_cast<uint64_t>(sizeLimit)) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Local image file too large to inspect. Path: {}, Size: {}", path.string(), fileSize);
+        return absl::InvalidArgumentError("Image too large");
+    }
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file.good()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to open local image file: {}", path.string());
+        return absl::InvalidArgumentError("Image loading failed");
+    }
+
+    image.resize(fileSize);
+    file.read(image.data(), static_cast<std::streamsize>(fileSize));
+    if (file.fail()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to read local image file: {}", path.string());
+        return absl::InvalidArgumentError("Image loading failed");
+    }
+    return absl::OkStatus();
+}
+
 bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char* url) {
     if (allowedDomains.size() == 1 && allowedDomains[0] == "all") {
         return true;
@@ -137,8 +165,7 @@ absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::vector<std::string>>& allowedMediaDomains) {
     std::size_t pos = imageSource.find(BASE64_PREFIX);
     std::string decoded;
-    // Part 1: fetch the encoded image bytes into `decoded` (base64 or download). The local
-    // filesystem case is handled separately below because it decodes straight from disk.
+    // Part 1: fetch the encoded image bytes into `decoded` (base64, URL, or local file).
     if (pos != std::string::npos) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
         size_t offset = pos + BASE64_PREFIX.length();
@@ -156,7 +183,6 @@ absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
             return status;
         }
     } else {
-        // Part 3: local filesystem - validated then decoded directly from file.
         if (!allowedLocalMediaPath.has_value()) {
             return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
         }
@@ -173,11 +199,9 @@ absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
         if (!isPathInsideDirectory(resolvedImagePath, resolvedAllowedPath)) {
             return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
         }
-        try {
-            return loadImageStbiFromFile(resolvedImagePathStr.c_str());
-        } catch (std::runtime_error& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image file {} parsing failed: {}", resolvedImagePathStr, e.what());
-            return absl::InvalidArgumentError("Image file parsing failed");
+        auto status = readLocalImage(resolvedImagePath, decoded, MAX_IMAGE_SIZE_BYTES);
+        if (status != absl::OkStatus()) {
+            return status;
         }
     }
 
