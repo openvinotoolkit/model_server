@@ -3484,9 +3484,9 @@ protected:
     }
 
     void TearDown() override {
-        TestWithTempDir::TearDown();
         stopServer();
         t->join();
+        TestWithTempDir::TearDown();
     }
 
     void performInference(ovms::StatusCode expectedStatus) {
@@ -3872,9 +3872,9 @@ protected:
     }
 
     void TearDown() override {
-        TestWithTempDir::TearDown();
         stopServer();
         t->join();
+        TestWithTempDir::TearDown();
     }
 };
 
