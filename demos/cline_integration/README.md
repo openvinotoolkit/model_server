@@ -42,7 +42,7 @@ ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3.8-27B-int8-
 :sync: OpenVINO/gemma-4-26b-a4b-it-int4-ov
 ```bat
 mkdir c:\models
-ovms --model_repository_path c:\models --source_model OpenVINO/gemma-4-26b-a4b-it-int4-ov --rest_port 8000 --model_name gemma-4-26b-a4b-it
+ovms --model_repository_path c:\models --source_model OpenVINO/gemma-4-26b-a4b-it-int4-ov --rest_port 8000 --model_name gemma-4-26b-a4b-it --task text_generation --kv_cache_precision u8
 ```
 :::
 
@@ -88,7 +88,7 @@ docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/mode
 ```bash
 docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/models/:rw ${GPU_ARGS} \
     openvino/model_server:latest-gpu \
-    --model_repository_path /models --source_model OpenVINO/gemma-4-26b-a4b-it-int4-ov --rest_port 8000 --allowed_media_domains raw.githubusercontent.com --model_name gemma-4-26b-a4b-it
+    --model_repository_path /models --source_model OpenVINO/gemma-4-26b-a4b-it-int4-ov --rest_port 8000 --allowed_media_domains raw.githubusercontent.com --model_name gemma-4-26b-a4b-it --task text_generation --kv_cache_precision u8
 ```
 :::
 
