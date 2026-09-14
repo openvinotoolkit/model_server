@@ -174,17 +174,17 @@ http_archive(
 
 ################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
+git_repository(
+    name = "mediapipe",
+    remote = "https://github.com/openvinotoolkit/mediapipe",
+    commit = "b27f0ca7d4fe36175a9f725844cb64b3d3e18959", # top of mediapipe main branch as of 13.09.2026
+)
+
+# DEV mediapipe 1 source - adjust local repository path for build
 #local_repository(
 #    name = "mediapipe",
 #    path = "C:\\git\\mediapipe",
 #)
-
-# Remote fallback for non-local development:
-git_repository(
-     name = "mediapipe",
-     remote = "https://github.com/openvinotoolkit/mediapipe",
-     commit = "178e9b61345ca1cf803b49a579baf31f1ff690a3", # Enable python nodes and ovms, geti calculators in new python lib (#134)
-)
 
 # Protobuf for Node dependencies
 http_archive(
@@ -197,8 +197,10 @@ http_archive(
 # Node dependencies
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "5aae76dced38f784b58d9776e4ab12278bc156a9ed2b1d9fcd3e39921dc88fda",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.7.1/rules_nodejs-5.7.1.tar.gz"],
+    sha256 = "d3476f6dc146766d3f35aa8aa39e65df6467ed7dc8dfdcabf9b7cad464516cd5",
+    strip_prefix = "rules_nodejs-5.7.1",
+    type = "tar.gz",
+    urls = ["https://codeload.github.com/bazelbuild/rules_nodejs/tar.gz/refs/tags/5.7.1"],
 )
 
 load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
@@ -239,14 +241,8 @@ http_archive(
 )
 
 # 2020-08-21 SHA 3a0d4d22c5ae0b9a2216988411cfa6bf860cc372
-http_archive(
-    name = "com_github_glog_glog",
-    strip_prefix = "glog-3a0d4d22c5ae0b9a2216988411cfa6bf860cc372",
-    sha256 = "170d08f80210b82d95563f4723a15095eff1aad1863000e8eeb569c96a98fefb",
-    urls = [
-        "https://github.com/google/glog/archive/3a0d4d22c5ae0b9a2216988411cfa6bf860cc372.zip",
-    ],
-)
+load("@ovms//third_party/glog:glog.bzl", "glog_dependencies")
+glog_dependencies()
 
 http_archive(
     name = "com_github_glog_glog_no_gflags",
@@ -590,10 +586,12 @@ new_local_repository(
     path = "third_party/mediapipe_calculators",
 )
 
-git_repository(
+http_archive(
     name = "nlohmann_json",
-    remote = "https://github.com/nlohmann/json/",
-    tag = "v3.11.3",
+    sha256 = "0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406",
+    strip_prefix = "json-3.11.3",
+    type = "tar.gz",
+    url = "https://codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.11.3",
 )
 # for rest client in unit tests (server_test.cpp)
 git_repository(

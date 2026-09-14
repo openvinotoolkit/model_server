@@ -231,15 +231,17 @@ pipeline {
                     sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                     sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                     sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
-                    sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                    withCredentials([usernamePassword(credentialsId: 'workflow_lab_mediapipe', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
+                      sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
 
-                    // release_image
-                    sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
-                    sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                    if ( test_doc_files_linux ) {
-                        sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
-                        stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
-                        sh "rm -f ovms_release_image.tar.gz"
+                      // release_image
+                      sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                      if ( test_doc_files_linux ) {
+                          sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
+                          stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
+                          sh "rm -f ovms_release_image.tar.gz"
+                      }
                     }
                   }
               }
@@ -317,7 +319,7 @@ pipeline {
                     def pwd = sh(returnStdout:true, script: "pwd").strip()
                     def cmd_venv = "make create-venv"
                     def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
-                    def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10"
+                    def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_MINIO_IMAGE_NAME=quay.io/minio/minio:latest"
                     def cmd_run_tests = "make tests"
                     def cmd = ""
                     if (image_build_needed == "true") {
