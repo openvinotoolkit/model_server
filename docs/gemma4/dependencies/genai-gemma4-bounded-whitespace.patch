@@ -1,0 +1,51 @@
+diff --git a/src/cpp/CMakeLists.txt b/src/cpp/CMakeLists.txt
+index 463542c9..42bbe6a3 100644
+--- a/src/cpp/CMakeLists.txt
++++ b/src/cpp/CMakeLists.txt
+@@ -152,7 +152,7 @@ if(ANDROID)
+ endif()
+ 
+ if(ENABLE_XGRAMMAR)
+-    set(XGRAMMAR_VERSION v0.1.31)
++    set(XGRAMMAR_VERSION 9aa840b6d16abf094f3e8e2ac9c10465b77656c9)
+     set(XGRAMMAR_DIR ${CMAKE_BINARY_DIR}/xgrammar)
+ 
+     FetchContent_Declare(
+diff --git a/src/cpp/include/openvino/genai/generation_config.hpp b/src/cpp/include/openvino/genai/generation_config.hpp
+index 26b230d3..9724c1a7 100644
+--- a/src/cpp/include/openvino/genai/generation_config.hpp
++++ b/src/cpp/include/openvino/genai/generation_config.hpp
+@@ -5,6 +5,7 @@
+ 
+ #include <filesystem>
+ #include <limits>
++#include <optional>
+ #include <variant>
+ #include <string>
+ #include <sstream>
+@@ -157,17 +158,21 @@ public:
+      */
+     struct JSONSchema {
+         std::string value;
++        std::optional<int> max_whitespace_cnt;
+ 
+         JSONSchema() = default;
+-        JSONSchema(const std::string& schema) : value(schema) {}
++        JSONSchema(const std::string& schema, std::optional<int> whitespace_bound = std::nullopt)
++            : value(schema), max_whitespace_cnt(whitespace_bound) {}
+         std::string to_string() const {
+-            return "JSONSchema(\"" + value + "\")";
++            return "JSONSchema(\"" + value + "\"" +
++                (max_whitespace_cnt ? ", max_whitespace_cnt=" + std::to_string(*max_whitespace_cnt) : "") + ")";
+         }
+         std::string to_json() const {
+-            return std::string("{\"type\": \"json_schema\", \"json_schema\": ") + value + "}";
++            return std::string("{\"type\": \"json_schema\", \"json_schema\": ") + value +
++                (max_whitespace_cnt ? ", \"max_whitespace_cnt\": " + std::to_string(*max_whitespace_cnt) : "") + "}";
+         }
+         bool operator==(const JSONSchema& other) const {
+-            return value == other.value;
++            return value == other.value && max_whitespace_cnt == other.max_whitespace_cnt;
+         }
+     };
+ 

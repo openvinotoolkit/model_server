@@ -1,0 +1,182 @@
+[
+  {
+    "path": "src/llm/apis/openai_api_handler.hpp",
+    "blob": "253927749af097478f8a1a067af6d48ce61993b7",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/apis/openai_completions.hpp",
+    "blob": "f2493f32b3ba72095ff6cdb94faa28caf916d439",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/apis/openai_request.hpp",
+    "blob": "2e829ed413f56b25876b5dcef9203b4ddcdcbcb3",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/apis/openai_responses.cpp",
+    "blob": "f65a34d1fc5f562fe50e736ba8620b5d9d79e15f",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/apis/openai_responses.hpp",
+    "blob": "8c36b2267bdf5028cdcc8c2a6c811db0354ee4cb",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/base_generation_config_builder.hpp",
+    "blob": "0e4c73cb98a76aaf69df0f34e7dff5c974601769",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/base_output_parser.hpp",
+    "blob": "1a7387e9fca60e1cc40b178b31decfd6053b47f4",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/chat_template/analyzer.cpp",
+    "blob": "050ac4b9d23274d6de0919f044e9d3883bf54c22",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/chat_template/caps.hpp",
+    "blob": "18860f7043222444678d02e61bfedfaa4976f518",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/gemma4/gemma4_reasoning_parser.cpp",
+    "blob": "c7e848098ca384fd960f4d7ae0f771fc5f0e14d3",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/gemma4/gemma4_reasoning_parser.hpp",
+    "blob": "3a574c3a2d4cc372578fa1420b8125c2b439c222",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/gemma4/gemma4_tool_parser.cpp",
+    "blob": "d7d766e032b47df0bb155140e6d26a8740af5217",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/gemma4/gemma4_tool_parser.hpp",
+    "blob": "31d0b820465e580911399e79b4b819185b067789",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/generation_config_builder.hpp",
+    "blob": "d78bb9c6c2083d60e49219dab32239d1231c0c15",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/input_processors/chat_template_adapter.cpp",
+    "blob": "92e66f2c69ab50470e563fc73afae620ca25c6c7",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/input_processors/chat_template_adapter.hpp",
+    "blob": "99e4efa0d73b144d2d95b969002636150886f466",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/input_processors/chat_template_processor.cpp",
+    "blob": "3549be639764815fee7c2869ab18d885401401dd",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/input_processors/chat_template_processor.hpp",
+    "blob": "79befb72577894d713ab762cdebffe154b078321",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/output_parser.cpp",
+    "blob": "4a8c0a299b348d117d75f957a72c03c3e21101c5",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/output_parser.hpp",
+    "blob": "503ed80fdb851bd814ea58d68212847bc439c649",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/io_processing/output_parsing_config.hpp",
+    "blob": "26dd20cf6b1ecd997969216d82fc75b3b4655bc8",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/ovms_text_streamer.cpp",
+    "blob": "f65d486c1bdacefc197a3ac4ba65a594fd703ffd",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/ovms_text_streamer.hpp",
+    "blob": "ab966c5e4167a60244f77a29804d28d6d33a6212",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/servable.cpp",
+    "blob": "2e1bd37f99944a47cd44bd4ffc4b4b2fa0485e6d",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/llm/servable.hpp",
+    "blob": "77e52a3206f6010fc344ed1e77d1cceb57bb7053",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/gemma4_fast/BUILD",
+    "blob": "576f1e8fc03b6b31602fb37a4397b9e323f7c2b0",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/gemma4_fast/gemma4_parser_contract_test.cpp",
+    "blob": "47a2edad2ff71ee3b60f83f01c8c3c11797b8fa6",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/gemma4_fast/gemma4_reasoning_semantic_refit_test.cpp",
+    "blob": "8a8dd7bc46ac2dd53ea0aec3d4aac1889c34989a",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/gemma4_fast/gemma4_recovery_contract_test.cpp",
+    "blob": "21d2307fa590b91002e0e34ce5559afc9e435e68",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/gemma4_overlay/BUILD",
+    "blob": "30f7a3f99033137ebbbd876840b9ff1e71f901f3",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/gemma4_overlay/gemma4_chat_template_overlay_contract_test.cpp",
+    "blob": "00194b65667251cf8855ccd7c714d6f0d052414c",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/gemma4_overlay/gemma4_google_jinja_contract_test.cpp",
+    "blob": "a5e219ace08e3aab1a24416f0c9f242735dbb7c2",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/generation_config/BUILD",
+    "blob": "e46ce9c3e9fac23b3ca21bbe997dc489dbfd48ba",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/generation_config/gemma4_generation_contract_test.cpp",
+    "blob": "9905e0b12ccabe580d3a9395bb6303918ada9a0a",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/generation_config/gemma4_prompt_state_generation_contract_test.cpp",
+    "blob": "b754ebf7d4c4eb45d76a1c74c91a4928d9c5fe95",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  },
+  {
+    "path": "src/test/llm/generation_config/openai_parallel_tool_calls_contract_test.cpp",
+    "blob": "89a8fea4fd193b19eb793bab6db9520820d0314a",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2"
+  }
+]

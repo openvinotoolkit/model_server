@@ -19,6 +19,7 @@
 #include <optional>
 #include <string>
 
+#include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/tokenizer.hpp>
 
 #include "../base_input_processor.hpp"
@@ -28,6 +29,14 @@
 #endif
 
 namespace ovms {
+
+// Reconciles a hard Gemma4 tool grammar with the prompt state produced by the
+// canonical Google template after a tool response. Returns true only when the
+// config is recognized as Gemma4's hard tools-or-thought-then-tools grammar and
+// the rendered prompt ends inside an already-open thought channel.
+bool adaptGemma4HardToolGrammarForRenderedPrompt(
+    ov::genai::GenerationConfig& config,
+    const std::string& renderedPrompt);
 
 // Applies the chat template to ChatHistory, producing req.promptText.
 // Active when: input is ChatHistory variant (CHAT_COMPLETIONS and RESPONSES).

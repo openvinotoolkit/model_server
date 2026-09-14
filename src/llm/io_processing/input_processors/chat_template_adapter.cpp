@@ -48,14 +48,35 @@ void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory) {
                 continue;
             }
             std::string argsStr = args.get_string();
-            // Parse and replace string arguments with the parsed JSON object
             try {
                 function["arguments"] = ov::genai::JsonContainer::from_json_string(argsStr);
             } catch (...) {
-                // If parsing fails, leave as-is
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse function arguments as JSON: {}", argsStr);
                 continue;
             }
+        }
+    }
+}
+
+void toolResponseJsonContentToObjectHistory(ov::genai::ChatHistory& chatHistory) {
+    for (size_t msgIdx = 0; msgIdx < chatHistory.size(); ++msgIdx) {
+        auto message = chatHistory[msgIdx];
+        if (!message.contains("role") || !message["role"].is_string() || message["role"].get_string() != "tool") {
+            continue;
+        }
+        if (!message.contains("content") || !message["content"].is_string()) {
+            continue;
+        }
+
+        const std::string content = message["content"].get_string();
+        try {
+            auto parsed = ov::genai::JsonContainer::from_json_string(content);
+            if (!parsed.is_object()) {
+                continue;
+            }
+            message["content"] = parsed;
+        } catch (...) {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool response content is not a JSON object; keeping string content");
         }
     }
 }
@@ -95,6 +116,9 @@ void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHi
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Applying chat template adaptations: {}", caps.toString());
     if (caps.requiresObjectArguments) {
         funcArgsToObjectHistory(chatHistory);
+    }
+    if (caps.parseToolResponseJsonContent) {
+        toolResponseJsonContentToObjectHistory(chatHistory);
     }
     if (!caps.missnamedReasoningField.empty()) {
         injectReasoningIntoMissnamedSection(chatHistory, caps.missnamedReasoningField);
