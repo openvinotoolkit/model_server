@@ -13,10 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
+#include <future>
 #include <iomanip>
 #include <limits>
 #include <memory>
@@ -401,6 +403,52 @@ TEST(CurlDownloaderProgressTest, FilledCellsClampToBarWidth) {
     EXPECT_EQ(ovms::computeProgressBarCells(200, 100, 50), 50);
     EXPECT_EQ(ovms::computeProgressBarCells(100, 100, 0), 0);
     EXPECT_EQ(ovms::computeProgressBarCells(100, 100, -1), 0);
+}
+
+// Regression test for the call-site, not just the extracted helper: a real chunked-transfer
+// response (no Content-Length) drives libcurl's progress callback with dltotal == 0 on every
+// tick. Before the fix this hung the download in a ~2.1 billion iteration padding loop; here
+// we bound the wait so a reintroduced regression fails instead of hanging the test suite.
+TEST_F(TestWithTempDir, ChunkedTransferWithoutContentLengthDoesNotHang) {
+    const std::string body(64 * 1024, 'x');
+    httplib::Server server;
+    server.Get("/chunked", [&body](const httplib::Request&, httplib::Response& res) {
+        res.set_chunked_content_provider("application/octet-stream",
+            [&body](size_t offset, httplib::DataSink& sink) {
+                if (offset >= body.size()) {
+                    sink.done();
+                    return true;
+                }
+                const size_t chunkSize = std::min<size_t>(4096, body.size() - offset);
+                sink.write(body.data() + offset, chunkSize);
+                return true;
+            });
+    });
+    const int port = server.bind_to_any_port("127.0.0.1");
+    ASSERT_GT(port, 0);
+    std::thread serverThread([&server]() {
+        server.listen_after_bind();
+    });
+    server.wait_until_ready();
+
+    const std::string url = "http://127.0.0.1:" + std::to_string(port) + "/chunked";
+    const std::string outputPath = directoryPath + "/downloaded.bin";
+
+    auto downloadFuture = std::async(std::launch::async, [&url, &outputPath]() {
+        return ovms::downloadFileWithCurl(url, outputPath);
+    });
+
+    ASSERT_EQ(downloadFuture.wait_for(std::chrono::seconds(10)), std::future_status::ready)
+        << "downloadFileWithCurl did not return in time for a chunked, Content-Length-less response";
+    EXPECT_EQ(downloadFuture.get(), ovms::StatusCode::OK);
+
+    server.stop();
+    serverThread.join();
+
+    std::ifstream downloadedFile(outputPath, std::ios::binary);
+    std::ostringstream downloadedContent;
+    downloadedContent << downloadedFile.rdbuf();
+    EXPECT_EQ(downloadedContent.str(), body);
 }
 
 // RAII helper class for managing log file lifecycle.
