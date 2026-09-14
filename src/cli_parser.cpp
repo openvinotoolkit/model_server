@@ -179,6 +179,19 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Path to directory that contains multimedia files that can be used as input for LLMs.",
                 cxxopts::value<std::string>(),
                 "ALLOWED_LOCAL_MEDIA_PATH")
+            ("max_image_decode_pixels",
+                "Maximum number of pixels (width x height) of a single decoded input image. Images whose header-declared "
+                "pixel count exceeds this limit are rejected before decoding, guarding against decompression-bomb inputs. "
+                "Default matches OpenCV's OPENCV_IO_MAX_IMAGE_PIXELS. Note: this does not change OpenCV's own internal limit, "
+                "which is controlled separately by the OPENCV_IO_MAX_IMAGE_PIXELS environment variable read at startup.",
+                cxxopts::value<uint64_t>()->default_value("67108864"),
+                "MAX_IMAGE_DECODE_PIXELS")
+            ("allow_unestimatable_image_formats",
+                "Flag allowing input images whose decoded size cannot be estimated (formats OVMS cannot inspect the header of) "
+                "to be decoded anyway. Disabled by default, so such images are rejected. Enable only if you must accept formats "
+                "OVMS cannot pre-validate.",
+                cxxopts::value<bool>()->default_value("false"),
+                "ALLOW_UNESTIMATABLE_IMAGE_FORMATS")
             ("allow_credentials",
                 "Flag enabling credentials on the API.",
                 cxxopts::value<bool>()->default_value("false"),
@@ -624,6 +637,9 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
 
     if (result->count("grpc_memory_quota"))
         serverSettings.grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
+
+    serverSettings.maxImageDecodePixels = result->operator[]("max_image_decode_pixels").as<uint64_t>();
+    serverSettings.allowUnestimatableImageFormats = result->operator[]("allow_unestimatable_image_formats").as<bool>();
 
     if (result->count("rest_workers"))
         serverSettings.restWorkers = result->operator[]("rest_workers").as<uint32_t>();

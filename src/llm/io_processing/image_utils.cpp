@@ -182,16 +182,21 @@ absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     }
 
     // Part 2: guard against decompression bombs, then decode the in-memory bytes exactly once.
-    uint64_t estimatedDecodedBytes = 0;
-    auto estimate = image_utils::estimateDecodedImageSize(decoded, estimatedDecodedBytes);
+    uint64_t estimatedDecodedPixels = 0;
+    auto estimate = image_utils::estimateDecodedImageSize(decoded, estimatedDecodedPixels);
     if (estimate == image_utils::DecodedSizeEstimate::InputTooLarge) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image binary payload too large to inspect. Size: {}", decoded.size());
         return absl::InvalidArgumentError("Image too large");
     }
+    if (estimate == image_utils::DecodedSizeEstimate::UnsupportedFormat &&
+        !request_validation_utils::allowUnestimatableImageFormats()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image decoded size could not be estimated and unestimatable formats are not allowed");
+        return absl::InvalidArgumentError("Image format decoded size cannot be verified");
+    }
     if (estimate == image_utils::DecodedSizeEstimate::Estimated &&
-        estimatedDecodedBytes > request_validation_utils::getMaxImageDecodedSizeBytes()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Estimated decoded image size {} exceeds budget {}",
-            estimatedDecodedBytes, request_validation_utils::getMaxImageDecodedSizeBytes());
+        estimatedDecodedPixels > request_validation_utils::getMaxImageDecodePixels()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Estimated decoded image pixels {} exceeds budget {}",
+            estimatedDecodedPixels, request_validation_utils::getMaxImageDecodePixels());
         return absl::InvalidArgumentError("Image exceeds maximum decoded size");
     }
     try {

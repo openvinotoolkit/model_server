@@ -1438,19 +1438,22 @@ TEST(PredictValidationImageKFSTest, validation_stage_does_not_reject_on_size) {
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
 
-TEST(PredictValidationImageKFSTest, decoded_size_budget_derives_pixel_cap) {
-    unsetenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES");
-    // Default byte budget is 1 GB; pixel cap = budget / MAX_DECODED_BYTES_PER_PIXEL.
-    EXPECT_EQ(ovms::request_validation_utils::getMaxImageDecodedSizeBytes(),
-        ovms::request_validation_utils::DEFAULT_MAX_IMAGE_DECODED_SIZE_BYTES);
-    EXPECT_EQ(ovms::request_validation_utils::getMaxImagePixels(),
-        ovms::request_validation_utils::DEFAULT_MAX_IMAGE_DECODED_SIZE_BYTES / ovms::request_validation_utils::MAX_DECODED_BYTES_PER_PIXEL);
+TEST(PredictValidationImageKFSTest, decode_pixel_budget_from_config) {
+    ScopedOVMSConfigGuard configGuard;
 
-    setenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES", "1048576", 1);  // 1 MB
-    EXPECT_EQ(ovms::request_validation_utils::getMaxImageDecodedSizeBytes(), 1048576u);
-    EXPECT_EQ(ovms::request_validation_utils::getMaxImagePixels(),
-        1048576u / ovms::request_validation_utils::MAX_DECODED_BYTES_PER_PIXEL);
-    unsetenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES");
+    ovms::ServerSettingsImpl scopedServerSettings = configGuard.getServerSettings();
+    scopedServerSettings.maxImageDecodePixels = 67108864;
+    scopedServerSettings.allowUnestimatableImageFormats = false;
+    ovms::ModelsSettingsImpl scopedModelsSettings = configGuard.getModelSettings();
+    configGuard.parse(scopedServerSettings, scopedModelsSettings);
+    EXPECT_EQ(ovms::request_validation_utils::getMaxImageDecodePixels(), 67108864u);
+    EXPECT_FALSE(ovms::request_validation_utils::allowUnestimatableImageFormats());
+
+    scopedServerSettings.maxImageDecodePixels = 1024;
+    scopedServerSettings.allowUnestimatableImageFormats = true;
+    configGuard.parse(scopedServerSettings, scopedModelsSettings);
+    EXPECT_EQ(ovms::request_validation_utils::getMaxImageDecodePixels(), 1024u);
+    EXPECT_TRUE(ovms::request_validation_utils::allowUnestimatableImageFormats());
 }
 
 #define VERIFY_COMPUTE_BUFFER_SIZE(SHAPE, ELEMENT_SIZE, WILL_NOT_OVERFLOW, EXPECTED_BYTES)                                                  \

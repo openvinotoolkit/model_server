@@ -280,6 +280,7 @@ ovms_cc_library(
             "libovmsstatus",
             "libovmsshape",
             "anonymous_input_name",
+            "libovms_config",
     ],
     visibility = ["//visibility:public",],
 )

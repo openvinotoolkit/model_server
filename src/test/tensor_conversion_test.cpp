@@ -23,6 +23,7 @@
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../capi_frontend/deserialization.hpp"
 #include "../kfs_frontend/deserialization.hpp"
+#include "../config.hpp"
 #include "../tensor_conversion.hpp"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
@@ -82,21 +83,27 @@ TYPED_TEST(NativeFileInputConversionTest, tensorWithInvalidImage) {
 }
 
 TYPED_TEST(NativeFileInputConversionTest, tensorWithExceededMemoryBudget) {
-    setenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES", "1", 1);  // 1 byte budget for test
+    ScopedOVMSConfigGuard configGuard;
+    ovms::ServerSettingsImpl scopedServerSettings = configGuard.getServerSettings();
+    scopedServerSettings.maxImageDecodePixels = 0;  // reject any image (test fixture is a 1x1 pixel jpg)
+    ovms::ModelsSettingsImpl scopedModelsSettings = configGuard.getModelSettings();
+    configGuard.parse(scopedServerSettings, scopedModelsSettings);
     ov::Tensor tensor;
     auto tensorInfo = std::make_shared<const TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
 
     EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, *tensorInfo, nullptr), ovms::StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED);
-    unsetenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES");
 }
 
 TYPED_TEST(NativeFileInputConversionTest, tensorWithinMemoryBudget) {
-    setenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES", "1073741824", 1);  // 1 GB budget
+    ScopedOVMSConfigGuard configGuard;
+    ovms::ServerSettingsImpl scopedServerSettings = configGuard.getServerSettings();
+    scopedServerSettings.maxImageDecodePixels = 67108864;  // default pixel budget
+    ovms::ModelsSettingsImpl scopedModelsSettings = configGuard.getModelSettings();
+    configGuard.parse(scopedServerSettings, scopedModelsSettings);
     ov::Tensor tensor;
     auto tensorInfo = std::make_shared<const TensorInfo>("", ovms::Precision::U8, ovms::Shape{1, 1, 1, 3}, Layout{"NHWC"});
 
     EXPECT_EQ(convertNativeFileFormatRequestTensorToOVTensor(this->requestTensor, tensor, *tensorInfo, nullptr), ovms::StatusCode::OK);
-    unsetenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES");
 }
 
 TYPED_TEST(NativeFileInputConversionTest, tensorWithEmptyTensor) {

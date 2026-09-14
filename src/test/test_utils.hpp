@@ -65,6 +65,36 @@ void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfi
 
 static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::ModelInfer};
 
+class ScopedOVMSConfigGuard {
+public:
+    ScopedOVMSConfigGuard() :
+        serverSettings(ovms::Config::instance().getServerSettings()),
+        modelsSettings(ovms::Config::instance().getModelSettings()) {}
+
+    ScopedOVMSConfigGuard(const ScopedOVMSConfigGuard&) = delete;
+    ScopedOVMSConfigGuard& operator=(const ScopedOVMSConfigGuard&) = delete;
+
+    ~ScopedOVMSConfigGuard() {
+        parse(serverSettings, modelsSettings);
+    }
+
+    const ovms::ServerSettingsImpl& getServerSettings() const {
+        return serverSettings;
+    }
+
+    const ovms::ModelsSettingsImpl& getModelSettings() const {
+        return modelsSettings;
+    }
+
+    bool parse(ovms::ServerSettingsImpl& serverSettings, ovms::ModelsSettingsImpl& modelsSettings) {
+        return ovms::Config::instance().parse(&serverSettings, &modelsSettings);
+    }
+
+private:
+    ovms::ServerSettingsImpl serverSettings;
+    ovms::ModelsSettingsImpl modelsSettings;
+};
+
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
 

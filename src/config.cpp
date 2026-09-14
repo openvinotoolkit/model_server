@@ -435,6 +435,8 @@ uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSe
 uint32_t Config::idleUnloadTimeoutSeconds() const { return this->serverSettings.idleUnloadTimeoutSeconds; }
 bool Config::disableInputCountValidation() const { return this->serverSettings.disableInputCountValidation; }
 bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
+uint64_t Config::maxImageDecodePixels() const { return this->serverSettings.maxImageDecodePixels; }
+bool Config::allowUnestimatableImageFormats() const { return this->serverSettings.allowUnestimatableImageFormats; }
 const std::string& Config::allowedOrigins() const { return this->serverSettings.allowedOrigins; }
 const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }
 const std::string& Config::allowedHeaders() const { return this->serverSettings.allowedHeaders; }

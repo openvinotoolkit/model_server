@@ -25,24 +25,18 @@
 #include "logging.hpp"
 #include "stringutils.hpp"
 #include "tensorinfo.hpp"
+#include "config.hpp"
 #include "status.hpp"
 
 namespace ovms {
 namespace request_validation_utils {
-size_t getMaxImageDecodedSizeBytes() {
-    size_t maxImageSize = DEFAULT_MAX_IMAGE_DECODED_SIZE_BYTES;
-    const char* env = std::getenv("OVMS_IMAGE_MAX_DECODED_SIZE_BYTES");
-    if (env && *env) {
-        auto parsed = stou64(env);
-        if (parsed.has_value() && parsed.value() > 0) {
-            maxImageSize = parsed.value();
-        }
-    }
-    return maxImageSize;
+// TODO(image-limits): remove the global Config singleton dependency here
+size_t getMaxImageDecodePixels() {
+    return Config::instance().maxImageDecodePixels();
 }
 
-size_t getMaxImagePixels() {
-    return getMaxImageDecodedSizeBytes() / MAX_DECODED_BYTES_PER_PIXEL;
+bool allowUnestimatableImageFormats() {
+    return Config::instance().allowUnestimatableImageFormats();
 }
 
 Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth) {

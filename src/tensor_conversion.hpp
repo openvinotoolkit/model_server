@@ -68,9 +68,9 @@ ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const TensorInfo& t
 ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
 shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
 Status checkEstimatedImageSize(std::string_view encodedImage, const std::string& inputName,
-    size_t alreadyAllocatedBytes, size_t maxAllowedImageBytes);
+    size_t alreadyAllocatedPixels, size_t maxAllowedImagePixels);
 Status accumulateAndCheckDecodedImageSize(const cv::Mat& image, const TensorInfo& tensorInfo,
-    size_t& totalAllocatedBytes, size_t maxAllowedImageBytes);
+    size_t& totalAllocatedPixels, size_t maxAllowedImagePixels);
 }  // namespace tensor_conversion
 template <typename TensorType>
 static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const TensorInfo& tensorInfo, const std::string* buffer) {
@@ -89,11 +89,11 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
         return status;
     }
     int numberOfInputs = (!rawInputsContentsUsed ? getBinaryInputsSize(src) : inputs.size());
-    size_t totalAllocatedBytes = 0;
-    size_t maxAllowedImageBytes = request_validation_utils::getMaxImageDecodedSizeBytes();
+    size_t totalAllocatedPixels = 0;
+    size_t maxAllowedImagePixels = request_validation_utils::getMaxImageDecodePixels();
     for (int i = 0; i < numberOfInputs; i++) {
         const std::string& encodedImage = !rawInputsContentsUsed ? getBinaryInput(src, i) : inputs[i];
-        status = tensor_conversion::checkEstimatedImageSize(encodedImage, tensorInfo.getMappedName(), totalAllocatedBytes, maxAllowedImageBytes);
+        status = tensor_conversion::checkEstimatedImageSize(encodedImage, tensorInfo.getMappedName(), totalAllocatedPixels, maxAllowedImagePixels);
         if (status != StatusCode::OK) {
             return status;
         }
@@ -101,7 +101,7 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
 
-        status = tensor_conversion::accumulateAndCheckDecodedImageSize(image, tensorInfo, totalAllocatedBytes, maxAllowedImageBytes);
+        status = tensor_conversion::accumulateAndCheckDecodedImageSize(image, tensorInfo, totalAllocatedPixels, maxAllowedImagePixels);
         if (status != StatusCode::OK) {
             return status;
         }
