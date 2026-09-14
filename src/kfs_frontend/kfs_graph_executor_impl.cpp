@@ -16,6 +16,7 @@
 #include "kfs_graph_executor_impl.hpp"
 
 #include <chrono>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -392,20 +393,30 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request.model_name(), request.model_version(), details);
                 return Status(StatusCode::INVALID_SHAPE, details);
             }
-            rawShape.emplace_back(requestInputItr->shape()[i]);
+            // mediapipe::Tensor::Shape stores dimensions as int; reject before the narrowing conversion below.
+            if (requestInputItr->shape()[i] > static_cast<int64_t>(std::numeric_limits<int>::max())) {
+                std::stringstream ss;
+                ss << "Dimension size too large for Mediapipe tensor: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request.model_name(), request.model_version(), details);
+                return Status(StatusCode::INVALID_SHAPE, details);
+            }
+            rawShape.emplace_back(static_cast<int>(requestInputItr->shape()[i]));
+        }
+        ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
+        size_t expectedBytes = 1;
+        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, precision.size(), expectedBytes);
+        // mediapipe::Tensor internally computes element/byte counts as int (see Tensor::bytes()); a size_t-valid
+        // value that exceeds INT_MAX would silently wrap there and corrupt the allocation size passed to malloc().
+        if (!expectedBufferSizeValid || expectedBytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
+            const std::string details = "Provided shape and datatype declare too large buffer.";
+            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
+            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
         mediapipe::Tensor::Shape tensorShape{rawShape};
         outTensor = std::make_unique<mediapipe::Tensor>(datatype, tensorShape);
         void* data;
         SET_DATA_FROM_MP_TENSOR(outTensor, GetCpuWriteView);
-        ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
-        size_t expectedBytes = 1;
-        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, precision.size(), expectedBytes);
-        if (!expectedBufferSizeValid) {
-            const std::string details = "Provided shape and datatype declare too large buffer.";
-            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
-            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
-        }
         if (request.raw_input_contents().size()) {
             auto& bufferLocation = request.raw_input_contents().at(inputIndex);
             OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, bufferLocation, requestedName, request));
