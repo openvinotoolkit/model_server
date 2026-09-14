@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=no-member
 
 import queue
 
@@ -172,7 +173,7 @@ class TritonServingWrapper(AbstractServingWrapper, AbstractCommunicationInterfac
 
     def prepare_triton_output_data(self):
         outputs = []
-        for i, out_model_name in enumerate(self.model.outputs):
+        for _i, out_model_name in enumerate(self.model.outputs):
             outputs.append(self.api_client.InferRequestedOutput(out_model_name))
         return outputs
 

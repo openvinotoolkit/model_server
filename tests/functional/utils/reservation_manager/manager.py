@@ -246,7 +246,7 @@ class Manager:
         """Return reservation from json data"""
 
         try:
-            with open(json_path, "r") as json_file:
+            with open(json_path, "r", encoding="utf-8") as json_file:
                 json_data = json.load(json_file)
                 logger.info(f"json_data: {json_data}")
 
@@ -295,7 +295,7 @@ class Manager:
 
                 # # Open exclusively, if file exists - throw exception
                 try:
-                    with open(json_save_path, "x") as json_file:
+                    with open(json_save_path, "x", encoding="utf-8") as json_file:
                         json.dump(reservation_json,
                                   json_file,
                                   ensure_ascii=False,
@@ -305,7 +305,7 @@ class Manager:
                     raise FileExistsError(f"Can't save reservation json: {exc}") from exc
 
                 try:
-                    with open(shell_env_save_path, "x") as shell_env_file:
+                    with open(shell_env_save_path, "x", encoding="utf-8") as shell_env_file:
                         shell_env_file.write(res_shell_envs)
 
                 except FileExistsError as exc:
@@ -387,7 +387,7 @@ class Manager:
 
         config = None
         try:
-            with open(config_path, 'r') as file:
+            with open(config_path, 'r', encoding='utf-8') as file:
                 config = yaml.load(file, Loader=yaml.FullLoader)["config"]
 
         except FileNotFoundError as exc:
@@ -536,14 +536,14 @@ class PoolPart:
         is in intersect with this instance.
         """
 
-        if type(pool_part) is PoolPart:
+        if isinstance(pool_part, PoolPart):
             self_is_subset = (self.range.start in pool_part.range
                               or self.range[-1] in pool_part.range)
             pool_part_is_subset = (pool_part.range.start in self.range
                                    or pool_part.range[-1] in self.range)
             return self_is_subset or pool_part_is_subset
 
-        elif type(pool_part) is Reservation:
+        if isinstance(pool_part, Reservation):
             res_pool_part = pool_part.pool_part.range
 
             self_is_subset = (self.range.start in res_pool_part

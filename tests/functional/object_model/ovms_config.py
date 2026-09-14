@@ -37,7 +37,7 @@ from tests.functional.utils.remote_test_environment import copy_custom_lib_to_ho
 logger = get_logger(__name__)
 
 
-class OvmsConfig(object):
+class OvmsConfig:
 
     @staticmethod
     def generate(name, models, **kwargs):
@@ -104,26 +104,26 @@ class OvmsConfig(object):
             if config_path is None
             else config_path
         )
-        logger.info("Saving config file to {}, content:\n{}".format(config_path, config_json))
+        logger.info(f"Saving config file to {config_path}, content:\n{config_json}")
 
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        with open(os.path.join(config_path), "w") as outfile:
+        with open(os.path.join(config_path), "w", encoding="utf-8") as outfile:
             outfile.write(config_json)
 
         return Paths.CONFIG_PATH_INTERNAL
 
     @staticmethod
     def save_without_encoding(config_path, config_dict: dict):
-        logger.info("Saving config file to {}, content:\n{}".format(config_path, str(config_dict)))
+        logger.info(f"Saving config file to {config_path}, content:\n{str(config_dict)}")
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        with open(os.path.join(config_path), "w") as outfile:
+        with open(os.path.join(config_path), "w", encoding="utf-8") as outfile:
             outfile.write(str(config_dict))
 
         return Paths.CONFIG_PATH_INTERNAL
 
     @staticmethod
     def build(
-        models: List[ModelInfo] = [],
+        models: List[ModelInfo] = None,
         pipelines: List[Pipeline] = None,
         custom_nodes: List[CustomNode] = None,
         metrics_enable=MetricsPolicy.NotDefined,
@@ -133,6 +133,8 @@ class OvmsConfig(object):
         use_subconfig=False,
         custom_graph_paths=None,
     ) -> dict:
+        if models is None:
+            models = []
         config = OvmsConfig.build_ovms_config(
             models,
             pipelines,
@@ -148,7 +150,7 @@ class OvmsConfig(object):
 
     @staticmethod
     def build_ovms_config(
-        models: List[ModelInfo] = [],
+        models: List[ModelInfo] = None,
         pipelines: List[Pipeline] = None,
         custom_nodes: List[CustomNode] = None,
         metrics_enable=MetricsPolicy.NotDefined,
@@ -158,11 +160,13 @@ class OvmsConfig(object):
         use_subconfig=False,
         custom_graph_paths=None,
     ) -> dict:
+        if models is None:
+            models = []
         if use_subconfig:
             config = {Config.MODEL_CONFIG_LIST: []}
         else:
             config = {Config.MODEL_CONFIG_LIST: [model.get_config() for model in models]}
-            if all([c is None for c in config[Config.MODEL_CONFIG_LIST]]):
+            if all(c is None for c in config[Config.MODEL_CONFIG_LIST]):
                 config = {Config.MODEL_CONFIG_LIST: []}
         if resource_dir and CurrentOvmsType.ovms_type in [
             OvmsType.CAPI,
@@ -203,7 +207,7 @@ class OvmsConfig(object):
                 ):
                     model["base_path"] = os.path.join(resource_dir, f'./{model["base_path"]}')
 
-        loader_configs = set([model.custom_loader.loader_config for model in models if model.custom_loader is not None])
+        loader_configs = {model.custom_loader.loader_config for model in models if model.custom_loader is not None}
         for loader in loader_configs:
             if (
                 resource_dir
@@ -232,12 +236,12 @@ class OvmsConfig(object):
 
     @staticmethod
     def load(config_path):
-        with open(config_path, "r") as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             try:
                 config_json = f.read()
                 config_dict = json.loads(config_json)
             except ValueError as e:
-                logger.error("Error while loading json: {}".format(config_json))
+                logger.error(f"Error while loading json: {config_json}")
                 raise e
         return config_dict
 
@@ -295,7 +299,7 @@ class OvmsConfig(object):
 
     @staticmethod
     def replace_subconfig_paths(name, subconfig_path, resources_dir):
-        subconfig_dict = json.loads(Path(subconfig_path).read_text())
+        subconfig_dict = json.loads(Path(subconfig_path).read_text(encoding="utf-8"))
         for i, model in enumerate(subconfig_dict["model_config_list"]):
             subconfig_dict["model_config_list"][i]["config"]["base_path"] = model["config"]["base_path"].replace(
                 Paths.MODELS_PATH_INTERNAL, os.path.join(resources_dir, Paths.MODELS_PATH_NAME)
@@ -311,21 +315,21 @@ class OvmsConfig(object):
         else:
             config_path = Path(os.path.join(config_path_on_host, Paths.CONFIG_FILE_NAME))
             if config_path.exists():
-                config_dict = json.loads(config_path.read_text())
+                config_dict = json.loads(config_path.read_text(encoding="utf-8"))
 
         subconfig_dict = {Config.MODEL_CONFIG_LIST: []}
         mediapipe_model = [model for model in parameters.models if model.is_mediapipe][0]
-        feature_extraction_models = \
+        _feature_extraction_models = \
             [
                 model for model in parameters.models
                 if hasattr(model, "is_feature_extraction") and model.is_feature_extraction
             ]
-        rerank_models = \
+        _rerank_models = \
             [
                 model for model in parameters.models
                 if hasattr(model, "is_rerank") and model.is_rerank
             ]
-        regular_models = [model for model in mediapipe_model.regular_models]
+        regular_models = list(mediapipe_model.regular_models)
 
         filename = Paths.SUBCONFIG_FILE_NAME
         subconfigs = [os.path.basename(elem.get("subconfig", ""))
@@ -338,8 +342,8 @@ class OvmsConfig(object):
                 subconfig_dict[Config.MODEL_CONFIG_LIST].append(model.get_config())
                 filename = (
                     f"subconfig_{model.name}.json"
-                    if config_dict is not None and all(["subconfig" in elem
-                                                        for elem in config_dict[Config.MEDIAPIPE_CONFIG_LIST]])
+                    if config_dict is not None and all("subconfig" in elem
+                                                        for elem in config_dict[Config.MEDIAPIPE_CONFIG_LIST])
                     else Paths.SUBCONFIG_FILE_NAME
                 )
         mediapipe_resources_path = os.path.join(config_path_on_host, mediapipe_model.name)

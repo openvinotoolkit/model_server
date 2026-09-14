@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import pprint
 import time
@@ -75,7 +76,7 @@ class ClientAuthType(Enum):
     OAUTH2_PROXY_AUTH = "OAuth2ProxyAuth"
 
 
-class NoAuthConfigurationProvider(object):
+class NoAuthConfigurationProvider:
     """Provide configuration for no client_auth http client."""
 
     @classmethod
@@ -88,7 +89,7 @@ class NoAuthConfigurationProvider(object):
         )
 
 
-class SslAuthConfigurationProvider(object):
+class SslAuthConfigurationProvider:
     """Provide configuration for https client with SSL/TLS."""
 
     @classmethod
@@ -285,7 +286,6 @@ class ClientAuthSsl(ClientAuthNoAuth):
     Class implemented to comply with coding standard.
     Authorisation is taken care by SSL certificates, no extra auth is needed.
     """
-    pass
 
 
 class HTTPCookieAuth(AuthBase):
@@ -381,8 +381,9 @@ class ClientAuthOAuth2Proxy(ClientAuthBase):
         return "\n".join(cookies) + "\n"
 
     def login_hook(self, http_session: HttpSession) -> Callable[[Response], Response]:
-        state = dict(logging_hook_fn=0, redirects=0,
-                     authorizations=0, authorizations_skipped=0)
+        state = {
+            "logging_hook_fn": 0, "redirects": 0, "authorizations": 0, "authorizations_skipped": 0
+        }
 
         def login_hook_fn(initial_response: Response, *args, **kwargs) -> Response:
             logger.verbose(f"\nLogin hook for session: {str(id(http_session))[-4:]}."
@@ -522,7 +523,7 @@ class ClientAuthOAuth2Proxy(ClientAuthBase):
         return data
 
 
-class ClientAuthFactory(object):
+class ClientAuthFactory:
     """Client authentication factory."""
 
     EMPTY_URL = ""
@@ -540,27 +541,18 @@ class ClientAuthFactory(object):
 
         if auth_type == ClientAuthType.TOKEN_AUTH:
             return ClientAuthToken(auth_url, session, params)
-
-        elif auth_type == ClientAuthType.HTTP_SESSION:
+        if auth_type == ClientAuthType.HTTP_SESSION:
             return ClientAuthSession(auth_url, session, params)
-
-        elif auth_type == ClientAuthType.HTTP_BASIC:
+        if auth_type == ClientAuthType.HTTP_BASIC:
             return ClientAuthHttpBasic(auth_url, session, params)
-
-        elif auth_type == ClientAuthType.TOKEN_NO_AUTH:
+        if auth_type == ClientAuthType.TOKEN_NO_AUTH:
             return ClientAuthTokenProvided(auth_url, session, params)
-
-        elif auth_type == ClientAuthType.NO_AUTH:
+        if auth_type == ClientAuthType.NO_AUTH:
             return ClientAuthNoAuth(auth_url, session)
-
-        elif auth_type == ClientAuthType.SSL:
+        if auth_type == ClientAuthType.SSL:
             return ClientAuthSsl(auth_url, session)
-
-        elif auth_type == ClientAuthType.LOGIN_PAGE:
+        if auth_type == ClientAuthType.LOGIN_PAGE:
             return ClientAuthLoginPage(auth_url, session, params)
-
-        elif auth_type == ClientAuthType.OAUTH2_PROXY_AUTH:
+        if auth_type == ClientAuthType.OAUTH2_PROXY_AUTH:
             return ClientAuthOAuth2Proxy(auth_url, session, params)
-
-        else:
-            raise ClientAuthFactoryInvalidAuthTypeException(auth_type)
+        raise ClientAuthFactoryInvalidAuthTypeException(auth_type)

@@ -15,9 +15,9 @@
 #
 
 import os
+import re
 
 import docker
-import re
 
 from tests.functional.utils.environment_info import DEFAULT_FULL_VERSION_NUMBER, BaseInfo
 from tests.functional.utils.logger import get_logger
@@ -222,7 +222,7 @@ class OvmsInfo(BaseInfo):
 
         if image_to_pull not in cls.IMAGES or force_pull:
             repository, tag = image_to_pull.split(":")
-            logger.info("Pulling image: {} tag: {}".format(repository, tag))
+            logger.info(f"Pulling image: {repository} tag: {tag}")
             image = DockerClient().pull(repository=repository, tag=tag)
             cls.IMAGES[image_to_pull] = image
         return cls.IMAGES[image_to_pull]

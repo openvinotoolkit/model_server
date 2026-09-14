@@ -16,15 +16,15 @@
 
 import concurrent.futures
 import enum
-import requests
-
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from http import HTTPStatus
 from math import prod
-from retry.api import retry_call
 from statistics import mean
+
+import requests
+from retry.api import retry_call
 
 from tests.functional.utils.assertions import InvalidReturnCodeException
 from tests.functional.utils.logger import get_logger, step
@@ -50,7 +50,7 @@ def run_in_loop_during(action_to_run_in_loop, parallel_action, runs):
 
 
 def run_all_actions_in_loop(actions, runs, max_workers=None):
-    logger.info(f"Starting n={runs} parallel actions={','.join(map(lambda x: str(x), actions))}")
+    logger.info(f"Starting n={runs} parallel actions={','.join(map(str, actions))}")
     with ThreadPoolExecutor(max_workers) as executor:
         futures = []
         for run in range(runs):
@@ -110,7 +110,7 @@ def send_request_to_endpoint(port, address=None, endpoint=None, expected_code=No
             endpoint == Endpoints.RELOAD_CONFIG.value]):
         logger.warning(f"{msg1} {msg2} Both of those codes are accepted.")
         return ret
-    elif not ret.status_code == expected_code:
+    if not ret.status_code == expected_code:
         raise InvalidReturnCodeException(f"{msg1} {msg2}")
     logger.info(msg1)
     return ret
@@ -156,10 +156,10 @@ def _generate_permutations(input_shape, shape_results, example_input_data_for_pr
             item = defaultdict(None)
             tmp_example_cnt = example_cnt.copy()
             tmp_example_cnt.reverse()
-            for in_name in input_array:
+            for in_name, in_values in input_array.items():
                 current_cnt = tmp_example_cnt.pop()
                 idx = (j // prod(tmp_example_cnt)) % current_cnt
-                item[in_name] = input_array[in_name][idx]
+                item[in_name] = in_values[idx]
             example_array.append(item)
         result_predict_shape.append(example_array)
     return result[skip_first_items:], result_predict_shape[skip_first_items:]
@@ -211,17 +211,17 @@ def generate_dynamic_shape_permutation(model):
         for i in range(2 ** len(shape)):
             new_shape = shape.copy()
             shape_for_predict_list = [shape.copy()]
-            for dim in range(len(shape)):
+            for dim, shape_val in enumerate(shape):
                 if (i >> dim) % 2 == 1:
                     new_shape[dim] = -1
 
                     copy_shape_for_predict_list = deepcopy(shape_for_predict_list)
                     for for_predict, copy_for_predict in zip(shape_for_predict_list, copy_shape_for_predict_list):
-                        for_predict[dim] = max(1, shape[dim] // 2)
+                        for_predict[dim] = max(1, shape_val // 2)
                         if layout is not None and layout.index("C") == dim:
-                            copy_for_predict[dim] = shape[dim]
+                            copy_for_predict[dim] = shape_val
                         else:
-                            copy_for_predict[dim] = shape[dim] * 2
+                            copy_for_predict[dim] = shape_val * 2
                     shape_for_predict_list += copy_shape_for_predict_list
 
             shape_results[in_name].append(f"({','.join([str(x) for x in new_shape])})")
@@ -268,13 +268,13 @@ def generate_range_shape_permutation(model, skip_dims=2, generate_low_range=None
         for i in range(2 ** len(shape[skip_dims:])):
             new_shape = shape[skip_dims:]
             shape_for_predict_list = [shape.copy()]
-            for dim in range(len(new_shape)):
+            for dim, new_shape_val in enumerate(new_shape):
                 if (i >> dim) % 2 == 1:
-                    high_value = generate_high_range(new_shape[dim])
+                    high_value = generate_high_range(new_shape_val)
                     if layout is not None and layout.index("C") == (dim + skip_dims):
                         copy_for_predict[dim] = shape[dim]
 
-                    new_shape[dim] = f"{generate_low_range(new_shape[dim])}:{high_value}"
+                    new_shape[dim] = f"{generate_low_range(new_shape_val)}:{high_value}"
 
                     copy_shape_for_predict_list = deepcopy(shape_for_predict_list)
                     for for_predict, copy_for_predict in zip(shape_for_predict_list, copy_shape_for_predict_list):

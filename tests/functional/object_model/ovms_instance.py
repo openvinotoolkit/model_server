@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument,no-member
 
 import os
 import random
@@ -124,7 +125,7 @@ class OvmsInstance(ABC):
                 OvmsMessages.PIPELINE_REFERS_TO_INCORRECT_LIBRARY,
             ])
 
-        if any([x.is_mediapipe for x in models]):
+        if any(x.is_mediapipe for x in models):
             break_msg_list.extend([
                 OvmsMessages.MEDIAPIPE_FAILED_TO_OPEN_GRAPH_SHORT,
             ])
@@ -147,7 +148,7 @@ class OvmsInstance(ABC):
                 [OvmsMessages.ERROR_FAILED_TO_CREATE_PLUGIN, OvmsMessages.ERROR_FAILED_TO_LOAD_LIBRARY]
             )
 
-        if all([x.is_hf_direct_load and not x.is_local for x in models]):
+        if all(x.is_hf_direct_load and not x.is_local for x in models):
             break_msg_list.extend([
                 OvmsMessages.WARNING_NO_VERSION_FOUND_FOR_MODEL,
             ])
@@ -257,8 +258,7 @@ class OvmsInstance(ABC):
     def get_port(self, api_type):
         if isinstance(api_type, str):
             return self.ovms_ports[api_type]
-        else:
-            return self.ovms_ports[api_type.type]
+        return self.ovms_ports[api_type.type]
 
     def execute_and_check(self, cmd, verbose=False, cwd=None):
         exit_code, stdout = self.execute_command(cmd, cwd)
@@ -326,8 +326,7 @@ class OvmsInstance(ABC):
                 if result:
                     exception, line = result
                     raise exception(line)
-                else:
-                    raise OvmsTestException(f"Received break status: {current_status}", ovms_log=ovms_logs_lines)
+                raise OvmsTestException(f"Received break status: {current_status}", ovms_log=ovms_logs_lines)
             if current_status == status:
                 break
 
@@ -377,7 +376,6 @@ class OvmsInstance(ABC):
         """
         Fetch and save OVMS process id.
         """
-        pass
 
     @abstractmethod
     def start(self, ensure_started=False, *args, **kwargs):
@@ -391,12 +389,11 @@ class OvmsInstance(ABC):
     def get_signal_type(terminate_signal_type):
         if terminate_signal_type == Ovms.SIGKILL_SIGNAL:
             return signal.SIGKILL
-        elif terminate_signal_type == Ovms.SIGINT_SIGNAL:
+        if terminate_signal_type == Ovms.SIGINT_SIGNAL:
             return signal.SIGINT
-        elif terminate_signal_type == Ovms.SIGTERM_SIGNAL:
+        if terminate_signal_type == Ovms.SIGTERM_SIGNAL:
             return signal.SIGTERM
-        else:
-            raise NotImplementedError(f"Unknown signal: {terminate_signal_type}")
+        raise NotImplementedError(f"Unknown signal: {terminate_signal_type}")
 
     def filter_unexpected_messages(self, unexpected_messages):
         for msg in unexpected_messages:
@@ -436,7 +433,7 @@ class OvmsInstance(ABC):
                     )
                     ovms_log = self._default_log.get_all_logs()
                     dmesg_log = self._dmesg_log.get_all_logs()
-                    for name, exception_class in dmesg_exceptions:
+                    for _name, exception_class in dmesg_exceptions:
                         msg = getattr(exception_class, "msg", None)
                         for m in unexpected_messages:
                             if m in msg:
@@ -459,7 +456,7 @@ class OvmsInstance(ABC):
                         hasattr(self, "cmd") and
                         self.cmd is not None and
                         self.cmd.base_os == OsType.Windows and
-                        type(error) == PermissionError
+                        isinstance(error, PermissionError)
                 ):
                     change_dir_permissions(self.container_folder)
                     shutil.rmtree(self.container_folder)
@@ -475,7 +472,7 @@ class OvmsInstance(ABC):
 
     @staticmethod
     def acquire_target_device_lock(target_device):
-        target_device = target_device.strip("'").split(" ")[0] if type(target_device) == str else target_device
+        target_device = target_device.strip("'").split(" ")[0] if isinstance(target_device, str) else target_device
         max_locks = MAX_WORKERS_PER_TARGET_DEVICE[get_base_device(target_device)]
         if max_locks == 0:  # No lock required
             return None
@@ -522,7 +519,7 @@ class OvmsInstance(ABC):
                 logger.warning(e)
                 proc = Process()
                 short_id = self.get_short_id()
-                code, stdout, stderr = proc.run_and_check_return_all(f"docker ps -a --filter id={short_id}")
+                _code, stdout, _stderr = proc.run_and_check_return_all(f"docker ps -a --filter id={short_id}")
                 assert short_id in stdout, f"OVMS is still running. Docker id: {short_id}, OVMS id: {ovms_pid}."
 
 

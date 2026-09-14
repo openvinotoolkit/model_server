@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument,abstract-method
 
 import os
 from abc import abstractmethod
@@ -102,22 +103,20 @@ class Node:
     def get_input_name(self, id):
         if self.input_names:
             return self.input_names[id]
+        if self.node_type == NodeType.Output:
+            prefix = "output"
         else:
-            if self.node_type == NodeType.Output:
-                prefix = "output"
-            else:
-                prefix = "input"
-            return f"{prefix}_{id}"
+            prefix = "input"
+        return f"{prefix}_{id}"
 
     def get_output_name(self, id):
         if self.output_names:
             return self.output_names[id]
+        if self.node_type == NodeType.Input:
+            prefix = "input"
         else:
-            if self.node_type == NodeType.Input:
-                prefix = "input"
-            else:
-                prefix = self.model.name
-            return f"{prefix}_{id}"
+            prefix = self.model.name
+        return f"{prefix}_{id}"
 
     def _change_name(self, names, old_name, new_name):
         for index, name in enumerate(names):
@@ -382,7 +381,7 @@ class Pipeline(ModelInfo):
                     )
                     if demultiply_count is not None:
                         dumultipy_content = []
-                        for i in range(number_of_batches_in_request):
+                        for _i in range(number_of_batches_in_request):
                             dumultipy_content.append(input_data[input_name])
                         input_data[input_name] = np.array(dumultipy_content)
                 else:
@@ -400,10 +399,10 @@ class Pipeline(ModelInfo):
         return data
 
     def prepare_model_input_data(self, batch_size=None):
-        return super(Pipeline, self).prepare_input_data(batch_size)
+        return super().prepare_input_data(batch_size)
 
     def prepare_model_resources(self, base_location):
-        return super(Pipeline, self).prepare_resources(base_location)
+        return super().prepare_resources(base_location)
 
     def map_inputs(self, prepare_inputs: dict):
         result_dict = {}
@@ -569,7 +568,7 @@ class MediaPipe(Pipeline):
     def prepare_input_data(self, batch_size=None, input_key=None):
         data = self.prepare_pipeline_input_data(batch_size)
         new_data = {}
-        for i, key in enumerate(list(data.keys()), start=0):
+        for _i, key in enumerate(list(data.keys()), start=0):
             new_input_key = input_key if input_key is not None else "input"
             new_data.update({new_input_key: data[key]})
         return new_data

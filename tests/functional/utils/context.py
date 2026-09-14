@@ -25,7 +25,7 @@ from tests.functional.utils.core import get_children_from_module
 from tests.functional.utils.logger import get_logger
 
 
-class Context(object):
+class Context:
     logger = get_logger("context")
     EXCEPTIONS_TO_CATCH = [
         UnexpectedResponseError,
@@ -52,7 +52,7 @@ class Context(object):
                 try:
                     self.logger.info(f"calling {item!s} to /get object to/ clean.")
                     item = item()
-                except BaseException as exc:
+                except BaseException as exc:  # pylint: disable=broad-exception-caught
                     self.logger.exception(f"Cannot call on callable item {item!r}", exc_info=exc)
                     continue
             if item is None:

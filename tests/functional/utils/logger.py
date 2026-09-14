@@ -154,7 +154,7 @@ class SensitiveKeysStrippingFilter(logging.Filter):
         return stripped_data
 
 
-class LoggerType(object):
+class LoggerType:
     """Logger types definitions"""
     HTTP_REQUEST = "http_request"
     HTTP_RESPONSE = "http_response"
