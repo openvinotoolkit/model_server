@@ -31,6 +31,13 @@ STYLE_CHECK_DIRS := src
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
+# Optional: avoids GitHub anonymous-fetch throttling during WORKSPACE git_repository() fetches.
+# Passed as a BuildKit --secret (never --build-arg) so the token is never written to an image layer or history.
+GITHUB_TOKEN ?=
+SECRET_ARGS :=
+ifneq ($(GITHUB_TOKEN),)
+SECRET_ARGS := --secret id=github_token,env=GITHUB_TOKEN
+endif
 ifeq ($(shell uname),Darwin)
     # MacOS
     CORES_TOTAL := $(shell sysctl -n hw.physicalcpu)
@@ -169,7 +176,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
-	INSTALL_DRIVER_VERSION ?= "26.18.38308"
+	INSTALL_DRIVER_VERSION ?= "26.31.39395"
 	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU24)
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
@@ -184,7 +191,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_RHEL) # not used
-  INSTALL_DRIVER_VERSION ?= "24.52.32224"
+  INSTALL_DRIVER_VERSION ?= "25.18.33578"
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -368,14 +375,16 @@ else
 	@touch .workspace/metadata.json
 endif
 	@cat .workspace/metadata.json
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker buildx build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=build
 
 targz_package:
-	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
+	docker buildx build -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--target=pkg && \
@@ -383,8 +392,9 @@ targz_package:
 	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
 	docker cp $$ID:/ovms_pkg/$(OS)/ovms.tar dist/$(OS)/ && \
 	docker rm $$ID
-	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
+	docker buildx build -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG) \
 		--target=capi-build && \
@@ -403,12 +413,14 @@ ifeq ($(BASE_OS),redhat)
 else
 	$(eval NPU:=1)
 endif
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker buildx build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--target=release && \
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker buildx build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		--build-arg GPU=1 \
 		--build-arg NPU=$(NPU) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
@@ -445,8 +457,9 @@ ifeq ($(BASE_OS),redhat)
 endif
 
 release_image:
-	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
+	docker buildx build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		$(SECRET_ARGS) \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		--build-arg GPU=$(GPU) \
 		--build-arg NPU=$(NPU) \

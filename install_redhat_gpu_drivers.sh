@@ -54,6 +54,15 @@ case $INSTALL_DRIVER_VERSION in \
 	rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-level-zero-gpu-1.6.32567.19-1099.el9_5.x86_64.rpm ; \
 	rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/l/level-zero-1.20.2.0-1098.el9_5.x86_64.rpm ; \
 ;; \
+"25.18.33578") \
+        $DNF_TOOL install --nodocs -y libedit libnl3; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-gmmlib-22.7.2-i1142.el9_6.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-igc-core-2.11.12-1146.el9_6.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-igc-opencl-2.11.12-1146.el9_6.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-opencl-25.18.33578.15-1146.el9_6.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-level-zero-gpu-1.6.33578.15-1146.el9_6.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/l/level-zero-1.21.9.0-1142.el9_6.x86_64.rpm ; \
+;; \
 
         *) \
         echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \

@@ -38,7 +38,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
 RUN dnf install -y pkg-config && rpm -ivh https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && dnf clean all
 
 # Enable GPU
-ARG INSTALL_DRIVER_VERSION="24.52.32224"
+ARG INSTALL_DRIVER_VERSION="25.18.33578"
 ARG DNF_TOOL="dnf"
 COPY install_redhat_gpu_drivers.sh /tmp/install_redhat_gpu_drivers.sh
 RUN chmod 775 /tmp/install_redhat_gpu_drivers.sh && /tmp/install_redhat_gpu_drivers.sh
