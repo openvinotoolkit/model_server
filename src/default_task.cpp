@@ -24,7 +24,9 @@
 
 #include "pull_module/curl_downloader.hpp"
 #include "pull_module/hf_env_vars.hpp"
+#include "capi_frontend/server_settings.hpp"
 #include "default_task_detector.hpp"
+#include "logging.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -79,7 +81,7 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
 
     // Try local model repository path before downloading from HuggingFace
     if (modelRepositoryPath.has_value() && !modelRepositoryPath->empty()) {
-        const auto localModelDir = std::filesystem::path(*modelRepositoryPath) / *sourceModel;
+        const auto localModelDir = std::filesystem::path(*modelRepositoryPath) / localModelDirectoryName(*sourceModel);
         if (std::filesystem::exists(localModelDir)) {
             ModelCatalogContext ctx(localModelDir, *sourceModel);
             const std::string task = detector.detect(ctx);
@@ -88,6 +90,15 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
             }
             return task;
         }
+    }
+
+    // An OCI reference is not addressable on HuggingFace, and reading the
+    // config out of the image would mean pulling it before the CLI has even
+    // finished parsing. Report "unknown" so the caller asks for an explicit
+    // --task instead.
+    if (isOciDownload(*sourceModel)) {
+        SPDLOG_DEBUG("Task cannot be inferred for OCI reference {} - --task has to be provided explicitly", *sourceModel);
+        return std::nullopt;
     }
 
     // Download config files from HuggingFace.

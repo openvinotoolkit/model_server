@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <map>
 #include <string>
 
@@ -40,7 +41,31 @@ GraphExportType stringToEnum(const std::string& inString) {
     return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
 }
 bool isOptimumCliDownload(const std::string& sourceModel, std::optional<std::string> ggufFilename) {
-    return !startsWith(toLower(sourceModel), "openvino/") && (ggufFilename == std::nullopt);
+    // OCI references are resolved by the OciDownloader, which decides on its
+    // own whether the resolved payload still needs an optimum-cli conversion.
+    return !isOciDownload(sourceModel) && !startsWith(toLower(sourceModel), "openvino/") && (ggufFilename == std::nullopt);
+}
+
+bool isOciDownload(const std::string& sourceModel) {
+    return startsWith(toLower(sourceModel), OCI_SCHEME);
+}
+
+std::string stripOciScheme(const std::string& sourceModel) {
+    if (!isOciDownload(sourceModel)) {
+        return sourceModel;
+    }
+    return sourceModel.substr(std::string(OCI_SCHEME).size());
+}
+
+std::string localModelDirectoryName(const std::string& sourceModel) {
+    if (!isOciDownload(sourceModel)) {
+        return sourceModel;
+    }
+    std::string name = stripOciScheme(sourceModel);
+    // ':' separates the tag (and, for a non-default registry port, the port).
+    // It is not a legal filename character on Windows.
+    std::replace(name.begin(), name.end(), ':', '_');
+    return name;
 }
 
 }  // namespace ovms
