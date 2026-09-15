@@ -53,15 +53,21 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Bazel compilation settings
-set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+:: Auto-detect Visual Studio (BuildTools/Community/Pro/Enterprise; VS2019/2022/2026+) via vswhere.
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if not exist "%VSWHERE%" goto :msvc_error
+set "VS_DETECTED="
+for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VS_DETECTED=%%i"
+if not defined VS_DETECTED goto :msvc_error
+set VS_2022_BT="%VS_DETECTED%"
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
 :msvc_error
-echo [ERROR] Required MSVC compiler not installed
+echo [ERROR] Required MSVC compiler not installed (need Visual Studio 2019/2022/2026 with the C++ x64 toolset)
 goto :exit_build_error
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
@@ -69,7 +75,14 @@ set BAZEL_VS=%VS_2022_BT%
 
 :: Bazel compilation settings end
 set "BAZEL_VC=%BAZEL_VS:"=%\VC"
-set "BAZEL_VC_FULL_VERSION=14.44.35207"
+:: Auto-detect the latest installed MSVC toolset version (was hardcoded 14.44.35207)
+set "BAZEL_VC_FULL_VERSION="
+for /f "delims=" %%v in ('dir /b /ad /o-n "%BAZEL_VC%\Tools\MSVC" 2^>nul') do if not defined BAZEL_VC_FULL_VERSION set "BAZEL_VC_FULL_VERSION=%%v"
+if not defined BAZEL_VC_FULL_VERSION (
+    echo [ERROR] Could not detect an MSVC toolset under "%BAZEL_VC%\Tools\MSVC" - install the C++ x64 build tools for the detected Visual Studio
+    exit /b 1
+)
+echo [INFO] Using MSVC toolset %BAZEL_VC_FULL_VERSION%
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
