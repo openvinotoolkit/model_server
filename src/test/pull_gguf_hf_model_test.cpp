@@ -32,7 +32,7 @@
 
 #include "../module.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "src/stringutils.hpp"
 #include "../timer.hpp"
 

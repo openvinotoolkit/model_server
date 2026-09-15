@@ -45,7 +45,7 @@
 #include "../logging.hpp"
 #include "../shutdown_state.hpp"
 #include "../stringutils.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 #ifndef PRIuZ
 /* Define the printf format specifier to use for size_t output */

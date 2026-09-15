@@ -25,7 +25,7 @@
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../shape.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 using testing::ElementsAre;
 

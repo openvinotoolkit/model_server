@@ -17,7 +17,7 @@
 
 #include <optional>
 
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "buffer.hpp"
 
 namespace ovms {

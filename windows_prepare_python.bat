@@ -71,9 +71,10 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 C:\Windows\System32\tar.exe -xf %python_short_name%.zip -C %python_short_name%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-del /q %python_short_name%.zip
-if !errorlevel! neq 0 exit /b !errorlevel!
-
+:: Keep pythonXY.zip in the embedded runtime root. OVMS embeds Python via
+:: ovms.exe and does not rely on python.exe-specific ._pth behavior, so the
+:: zipped stdlib must remain available for core modules such as encodings.
+:: del /q %python_short_name%.zip
 :: Adjust paths so everything is accessible
 (
 echo .\%python_short_name%
