@@ -381,9 +381,6 @@ void closeWindowsWorkerHandles(PROCESS_INFORMATION& pi) {
 
 }  // namespace
 
-// A response without Content-Length makes libcurl report dltotal == 0. The progress bar must
-// not divide by it: the ratio becomes infinite and converting that to int is undefined, which
-// in practice produced INT_MIN and a ~2.1 billion iteration padding loop.
 TEST(CurlDownloaderProgressTest, UnknownTotalYieldsNoFilledCells) {
     EXPECT_EQ(ovms::computeProgressBarCells(0, 0, 50), 0);
     EXPECT_EQ(ovms::computeProgressBarCells(1024, 0, 50), 0);
@@ -404,9 +401,6 @@ TEST(CurlDownloaderProgressTest, FilledCellsClampToBarWidth) {
     EXPECT_EQ(ovms::computeProgressBarCells(100, 100, -1), 0);
 }
 
-// Regression test for the call-site, not just the extracted helper: a real chunked-transfer
-// response (no Content-Length) drives libcurl's progress callback with dltotal == 0 on every
-// tick and verifies that the response is downloaded intact.
 TEST_F(TestWithTempDir, ChunkedTransferWithoutContentLengthDownloadsFile) {
     const std::string body(64 * 1024, 'x');
     httplib::Server server;

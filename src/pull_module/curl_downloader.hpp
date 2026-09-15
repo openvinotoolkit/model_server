@@ -25,8 +25,7 @@ Status downloadFileWithCurl(const std::string& url, const std::string& filePath,
 Status fetchUrlToString(const std::string& url, const std::string& authToken, std::string& responseBody);
 
 // Number of filled cells in a barWidth-wide progress bar for count out of max bytes,
-// clamped to [0, barWidth]. max == 0 means the server sent no Content-Length, so there is
-// no ratio to render and the result is 0. Declared here so the arithmetic can be unit tested.
+// clamped to [0, barWidth]. max == 0 means the server sent no Content-Length
 int computeProgressBarCells(size_t count, size_t max, int barWidth);
 
 }  // namespace ovms

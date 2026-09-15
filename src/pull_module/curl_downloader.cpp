@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "curl_downloader.hpp"
 
+#include <array>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
@@ -32,7 +33,7 @@
 
 namespace ovms {
 
-static const char* sizeUnits[] = {"B", "KB", "MB", "GB", "TB", NULL};
+static constexpr std::array<const char*, 5> sizeUnits = {"B", "KB", "MB", "GB", "TB"};
 
 static void print_download_speed_info(size_t received_size, size_t elapsed_time) {
     double recv_len = (double)received_size;
@@ -41,7 +42,7 @@ static void print_download_speed_info(size_t received_size, size_t elapsed_time)
     rate = elapsed ? recv_len / elapsed : received_size;
 
     size_t rate_unit_idx = 0;
-    while (rate > 1000 && sizeUnits[rate_unit_idx + 1]) {
+    while (rate > 1000 && rate_unit_idx + 1 < sizeUnits.size()) {
         rate /= 1000.0;
         rate_unit_idx++;
     }
@@ -53,25 +54,20 @@ int computeProgressBarCells(size_t count, size_t max, int barWidth) {
         return 0;
     }
     const double ratio = static_cast<double>(count) / static_cast<double>(max);
-    // Written as a positive test so a NaN ratio also lands here rather than falling through.
-    if (!(ratio > 0.0)) {
+    if (ratio <= 0.0) {
         return 0;
-    }
-    if (ratio >= 1.0) {
+    } else if (ratio >= 1.0) {
         return barWidth;
     }
     return static_cast<int>(ratio * barWidth);
 }
 
 static void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time) {
-    // A response with no Content-Length reports dltotal == 0, so there is no ratio to show;
-    // report the running byte count instead. Dividing by max here yielded an infinite ratio
-    // whose conversion to int is undefined - in practice INT_MIN, which drove the padding
-    // loop below through roughly 2.1 billion putchar calls on every progress tick.
+    // A response with no Content-Length reports dltotal == 0, so there is no ratio to show
     if (max == 0) {
         double received = (double)count;
         size_t receivedUnitId = 0;
-        while (received > 1000 && sizeUnits[receivedUnitId + 1]) {
+        while (received > 1000 && receivedUnitId + 1 < sizeUnits.size()) {
             received /= 1000.0;
             receivedUnitId++;
         }
@@ -98,7 +94,7 @@ static void print_progress(size_t count, size_t max, bool first_run, size_t elap
     }
     size_t totalSizeUnitId = 0;
     double totalSize = max;
-    while (totalSize > 1000 && sizeUnits[totalSizeUnitId + 1]) {
+    while (totalSize > 1000 && totalSizeUnitId + 1 < sizeUnits.size()) {
         totalSize /= 1000.0;
         totalSizeUnitId++;
     }
