@@ -22,9 +22,21 @@ A group is a unit that OVMS loads and unloads together. Add `group_name` to a se
 
 Without `group_name`, every classic model and MediaPipe graph is assigned to its own group. A group named `permanent` stays loaded and is never unloaded.
 
+For groups that contain only one non-permanent model or graph, setting `group_name` is optional. Keeping it explicit in configuration can improve readability.
+
 OVMS keeps one non-permanent group active. A request for servable from another group waits for current group to finish its requests, then loads requested group. First request after unload includes wake-up latency. 
 
-The following configuration keeps a small chat model and speech recognition model loaded. It loads one of the larger workloads on demand: a large language model, vision-language model, or image-generation model. Download the referenced models to the corresponding local paths before starting OVMS.
+You can create or update `config.json` with OVMS CLI:
+
+```text
+ovms --add_to_config --config_path /models/config.json --model_name small_llm --model_path /models/OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --group_name permanent
+ovms --add_to_config --config_path /models/config.json --model_name speech_to_text --model_path /models/openai/whisper-tiny --group_name permanent
+ovms --add_to_config --config_path /models/config.json --model_name large_llm --model_path /models/OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --group_name large_llm
+ovms --add_to_config --config_path /models/config.json --model_name vlm --model_path /models/OpenVINO/Qwen3.6-35B-A3B-int4-ov --group_name vlm
+ovms --add_to_config --config_path /models/config.json --model_name image_generation --model_path /models/OpenVINO/FLUX.1-schnell-int4-ov --group_name image_generation
+```
+
+The following resulting configuration keeps a small chat model and speech recognition model loaded. It loads one of the larger workloads on demand: a large language model, vision-language model, or image-generation model. Download the referenced models to the corresponding local paths before starting OVMS.
 
 ```json
 {
@@ -32,7 +44,7 @@ The following configuration keeps a small chat model and speech recognition mode
         {
             "config": {
                 "name": "small_llm",
-                "base_path": "/models/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov",
+                "base_path": "/models/OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov",
                 "group_name": "permanent"
             }
         },
@@ -68,7 +80,7 @@ The following configuration keeps a small chat model and speech recognition mode
 }
 ```
 
-> **Important:** Concurrent requests targeting loaded and unloaded groups have no scheduling policy in this preview. While requests run on active group, incoming traffic continues to that group. Do not depend on fair routing or a bounded switch time between groups.
+> **Important:** Concurrent requests targeting loaded and unloaded groups have no scheduling policy in this preview. While requests run on active group, incoming traffic continues to that group. Do not depend on fair routing or a bounded switch time between groups. Organize groups so that one active non-permanent group fits available host and device memory to avoid out-of-memory conditions during swaps.
 
 ## Servable status
 
@@ -79,3 +91,7 @@ Idle-unloaded servables remain `AVAILABLE` in readiness and status APIs. They wa
 Enable metrics as described in [Metrics](./metrics.md). `ovms_graph_loaded` is default gauge for MediaPipe graphs. It has label `name` and reports `1` when graph resources are loaded or `0` when idle-unloaded.
 
 Classic models have no equivalent loaded-state metric in this preview. Monitor request latency to observe model wake-up time.
+
+## Related resources
+
+For service-level on-demand model switching workflows, see [OVMS integration with llama_swap](../extras/llama_swap/README.md).

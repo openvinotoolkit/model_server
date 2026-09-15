@@ -68,7 +68,7 @@ OpenVINO Model Server regularly checks for changes to the configuration file and
 [Learn more](online_config_changes.md)
 
 ## Idle Servable Management (Preview)
-Unload inactive model and graph groups, then load them on the next inference request. Reduce CPU and GPU memory needed to serve multiple large models.
+Unload inactive model and graph groups, then load them with the next inference request. Reduce CPU and GPU memory needed to serve multiple large models.
 
 [Learn more](./idle_servable_management.md)
 
