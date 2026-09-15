@@ -56,6 +56,15 @@ int64_t getStringBatchSize(const RequestTensorType& tensor);
 template <typename RequestTensorType>
 size_t getStringInputWidth(const RequestTensorType& tensor);
 
+template <typename RequestTensorType>
+Status validateImageInputEstimatedDecodedSize(const RequestTensorType& tensor,
+    const std::string* rawInputBuffer,
+    const std::string& inputName,
+    size_t& totalEstimatedImagePixels,
+    size_t maxAllowedImagePixels) {
+    return StatusCode::NOT_IMPLEMENTED;
+}
+
 template <typename RequestTensorType, typename RequestTensorShapeType>
 struct RequestShapeInfo {
     const RequestTensorType& tensor;
@@ -295,6 +304,8 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
         RETURN_IF_ERR(validateNumberOfTensors());
     }
     RETURN_IF_ERR(validateRequestCoherency());
+    size_t totalEstimatedImagePixels = 0;
+    size_t maxAllowedImagePixels = request_validation_utils::getMaxImageDecodePixels();
     size_t bufferId = 0;
     for (const auto& [name, tensorInfo] : ((choice == ValidationChoice::INPUT) ? inputsInfo : outputsInfo)) {
         auto getTensorStatus = validateAndGetTensor(request, name, bufferId);
@@ -318,9 +329,10 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
                 const auto processingHint = tensorInfo->getPreProcessingHint();
                 int32_t inputBatchSize = 0;
                 size_t inputWidth = 0;
+                const std::string* rawInputBuffer = nullptr;
                 if (dataInRawInputContents(request)) {
-                    const std::string* buffer = getRawInputContents(request, bufferId);
-                    RETURN_IF_ERR(getRawInputContentsBatchSizeAndWidth(*buffer, inputBatchSize, inputWidth));
+                    rawInputBuffer = getRawInputContents(request, bufferId);
+                    RETURN_IF_ERR(getRawInputContentsBatchSizeAndWidth(*rawInputBuffer, inputBatchSize, inputWidth));
                 } else {
                     inputBatchSize = getStringBatchSize(*proto);
                     inputWidth = getStringInputWidth(*proto);
@@ -341,6 +353,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
                 } else if (processingHint == TensorInfo::ProcessingHint::IMAGE) {
                     SPDLOG_DEBUG("[servable name: {} version: {}] Validating request containing binary image input: name: {}",
                         servableName, servableVersion, name);
+                    RETURN_IF_ERR(validateImageInputEstimatedDecodedSize(*proto, rawInputBuffer, name, totalEstimatedImagePixels, maxAllowedImagePixels));
                     RETURN_IF_ERR(validateNumberOfBinaryInputShapeDimensions(*proto));
                     RETURN_IF_ERR(checkBinaryBatchSizeMismatch(*proto, tensorInfo->getBatchSize(), finalStatus, batchingMode, shapeMode, inputBatchSize));  // 4/5 dimensions assumed
                     continue;

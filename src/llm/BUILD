@@ -57,7 +57,7 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         "//src:libovmsprofiler",
         "//third_party:curl",
-        "//src:image_conversion",
+        "//src/image_utils:image_conversion",
         "//src/filesystem:libovmsfilesystem",
         "@stb//:image",
         ":openai_request",
@@ -76,7 +76,7 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         "//src:libovmsprofiler",
         "//third_party:curl",
-        "//src:image_conversion",
+        "//src/image_utils:image_conversion",
         "//src/filesystem:libovmsfilesystem",
         "@stb//:image",
         ":openai_api_handler",
@@ -96,7 +96,7 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         "//src:libovmsprofiler",
         "//third_party:curl",
-        "//src:image_conversion",
+        "//src/image_utils:image_conversion",
         "//src/filesystem:libovmsfilesystem",
         "@stb//:image",
         ":openai_api_handler",
@@ -126,7 +126,9 @@ ovms_cc_library(
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",  # required for absl status
         "//third_party:curl",
-        "//src:image_conversion",
+        "//src/image_utils:image_conversion",
+        "//src/image_utils:decoded_image_size",
+        "//src:predict_request_validation_utils_impl",
         "//src/filesystem:libovmsfilesystem",
         "//third_party:genai",
         "//src:libovmslogging",

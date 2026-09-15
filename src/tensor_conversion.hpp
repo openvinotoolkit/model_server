@@ -16,8 +16,9 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <string_view>
+#include <vector>
 #include <utility>
 
 #include "deps/opencv.hpp"
@@ -66,6 +67,10 @@ Status getInputs(const std::string* buffer, std::vector<std::string>& inputs);
 ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
 ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
 shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
+Status checkEstimatedImageSize(std::string_view encodedImage, const std::string& inputName,
+    size_t alreadyAllocatedPixels, size_t maxAllowedImagePixels);
+Status accumulateAndCheckDecodedImageSize(const cv::Mat& image, const TensorInfo& tensorInfo,
+    size_t& totalAllocatedPixels, size_t maxAllowedImagePixels);
 }  // namespace tensor_conversion
 template <typename TensorType>
 static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const TensorInfo& tensorInfo, const std::string* buffer) {
@@ -84,10 +89,22 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
         return status;
     }
     int numberOfInputs = (!rawInputsContentsUsed ? getBinaryInputsSize(src) : inputs.size());
+    size_t totalAllocatedPixels = 0;
+    size_t maxAllowedImagePixels = request_validation_utils::getMaxImageDecodePixels();
     for (int i = 0; i < numberOfInputs; i++) {
-        cv::Mat image = tensor_conversion::convertStringToMat(!rawInputsContentsUsed ? getBinaryInput(src, i) : inputs[i]);
+        const std::string& encodedImage = !rawInputsContentsUsed ? getBinaryInput(src, i) : inputs[i];
+        status = tensor_conversion::checkEstimatedImageSize(encodedImage, tensorInfo.getMappedName(), totalAllocatedPixels, maxAllowedImagePixels);
+        if (status != StatusCode::OK) {
+            return status;
+        }
+        cv::Mat image = tensor_conversion::convertStringToMat(encodedImage);
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
+
+        status = tensor_conversion::accumulateAndCheckDecodedImageSize(image, tensorInfo, totalAllocatedPixels, maxAllowedImagePixels);
+        if (status != StatusCode::OK) {
+            return status;
+        }
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
         status = tensor_conversion::validateInput(tensorInfo, image, firstImage, enforceResolutionAlignment);
         if (status != StatusCode::OK) {
@@ -97,7 +114,8 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
             tensor_conversion::updateTargetResolution(targetHeight, targetWidth, image);
         }
 
-        if (!tensor_conversion::isPrecisionEqual(image.depth(), tensorInfo.getPrecision())) {
+        bool needsPrecisionConv = !tensor_conversion::isPrecisionEqual(image.depth(), tensorInfo.getPrecision());
+        if (needsPrecisionConv) {
             cv::Mat imageCorrectPrecision;
             status = tensor_conversion::convertPrecision(image, imageCorrectPrecision, tensorInfo.getPrecision());
 
@@ -129,9 +147,6 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
 
-        // if (i == 0 && src.contents().bytes_contents_size() > 1) {
-        //     // Multiply src.string_val_size() * image resolution * precision size
-        // }
         images.push_back(image);
     }
     return StatusCode::OK;

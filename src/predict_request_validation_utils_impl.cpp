@@ -23,11 +23,22 @@
 #include <string>
 
 #include "logging.hpp"
+#include "stringutils.hpp"
 #include "tensorinfo.hpp"
+#include "config.hpp"
 #include "status.hpp"
 
 namespace ovms {
 namespace request_validation_utils {
+// TODO(image-limits): remove the global Config singleton dependency here
+size_t getMaxImageDecodePixels() {
+    return Config::instance().maxImageDecodePixels();
+}
+
+bool allowUnestimatableImageFormats() {
+    return Config::instance().allowUnestimatableImageFormats();
+}
+
 Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth) {
     if (inputBatchSize <= 0) {
         return StatusCode::INVALID_BATCH_SIZE;

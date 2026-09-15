@@ -237,3 +237,15 @@ The `--target_device` option defaults to auto-detected based on available GPU de
 - Falls back to `CPU` if no suitable GPU is found.
 
 > **Note:** Auto-detection does not select `NPU`. To use NPU, set `--target_device NPU` explicitly.
+
+## Image input decode protection
+
+Binary image inputs (KServe / TensorFlow Serving predict requests and multimodal `/v3` requests) are decoded before inference. A small compressed image can decode into a far larger raw buffer, and for vision language models even a "reasonable" ~1 GB image can amplify further inside the vision encoder. The server therefore bounds the decoded image size by pixel count (width × height) before decoding.
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `--max_image_decode_pixels` | CLI parameter | `67108864` | OVMS in-process pixel budget, read **per request**. Images whose header-declared pixel count exceeds this limit are rejected before decoding, and the total pixels across all images in a request are bounded too. Applies on the OVMS decode pre-check (stb + OpenCV paths) on every deployment. The default matches `OPENCV_IO_MAX_IMAGE_PIXELS`. |
+| `--allow_unestimatable_image_formats` | CLI parameter | `false` | When `false`, images whose decoded pixel count cannot be estimated (formats OVMS cannot inspect the header of) are rejected. Set to `true` only if you must accept such formats. |
+| `OPENCV_IO_MAX_IMAGE_PIXELS` | Environment variable | `67108864` (set in the provided container images) | OpenCV's own guard, read **once at process startup**, so it must be set before OVMS launches. It is separate from `--max_image_decode_pixels`: changing the CLI parameter does not change OpenCV's internal limit. OpenCV rejects images whose header-declared pixel count exceeds this limit, before allocating the decode buffer. The provided container images set it by default; on bare-metal deployments export it yourself before starting OVMS (or, for the container, override it with `docker run -e OPENCV_IO_MAX_IMAGE_PIXELS=<value>`). This is only relevant when `--allow_unestimatable_image_formats` is `true` (see below); otherwise it is defense-in-depth. |
+
+With default settings you do not depend on `OPENCV_IO_MAX_IMAGE_PIXELS`. By default `--allow_unestimatable_image_formats` is `false`, so images OVMS cannot estimate (formats stb cannot read the header of, e.g. TIFF) are rejected before reaching OpenCV, and images OVMS can estimate are already bounded by `--max_image_decode_pixels`. The OpenCV variable only becomes the active guard if an admin sets `--allow_unestimatable_image_formats=true`, which lets unestimatable formats fall through to OpenCV's `cv::imdecode` — there `OPENCV_IO_MAX_IMAGE_PIXELS` is the remaining pixel cap. Note the VLM (stb) decode path does not use OpenCV at all, so it is unaffected by this variable. Keep both limits at the same value if you change either.

@@ -16,27 +16,24 @@
 #pragma once
 
 #include <cstdint>
-#include <optional>
-#include <string>
 #include <string_view>
-#include <vector>
-
-#pragma warning(push)
-#pragma warning(disable : 6001 4324 6385 6386)
-#include "absl/status/statusor.h"
-#pragma warning(pop)
-
-#include "openvino/runtime/tensor.hpp"
 
 namespace ovms {
+namespace image_utils {
 
-constexpr std::string_view BASE64_PREFIX = "base64,";
-constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
+enum class DecodedSizeEstimate {
+    Estimated,          // outDecodedPixels holds a valid estimate
+    UnsupportedFormat,  // format not recognized (stb + WebP fallback); caller may fail open
+    InputTooLarge,      // buffer too large to inspect safely; caller should reject
+};
 
-// Fetches an image from a base64 data URI, HTTP/HTTPS URL, or local file path and decodes it.
-// Returns the decoded image as an ov::Tensor (RGB, u8).
-absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
-    const std::optional<std::string>& allowedLocalMediaPath,
-    const std::optional<std::vector<std::string>>& allowedMediaDomains);
+// Estimates the decoded pixel count (width*height) of an encoded image by reading ONLY its header
+// Sets outDecodedPixels and returns Estimated only when the format is recognized and the header
+// parses within bounds.
+// Returns UnsupportedFormat when the format is unrecognized or the header is
+// malformed/truncated.
+// Returns InputTooLarge when the buffer itself is too large to inspect.
+[[nodiscard]] DecodedSizeEstimate estimateDecodedImageSize(std::string_view data, uint64_t& outDecodedPixels);
 
+}  // namespace image_utils
 }  // namespace ovms
