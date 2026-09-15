@@ -257,7 +257,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	$(GIT_CONFIG_SECRET)
 
 
-.PHONY: default docker_build \
+.PHONY: default docker_build update_release_links \
 
 default: docker_build
 
@@ -297,6 +297,17 @@ cppclean: venv-style
 	@bash -c "./ci/cppclean.sh"
 
 style: venv-style spell clang-format-check cpplint cppclean
+
+# Run once when cutting a release branch, e.g.:
+#   make update_release_links RELEASE_BRANCH=releases/2026/4
+#   make update_release_links RELEASE_BRANCH=releases/2026/4 DOCS_VERSION=2026
+#   make update_release_links RELEASE_BRANCH=releases/2026/4 DRY_RUN=1
+#   make update_release_links RELEASE_BRANCH=releases/2026/4 CHECK_LINKS=1
+update_release_links:
+ifndef RELEASE_BRANCH
+	$(error RELEASE_BRANCH is required, e.g. make update_release_links RELEASE_BRANCH=releases/2026/4)
+endif
+	python3 ci/update_release_links.py --release-branch $(RELEASE_BRANCH) $(if $(DOCS_VERSION),--docs-version $(DOCS_VERSION),) $(if $(DRY_RUN),--dry-run,) $(if $(CHECK_LINKS),--check-links,)
 
 hadolint:
 	@echo "Checking SDL requirements..."
