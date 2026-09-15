@@ -91,7 +91,3 @@ Idle-unloaded servables remain `AVAILABLE` in readiness and status APIs. They wa
 Enable metrics as described in [Metrics](./metrics.md). `ovms_graph_loaded` is default gauge for MediaPipe graphs. It has label `name` and reports `1` when graph resources are loaded or `0` when idle-unloaded.
 
 Classic models have no equivalent loaded-state metric in this preview. Monitor request latency to observe model wake-up time.
-
-## Related resources
-
-For service-level on-demand model switching workflows, see [OVMS integration with llama_swap](../extras/llama_swap/README.md).
