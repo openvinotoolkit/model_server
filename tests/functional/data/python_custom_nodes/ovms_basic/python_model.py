@@ -18,7 +18,7 @@ import inspect
 from typing import List
 
 # Fetched from:
-# https://raw.githubusercontent.com/openvinotoolkit/model_server/main/docs/python_support/quickstart.md
+# https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/4/docs/python_support/quickstart.md
 
 class OvmsPythonModel:
     def initialize(self, kwargs: dict):

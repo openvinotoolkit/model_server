@@ -19,7 +19,7 @@ from typing import List
 from pyovms import Tensor
 
 # Fetched from:
-# https://docs.openvino.ai/nightly/ovms_docs_python_support_reference.html#basic-example
+# https://docs.openvino.ai/2026/ovms_docs_python_support_reference.html#basic-example
 
 class OvmsPythonModel:
     # Assuming this code is used with nodes

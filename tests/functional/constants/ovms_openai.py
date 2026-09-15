@@ -143,7 +143,7 @@ class OvmsCommonCompletionsRequestParams(OpenAICommonCompletionsRequestParams, O
 @dataclass
 class OvmsChatCompletionsRequestParams(OvmsCommonCompletionsRequestParams, OpenAIChatCompletionsRequestParams):
     # Some request parameters are supported by OVMS but not by OpenAI API. For full list go to:
-    # https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api_chat.md
+    # https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/docs/model_server_rest_api_chat.md
     best_of: int = None
     tools: list = None
     tool_choice: Union[dict, str] = None
@@ -166,7 +166,7 @@ class OvmsChatCompletionsRequestParams(OvmsCommonCompletionsRequestParams, OpenA
 @dataclass
 class OvmsCompletionsRequestParams(OvmsCommonCompletionsRequestParams, OpenAICompletionsRequestParams):
     # Some of the request parameters are supported by OVMS but not by OpenAI API. For full list go to:
-    # https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api_completions.md
+    # https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/docs/model_server_rest_api_completions.md
 
     def prepare_dict(self, set_null_values=False, use_extra_body=True):
         if use_extra_body:
