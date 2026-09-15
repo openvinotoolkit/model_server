@@ -13,11 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <memory>
 #include <openssl/sha.h>
 #include <mutex>
@@ -47,6 +49,7 @@
 #include "src/test/test_file_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "src/pull_module/curl_downloader.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
 #include "src/pull_module/optimum_export.hpp"
@@ -377,6 +380,70 @@ void closeWindowsWorkerHandles(PROCESS_INFORMATION& pi) {
 #endif
 
 }  // namespace
+
+TEST(CurlDownloaderProgressTest, UnknownTotalYieldsNoFilledCells) {
+    EXPECT_EQ(ovms::computeProgressBarCells(0, 0, 50), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(1024, 0, 50), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(std::numeric_limits<size_t>::max(), 0, 50), 0);
+}
+
+TEST(CurlDownloaderProgressTest, FilledCellsTrackRatio) {
+    EXPECT_EQ(ovms::computeProgressBarCells(0, 100, 50), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(50, 100, 50), 25);
+    EXPECT_EQ(ovms::computeProgressBarCells(100, 100, 50), 50);
+}
+
+// Some servers report more bytes transferred than announced; the bar must stay within its width
+// so the padding loop below it always runs a sane number of times.
+TEST(CurlDownloaderProgressTest, FilledCellsClampToBarWidth) {
+    EXPECT_EQ(ovms::computeProgressBarCells(200, 100, 50), 50);
+    EXPECT_EQ(ovms::computeProgressBarCells(100, 100, 0), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(100, 100, -1), 0);
+}
+
+TEST_F(TestWithTempDir, ChunkedTransferWithoutContentLengthDownloadsFile) {
+    const std::string body(64 * 1024, 'x');
+    httplib::Server server;
+    server.Get("/chunked", [&body](const httplib::Request&, httplib::Response& res) {
+        res.set_chunked_content_provider("application/octet-stream",
+            [&body](size_t offset, httplib::DataSink& sink) {
+                if (offset >= body.size()) {
+                    sink.done();
+                    return true;
+                }
+                const size_t chunkSize = std::min<size_t>(4096, body.size() - offset);
+                // Keep the transfer active past the one-second progress throttle so the
+                // unknown-total path reaches print_progress() before the download completes.
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                sink.write(body.data() + offset, chunkSize);
+                return true;
+            });
+    });
+    const int port = server.bind_to_any_port("127.0.0.1");
+    ASSERT_GT(port, 0);
+    std::thread serverThread([&server]() {
+        server.listen_after_bind();
+    });
+    server.wait_until_ready();
+
+    const std::string url = "http://127.0.0.1:" + std::to_string(port) + "/chunked";
+    const std::string outputPath = directoryPath + "/downloaded.bin";
+
+    testing::internal::CaptureStdout();
+    const ovms::Status downloadStatus = ovms::downloadFileWithCurl(url, outputPath);
+    const std::string output = testing::internal::GetCapturedStdout();
+
+    server.stop();
+    serverThread.join();
+
+    ASSERT_EQ(downloadStatus, ovms::StatusCode::OK);
+    EXPECT_THAT(output, ::testing::HasSubstr("total size unknown"));
+
+    std::ifstream downloadedFile(outputPath, std::ios::binary);
+    std::ostringstream downloadedContent;
+    downloadedContent << downloadedFile.rdbuf();
+    EXPECT_EQ(downloadedContent.str(), body);
+}
 
 // RAII helper class for managing log file lifecycle.
 // Creates a log file path and automatically removes it on destruction.
@@ -2453,7 +2520,8 @@ TEST_F(HfPullModelModuleLoraTest, ResolveHfLoraFilenames) {
     ovms::ImageGenerationGraphSettingsImpl graphSettings;
     ovms::LoraAdapterSettings adapter;
     adapter.alias = "pokemon";
-    adapter.sourceLora = "juliensimon/sd-pokemon-lora";
+    // juliensimon/sd-pokemon-lora was removed upstream; replaced with a repo verified to still exist.
+    adapter.sourceLora = "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning";
     adapter.sourceType = ovms::LoraSourceType::HF_REPO;
     graphSettings.loraAdapters.push_back(adapter);
     settings.graphSettings = graphSettings;
@@ -2480,7 +2548,8 @@ TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
     ovms::ImageGenerationGraphSettingsImpl graphSettings;
     ovms::LoraAdapterSettings adapter;
     adapter.alias = "pokemon";
-    adapter.sourceLora = "juliensimon/sd-pokemon-lora";
+    // juliensimon/sd-pokemon-lora was removed upstream; replaced with a repo verified to still exist.
+    adapter.sourceLora = "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning";
     adapter.safetensorsFile = "pytorch_lora_weights.safetensors";  // explicit filename — skips HF API resolve
     adapter.sourceType = ovms::LoraSourceType::HF_REPO;
     graphSettings.loraAdapters.push_back(adapter);
@@ -2489,7 +2558,7 @@ TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
     auto status = module.testPullLoraAdapters(this->directoryPath);
     ASSERT_TRUE(status.ok()) << status.string();
 
-    auto loraFilePath = ovms::FileSystem::joinPath({this->directoryPath, "loras", "juliensimon/sd-pokemon-lora", "pytorch_lora_weights.safetensors"});
+    auto loraFilePath = ovms::FileSystem::joinPath({this->directoryPath, "loras", "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning", "pytorch_lora_weights.safetensors"});
     ASSERT_TRUE(std::filesystem::exists(loraFilePath)) << loraFilePath;
     EXPECT_GT(std::filesystem::file_size(loraFilePath), 0);
 }
@@ -2539,7 +2608,8 @@ TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
     std::string modelName = "OpenVINO/stable-diffusion-v1-5-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "image_generation";
-    std::string sourceLoras = "pokemon=juliensimon/sd-pokemon-lora@pytorch_lora_weights.safetensors";
+    // juliensimon/sd-pokemon-lora was removed upstream; replaced with a repo verified to still exist.
+    std::string sourceLoras = "pokemon=MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning@pytorch_lora_weights.safetensors";
     ::SetUpServerForDownloadWithLoras(this->t, this->server, modelName, downloadPath, task, sourceLoras);
 
     std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "stable-diffusion-v1-5-int8-ov"});
@@ -2550,7 +2620,7 @@ TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
     ASSERT_TRUE(std::filesystem::exists(graphPath)) << graphPath;
 
     // Verify LoRA adapter was downloaded
-    std::string loraDir = ovms::FileSystem::joinPath({basePath, "loras", "juliensimon", "sd-pokemon-lora"});
+    std::string loraDir = ovms::FileSystem::joinPath({basePath, "loras", "MohamedAhmedAE", "stable-diffusion-v1-5_lora_finetuning"});
     auto loraFiles = searchFilesRecursively(loraDir, {"pytorch_lora_weights.safetensors"});
     ASSERT_FALSE(loraFiles.empty()) << "LoRA .safetensors not found in: " << loraDir;
 
