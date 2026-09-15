@@ -26,10 +26,10 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../http_payload.hpp"
-#include "../logging.hpp"
-#include "../mediapipe_internal/graph_side_packets.hpp"
-#include "../profiler.hpp"
+#include "src/http_payload.hpp"
+#include "src/logging.hpp"
+#include "src/mediapipe_internal/graph_side_packets.hpp"
+#include "src/profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
 

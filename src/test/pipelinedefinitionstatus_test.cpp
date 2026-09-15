@@ -16,11 +16,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../dags/pipelinedefinitionstatus.hpp"
-#include "../modelinstance.hpp"
-#include "../prediction_service_utils.hpp"
-#include "../status.hpp"
-#include "../timer.hpp"
+#include "src/dags/pipelinedefinitionstatus.hpp"
+#include "src/modelinstance.hpp"
+#include "src/prediction_service_utils.hpp"
+#include "src/status.hpp"
+#include "src/timer.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

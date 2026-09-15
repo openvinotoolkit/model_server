@@ -17,8 +17,8 @@
 
 #include <utility>
 
-#include "../custom_node_interface.h"  // NOLINT
-#include "../logging.hpp"
+#include "src/custom_node_interface.h"  // NOLINT
+#include "src/logging.hpp"
 
 namespace ovms {
 

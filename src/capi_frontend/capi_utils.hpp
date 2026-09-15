@@ -17,10 +17,10 @@
 #include <string>
 #include <vector>
 
-#include "../predict_request_validation_utils.hpp"
-#include "../ovms.h"  // NOLINT
-#include "../precision.hpp"
-#include "../shape.hpp"
+#include "src/predict_request_validation_utils.hpp"
+#include "src/ovms.h"  // NOLINT
+#include "src/precision.hpp"
+#include "src/shape.hpp"
 
 namespace ovms {
 class InferenceRequest;

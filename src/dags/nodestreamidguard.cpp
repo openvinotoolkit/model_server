@@ -18,10 +18,10 @@
 #include <future>
 #include <optional>
 
-#include "../logging.hpp"
-#include "../model_metric_reporter.hpp"
-#include "../ovinferrequestsqueue.hpp"
-#include "../profiler.hpp"
+#include "src/logging.hpp"
+#include "src/model_metric_reporter.hpp"
+#include "src/ovinferrequestsqueue.hpp"
+#include "src/profiler.hpp"
 
 namespace ovms {
 

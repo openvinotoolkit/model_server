@@ -23,9 +23,9 @@
 #include <rapidjson/document.h>
 #pragma warning(pop)
 
-#include "../http_payload.hpp"
-#include "../mediapipe_internal/packettypes.hpp"
-#include "../status.hpp"
+#include "src/http_payload.hpp"
+#include "src/mediapipe_internal/packettypes.hpp"
+#include "src/status.hpp"
 #pragma warning(push)
 #pragma warning(disable : 4005 4324 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
@@ -37,10 +37,10 @@
 #pragma warning(pop)
 
 #if (PYTHON_DISABLE == 0)
-#include "../python/python_backend.hpp"
+#include "src/python/python_backend.hpp"
 #endif
 
-#include "../http_async_writer_interface.hpp"
+#include "src/http_async_writer_interface.hpp"
 
 namespace ovms {
 

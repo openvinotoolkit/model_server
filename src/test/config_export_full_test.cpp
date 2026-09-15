@@ -25,12 +25,12 @@
 #include "platform_utils.hpp"
 #include "test_with_temp_dir.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "../module_names.hpp"
-#include "../server.hpp"
-#include "../status.hpp"
-#include "../stringutils.hpp"
-#include "../capi_frontend/server_settings.hpp"
-#include "../config_export_module/config_export.hpp"
+#include "src/module_names.hpp"
+#include "src/server.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
+#include "src/capi_frontend/server_settings.hpp"
+#include "src/config_export_module/config_export.hpp"
 namespace {
 const std::string expectedConfigContents = R"({
     "model_config_list": [

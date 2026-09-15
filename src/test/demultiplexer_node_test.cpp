@@ -18,16 +18,16 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../dags/dl_node.hpp"
-#include "../dags/dlnodesession.hpp"
-#include "../dags/gathernodeinputhandler.hpp"
-#include "../dags/node.hpp"
-#include "../dags/nodeinputhandler.hpp"
-#include "../dags/nodestreamidguard.hpp"
-#include "../logging.hpp"
-#include "../modelinstance.hpp"
-#include "../modelinstanceunloadguard.hpp"
-#include "../ov_utils.hpp"
+#include "src/dags/dl_node.hpp"
+#include "src/dags/dlnodesession.hpp"
+#include "src/dags/gathernodeinputhandler.hpp"
+#include "src/dags/node.hpp"
+#include "src/dags/nodeinputhandler.hpp"
+#include "src/dags/nodestreamidguard.hpp"
+#include "src/logging.hpp"
+#include "src/modelinstance.hpp"
+#include "src/modelinstanceunloadguard.hpp"
+#include "src/ov_utils.hpp"
 
 #include "constructor_enabled_model_manager.hpp"
 #include "test_utils.hpp"

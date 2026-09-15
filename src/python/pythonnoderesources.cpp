@@ -22,15 +22,15 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../logging.hpp"
-#include "../status.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
 #pragma warning(pop)
 
-#include "../mediapipe_internal/mediapipe_utils.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
 #include "src/python/python_executor_calculator.pb.h"
 
 namespace ovms {

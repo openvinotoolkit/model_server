@@ -26,13 +26,13 @@
 #include <random>
 #include <unordered_set>
 
-#include "../capi_frontend/capi_utils.hpp"
-#include "../capi_frontend/inferenceparameter.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../network_utils.hpp"
+#include "src/capi_frontend/capi_utils.hpp"
+#include "src/capi_frontend/inferenceparameter.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
+#include "src/network_utils.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
-#include "../tensorinfo.hpp"
+#include "src/server.hpp"
+#include "src/tensorinfo.hpp"
 
 using ovms::TensorInfo;
 

@@ -19,8 +19,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "../modelversion.hpp"
-#include "../ovms.h"  // NOLINT
+#include "src/modelversion.hpp"
+#include "src/ovms.h"  // NOLINT
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
 

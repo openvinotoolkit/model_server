@@ -18,11 +18,11 @@
 #include <string>
 #include <vector>
 
-#include "../ovms.h"  // NOLINT
+#include "src/ovms.h"  // NOLINT
 #include "inferencerequest.hpp"
-#include "../shape.hpp"
-#include "../logging.hpp"
-#include "../status.hpp"
+#include "src/shape.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 class InferenceRequest;

@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "../mediapipe_internal/packettypes.hpp"
+#include "src/mediapipe_internal/packettypes.hpp"
 #include "kfs_grpc_inference_service.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 6385 6386 6326 6011 4309 4005 4456 6246)

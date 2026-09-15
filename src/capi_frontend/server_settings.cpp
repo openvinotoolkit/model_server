@@ -17,7 +17,7 @@
 #include <string>
 
 #include "server_settings.hpp"
-#include "../stringutils.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 std::string enumToString(ConfigExportType type) {

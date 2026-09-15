@@ -22,10 +22,10 @@
 #include <openvino/runtime/tensor.hpp>
 
 #include "kfs_utils.hpp"
-#include "../profiler.hpp"
-#include "../status.hpp"
-#include "../serialization_common.hpp"
-#include "../tensorinfo.hpp"
+#include "src/profiler.hpp"
+#include "src/status.hpp"
+#include "src/serialization_common.hpp"
+#include "src/tensorinfo.hpp"
 
 namespace ovms {
 Status serializeTensorToTensorProto(

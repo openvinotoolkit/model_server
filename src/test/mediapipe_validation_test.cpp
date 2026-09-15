@@ -21,11 +21,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../grpcservermodule.hpp"
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
-#include "../precision.hpp"
-#include "../server.hpp"
+#include "src/grpcservermodule.hpp"
+#include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/precision.hpp"
+#include "src/server.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
 

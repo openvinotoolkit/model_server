@@ -22,20 +22,20 @@
 #include <string>
 
 #include "buffer.hpp"
-#include "../modelversion.hpp"
-#include "../shape.hpp"
-#include "../tensorinfo.hpp"
+#include "src/modelversion.hpp"
+#include "src/shape.hpp"
+#include "src/tensorinfo.hpp"
 
 #include "capi_utils.hpp"
 #include "inferencerequest.hpp"
 #include "inferencetensor.hpp"
 #include "capi_request_utils.hpp"
-#include "../logging.hpp"
-#include "../precision.hpp"
-#include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/logging.hpp"
+#include "src/precision.hpp"
+#include "src/profiler.hpp"
+#include "src/status.hpp"
 
-#include "../predict_request_validation_utils.hpp"
+#include "src/predict_request_validation_utils.hpp"
 namespace ovms {
 namespace request_validation_utils {
 Status validateCapiTensorPrecision(const ovms::TensorInfo& info, const InferenceTensor& tensor, const std::string& tensorName, const std::string& servableName, const model_version_t servableVersion, ValidationChoice choice) {

@@ -18,20 +18,20 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../config.hpp"
-#include "../dags/pipeline.hpp"
-#include "../dags/pipeline_factory.hpp"
-#include "../dags/pipelinedefinition.hpp"
+#include "src/config.hpp"
+#include "src/dags/pipeline.hpp"
+#include "src/dags/pipeline_factory.hpp"
+#include "src/dags/pipelinedefinition.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "src/kfs_frontend/kfs_graph_executor_impl.hpp"
 #endif
-#include "../kfs_frontend/kfs_utils.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
 #include "src/filesystem/localfilesystem.hpp"
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
-#include "../status.hpp"
-#include "../stringutils.hpp"
+#include "src/server.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
 #include "stress_test_utils.hpp"
 #include "test_models.hpp"
 #include "test_utils.hpp"

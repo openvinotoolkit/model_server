@@ -18,12 +18,12 @@
 #include <string>
 #include <memory>
 
-#include "../capi_frontend/server_settings.hpp"
+#include "src/capi_frontend/server_settings.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/filesystem/localfilesystem.hpp"
-#include "../logging.hpp"
-#include "../stringutils.hpp"
-#include "../status.hpp"
+#include "src/logging.hpp"
+#include "src/stringutils.hpp"
+#include "src/status.hpp"
 #include "cmd_exec.hpp"
 #include "model_downloader.hpp"
 

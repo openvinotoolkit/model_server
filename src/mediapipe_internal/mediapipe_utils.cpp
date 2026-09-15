@@ -24,9 +24,9 @@
 #include <utility>
 #include <vector>
 
-#include "../logging.hpp"
-#include "../status.hpp"
-#include "../stringutils.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 const std::string KFS_REQUEST_PREFIX{"REQUEST"};

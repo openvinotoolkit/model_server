@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include "../multi_part_parser.hpp"
+#include "src/multi_part_parser.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6326)

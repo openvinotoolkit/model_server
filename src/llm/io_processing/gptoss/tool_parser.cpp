@@ -19,11 +19,11 @@
 #include <vector>
 #include <regex>
 
-#include "../../../logging.hpp"
-#include "../../../stringutils.hpp"
+#include "src/logging.hpp"
+#include "src/stringutils.hpp"
 #include "tool_parser.hpp"
 #include "harmony.hpp"
-#include "../utils.hpp"
+#include "src/llm/io_processing/utils.hpp"
 
 namespace ovms {
 

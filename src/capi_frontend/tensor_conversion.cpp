@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "../tensor_conversion.hpp"
-#include "../tensor_conversion_common.hpp"
+#include "src/tensor_conversion.hpp"
+#include "src/tensor_conversion_common.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -25,11 +25,11 @@
 #include <openvino/openvino.hpp>
 
 #include "inferencetensor.hpp"
-#include "../logging.hpp"
-#include "../deps/opencv.hpp"
-#include "../profiler.hpp"
-#include "../status.hpp"
-#include "../tensor_conversion_after.hpp"
+#include "src/logging.hpp"
+#include "src/deps/opencv.hpp"
+#include "src/profiler.hpp"
+#include "src/status.hpp"
+#include "src/tensor_conversion_after.hpp"
 
 namespace ovms {
 

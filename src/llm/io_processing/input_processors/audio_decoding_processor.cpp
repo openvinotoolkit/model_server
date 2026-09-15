@@ -28,7 +28,7 @@
 #pragma warning(pop)
 #include <openvino/runtime/tensor.hpp>
 
-#include "../../../logging.hpp"
+#include "src/logging.hpp"
 #include "src/audio/audio_utils.hpp"
 
 namespace ovms {

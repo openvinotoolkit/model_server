@@ -42,10 +42,10 @@
 #include "src/filesystem/filesystem.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "src/utils/env_guard.hpp"
-#include "../logging.hpp"
-#include "../shutdown_state.hpp"
-#include "../stringutils.hpp"
-#include "../status.hpp"
+#include "src/logging.hpp"
+#include "src/shutdown_state.hpp"
+#include "src/stringutils.hpp"
+#include "src/status.hpp"
 
 #ifndef PRIuZ
 /* Define the printf format specifier to use for size_t output */

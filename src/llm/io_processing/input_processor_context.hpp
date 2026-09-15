@@ -22,7 +22,7 @@
 #include "chat_template/caps.hpp"
 #include "input_processing_config.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "../py_jinja_template_processor.hpp"
+#include "src/llm/py_jinja_template_processor.hpp"
 #endif
 
 namespace ovms {

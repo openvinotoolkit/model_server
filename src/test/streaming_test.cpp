@@ -20,22 +20,22 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../kfs_frontend/kfs_graph_executor_impl.hpp"
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/kfs_frontend/kfs_graph_executor_impl.hpp"
+#include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
-#include "../status.hpp"
-#include "../stringutils.hpp"
+#include "src/server.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
 #include "mediapipe/framework/port/integral_types.h"
-#include "../mediapipe_internal/mediapipefactory.hpp"
+#include "src/mediapipe_internal/mediapipefactory.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
 #include "test_utils.hpp"
 
 #if (PYTHON_DISABLE == 0)
-#include "../python/pythoninterpretermodule.hpp"
+#include "src/python/pythoninterpretermodule.hpp"
 #endif
 
 using namespace ovms;
@@ -837,7 +837,7 @@ node {
 #include <pybind11/embed.h>  // everything needed for embedding
 #pragma warning(pop)
 namespace py = pybind11;
-#include "../python/python_backend.hpp"
+#include "src/python/python_backend.hpp"
 // ------------------------- Regular mode
 
 TEST_F(PythonStreamingTest, Positive_SingleStreamSend1Receive1Python) {

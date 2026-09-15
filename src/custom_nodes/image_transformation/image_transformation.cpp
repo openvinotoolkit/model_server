@@ -17,9 +17,9 @@
 #include <map>
 #include <string>
 
-#include "../../custom_node_interface.h"
-#include "../common/opencv_utils.hpp"
-#include "../common/utils.hpp"
+#include "src/custom_node_interface.h"
+#include "src/custom_nodes/common/opencv_utils.hpp"
+#include "src/custom_nodes/common/utils.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6269 6294 6201)
 #include "opencv2/opencv.hpp"

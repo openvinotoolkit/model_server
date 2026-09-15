@@ -27,7 +27,7 @@
 #include <utility>
 #include <vector>
 
-#include "../queue.hpp"
+#include "src/queue.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "src/python/pythonnoderesources.hpp"
 #endif

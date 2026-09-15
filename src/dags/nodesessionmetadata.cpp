@@ -21,7 +21,7 @@
 #include <sstream>
 #include <utility>
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 

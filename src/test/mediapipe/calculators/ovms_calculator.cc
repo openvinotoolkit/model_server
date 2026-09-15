@@ -19,8 +19,8 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../../../ovms.h"  // NOLINT
-#include "../../../stringutils.hpp"
+#include "src/ovms.h"  // NOLINT
+#include "src/stringutils.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

@@ -19,10 +19,10 @@
 #include <string>
 #include <utility>
 
-#include "../model.hpp"
-#include "../modelinstance.hpp"
-#include "../modelversionstatus.hpp"
-#include "../status.hpp"
+#include "src/model.hpp"
+#include "src/modelinstance.hpp"
+#include "src/modelversionstatus.hpp"
+#include "src/status.hpp"
 #include "test_utils.hpp"
 
 class MockModelInstanceChangingStates : public ovms::ModelInstance {

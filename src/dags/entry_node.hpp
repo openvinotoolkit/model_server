@@ -21,9 +21,9 @@
 
 #include <openvino/runtime/tensor.hpp>
 
-#include "../ovms.h"  // NOLINT
-#include "../regularovtensorfactory.hpp"
-#include "../tensorinfo.hpp"
+#include "src/ovms.h"  // NOLINT
+#include "src/regularovtensorfactory.hpp"
+#include "src/tensorinfo.hpp"
 #include "node.hpp"
 
 namespace ovms {

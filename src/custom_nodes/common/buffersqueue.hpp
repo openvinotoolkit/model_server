@@ -24,7 +24,7 @@
 #include <thread>
 #include <vector>
 
-#include "../../queue.hpp"
+#include "src/queue.hpp"
 
 namespace ovms {
 namespace custom_nodes_common {

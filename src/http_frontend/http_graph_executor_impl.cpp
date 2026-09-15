@@ -32,7 +32,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../mediapipe_internal/mediapipe_utils.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
 
 namespace ovms {
 

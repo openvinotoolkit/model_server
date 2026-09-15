@@ -22,11 +22,11 @@
 #include <utility>
 #include <vector>
 
-#include "../../../logging.hpp"
-#include "../../../status.hpp"
-#include "../../apis/openai_completions.hpp"
-#include "../../apis/openai_responses.hpp"
-#include "../../ovms_text_streamer.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
+#include "src/llm/apis/openai_completions.hpp"
+#include "src/llm/apis/openai_responses.hpp"
+#include "src/llm/ovms_text_streamer.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -40,15 +40,15 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 
-#include "../../../config.hpp"
-#include "../../../http_payload.hpp"
-#include "../../../mediapipe_internal/mediapipe_utils.hpp"
-#include "../../text_utils.hpp"
-#include "../../../tokenize/tokenize_parser.hpp"
+#include "src/config.hpp"
+#include "src/http_payload.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
+#include "src/llm/text_utils.hpp"
+#include "src/tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "../../py_jinja_template_processor.hpp"
+#include "src/llm/py_jinja_template_processor.hpp"
 #endif
-#include "../../io_processing/generation_config_builder.hpp"
+#include "src/llm/io_processing/generation_config_builder.hpp"
 #include "servable.hpp"
 
 namespace ovms {

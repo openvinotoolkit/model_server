@@ -20,9 +20,9 @@
 
 #include <gtest/gtest.h>
 
-#include "../../audio/speech_to_text/streaming_text_queue.hpp"
-#include "../../audio/speech_to_text/s2t_streaming_handler.hpp"
-#include "../../sse_utils.hpp"
+#include "src/audio/speech_to_text/streaming_text_queue.hpp"
+#include "src/audio/speech_to_text/s2t_streaming_handler.hpp"
+#include "src/sse_utils.hpp"
 
 using ovms::StreamingTextQueue;
 

@@ -19,17 +19,17 @@
 #include <map>
 #include <string>
 
-#include "../logging.hpp"
-#include "../model_instance_provider.hpp"
-#include "../modelinstance.hpp"
-#include "../modelinstanceunloadguard.hpp"
-#include "../ovinferrequestsqueue.hpp"
-#include "../ov_utils.hpp"
-#include "../profiler.hpp"
-#include "../shape.hpp"
-#include "../status.hpp"
-#include "../tensorinfo.hpp"
-#include "../timer.hpp"
+#include "src/logging.hpp"
+#include "src/model_instance_provider.hpp"
+#include "src/modelinstance.hpp"
+#include "src/modelinstanceunloadguard.hpp"
+#include "src/ovinferrequestsqueue.hpp"
+#include "src/ov_utils.hpp"
+#include "src/profiler.hpp"
+#include "src/shape.hpp"
+#include "src/status.hpp"
+#include "src/tensorinfo.hpp"
+#include "src/timer.hpp"
 #include "nodeinputhandler.hpp"
 #include "nodestreamidguard.hpp"
 

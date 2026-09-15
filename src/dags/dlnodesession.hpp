@@ -22,7 +22,7 @@
 #include <openvino/runtime/infer_request.hpp>
 #include <openvino/runtime/tensor.hpp>
 
-#include "../modelversion.hpp"
+#include "src/modelversion.hpp"
 #include "nodesession.hpp"
 #include "pipelineeventqueue.hpp"
 

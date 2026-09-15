@@ -26,7 +26,7 @@
 
 #include "src/filesystem/filesystem.hpp"
 #include "src/graph_export/graph_export.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 

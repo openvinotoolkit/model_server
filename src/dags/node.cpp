@@ -21,11 +21,11 @@
 #include <sstream>
 #include <vector>
 
-#include "../logging.hpp"
-#include "../ov_utils.hpp"
-#include "../profiler.hpp"
-#include "../shape.hpp"
-#include "../status.hpp"
+#include "src/logging.hpp"
+#include "src/ov_utils.hpp"
+#include "src/profiler.hpp"
+#include "src/shape.hpp"
+#include "src/status.hpp"
 #include "nodesession.hpp"
 #include "tensormap.hpp"
 

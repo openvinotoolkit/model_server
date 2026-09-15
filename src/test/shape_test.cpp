@@ -18,7 +18,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../shape.hpp"
+#include "src/shape.hpp"
 #include "test_utils.hpp"
 
 using ovms::Dimension;

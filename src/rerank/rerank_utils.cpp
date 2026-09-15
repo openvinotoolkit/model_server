@@ -22,8 +22,8 @@
 #include "src/port/rapidjson_document.hpp"
 #include "src/port/rapidjson_writer.hpp"
 
-#include "../logging.hpp"
-#include "../profiler.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
 
 using namespace rapidjson;
 

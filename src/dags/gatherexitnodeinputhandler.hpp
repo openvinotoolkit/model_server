@@ -22,9 +22,9 @@
 #include <openvino/core/type/element_type.hpp>
 #include <openvino/runtime/tensor.hpp>
 
-#include "../logging.hpp"
-#include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
+#include "src/status.hpp"
 #include "gathernodeinputhandler.hpp"
 
 namespace ovms {

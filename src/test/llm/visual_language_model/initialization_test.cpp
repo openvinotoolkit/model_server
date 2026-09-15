@@ -18,10 +18,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../../../llm/servable_initializer.hpp"
-#include "../../constructor_enabled_model_manager.hpp"
-#include "../../platform_utils.hpp"
-#include "../../test_utils.hpp"
+#include "src/llm/servable_initializer.hpp"
+#include "src/test/constructor_enabled_model_manager.hpp"
+#include "src/test/platform_utils.hpp"
+#include "src/test/test_utils.hpp"
 
 using namespace ovms;
 

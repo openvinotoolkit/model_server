@@ -20,9 +20,9 @@
 #include <unordered_map>
 #include <utility>
 
-#include "../logging.hpp"
-#include "../modelversion.hpp"
-#include "../status.hpp"
+#include "src/logging.hpp"
+#include "src/modelversion.hpp"
+#include "src/status.hpp"
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
 

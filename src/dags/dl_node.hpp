@@ -23,8 +23,8 @@
 
 #include <openvino/runtime/infer_request.hpp>
 
-#include "../executingstreamidguard.hpp"
-#include "../modelversion.hpp"
+#include "src/executingstreamidguard.hpp"
+#include "src/modelversion.hpp"
 #include "node.hpp"
 
 namespace ovms {

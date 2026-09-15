@@ -15,9 +15,9 @@
 //*****************************************************************************
 #include "nodeinputhandler.hpp"
 
-#include "../logging.hpp"
-#include "../status.hpp"
-#include "../tensor_utils.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
+#include "src/tensor_utils.hpp"
 
 namespace ovms {
 

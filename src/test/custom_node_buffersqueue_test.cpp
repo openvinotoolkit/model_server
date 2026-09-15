@@ -20,7 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../custom_nodes/common/buffersqueue.hpp"
+#include "src/custom_nodes/common/buffersqueue.hpp"
 
 using namespace ovms;
 using custom_nodes_common::BuffersQueue;

@@ -18,7 +18,7 @@
 #include <cstring>
 #include <utility>
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 Buffer::Buffer(std::unique_ptr<std::vector<std::string>>&& values) :

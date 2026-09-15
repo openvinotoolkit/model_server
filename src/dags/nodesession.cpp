@@ -15,10 +15,10 @@
 //*****************************************************************************
 #include "nodesession.hpp"
 
-#include "../logging.hpp"
-#include "../status.hpp"
-#include "../tensor_utils.hpp"
-#include "../timer.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
+#include "src/tensor_utils.hpp"
+#include "src/timer.hpp"
 #include "gathernodeinputhandler.hpp"
 #include "nodeinputhandler.hpp"
 

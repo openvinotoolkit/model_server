@@ -20,12 +20,12 @@
 #include <string>
 #include <sstream>
 
-#include "../config_export_module/config_export.hpp"
-#include "../config.hpp"
-#include "../logging.hpp"
-#include "../module_names.hpp"
-#include "../status.hpp"
-#include "../stringutils.hpp"
+#include "src/config_export_module/config_export.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
+#include "src/module_names.hpp"
+#include "src/status.hpp"
+#include "src/stringutils.hpp"
 #include "listmodels.hpp"
 
 namespace ovms {
