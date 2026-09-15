@@ -63,6 +63,20 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+# This calculator is for debugging to check whether render data is correctly passed through the graph.
+cc_library(
+    name = "render_data_passthrough",
+    srcs = ["render_data_passthrough_calculator.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework/formats:detection_cc_proto",
+        "@mediapipe//mediapipe/framework/port:status",
+        "@mediapipe//mediapipe/util:render_data_cc_proto",
+    ],
+    alwayslink = 1
+)
+
 
 cc_library(
     name = "mediapipe_test_calculators",
