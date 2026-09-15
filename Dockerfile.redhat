@@ -48,13 +48,10 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
             wget && \
             dnf clean all
 
-## WA for authentication issues with git over HTTP/2
-RUN git config --global http.version HTTP/1.1
-
 ####### Azure SDK (modern azure-sdk-for-cpp: azure-core, azure-storage-blobs, azure-storage-files-shares)
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 WORKDIR /azure-sdk-for-cpp
-RUN git clone --depth 1 --branch azure-storage-blobs_12.18.0 https://github.com/Azure/azure-sdk-for-cpp.git . && \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git clone --depth 1 --branch azure-storage-blobs_12.18.0 https://github.com/Azure/azure-sdk-for-cpp.git . && \
     echo "# no-op: use system libcurl and openssl" > /azure-sdk-toolchain.cmake && \
     cmake -S sdk/core/azure-core -B build/azure-core \
         -DCMAKE_TOOLCHAIN_FILE=/azure-sdk-toolchain.cmake \
@@ -107,7 +104,7 @@ COPY third_party/pugixml /ovms/third_party/pugixml
 
 # Build and install pugixml
 # hadolint ignore=DL3003
-RUN git clone -b v1.13 https://github.com/zeux/pugixml && \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git clone -b v1.13 https://github.com/zeux/pugixml && \
     cd pugixml && \
     patch -p1 < /ovms/third_party/pugixml/pugixml_v1.13_flags.patch && \
     cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_LOGS} \
@@ -207,7 +204,7 @@ ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -fPIE -pie -fstack-protector-str
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel fdupes && \
     dnf clean all
 # hadolint ignore=DL3003
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; pip3.12 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
@@ -255,7 +252,7 @@ WORKDIR /openvino_tokenizers/
 ARG ov_tokenizers_branch=85be884a69f10270703f81f970a5ee596a4c8df7
 ARG ov_tokenizers_org=openvinotoolkit
 # hadolint ignore=DL3003
-RUN git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive && \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive && \
     sed -i '/openvino~=/d' /openvino_tokenizers/pyproject.toml && \
     sed -i '/requires-python/d' /openvino_tokenizers/pyproject.toml && \
     cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -S ./ -B ./build/  && cmake --build ./build/ --parallel $JOBS && cp -vP /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
@@ -268,7 +265,7 @@ WORKDIR /openvino_genai/
 ARG ov_genai_branch=master
 ARG ov_genai_org=openvinotoolkit
 # hadolint ignore=DL3003
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
     git clone https://github.com/$ov_genai_org/openvino.genai /openvino_genai && cd /openvino_genai && git checkout $ov_genai_branch && git submodule update --init --recursive && \
     cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_SYSTEM_ICU="True" -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON -S ./ -B ./build/ && \
     cmake --build ./build/ --parallel $JOBS && cp -vP /openvino_genai/build/openvino_genai/lib*.so* /opt/intel/openvino/runtime/lib/intel64/ && \
@@ -304,7 +301,7 @@ COPY package.json /ovms/
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
 ARG KONFLUX=1  # This is a workaround to avoid bazel fetching dependencies during build, which causes issues in Konflux. Should be disabled when building outside of Konflux to speed up the build by using bazel cache and avoid fetching dependencies which are already cached.
-RUN if [ "$KONFLUX" == "0" ] ; then true ; else exit 0 ; fi ; \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$KONFLUX" == "0" ] ; then true ; else exit 0 ; fi ; \
     bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
 COPY src/ /ovms/src/
@@ -335,13 +332,13 @@ RUN rm -f /usr/lib64/cmake/OpenSSL/OpenSSLConfig.cmake
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n //src:ovms_test; fi)
 
 # espeak-ng is built as a separate step, independent of the OVMS binary.
 # Set ESPEAK=0 to skip the espeak build.
 ARG ESPEAK=1
 # hadolint ignore=DL3059
-RUN if [ "$ESPEAK" == "1" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //third_party:espeak_ng //third_party:espeak_ng_data; fi
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ESPEAK" == "1" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} //third_party:espeak_ng //third_party:espeak_ng_data; fi
 
 # Tests execution
 COPY ci/check_coverage.bat /ovms/
@@ -369,14 +366,14 @@ ARG CAPI_FLAGS="--strip=always  --config=mp_off_py_off --//:distro=redhat"
 ARG JOBS=40
 ARG LTO_ENABLE=OFF
 WORKDIR /ovms
-RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
 
 # C api app with bazel
 # hadolint ignore=DL3059
-RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
 
 # C-API benchmark app
-RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
 RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \
