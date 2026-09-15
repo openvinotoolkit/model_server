@@ -17,6 +17,7 @@
 #define SRC_MAIN_WINDOWS_HPP_
 #endif  // SRC_MAIN_WINDOWS_HPP_
 
+#include <atomic>
 #include <memory>
 #include <string>
 #include <utility>
@@ -85,8 +86,10 @@ public:
     static OvmsWindowsServiceManager& instance();
     static std::string getCurrentTimeString();
     static void logParameters(DWORD argc, LPTSTR* argv, const std::string& logText);
-    static void serviceReportEvent(LPSTR szFunction);
+    static void serviceReportEvent(LPCSTR szFunction);
     static void serviceReportEvent(const std::string& szFunction);
+    static void serviceReportEvent(LPCSTR szFunction, DWORD errorCode);
+    static void serviceReportEvent(const std::string& szFunction, DWORD errorCode);
     static void serviceReportEventWithExitCode(const std::string& szFunction, const std::string& message, const int& exitCode);
     static void serviceReportEventWithExitCode(LPSTR szFunction, const std::string& message, const int& exitCode);
     static void serviceReportEventSuccess(const std::string& szFunction, const std::string& message);
@@ -106,6 +109,7 @@ private:
     static SERVICE_STATUS serviceStatus;
     static std::unique_ptr<WinServiceStatusWrapper> statusHandle;
     static std::unique_ptr<WinServiceEventWrapper> serviceStopEvent;
+    static std::atomic<bool> serviceStopRequested;
 
     // Methods
     static void WINAPI serviceCtrlHandler(DWORD);
