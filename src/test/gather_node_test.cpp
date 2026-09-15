@@ -43,7 +43,7 @@
 #include "../modelinstance.hpp"
 #include "../ov_utils.hpp"
 #include "../prediction_service_utils.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
