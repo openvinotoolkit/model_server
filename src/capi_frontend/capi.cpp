@@ -604,6 +604,84 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetAllowedMediaDomains(OVMS_ServerSet
     return nullptr;
 }
 
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetGrpcCertPath(OVMS_ServerSettings* settings,
+    const char* grpc_cert_path) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    if (grpc_cert_path == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "grpc certificate path"));
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->grpcCertPath.assign(grpc_cert_path);
+    return nullptr;
+}
+
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetGrpcKeyPath(OVMS_ServerSettings* settings,
+    const char* grpc_key_path) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    if (grpc_key_path == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "grpc key path"));
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->grpcKeyPath.assign(grpc_key_path);
+    return nullptr;
+}
+
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetGrpcCaPath(OVMS_ServerSettings* settings,
+    const char* grpc_ca_path) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    if (grpc_ca_path == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "grpc CA path"));
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->grpcCaPath.assign(grpc_ca_path);
+    return nullptr;
+}
+
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetRestCertPath(OVMS_ServerSettings* settings,
+    const char* rest_cert_path) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    if (rest_cert_path == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "rest certificate path"));
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->restCertPath.assign(rest_cert_path);
+    return nullptr;
+}
+
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetRestKeyPath(OVMS_ServerSettings* settings,
+    const char* rest_key_path) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    if (rest_key_path == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "rest key path"));
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->restKeyPath.assign(rest_key_path);
+    return nullptr;
+}
+
+DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetRestCaPath(OVMS_ServerSettings* settings,
+    const char* rest_ca_path) {
+    if (settings == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
+    }
+    if (rest_ca_path == nullptr) {
+        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "rest CA path"));
+    }
+    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
+    serverSettings->restCaPath.assign(rest_ca_path);
+    return nullptr;
+}
+
 DLL_PUBLIC OVMS_Status* OVMS_ModelsSettingsSetConfigPath(OVMS_ModelsSettings* settings,
     const char* config_path) {
     if (settings == nullptr) {
