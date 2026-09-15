@@ -46,13 +46,45 @@ static void print_download_speed_info(size_t received_size, size_t elapsed_time)
     printf(" [%.2f %s/s] ", rate, sizeUnits[rate_unit_idx]);
 }
 
+int computeProgressBarCells(size_t count, size_t max, int barWidth) {
+    if (max == 0 || barWidth <= 0) {
+        return 0;
+    }
+    const double ratio = static_cast<double>(count) / static_cast<double>(max);
+    // Written as a positive test so a NaN ratio also lands here rather than falling through.
+    if (!(ratio > 0.0)) {
+        return 0;
+    }
+    if (ratio >= 1.0) {
+        return barWidth;
+    }
+    return static_cast<int>(ratio * barWidth);
+}
+
 static void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time) {
+    // A response with no Content-Length reports dltotal == 0, so there is no ratio to show;
+    // report the running byte count instead. Dividing by max here yielded an infinite ratio
+    // whose conversion to int is undefined - in practice INT_MIN, which drove the padding
+    // loop below through roughly 2.1 billion putchar calls on every progress tick.
+    if (max == 0) {
+        double received = (double)count;
+        size_t receivedUnitId = 0;
+        while (received > 1000 && sizeUnits[receivedUnitId + 1]) {
+            received /= 1000.0;
+            receivedUnitId++;
+        }
+        printf("\rProgress: %.2f %s downloaded, total size unknown", received, sizeUnits[receivedUnitId]);
+        print_download_speed_info(count, elapsed_time);
+        fflush(stdout);
+        return;
+    }
+
     float progress = (float)count / max;
     if (!first_run && progress < 0.01 && count > 0)
         return;
 
     const int bar_width = 50;
-    int bar_length = progress * bar_width;
+    const int bar_length = computeProgressBarCells(count, max, bar_width);
 
     printf("\rProgress: [");
     int i;
