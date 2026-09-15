@@ -46,7 +46,7 @@ static void print_download_speed_info(size_t received_size, size_t elapsed_time)
         rate /= 1000.0;
         rate_unit_idx++;
     }
-    printf(" [%.2f %s/s] ", rate, sizeUnits[rate_unit_idx]);
+    printf(" [%.2f %s/s] ", rate, sizeUnits.at(rate_unit_idx));
 }
 
 int computeProgressBarCells(size_t count, size_t max, int barWidth) {
@@ -71,7 +71,7 @@ static void print_progress(size_t count, size_t max, bool first_run, size_t elap
             received /= 1000.0;
             receivedUnitId++;
         }
-        printf("\rProgress: %.2f %s downloaded, total size unknown", received, sizeUnits[receivedUnitId]);
+        printf("\rProgress: %.2f %s downloaded, total size unknown", received, sizeUnits.at(receivedUnitId));
         print_download_speed_info(count, elapsed_time);
         fflush(stdout);
         return;
@@ -98,7 +98,7 @@ static void print_progress(size_t count, size_t max, bool first_run, size_t elap
         totalSize /= 1000.0;
         totalSizeUnitId++;
     }
-    printf("] %.2f%% of %.2f %s", progress * 100, totalSize, sizeUnits[totalSizeUnitId]);
+    printf("] %.2f%% of %.2f %s", progress * 100, totalSize, sizeUnits.at(totalSizeUnitId));
     print_download_speed_info(count, elapsed_time);
     if (progress == 1.0)
         printf("\n");
