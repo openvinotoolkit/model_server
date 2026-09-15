@@ -19,7 +19,7 @@
 #include <utility>
 
 #include "../logging.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "packettypes.hpp"
 
 namespace ovms {
