@@ -53,11 +53,19 @@
 #pragma GCC diagnostic pop
 #include "opencv2/opencv.hpp"
 
+#include "../http_payload.hpp"
+#include "../http_rest_api_handler.hpp"
 #include "../python/python_backend.hpp"
 #include "c_api_test_utils.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
+
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
+#pragma warning(pop)
 
 namespace py = pybind11;
 using namespace ovms;
@@ -2318,6 +2326,305 @@ TEST_F(PythonFlowTest, ConverterCalculator_PyTensorBufferMismatch) {
     } catch (const pybind11::error_already_set& e) {
         ASSERT_EQ(1, 0) << e.what();
     }
+}
+
+// ---- HTTP_REQUEST_PAYLOAD / HTTP_RESPONSE_PAYLOAD conversion tests --------
+
+TEST_F(PythonFlowTest, ConverterCalculator_HttpJsonRequestToPyDict) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "OVMS_PY_TENSOR:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    auto payload = std::make_unique<ovms::HttpPayload>();
+    payload->body = R"({"prompt":"hello","temperature":0.5,"n":3})";
+    payload->parsedJson = std::make_shared<rapidjson::Document>();
+    payload->parsedJson->Parse(payload->body.c_str());
+    ASSERT_FALSE(payload->parsedJson->HasParseError());
+
+    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
+
+    py::gil_scoped_acquire acquire;
+    {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_TRUE(status.ok()) << status.code() << " " << status.message();
+    }
+
+    const PyObjectWrapper<py::object>& out =
+        runner.Outputs().Tag("OVMS_PY_TENSOR").packets[0].Get<PyObjectWrapper<py::object>>();
+    const py::object& obj = out.getObject();
+    ASSERT_TRUE(py::isinstance<py::dict>(obj));
+    py::dict d = obj.cast<py::dict>();
+    EXPECT_EQ(d["prompt"].cast<std::string>(), "hello");
+    EXPECT_DOUBLE_EQ(d["temperature"].cast<double>(), 0.5);
+    EXPECT_EQ(d["n"].cast<int>(), 3);
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_HttpRawJsonBodyToPyDict) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "OVMS_PY_TENSOR:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    auto payload = std::make_unique<ovms::HttpPayload>();
+    payload->body = R"({"a":1,"b":[2,3]})";
+    // parsedJson left null - exercise the json.loads(body) fallback.
+    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
+
+    py::gil_scoped_acquire acquire;
+    {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_TRUE(status.ok()) << status.code() << " " << status.message();
+    }
+
+    const PyObjectWrapper<py::object>& out =
+        runner.Outputs().Tag("OVMS_PY_TENSOR").packets[0].Get<PyObjectWrapper<py::object>>();
+    const py::object& obj = out.getObject();
+    ASSERT_TRUE(py::isinstance<py::dict>(obj));
+    py::dict d = obj.cast<py::dict>();
+    EXPECT_EQ(d["a"].cast<int>(), 1);
+    py::list l = d["b"].cast<py::list>();
+    ASSERT_EQ(l.size(), 2u);
+    EXPECT_EQ(l[0].cast<int>(), 2);
+    EXPECT_EQ(l[1].cast<int>(), 3);
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_HttpRawNonJsonBodyToPyString) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "OVMS_PY_TENSOR:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    auto payload = std::make_unique<ovms::HttpPayload>();
+    payload->body = "not json at all";
+    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
+
+    py::gil_scoped_acquire acquire;
+    {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_TRUE(status.ok()) << status.code() << " " << status.message();
+    }
+
+    const PyObjectWrapper<py::object>& out =
+        runner.Outputs().Tag("OVMS_PY_TENSOR").packets[0].Get<PyObjectWrapper<py::object>>();
+    const py::object& obj = out.getObject();
+    ASSERT_TRUE(py::isinstance<py::str>(obj));
+    EXPECT_EQ(obj.cast<std::string>(), "not json at all");
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_HttpMultipartToPyDict) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "OVMS_PY_TENSOR:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    // Lifetime of file content must outlive runner.Run() because parser returns string_view.
+    static const std::string fileBytes{"\x01\x02\x03\x04\x05", 5};
+    auto parser = std::make_shared<MockedMultiPartParser>();
+    EXPECT_CALL(*parser, hasParseError()).WillRepeatedly(::testing::Return(false));
+    EXPECT_CALL(*parser, getAllFieldNames())
+        .WillRepeatedly(::testing::Return(std::set<std::string>{"file", "model"}));
+    EXPECT_CALL(*parser, getFilesArrayByFieldName(::testing::Eq("file")))
+        .WillRepeatedly(::testing::Return(std::vector<std::string_view>{std::string_view{fileBytes}}));
+    EXPECT_CALL(*parser, getFilesArrayByFieldName(::testing::Eq("model")))
+        .WillRepeatedly(::testing::Return(std::vector<std::string_view>{}));
+    EXPECT_CALL(*parser, getFieldByName(::testing::Eq("model")))
+        .WillRepeatedly(::testing::Return(std::string{"my-model"}));
+
+    auto payload = std::make_unique<ovms::HttpPayload>();
+    payload->multipartParser = parser;
+    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
+
+    py::gil_scoped_acquire acquire;
+    {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_TRUE(status.ok()) << status.code() << " " << status.message();
+    }
+
+    const PyObjectWrapper<py::object>& out =
+        runner.Outputs().Tag("OVMS_PY_TENSOR").packets[0].Get<PyObjectWrapper<py::object>>();
+    const py::object& obj = out.getObject();
+    ASSERT_TRUE(py::isinstance<py::dict>(obj));
+    py::dict d = obj.cast<py::dict>();
+    ASSERT_TRUE(d.contains("file"));
+    ASSERT_TRUE(d.contains("model"));
+
+    py::module_ numpy = py::module_::import("numpy");
+    py::object ndarray = d["file"];
+    ASSERT_TRUE(py::isinstance(ndarray, numpy.attr("ndarray")));
+    EXPECT_EQ(ndarray.attr("dtype").attr("name").cast<std::string>(), "uint8");
+    EXPECT_EQ(ndarray.attr("size").cast<size_t>(), fileBytes.size());
+    auto bytesOut = ndarray.attr("tobytes")().cast<std::string>();
+    EXPECT_EQ(bytesOut, fileBytes);
+
+    EXPECT_EQ(d["model"].cast<std::string>(), "my-model");
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_HttpMultipartEmptyFileToPyEmptyArray) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "OVMS_PY_TENSOR:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    auto parser = std::make_shared<MockedMultiPartParser>();
+    EXPECT_CALL(*parser, hasParseError()).WillRepeatedly(::testing::Return(false));
+    EXPECT_CALL(*parser, getAllFieldNames())
+        .WillRepeatedly(::testing::Return(std::set<std::string>{"file"}));
+    // File is present in the multipart upload but its content is empty.
+    EXPECT_CALL(*parser, getFilesArrayByFieldName(::testing::Eq("file")))
+        .WillRepeatedly(::testing::Return(std::vector<std::string_view>{std::string_view{}}));
+
+    auto payload = std::make_unique<ovms::HttpPayload>();
+    payload->multipartParser = parser;
+    runner.MutableInputs()->Tag("HTTP_REQUEST_PAYLOAD").packets.push_back(mediapipe::Adopt<ovms::HttpPayload>(payload.release()).At(mediapipe::Timestamp(0)));
+
+    py::gil_scoped_acquire acquire;
+    {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_TRUE(status.ok()) << status.code() << " " << status.message();
+    }
+
+    const PyObjectWrapper<py::object>& out =
+        runner.Outputs().Tag("OVMS_PY_TENSOR").packets[0].Get<PyObjectWrapper<py::object>>();
+    const py::object& obj = out.getObject();
+    ASSERT_TRUE(py::isinstance<py::dict>(obj));
+    py::dict d = obj.cast<py::dict>();
+    ASSERT_TRUE(d.contains("file"));
+    py::module_ numpy = py::module_::import("numpy");
+    py::object ndarray = d["file"];
+    ASSERT_TRUE(py::isinstance(ndarray, numpy.attr("ndarray")));
+    EXPECT_EQ(ndarray.attr("dtype").attr("name").cast<std::string>(), "uint8");
+    EXPECT_EQ(ndarray.attr("size").cast<size_t>(), 0u);
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_PyDictToHttpResponse) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVMS_PY_TENSOR:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    py::gil_scoped_acquire acquire;
+    {
+        py::dict d;
+        d["status"] = py::str("ok");
+        d["count"] = py::int_(7);
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(new PyObjectWrapper<py::object>(static_cast<py::object>(d))).At(mediapipe::Timestamp(0)));
+    }
+
+    {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_TRUE(status.ok()) << status.code() << " " << status.message();
+    }
+
+    const std::string& response =
+        runner.Outputs().Tag("HTTP_RESPONSE_PAYLOAD").packets[0].Get<std::string>();
+    // Validate by re-parsing instead of relying on key ordering.
+    rapidjson::Document doc;
+    doc.Parse(response.c_str());
+    ASSERT_FALSE(doc.HasParseError()) << response;
+    ASSERT_TRUE(doc.IsObject());
+    ASSERT_TRUE(doc.HasMember("status"));
+    ASSERT_TRUE(doc.HasMember("count"));
+    EXPECT_STREQ(doc["status"].GetString(), "ok");
+    EXPECT_EQ(doc["count"].GetInt(), 7);
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_PyStringToHttpResponse) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVMS_PY_TENSOR:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    py::gil_scoped_acquire acquire;
+    {
+        py::object s = py::str("raw response body");
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(new PyObjectWrapper<py::object>(s)).At(mediapipe::Timestamp(0)));
+    }
+
+    {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_TRUE(status.ok()) << status.code() << " " << status.message();
+    }
+
+    const std::string& response =
+        runner.Outputs().Tag("HTTP_RESPONSE_PAYLOAD").packets[0].Get<std::string>();
+    EXPECT_EQ(response, "raw response body");
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_PyBytesToHttpResponse) {
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "OVMS_PY_TENSOR:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+
+    // Binary payload: embedded NUL plus high (non-UTF-8) bytes. Must round-trip byte-for-byte.
+    const std::string expected{"\x00\x01\xff\x80\x7f\x00"
+                               "ABC\xfe",
+        10};
+
+    py::gil_scoped_acquire acquire;
+    {
+        py::object b = py::bytes(expected.data(), expected.size());
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(new PyObjectWrapper<py::object>(b)).At(mediapipe::Timestamp(0)));
+    }
+
+    {
+        py::gil_scoped_release release;
+        auto status = runner.Run();
+        ASSERT_TRUE(status.ok()) << status.code() << " " << status.message();
+    }
+
+    const std::string& response =
+        runner.Outputs().Tag("HTTP_RESPONSE_PAYLOAD").packets[0].Get<std::string>();
+    ASSERT_EQ(response.size(), expected.size());
+    EXPECT_EQ(response, expected);
+}
+
+TEST_F(PythonFlowTest, ConverterCalculator_InvalidTagPairRejected) {
+    // HTTP_REQUEST_PAYLOAD as input must pair with OVMS_PY_TENSOR output.
+    // Pairing with OVTENSOR is unsupported and GetContract should reject it.
+    std::string testPbtxt = R"(
+        calculator: "PyTensorOvTensorConverterCalculator"
+        name: "conversionNode"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "OVTENSOR:output"
+    )";
+    mediapipe::CalculatorRunner runner(testPbtxt);
+    py::gil_scoped_acquire acquire;
+    py::gil_scoped_release release;
+    auto status = runner.Run();
+    EXPECT_FALSE(status.ok());
 }
 
 TEST_F(PythonFlowTest, PythonCalculatorTestSingleInSingleOutMultiRunWithErrors) {
