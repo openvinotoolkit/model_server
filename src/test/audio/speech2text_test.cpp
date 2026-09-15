@@ -19,6 +19,8 @@
 #include <gtest/gtest.h>
 
 #include <drogon/drogon.h>
+
+#include "absl/status/status.h"
 #include "../../http_frontend/multi_part_parser_drogon_impl.hpp"
 #include "../../audio/audio_utils.hpp"
 #include "../../audio/speech_to_text/s2t_servable.hpp"
@@ -125,6 +127,73 @@ TEST(SttServableParseTemperatureTest, positiveTemperatureEnablesSampling) {
     EXPECT_TRUE(status.ok());
     EXPECT_FLOAT_EQ(config.temperature, 1.0f);
     EXPECT_TRUE(config.do_sample);
+}
+
+// A temperature field that is not entirely a number must be rejected rather than silently
+// reinterpreted. These all used to be accepted: the ovms::stou32 fallback parsed the leading
+// digits of a value ovms::stof had already rejected.
+TEST(SttServableParseTemperatureTest, trailingGarbageTemperatureRejected) {
+    HttpPayload payload;
+    std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
+    payload.multipartParser = multipartParser;
+    EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
+        .WillOnce(::testing::Return("0.5x"));
+
+    ov::genai::ASRGenerationConfig config;
+    config.do_sample = false;
+
+    auto status = SttServable::parseTemperature(payload, config);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_FALSE(config.do_sample);
+}
+
+TEST(SttServableParseTemperatureTest, digitsFollowedByLettersTemperatureRejected) {
+    HttpPayload payload;
+    std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
+    payload.multipartParser = multipartParser;
+    EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
+        .WillOnce(::testing::Return("0abc"));
+
+    ov::genai::ASRGenerationConfig config;
+    config.do_sample = false;
+
+    auto status = SttServable::parseTemperature(payload, config);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_FALSE(config.do_sample);
+}
+
+TEST(SttServableParseTemperatureTest, outOfRangeFloatTemperatureRejected) {
+    HttpPayload payload;
+    std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
+    payload.multipartParser = multipartParser;
+    EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
+        .WillOnce(::testing::Return("1e400"));
+
+    ov::genai::ASRGenerationConfig config;
+    config.do_sample = false;
+
+    auto status = SttServable::parseTemperature(payload, config);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_FALSE(config.do_sample);
+}
+
+TEST(SttServableParseTemperatureTest, embeddedSpaceTemperatureRejected) {
+    HttpPayload payload;
+    std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
+    payload.multipartParser = multipartParser;
+    EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
+        .WillOnce(::testing::Return("5 5"));
+
+    ov::genai::ASRGenerationConfig config;
+    config.do_sample = false;
+
+    auto status = SttServable::parseTemperature(payload, config);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_FALSE(config.do_sample);
 }
 
 // ====================== Speech2Text Streaming Tests ======================
