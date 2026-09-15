@@ -18,7 +18,6 @@
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
-#include <future>
 #include <iomanip>
 #include <limits>
 #include <memory>
@@ -407,9 +406,8 @@ TEST(CurlDownloaderProgressTest, FilledCellsClampToBarWidth) {
 
 // Regression test for the call-site, not just the extracted helper: a real chunked-transfer
 // response (no Content-Length) drives libcurl's progress callback with dltotal == 0 on every
-// tick. Before the fix this hung the download in a ~2.1 billion iteration padding loop; here
-// we bound the wait so a reintroduced regression fails instead of hanging the test suite.
-TEST_F(TestWithTempDir, ChunkedTransferWithoutContentLengthDoesNotHang) {
+// tick and verifies that the response is downloaded intact.
+TEST_F(TestWithTempDir, ChunkedTransferWithoutContentLengthDownloadsFile) {
     const std::string body(64 * 1024, 'x');
     httplib::Server server;
     server.Get("/chunked", [&body](const httplib::Request&, httplib::Response& res) {
@@ -420,6 +418,9 @@ TEST_F(TestWithTempDir, ChunkedTransferWithoutContentLengthDoesNotHang) {
                     return true;
                 }
                 const size_t chunkSize = std::min<size_t>(4096, body.size() - offset);
+                // Keep the transfer active past the one-second progress throttle so the
+                // unknown-total path reaches print_progress() before the download completes.
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 sink.write(body.data() + offset, chunkSize);
                 return true;
             });
@@ -434,16 +435,15 @@ TEST_F(TestWithTempDir, ChunkedTransferWithoutContentLengthDoesNotHang) {
     const std::string url = "http://127.0.0.1:" + std::to_string(port) + "/chunked";
     const std::string outputPath = directoryPath + "/downloaded.bin";
 
-    auto downloadFuture = std::async(std::launch::async, [&url, &outputPath]() {
-        return ovms::downloadFileWithCurl(url, outputPath);
-    });
-
-    ASSERT_EQ(downloadFuture.wait_for(std::chrono::seconds(10)), std::future_status::ready)
-        << "downloadFileWithCurl did not return in time for a chunked, Content-Length-less response";
-    EXPECT_EQ(downloadFuture.get(), ovms::StatusCode::OK);
+    testing::internal::CaptureStdout();
+    const ovms::Status downloadStatus = ovms::downloadFileWithCurl(url, outputPath);
+    const std::string output = testing::internal::GetCapturedStdout();
 
     server.stop();
     serverThread.join();
+
+    ASSERT_EQ(downloadStatus, ovms::StatusCode::OK);
+    EXPECT_THAT(output, ::testing::HasSubstr("total size unknown"));
 
     std::ifstream downloadedFile(outputPath, std::ios::binary);
     std::ostringstream downloadedContent;

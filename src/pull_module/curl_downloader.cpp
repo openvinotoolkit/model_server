@@ -151,9 +151,9 @@ static size_t file_write_callback(void* buffer, size_t size, size_t nmemb, void*
         }                                                                                                \
     } while (0)
 
-// libcurl requires curl_global_init/curl_global_cleanup to run exactly once per process;
-// calling curl_global_cleanup() after every download tears down global TLS/engine state
-// still needed elsewhere (other in-flight curl users), which segfaults on next use.
+// Keep one balanced libcurl global initialization for this downloader's process lifetime.
+// The previous per-call guard held a null unique_ptr, so its deleter never ran and every
+// download added another unmatched curl_global_init() call.
 static Status ensureCurlGlobalInit() {
     static std::once_flag initFlag;
     static CURLcode initResult = CURLE_OK;
