@@ -143,13 +143,13 @@ new_local_repository(
 cc_import(
     name = "curl_lib",
     hdrs = [],
+    interface_library = "bin/libcurl-x64.lib",
     shared_library = "bin/libcurl-x64.dll",
     visibility = ["//visibility:public"],
 )
 cc_library(
     name = "curl",
     hdrs = glob(["include/curl/curl.h"]),
-    srcs = glob(["lib/libcurl.dll.a"]),
     includes = ["include/"],
     visibility = ["//visibility:public"],
     deps = [":curl_lib"],
@@ -243,6 +243,16 @@ http_archive(
 # 2020-08-21 SHA 3a0d4d22c5ae0b9a2216988411cfa6bf860cc372
 load("@ovms//third_party/glog:glog.bzl", "glog_dependencies")
 glog_dependencies()
+
+http_archive(
+    name = "com_github_glog_glog_no_gflags",
+    strip_prefix = "glog-3a0d4d22c5ae0b9a2216988411cfa6bf860cc372",
+    sha256 = "170d08f80210b82d95563f4723a15095eff1aad1863000e8eeb569c96a98fefb",
+    urls = [
+        "https://github.com/google/glog/archive/3a0d4d22c5ae0b9a2216988411cfa6bf860cc372.zip",
+    ],
+    build_file = "@mediapipe//third_party:glog_no_gflags.BUILD",
+)
 
 load("@mediapipe//third_party:external_files.bzl", "external_files")
 external_files()
