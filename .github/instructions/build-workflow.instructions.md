@@ -3,6 +3,12 @@ description: "Build workflow, Docker setup, Makefile targets, style checks and t
 ---
 # OVMS Build & Test Workflow
 
+## Which build do I need?
+
+- **Most code changes** (`.cpp`/`.hpp`/`BUILD` under `src/`): build & test **inside the existing `-build` container** with Bazel. This is fast and is the default — do NOT rebuild the Docker image.
+- **`Dockerfile.*` or `Makefile` changes** (build environment, dependencies, packaging): a **full image build** is required (`make docker_build`).
+- **Windows**: use the batch scripts in the repo root (see the Windows Builds section) — no Docker container.
+
 ## Docker-Based Development
 
 Building and testing is done **inside a Docker `-build` container** with the repository mounted. Developers do not run Bazel on the host directly.

@@ -29,7 +29,7 @@ performance impact. Avoid copies, allocations, and blocking operations on the ho
 
 ## Always-on principles
 
-- **Performance first** on the hot path — no unnecessary copies, allocations, `dynamic_cast`, or blocking calls.
+- **Performance first** on the hot path — no unnecessary copies, allocations, or blocking calls.
 - **Include-what-you-use**; prefer forward declarations in headers, full includes in `.cpp`. Build times are long — do not add unneeded includes.
 - **No dead code**: remove unused functions, variables, includes, and orphan files.
 - **Style is enforced** via `make` targets (`make clang-format`, `make cpplint`, `make cppclean`, `make spell`) run on the **host**, not inside the build container. Never invoke `clang-format`/`cpplint` by hand.

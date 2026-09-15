@@ -6,6 +6,7 @@ applyTo: "**/*.hpp"
 ## Include Discipline
 
 - **Ban umbrella includes**: never use `openvino/openvino.hpp`, `rapidjson/document.h`, or similar in headers. Include only the specific subheader you need.
+- **Use repo-root-relative include paths across directories**: a same-directory include may be relative (`#include "logging.hpp"`), but never reach across directories with `..` — write `#include "src/foo/bar.hpp"` from the workspace root, never `#include "../foo/bar.hpp"`.
 - **Forward-declare in headers**: if a header only uses pointers or references to a type, write `class Foo;` instead of `#include "foo.hpp"`. Move the full include to the `.cpp`.
 - **Self-contained but minimal**: every header must compile on its own (`#pragma once`, own includes), but must not pull in transitive dependencies callers don't need.
 - **No header solely for a typedef or enum**: forward-declare the enum (`enum class Foo;`) or use a lightweight `_fwd.hpp` header.
