@@ -891,7 +891,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageLocalFilesystem
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingImageUrlNotInAllowedDomainsPreservesUrlInChatHistory) {
     // Domain validation is deferred to ImageDecodingProcessor; handler just preserves URL.
-    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg");
+    std::string json = createImageOnlyRequest("http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/common/static/images/zebra.jpeg");
     auto apiHandler = parseCurrentRequest(json);
     ASSERT_NE(apiHandler, nullptr);
     auto content = apiHandler->getChatHistory()[0]["content"];

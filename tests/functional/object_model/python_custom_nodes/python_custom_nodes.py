@@ -136,7 +136,7 @@ class SimplePythonCustomNodeMediaPipe(MediaPipe):
                 char_array = [ord(char) for char in input_text]
                 # For REST API and BYTES type, every batch is always preceding by the 4 bytes, that contains its size
                 # [42, 0, 0, 0] is constant value for "Lorem ipsum dolor sit amet"
-                # https://github.com/openvinotoolkit/model_server/blob/main/docs/model_server_rest_api_kfs.md
+                # https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/docs/model_server_rest_api_kfs.md
                 elements = np.array_split(np.array(char_array, dtype=np.object_), multiply_value)
                 extended_with_length = [np.insert(elem, 0, [42, 0, 0, 0]) for elem in elements]
                 output_data[self.output_names[i]] = np.concatenate(extended_with_length, dtype=np.object_)
