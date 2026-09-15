@@ -35,7 +35,8 @@ namespace ovms {
 // Guarantees provided by OVMSTextStreamer:
 //   - Ordered delivery: tokens are passed to OutputParser in the exact generation order,
 //     one logical chunk at a time.
-//   - Final flush: end() ALWAYS calls parseChunk("", [], finishReason=STOP) after all tokens
+//   - Final flush: end(reason) calls parseChunk with the terminal reason after all tokens;
+//     the no-argument end() preserves STOP. This is done after all tokens
 //     have been processed.  This is the "at least one subsequent call after every phase
 //     transition" guarantee that OutputParser depends on to drain buffered remainders.
 //   - Phase-aware decode mode: after every write(), the streamer queries
@@ -83,6 +84,7 @@ public:
     ov::genai::StreamingStatus write(int64_t token) override;
     ov::genai::StreamingStatus write(const std::vector<int64_t>& tokens) override;
     void end() override;
+    void end(ov::genai::GenerationFinishReason finish_reason);
 
 private:
     std::shared_ptr<OutputParser> m_output_parser;
@@ -111,6 +113,7 @@ private:
 
     // All token IDs received by write() in order, used for end() trace logging.
     std::vector<int64_t> m_all_tokens;
+    size_t m_generated_tokens = 0;
 };
 
 }  // namespace ovms
