@@ -175,9 +175,9 @@ http_archive(
 #### Will be used on feature release
 http_archive(
     name = "mediapipe",
-    url = "https://github.com/openvinotoolkit/mediapipe/archive/b27f0ca7d4fe36175a9f725844cb64b3d3e18959.tar.gz",
-    sha256 = "c518f07924243cccaebb763804f47bf7483d9ef75a32ccdf780e953aeab51e9a",
-    strip_prefix = "mediapipe-b27f0ca7d4fe36175a9f725844cb64b3d3e18959", # top of mediapipe main branch as of 13.09.2026
+    url = "https://github.com/openvinotoolkit/mediapipe/archive/1153c8688f234d3b40ed20105df7893eb517b429.tar.gz",
+    sha256 = "924f4b74fe5a32c4ae807c8387fe7c65cafceb2c9a316e211a2a0a29a53be1b5",
+    strip_prefix = "mediapipe-1153c8688f234d3b40ed20105df7893eb517b429", # top of mediapipe main branch as of 16.09.2026
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
