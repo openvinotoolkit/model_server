@@ -477,8 +477,14 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             jinja_env.globals["raise_exception"] = raise_exception
             jinja_env.globals["strftime_now"] = strftime_now
             jinja_env.filters["from_json"] = json.loads
-            # Override tojson to return plain str instead of Markup to prevent HTML escaping in LLM prompts
-            jinja_env.filters["tojson"] = lambda value, indent=None: json.dumps(value, ensure_ascii=False, indent=indent)
+            # Match Transformers' tojson filter signature while returning plain str instead of Markup.
+            # Granite 4.2's official template passes ensure_ascii=False explicitly; accepting the
+            # complete Transformers signature keeps that template unchanged and preserves the
+            # existing HTML-escaping workaround for prompt construction.
+            def tojson(value, ensure_ascii=False, indent=None, separators=None, sort_keys=False):
+                return json.dumps(value, ensure_ascii=ensure_ascii, indent=indent,
+                                  separators=separators, sort_keys=sort_keys)
+            jinja_env.filters["tojson"] = tojson
 
             # Try to read data from tokenizer_config.json to get additional tool chat template if present
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")

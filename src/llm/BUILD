@@ -432,6 +432,28 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "io_processing_granite42_content_parser",
+    hdrs = ["io_processing/granite42/granite42_content_parser.hpp"],
+    srcs = ["io_processing/granite42/granite42_content_parser.cpp"],
+    deps = [
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_granite42_thinking_parser",
+    hdrs = ["io_processing/granite42/granite42_thinking_parser.hpp"],
+    srcs = ["io_processing/granite42/granite42_thinking_parser.cpp"],
+    deps = [
+        ":io_processing_base_output_parser",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "io_processing_onyx_content_parser",
     hdrs = ["io_processing/onyx/onyx_content_parser.hpp"],
     srcs = ["io_processing/onyx/onyx_content_parser.cpp"],
@@ -533,6 +555,8 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":io_processing_onyx_content_parser",
         ":io_processing_default_content_parser",
         ":io_processing_lfm25_reasoning_parser",
+        ":io_processing_granite42_content_parser",
+        ":io_processing_granite42_thinking_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
     ],
@@ -575,7 +599,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "genai_servables",
     hdrs = ["servable.hpp",
-            "servable_initializer.hpp", 
+            "servable_initializer.hpp",
             "language_model/continuous_batching/servable.hpp",
             "language_model/continuous_batching/llm_executor.hpp",
             "language_model/continuous_batching/servable_initializer.hpp",

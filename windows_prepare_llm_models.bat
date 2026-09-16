@@ -38,6 +38,7 @@ set "STT_MODEL=openai/whisper-tiny"
 
 :: Models for tools testing. Only tokenizers are downloaded.
 set "QWEN3_MODEL=Qwen/Qwen3-8B"
+set "GRANITE42_MODEL=ibm-granite/granite-4.2-8b"
 set "LLAMA3_MODEL=unsloth/Llama-3.1-8B-Instruct"
 set "HERMES3_MODEL=NousResearch/Hermes-3-Llama-3.1-8B"
 set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
@@ -81,6 +82,7 @@ if not exist "%~1\%FACEBOOK_MODEL%\chat_template.jinja" (
 
 :: Download tokenizers for tools testing
 call :download_tokenizer "%QWEN3_MODEL%" "%~1\%QWEN3_MODEL%"
+call :download_tokenizer "%GRANITE42_MODEL%" "%~1\%GRANITE42_MODEL%"
 call :download_tokenizer "%LLAMA3_MODEL%" "%~1\%LLAMA3_MODEL%"
 call :download_tokenizer "%HERMES3_MODEL%" "%~1\%HERMES3_MODEL%"
 call :download_tokenizer "%PHI4_MODEL%" "%~1\%PHI4_MODEL%"

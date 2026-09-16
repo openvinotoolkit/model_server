@@ -40,6 +40,8 @@
 #include "default_content_parser.hpp"
 #include "minicpm5/minicpm5_tool_parser.hpp"
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
+#include "granite42/granite42_content_parser.hpp"
+#include "granite42/granite42_thinking_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -123,7 +125,8 @@ std::optional<Delta> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
         return std::nullopt;  // hold — keep buffer
     streamOutputCache.clear();
     processingPhase = newPhase;
-    // Suppress preamble-only ContentDelta (empty text = structural tag consumed, nothing to emit).
+    // Suppress preamble-only ContentDelta (empty text = structural tag consumed,
+    // nothing to emit).
     if (const auto* cd = std::get_if<ContentDelta>(&*result)) {
         if (cd->text.empty())
             return std::nullopt;
@@ -180,12 +183,19 @@ std::optional<Delta> OutputParser::parseReasoningChunk(const std::vector<int64_t
     }
     streamOutputCache.clear();
     processingPhase = newPhase;
+    if (newPhase != REASONING) {
+        reasoningPhaseCompleted = true;
+        if (!remainder.empty()) {
+            finalContentWasPresent = true;
+        }
+    }
     if (!remainder.empty())
         streamOutputCache.add(remainder);
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap,
+    bool granitePromoteReasoningToContent) :
     tokenizer(tokenizer) {
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
@@ -226,6 +236,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "onyx") {
         reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "granite42") {
+        reasoningParser = std::make_unique<Granite42ThinkingParser>(tokenizer, granitePromoteReasoningToContent);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
@@ -236,7 +248,9 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     // minicpm5's <s>/<|im_end|> must be visible before parser-owned phases begin). For all other
     // parser combinations the content phase decodes with skip_special_tokens=true (the default,
     // lower noise). Each parser that requires this sets defaultDecodingWithSpecialTokens in its config.
-    if (toolParserName == "onyx" || reasoningParserName == "onyx")
+    if (reasoningParserName == "granite42")
+        contentParser = std::make_unique<Granite42ContentParser>(tokenizer);
+    else if (toolParserName == "onyx" || reasoningParserName == "onyx")
         contentParser = std::make_unique<OnyxContentParser>(tokenizer);
     else if (toolParserName == "gptoss" || reasoningParserName == "gptoss")
         contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{
@@ -278,6 +292,12 @@ bool OutputParser::isReasoningParserAvailable() const {
     return reasoningParser != nullptr;
 }
 
+void OutputParser::finalizeUnaryDeltas(std::vector<Delta>& deltas) const {
+    if (reasoningParser) {
+        reasoningParser->finalizeUnaryDeltas(deltas, finalContentWasPresent);
+    }
+}
+
 std::string OutputParser::getToolParserStartTag() const {
     if (toolParser) {
         return toolParser->getParsingConfig().startTags[0];
@@ -287,8 +307,10 @@ std::string OutputParser::getToolParserStartTag() const {
 }
 
 void OutputParser::resetStreamingState() {
-    processingPhase = UNKNOWN;
+    processingPhase = promptReasoningEnded ? CONTENT : UNKNOWN;
     streamOutputCache.clear();
+    reasoningPhaseCompleted = promptReasoningEnded;
+    finalContentWasPresent = false;
     if (toolParser)
         toolParser->resetState();
     if (reasoningParser)
@@ -327,7 +349,8 @@ std::string OutputParser::getPhaseStartTagForToken(int64_t tokenId, bool toolsAv
             return it->second;
         }
     }
-    if (reasoningParser) {
+    if (reasoningParser &&
+        (!reasoningPhaseCompleted || reasoningParser->getParsingConfig().allowReasoningReentry)) {
         const auto& tokenMap = reasoningParser->getResolvedStartTokenToTag();
         auto it = tokenMap.find(tokenId);
         if (it != tokenMap.end() && processingPhase != REASONING) {
@@ -338,6 +361,11 @@ std::string OutputParser::getPhaseStartTagForToken(int64_t tokenId, bool toolsAv
 }
 
 void OutputParser::setImplicitReasoningStart(bool value) {
+    if (value) {
+        // An explicit prompt-opening marker supersedes any previously detected
+        // prompt-closing state when callers reuse an OutputParser instance.
+        promptReasoningEnded = false;
+    }
     implicitReasoningStart = value;
     if (!reasoningParser) {
         return;
@@ -360,7 +388,29 @@ void OutputParser::detectAndSetImplicitReasoningStart(const std::string& rendere
     const auto& startTags = reasoningParser->getParsingConfig().startTags;
     bool detected = std::any_of(startTags.begin(), startTags.end(),
         [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
-    setImplicitReasoningStart(detected);
+    const std::string& endTag = reasoningParser->getParsingConfig().endTag;
+    promptReasoningEnded = !endTag.empty() && endsWith(trimmed, endTag);
+    if (promptReasoningEnded) {
+        // vLLM's DelegatingParser reverse-scans prompt token IDs and starts
+        // directly in its content/tool phase when the latest reasoning marker
+        // is </think> (Granite's enable_thinking=false template). Preserve
+        // that state explicitly because generated output has no opening tag.
+        setImplicitReasoningStart(false);
+        reasoningPhaseCompleted = true;
+        finalContentWasPresent = false;
+        processingPhase = CONTENT;
+    } else {
+        // The parser instance is normally request-scoped, but clearing these
+        // prompt facts makes reuse safe as well: a prior disabled-thinking
+        // prompt must not force the next generation into CONTENT.
+        reasoningPhaseCompleted = false;
+        finalContentWasPresent = false;
+        setImplicitReasoningStart(detected);
+        // `setImplicitReasoningStart(false)` deliberately avoids disturbing an
+        // active phase. Prompt detection runs before a new generation, so when
+        // an instance is reused we must explicitly restore the initial phase.
+        processingPhase = detected ? REASONING : UNKNOWN;
+    }
     return;
 }
 
@@ -374,9 +424,14 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
     */
 
     bool reasoningParserExistsAndSupportsStreaming = reasoningParser && !reasoningParser->getParsingConfig().startTags.empty() && !reasoningParser->getParsingConfig().endTag.empty();
+    bool reasoningParserCanStart = reasoningParserExistsAndSupportsStreaming &&
+                                   (!reasoningPhaseCompleted || reasoningParser->getParsingConfig().allowReasoningReentry);
     bool toolParserExistsAndSupportsStreaming = toolParser && !toolParser->getParsingConfig().startTags.empty();
     bool applyToolParser = toolParserExistsAndSupportsStreaming && toolsAvailable;
 
+    if (reasoningPhaseCompleted && !chunkResponse.empty()) {
+        finalContentWasPresent = true;
+    }
     streamOutputCache.add(chunkResponse);
 
     if (llm_calculator_logger->should_log(spdlog::level::trace)) {
@@ -418,7 +473,7 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
     if (processingPhase == UNKNOWN) {
         // If we are in the UNKNOWN phase, we need to determine if we should switch to CONTENT, REASONING, or TOOL_CALLS phase.
         TagLookupStatus anyStartTagStatus = TagLookupStatus::NOT_FOUND;
-        if (reasoningParserExistsAndSupportsStreaming) {
+        if (reasoningParserCanStart) {
             // Check if reasoning start tag has been received
             TagLookupStatus reasoningStartTagStatus = streamOutputCache.lookupTags(reasoningParser->getParsingConfig().startTags);
             if (reasoningStartTagStatus == TagLookupStatus::NOT_FOUND) {
@@ -426,9 +481,35 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
                 reasoningStartTagStatus = streamOutputCache.lookupTags(reasoningParser->getParsingConfig().preambleStartTags);
             }
             if (reasoningStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
+                const TagLookupStatus reasoningEndTagStatus = streamOutputCache.lookupTag(reasoningParser->getParsingConfig().endTag);
+                if (reasoningEndTagStatus == TagLookupStatus::FOUND_COMPLETE) {
+                    return parseReasoningChunk(tokens, finishReason, UNKNOWN);
+                }
+                if (reasoningEndTagStatus == TagLookupStatus::FOUND_INCOMPLETE &&
+                    finishReason == ov::genai::GenerationFinishReason::NONE) {
+                    processingPhase = REASONING;
+                    return std::nullopt;
+                }
                 return parseReasoningChunk(tokens, finishReason);
             }  // else startTagStatus is FOUND_INCOMPLETE or NOT_FOUND, we continue processing, so potential tool parser start tag is not missed
             anyStartTagStatus = reasoningStartTagStatus;
+            if (reasoningStartTagStatus == TagLookupStatus::NOT_FOUND &&
+                reasoningParser->getParsingConfig().reasoningStartsWithoutTag) {
+                // DeepSeek-R1-compatible streaming parsers classify text before
+                // any explicit <think> marker as reasoning. Keep this fallback
+                // ahead of tool detection: Granite's tool syntax is final
+                // content only after </think> has completed.
+                const TagLookupStatus reasoningEndTagStatus = streamOutputCache.lookupTag(reasoningParser->getParsingConfig().endTag);
+                if (reasoningEndTagStatus == TagLookupStatus::FOUND_COMPLETE) {
+                    return parseReasoningChunk(tokens, finishReason, UNKNOWN);
+                }
+                if (reasoningEndTagStatus == TagLookupStatus::FOUND_INCOMPLETE &&
+                    finishReason == ov::genai::GenerationFinishReason::NONE) {
+                    processingPhase = REASONING;
+                    return std::nullopt;
+                }
+                return parseReasoningChunk(tokens, finishReason);
+            }
         }
 
         if (applyToolParser) {
@@ -446,8 +527,9 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
             }
         }
 
-        if ((!reasoningParserExistsAndSupportsStreaming && !applyToolParser) || finishReason != ov::genai::GenerationFinishReason::NONE || anyStartTagStatus == TagLookupStatus::NOT_FOUND) {
-            // If no special parsers are available, generation has finished or we have no start tags we just return content chunks and switch to CONTENT phase.
+        if ((!reasoningParserCanStart && !applyToolParser) || finishReason != ov::genai::GenerationFinishReason::NONE || anyStartTagStatus == TagLookupStatus::NOT_FOUND) {
+            // If no parser can claim the buffer, generation has finished or no
+            // phase-start tag is present, so route the chunk to content.
             return parseContentChunk();
         }
         // If we are here, it means we have incomplete start tag for either reasoning or tool parser, so we wait for more chunks

@@ -240,6 +240,9 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
     }
 
     auto deltas = omniExecutionContext->deltaChannel.drain();
+    if (const auto& outputParser = executionContext->apiHandler->getOutputParser()) {
+        outputParser->finalizeUnaryDeltas(deltas);
+    }
     const ov::genai::GenerationFinishReason finishReason =
         omniExecutionContext->results.finish_reasons.empty()
             ? ov::genai::GenerationFinishReason::STOP

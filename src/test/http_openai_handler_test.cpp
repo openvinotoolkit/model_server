@@ -1226,6 +1226,157 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasReasoningConten
     ASSERT_NE(serialized.find("\"finish_reason\":\"stop\""), std::string::npos) << serialized;
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserPromotesReasoningAfterEffectiveDisableThinking) {
+    std::string json = R"({
+        "model": "granite",
+        "messages": [{"role": "user", "content": "Reply."}],
+        "reasoning_effort": "none"
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS, "", "granite42");
+    ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+
+    std::vector<ovms::Delta> deltas{
+        ovms::ReasoningDelta{"fallback answer"},
+        ovms::FinishDelta{},
+    };
+    apiHandler->getOutputParser()->finalizeUnaryDeltas(deltas);
+    const std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
+
+    EXPECT_NE(serialized.find("\"content\":\"fallback answer\""), std::string::npos) << serialized;
+    EXPECT_EQ(serialized.find("\"reasoning_content\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserForceNonemptyContentUsesUnaryPromotion) {
+    std::string json = R"({
+        "model": "granite",
+        "messages": [{"role": "user", "content": "Reply."}],
+        "chat_template_kwargs": {"force_nonempty_content": true}
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS, "", "granite42");
+    ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+
+    std::vector<ovms::Delta> deltas{
+        ovms::ReasoningDelta{"fallback answer"},
+        ovms::FinishDelta{},
+    };
+    apiHandler->getOutputParser()->finalizeUnaryDeltas(deltas);
+    const std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
+
+    EXPECT_NE(serialized.find("\"content\":\"fallback answer\""), std::string::npos) << serialized;
+    EXPECT_EQ(serialized.find("\"reasoning_content\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserDoesNotPromotePresentEmptyFinalContent) {
+    std::string json = R"({
+        "model": "granite",
+        "messages": [{"role": "user", "content": "Reply."}],
+        "chat_template_kwargs": {"force_nonempty_content": true}
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS, "", "granite42");
+    ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+
+    // Drive the parser rather than manufacture an empty delta: the distinction
+    // comes from raw post-</think> text which normalizes to an empty visible
+    // content stream, and is retained privately by OutputParser for unary parity.
+    const auto& parser = apiHandler->getOutputParser();
+    ASSERT_NE(parser, nullptr);
+    parser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>\n");
+    const auto reasoningDelta = parser->parseChunk("reasoning</think>", {}, false,
+        ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(reasoningDelta.has_value());
+    EXPECT_NE(std::get_if<ovms::ReasoningDelta>(&*reasoningDelta), nullptr);
+    EXPECT_FALSE(parser->parseChunk("\n\n", {}, false,
+        ov::genai::GenerationFinishReason::NONE).has_value());
+
+    std::vector<ovms::Delta> deltas{
+        *reasoningDelta,
+        ovms::FinishDelta{},
+    };
+    parser->finalizeUnaryDeltas(deltas);
+    const std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
+
+    EXPECT_NE(serialized.find("\"reasoning_content\":\"reasoning\""), std::string::npos) << serialized;
+    EXPECT_NE(serialized.find("\"content\":\"\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserRequiresBooleanTemplateKwargsForPromotion) {
+    std::string json = R"({
+        "model": "granite",
+        "messages": [{"role": "user", "content": "Reply."}],
+        "chat_template_kwargs": {"enable_thinking": "false"}
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS, "", "granite42");
+    ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+
+    std::vector<ovms::Delta> deltas{
+        ovms::ReasoningDelta{"reasoning"},
+        ovms::FinishDelta{},
+    };
+    apiHandler->getOutputParser()->finalizeUnaryDeltas(deltas);
+    const std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
+
+    EXPECT_NE(serialized.find("\"reasoning_content\":\"reasoning\""), std::string::npos) << serialized;
+    EXPECT_NE(serialized.find("\"content\":\"\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserDoesNotPromoteWhenThinkingIsExplicitlyEnabled) {
+    std::string json = R"({
+        "model": "granite",
+        "messages": [{"role": "user", "content": "Reply."}],
+        "chat_template_kwargs": {"enable_thinking": true}
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS, "", "granite42");
+    ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+
+    std::vector<ovms::Delta> deltas{
+        ovms::ReasoningDelta{"reasoning"},
+        ovms::FinishDelta{},
+    };
+    apiHandler->getOutputParser()->finalizeUnaryDeltas(deltas);
+    const std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
+
+    EXPECT_NE(serialized.find("\"reasoning_content\":\"reasoning\""), std::string::npos) << serialized;
+    EXPECT_NE(serialized.find("\"content\":\"\""), std::string::npos) << serialized;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserRequiresBooleanForceNonemptyContent) {
+    std::string json = R"({
+        "model": "granite",
+        "messages": [{"role": "user", "content": "Reply."}],
+        "chat_template_kwargs": {"force_nonempty_content": "true"}
+    })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS, "", "granite42");
+    ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+
+    std::vector<ovms::Delta> deltas{
+        ovms::ReasoningDelta{"reasoning"},
+        ovms::FinishDelta{},
+    };
+    apiHandler->getOutputParser()->finalizeUnaryDeltas(deltas);
+    const std::string serialized = apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP);
+
+    EXPECT_NE(serialized.find("\"reasoning_content\":\"reasoning\""), std::string::npos) << serialized;
+    EXPECT_NE(serialized.find("\"content\":\"\""), std::string::npos) << serialized;
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasLengthFinishReason) {
     std::string json = R"({"model":"llama","messages":[{"role":"user","content":"Hi"}]})";
     doc.Parse(json.c_str());
