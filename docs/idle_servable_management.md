@@ -29,61 +29,51 @@ OVMS keeps one non-permanent group active. A request for servable from another g
 You can create or update `config.json` with OVMS CLI:
 
 ```text
-set MODEL_REPOSITORY_PATH=c:\models
-ovms pull --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov 
-ovms --add_to_config --model_name OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --group_name permanent
+export OVMS_MODEL_REPOSITORY_PATH=/models
+printf '{"model_config_list": []}\n' > ${OVMS_MODEL_REPOSITORY_PATH}/config.json
 
-ovms pull --source_model OpenVINO/bge-base-en-v1.5-int8-ov
-ovms --add_to_config --model_name OpenVINO/bge-base-en-v1.5-int8-ov --group_name rag
-ovms pull --source_model OpenVINO/bge-reranker-base-int8-ov
-ovms --add_to_config --model_name OpenVINO/bge-reranker-base-int8-ov --group_name rag
+ovms --pull --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov
+ovms --add_to_config --config_path ${OVMS_MODEL_REPOSITORY_PATH}/config.json --model_name OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --group_name permanent
 
-ovms pull --source_model OpenVINO/FLUX.1-schnell-int4-ov
-ovms --add_to_config --model_name OpenVINO/FLUX.1-schnell-int4-ov
-ovms --config_path c:\models\config.json --rest_port 8000 --cache_dir .ovcache
+ovms --pull --source_model OpenVINO/bge-base-en-v1.5-int8-ov
+ovms --add_to_config --config_path ${OVMS_MODEL_REPOSITORY_PATH}/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --group_name rag
 
-ovms --add_to_config --config_path /models/config.json --model_name speech_to_text --model_path /models/openai/whisper-tiny --group_name permanent
-ovms --add_to_config --config_path /models/config.json --model_name large_llm --model_path /models/OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --group_name large_llm
-ovms --add_to_config --config_path /models/config.json --model_name vlm --model_path /models/OpenVINO/Qwen3.6-35B-A3B-int4-ov --group_name vlm
-ovms --add_to_config --config_path /models/config.json --model_name image_generation --model_path /models/OpenVINO/FLUX.1-schnell-int4-ov --group_name image_generation
+ovms --pull --source_model OpenVINO/bge-reranker-base-int8-ov
+ovms --add_to_config --config_path ${OVMS_MODEL_REPOSITORY_PATH}/config.json --model_name OpenVINO/bge-reranker-base-int8-ov --group_name rag
+
+ovms --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov
+ovms --add_to_config --config_path ${OVMS_MODEL_REPOSITORY_PATH}/config.json --model_name OpenVINO/FLUX.1-schnell-int4-ov --group_name image_generation
 ```
 
-The following resulting configuration keeps a small chat model and speech recognition model loaded. It loads one of the larger workloads on demand: a large language model, vision-language model, or image-generation model. Download the referenced models to the corresponding local paths before starting OVMS.
+The following resulting configuration keeps one large model loaded and groups retrieval models together. It loads image generation on demand. Download the referenced models before starting OVMS.
 
 ```json
 {
     "model_config_list": [
         {
             "config": {
-                "name": "small_llm",
-                "base_path": "/models/OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov",
-                "group_name": "permanent"
-            }
-        },
-        {
-            "config": {
-                "name": "speech_to_text",
-                "base_path": "/models/openai/whisper-tiny",
-                "group_name": "permanent"
-            }
-        },
-        {
-            "config": {
-                "name": "large_llm",
+                "name": "OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov",
                 "base_path": "/models/OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov",
-                "group_name": "large_llm"
+                "group_name": "permanent"
             }
         },
         {
             "config": {
-                "name": "vlm",
-                "base_path": "/models/OpenVINO/Qwen3.6-35B-A3B-int4-ov",
-                "group_name": "vlm"
+                "name": "OpenVINO/bge-base-en-v1.5-int8-ov",
+                "base_path": "/models/OpenVINO/bge-base-en-v1.5-int8-ov",
+                "group_name": "rag"
             }
         },
         {
             "config": {
-                "name": "image_generation",
+                "name": "OpenVINO/bge-reranker-base-int8-ov",
+                "base_path": "/models/OpenVINO/bge-reranker-base-int8-ov",
+                "group_name": "rag"
+            }
+        },
+        {
+            "config": {
+                "name": "OpenVINO/FLUX.1-schnell-int4-ov",
                 "base_path": "/models/OpenVINO/FLUX.1-schnell-int4-ov",
                 "group_name": "image_generation"
             }
