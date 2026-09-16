@@ -5,5 +5,5 @@
 maxdepth: 1
 ---
 
-OpenClip with Python Execution <python_demos/clip_image_classification/README>
+OpenClip with Python Execution <ovms_demo_clip_image_classification>
 ```
