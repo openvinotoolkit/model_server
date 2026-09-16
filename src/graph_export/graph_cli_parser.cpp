@@ -26,7 +26,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../llm/io_processing/parser_config_validation.hpp"
 #include "../ovms_exit_codes.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 
