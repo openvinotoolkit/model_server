@@ -429,6 +429,14 @@ TEST_F(TestWithTempDir, ChunkedTransferWithoutContentLengthDownloadsFile) {
     const std::string url = "http://127.0.0.1:" + std::to_string(port) + "/chunked";
     const std::string outputPath = directoryPath + "/downloaded.bin";
 
+    EnvGuard envGuard;
+    envGuard.unset("http_proxy");
+    envGuard.unset("https_proxy");
+    envGuard.unset("HTTP_PROXY");
+    envGuard.unset("HTTPS_PROXY");
+    envGuard.unset("no_proxy");
+    envGuard.unset("NO_PROXY");
+
     testing::internal::CaptureStdout();
     const ovms::Status downloadStatus = ovms::downloadFileWithCurl(url, outputPath);
     const std::string output = testing::internal::GetCapturedStdout();
