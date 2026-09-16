@@ -33,6 +33,16 @@ mechanics see [cpp-headers.instructions.md](cpp-headers.instructions.md) and
 - Use `const` and `constexpr` wherever possible.
 - Descriptive names; extract duplicated logic into reusable utilities.
 
+## Comments
+
+Comments bloat the code and are a frequent review rejection — keep them minimal.
+
+- Add a comment only to state what the code cannot show on its own, and keep it to one short line.
+- Do not add comments where the code, function name, or test name already conveys the intent.
+- No "what happens next" narration before test cases or code blocks — the name should convey intent.
+- Only comment genuinely non-obvious things: workarounds, subtle ordering constraints, non-obvious rationale.
+- Do not restate what the next line does or explain a change to the reviewer in the code.
+
 ## Documentation & tests
 
 - New public APIs get docstrings in C++ headers and Python bindings; update `docs/` as needed.
