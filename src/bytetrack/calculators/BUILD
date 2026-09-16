@@ -30,6 +30,10 @@ ovms_cc_library(
         ":strack",
         ":bytetrack_calculator",
     ],
+    visibility = [
+        "//src:__subpackages__",
+        "//src/mediapipe_internal:__pkg__",
+    ],
     alwayslink = 1
 )
 

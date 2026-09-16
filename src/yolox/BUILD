@@ -47,7 +47,8 @@ cc_library(
         ":ov_yolox_tensors_to_detections_calculator_cc_proto",
     ],
     visibility = [
-        "//src:__pkg__",
+        "//src:__subpackages__",
+        "//src/mediapipe_internal:__pkg__",
     ],
     alwayslink = True
 )
