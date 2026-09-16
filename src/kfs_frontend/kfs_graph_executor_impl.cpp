@@ -645,15 +645,12 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         size_t expectedBytes = 1;
         bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, precision.size(), expectedBytes);
-        // mediapipe::Tensor internally computes element/byte counts as int (see Tensor::bytes()); a size_t-valid
-        // value that exceeds INT_MAX would silently wrap there and corrupt the allocation size passed to malloc().
+        // mediapipe::Tensor stores byte count as int (see Tensor::bytes()), so guard against overflow here too.
         if (!expectedBufferSizeValid || expectedBytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
             const std::string details = "Provided shape and datatype declare too large buffer.";
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
             return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
-        // Validate declared size against the actual payload before allocating: a shape within the INT_MAX
-        // bound above can still declare a multi-GB buffer while the request carries only a handful of bytes.
         if (request.raw_input_contents().size()) {
             OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, request.raw_input_contents().at(inputIndex), requestedName, request));
         } else {
@@ -739,20 +736,17 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
             return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
+        if (request.raw_input_contents().size()) {
+            OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, request.raw_input_contents().at(inputIndex), requestedName, request));
+        } else {
+            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
+        }
         outTensor = std::make_unique<tensorflow::Tensor>(datatype, tensorShape);
         if (request.raw_input_contents().size()) {
             auto& bufferLocation = request.raw_input_contents().at(inputIndex);
-            if (outTensor->TotalBytes() != bufferLocation.size()) {
-                std::stringstream ss;
-                ss << "Mediapipe deserialization content size mismatch; allocated TF Tensor: " << outTensor->TotalBytes() << " bytes vs KServe buffer: " << bufferLocation.size() << " bytes";
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
-                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
-            }
             void* tfTensordata = outTensor->data();
             std::memcpy(tfTensordata, bufferLocation.data(), bufferLocation.size());
         } else {
-            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
             void* data = outTensor->data();
             switch (datatype) {
             case TFSDataType::DT_FLOAT: {

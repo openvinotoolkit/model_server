@@ -3932,6 +3932,42 @@ protected:
         t->join();
         TestWithTempDir::TearDown();
     }
+
+    // Writes out graph.pbtxt/config.json for a single-node passthrough graph and starts the server with it.
+    void startServerWithGraph(const std::string& pbtxtContent, const std::string& servableName) {
+        std::string graphFilePath = this->directoryPath + "/graph.pbtxt";
+        createConfigFileWithContent(pbtxtContent, graphFilePath);
+        std::string configContent = R"(
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":")" + servableName + R"(",
+        "graph_path": ")" + graphFilePath +
+                                    R"("
+    }
+    ]
+}
+)";
+        std::string configFilePath = this->directoryPath + "/config.json";
+        createConfigFileWithContent(configContent, configFilePath);
+
+        char* argv[] = {(char*)"ovms",
+            (char*)"--config_path",
+            (char*)configFilePath.c_str(),
+            (char*)"--port",
+            (char*)this->port.c_str()};
+        int argc = 5;
+        this->server.setShutdownRequest(0);
+        this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
+            EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
+        });
+        auto start = std::chrono::high_resolution_clock::now();
+        while (!isMpReady(servableName) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+    }
 };
 
 TEST_F(MPTensorOversizedShapeTest, HugeDimensionRejectedWithServableStayingHealthy) {
@@ -3944,38 +3980,7 @@ TEST_F(MPTensorOversizedShapeTest, HugeDimensionRejectedWithServableStayingHealt
         output_stream: "TENSOR:out"
         }
     )";
-    std::string graphFilePath = this->directoryPath + "/graph.pbtxt";
-    createConfigFileWithContent(pbtxtContent, graphFilePath);
-    std::string configContent = R"(
-{
-    "model_config_list": [],
-    "mediapipe_config_list": [
-    {
-        "name":"shapeTest",
-        "graph_path": ")" + graphFilePath +
-                                R"("
-    }
-    ]
-}
-)";
-    std::string configFilePath = this->directoryPath + "/config.json";
-    createConfigFileWithContent(configContent, configFilePath);
-
-    char* argv[] = {(char*)"ovms",
-        (char*)"--config_path",
-        (char*)configFilePath.c_str(),
-        (char*)"--port",
-        (char*)this->port.c_str()};
-    int argc = 5;
-    this->server.setShutdownRequest(0);
-    this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
-        EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
-    });
-    auto start = std::chrono::high_resolution_clock::now();
-    while (!isMpReady("shapeTest") &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
-        std::this_thread::sleep_for(std::chrono::microseconds(100));
-    }
+    this->startServerWithGraph(pbtxtContent, "shapeTest");
 
     const ovms::Module* grpcModule = this->server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     ASSERT_NE(grpcModule, nullptr);
@@ -4016,38 +4021,7 @@ TEST_F(MPTensorOversizedShapeTest, LargeShapeContentMismatchRejectedWithoutAlloc
         output_stream: "TENSOR:out"
         }
     )";
-    std::string graphFilePath = this->directoryPath + "/graph.pbtxt";
-    createConfigFileWithContent(pbtxtContent, graphFilePath);
-    std::string configContent = R"(
-{
-    "model_config_list": [],
-    "mediapipe_config_list": [
-    {
-        "name":"shapeTest",
-        "graph_path": ")" + graphFilePath +
-                                R"("
-    }
-    ]
-}
-)";
-    std::string configFilePath = this->directoryPath + "/config.json";
-    createConfigFileWithContent(configContent, configFilePath);
-
-    char* argv[] = {(char*)"ovms",
-        (char*)"--config_path",
-        (char*)configFilePath.c_str(),
-        (char*)"--port",
-        (char*)this->port.c_str()};
-    int argc = 5;
-    this->server.setShutdownRequest(0);
-    this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
-        EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
-    });
-    auto start = std::chrono::high_resolution_clock::now();
-    while (!isMpReady("shapeTest") &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
-        std::this_thread::sleep_for(std::chrono::microseconds(100));
-    }
+    this->startServerWithGraph(pbtxtContent, "shapeTest");
 
     const ovms::Module* grpcModule = this->server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     ASSERT_NE(grpcModule, nullptr);
