@@ -194,7 +194,7 @@ docker pull openvino/model_server:latest-gpu    # Intel CPU,GPU,NPU
 ## Contributing
 
 Contributions are welcome! Please open an issue or pull request on GitHub.  
-See [security policy](security.md) for responsible disclosure.
+See [security policy](../security.md) for responsible disclosure.
 
 ---
 
