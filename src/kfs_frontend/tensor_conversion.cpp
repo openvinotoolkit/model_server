@@ -29,7 +29,7 @@
 #include "../logging.hpp"
 #include "../deps/opencv.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {

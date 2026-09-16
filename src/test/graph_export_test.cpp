@@ -27,7 +27,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../version.hpp"
 
 const std::string expectedOneSettingPluginGraphContents = R"(
