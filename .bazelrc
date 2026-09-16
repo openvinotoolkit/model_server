@@ -87,8 +87,6 @@ build:avx2_win --copt=/arch=AVX2
 # LLVM, MLIR and TF require C++14, we use C++17 in project
 build:linux --cxxopt=-std=c++17
 build:linux --host_cxxopt=-std=c++17
-build:linux --action_env=HOME=/root
-build:linux --repo_env=HOME=/root
 
 # For Tensorflow building only
 build:linux --action_env PYTHON_BIN_PATH="/usr/bin/python3"
