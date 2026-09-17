@@ -291,9 +291,7 @@ COPY package.json /ovms/
 
 # prebuild dependencies before copying sources & test dependencies for caching
 # hadolint ignore=DL3059
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false cat /root/.gitconfig; \
-    git config --global --list ; \
-    git ls-remote https://github.com/openvinotoolkit/model_api.git && \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false \
     bazel build --repo_env=HOME=/root --action_env=HOME=/root --repo_env=GIT_CONFIG_GLOBAL=/root/.gitconfig --repo_env=GIT_TERMINAL_PROMPT=0 \
         --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
