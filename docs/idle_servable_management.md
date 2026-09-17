@@ -28,21 +28,20 @@ OVMS keeps one non-permanent group active. A request for servable from another g
 
 You can create or update `config.json` with OVMS CLI:
 
-```text
-export OVMS_MODEL_REPOSITORY_PATH=/models
-printf '{"model_config_list": []}\n' > ${OVMS_MODEL_REPOSITORY_PATH}/config.json
+```txt
+set OVMS_MODEL_REPOSITORY_PATH=c:\models
 
 ovms --pull --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov
-ovms --add_to_config --config_path ${OVMS_MODEL_REPOSITORY_PATH}/config.json --model_name OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --group_name permanent
+ovms --add_to_config --model_name OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --group_name permanent
 
 ovms --pull --source_model OpenVINO/bge-base-en-v1.5-int8-ov
-ovms --add_to_config --config_path ${OVMS_MODEL_REPOSITORY_PATH}/config.json --model_name OpenVINO/bge-base-en-v1.5-int8-ov --group_name rag
+ovms --add_to_config --model_name OpenVINO/bge-base-en-v1.5-int8-ov --group_name rag
 
 ovms --pull --source_model OpenVINO/bge-reranker-base-int8-ov
-ovms --add_to_config --config_path ${OVMS_MODEL_REPOSITORY_PATH}/config.json --model_name OpenVINO/bge-reranker-base-int8-ov --group_name rag
+ovms --add_to_config --model_name OpenVINO/bge-reranker-base-int8-ov --group_name rag
 
 ovms --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov
-ovms --add_to_config --config_path ${OVMS_MODEL_REPOSITORY_PATH}/config.json --model_name OpenVINO/FLUX.1-schnell-int4-ov --group_name image_generation
+ovms --add_to_config --model_name OpenVINO/FLUX.1-schnell-int4-ov
 ```
 
 The following resulting configuration keeps one large model loaded and groups retrieval models together. It loads image generation on demand. Download the referenced models before starting OVMS.
@@ -53,29 +52,28 @@ The following resulting configuration keeps one large model loaded and groups re
         {
             "config": {
                 "name": "OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov",
-                "base_path": "/models/OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov",
+                "base_path": "./OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov",
                 "group_name": "permanent"
             }
         },
         {
             "config": {
                 "name": "OpenVINO/bge-base-en-v1.5-int8-ov",
-                "base_path": "/models/OpenVINO/bge-base-en-v1.5-int8-ov",
+                "base_path": "./OpenVINO/bge-base-en-v1.5-int8-ov",
                 "group_name": "rag"
             }
         },
         {
             "config": {
                 "name": "OpenVINO/bge-reranker-base-int8-ov",
-                "base_path": "/models/OpenVINO/bge-reranker-base-int8-ov",
+                "base_path": "./OpenVINO/bge-reranker-base-int8-ov",
                 "group_name": "rag"
             }
         },
         {
             "config": {
                 "name": "OpenVINO/FLUX.1-schnell-int4-ov",
-                "base_path": "/models/OpenVINO/FLUX.1-schnell-int4-ov",
-                "group_name": "image_generation"
+                "base_path": "./OpenVINO/FLUX.1-schnell-int4-ov"
             }
         }
     ]
