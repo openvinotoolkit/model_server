@@ -13,15 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -45,6 +48,7 @@
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/kfs_python_tensor_bridge.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -54,7 +58,8 @@
 #include "../model.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../precision.hpp"
-#include "../servablemanagermodule.hpp"
+#include "../servable_definition_unload_guard.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
@@ -101,8 +106,8 @@ protected:
         ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(graphPath).c_str(), graphName);
     }
 
-    void SetUpServer(const char* configPath) {
-        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str());
+    void SetUpServer(const char* configPath, bool withPython = true) {
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str(), SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, "", withPython);
     }
 
     void SetUp() override {
@@ -140,7 +145,7 @@ public:
 class MediapipeConfigFlowTestDummyModelMesh : public MediapipeCliFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/model_mesh/config.json");
+        SetUpServer("/ovms/src/test/mediapipe/model_mesh/config.json", false);
     }
 };
 
@@ -1473,7 +1478,7 @@ protected:
     MediapipeGraphDefinition* getMPDefinitionByName(const std::string& name) {
         const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
         ModelManager& modelManager = smm->getServableManager();
-        const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+        const auto& factory = modelManager.getMediapipeFactory();
         return factory.findDefinitionByName(name);
     }
 };
@@ -1523,7 +1528,7 @@ TEST_F(MediapipeStreamFlowAddTest, Infer) {
 // Inference on unloaded mediapipe graph
 // Expect old stream to continue responding until closure
 // Expect new stream to be rejected
-TEST_F(MediapipeStreamFlowAddTest, InferOnUnloadedGraph) {
+TEST_F(MediapipeStreamFlowAddTest, InferOnSleepingGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
 
@@ -2509,7 +2514,8 @@ const std::string MediapipeConfigChanges::configFileWithGraphPathToReplace = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": ")" +
+                                                                             getGenericFullPathForSrcTest("/ovms/src/test/dummy") + R"("
         }
         }
     ],
@@ -2527,7 +2533,8 @@ const std::string MediapipeConfigChanges::configFileWithEmptyBasePath = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": ")" +
+                                                                        getGenericFullPathForSrcTest("/ovms/src/test/dummy") + R"("
         }
         }
     ],
@@ -2545,7 +2552,8 @@ const std::string MediapipeConfigChanges::configFileWithNoBasePath = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": ")" +
+                                                                     getGenericFullPathForSrcTest("/ovms/src/test/dummy") + R"("
         }
         }
     ],
@@ -2587,7 +2595,8 @@ const std::string MediapipeConfigChanges::configFileWithoutGraph = R"(
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy"
+                "base_path": ")" +
+                                                                   getGenericFullPathForSrcTest("/ovms/src/test/dummy") + R"("
         }
         }
     ]
@@ -2680,7 +2689,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenChangeInputNameInDefinition) {
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2722,7 +2731,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithEmptyBasePath) {
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2859,6 +2868,24 @@ TEST_F(MediapipeSerialization, MPImageTensor) {
     EXPECT_EQ(mp_response.raw_output_contents().at(0).data()[2], 1);
 }
 
+TEST_F(MediapipeSerialization, OVMSPyTensorWithoutRuntimeBridge) {
+    // Force bridge absence explicitly so this test is independent from global
+    // process state and test execution order.
+    const auto* originalBridge = getKfsPyTensorBridgeVTable();
+    setKfsPyTensorBridgeVTable(nullptr);
+
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<int>(1);
+    auto status =
+        onPacketReadySerializeImpl(
+            "1", "py_response", "1", "py_response",
+            mediapipe_packet_type_enum::OVMS_PY_TENSOR,
+            packet,
+            mp_response);
+
+    setKfsPyTensorBridgeVTable(originalBridge);
+    ASSERT_EQ(status, StatusCode::NOT_IMPLEMENTED);
+}
+
 TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     std::string graphPbtxtFileContent = pbtxtContent;
     std::string configFileContent = configFileWithNoBasePath;
@@ -2879,7 +2906,7 @@ TEST_F(MediapipeConfigChanges, ConfigWithNoBasePath) {
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2898,7 +2925,7 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -2922,6 +2949,115 @@ TEST_F(MediapipeConfigChanges, AddProperGraphThenRetireThenAddAgain) {
     checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
 }
 
+TEST_F(MediapipeConfigChanges, RetireGraphWithIdleManagementEnabled) {
+    std::string configFileContent = configFileWithGraphPathToReplace;
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    const std::string modelPathToReplace{"XYZ"};
+    configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    createConfigFileWithContent(configFileContent, configFilePath);
+    createConfigFileWithContent(pbtxtContent, graphFilePath);
+    ConstructorEnabledModelManager modelManager(30'000'000);
+    modelManager.loadConfig(configFilePath);
+    const auto& factory = modelManager.getMediapipeFactory();
+    auto definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::OK);
+    // now we retire
+    configFileContent = configFileWithoutGraph;
+    createConfigFileWithContent(configFileContent, configFilePath);
+    modelManager.loadConfig(configFilePath);
+    definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    EXPECT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE);
+    EXPECT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+}
+
+TEST_F(MediapipeConfigChanges, RetiringGraphsGoesThroughLoadingQueue) {
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    createConfigFileWithContent(pbtxtContent, graphFilePath);
+
+    const std::string dummyModelPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy");
+    auto configWithGraphs = [&graphFilePath, &dummyModelPath](const std::vector<std::string>& graphNames) {
+        std::string entries;
+        for (const auto& name : graphNames) {
+            if (!entries.empty()) {
+                entries += ",";
+            }
+            entries += R"({"name":")" + name + R"(","graph_path":")" + graphFilePath + R"("})";
+        }
+        return R"({"model_config_list":[{"config":{"name":"dummy","base_path":")" + dummyModelPath + R"("}}],)"
+                                                                                                     R"("mediapipe_config_list":[)" +
+               entries + "]}";
+    };
+
+    createConfigFileWithContent(configWithGraphs({"graphA", "graphB", "graphC"}), configFilePath);
+    ConstructorEnabledModelManager modelManager;
+    ASSERT_EQ(modelManager.loadConfig(configFilePath), StatusCode::OK);
+    const auto& factory = modelManager.getMediapipeFactory();
+    for (const auto& name : {"graphA", "graphB", "graphC"}) {
+        auto* definition = factory.findDefinitionByName(name);
+        ASSERT_NE(nullptr, definition) << name;
+        ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE) << name;
+    }
+
+    std::mutex retiredMtx;
+    std::vector<std::string> retired;
+    // Installed after the initial load so that only the retirement reload is recorded.
+    modelManager.getLoadingQueue().setTaskObserver(
+        [&retiredMtx, &retired](TaskEvent event, const ServableLoadingTask& task) {
+            if (event != TaskEvent::Executed || task.type != ServableLoadingTaskType::RetireMediapipe) {
+                return;
+            }
+            std::lock_guard<std::mutex> lock(retiredMtx);
+            retired.push_back(task.name);
+        });
+
+    createConfigFileWithContent(configWithGraphs({"graphB"}), configFilePath);
+    ASSERT_EQ(modelManager.loadConfig(configFilePath), StatusCode::OK);
+
+    for (const auto& name : {"graphA", "graphC"}) {
+        auto* definition = factory.findDefinitionByName(name);
+        ASSERT_NE(nullptr, definition) << name;
+        EXPECT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED) << name;
+    }
+    EXPECT_EQ(factory.findDefinitionByName("graphB")->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+
+    std::lock_guard<std::mutex> lock(retiredMtx);
+    std::sort(retired.begin(), retired.end());
+    EXPECT_EQ(retired, (std::vector<std::string>{"graphA", "graphC"}))
+        << "graphs dropped from the config must be retired through the loading queue like every other state change";
+}
+
+TEST_F(MediapipeConfigChanges, WakeUpDoesNotResurrectRetiredGraph) {
+    std::string configFileContent = configFileWithGraphPathToReplace;
+    std::string configFilePath = directoryPath + "/config.json";
+    std::string graphFilePath = directoryPath + "/graph.pbtxt";
+    const std::string modelPathToReplace{"XYZ"};
+    configFileContent.replace(configFileContent.find(modelPathToReplace), modelPathToReplace.size(), graphFilePath);
+    createConfigFileWithContent(configFileContent, configFilePath);
+    createConfigFileWithContent(pbtxtContent, graphFilePath);
+    ConstructorEnabledModelManager modelManager;
+    ASSERT_EQ(modelManager.loadConfig(configFilePath), StatusCode::OK);
+    const auto& factory = modelManager.getMediapipeFactory();
+    auto* definition = factory.findDefinitionByName(mgdName);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+
+    createConfigFileWithContent(configFileWithoutGraph, configFilePath);
+    ASSERT_EQ(modelManager.loadConfig(configFilePath), StatusCode::OK);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+
+    // A wake-up scheduled by a request thread working off a stale group snapshot must not
+    // bring back a graph the user removed from the config.
+    auto status = modelManager.requestServableWakeUp(mgdName, /*urgent=*/true).get();
+    EXPECT_EQ(status, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE) << status.string();
+    EXPECT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::RETIRED);
+    checkStatus<KFSRequest, KFSResponse>(modelManager, StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE);
+}
+
 TEST_F(MediapipeConfigChanges, AddImproperGraphThenFixWithReloadThenBreakAgain) {
     std::string configFileContent = configFileWithGraphPathToReplace;
     std::string configFilePath = directoryPath + "/config.json";
@@ -2930,7 +3066,7 @@ TEST_F(MediapipeConfigChanges, AddImproperGraphThenFixWithReloadThenBreakAgain) 
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
@@ -2964,7 +3100,7 @@ TEST_F(MediapipeConfigChanges, GraphWithNonexistentCalcShouldBeInNotLoadedYet) {
     createConfigFileWithContent(pbtxtContentNonexistentCalc, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(mgdName);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
@@ -2985,7 +3121,7 @@ TEST_F(MediapipeConfigChanges, AddModelToConfigThenUnloadThenAddToSubconfig) {
     createConfigFileWithContent(pbtxtContent, graphFilePath);
     ConstructorEnabledModelManager modelManager;
     modelManager.loadConfig(configFilePath);
-    const MediapipeFactory& factory = modelManager.getMediapipeFactory();
+    const auto& factory = modelManager.getMediapipeFactory();
     auto model = modelManager.findModelByName("dummy");
     ASSERT_NE(nullptr, model->getDefaultModelInstance());
     ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
@@ -3367,9 +3503,9 @@ protected:
     }
 
     void TearDown() override {
-        TestWithTempDir::TearDown();
         stopServer();
         t->join();
+        TestWithTempDir::TearDown();
     }
 
     void performInference(ovms::StatusCode expectedStatus) {
@@ -3394,7 +3530,10 @@ protected:
         if (expectedStatus == ovms::StatusCode::OK) {
             ASSERT_EQ(response.outputs_size(), 1);
             ASSERT_EQ(response.raw_output_contents_size(), 1);
-            ASSERT_EQ(response.raw_output_contents()[0].size(), 10 * ovms::KFSDataTypeSize(request.inputs()[0].datatype()));
+            // BYTES has no fixed per-element size, so the exact-size check only applies to fixed-size datatypes.
+            if (request.inputs()[0].datatype() != "BYTES") {
+                ASSERT_EQ(response.raw_output_contents()[0].size(), 10 * ovms::KFSDataTypeSize(request.inputs()[0].datatype()));
+            }
         }
     }
 
@@ -3490,6 +3629,10 @@ std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>
 
 typedef testing::Types<float, double, int64_t, int32_t, int16_t, int8_t, uint64_t, uint32_t, uint16_t, uint8_t, bool> InferInputTensorContentsTypesToTest;
 TYPED_TEST_SUITE(KFSGRPCContentFieldsSupportTest, InferInputTensorContentsTypesToTest);
+
+// Non-typed alias for the BYTES/Precision::STRING typed-contents test below, which does not vary by numeric TypeParam.
+using KFSGRPCContentFieldsSupportTestBytes = KFSGRPCContentFieldsSupportTest<uint8_t>;
+
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentOVTensor = R"(
         input_stream: "OVTENSOR:in"
@@ -3564,6 +3707,36 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorInvalidContentSize) {
         }
     )";
     this->performInvalidContentSizeTest(pbtxtContentPyTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+
+// Covers the Precision::STRING branch of serializeKfsTypedContentToRawBytes: bytes_contents
+// typed data with no raw_input_contents, routed through the OVMS_PY_TENSOR bridge.
+TEST_F(KFSGRPCContentFieldsSupportTestBytes, PyTensorBytesContentsCheckExpectedStatusCode) {
+    const std::string pbtxtContentPytensor = R"(
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "OVMS_PY_TENSOR:in"
+        output_stream: "OVMS_PY_TENSOR:out"
+        }
+    )";
+    this->CreateConfigAndPbtxt(pbtxtContentPytensor);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--config_path",
+        (char*)this->configFilePath.c_str(),
+        (char*)"--port",
+        (char*)this->port.c_str()};
+    int argc = 5;
+    this->server.setShutdownRequest(0);
+    this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
+        EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
+    });
+    // prepare bytes_contents typed data (no raw_input_contents) to exercise Precision::STRING
+    prepareInferStringRequest(this->request, "in", {"foo", "bar", "baz"}, /*putBufferInInputTensorContent=*/true);
+    const std::string servableName{"mediapipeDummy"};
+    this->request.mutable_model_name()->assign(servableName);
+    this->performInference(ovms::StatusCode::OK);
 }
 #endif
 
@@ -3739,6 +3912,144 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorInvalidContentSize) {
         }
     )";
     this->performInvalidContentSizeTest(pbtxtContentTFTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+
+class MPTensorOversizedShapeTest : public TestWithTempDir {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<std::thread> t;
+    std::string port = "9000";
+    KFSRequest request;
+    KFSResponse response;
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        randomizeAndEnsureFree(port);
+    }
+
+    void TearDown() override {
+        stopServer();
+        t->join();
+        TestWithTempDir::TearDown();
+    }
+
+    // Writes out graph.pbtxt/config.json for a single-node passthrough graph and starts the server with it.
+    void startServerWithGraph(const std::string& pbtxtContent, const std::string& servableName) {
+        std::string graphFilePath = this->directoryPath + "/graph.pbtxt";
+        createConfigFileWithContent(pbtxtContent, graphFilePath);
+        std::string configContent = R"(
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":")" + servableName + R"(",
+        "graph_path": ")" + graphFilePath +
+                                    R"("
+    }
+    ]
+}
+)";
+        std::string configFilePath = this->directoryPath + "/config.json";
+        createConfigFileWithContent(configContent, configFilePath);
+
+        char* argv[] = {(char*)"ovms",
+            (char*)"--config_path",
+            (char*)configFilePath.c_str(),
+            (char*)"--port",
+            (char*)this->port.c_str()};
+        int argc = 5;
+        this->server.setShutdownRequest(0);
+        this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
+            EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
+        });
+        auto start = std::chrono::high_resolution_clock::now();
+        while (!isMpReady(servableName) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+    }
+};
+
+TEST_F(MPTensorOversizedShapeTest, HugeDimensionRejectedWithServableStayingHealthy) {
+    const std::string pbtxtContent = R"(
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        }
+    )";
+    this->startServerWithGraph(pbtxtContent, "shapeTest");
+
+    const ovms::Module* grpcModule = this->server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    ASSERT_NE(grpcModule, nullptr);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+
+    // Malicious request: declared shape[0] == INT_MAX + 1, single FP32 value in contents.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto maliciousStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_NE(maliciousStatus.error_code(), grpc::StatusCode::OK);
+
+    // Server must still be alive and able to serve a normal request afterwards.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(1);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto healthyStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_EQ(healthyStatus.error_code(), grpc::StatusCode::OK) << healthyStatus.error_message();
+}
+
+TEST_F(MPTensorOversizedShapeTest, LargeShapeContentMismatchRejectedWithoutAllocating) {
+    const std::string pbtxtContent = R"(
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        }
+    )";
+    this->startServerWithGraph(pbtxtContent, "shapeTest");
+
+    const ovms::Module* grpcModule = this->server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    ASSERT_NE(grpcModule, nullptr);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+
+    // Declares a ~2GiB FP32 buffer (536870911 * 4 bytes, still < INT_MAX) but carries a single value.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(536870911);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto maliciousStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_EQ(maliciousStatus.error_code(), grpc::StatusCode::INVALID_ARGUMENT) << maliciousStatus.error_message();
+
+    // Server must still be alive and able to serve a normal request afterwards.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(1);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto healthyStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_EQ(healthyStatus.error_code(), grpc::StatusCode::OK) << healthyStatus.error_message();
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -4480,7 +4791,7 @@ TEST_F(UnaryQueueReinitTest, GraphIsReinitializedAfterCalculatorError) {
             {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(),
             std::move(guard)};
         prepareInferRequest(request, -1.0f);
-        auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
+        auto status = executor.inferTyped<KFSRequest, KFSResponse>(&request, &response, executionContext);
         ASSERT_FALSE(status.ok());
         EXPECT_EQ(status.getCode(), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     }
@@ -4496,7 +4807,159 @@ TEST_F(UnaryQueueReinitTest, GraphIsReinitializedAfterCalculatorError) {
             {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(),
             std::move(guard)};
         prepareInferRequest(request, 2.0f);
-        auto status = executor.infer<KFSRequest, KFSResponse>(&request, &response, executionContext);
+        auto status = executor.inferTyped<KFSRequest, KFSResponse>(&request, &response, executionContext);
         ASSERT_TRUE(status.ok());
     }
+}
+
+// ---------------------------------------------------------------------------
+// Idle unload feature: putToSleep() guard correctness (issue #4141, model-free)
+// Verifies FIX 1: putToSleep() must NOT tear down resources unless the state was
+// actually AVAILABLE and the SleepEvent transition really happened.
+// ---------------------------------------------------------------------------
+
+// A trivial pbtxt is enough; these tests never reach validate(), they drive the
+// state machine directly to exercise putToSleep() preconditions.
+static const std::string kIdleUnloadDummyPbtxt = R"(
+    input_stream: "in"
+    output_stream: "out"
+)";
+
+TEST(MediapipeIdleUnloadGuard, SleepIsNoOpWhenStateBegin) {
+    ovms::MediapipeGraphConfig mgc{"idleGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("idleGuard", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    // Fresh definition is in BEGIN (validate never called).
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    def.insertSidePacketMarkerForTest("marker");
+    const void* mapsBefore = def.sidePacketMapsPtrForTest();
+
+    ASSERT_EQ(def.putToSleep(), ovms::StatusCode::MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE);
+
+    // State unchanged and resources untouched.
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::BEGIN);
+    ASSERT_TRUE(def.hasSidePacketMarkerForTest("marker"));
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);
+}
+
+TEST(MediapipeIdleUnloadGuard, SleepIsNoOpWhenStateReloading) {
+    ovms::MediapipeGraphConfig mgc{"idleGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("idleGuard", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    // Drive BEGIN -> AVAILABLE -> RELOADING.
+    def.forceValidationPassedEventForTest();
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    def.forceReloadEventForTest();
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+
+    def.insertSidePacketMarkerForTest("marker");
+    const void* mapsBefore = def.sidePacketMapsPtrForTest();
+
+    ASSERT_EQ(def.putToSleep(), ovms::StatusCode::MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE);
+
+    // Critical: unload() must NOT have cleared resources while RELOADING.
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+    ASSERT_TRUE(def.hasSidePacketMarkerForTest("marker"));
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);
+}
+
+TEST(MediapipeIdleUnloadGuard, SleepTransitionsAndTearsDownWhenAvailable) {
+    ovms::MediapipeGraphConfig mgc{"idleGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("idleGuard", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    def.forceValidationPassedEventForTest();
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    def.insertSidePacketMarkerForTest("marker");
+    const void* mapsBefore = def.sidePacketMapsPtrForTest();
+
+    ASSERT_EQ(def.putToSleep(), ovms::StatusCode::OK);
+
+    // Now it should have transitioned and released resources.
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), nullptr);
+    ASSERT_NE(def.sidePacketMapsPtrForTest(), mapsBefore);
+}
+
+TEST(MediapipeIdleUnloadGuard, UnloadSkipsWhenRequestsInFlight) {
+    ovms::MediapipeGraphConfig mgc{"idleGuard", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("idleGuard", mgc, kIdleUnloadDummyPbtxt, nullptr);
+    def.forceValidationPassedEventForTest();
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+    def.insertSidePacketMarkerForTest("marker");
+    const void* mapsBefore = def.sidePacketMapsPtrForTest();
+
+    {
+        // Simulate an in-flight request by holding an unload guard (bumps the counter).
+        ovms::ServableDefinitionUnloadGuard guard(def);
+        ASSERT_EQ(def.requestsHandlesCounterForTest(), 1u);
+
+        // putToSleep() must be rejected because counter > 0.
+        auto sleepStatus = def.putToSleep();
+        ASSERT_EQ(sleepStatus, ovms::StatusCode::MEDIAPIPE_PUT_TO_SLEEP_REQUESTS_IN_FLIGHT);
+        ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
+        ASSERT_TRUE(def.hasSidePacketMarkerForTest("marker"));
+        ASSERT_EQ(def.sidePacketMapsPtrForTest(), mapsBefore);
+    }
+    // After the guard releases, putToSleep() now proceeds.
+    ASSERT_EQ(def.requestsHandlesCounterForTest(), 0u);
+    ASSERT_EQ(def.putToSleep(), ovms::StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    ASSERT_EQ(def.sidePacketMapsPtrForTest(), nullptr);
+}
+
+TEST(MediapipeIdleUnloadGuard, LazyLoadConstructorStartsSleeping) {
+    ovms::MediapipeGraphConfig mgc{"skipLoad", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr, true);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+}
+
+TEST(MediapipeIdleUnloadGuard, LazyLoadThenUnloadIsNoOp) {
+    ovms::MediapipeGraphConfig mgc{"skipLoad", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("skipLoad", mgc, kIdleUnloadDummyPbtxt, nullptr, true);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+
+    ASSERT_EQ(def.putToSleep(), ovms::StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+}
+
+namespace {
+class StubMetricProvider : public ovms::MetricProvider {
+public:
+    ovms::MetricRegistry* getMetricRegistry() const override { return nullptr; }
+    const ovms::MetricConfig& getMetricConfig() const override { return config_; }
+
+private:
+    ovms::MetricConfig config_;
+};
+}  // namespace
+
+TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoad) {
+    ovms::MediapipeFactory factory(nullptr);
+    ovms::MediapipeGraphConfig mgc{"unloadedGraph", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    StubMetricProvider metrics;
+    ovms::ModelManager manager;
+
+    auto status = factory.createDefinition("unloadedGraph", mgc, metrics, manager, true);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    auto* def = factory.findDefinitionByName("unloadedGraph");
+    ASSERT_NE(def, nullptr);
+    ASSERT_EQ(def->getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+}
+
+TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoadRejectsDuplicate) {
+    ovms::MediapipeFactory factory(nullptr);
+    ovms::MediapipeGraphConfig mgc{"dupGraph", "", ""};
+    StubMetricProvider metrics;
+    ovms::ModelManager manager;
+
+    auto status1 = factory.createDefinition("dupGraph", mgc, metrics, manager, true);
+    ASSERT_EQ(status1, ovms::StatusCode::OK);
+
+    auto status2 = factory.createDefinition("dupGraph", mgc, metrics, manager, true);
+    ASSERT_EQ(status2, ovms::StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST);
 }

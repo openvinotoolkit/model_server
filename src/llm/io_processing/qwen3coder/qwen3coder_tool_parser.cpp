@@ -155,6 +155,8 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     case State::InsideFunctionName: {
         DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::XML_TAG_END);
         this->currentFunction.name = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
+        // Some models quote the tag attribute (<function="name">); the quotes are delimiters, not part of the name.
+        trimSurroundingQuotes(this->currentFunction.name);
         this->lastProcessedPosition = pos + Qwen3CoderToolParser::XML_TAG_END.length();
         this->currentState = State::InsideFunction;
         break;
@@ -175,6 +177,8 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     case State::InsideParameterName: {
         DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::XML_TAG_END);
         this->currentParameterName = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
+        // Some models quote the tag attribute (<parameter="name">); the quotes are delimiters, not part of the name.
+        trimSurroundingQuotes(this->currentParameterName);
         this->lastProcessedPosition = pos + Qwen3CoderToolParser::XML_TAG_END.length();
         this->currentState = State::InsideParameter;
         break;

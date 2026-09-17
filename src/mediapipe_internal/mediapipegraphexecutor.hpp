@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <atomic>
+#include <chrono>
 #include <map>
 #include <memory>
 #include <optional>
@@ -24,10 +26,12 @@
 #include <utility>
 #include <vector>
 
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
+#include "mediapipe_graph_executor_interface.hpp"
 #include "../model_metric_reporter.hpp"
+#include "src/time_utils.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../timer.hpp"
 #include "src/llm/execution_context_utils.hpp"
 #pragma warning(push)
@@ -48,7 +52,47 @@
 namespace ovms {
 class PythonBackend;
 class ServableMetricReporter;
+
+// RAII guard that tracks an in-flight inference on a MediapipeGraphDefinition.
+// Increments the counter on construction; decrements it and refreshes
+// lastActivityTimeNs on destruction (even if the inference threw). Both are held as
+// shared_ptrs so they remain valid even if the definition is reloaded or retired
+// while the inference (and thus the owning executor) is still alive.
+// The lastActivityTimeNs refresh on decrement ensures that completing a long
+// generation resets the idle timer — preventing an immediate re-unload on the next
+// watcher cycle.
+struct ActiveInferenceGuard {
+    std::shared_ptr<std::atomic<int64_t>> counter;
+    std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs;
+
+    ActiveInferenceGuard(std::shared_ptr<std::atomic<int64_t>> counter,
+        std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs) :
+        counter(std::move(counter)),
+        lastActivityTimeNs(std::move(lastActivityTimeNs)) {
+        if (this->counter) {
+            this->counter->fetch_add(1, std::memory_order_acq_rel);
+        }
+    }
+
+    ~ActiveInferenceGuard() {
+        if (counter) {
+            // Refresh activity timestamp BEFORE decrementing so the watcher sees a
+            // recent activity time if it samples between the refresh and the decrement.
+            if (lastActivityTimeNs) {
+                lastActivityTimeNs->store(nanosSinceEpochStart(), std::memory_order_relaxed);
+            }
+            counter->fetch_sub(1, std::memory_order_acq_rel);
+        }
+    }
+
+    // Non-copyable, movable.
+    ActiveInferenceGuard(const ActiveInferenceGuard&) = delete;
+    ActiveInferenceGuard& operator=(const ActiveInferenceGuard&) = delete;
+    ActiveInferenceGuard(ActiveInferenceGuard&&) = default;
+    ActiveInferenceGuard& operator=(ActiveInferenceGuard&&) = default;
+};
 class MediapipeGraphExecutor;
+class ServableDefinitionUnloadGuard;
 
 inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
     if (code == absl::StatusCode::kFailedPrecondition) {  // ovms session calculator returns this status code when loading model fails
@@ -121,10 +165,20 @@ struct StreamingFunctor : public OutputStreamObserverI {
     absl::Status handlePacket(const ::mediapipe::Packet& packet) override;
     ~StreamingFunctor() = default;
 };
-class MediapipeGraphExecutor {
+class MediapipeGraphExecutor : public MediapipeGraphExecutorInterface {
 public:
     const std::string name;
     const std::string version;
+
+    // These virtual overloads are the actual public API for the executor.
+    // Each front-end (gRPC/KFS/HTTP) resolves into one of these request-specific
+    // entry points and then calls the typed template helper below with the
+    // concrete request/response model.
+    //
+    // The template methods are intentionally named differently from the virtual
+    // interface methods to make the dispatch flow explicit: the virtual methods
+    // are the transport-facing contract, while the typed helpers perform the
+    // concrete Mediapipe execution logic.
 
 private:
     const ::mediapipe::CalculatorGraphConfig config;
@@ -140,6 +194,13 @@ private:
 
     MediapipeServableMetricReporter* mediapipeServableMetricReporter;
     std::optional<GraphIdGuard> guard;
+    // RAII guard tracking this executor's active inference on the parent definition.
+    // Held for the entire lifetime of the executor so that the in-flight-inference
+    // check in shouldUnloadDueToIdle() / unload() sees a non-zero count while any
+    // inference method (infer / inferStream) is executing. On destruction (when the
+    // executor goes out of scope after inference completes) the counter decrements
+    // and lastActivityTimeNs is refreshed.
+    std::optional<ActiveInferenceGuard> activeInferenceGuard;
 
 public:
     MediapipeGraphExecutor(const std::string& name,
@@ -150,7 +211,9 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const GraphSidePackets& sidePacketMaps,
         PythonBackend* pythonBackend,
-        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard);
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard,
+        std::shared_ptr<std::atomic<int64_t>> activeInferenceCount = nullptr,
+        std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs = nullptr);
     // Constructor without graph queue (old path - graph created per-request)
     MediapipeGraphExecutor(const std::string& name,
         const std::string& version,
@@ -160,10 +223,33 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const GraphSidePackets& sidePacketMaps,
         PythonBackend* pythonBackend,
-        MediapipeServableMetricReporter* mediapipeServableMetricReporter);
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter,
+        std::shared_ptr<std::atomic<int64_t>> activeInferenceCount = nullptr,
+        std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs = nullptr);
 
+    // Transport-facing virtual API. These are the overloads selected by the
+    // front-end adapters and then immediately delegated into the typed helper
+    // below for the actual mediapipe execution.
+    Status infer(const inference::ModelInferRequest* request,
+        inference::ModelInferResponse* response,
+        const ExecutionContext& executionContext) override;
+    Status inferStream(const inference::ModelInferRequest& firstRequest,
+        grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
+        const ExecutionContext& executionContext) override;
+    Status infer(const HttpPayload* request,
+        std::string* response,
+        const ExecutionContext& executionContext) override;
+    Status inferStream(const HttpPayload& firstRequest,
+        HttpAsyncWriter& serverReaderWriter,
+        const ExecutionContext& executionContext) override;
+
+    // Template helper used by the transport-specific overloads above.
+    // This is the real implementation body: it is templated so one execution
+    // path can handle both gRPC and HTTP request types without duplicating the
+    // graph logic. The name intentionally differs from the virtual API to keep
+    // the front-end dispatch and the concrete runtime implementation separate.
     template <typename RequestType, typename ResponseType>
-    Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
+    Status inferTyped(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", this->name);
         MetricCounterGuard failedRequestsGuard(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, false));
@@ -342,7 +428,7 @@ public:
     }
 
     template <typename RequestType, typename ReaderWriterType>
-    Status inferStream(const RequestType& req, ReaderWriterType& serverReaderWriter, ExecutionContext executionContext) {
+    Status inferStreamTyped(const RequestType& req, ReaderWriterType& serverReaderWriter, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         if (this->guard.has_value()) {
             return inferStreamWithQueue(req, serverReaderWriter, executionContext);

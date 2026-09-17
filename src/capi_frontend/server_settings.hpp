@@ -246,12 +246,18 @@ struct ServerSettingsImpl {
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
     uint32_t resourcesCleanerPollWaitSeconds = 300;
+    uint32_t idleUnloadTimeoutSeconds = 0;
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;
     ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;
     OvmsServerMode serverMode = SERVING_MODELS_MODE;
+    // Populated once by Server::startModules when serverMode == IN_MEMORY_GRAPH_MODE
+    // (task inferred, --model_path given, no HF download). Consumers (ModelManager,
+    // MediapipeGraphDefinition, MediapipeGraphConfig) read this instead of taking a
+    // dependency on //src/graph_export. Not mutated after startup, so no locking needed.
+    std::optional<std::string> inMemoryGraphPbtxt;
 };
 
 struct ModelsSettingsImpl {
@@ -268,6 +274,7 @@ struct ModelsSettingsImpl {
     uint32_t nireq = 0;
     std::string targetDevice;
     std::string pluginConfig;
+    std::optional<std::string> groupName;
     std::vector<std::string> userSetSingleModelArguments;
 
     std::string configPath;

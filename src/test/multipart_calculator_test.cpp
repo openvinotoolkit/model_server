@@ -19,7 +19,7 @@
 #include "../http_rest_api_handler.hpp"
 #include "../http_payload.hpp"
 #include "../module_names.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"

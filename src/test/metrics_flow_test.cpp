@@ -32,7 +32,7 @@
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../precision.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "constructor_enabled_model_manager.hpp"
@@ -135,6 +135,8 @@ public:
         module = this->createModule(GRPC_SERVER_MODULE_NAME);
         this->modules.emplace(GRPC_SERVER_MODULE_NAME, std::move(module));
     }
+    // Modules hold a reference to manager; shut them down before manager is destroyed
+    ~ServerWithMockedManagerModule() override { shutdownModules(); }
 
     ConstructorEnabledModelManager& getManager() {
         return this->manager;

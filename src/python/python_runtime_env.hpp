@@ -1,5 +1,5 @@
-//****************************************************************************
-// Copyright 2022 Intel Corporation
+//*****************************************************************************
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,26 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-#include <memory>
 
-#include "module.hpp"
+#pragma once
+
+#include <string>
 
 namespace ovms {
-class Config;
-class ModelManager;
-class Server;
 
-class ServableManagerModule : public Module {
-protected:
-    mutable std::unique_ptr<ModelManager> servableManager;
+bool existsExecutableInPath(const std::string& executableName);
 
-public:
-    ServableManagerModule(ovms::Server& ovmsServer);
-    ~ServableManagerModule();
-    Status start(const ovms::Config& config) override;
-
-    void shutdown() override;
-    virtual ModelManager& getServableManager() const;
-};
 }  // namespace ovms

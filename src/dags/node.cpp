@@ -25,7 +25,7 @@
 #include "../ov_utils.hpp"
 #include "../profiler.hpp"
 #include "../shape.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "nodesession.hpp"
 #include "tensormap.hpp"
 

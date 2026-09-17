@@ -26,17 +26,16 @@
 #include <utility>
 #include <vector>
 
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
 #include "../config.hpp"
 #include "src/utils/env_guard.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "src/graph_export/graph_export.hpp"
 #include "src/metrics/metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../ov_utils.hpp"
 #include "../servable_definition_unload_guard.hpp"
 #include "../servable_name_checker.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 #include "src/systeminfo.hpp"
 #include "../tensorinfo.hpp"
@@ -44,6 +43,10 @@
 #include "../version.hpp"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
+#pragma warning(push)
+#pragma warning(disable : 6001 4324 6385 6386 6326 6246)
+#include "mediapipe/framework/deps/registration.h"
+#pragma warning(pop)
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 #include "node_initializer.hpp"
@@ -67,10 +70,10 @@ const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
-    if (GraphExport::hasInMemoryGraphContent() && ovms::Config::instance().getServerSettings().serverMode == IN_MEMORY_GRAPH_MODE) {
-        const std::string& content = GraphExport::getInMemoryGraphContent();
-        this->chosenConfig = content;
-        this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(content));
+    const auto& inMemoryPbtxt = this->mgconfig.getInMemoryGraphPbTxt();
+    if (inMemoryPbtxt.has_value()) {
+        this->chosenConfig = *inMemoryPbtxt;
+        this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(this->chosenConfig));
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Using in-memory graph content for mediapipe graph definition: {}", this->getName());
         return StatusCode::OK;
     }
@@ -209,6 +212,45 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
     return StatusCode::OK;
 }
 
+Status MediapipeGraphDefinition::validateReferencedNodesRegistered() {
+    const auto& registeredCalculators = mediapipe::CalculatorBaseRegistry::GetRegisteredNames();
+    const auto& registeredSubgraphs = mediapipe::SubgraphRegistry::GetRegisteredNames();
+
+    std::unordered_map<std::string, bool> missingNamesMap;
+    for (const auto& node : this->config.node()) {
+        const auto& nodeName = node.calculator();
+        if (nodeName.empty()) {
+            continue;
+        }
+        const bool isRegistered =
+            registeredCalculators.find(nodeName) != registeredCalculators.end() ||
+            registeredSubgraphs.find(nodeName) != registeredSubgraphs.end();
+        if (!isRegistered) {
+            missingNamesMap[nodeName] = true;
+        }
+    }
+
+    if (missingNamesMap.empty()) {
+        return StatusCode::OK;
+    }
+
+    std::vector<std::string> missingNames;
+    missingNames.reserve(missingNamesMap.size());
+    for (const auto& [name, _] : missingNamesMap) {
+        missingNames.emplace_back(name);
+    }
+    std::sort(missingNames.begin(), missingNames.end());
+    const std::string missingNamesList = joins(missingNames, ", ");
+
+    SPDLOG_LOGGER_ERROR(modelmanager_logger,
+        "Mediapipe graph: {} references unregistered calculators/subgraphs: [{}]",
+        this->getName(),
+        missingNamesList);
+    return Status(
+        StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
+        "Missing registered calculators/subgraphs: " + missingNamesList);
+}
+
 Status MediapipeGraphDefinition::dryInitializeTest() {
     ::mediapipe::CalculatorGraph graph;
     try {
@@ -229,6 +271,12 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 }
 Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validation context for mediapipe: {} graph_path: {} subconfig_path: {}", getName(), this->mgconfig.getGraphPath(), this->mgconfig.getSubconfigPath());
+#if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Build flag OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME is enabled for mediapipe: {}", getName());
+#else
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Build flag OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME is disabled for mediapipe: {}", getName());
+#endif
     if (!this->sidePacketMaps->empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
@@ -240,30 +288,39 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     }
     Status validationResult = validateForConfigFileExistence();
     if (!validationResult.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage validateForConfigFileExistence for graph: {} status: {}", getName(), validationResult.string());
         return validationResult;
     }
     validationResult = validateForConfigLoadableness();
     if (!validationResult.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage validateForConfigLoadableness for graph: {} status: {}", getName(), validationResult.string());
         return validationResult;
     }
+    validationResult = validateReferencedNodesRegistered();
+    if (!validationResult.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage validateReferencedNodesRegistered for graph: {} status: {}", getName(), validationResult.string());
+        return validationResult;
+    }
+
     validationResult = resolveGraphQueueSize();
     if (!validationResult.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage resolveGraphQueueSize for graph: {} status: {}", getName(), validationResult.string());
         return validationResult;
     }
     std::unique_lock lock(metadataMtx);
     auto status = createInputsInfo();
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create inputs info for mediapipe graph definition: {}", getName());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage createInputsInfo for graph: {} status: {}", getName(), status.string());
         return status;
     }
     status = createOutputsInfo();
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create outputs info for mediapipe graph definition: {}", getName());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage createOutputsInfo for graph: {} status: {}", getName(), status.string());
         return status;
     }
     status = createInputSidePacketsInfo();
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create input side packets info for mediapipe graph definition: {}", getName());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage createInputSidePacketsInfo for graph: {} status: {}", getName(), status.string());
         return status;
     }
     // Detect what deserialization needs to be performed
@@ -274,15 +331,18 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     // here we will not be available if calculator does not exist in OVMS
     status = this->dryInitializeTest();
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage dryInitializeTest for graph: {} status: {}", getName(), status.string());
         return status;
     }
 
     status = this->initializeNodes();
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage initializeNodes for graph: {} status: {}", getName(), status.string());
         return status;
     }
     status = this->initializeQueueIfRequired();
     if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage initializeQueueIfRequired for graph: {} status: {}", getName(), status.string());
         return status;
     }
 
@@ -293,6 +353,8 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
 
     lock.unlock();
     notifier.passed = true;
+    // Graph resources are now loaded (covers both initial load and wake-up reload).
+    SET_IF_ENABLED(this->reporter->graphLoaded, 1);
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Finished validation of mediapipe: {}", getName());
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} inputs: {}", getName(), getTensorMapString(inputsInfo));
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Mediapipe: {} outputs: {}", getName(), getTensorMapString(outputsInfo));
@@ -323,14 +385,22 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     const MediapipeGraphConfig& config,
     MetricRegistry* registry,
     const MetricConfig* metricConfig,
-    PythonBackend* pythonBackend) :
+    PythonBackend* pythonBackend,
+    bool lazyLoad) :
     SingleVersionServableDefinition(name),
     sidePacketMaps(std::make_shared<GraphSidePackets>()),
     status(SCHEDULER_CLASS_NAME, getName()),
     pythonBackend(pythonBackend),
     reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
     mgconfig = config;
+    idleUnloadTimeoutSecondsCache.store(mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     passKfsRequestFlag = false;
+    lastActivityTimeNs = std::make_shared<std::atomic<int64_t>>(0);
+    recordActivity();
+    activeInferenceCount = std::make_shared<std::atomic<int64_t>>(0);
+    if (lazyLoad) {
+        this->status.handle(SleepEvent());
+    }
 }
 
 Status MediapipeGraphDefinition::createInputsInfo() {
@@ -387,6 +457,11 @@ Status MediapipeGraphDefinition::createOutputsInfo() {
 }
 
 Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>& pipeline) {
+    // Update idle-tracking timestamp on every inference acquisition path.
+    // Status endpoints / health checks do not reach this method, so idle
+    // tracking is automatically inference-only.
+    recordActivity();
+
     std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
     Status status = waitForLoaded(unloadGuard);
     if (!status.ok()) {
@@ -399,12 +474,14 @@ Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>&
         pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
             this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
             *this->sidePacketMaps,
-            this->pythonBackend, this->reporter.get(), std::move(graphIdGuard));
+            this->pythonBackend, this->reporter.get(), std::move(graphIdGuard),
+            this->activeInferenceCount, this->lastActivityTimeNs);
     } else {
         pipeline = std::make_unique<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
             this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
             *this->sidePacketMaps,
-            this->pythonBackend, this->reporter.get());
+            this->pythonBackend, this->reporter.get(),
+            this->activeInferenceCount, this->lastActivityTimeNs);
     }
     SPDLOG_DEBUG("Created Mediapipe graph executor: {}", getName());
     return status;
@@ -435,8 +512,28 @@ Status MediapipeGraphDefinition::setStreamTypes() {
         return v == mediapipe_packet_type_enum::TFLITETENSOR;
     });
     if (anyInputTfLite || anyOutputTfLite) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "There is no support for TfLiteTensor deserialization & serialization");
-        return StatusCode::NOT_IMPLEMENTED;
+        std::string inputTfLiteNames;
+        for (const auto& [name, type] : inputTypes) {
+            if (type == mediapipe_packet_type_enum::TFLITETENSOR) {
+                if (!inputTfLiteNames.empty()) {
+                    inputTfLiteNames += ", ";
+                }
+                inputTfLiteNames += name;
+            }
+        }
+        std::string outputTfLiteNames;
+        for (const auto& [name, type] : outputTypes) {
+            if (type == mediapipe_packet_type_enum::TFLITETENSOR) {
+                if (!outputTfLiteNames.empty()) {
+                    outputTfLiteNames += ", ";
+                }
+                outputTfLiteNames += name;
+            }
+        }
+        SPDLOG_LOGGER_ERROR(modelmanager_logger,
+            "TfLiteTensor stream type is unsupported. Detected in mediapipe graph: {}. input_streams: [{}] output_streams: [{}]. ", getName(), inputTfLiteNames, outputTfLiteNames);
+        return Status(StatusCode::NOT_IMPLEMENTED,
+            "TfLiteTensor stream type is not supported in mediapipe KServe execution path");
     }
     bool kfsRequestPass = std::any_of(inputTypes.begin(), inputTypes.end(), [](const auto& p) {
         const auto& [k, v] = p;
@@ -474,25 +571,127 @@ Status MediapipeGraphDefinition::setStreamTypes() {
 }
 
 Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config) {
+    // Serialize against unload()/wakeUp() on the watcher/request threads.
+    // Recursive: wakeUpIfSleeping() already holds this and calls reload().
+    std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
-    while (requestsHandlesCounter > 0) {
+    while (pendingCreateExecutorCount > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
     this->mgconfig = config;
+    // Refresh the lock-free cache while we still hold lifecycleMtx.
+    idleUnloadTimeoutSecondsCache.store(this->mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     this->queue.reset();
     this->sidePacketMaps = std::make_shared<GraphSidePackets>();
     return validate(checker);
 }
 
 void MediapipeGraphDefinition::retire() {
+    std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
     // Block creating new unloadGuards
     this->status.handle(RetireEvent());
-    while (requestsHandlesCounter > 0) {
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    unloadComponentsAfterPendingExecutorsAreCreated();
+}
+
+bool MediapipeGraphDefinition::isIdleUnloadEnabled() const {
+    // Lock-free read of the cached timeout (mgconfig is only safe under lifecycleMtx).
+    return idleUnloadTimeoutSecondsCache.load(std::memory_order_relaxed) > 0;
+}
+
+bool MediapipeGraphDefinition::shouldUnloadDueToIdle() const {
+    // Advisory pre-filter ONLY — reads no unsynchronized per-definition state.
+    // It must NOT read this->status (the state-machine variant) without the lock,
+    // since the config thread can mutate it concurrently. putToSleep() performs the
+    // authoritative state==AVAILABLE check under lifecycleMtx.
+    // pendingCreateExecutorCount, lastActivityTimeNs and idleUnloadTimeoutSecondsCache
+    // are all atomics, so every read here is data-race-free. We never read mgconfig
+    // (only safe under lifecycleMtx) on this advisory path.
+    int64_t timeoutSeconds = idleUnloadTimeoutSecondsCache.load(std::memory_order_relaxed);
+    if (timeoutSeconds <= 0) {
+        return false;
     }
-    this->queue.reset();
-    this->sidePacketMaps.reset();
+    if (pendingCreateExecutorCount.load(std::memory_order_relaxed) != 0) {
+        return false;
+    }
+    // Guard: if inferences are actively executing, never report idle.
+    // activeInferenceCount is bumped when a MediapipeGraphExecutor is created (in
+    // create()) by its RAII ActiveInferenceGuard, held for the executor's lifetime
+    // (which spans the inference), and decremented (with a lastActivityTimeNs refresh)
+    // when the executor is destroyed after the inference completes or throws.
+    if (activeInferenceCount && activeInferenceCount->load(std::memory_order_acquire) > 0) {
+        return false;
+    }
+    int64_t lastActivity = lastActivityTimeNs->load(std::memory_order_relaxed);
+    int64_t nowNs = nanosSinceEpochStart();
+    int64_t timeoutNs = timeoutSeconds * 1'000'000'000LL;
+    return (nowNs - lastActivity) >= timeoutNs;
+}
+
+[[nodiscard]] Status MediapipeGraphDefinition::putToSleep() {
+    std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
+    if (status.getStateCode() == PipelineDefinitionStateCode::SLEEPING) {
+        return StatusCode::OK;
+    }
+    if (status.getStateCode() != PipelineDefinitionStateCode::AVAILABLE) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+            "Skipping idle-unload of mediapipe graph {}: state is no longer AVAILABLE", getName());
+        return Status(StatusCode::MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE,
+            "Cannot put mediapipe graph to sleep: state is not AVAILABLE");
+    }
+    if (pendingCreateExecutorCount.load(std::memory_order_acquire) != 0) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+            "Skipping idle-unload of mediapipe graph {}: requests in flight", getName());
+        return Status(StatusCode::MEDIAPIPE_PUT_TO_SLEEP_REQUESTS_IN_FLIGHT,
+            "Cannot put mediapipe graph to sleep: requests are in flight");
+    }
+    if (activeInferenceCount && activeInferenceCount->load(std::memory_order_acquire) > 0) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+            "Skipping idle-unload of mediapipe graph {}: active inferences in progress", getName());
+        return Status(StatusCode::MEDIAPIPE_PUT_TO_SLEEP_ACTIVE_INFERENCES,
+            "Cannot put mediapipe graph to sleep: active inferences in progress");
+    }
+
+    this->status.handle(SleepEvent());
+
+    unloadComponentsAfterPendingExecutorsAreCreated();
+
+    SET_IF_ENABLED(this->reporter->graphLoaded, 0);
+    SPDLOG_LOGGER_INFO(modelmanager_logger,
+        "Mediapipe graph {} idle-unloaded (freed GPU/CPU resources after {}s idle timeout)",
+        getName(), mgconfig.getIdleUnloadTimeoutSeconds());
+    return StatusCode::OK;
+}
+
+Status MediapipeGraphDefinition::wakeUpIfSleeping(const ServableNameChecker& checker) {
+    std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
+    auto state = status.getStateCode();
+    if (state == PipelineDefinitionStateCode::AVAILABLE || state == PipelineDefinitionStateCode::RELOADING)
+        return StatusCode::OK;
+    if (state != PipelineDefinitionStateCode::SLEEPING)
+        return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
+    SPDLOG_LOGGER_INFO(modelmanager_logger,
+        "Mediapipe graph {} is SLEEPING; triggering lazy wake-up reload", getName());
+    auto start = std::chrono::steady_clock::now();
+    Status reloadStatus = reload(checker, this->mgconfig);
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - start);
+    if (reloadStatus.ok()) {
+        // Only reset the idle timer on a successful wake; on failure leave it so
+        // the existing failure-state handling applies and we don't mask the error.
+        recordActivity();
+        SPDLOG_LOGGER_INFO(modelmanager_logger,
+            "Mediapipe graph {} wake-up completed in {}ms",
+            getName(), elapsed.count());
+    } else {
+        // Wake-up reload failed. For now sleeping the graph again. So that new request will try to load again.
+        this->status.handle(SleepEvent());
+        SPDLOG_LOGGER_ERROR(modelmanager_logger,
+            "Mediapipe graph {} wake-up failed after {}ms: {}. Reverted to SLEEPING; "
+            "next request will retry the wake.",
+            getName(), elapsed.count(), reloadStatus.string());
+    }
+    return reloadStatus;
 }
 
 bool MediapipeGraphDefinition::isReloadRequired(const MediapipeGraphConfig& config) const {
@@ -511,6 +710,14 @@ StatusCode MediapipeGraphDefinition::notLoadedAnymoreCode() const {
     return StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE;
 }
 
+void MediapipeGraphDefinition::unloadComponentsAfterPendingExecutorsAreCreated() {
+    while (pendingCreateExecutorCount > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
+    this->queue.reset();
+    this->sidePacketMaps.reset();
+}
+
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
     bool success = false;
@@ -525,9 +732,10 @@ Status MediapipeGraphDefinition::initializeNodes() {
 
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
+        const auto& node = config.node(i);
         for (const auto& initializer : registry.all()) {
-            if (initializer->matches(config.node(i).calculator())) {
-                Status status = initializer->initialize(config.node(i), getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend);
+            if (initializer->matches(node.calculator())) {
+                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend);
                 if (!status.ok()) {
                     return status;
                 }

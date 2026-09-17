@@ -26,13 +26,17 @@
 #include <utility>
 #include <vector>
 
-#include "dags/dag_resource_manager.hpp"
-#include "metrics/metric_provider.hpp"
-#include "model_instance_provider.hpp"
-#include "modelconfig.hpp"
-#include "resources_cleaner.hpp"
-#include "servable_name_checker.hpp"
-#include "status.hpp"
+#include "src/dags/dag_resource_manager.hpp"
+#include "src/metrics/metric_provider.hpp"
+#include "src/model_instance_provider.hpp"
+#include "src/modelconfig.hpp"
+#include "src/resources_cleaner.hpp"
+#include "src/servable_name_checker.hpp"
+#include "src/status.hpp"
+
+#if (MEDIAPIPE_DISABLE == 0)
+#include "src/mediapipe_runtime_api.hpp"
+#endif
 
 namespace ov {
 class Core;
@@ -50,16 +54,19 @@ class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricConfig;
 class MetricRegistry;
+class MediapipeGraphExecutorInterface;
 class Model;
 class ModelConfig;
 class FileSystem;
-class MediapipeFactory;
 class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
+class MediapipeRuntimeApi;
 class ModelInstance;
+class ServableGroupManager;
 class ServableDefinition;
 class ModelInstanceUnloadGuard;
 class Pipeline;
+class ServableLoadingQueue;
 class PipelineFactory;
 struct FunctorResourcesCleaner;
 class PythonBackend;
@@ -85,9 +92,10 @@ protected:
     std::map<std::string, std::shared_ptr<Model>> models;
     std::unique_ptr<ov::Core> ieCore;
 
+    std::unique_ptr<ServableLoadingQueue> loadingQueue;
     std::unique_ptr<PipelineFactory> pipelineFactory;
 #if (MEDIAPIPE_DISABLE == 0)
-    std::unique_ptr<MediapipeFactory> mediapipeFactory;
+    std::unique_ptr<MediapipeRuntimeApi> mediapipeFactory;
 #endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
@@ -109,7 +117,7 @@ private:
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed);
 
 #if (MEDIAPIPE_DISABLE == 0)
-    Status processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory);
+    [[nodiscard]] Status retireMediapipesOtherThan(const std::set<std::string>& graphsInConfigFile);
     Status loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
     Status loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
         std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
@@ -127,6 +135,12 @@ private:
      * @brief Watcher thread for monitor changes in config
      */
     void watcher(std::future<void> exitSignal, bool watchConfigFile);
+
+    /**
+     * @brief Sweep mediapipe graph definitions and unload any that have been
+     *        idle past their configured idle_unload_timeout_seconds.
+     */
+    void unloadIdleGraphs();
 
     /**
      * @brief Cleaner thread for resources cleanup
@@ -206,6 +220,8 @@ protected:
      */
     uint32_t resourcesCleanupIntervalMillisec = 1000;
 
+    std::unique_ptr<ServableGroupManager> servableGroupManager;
+
 private:
     /**
      * @brief last md5sum of configfile
@@ -231,6 +247,7 @@ private:
      */
     std::string rootDirectoryPath;
     bool startedWithConfigFile = false;
+
     /**
      * @brief Set json config directory path
      *
@@ -301,6 +318,10 @@ public:
         return models;
     }
 
+    ServableGroupManager* getGroupManager() const {
+        return servableGroupManager.get();
+    }
+
     const std::vector<std::string> getNamesOfAvailableModels() const;
 
     /**
@@ -311,7 +332,11 @@ public:
     const PipelineFactory& getPipelineFactory() const;
 
 #if (MEDIAPIPE_DISABLE == 0)
-    const MediapipeFactory& getMediapipeFactory() const {
+    const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
+    const MediapipeRuntimeApi& getMediapipeFactory() const {
+        return *mediapipeFactory;
+    }
+    MediapipeRuntimeApi& getMediapipeFactory() {
         return *mediapipeFactory;
     }
 #endif
@@ -339,6 +364,8 @@ public:
             return true;
     }
 
+    bool isServableAvailable(const std::string& name) const;
+
     /**
      * @brief Finds model instance with specific name and version, returns default if version not specified
      *
@@ -356,8 +383,12 @@ public:
     Status getModelOutputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const override;
     Status hasAutoModelParameters(const std::string& name, model_version_t version, bool& batchAuto, bool& shapeAuto) const override;
 
+#if (MEDIAPIPE_DISABLE == 0)
     Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
         const std::string& name);
+    Status createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
+        const std::string& name);
+#endif
 
     /**
      * @brief Starts model manager using provided config file
@@ -393,6 +424,10 @@ public:
      * @return status
      */
     Status reloadModelWithVersions(ModelConfig& config);
+
+    // Enqueue an urgent servable load request (for inference threads).
+    std::future<Status> requestServableWakeUp(const std::string& name, bool urgent);
+    std::future<Status> requestServablePutToSleep(const std::string& name, bool urgent);
 
     /**
      * @brief Starts model manager using ovms::Config
