@@ -144,6 +144,12 @@ bool validateEnvPaths(std::string& details) {
 
 }  // namespace
 
+// Applies the real --log_level/--log_path config to this library's own logger
+// instances (isolated from the main process by RTLD_DEEPBIND/header-only spdlog).
+extern "C" PYTHON_RUNTIME_EXPORT void OVMS_ConfigureRuntimeLogging(const char* logLevel, const char* logPath) {
+    ovms::configure_logger(logLevel != nullptr ? logLevel : "", logPath != nullptr ? logPath : "");
+}
+
 extern "C" PYTHON_RUNTIME_EXPORT ovms::Module* OVMS_createPythonInterpreterModule() {
     ovms::initialize_named_loggers_from_default();
     return new ovms::PythonInterpreterModule();
