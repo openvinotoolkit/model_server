@@ -6,15 +6,6 @@ Idle servable management keeps configured models and MediaPipe graphs visible to
 
 Optionally set an OpenVINO model cache directory with `--cache_dir` to reduce reload latency. This is recommended because reloading from cache avoids recompiling the model. The first request still bears the latency cost of waiting for the model to wake up.
 
-## Enable idle management
-
-Set `--idle_unload_timeout_seconds` to a positive number when starting OVMS. `0`, the default, disables idle servable management.
-
-Start OVMS with a cache directory:
-
-```text
-ovms --config_path /models/config.json --cache_dir /models/cache --idle_unload_timeout_seconds 60
-```
 
 ## Groups
 
@@ -81,6 +72,15 @@ The following resulting configuration keeps one large model loaded and groups re
 ```
 
 > **Important:** Concurrent requests targeting loaded and unloaded groups have no scheduling policy in this preview. While requests run on active group, incoming traffic continues to that group. Do not depend on fair routing or a bounded switch time between groups. Organize groups so that one active non-permanent group fits available host and device memory to avoid out-of-memory conditions during swaps.
+
+## Enable idle management
+
+Set `--idle_unload_timeout_seconds` to a positive number when starting OVMS. `0`, the default, disables idle servable management.
+Start OVMS with a cache directory:
+
+```text
+ovms --config_path c:\models\config.json --cache_dir c:\models\cache --idle_unload_timeout_seconds 60
+```
 
 ## Servable status
 
