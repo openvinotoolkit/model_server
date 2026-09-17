@@ -32,12 +32,12 @@
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/tensor.h"
 #include "mediapipe/framework/port/canonical_errors.h"
-#include "openvinoinferencecalculator.h"
-#include "openvinoinferencecalculatoroptions.h"
-#include "openvinoinferenceutils.h"
+#include "src/mediapipe_calculators/ovms/openvinoinferencecalculator.h"
+#include "src/mediapipe_calculators/ovms/openvinoinferencecalculatoroptions.h"
+#include "src/mediapipe_calculators/ovms/openvinoinferenceutils.h"
 #include "src/mediapipe_calculators/ovms/openvinoinferencecalculator.pb.h"
 #if (OVMS_DUMP_TO_FILE == 1)
-#include "openvinoinferencedumputils.h"
+#include "src/mediapipe_calculators/ovms/openvinoinferencedumputils.h"
 #endif
 #pragma GCC diagnostic pop
 namespace mediapipe {
@@ -275,7 +275,7 @@ absl::Status OpenVINOInferenceCalculator::Process(CalculatorContext* cc) {
 
         try {
             if (startsWith(tag, OVTENSORS_TAG)) {
-                DESERIALIZE_TENSORS(ov::Tensor, );
+                DESERIALIZE_TENSORS(ov::Tensor,);  // NOLINT(whitespace/comma)
             } else if (startsWith(tag, MPTENSORS_TAG)) {
                 DESERIALIZE_TENSORS(Tensor, convertMPTensor2OVTensor);
             } else if (startsWith(tag, OVTENSOR_TAG)) {

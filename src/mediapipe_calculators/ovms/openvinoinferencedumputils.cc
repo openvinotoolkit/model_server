@@ -24,7 +24,7 @@
 
 #include <openvino/openvino.hpp>
 
-#include "openvinoinferencedumputils.h"
+#include "src/mediapipe_calculators/ovms/openvinoinferencedumputils.h"
 
 namespace mediapipe {
 
@@ -107,7 +107,8 @@ static void writeToFile(std::stringstream& stream, std::string name) {
 static std::string getTimestampString() {
     auto rawtime = std::make_unique<time_t>();
     time(rawtime.get());
-    struct tm* timeinfo = localtime(rawtime.get());
+    struct tm timeinfoBuf;
+    struct tm* timeinfo = localtime_r(rawtime.get(), &timeinfoBuf);
     auto start = std::chrono::system_clock::now();
     std::stringstream timestampStream;
     timestampStream << timeinfo->tm_year << "_" << timeinfo->tm_mon << "_" << timeinfo->tm_mday << "_";

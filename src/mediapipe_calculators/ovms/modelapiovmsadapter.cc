@@ -15,9 +15,10 @@
 //*****************************************************************************
 #include "modelapiovmsadapter.hpp"
 #if (OVMS_DUMP_TO_FILE == 1)
-#include "openvinoinferencedumputils.h"
+#include "src/mediapipe_calculators/ovms/openvinoinferencedumputils.h"
 #endif
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <sstream>

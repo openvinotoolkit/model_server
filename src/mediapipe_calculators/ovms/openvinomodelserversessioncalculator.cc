@@ -13,11 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "openvinomodelserversessioncalculator.h"
+#include "src/mediapipe_calculators/ovms/openvinomodelserversessioncalculator.h"
 
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <limits>
 #include <locale>
 #include <memory>
 #include <mutex>
@@ -35,7 +36,7 @@
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "modelapiovmsadapter.hpp"
-#include "openvinoinferenceutils.h"
+#include "src/mediapipe_calculators/ovms/openvinoinferenceutils.h"
 #include "src/mediapipe_calculators/ovms/openvinomodelserversessioncalculator.pb.h"
 #pragma GCC diagnostic pop
 namespace mediapipe {

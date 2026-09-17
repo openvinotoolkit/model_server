@@ -35,8 +35,8 @@ class OpenVINOInferenceCalculator : public CalculatorBase {
 
 public:
     static absl::Status GetContract(CalculatorContract* cc);
-    absl::Status Close(CalculatorContext* cc) override final;
-    absl::Status Open(CalculatorContext* cc) override final;
-    absl::Status Process(CalculatorContext* cc) override final;
+    absl::Status Close(CalculatorContext* cc) final;
+    absl::Status Open(CalculatorContext* cc) final;
+    absl::Status Process(CalculatorContext* cc) final;
 };
 }  // namespace mediapipe

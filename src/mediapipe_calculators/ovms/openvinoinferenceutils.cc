@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "ovms.h"  // NOLINT
+#include "src/mediapipe_calculators/ovms/openvinoinferenceutils.h"
 namespace mediapipe {
 
 // Function from ovms/src/string_utils.h

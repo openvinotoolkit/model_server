@@ -25,8 +25,8 @@
 #include "mediapipe/framework/calculator_contract.h"
 #include "src/mediapipe_calculators/ovms/openvinoinferencecalculator.pb.h"
 #pragma GCC diagnostic pop
-#include "openvinoinferencecalculatoroptions.h"
-#include "openvinoinferenceutils.h"
+#include "src/mediapipe_calculators/ovms/openvinoinferencecalculatoroptions.h"
+#include "src/mediapipe_calculators/ovms/openvinoinferenceutils.h"
 
 namespace mediapipe {
 

@@ -13,11 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 #include <chrono>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <sstream>
+#include <string>
 #include <thread>
 #include <unordered_map>
 
@@ -42,9 +44,9 @@ class OpenVINOModelServerSessionCalculator : public CalculatorBase {
 
 public:
     static absl::Status GetContract(CalculatorContract* cc);
-    absl::Status Close(CalculatorContext* cc) override final;
-    absl::Status Open(CalculatorContext* cc) override final;
-    absl::Status Process(CalculatorContext* cc) override final;
+    absl::Status Close(CalculatorContext* cc) final;
+    absl::Status Open(CalculatorContext* cc) final;
+    absl::Status Process(CalculatorContext* cc) final;
     static OVMS_LogLevel OvmsLogLevel;
     static const char* OvmsLogLevelEnv;
 };
