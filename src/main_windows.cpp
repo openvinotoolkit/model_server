@@ -200,6 +200,7 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     // Create the stop event before the service starts accepting stop controls.
     serviceStopRequested.store(false);
     serviceWorkerWin32Error.store(ERROR_SUCCESS);
+    serviceStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
     serviceStopEvent->handle = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (serviceStopEvent->handle == NULL || serviceStopEvent->handle == INVALID_HANDLE_VALUE) {
         const DWORD createEventError = GetLastError();
