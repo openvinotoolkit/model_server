@@ -253,7 +253,20 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
 
     DEBUG_LOG("ServiceMain: Waiting for Worker Thread to complete");
 
-    WaitForSingleObject(mainThread.get(), INFINITE);
+    const DWORD workerWaitResult = WaitForSingleObject(mainThread.get(), INFINITE);
+    if (workerWaitResult == WAIT_FAILED) {
+        const DWORD waitError = GetLastError();
+        DEBUG_LOG("ServiceMain: WaitForSingleObject(mainThread) returned error");
+        serviceReportEvent("WaitForSingleObject", waitError);
+        this->setServiceStopStatusWithError(waitError);
+        return;
+    }
+    if (workerWaitResult != WAIT_OBJECT_0) {
+        DEBUG_LOG("ServiceMain: WaitForSingleObject(mainThread) returned unexpected status");
+        serviceReportEvent("WaitForSingleObject", ERROR_INVALID_FUNCTION);
+        this->setServiceStopStatusWithError(ERROR_INVALID_FUNCTION);
+        return;
+    }
     DEBUG_LOG("ServiceMain: Worker Thread Stop Event signaled after we leave the WaitForSingle call");
 
     DWORD workerExitCode = ERROR_GEN_FAILURE;
@@ -417,18 +430,18 @@ struct WinESHandleDeleter {
 };
 
 void OvmsWindowsServiceManager::serviceReportEvent(const std::string& szFunction) {
-    serviceReportEvent(const_cast<LPSTR>(szFunction.c_str()), GetLastError());
+    serviceReportEvent(szFunction.c_str(), GetLastError());
 }
 
-void OvmsWindowsServiceManager::serviceReportEvent(LPSTR szFunction) {
+void OvmsWindowsServiceManager::serviceReportEvent(LPCSTR szFunction) {
     serviceReportEvent(szFunction, GetLastError());
 }
 
 void OvmsWindowsServiceManager::serviceReportEvent(const std::string& szFunction, DWORD errorCode) {
-    serviceReportEvent(const_cast<LPSTR>(szFunction.c_str()), errorCode);
+    serviceReportEvent(szFunction.c_str(), errorCode);
 }
 
-void OvmsWindowsServiceManager::serviceReportEvent(LPSTR szFunction, DWORD errorCode) {
+void OvmsWindowsServiceManager::serviceReportEvent(LPCSTR szFunction, DWORD errorCode) {
     LPCTSTR lpszStrings[2];
     TCHAR Buffer[200];
     std::unique_ptr<SC_HANDLE, WinESHandleDeleter> hEventSource(RegisterEventSource(NULL, OvmsWindowsServiceManager::serviceName));

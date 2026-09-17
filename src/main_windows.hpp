@@ -86,9 +86,9 @@ public:
     static OvmsWindowsServiceManager& instance();
     static std::string getCurrentTimeString();
     static void logParameters(DWORD argc, LPTSTR* argv, const std::string& logText);
-    static void serviceReportEvent(LPSTR szFunction);
+    static void serviceReportEvent(LPCSTR szFunction);
     static void serviceReportEvent(const std::string& szFunction);
-    static void serviceReportEvent(LPSTR szFunction, DWORD errorCode);
+    static void serviceReportEvent(LPCSTR szFunction, DWORD errorCode);
     static void serviceReportEvent(const std::string& szFunction, DWORD errorCode);
     static void serviceReportEventWithExitCode(const std::string& szFunction, const std::string& message, const int& exitCode);
     static void serviceReportEventWithExitCode(LPSTR szFunction, const std::string& message, const int& exitCode);
