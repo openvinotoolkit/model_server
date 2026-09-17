@@ -16,8 +16,10 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 ## Speech generation
 Kokoro is the primary example in this demo, but SpeechT5 remains supported for existing deployments.
+
+For Kokoro-based requests, the `language` field controls which OpenVINO GenAI phonemization path is used. The currently supported values are `en-us`, `en-gb`, `es`, `fr-fr`, `it`, `pt-br`, and `hi`. If `language` is omitted, OVMS defaults to `en-us`.
 ### Model preparation
-This demo uses a pre-exported OpenVINO IR model [luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS](https://huggingface.co/luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS) available on HuggingFace.
+This demo uses the official OpenVINO model [OpenVINO/Kokoro-82M-int8-ov](https://huggingface.co/OpenVINO/Kokoro-82M-int8-ov) available on HuggingFace.
 The model can be pulled directly by OVMS without any conversion step.
 
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before starting OVMS to connect to the HF Hub.
@@ -31,14 +33,21 @@ See the [T2s calculator documentation](../../docs/speech_generation/reference.md
 
 ```bash
 mkdir -p ${HOME}/models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --model_name Kokoro-82M-int8-ov --target_device CPU
+```
+
+**Deploying with Docker on NPU**
+
+```bash
+mkdir -p ${HOME}/models
+docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --model_name Kokoro-82M-int8-ov --target_device NPU
 ```
 
 **Deploying on Bare Metal**
 
 ```bat
 mkdir c:\models
-ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path c:\models --model_name Kokoro-82M-OpenVINO-FP16-OVMS --target_device CPU
+ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path c:\models --model_name Kokoro-82M-int8-ov --target_device CPU
 ```
 
 ### Request Generation 
@@ -47,7 +56,7 @@ ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS
 
 
 ```bash
-curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-OpenVINO-FP16-OVMS\", \"voice\": \"af_alloy\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" -o speech.wav
+curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"af_alloy\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" -o speech.wav
 ```
 :::
 
@@ -66,7 +75,7 @@ speech_file_path = Path(__file__).parent / "speech.wav"
 client = OpenAI(base_url=url, api_key="not_used")
 
 with client.audio.speech.with_streaming_response.create(
-  model="Kokoro-82M-OpenVINO-FP16-OVMS",
+  model="Kokoro-82M-int8-ov",
   voice="af_alloy",
   input=prompt
 ) as response:
@@ -86,9 +95,9 @@ An asynchronous benchmarking client can be used to access the model server perfo
 > Values greater than `1.0x` mean faster-than-real-time generation, while values below `1.0x` mean slower-than-real-time.
 
 ```console
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/requirements.txt openai>=1.0.0
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/benchmark.py -o benchmark.py
-python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model Kokoro-82M-OpenVINO-FP16-OVMS --batch_size 1 --limit 1000 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset ihm --voice af_alloy
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/benchmark/v3/requirements.txt openai>=1.0.0
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/benchmark/v3/benchmark.py -o benchmark.py
+python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model Kokoro-82M-int8-ov --batch_size 1 --limit 1000 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset ihm --voice af_alloy
 Number of documents: 1000
 100%|█████████████████████████████████████████████████████████████████████████████████| 1000/1000 [16:37<00:00,  1.00it/s]
 Success rate: 100.0%. (1000/1000)
@@ -248,8 +257,8 @@ If you need word-level timestamps support, export the model with `export_model.p
 
 Prepare export script and dependencies:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/common/export_models/export_model.py -o export_model.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/common/export_models/requirements.txt
 ```
 
 Export Speech-to-Text model with word timestamps enabled.
@@ -348,7 +357,7 @@ cd open_asr_leaderboard
 
 Download and apply OVMS API compatibility patch:
 
-    curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/external/open_asr_leaderboard.patch -o ovms_open_asr_leaderboard.patch
+    curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/external/open_asr_leaderboard.patch -o ovms_open_asr_leaderboard.patch
     git apply ovms_open_asr_leaderboard.patch
 
 Set OpenAI-compatible endpoint variables for OVMS:
@@ -405,7 +414,7 @@ mkdir -p ${HOME}/models
 # in case GPU is available
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 
-docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path /models --model_name Kokoro-82M-OpenVINO-FP16-OVMS
+docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --model_name Kokoro-82M-int8-ov
 ```
 
 **Deploying on Bare Metal**
@@ -414,13 +423,13 @@ The same command can be used for CPU and GPU deployments. OVMS will auto-detect 
 
 ```bat
 mkdir c:\models
-ovms --rest_port 8000 --source_model luis-castillo/Kokoro-82M-OpenVINO-FP16-OVMS --model_repository_path c:\models --model_name Kokoro-82M-OpenVINO-FP16-OVMS
+ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path c:\models --model_name Kokoro-82M-int8-ov
 ```
 
-For non-English Kokoro input, set the `language` field explicitly.
+For non-English text, set the `language` field explicitly so OpenVINO GenAI selects the correct phonemization path. Voice selection does not infer the language.
 
 ```console
-curl -fS http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-OpenVINO-FP16-OVMS\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
+curl -fS http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
 ```
 
 ### Deployment

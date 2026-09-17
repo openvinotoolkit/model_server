@@ -98,7 +98,7 @@ Use [Berkeley function call leaderboard ](https://github.com/ShishirPatil/gorill
 git clone https://github.com/ShishirPatil/gorilla
 cd gorilla/berkeley-function-call-leaderboard
 git checkout 9b8a5202544f49a846aced185a340361231ef3e1
-curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
+curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
 pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
 ```
 The commands below assumes the models is deployed with the name `ovms-model`. It must match the name set in the `bfcl_eval/constants/model_config.py`.
@@ -125,5 +125,3 @@ cat score/openvino-qwen3-8b-int4-FC/BFCL_v4_simple_python_score.json | head -1
 {"accuracy": 0.95, "correct_count": 380, "total_count": 400}
 ```
 Those results can be compared with the reference from the [berkeley leaderbaord](https://gorilla.cs.berkeley.edu/leaderboard.html#leaderboard).
-
----

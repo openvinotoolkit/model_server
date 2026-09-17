@@ -294,7 +294,7 @@ def start_capi_ovms(context: Context, parameters: OvmsDockerParams, environment:
     if context.port_manager_rest is not None and parameters.rest_port is None:
         parameters.rest_port = context.port_manager_rest.get_port()
 
-    # https://github.com/openvinotoolkit/model_server/blob/main/src/ovms.h#L394
+    # https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/src/ovms.h#L394
     # CAPI is supported only with config.json file.
     if parameters.custom_config is None:
         indirect_config_path, config_dict = OvmsConfig.generate_from_parameters(

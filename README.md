@@ -2,7 +2,7 @@
 
 **High-performance model serving for Generative AI and classic deep learning — powered by [OpenVINO](https://github.com/openvinotoolkit/openvino) and optimized for Intel hardware.**
 
-[![Apache License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/openvinotoolkit/model_server/blob/main/LICENSE)
+[![Apache License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/LICENSE)
 [![Docker Pulls](https://img.shields.io/docker/pulls/openvino/model_server.svg)](https://hub.docker.com/r/openvino/model_server)
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/model_server)](https://github.com/openvinotoolkit/model_server/releases)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-blue)](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server.html)
@@ -93,7 +93,7 @@ ovms --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.5
 Run inference with a sample client
 ```console
 pip install numpy tritonclient[grpc]
-curl -L -o image.jpeg https://github.com/openvinotoolkit/model_server/blob/main/demos/common/static/images/bee.jpeg?raw=true
+curl -L -o image.jpeg https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/demos/common/static/images/bee.jpeg?raw=true
 ```
 ```python
 import numpy as np
@@ -129,7 +129,7 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 - TensorFlow, ONNX, PaddlePaddle, OpenVINO IR model formats
 - [MediaPipe graphs](https://docs.openvino.ai/2026/model-server/ovms_docs_mediapipe.html)
 - [Python execution nodes](https://docs.openvino.ai/2026/model-server/ovms_docs_python_support_reference.html)
-- [Dynamic input shapes](https://docs.openvino.ai/2026/model-server/ovms_docs_shape_batch_size_and_layout.html)
+- [Dynamic input shapes](https://docs.openvino.ai/2026/model-server/ovms_docs_dynamic_input.html)
 
 ### Deployment & Integration
 - [Docker](docs/deploying_server_docker.md), [bare metal (Linux & Windows)](docs/deploying_server_baremetal.md), [Kubernetes / OpenShift](docs/deploying_server_kubernetes.md)
@@ -141,7 +141,7 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 
 ### Hardware Acceleration
 - CPU (x86, including Xeon), Intel integrated and discrete GPU, NPU
-- See [supported accelerators](https://docs.openvino.ai/2026/model-server/ovms_docs_accelerators.html)
+- See [supported accelerators](https://docs.openvino.ai/2026/model-server/ovms_docs_target_devices.html)
 
 [→ Full feature list](https://docs.openvino.ai/2026/model-server/ovms_docs_features.html)
 

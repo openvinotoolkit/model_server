@@ -108,7 +108,7 @@ Run inference with a sample python client
 
 ```console
 pip install numpy tritonclient[grpc]
-curl -L -o image.jpeg https://github.com/openvinotoolkit/model_server/blob/main/demos/common/static/images/bee.jpeg?raw=true
+curl -L -o image.jpeg https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/demos/common/static/images/bee.jpeg?raw=true
 ```
 
 ```python
@@ -194,7 +194,7 @@ docker pull openvino/model_server:latest-gpu    # Intel CPU,GPU,NPU
 ## Contributing
 
 Contributions are welcome! Please open an issue or pull request on GitHub.  
-See [security policy](security.md) for responsible disclosure.
+See [security policy](../security.md) for responsible disclosure.
 
 ---
 

@@ -46,7 +46,7 @@ make BASE_OS=redhat NODES=face_blur
 | image | Returns blurred image in place of detected boxes. Boxes are filtered based on confidence_threshold param. Resolution is defined by the node parameters.   | `N,C,H,W` | FP32  |
 
 # Custom node parameters
-Parameters can be defined in pipeline definition in OVMS configuration file. [Read more](https://github.com/openvinotoolkit/model_server/blob/main/docs/custom_node_development.md) about node parameters.
+Parameters can be defined in pipeline definition in OVMS configuration file. [Read more](https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/docs/custom_node_development.md) about node parameters.
 | Parameter        | Description           | Default  | Required |
 | ------------- | ------------- | ------------- | ------------ |
 | original_image_width  | Required input image width |  | &check; |
