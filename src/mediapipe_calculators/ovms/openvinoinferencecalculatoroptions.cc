@@ -42,7 +42,7 @@ static bool ValidateOrderLists(std::set<std::string> calculatorTags, const googl
             for (const auto& supportedVectorTag : supportedVectorTags) {
                 if (startsWith(inputType, supportedVectorTag)) {
                     if (order_list.size() < 1) {
-                        LOG(ERROR) << "OpenVINOInferenceCalculator GetContract error. Order list is requiered for vector types: " << inputType;
+                        LOG(ERROR) << "OpenVINOInferenceCalculator GetContract error. Order list is required for vector types: " << inputType;
                         return false;
                     }
                 }
