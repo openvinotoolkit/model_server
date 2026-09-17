@@ -39,20 +39,19 @@ class ByteTrackCalculatorTest : public ::testing::Test {
 protected:
     std::unique_ptr<CalculatorRunner> MakeRunner(float track_high_threshold, float track_low_threshold, float new_track_threshold, float matching_threshold, int track_buffer, bool fuse_score) {
         std::string pbtxt = absl::StrFormat(R"pb(node {
-  calculator: "ByteTrackCalculator"
-  input_stream: "DETECTIONS:output_detections"
-  output_stream: "DETECTIONS:tracked_detections"
-  options: {
-    [mediapipe.ByteTrackCalculatorOptions.ext] {
-      track_high_threshold:%f
-      track_low_threshold:%f
-      new_track_threshold:%f
-      matching_threshold: %f
-      track_buffer: %d
-      fuse_score: %v
-    }
-  }
-})pb",
+                                                   calculator: "ByteTrackCalculator"
+                                                   input_stream: "DETECTIONS:output_detections"
+                                                   output_stream: "DETECTIONS:tracked_detections"
+                                                   options: {
+                                                           [mediapipe.ByteTrackCalculatorOptions.ext] {
+                                                             track_high_threshold: % f
+                                                             track_low_threshold: % f
+                                                             new_track_threshold: % f
+                                                             matching_threshold: % f
+                                                             track_buffer: % d
+                                                             fuse_score: % v
+                                                           }}
+                                                 })pb",
             track_high_threshold, track_low_threshold, new_track_threshold, matching_threshold, track_buffer, fuse_score);
         return std::make_unique<CalculatorRunner>(pbtxt);
     }
