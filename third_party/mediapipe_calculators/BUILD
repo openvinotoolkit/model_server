@@ -70,11 +70,7 @@ cc_library(
         "@mediapipe//mediapipe/calculators/core:vector_size_calculator",
         "@mediapipe//mediapipe/calculators/core:packet_sequencer_calculator",
         "@mediapipe//mediapipe/calculators/core:merge_to_vector_calculator",
-        #TENSORFLOW LITE BELOW
-        "@mediapipe//mediapipe/calculators/tflite:ssd_anchors_calculator",
-        "@mediapipe//mediapipe/calculators/tflite:tflite_converter_calculator",
-        "@mediapipe//mediapipe/calculators/tflite:tflite_tensors_to_detections_calculator",
-        
+
         "@mediapipe//mediapipe/calculators/util:annotation_overlay_calculator",
         "@mediapipe//mediapipe/calculators/util:detection_label_id_to_text_calculator",
         "@mediapipe//mediapipe/calculators/util:detections_to_render_data_calculator",

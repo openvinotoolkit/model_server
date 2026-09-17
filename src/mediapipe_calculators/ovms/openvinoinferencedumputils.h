@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2026 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,23 +14,16 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <map>
+#include <string>
 
-#pragma warning(push)
-#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow/core/framework/tensor.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
+namespace ov {
+class Tensor;
+}
 
-#include "precision.hpp"
+namespace mediapipe {
 
-using TFSDataType = tensorflow::DataType;  // TODO @atobiszei since we dont have TFS now we can rename to TFDataType?
+using InferenceInput = std::map<std::string, ov::Tensor>;
+void dumpOvTensorInput(const InferenceInput& input, const std::string& dumpDirectoryName);
 
-namespace ovms {
-
-Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype);
-TFSDataType getPrecisionAsDataType(Precision precision);
-
-}  // namespace ovms
+}  // namespace mediapipe
