@@ -275,7 +275,7 @@ absl::Status OpenVINOInferenceCalculator::Process(CalculatorContext* cc) {
 
         try {
             if (startsWith(tag, OVTENSORS_TAG)) {
-                DESERIALIZE_TENSORS(ov::Tensor,);  // NOLINT(whitespace/comma)
+                DESERIALIZE_TENSORS(ov::Tensor, );  // NOLINT(whitespace/comma)
             } else if (startsWith(tag, MPTENSORS_TAG)) {
                 DESERIALIZE_TENSORS(Tensor, convertMPTensor2OVTensor);
             } else if (startsWith(tag, OVTENSOR_TAG)) {
