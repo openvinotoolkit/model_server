@@ -223,6 +223,9 @@ $(GIT_CONFIG_FILE):
 	@git config --file $@ url."https://x-access-token:$(TOKEN)@github.com/".insteadOf https://github.com/
 endif
 
+# Mount .gitconfig into unit-test containers when present so git operations can reuse the token-authenticated config.
+GIT_CONFIG_MOUNT = $(if $(wildcard .gitconfig),-v $(shell realpath .gitconfig):/root/.gitconfig:ro,)
+
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
@@ -674,6 +677,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		$(GIT_CONFIG_MOUNT) \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
@@ -691,6 +695,7 @@ else
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		$(GIT_CONFIG_MOUNT) \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e JOBS=$(JOBS) \
