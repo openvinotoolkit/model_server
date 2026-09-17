@@ -1226,7 +1226,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasReasoningConten
     ASSERT_NE(serialized.find("\"finish_reason\":\"stop\""), std::string::npos) << serialized;
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserPromotesReasoningAfterEffectiveDisableThinking) {
+TEST_F(HttpOpenAIHandlerParsingTest, Granite42ReasoningParserPromotesReasoningAfterEffectiveDisableThinking) {
     std::string json = R"({
         "model": "granite",
         "messages": [{"role": "user", "content": "Reply."}],
@@ -1249,7 +1249,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserPromotesReasoningAfter
     EXPECT_EQ(serialized.find("\"reasoning_content\""), std::string::npos) << serialized;
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserForceNonemptyContentUsesUnaryPromotion) {
+TEST_F(HttpOpenAIHandlerParsingTest, Granite42ReasoningParserForceNonemptyContentUsesUnaryPromotion) {
     std::string json = R"({
         "model": "granite",
         "messages": [{"role": "user", "content": "Reply."}],
@@ -1272,7 +1272,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserForceNonemptyContentUs
     EXPECT_EQ(serialized.find("\"reasoning_content\""), std::string::npos) << serialized;
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserDoesNotPromotePresentEmptyFinalContent) {
+TEST_F(HttpOpenAIHandlerParsingTest, Granite42ReasoningParserDoesNotPromotePresentEmptyFinalContent) {
     std::string json = R"({
         "model": "granite",
         "messages": [{"role": "user", "content": "Reply."}],
@@ -1308,7 +1308,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserDoesNotPromotePresentE
     EXPECT_NE(serialized.find("\"content\":\"\""), std::string::npos) << serialized;
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserRequiresBooleanTemplateKwargsForPromotion) {
+TEST_F(HttpOpenAIHandlerParsingTest, Granite42ReasoningParserRequiresBooleanTemplateKwargsForPromotion) {
     std::string json = R"({
         "model": "granite",
         "messages": [{"role": "user", "content": "Reply."}],
@@ -1331,7 +1331,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserRequiresBooleanTemplat
     EXPECT_NE(serialized.find("\"content\":\"\""), std::string::npos) << serialized;
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserDoesNotPromoteWhenThinkingIsExplicitlyEnabled) {
+TEST_F(HttpOpenAIHandlerParsingTest, Granite42ReasoningParserDoesNotPromoteWhenThinkingIsExplicitlyEnabled) {
     std::string json = R"({
         "model": "granite",
         "messages": [{"role": "user", "content": "Reply."}],
@@ -1354,7 +1354,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserDoesNotPromoteWhenThin
     EXPECT_NE(serialized.find("\"content\":\"\""), std::string::npos) << serialized;
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, GraniteThinkingParserRequiresBooleanForceNonemptyContent) {
+TEST_F(HttpOpenAIHandlerParsingTest, Granite42ReasoningParserRequiresBooleanForceNonemptyContent) {
     std::string json = R"({
         "model": "granite",
         "messages": [{"role": "user", "content": "Reply."}],

@@ -30,7 +30,7 @@ namespace ovms {
 // The constructor flag is derived from the effective chat_template_kwargs after
 // OpenAI reasoning-effort processing, keeping RapidJSON request handling out of
 // the parser itself.
-class Granite42ThinkingParser final : public BaseOutputParser {
+class Granite42ReasoningParser final : public BaseOutputParser {
     bool promoteReasoningToContent_ = false;
     bool phaseEntryTagConsumed_ = false;
     // Streaming keeps a fused <think> marker in the reasoning delta. Unary
@@ -52,7 +52,7 @@ class Granite42ThinkingParser final : public BaseOutputParser {
     size_t emittedReasoningDeltaCount_ = 0;
 
 public:
-    Granite42ThinkingParser() = delete;
+    Granite42ReasoningParser() = delete;
 
     static OutputParsingConfig defaultParsingConfig() {
         OutputParsingConfig cfg;
@@ -71,7 +71,7 @@ public:
         return cfg;
     }
 
-    explicit Granite42ThinkingParser(ov::genai::Tokenizer& tokenizer,
+    explicit Granite42ReasoningParser(ov::genai::Tokenizer& tokenizer,
         bool promoteReasoningToContent = false) :
         BaseOutputParser(tokenizer, defaultParsingConfig()),
         promoteReasoningToContent_(promoteReasoningToContent) {}

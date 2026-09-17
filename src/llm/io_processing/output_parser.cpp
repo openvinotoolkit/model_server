@@ -41,7 +41,7 @@
 #include "minicpm5/minicpm5_tool_parser.hpp"
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
 #include "granite42/granite42_content_parser.hpp"
-#include "granite42/granite42_thinking_parser.hpp"
+#include "granite42/granite42_reasoning_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -237,7 +237,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (reasoningParserName == "onyx") {
         reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
     } else if (reasoningParserName == "granite42") {
-        reasoningParser = std::make_unique<Granite42ThinkingParser>(tokenizer, granitePromoteReasoningToContent);
+        reasoningParser = std::make_unique<Granite42ReasoningParser>(tokenizer, granitePromoteReasoningToContent);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());

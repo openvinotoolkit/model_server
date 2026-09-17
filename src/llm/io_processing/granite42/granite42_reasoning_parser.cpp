@@ -19,11 +19,11 @@
 #include <utility>
 #include <variant>
 
-#include "granite42_thinking_parser.hpp"
+#include "granite42_reasoning_parser.hpp"
 
 namespace ovms {
 
-std::optional<Delta> Granite42ThinkingParser::parseChunk(
+std::optional<Delta> Granite42ReasoningParser::parseChunk(
     const std::string& chunk,
     const std::vector<int64_t>& tokens,
     ov::genai::GenerationFinishReason /*finishReason*/) {
@@ -113,7 +113,7 @@ std::optional<Delta> Granite42ThinkingParser::parseChunk(
     return ReasoningDelta{std::move(reasoning)};
 }
 
-void Granite42ThinkingParser::finalizeUnaryDeltas(
+void Granite42ReasoningParser::finalizeUnaryDeltas(
     std::vector<Delta>& deltas,
     bool finalContentWasPresent) const {
     // IBM's unary parent partitions on the first generated <think> marker.
