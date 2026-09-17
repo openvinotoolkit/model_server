@@ -254,9 +254,7 @@ packages = {
     },
     OvmsBaseType.UBUNTU24: {
         'libicu74',
-        'tzdata',
-        'netbase',
-        'libreadline8t64'},
+    },
     OvmsBaseType.UBUNTU24_PYTHON: {
         'libpython3.12t64',
         'libpython3.12-minimal',
