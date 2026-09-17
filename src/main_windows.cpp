@@ -283,7 +283,10 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
         this->setServiceStopStatusWithError(workerWin32Error);
     } else if (workerExitCode == ERROR_SUCCESS) {
         this->setServiceStopStatusWithSuccess();
-    } else if (workerExitCode <= static_cast<DWORD>(OVMS_EX_WARNING)) {
+    // Map known OVMS application exit codes through setServiceStopStatusWithExitCode
+    // so SCM receives the established Win32 status translation instead of the raw code.
+    // OVMS_EX_WARNING, OVMS_EX_FAILURE, OVMS_EX_USAGE
+    } else if (workerExitCode <= static_cast<DWORD>(OVMS_EX_USAGE)) {
         this->setServiceStopStatusWithExitCode(static_cast<int>(workerExitCode));
     } else {
         this->setServiceStopStatusWithError(workerExitCode);
@@ -575,6 +578,9 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
             DEBUG_LOG("serviceWorkerThread: Starting ovms from parameters.");
             ovmsService->SetUp(params);
         }
+        if (serviceStopRequested.load()) {
+            break;
+        }
         // Check thread not exited
         if (!ovmsService->isRunning()) {
             DEBUG_LOG("serviceWorkerThread: Server thread is not running.")
@@ -582,6 +588,9 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
         }
 
         if (!ovmsService->started && ovmsService->checkModulesStarted()) {
+            if (serviceStopRequested.load()) {
+                break;
+            }
             // Tell the service controller we are started
             OvmsWindowsServiceManager::setServiceRunningStatus();
             ovmsService->started = true;
