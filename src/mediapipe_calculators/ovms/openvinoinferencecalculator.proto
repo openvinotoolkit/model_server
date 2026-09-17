@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2026 Intel Corporation
+// Copyright 2023 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,24 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
 
-#pragma warning(push)
-#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow/core/framework/tensor.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
+syntax = "proto2";
+package mediapipe;
 
-#include "precision.hpp"
+import "mediapipe/framework/calculator.proto";
 
-using TFSDataType = tensorflow::DataType;  // TODO @atobiszei since we dont have TFS now we can rename to TFDataType?
-
-namespace ovms {
-
-Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype);
-TFSDataType getPrecisionAsDataType(Precision precision);
-
-}  // namespace ovms
+message OpenVINOInferenceCalculatorOptions {
+  extend mediapipe.CalculatorOptions {
+    // https://github.com/google/mediapipe/issues/634 have to be unique in app
+    // no rule to obtain this
+    optional OpenVINOInferenceCalculatorOptions ext = 113473743;
+    }
+    map<string, string> tag_to_input_tensor_names = 1;
+    map<string, string> tag_to_output_tensor_names = 2;
+    // repeated gives optional option by default
+    repeated string input_order_list = 3;
+    repeated string output_order_list = 4;
+}
