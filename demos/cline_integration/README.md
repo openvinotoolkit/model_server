@@ -23,8 +23,9 @@ so that Cline runs entirely on your own machine, without sending code or prompts
 | `OpenVINO/Qwen3.8-27B-int8-ov` | Vision-capable (VLM); general purpose chat/agent model |
 | `OpenVINO/Qwen3.6-35B-A3B-int4-ov` | Vision-capable (VLM); general purpose chat/agent model |
 | `OpenVINO/Muse-Glimmer-30B-int4-ov` | Vision-capable (VLM); general purpose chat/agent model |
+| `OpenVINO/gpt-oss-20B-int4-ov` | General purpose chat/agent model |
 | `OpenVINO/Qwen3-Coder-Next` | **To be published soon;** Big coding model; available only on PTL with minimum 64GB of RAM |
-| `OpenVINO/LFM2.5-8B-A1B-int4-ov` | Smaller model, use when RAM/VRAM is limited or for quick, low-latency edits; not recommended for harder coding tasks |
+| `OpenVINO/Qwen3.5-9B-int4-ov` | Smaller model, use when RAM/VRAM is limited or for quick, low-latency edits; not recommended for harder coding tasks |
 
 ## Deploy OVMS
 
@@ -61,7 +62,7 @@ Open Cline's settings and add a new API provider configuration:
 - **Model ID:** the `--model_name` you used when starting OVMS, e.g. `ovms-model`
 
 Cline lets Plan mode and Act mode use different models/providers, so you can, for example, keep a small model like
-`LFM2.5-8B-A1B` for quick Plan-mode questions and switch to `Qwen3.8-27B` (on B70) for Act-mode code changes. 
+`Qwen3.5-9B` for quick Plan-mode questions and switch to `Qwen3.8-27B` (on B70) for Act-mode code changes. 
 You can set that checking **Use different models for Plan and Act modes**.
 
 ## Usage examples
@@ -99,22 +100,6 @@ completion request. OVMS supports the OpenAI API `reasoning_effort` field native
 across all of the suggested models above, regardless of the underlying chat template.
 It may be changed in Cline's **Settings** under **Reasoning Effort** section.
 
-## MCP usage
-
-Cline can call tools exposed by MCP servers, the same way it calls its own built-in tools. Reuse the weather MCP
-server from the [AI Agents with MCP servers](../continuous_batching/agentic_ai/README.md) demo, or point Cline at any other MCP server, by clicking **Customize** icon and providing:
-- **Server name**
-- **Server URL**
-- **Transport Type**
-
-![mcp_config](./mcp_config.png)
-
-Once the server is registered and enabled, Act-mode prompts such as "What is the current weather in Tokyo?" will
-make the OVMS-served model emit a tool call that Cline routes to the MCP server, exactly like the standalone agent
-script in the MCP demo above, but from within the editor.
-
-![mcp_usage](./mcp_usage.png)
-
 ## Coding task
 
 For coding task example check [CodingAgenticWorflow Demo](https://github.com/intel-samples/agentic-demos/tree/main/CodingAgenticWorkflow#setup-ovms-server).
@@ -125,7 +110,7 @@ For coding task example check [CodingAgenticWorflow Demo](https://github.com/int
   template) with Cline's built-in tools (terminal, file read/write, browser) and any MCP servers you register,
   letting Cline plan and execute multi-step tasks autonomously.
 - **Coding**: Use `Qwen3.8-27B` on B70 or `Qwen3-Coder-Next` on PTL for the strongest code generation/editing quality among the suggested models;
-  fall back to `LFM2.5-8B-A1B` for lightweight or latency-sensitive edits.
+  fall back to `Qwen3.5-9B` for lightweight or latency-sensitive edits.
 - **MCP**: any MCP server (weather, filesystem, browser, etc.) becomes available to Cline the same way it is
   available to the OpenAI Agents SDK example in the agentic AI demo.
 - **Image input**: use `Qwen3.8-27B`, `Qwen3.6-35B-A3B-int4-ov` or `Muse-Glimmer-30B-int4-ov` for prompts that include screenshots or diagrams.
