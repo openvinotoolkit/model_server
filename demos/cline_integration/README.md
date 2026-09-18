@@ -9,23 +9,21 @@ so that Cline runs entirely on your own machine, without sending code or prompts
 
 ## Requirements
 - Windows (standalone package) or Linux (Docker)
-- Python installed (for model preparation only)
 - Visual Studio Code with the [Cline extension](https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev) installed
 - Make sure that Cline works with `next` version (to change it go to Visual Studio Code settings and search `@ext:saoudrizwan.claude-dev`, check `next` option from dropdown) 
-- Hardware: Intel Panther Lake (PTL, Core Ultra iGPU with large unified memory) or a discrete Intel Arc B70 GPU
-  (dedicated VRAM). All of the suggested models below (except `Qwen3-Coder-Next`) can run on either, though B70 gives better performance.
+- Hardware: Tested on Intel Core Ultra iGPU with 32GB RAM and a discrete Intel Arc B70 GPU (dedicated VRAM). `Qwen3-Coder-Next` can be deployed on iGPU with 64GB RAM on board.
 - Memory requirements depend on the chosen model (see table below)
 
 ## Suggested models
 
-| Model  | Notes |
-|---|---|
-| `OpenVINO/Qwen3.8-27B-int8-ov` | Vision-capable (VLM); general purpose chat/agent model |
-| `OpenVINO/Qwen3.6-35B-A3B-int4-ov` | Vision-capable (VLM); general purpose chat/agent model |
-| `OpenVINO/Muse-Glimmer-30B-int4-ov` | Vision-capable (VLM); general purpose chat/agent model |
-| `OpenVINO/gpt-oss-20B-int4-ov` | General purpose chat/agent model |
-| `OpenVINO/Qwen3-Coder-Next` | **To be published soon;** Big coding model; available only on PTL with minimum 64GB of RAM |
-| `OpenVINO/Qwen3.5-9B-int4-ov` | Smaller model, use when RAM/VRAM is limited or for quick, low-latency edits; not recommended for harder coding tasks |
+| Model  | HF Link | Notes |
+|---|---|---|
+| `OpenVINO/Qwen3.8-27B-int8-ov` | [link](https://huggingface.co/OpenVINO/Qwen3.8-27B-int8-ov) | Vision-capable (VLM); general purpose chat/agent model |
+| `OpenVINO/Qwen3.6-35B-A3B-int4-ov` | [link](https://huggingface.co/OpenVINO/Qwen3.6-35B-A3B-int4-ov) | Vision-capable (VLM); general purpose chat/agent model |
+| `OpenVINO/Muse-Glimmer-30B-int4-ov` | [link](https://huggingface.co/OpenVINO/Muse-Glimmer-30B-int4-ov) | Vision-capable (VLM); general purpose chat/agent model |
+| `OpenVINO/gpt-oss-20B-int4-ov` | [link](https://huggingface.co/OpenVINO/gpt-oss-20b-int4-ov) | General purpose chat/agent model |
+| `OpenVINO/Qwen3-Coder-Next` | **To be published soon** | Big coding model; available only on iGPU with minimum 64GB of RAM |
+| `OpenVINO/Qwen3.5-9B-int4-ov` | [link](https://huggingface.co/OpenVINO/Qwen3.5-9B-int4-ov) | Smaller model, use when RAM/VRAM is limited or for quick, low-latency edits; not recommended for harder coding tasks |
 
 ## Deploy OVMS
 
@@ -34,7 +32,7 @@ so that Cline runs entirely on your own machine, without sending code or prompts
 All models can be deployed with the same command, only `--source_model` parameter should be changed to desired model.
 ```bat
 mkdir c:\models
-ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3.8-27B-int8-ov --rest_port 8000 --model_name ovms-model
+ovms --model_repository_path c:\models --source_model OpenVINO/Qwen3.8-27B-int8-ov --rest_port 8000
 ```
 
 
@@ -46,7 +44,7 @@ mkdir -p ${HOME}/models
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi) 
 docker run -d -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/models:/models/:rw ${GPU_ARGS} \
     openvino/model_server:latest-gpu \
-    --model_repository_path /models --source_model OpenVINO/Qwen3.8-27B-int8-ov --rest_port 8000 --model_name ovms-model
+    --model_repository_path /models --source_model OpenVINO/Qwen3.8-27B-int8-ov --rest_port 8000
 ```
 
 ## Set Up Visual Studio Code
@@ -59,7 +57,7 @@ Open Cline's settings and add a new API provider configuration:
 - **API Provider:** `OpenAI Compatible`
 - **Base URL:** `http://localhost:8000/v1`
 - **API Key:** any placeholder value, e.g. `unused` (unless configured on OVMS server side)
-- **Model ID:** the `--model_name` you used when starting OVMS, e.g. `ovms-model`
+- **Model ID:** value provided as `--source_model`, e.g. `OpenVINO/Qwen3.8-27B-int8-ov` or as the `--model_name` e.g. `ovms-model`
 
 Cline lets Plan mode and Act mode use different models/providers, so you can, for example, keep a small model like
 `Qwen3.5-9B` for quick Plan-mode questions and switch to `Qwen3.8-27B` (on B70) for Act-mode code changes. 
@@ -109,7 +107,7 @@ For coding task example check [CodingAgenticWorflow Demo](https://github.com/int
 - **Agentic**: Act mode combines the model's tool-calling ability (auto-detected by OVMS from the model's chat
   template) with Cline's built-in tools (terminal, file read/write, browser) and any MCP servers you register,
   letting Cline plan and execute multi-step tasks autonomously.
-- **Coding**: Use `Qwen3.8-27B` on B70 or `Qwen3-Coder-Next` on PTL for the strongest code generation/editing quality among the suggested models;
+- **Coding**: Use `Qwen3.8-27B` on B70 or `Qwen3-Coder-Next` on iGPU for the strongest code generation/editing quality among the suggested models;
   fall back to `Qwen3.5-9B` for lightweight or latency-sensitive edits.
 - **MCP**: any MCP server (weather, filesystem, browser, etc.) becomes available to Cline the same way it is
   available to the OpenAI Agents SDK example in the agentic AI demo.
