@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <limits>
 #include <optional>
 
 #include <gmock/gmock.h>
@@ -101,6 +102,23 @@ TEST_F(KFSMakeJsonFromPredictResponseRawTest, Positive) {
             "data": [5, 2, 3, 8, -2, -100, 0, 125, 4, -1]
         }]
 })");
+}
+
+TEST_F(KFSMakeJsonFromPredictResponseRawTest, NonFiniteInfFloatError) {
+    float bad[8] = {5.0f, std::numeric_limits<float>::infinity(), -3.0f, 2.5f, 9.0f, 55.5f, -0.5f, -1.5f};
+    proto.mutable_raw_output_contents(0)->assign(reinterpret_cast<const char*>(bad), 8 * sizeof(float));
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::JSON_SERIALIZATION_ERROR);
+}
+
+TEST_F(KFSMakeJsonFromPredictResponseRawTest, NonFiniteNaNFloatError) {
+    float bad[8] = {std::numeric_limits<float>::quiet_NaN(), 10.0f, -3.0f, 2.5f, 9.0f, 55.5f, -0.5f, -1.5f};
+    proto.mutable_raw_output_contents(0)->assign(reinterpret_cast<const char*>(bad), 8 * sizeof(float));
+    EXPECT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::JSON_SERIALIZATION_ERROR);
+}
+
+TEST_F(KFSMakeJsonFromPredictResponseRawTest, IntOutputsUnaffectedByFiniteCheck) {
+    // sanity: integer outputs must still serialize fine (helper returns true for them)
+    ASSERT_EQ(makeJsonFromPredictResponse(proto, &json, inferenceHeaderContentLength), StatusCode::OK);
 }
 
 TEST_F(KFSMakeJsonFromPredictResponseRawTest, EmptyRawOutputContentsError) {
