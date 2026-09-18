@@ -393,8 +393,6 @@ TEST(CurlDownloaderProgressTest, FilledCellsTrackRatio) {
     EXPECT_EQ(ovms::computeProgressBarCells(100, 100, 50), 50);
 }
 
-// Some servers report more bytes transferred than announced; the bar must stay within its width
-// so the padding loop below it always runs a sane number of times.
 TEST(CurlDownloaderProgressTest, FilledCellsClampToBarWidth) {
     EXPECT_EQ(ovms::computeProgressBarCells(200, 100, 50), 50);
     EXPECT_EQ(ovms::computeProgressBarCells(100, 100, 0), 0);
@@ -2528,7 +2526,6 @@ TEST_F(HfPullModelModuleLoraTest, ResolveHfLoraFilenames) {
     ovms::ImageGenerationGraphSettingsImpl graphSettings;
     ovms::LoraAdapterSettings adapter;
     adapter.alias = "pokemon";
-    // juliensimon/sd-pokemon-lora was removed upstream; replaced with a repo verified to still exist.
     adapter.sourceLora = "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning";
     adapter.sourceType = ovms::LoraSourceType::HF_REPO;
     graphSettings.loraAdapters.push_back(adapter);
@@ -2556,7 +2553,6 @@ TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
     ovms::ImageGenerationGraphSettingsImpl graphSettings;
     ovms::LoraAdapterSettings adapter;
     adapter.alias = "pokemon";
-    // juliensimon/sd-pokemon-lora was removed upstream; replaced with a repo verified to still exist.
     adapter.sourceLora = "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning";
     adapter.safetensorsFile = "pytorch_lora_weights.safetensors";  // explicit filename — skips HF API resolve
     adapter.sourceType = ovms::LoraSourceType::HF_REPO;
@@ -2616,7 +2612,6 @@ TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
     std::string modelName = "OpenVINO/stable-diffusion-v1-5-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "image_generation";
-    // juliensimon/sd-pokemon-lora was removed upstream; replaced with a repo verified to still exist.
     std::string sourceLoras = "pokemon=MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning@pytorch_lora_weights.safetensors";
     ::SetUpServerForDownloadWithLoras(this->t, this->server, modelName, downloadPath, task, sourceLoras);
 
