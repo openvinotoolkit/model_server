@@ -91,7 +91,7 @@ models
 :::{dropdown} **Deploying with Docker**
 ```bash
 docker run -d --rm $(test -d /dev/dri && echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)") \
-  -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:weekly \
+  -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:2026.4.0-gpu \
   --rest_port 8000 --config_path /workspace/config.json
 ```
 
