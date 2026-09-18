@@ -632,26 +632,38 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
                 SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request.model_name(), request.model_version(), details);
                 return Status(StatusCode::INVALID_SHAPE, details);
             }
-            rawShape.emplace_back(requestInputItr->shape()[i]);
+            // mediapipe::Tensor::Shape stores dimensions as int; reject before the narrowing conversion below.
+            if (requestInputItr->shape()[i] > static_cast<int64_t>(std::numeric_limits<int>::max())) {
+                std::stringstream ss;
+                ss << "Dimension size too large for Mediapipe tensor: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
+                const std::string details = ss.str();
+                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request.model_name(), request.model_version(), details);
+                return Status(StatusCode::INVALID_SHAPE, details);
+            }
+            rawShape.emplace_back(static_cast<int>(requestInputItr->shape()[i]));
         }
-        mediapipe::Tensor::Shape tensorShape{rawShape};
-        outTensor = std::make_unique<mediapipe::Tensor>(datatype, tensorShape);
-        void* data;
-        SET_DATA_FROM_MP_TENSOR(outTensor, GetCpuWriteView);
         ov::element::Type precision = ovmsPrecisionToIE2Precision(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
         size_t expectedBytes = 1;
         bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, precision.size(), expectedBytes);
-        if (!expectedBufferSizeValid) {
+        // mediapipe::Tensor stores byte count as int (see Tensor::bytes()), so guard against overflow here too.
+        if (!expectedBufferSizeValid || expectedBytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
             const std::string details = "Provided shape and datatype declare too large buffer.";
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
             return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
         if (request.raw_input_contents().size()) {
+            OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, request.raw_input_contents().at(inputIndex), requestedName, request));
+        } else {
+            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
+        }
+        mediapipe::Tensor::Shape tensorShape{rawShape};
+        outTensor = std::make_unique<mediapipe::Tensor>(datatype, tensorShape);
+        void* data;
+        SET_DATA_FROM_MP_TENSOR(outTensor, GetCpuWriteView);
+        if (request.raw_input_contents().size()) {
             auto& bufferLocation = request.raw_input_contents().at(inputIndex);
-            OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, bufferLocation, requestedName, request));
             std::memcpy(data, bufferLocation.data(), bufferLocation.size());
         } else {  // need to copy each value separately
-            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
             switch (datatype) {
             case mediapipe::Tensor::ElementType::kFloat32: {
                 COPY_INPUT_VALUE_BY_VALUE(float, fp32);
@@ -724,20 +736,17 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
             return Status(StatusCode::INVALID_CONTENT_SIZE, details);
         }
+        if (request.raw_input_contents().size()) {
+            OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, request.raw_input_contents().at(inputIndex), requestedName, request));
+        } else {
+            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
+        }
         outTensor = std::make_unique<tensorflow::Tensor>(datatype, tensorShape);
         if (request.raw_input_contents().size()) {
             auto& bufferLocation = request.raw_input_contents().at(inputIndex);
-            if (outTensor->TotalBytes() != bufferLocation.size()) {
-                std::stringstream ss;
-                ss << "Mediapipe deserialization content size mismatch; allocated TF Tensor: " << outTensor->TotalBytes() << " bytes vs KServe buffer: " << bufferLocation.size() << " bytes";
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
-                return Status(StatusCode::INVALID_CONTENT_SIZE, details);
-            }
             void* tfTensordata = outTensor->data();
             std::memcpy(tfTensordata, bufferLocation.data(), bufferLocation.size());
         } else {
-            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
             void* data = outTensor->data();
             switch (datatype) {
             case TFSDataType::DT_FLOAT: {
@@ -1183,6 +1192,7 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
         SPDLOG_DEBUG("Request processing Mediapipe ImageFrame: {}", inputName);
         status = createPacketAndPushIntoGraph<mediapipe::ImageFrame, Holder>(inputName, request, graph, timestamp, nullptr);
     } else if (inputPacketType == mediapipe_packet_type_enum::OVMS_PY_TENSOR) {
+        SPDLOG_DEBUG("Request processing OVMS Python input: {}", inputName);
         status = createPacketAndPushPyTensorIntoGraph(inputName, request, graph, timestamp);
     } else if ((inputPacketType == mediapipe_packet_type_enum::OVTENSOR) ||
                (inputPacketType == mediapipe_packet_type_enum::UNKNOWN)) {
@@ -1286,6 +1296,7 @@ Status onPacketReadySerializeImpl(
         SPDLOG_DEBUG("Response processing Mediapipe Image Frame: {}", packetName);
         status = receiveAndSerializePacket<mediapipe::ImageFrame>(packet, response, packetName);
     } else if (packetType == mediapipe_packet_type_enum::OVMS_PY_TENSOR) {
+        SPDLOG_DEBUG("Response processing Ovms Python Tensor name: {}", packetName);
         status = receiveAndSerializePythonTensorIfSupported(packet, response, packetName);
     } else if ((packetType == mediapipe_packet_type_enum::OVTENSOR) ||
                (packetType == mediapipe_packet_type_enum::UNKNOWN)) {
