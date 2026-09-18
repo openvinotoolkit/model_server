@@ -40,6 +40,31 @@ namespace ovms {
 
 constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
 
+namespace {
+
+// granite_thinking_parser.py checks Python identity (is False / is True), so
+// accept only JSON booleans here. This runs after applyReasoningEffort() has
+// merged its effective enable_thinking value into chat_template_kwargs.
+bool shouldPromoteGraniteReasoningToContent(const Document& doc) {
+    const auto kwargsIt = doc.FindMember("chat_template_kwargs");
+    if (kwargsIt == doc.MemberEnd() || !kwargsIt->value.IsObject()) {
+        return false;
+    }
+
+    const auto& kwargs = kwargsIt->value;
+    const auto enableThinkingIt = kwargs.FindMember("enable_thinking");
+    const bool thinkingDisabled = enableThinkingIt != kwargs.MemberEnd() &&
+                                 enableThinkingIt->value.IsBool() &&
+                                 !enableThinkingIt->value.GetBool();
+    const auto forceContentIt = kwargs.FindMember("force_nonempty_content");
+    const bool forceNonemptyContent = forceContentIt != kwargs.MemberEnd() &&
+                                      forceContentIt->value.IsBool() &&
+                                      forceContentIt->value.GetBool();
+    return thinkingDisabled || forceNonemptyContent;
+}
+
+}  // namespace
+
 ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value) {
     if (value.IsNull()) {
         return ov::genai::JsonContainer(nullptr);
@@ -309,7 +334,11 @@ absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLim
 void OpenAIApiHandler::initOutputParser() {
     if (toolParserName.empty() && reasoningParserName.empty())
         return;
-    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, request.toolNameSchemaMap);
+    const bool granitePromoteReasoningToContent =
+        reasoningParserName == "granite42" &&
+        shouldPromoteGraniteReasoningToContent(doc);
+    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName,
+        request.toolNameSchemaMap, granitePromoteReasoningToContent);
 }
 
 absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseToolsToJsonContainer() {
