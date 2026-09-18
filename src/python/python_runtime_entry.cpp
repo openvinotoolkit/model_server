@@ -537,6 +537,8 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
         prepared->chatTemplate = chatTemplateObject.release().ptr();
         prepared->toolTemplate = toolTemplateObject.release().ptr();
         *preparedHandle = prepared.release();
+        SPDLOG_LOGGER_DEBUG(ovms::modelmanager_logger, "Loaded runtime Jinja template processor. Bos token: {}, Eos token: {}, Chat template: \n{}",
+            bosToken, eosToken, locals["chat_template"].cast<std::string>());
         return true;
     } catch (const py::error_already_set& e) {
         setRuntimeOutput(e.what(), output);
