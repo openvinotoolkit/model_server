@@ -2400,6 +2400,7 @@ cc_test(
             ":test_cmd_exec",
             ":test_modelinstance_test",
             ":servable_loading_queue_test",
+            ":bytetrack_tests",
             ":test_idle_model_test",
             ":test_servable_group_manager",
             ] + select({
@@ -2460,6 +2461,8 @@ cc_test(
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator_ov",
                 "//src/image_gen:image_gen_calculator",
+                "//src/yolox:ov_yolox_tensors_to_detections_calculator",
+                "//src/bytetrack/calculators:bytetrack_calculators",
                 "@mediapipe//mediapipe/framework/stream_handler:barrier_input_stream_handler",
                 "@mediapipe//mediapipe/framework/stream_handler:early_close_input_stream_handler",
                 "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",
@@ -2584,6 +2587,25 @@ ovms_cc_test_library(
     deps = [
         "//src/servable_management:servable_loading_queue",
         "@com_google_googletest//:gtest",
+    ],
+)
+
+ovms_cc_test_library(
+    name = "bytetrack_tests",
+    testonly = True,
+    srcs = ["test/bytetrack/ov_yolox_tensors_to_detections_calculator_test.cpp",
+            "test/bytetrack/detection_color_by_id_calculator_test.cpp",],
+    deps = [
+        "@com_google_googletest//:gtest",
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework:calculator_runner",
+        "@mediapipe//mediapipe/framework/formats:detection_cc_proto",
+        "@mediapipe//mediapipe/framework:packet",
+        "@mediapipe//mediapipe/util:render_data_cc_proto",
+        "@mediapipe//mediapipe/util:color_cc_proto",
+        "//src/yolox:ov_yolox_tensors_to_detections_calculator_cc_proto",
+        "//src/bytetrack/utils:detection_color_by_id_calculator_cc_proto",
     ],
 )
 
