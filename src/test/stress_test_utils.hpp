@@ -57,7 +57,6 @@
 #include "test_with_temp_dir.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
-#include "src/tensorflow_type_utils.hpp"
 #endif
 
 using namespace ovms;

@@ -234,7 +234,7 @@ public:
         inference::ModelInferResponse* response,
         const ExecutionContext& executionContext) override;
     Status inferStream(const inference::ModelInferRequest& firstRequest,
-        grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
+        grpc::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
         const ExecutionContext& executionContext) override;
     Status infer(const HttpPayload* request,
         std::string* response,

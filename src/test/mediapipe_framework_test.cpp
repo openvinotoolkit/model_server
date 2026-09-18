@@ -45,7 +45,6 @@
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
-#include "src/tensorflow_type_utils.hpp"
 #include "src/timer.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "c_api_test_utils.hpp"

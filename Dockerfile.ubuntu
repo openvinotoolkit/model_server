@@ -159,7 +159,7 @@ ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/exter
 ENV TF_SYSTEM_LIBS="curl"
 
 # Set up Bazel
-ENV BAZEL_VERSION 6.1.1
+ENV BAZEL_VERSION 7.4.1
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \

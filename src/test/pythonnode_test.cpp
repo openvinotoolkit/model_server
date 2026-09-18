@@ -45,7 +45,6 @@
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
-#include "src/tensorflow_type_utils.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"

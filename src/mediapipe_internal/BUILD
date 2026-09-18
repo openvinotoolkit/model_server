@@ -240,12 +240,8 @@ ovms_cc_library(
     name = "libovms_mediapipe_runtime_owner",
     deps = [
         ":libovms_mediapipe",
-        "//src:kfs_graph_executor_impl_runtime",
+        "//src:kfs_graph_executor_impl",
         "//src:libovms_mediapipe_http_executor",
-        "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
-        "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
-        "@mediapipe//mediapipe/calculators/geti/utils:utils",
-        "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
         "//src/embeddings:embeddingscalculator_ov",
         "//src/rerank:rerankcalculator_ov",
         "//src/llm:llmcalculator",

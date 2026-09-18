@@ -34,7 +34,7 @@ def check_header(fd):
 
 def check_function(fd):
     # Add space separated exceptions for given file in the dictionary
-    fix_applied = {"./src/test/ensemble_flow_custom_node_tests.cpp":"size_t strLen = std::strlen(str);size_t prefixLen = std::strlen(prefix);",}
+    fix_applied = {}
 
     detected = False
     try:
@@ -83,6 +83,7 @@ def check_dir(start_dir):
         'REST_age_gender.ipynb',
         '__pycache__',
         'abseil_gcc_8.5_constant_expression.patch',
+        'absl_constexpr_fix.patch',
         'azure_sdk.patch',
         'cb.patch',
         'bazel-',
@@ -109,6 +110,7 @@ def check_dir(start_dir):
         'partial.patch',
         'ovms_drogon_trantor.patch',
         'gorilla.patch',
+        'grpc_missing_algorithm_include.patch',
         'opencv_cmake_flags.txt',
         'ovms-c/dist',
         'requirements.txt',
@@ -122,8 +124,6 @@ def check_dir(start_dir):
         'upb_platform_fix.patch',
         'upb_warning_turn_off.patch',
         'partial_2.18.patch',
-        'tf_2.18_logging.patch',
-        'tf_nsync_chrono.patch',
         'vehicle_images.txt',
         'bazel_rules_apple.patch',
         "go.sum",
@@ -157,6 +157,10 @@ def check_dir(start_dir):
         "ServingRuntime.yaml",
         "dummy_facebook_template.jinja",
         "mediapipe_model_api_openvino_windows.patch",
+        'model_api_json_archive.patch',
+        'com_google_protobuf_fixes.diff',
+        'ovms_no_litert.diff',
+        'ovms_strip.diff',
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates']
@@ -237,8 +241,6 @@ def check_func(start_dir):
         'tf_graph_info_multilinecomment.patch',
         'tftext.patch',
         'partial_2.18.patch',
-        'tf_2.18_logging.patch',
-        'tf_nsync_chrono.patch',
         'zlib.LICENSE.txt',
         'bazel_rules_apple.patch',
         'yarn.lock',

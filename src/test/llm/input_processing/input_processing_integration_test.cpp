@@ -445,9 +445,7 @@ INSTANTIATE_TEST_SUITE_P(BothEndpoints, InputProcessingIntegrationTest,
 // ---------------------------------------------------------------------------
 
 static std::string toBase64(const std::string& raw) {
-    std::string encoded;
-    absl::Base64Escape(raw, &encoded);
-    return encoded;
+    return absl::Base64Escape(raw);
 }
 
 TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {

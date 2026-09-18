@@ -16,6 +16,7 @@
 
 workspace(name = "ovms")
 
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # 2023-06-05
@@ -40,18 +41,46 @@ http_archive(
 
 http_archive(
     name = "bazel_skylib",
-    sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
+    sha256 = "37cdfbc6faefea94f7b37760a305c98c08981116c2bc9e821e3b423221fad8c8",
     urls = [
-        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.9.2/bazel-skylib-1.9.2.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.9.2/bazel-skylib-1.9.2.tar.gz",
     ],
 )
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 bazel_skylib_workspace()
 load("@bazel_skylib//lib:versions.bzl", "versions")
-versions.check(minimum_bazel_version = "6.0.0")
+versions.check(minimum_bazel_version = "7.0.0")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# platforms bumped to include ppc64le (needed by rules_go under bazel 7 / grpc_extra_deps).
+http_archive(
+    name = "platforms",
+    sha256 = "3384eb1c30762704fbe38e440204e114154086c8fc8a8c2e3e28441028c019a8",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/platforms/releases/download/1.0.0/platforms-1.0.0.tar.gz",
+        "https://github.com/bazelbuild/platforms/releases/download/1.0.0/platforms-1.0.0.tar.gz",
+    ],
+)
+
+# bazel_features - required by newer rules_cc / mediapipe upstream.
+http_archive(
+    name = "bazel_features",
+    sha256 = "5ac743bf5f05d88e84962e978811f2524df09602b789c92cf7ae2111ecdeda94",
+    strip_prefix = "bazel_features-1.14.0",
+    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.14.0/bazel_features-v1.14.0.tar.gz",
+)
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
+bazel_features_deps()
+
+# Newer rules_cc required by upstream mediapipe (@rules_cc//cc:cc_library.bzl, cc_binary.bzl).
+http_archive(
+    name = "rules_cc",
+    sha256 = "b8b918a85f9144c01f6cfe0f45e4f2838c7413961a8ff23bc0c6cdf8bb07a3b6",
+    strip_prefix = "rules_cc-0.1.5",
+    url = "https://github.com/bazelbuild/rules_cc/releases/download/0.1.5/rules_cc-0.1.5.tar.gz",
+)
 
 http_archive(
     name = "rules_python",
@@ -64,23 +93,25 @@ load("@rules_python//python:repositories.bzl", "py_repositories")
 
 py_repositories()
 
-# ABSL on 2023-10-18
-# Needed for MP
-# https://github.com/google-ai-edge/mediapipe/commit/743cdb747332efdfb43338d92aa6349acc40a06a
-# patch for static_assert(ValidateAsciiCasefold() == 0, "error in case conversion");
-# needs to be before MP & TF
+# ABSL pinned to a release with `absl/status/status_macros.h` (required by
+# mediapipe upstream) and compatible with protobuf 6.31 / gRPC 1.74.
 http_archive(
     name = "com_google_absl",
-    url = "https://github.com/abseil/abseil-cpp/archive/9687a8ea750bfcddf790372093245a1d041b21a3.tar.gz",
-    sha256 = "f841f78243f179326f2a80b719f2887c38fe226d288ecdc46e2aa091e6aa43bc",
-    strip_prefix = "abseil-cpp-9687a8ea750bfcddf790372093245a1d041b21a3", # MP image buildable original MP
-    patches = [
-        "@mediapipe//third_party:com_google_absl_windows_patch.diff",
-        "abseil_gcc_8.5_constant_expression.patch",
-    ],
-    patch_args = [
-        "-p1",
-    ],
+    sha256 = "6e1aee535473414164bf83e4ebc40240dec71a4701f8a642d906e95bea1aea0c",
+    strip_prefix = "abseil-cpp-20260526.0",
+    urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20260526.0.tar.gz"],
+    patches = ["@ovms//third_party/absl:absl_constexpr_fix.patch"],
+    patch_args = ["-p1"],
+    patch_tool = "patch",
+)
+
+# Pre-declare `com_google_googletest` (satisfies protobuf_deps's existing-rule
+# check) so it does not pull in a second abseil under the name `@abseil-cpp`.
+http_archive(
+    name = "com_google_googletest",
+    sha256 = "65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c",
+    strip_prefix = "googletest-1.17.0",
+    urls = ["https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"],
 )
 
 http_archive(
@@ -94,7 +125,7 @@ http_archive(
 # RapidJSON
 # Must be defined earlier than tensorflow_serving because TFS is using older rapidjson
 # Version must match openvino.genai -> jinja2cpp -> rapidjson
-# git/Jinja2Cpp/thirdparty/internal_deps.cmake
+# git/Jinja2Cpp/third_party/internal_deps.cmake
 # Date:   Tue May 9 21:31:22 2023 +0000 Avoid ptrdiff between pointers to different allocations
 http_archive(
     name = "com_github_tencent_rapidjson",
@@ -121,8 +152,9 @@ new_local_repository(
     build_file = "@//third_party/boringssl:BUILD",
 )
 
+# `@curl` is used by google_cloud_cpp (via repo_mapping) and OVMS itself.
 new_local_repository(
-    name = "linux_curl",
+    name = "curl",
     path = "/usr/",
     build_file_content = """
 cc_library(
@@ -160,24 +192,32 @@ cc_library(
 ########################################################### Mediapipe
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "87407cd28e7a9c95d9f61a098a53cf031109d451a7763e7dd1253abf8b4df422",
-    strip_prefix = "protobuf-3.19.1",
-    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.19.1.tar.gz"],
-    patches = [
-        "@mediapipe//third_party:com_google_protobuf_fixes.diff"
-    ],
-    patch_args = [
-        "-p1",
-    ],
+    sha256 = "597071a340acc5346494c119ba3a541825c3f81071fc783521b24e29a485d60f",
+    strip_prefix = "protobuf-6.31.1",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/refs/tags/v6.31.1.tar.gz"],
+    repo_mapping = {"@abseil-cpp": "@com_google_absl"},
 )
 
-################################### Official/forked mediapipe repository #########
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+protobuf_deps()
+
+load("@rules_java//java:rules_java_deps.bzl", "rules_java_dependencies")
+rules_java_dependencies()
+load("@rules_java//java:repositories.bzl", "rules_java_toolchains")
+rules_java_toolchains()
+
+################################### Upstream mediapipe repository ###############
 #### Will be used on feature release
-http_archive(
+git_repository(
     name = "mediapipe",
-    url = "https://github.com/openvinotoolkit/mediapipe/archive/1153c8688f234d3b40ed20105df7893eb517b429.tar.gz",
-    sha256 = "924f4b74fe5a32c4ae807c8387fe7c65cafceb2c9a316e211a2a0a29a53be1b5",
-    strip_prefix = "mediapipe-1153c8688f234d3b40ed20105df7893eb517b429", # top of mediapipe main branch as of 16.09.2026
+    remote = "https://github.com/google-ai-edge/mediapipe",
+    commit = "2bce9dd15fa45f267c9e5f77086997c984a9f107", # top of mediapipe master branch as of 17.09.2026
+    patches = [
+        "@ovms//third_party/mediapipe:ovms_strip.diff",
+        "@ovms//third_party/mediapipe:ovms_no_litert.diff",
+    ],
+    patch_args = ["-p1"],
+    patch_tool = "patch",
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -387,91 +427,27 @@ cc_library(
 """,
 )
 
-# We need to override upb due to false positive stringop-truncation warning
-# second patch is needed & copied from TF
-http_archive(
-    name = "upb",
-    sha256 = "61d0417abd60e65ed589c9deee7c124fe76a4106831f6ad39464e1525cef1454",
-    strip_prefix = "upb-9effcbcb27f0a665f9f345030188c0b291e32482",
-    patches = [
-            "upb_platform_fix.patch",
-            "upb_warning_turn_off.patch"
-    ],
-    patch_args = [
-        "-p1",
-    ],
-    urls = ["https://github.com/protocolbuffers/upb/archive/9effcbcb27f0a665f9f345030188c0b291e32482.tar.gz"],
-)
-
-# TensorFlow repo should always go after the other external dependencies.
-# TF on 2024-09-24 same as in Mediapipe
-_TENSORFLOW_GIT_COMMIT = "5329ec8dd396487982ef3e743f98c0195af39a6b"
-_TENSORFLOW_SHA256 = "eb1f8d740d59ea3dee91108ab1fc19d91c4e9ac2fd17d9ab86d865c3c43d81c9"
-http_archive(
-    name = "org_tensorflow",
+# grpc must be defined before grpc_deps() below so this version is picked up.
+http_archive( # 1.74.1
+    name = "com_github_grpc_grpc",
     urls = [
-      "https://github.com/tensorflow/tensorflow/archive/%s.tar.gz" % _TENSORFLOW_GIT_COMMIT,
+        "https://github.com/grpc/grpc/archive/893bdadd56dbb75fb156175afdaa2b0d47e1c15b.tar.gz",
     ],
-    patches = [
-        "@mediapipe//third_party:org_tensorflow_c_api_experimental.diff",
-        "@mediapipe//third_party:org_tensorflow_custom_ops.diff",
-        "@mediapipe//third_party:org_tensorflow_objc_build_fixes.diff",
-        "tf_2.18_logging.patch",
-        "tf_nsync_chrono.patch",
-    ],
-    patch_args = [
-        "-p1",
-    ],
-    strip_prefix = "tensorflow-%s" % _TENSORFLOW_GIT_COMMIT,
-    sha256 = _TENSORFLOW_SHA256,
-    repo_mapping = {"@curl" : "@curl"}
+    strip_prefix = "grpc-893bdadd56dbb75fb156175afdaa2b0d47e1c15b",
+    patches = ["@ovms//third_party/grpc:grpc_missing_algorithm_include.patch"],
+    patch_args = ["-p1"],
+    repo_mapping = {"@abseil-cpp": "@com_google_absl"},
 )
 
-# Initialize TensorFlow's external dependencies.
-load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
-workspace()
-# Initialize hermetic Python
-load("@org_tensorflow//third_party/xla/third_party/py:python_init_rules.bzl", "python_init_rules")
-python_init_rules()
-
-load("@org_tensorflow//third_party/xla/third_party/py:python_init_repositories.bzl", "python_init_repositories")
-python_init_repositories(
-    default_python_version = "system",
-    local_wheel_dist_folder = "dist",
-    requirements = {
-        "3.9": "@mediapipe//:requirements_lock.txt",
-        "3.10": "@mediapipe//:requirements_lock_3_10.txt",
-        "3.11": "@mediapipe//:requirements_lock_3_11.txt",
-        "3.12": "@mediapipe//:requirements_lock_3_12.txt",
-    },
-    #local_wheel_inclusion_list = ["mediapipe*"],
-    #local_wheel_workspaces = ["//:WORKSPACE"],
+# rules_pkg was previously provided transitively via TensorFlow's workspace macros.
+http_archive(
+    name = "rules_pkg",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.9.1/rules_pkg-0.9.1.tar.gz",
+        "https://github.com/bazelbuild/rules_pkg/releases/download/0.9.1/rules_pkg-0.9.1.tar.gz",
+    ],
+    sha256 = "8f9ee2dc10c1ae514ee599a8b42ed99fa262b757058f65ad3c384289ff70c4b8",
 )
-
-load("@org_tensorflow//third_party/xla/third_party/py:python_init_toolchains.bzl", "python_init_toolchains")
-python_init_toolchains()
-
-load("@org_tensorflow//third_party/xla/third_party/py:python_init_pip.bzl", "python_init_pip")
-python_init_pip()
-
-load("@pypi//:requirements.bzl", "install_deps")
-install_deps()
-# End hermetic Python initialization
-load("@org_tensorflow//tensorflow:workspace2.bzl", "workspace")
-workspace()
-load("@org_tensorflow//tensorflow:workspace1.bzl", "workspace")
-workspace()
-load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
-workspace()
-
-# required after update to mp 0.10.18
-load(
-    "@org_tensorflow//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
-    "cuda_configure",
-)
-cuda_configure(name = "local_config_cuda")
-
-
 
 # Initialize bazel package rules' external dependencies.
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
@@ -531,13 +507,9 @@ gl_cpp_workspace5()
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
-http_archive( # 1.74.1
-    name = "com_github_grpc_grpc",
-    urls = [
-        "https://github.com/grpc/grpc/archive/893bdadd56dbb75fb156175afdaa2b0d47e1c15b.tar.gz",
-    ],
-    strip_prefix = "grpc-893bdadd56dbb75fb156175afdaa2b0d47e1c15b",
-)
+
+load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
+grpc_extra_deps()
 
 # cxxopts
 http_archive(
@@ -579,13 +551,22 @@ load("@com_github_jupp0r_prometheus_cpp//bazel:repositories.bzl", "prometheus_cp
 prometheus_cpp_repositories()
 
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
-load("@mediapipe//third_party/model_api:model_api.bzl", "workspace_model_api")
+load("@ovms//third_party/model_api:model_api.bzl", "workspace_model_api")
 workspace_model_api()
 
 new_local_repository(
     name = "mediapipe_calculators",
     build_file = "@//third_party/mediapipe_calculators:BUILD",
     path = "third_party/mediapipe_calculators",
+)
+
+# Eigen — referenced by mediapipe upstream calculators (e.g. matrix_to_vector).
+http_archive(
+    name = "eigen",
+    build_file = "@mediapipe//third_party:eigen.BUILD",
+    sha256 = "35c6126e246585d9cf6600b65471582c2701aae64b784a6fd19168a90cfc841e",
+    strip_prefix = "eigen-ea13a98decd497a8c5588fb5de71b57bcf10d864",
+    urls = ["https://gitlab.com/libeigen/eigen/-/archive/ea13a98decd497a8c5588fb5de71b57bcf10d864/eigen-ea13a98decd497a8c5588fb5de71b57bcf10d864.tar.gz"],
 )
 
 http_archive(
