@@ -83,6 +83,7 @@ def check_dir(start_dir):
         'REST_age_gender.ipynb',
         '__pycache__',
         'abseil_gcc_8.5_constant_expression.patch',
+        'absl_constexpr_fix.patch',
         'azure_sdk.patch',
         'cb.patch',
         'bazel-',
@@ -109,6 +110,7 @@ def check_dir(start_dir):
         'partial.patch',
         'ovms_drogon_trantor.patch',
         'gorilla.patch',
+        'grpc_missing_algorithm_include.patch',
         'opencv_cmake_flags.txt',
         'ovms-c/dist',
         'requirements.txt',
@@ -155,6 +157,10 @@ def check_dir(start_dir):
         "ServingRuntime.yaml",
         "dummy_facebook_template.jinja",
         "mediapipe_model_api_openvino_windows.patch",
+        'model_api_json_archive.patch',
+        'com_google_protobuf_fixes.diff',
+        'ovms_no_litert.diff',
+        'ovms_strip.diff',
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates']
