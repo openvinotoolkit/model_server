@@ -117,8 +117,15 @@ std::optional<uint32_t> stou32(const std::string& input) {
         return std::nullopt;
     }
 
+    size_t idx = 0;
     try {
-        uint64_t val = std::stoul(str);
+        uint64_t val = std::stoul(str, &idx);
+        // Check if the whole string was consumed, as stou64/stoi32/stof do. Without this
+        // std::stoul stops at the first non-digit and reports success, so "12abc" parsed
+        // as 12 and "3.9" as 3.
+        if (idx != str.size()) {
+            return std::nullopt;
+        }
         if (val > std::numeric_limits<uint32_t>::max()) {
             return std::nullopt;
         }
