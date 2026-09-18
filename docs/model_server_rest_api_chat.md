@@ -195,6 +195,41 @@ curl http://localhost/v3/chat/completions \
 ```
 **Note**: check `--allowed_local_media_path` parameter described [here](parameters.md)
 
+In case of VLM models that support video understanding (e.g. Qwen3-VL), a video can be sent as a `video_url` content part. Because the server does not decode compressed video containers (mp4 etc.), the client is responsible for extracting frames from the source video and sending them as an **array of already-decoded frames**. Each element of the `url` array is a single frame in the same formats accepted by `image_url` (base64 data URI, HTTP(S) URL, or local filesystem path). Frames are sent in the order given, so extract them in temporal order:
+
+```
+curl http://localhost/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3-vl",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Describe this video."
+                },
+                {
+                    "type": "video_url",
+                    "video_url": {
+                        "url": [
+                            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD ...",
+                            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD ...",
+                            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD ..."
+                        ]
+                    }
+                }
+            ]
+        }
+    ],
+    "temperature": 0.0,
+    "max_completion_tokens": 128
+}'
+```
+
+**Note**: Unlike `image_url.url` which is a single string, `video_url.url` is an **array of strings** (one per frame). All frames of a single video must share the same height, width and channel count. The same `--allowed_media_domains` / `--allowed_local_media_path` restrictions apply to each frame reference. Multiple `video_url` parts, and mixing `image_url` and `video_url` in one message, are supported.
+
 ### Request
 
 Below we listed request parameters specified in the body as defined in OpenAI API specification. 

@@ -487,6 +487,109 @@ TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {
 }
 
 // ---------------------------------------------------------------------------
+// Video (client-extracted frames) integration test — CHAT_COMPLETIONS only.
+// The Responses endpoint does not define a video content type, so this test is
+// skipped for it. video_url.url carries an array of already-decoded frame
+// references; VideoFramesProcessor stacks them into
+// a single video tensor and emits a single <ov_genai_video_0> tag.
+// ---------------------------------------------------------------------------
+
+TEST_P(InputProcessingIntegrationTest, VideoFrames_DecodedAndTagInPrompt) {
+    if (GetParam() != Endpoint::CHAT_COMPLETIONS) {
+        GTEST_SKIP() << "video_url is only supported on the chat/completions endpoint";
+    }
+
+    // One message: text part + one video made of three frames.
+    const std::string json =
+        R"({"model":"m","messages":[{"role":"user","content":[)"
+        R"({"type":"text","text":"Describe this video."},)"
+        R"({"type":"video_url","video_url":{"url":[")" +
+        std::string(TINY_PNG) + R"(",")" + std::string(TINY_PNG) + R"(",")" +
+        std::string(TINY_PNG) + R"("]}}]}]})";
+
+    auto result = runPipeline(json, /*isVLM=*/true);
+
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+
+    // The three frames are stacked into a single [N, H, W, C] video tensor.
+    ASSERT_EQ(result.req.inputVideos.size(), 1u);
+    ASSERT_EQ(result.req.inputVideos[0].get_shape().size(), 4u);
+    EXPECT_EQ(result.req.inputVideos[0].get_shape()[0], 3u);
+    // No images were sent.
+    EXPECT_TRUE(result.req.inputImages.empty());
+    // Preserve the multipart order: [text("Describe this video."), video tag].
+    const std::string expected =
+        std::string(SMOL_DEFAULT_SYSTEM) +
+        "<|im_start|>user\nDescribe this video.\n<ov_genai_video_0><|im_end|>\n"
+        "<|im_start|>assistant\n";
+    EXPECT_EQ(result.req.promptText, expected);
+    EXPECT_GT(result.req.inputIds.get_size(), 0u);
+}
+
+// video_url content combined with image_url in the same message: both the video
+// tag and the image tag must appear, each modality filling its own tensor list.
+TEST_P(InputProcessingIntegrationTest, VideoAndImageTogether_BothTagsInPrompt) {
+    if (GetParam() != Endpoint::CHAT_COMPLETIONS) {
+        GTEST_SKIP() << "video_url is only supported on the chat/completions endpoint";
+    }
+
+    const std::string json =
+        R"({"model":"m","messages":[{"role":"user","content":[)"
+        R"({"type":"text","text":"Compare."},)"
+        R"({"type":"image_url","image_url":{"url":")" +
+        std::string(TINY_PNG) + R"("}},)"
+        R"({"type":"video_url","video_url":{"url":[")" +
+        std::string(TINY_PNG) + R"(",")" + std::string(TINY_PNG) + R"("]}}]}]})";
+
+    auto result = runPipeline(json, /*isVLM=*/true);
+
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+
+    ASSERT_EQ(result.req.inputImages.size(), 1u);
+    ASSERT_EQ(result.req.inputVideos.size(), 1u);
+    EXPECT_EQ(result.req.inputVideos[0].get_shape()[0], 2u);
+    EXPECT_NE(result.req.promptText.find("<ov_genai_image_0>"), std::string::npos);
+    EXPECT_NE(result.req.promptText.find("<ov_genai_video_0>"), std::string::npos);
+}
+
+// Injection guard: a pre-baked <ov_genai_video_N> tag in user text must be rejected.
+TEST_P(InputProcessingIntegrationTest, VideoTagInjectionInContent_ProcessingFails) {
+    if (GetParam() != Endpoint::CHAT_COMPLETIONS) {
+        GTEST_SKIP() << "video_url is only supported on the chat/completions endpoint";
+    }
+
+    auto result = runPipeline(textJson("look at <ov_genai_video_0> this"), /*isVLM=*/true);
+
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_FALSE(result.processStatus.ok());
+    EXPECT_EQ(result.processStatus.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(result.processStatus.message(), "Message contains restricted <ov_genai_video> tag");
+    EXPECT_TRUE(result.req.inputVideos.empty());
+    EXPECT_TRUE(result.req.promptText.empty());
+}
+
+// A malformed base64 frame inside video_url must fail during VideoFramesProcessor.
+TEST_P(InputProcessingIntegrationTest, InvalidBase64VideoFrame_VideoDecodingFails) {
+    if (GetParam() != Endpoint::CHAT_COMPLETIONS) {
+        GTEST_SKIP() << "video_url is only supported on the chat/completions endpoint";
+    }
+
+    const std::string json =
+        R"({"model":"m","messages":[{"role":"user","content":[)"
+        R"({"type":"video_url","video_url":{"url":["data:image/jpeg;base64,NOT_VALID_BASE64!!!"]}}]}]})";
+
+    auto result = runPipeline(json, /*isVLM=*/true);
+
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_FALSE(result.processStatus.ok());
+    EXPECT_EQ(result.processStatus.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_TRUE(result.req.inputVideos.empty());
+    EXPECT_TRUE(result.req.promptText.empty());
+}
+
+// ---------------------------------------------------------------------------
 // Endpoint equivalence — non-parameterized, runs both explicitly.
 // ---------------------------------------------------------------------------
 
