@@ -1,0 +1,254 @@
+[
+  {
+    "path": "src/llm/apis/openai_api_handler.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "253927749af097478f8a1a067af6d48ce61993b7",
+    "pr_blob": "253927749af097478f8a1a067af6d48ce61993b7",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/apis/openai_completions.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "f2493f32b3ba72095ff6cdb94faa28caf916d439",
+    "pr_blob": "f2493f32b3ba72095ff6cdb94faa28caf916d439",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/apis/openai_request.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "2e829ed413f56b25876b5dcef9203b4ddcdcbcb3",
+    "pr_blob": "2e829ed413f56b25876b5dcef9203b4ddcdcbcb3",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/apis/openai_responses.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "f65a34d1fc5f562fe50e736ba8620b5d9d79e15f",
+    "pr_blob": "f65a34d1fc5f562fe50e736ba8620b5d9d79e15f",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/apis/openai_responses.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "8c36b2267bdf5028cdcc8c2a6c811db0354ee4cb",
+    "pr_blob": "8c36b2267bdf5028cdcc8c2a6c811db0354ee4cb",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/base_generation_config_builder.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "0e4c73cb98a76aaf69df0f34e7dff5c974601769",
+    "pr_blob": "0e4c73cb98a76aaf69df0f34e7dff5c974601769",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/base_output_parser.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "1a7387e9fca60e1cc40b178b31decfd6053b47f4",
+    "pr_blob": "1a7387e9fca60e1cc40b178b31decfd6053b47f4",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/chat_template/analyzer.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "050ac4b9d23274d6de0919f044e9d3883bf54c22",
+    "pr_blob": "050ac4b9d23274d6de0919f044e9d3883bf54c22",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/chat_template/caps.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "18860f7043222444678d02e61bfedfaa4976f518",
+    "pr_blob": "18860f7043222444678d02e61bfedfaa4976f518",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/gemma4/gemma4_reasoning_parser.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "c7e848098ca384fd960f4d7ae0f771fc5f0e14d3",
+    "pr_blob": "c7e848098ca384fd960f4d7ae0f771fc5f0e14d3",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/gemma4/gemma4_reasoning_parser.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "3a574c3a2d4cc372578fa1420b8125c2b439c222",
+    "pr_blob": "3a574c3a2d4cc372578fa1420b8125c2b439c222",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/gemma4/gemma4_tool_parser.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "d7d766e032b47df0bb155140e6d26a8740af5217",
+    "pr_blob": "d7d766e032b47df0bb155140e6d26a8740af5217",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/gemma4/gemma4_tool_parser.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "31d0b820465e580911399e79b4b819185b067789",
+    "pr_blob": "31d0b820465e580911399e79b4b819185b067789",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/generation_config_builder.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "d78bb9c6c2083d60e49219dab32239d1231c0c15",
+    "pr_blob": "d78bb9c6c2083d60e49219dab32239d1231c0c15",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/input_processors/chat_template_adapter.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "92e66f2c69ab50470e563fc73afae620ca25c6c7",
+    "pr_blob": "92e66f2c69ab50470e563fc73afae620ca25c6c7",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/input_processors/chat_template_adapter.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "99e4efa0d73b144d2d95b969002636150886f466",
+    "pr_blob": "99e4efa0d73b144d2d95b969002636150886f466",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/input_processors/chat_template_processor.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "3549be639764815fee7c2869ab18d885401401dd",
+    "pr_blob": "3549be639764815fee7c2869ab18d885401401dd",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/input_processors/chat_template_processor.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "79befb72577894d713ab762cdebffe154b078321",
+    "pr_blob": "79befb72577894d713ab762cdebffe154b078321",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/output_parser.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "4a8c0a299b348d117d75f957a72c03c3e21101c5",
+    "pr_blob": "4a8c0a299b348d117d75f957a72c03c3e21101c5",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/output_parser.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "503ed80fdb851bd814ea58d68212847bc439c649",
+    "pr_blob": "503ed80fdb851bd814ea58d68212847bc439c649",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/io_processing/output_parsing_config.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "26dd20cf6b1ecd997969216d82fc75b3b4655bc8",
+    "pr_blob": "26dd20cf6b1ecd997969216d82fc75b3b4655bc8",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/ovms_text_streamer.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "f65d486c1bdacefc197a3ac4ba65a594fd703ffd",
+    "pr_blob": "f65d486c1bdacefc197a3ac4ba65a594fd703ffd",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/ovms_text_streamer.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "ab966c5e4167a60244f77a29804d28d6d33a6212",
+    "pr_blob": "ab966c5e4167a60244f77a29804d28d6d33a6212",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/servable.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "2e1bd37f99944a47cd44bd4ffc4b4b2fa0485e6d",
+    "pr_blob": "2e1bd37f99944a47cd44bd4ffc4b4b2fa0485e6d",
+    "change": "exact"
+  },
+  {
+    "path": "src/llm/servable.hpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "77e52a3206f6010fc344ed1e77d1cceb57bb7053",
+    "pr_blob": "77e52a3206f6010fc344ed1e77d1cceb57bb7053",
+    "change": "exact"
+  },
+  {
+    "path": "src/test/llm/gemma4_fast/BUILD",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "576f1e8fc03b6b31602fb37a4397b9e323f7c2b0",
+    "pr_blob": "a269bf9dbfbaf7e45a845186ee81c87e3189b833",
+    "change": "license preamble only"
+  },
+  {
+    "path": "src/test/llm/gemma4_fast/gemma4_parser_contract_test.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "47a2edad2ff71ee3b60f83f01c8c3c11797b8fa6",
+    "pr_blob": "47a2edad2ff71ee3b60f83f01c8c3c11797b8fa6",
+    "change": "exact"
+  },
+  {
+    "path": "src/test/llm/gemma4_fast/gemma4_reasoning_semantic_refit_test.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "8a8dd7bc46ac2dd53ea0aec3d4aac1889c34989a",
+    "pr_blob": "8a8dd7bc46ac2dd53ea0aec3d4aac1889c34989a",
+    "change": "exact"
+  },
+  {
+    "path": "src/test/llm/gemma4_fast/gemma4_recovery_contract_test.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "21d2307fa590b91002e0e34ce5559afc9e435e68",
+    "pr_blob": "21d2307fa590b91002e0e34ce5559afc9e435e68",
+    "change": "exact"
+  },
+  {
+    "path": "src/test/llm/gemma4_overlay/BUILD",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "30f7a3f99033137ebbbd876840b9ff1e71f901f3",
+    "pr_blob": "e587408221f42ea416c81ba5b11d84e10359b515",
+    "change": "license preamble only"
+  },
+  {
+    "path": "src/test/llm/gemma4_overlay/gemma4_chat_template_overlay_contract_test.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "00194b65667251cf8855ccd7c714d6f0d052414c",
+    "pr_blob": "00194b65667251cf8855ccd7c714d6f0d052414c",
+    "change": "exact"
+  },
+  {
+    "path": "src/test/llm/gemma4_overlay/gemma4_google_jinja_contract_test.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "a5e219ace08e3aab1a24416f0c9f242735dbb7c2",
+    "pr_blob": "a5e219ace08e3aab1a24416f0c9f242735dbb7c2",
+    "change": "exact"
+  },
+  {
+    "path": "src/test/llm/generation_config/BUILD",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "e46ce9c3e9fac23b3ca21bbe997dc489dbfd48ba",
+    "pr_blob": "abd5f6653305bf2f5af8c010072fd34d7beda950",
+    "change": "license preamble only"
+  },
+  {
+    "path": "src/test/llm/generation_config/gemma4_generation_contract_test.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "9905e0b12ccabe580d3a9395bb6303918ada9a0a",
+    "pr_blob": "9905e0b12ccabe580d3a9395bb6303918ada9a0a",
+    "change": "exact"
+  },
+  {
+    "path": "src/test/llm/generation_config/gemma4_prompt_state_generation_contract_test.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "b754ebf7d4c4eb45d76a1c74c91a4928d9c5fe95",
+    "pr_blob": "b754ebf7d4c4eb45d76a1c74c91a4928d9c5fe95",
+    "change": "exact"
+  },
+  {
+    "path": "src/test/llm/generation_config/openai_parallel_tool_calls_contract_test.cpp",
+    "source": "170644006a5334cb971b05824e4a8c95b495c4e2",
+    "source_blob": "89a8fea4fd193b19eb793bab6db9520820d0314a",
+    "pr_blob": "89a8fea4fd193b19eb793bab6db9520820d0314a",
+    "change": "exact"
+  }
+]

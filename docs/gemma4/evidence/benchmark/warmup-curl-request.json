@@ -1,0 +1,1 @@
+{"model":"gemma4-26-heretic","messages":[{"role":"user","content":"Reply with a short sentence confirming readiness."}],"max_tokens":16,"temperature":1.0,"top_k":64,"top_p":0.95,"seed":1}

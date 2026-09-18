@@ -16,6 +16,7 @@
 #pragma once
 
 #include <condition_variable>
+#include <cstdint>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -31,6 +32,8 @@
 #include "io_processing/delta.hpp"
 #include "openvino/genai/text_streamer.hpp"
 #include "mediapipe/framework/calculator_graph.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -78,6 +81,52 @@ enum class GenerationPhase {
 enum class ChatTemplateMode {
     MINJA,  // Use GenAI's apply_chat_template (minja-based)
     JINJA,  // Use Python Jinja2 module for chat template processing
+};
+
+// Lightweight handle for one durable request journal entry. It deliberately does
+// not retain request bodies in RAM; those live in the disk-backed session store.
+struct SessionTurnContext {
+    bool active = false;
+    std::string sessionId;
+    uint64_t turnIndex = 0;
+    uint32_t seed = 0;
+};
+
+// Process-wide session metadata store used by OpenAI HTTP turns. The public API is
+// intentionally generic: model-specific builders only see an ordinary explicit
+// request seed after beginTurn() has resolved the session contract.
+class SessionStateStore {
+public:
+    static constexpr size_t DEFAULT_CACHE_ENTRIES = 64;
+    static constexpr uint64_t DEFAULT_MAX_BYTES = 1024ULL * 1024ULL * 1024ULL;
+    static constexpr size_t DEFAULT_MAX_REQUEST_BYTES = 8ULL * 1024ULL * 1024ULL;
+
+    SessionStateStore(std::string rootDirectory,
+        size_t cacheEntries = DEFAULT_CACHE_ENTRIES,
+        uint64_t maxBytes = DEFAULT_MAX_BYTES,
+        size_t maxRequestBytes = DEFAULT_MAX_REQUEST_BYTES);
+    ~SessionStateStore();
+    SessionStateStore(SessionStateStore&&) noexcept;
+    SessionStateStore& operator=(SessionStateStore&&) noexcept;
+    SessionStateStore(const SessionStateStore&) = delete;
+    SessionStateStore& operator=(const SessionStateStore&) = delete;
+
+    static std::shared_ptr<SessionStateStore> fromEnvironment();
+    bool enabled() const;
+
+    absl::StatusOr<SessionTurnContext> beginTurn(
+        const std::string& sessionId,
+        const std::string& rawBody,
+        rapidjson::Document& effectiveDocument);
+
+    absl::Status recordGenerationConfig(
+        const SessionTurnContext& turn,
+        const ov::genai::GenerationConfig& config,
+        const std::string& toolChoice);
+
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl;
 };
 
 // Thread-safe channel for parsed streaming deltas.
@@ -141,6 +190,7 @@ private:
 struct GenAiServableExecutionContext {
     // Common API related members
     HttpPayload payload;
+    SessionTurnContext sessionTurn;
     Endpoint endpoint;
     std::shared_ptr<OpenAIApiHandler> apiHandler;
     // Populated in parseRequest(); carries all GenAI inputs including the generation config.
