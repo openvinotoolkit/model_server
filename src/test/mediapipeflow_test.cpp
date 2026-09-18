@@ -3503,9 +3503,9 @@ protected:
     }
 
     void TearDown() override {
-        TestWithTempDir::TearDown();
         stopServer();
         t->join();
+        TestWithTempDir::TearDown();
     }
 
     void performInference(ovms::StatusCode expectedStatus) {
@@ -3912,6 +3912,144 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorInvalidContentSize) {
         }
     )";
     this->performInvalidContentSizeTest(pbtxtContentTFTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+
+class MPTensorOversizedShapeTest : public TestWithTempDir {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<std::thread> t;
+    std::string port = "9000";
+    KFSRequest request;
+    KFSResponse response;
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        randomizeAndEnsureFree(port);
+    }
+
+    void TearDown() override {
+        stopServer();
+        t->join();
+        TestWithTempDir::TearDown();
+    }
+
+    // Writes out graph.pbtxt/config.json for a single-node passthrough graph and starts the server with it.
+    void startServerWithGraph(const std::string& pbtxtContent, const std::string& servableName) {
+        std::string graphFilePath = this->directoryPath + "/graph.pbtxt";
+        createConfigFileWithContent(pbtxtContent, graphFilePath);
+        std::string configContent = R"(
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":")" + servableName + R"(",
+        "graph_path": ")" + graphFilePath +
+                                    R"("
+    }
+    ]
+}
+)";
+        std::string configFilePath = this->directoryPath + "/config.json";
+        createConfigFileWithContent(configContent, configFilePath);
+
+        char* argv[] = {(char*)"ovms",
+            (char*)"--config_path",
+            (char*)configFilePath.c_str(),
+            (char*)"--port",
+            (char*)this->port.c_str()};
+        int argc = 5;
+        this->server.setShutdownRequest(0);
+        this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
+            EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
+        });
+        auto start = std::chrono::high_resolution_clock::now();
+        while (!isMpReady(servableName) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+    }
+};
+
+TEST_F(MPTensorOversizedShapeTest, HugeDimensionRejectedWithServableStayingHealthy) {
+    const std::string pbtxtContent = R"(
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        }
+    )";
+    this->startServerWithGraph(pbtxtContent, "shapeTest");
+
+    const ovms::Module* grpcModule = this->server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    ASSERT_NE(grpcModule, nullptr);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+
+    // Malicious request: declared shape[0] == INT_MAX + 1, single FP32 value in contents.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto maliciousStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_NE(maliciousStatus.error_code(), grpc::StatusCode::OK);
+
+    // Server must still be alive and able to serve a normal request afterwards.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(1);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto healthyStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_EQ(healthyStatus.error_code(), grpc::StatusCode::OK) << healthyStatus.error_message();
+}
+
+TEST_F(MPTensorOversizedShapeTest, LargeShapeContentMismatchRejectedWithoutAllocating) {
+    const std::string pbtxtContent = R"(
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        }
+    )";
+    this->startServerWithGraph(pbtxtContent, "shapeTest");
+
+    const ovms::Module* grpcModule = this->server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    ASSERT_NE(grpcModule, nullptr);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+
+    // Declares a ~2GiB FP32 buffer (536870911 * 4 bytes, still < INT_MAX) but carries a single value.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(536870911);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto maliciousStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_EQ(maliciousStatus.error_code(), grpc::StatusCode::INVALID_ARGUMENT) << maliciousStatus.error_message();
+
+    // Server must still be alive and able to serve a normal request afterwards.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(1);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto healthyStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_EQ(healthyStatus.error_code(), grpc::StatusCode::OK) << healthyStatus.error_message();
 }
 
 INSTANTIATE_TEST_SUITE_P(

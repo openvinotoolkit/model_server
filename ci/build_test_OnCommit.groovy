@@ -74,11 +74,6 @@ pipeline {
           }
         }
         stage('Configure') {
-          environment {
-            GIT_CONFIG_COUNT = '1'
-            GIT_CONFIG_KEY_0 = 'http.version'
-            GIT_CONFIG_VALUE_0 = 'HTTP/1.1'
-          }
           steps {
             script {
               withGithubStageStatus('jenkins/oncommit/configure', 'Configure') {
@@ -92,7 +87,9 @@ pipeline {
               def git_diff = ""
               def diffBase = ""
               if (env.CHANGE_ID){ // PR - check changes between target branch
-                sh 'git fetch origin ${CHANGE_TARGET}'
+                withCredentials([usernamePassword(credentialsId: 'workflow_lab_mediapipe', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
+                  sh 'git fetch https://${GIT_USERNAME}:${TOKEN}@github.com/openvinotoolkit/model_server.git ${CHANGE_TARGET}'
+                }
                 diffBase = sh(script: 'git merge-base FETCH_HEAD HEAD', returnStdout: true).trim()
                 git_diff = sh (script: "git diff --name-only ${diffBase}", returnStdout: true).trim()
                 println("git diff:\n${git_diff}")
