@@ -111,9 +111,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
 
 Status MediapipeGraphExecutor::inferStream(
     const KFSRequest& firstRequest,
-    grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
+    grpc::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
     const ExecutionContext& executionContext) {
-    return this->inferStreamTyped<KFSRequest, grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>>(firstRequest, serverReaderWriter, executionContext);
+    return this->inferStreamTyped<KFSRequest, grpc::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>>(firstRequest, serverReaderWriter, executionContext);
 }
 
 // Utilities
@@ -513,7 +513,7 @@ Status receiveAndSerializePacket<mediapipe::ImageFrame>(const ::mediapipe::Packe
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();
 }
 
-static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<const inference::ModelInferRequest_InferInputTensor>& itr, const std::string& requestedName, const KFSRequest& request) {
+static Status getRequestInput(KFSInputTensorIteratorType& itr, const std::string& requestedName, const KFSRequest& request) {
     auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
     if (requestInputItr == request.inputs().end()) {
         std::stringstream ss;
