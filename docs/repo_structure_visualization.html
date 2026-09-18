@@ -1,0 +1,147 @@
+<!--
+Copyright (C) 2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OVMS Repository Structure Visualization</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #0f172a;
+            --panel: #111827;
+            --panel-border: #374151;
+            --text: #e5e7eb;
+            --muted: #cbd5e1;
+            --accent: #60a5fa;
+        }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        h1, h2 {
+            margin-bottom: 12px;
+        }
+        p, li {
+            color: var(--muted);
+            line-height: 1.5;
+        }
+        .panel {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            background: var(--panel);
+            overflow: auto;
+        }
+        code {
+            color: #bfdbfe;
+        }
+        .mermaid {
+            min-width: 1100px;
+        }
+    </style>
+    <script type="module">
+        import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: "dark",
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true,
+                curve: "basis"
+            }
+        });
+    </script>
+</head>
+<body>
+    <main>
+        <h1>OpenVINO Model Server Repository Structure</h1>
+        <p>
+            Visual overview of <code>/home/runner/work/model_server/model_server</code>.
+            Open this file in a browser to inspect the main directories and the high-level runtime flow.
+        </p>
+
+        <section class="panel">
+            <h2>Repository layout</h2>
+            <div class="mermaid">
+flowchart TD
+    repo["model_server/"]
+
+    repo --> src["src/<br/>main C++ implementation"]
+    repo --> client["client/<br/>SDKs and client libraries"]
+    repo --> demos["demos/<br/>sample applications"]
+    repo --> docs["docs/<br/>documentation"]
+    repo --> tests["tests/<br/>higher-level test assets"]
+    repo --> ci["ci/<br/>CI scripts and workflows"]
+    repo --> thirdParty["third_party/<br/>external dependency definitions"]
+    repo --> tools["tools/<br/>developer utilities"]
+    repo --> bazel["BUILD.bazel / WORKSPACE<br/>Bazel configuration"]
+    repo --> docker["Dockerfile.* / Makefile<br/>containerized build and test entrypoints"]
+    repo --> github[".github/<br/>templates and automation instructions"]
+
+    subgraph sourceTree["src/"]
+        direction TB
+        src --> entrypoints["main*.cpp<br/>server and C API entrypoints"]
+        src --> frontends["grpc* / http*<br/>API frontends"]
+        src --> model["model*<br/>loading, config, versioning, metrics"]
+        src --> dags["dags/<br/>DAG and pipeline orchestration"]
+        src --> mediapipe["mediapipe_internal/<br/>MediaPipe integration"]
+        src --> llm["llm/<br/>LLM serving"]
+        src --> embeddings["embeddings/<br/>embeddings API"]
+        src --> rerank["rerank/<br/>reranking API"]
+        src --> imageGen["image_gen/<br/>image generation API"]
+        src --> audio["audio/<br/>speech recognition and TTS"]
+        src --> python["python/<br/>Python nodes and bindings"]
+        src --> capi["capi_frontend/<br/>native C API"]
+        src --> srcTest["test/<br/>unit tests, graphs, configs, test models"]
+    end
+
+    subgraph clientTree["client/"]
+        direction LR
+        client --> clientCpp["cpp/"]
+        client --> clientPython["python/"]
+        client --> clientGo["go/"]
+        client --> clientJava["java/"]
+    end
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Runtime dependency flow</h2>
+            <div class="mermaid">
+flowchart LR
+    callers["Clients / Demos"] --> apis["gRPC / REST / OpenAI / C API frontends"]
+    apis --> parsing["Request parsing and validation"]
+    parsing --> serving["Servable management layer"]
+    serving --> classic["Classic model serving"]
+    serving --> graph["DAG / MediaPipe / Python execution"]
+    serving --> genai["LLM / embeddings / rerank / image / audio"]
+    classic --> runtime["OpenVINO runtime"]
+    graph --> runtime
+    genai --> runtime["OpenVINO / OpenVINO GenAI execution"]
+    runtime --> responses["Serialization and responses"]
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Notes</h2>
+            <ul>
+                <li>This is a curated structural view, not a generated full dependency graph.</li>
+                <li>The file is standalone and only requires network access to load the Mermaid JavaScript module from jsDelivr.</li>
+                <li>If needed, the graph can be extended for narrower areas such as <code>src/dags</code>, <code>src/llm</code>, or <code>src/test</code>.</li>
+            </ul>
+        </section>
+    </main>
+</body>
+</html>
