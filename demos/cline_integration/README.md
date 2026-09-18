@@ -14,6 +14,8 @@ so that Cline runs entirely on your own machine, without sending code or prompts
 - Hardware: Tested on Intel Core Ultra iGPU with 32GB RAM and a discrete Intel Arc B70 GPU (dedicated VRAM). `Qwen3-Coder-Next` can be deployed on iGPU with 64GB RAM on board.
 - Memory requirements depend on the chosen model (see table below)
 
+![extension_webpage](./extension_webpage.png)
+
 ## Suggested models
 
 | Model  | HF Link | Notes |
@@ -21,7 +23,7 @@ so that Cline runs entirely on your own machine, without sending code or prompts
 | `OpenVINO/Qwen3.8-27B-int8-ov` | [link](https://huggingface.co/OpenVINO/Qwen3.8-27B-int8-ov) | Vision-capable (VLM); general purpose chat/agent model |
 | `OpenVINO/Qwen3.6-35B-A3B-int4-ov` | [link](https://huggingface.co/OpenVINO/Qwen3.6-35B-A3B-int4-ov) | Vision-capable (VLM); general purpose chat/agent model |
 | `OpenVINO/Muse-Glimmer-30B-int4-ov` | [link](https://huggingface.co/OpenVINO/Muse-Glimmer-30B-int4-ov) | Vision-capable (VLM); general purpose chat/agent model |
-| `OpenVINO/gpt-oss-20B-int4-ov` | [link](https://huggingface.co/OpenVINO/gpt-oss-20b-int4-ov) | General purpose chat/agent model |
+| `OpenVINO/gpt-oss-20b-int4-ov` | [link](https://huggingface.co/OpenVINO/gpt-oss-20b-int4-ov) | General purpose chat/agent model |
 | `OpenVINO/Qwen3-Coder-Next` | **To be published soon** | Big coding model; available only on iGPU with minimum 64GB of RAM |
 | `OpenVINO/Qwen3.5-9B-int4-ov` | [link](https://huggingface.co/OpenVINO/Qwen3.5-9B-int4-ov) | Smaller model, use when RAM/VRAM is limited or for quick, low-latency edits; not recommended for harder coding tasks |
 
@@ -59,9 +61,16 @@ Open Cline's settings and add a new API provider configuration:
 - **API Key:** any placeholder value, e.g. `unused` (unless configured on OVMS server side)
 - **Model ID:** value provided as `--source_model`, e.g. `OpenVINO/Qwen3.8-27B-int8-ov` or as the `--model_name` e.g. `ovms-model`
 
-Cline lets Plan mode and Act mode use different models/providers, so you can, for example, keep a small model like
-`Qwen3.5-9B` for quick Plan-mode questions and switch to `Qwen3.8-27B` (on B70) for Act-mode code changes. 
+![examplary_configuration](./examplary_configuration.png)
+
+Cline lets Plan mode and Act mode use different models/providers, so you can, for example, use
+`Qwen3.6-35B-A3B-int4-ov` for Plan-mode reasoning and switch to `Qwen3.8-27B` (on B70) for Act-mode code changes.
 You can set that checking **Use different models for Plan and Act modes**.
+
+Running two large models like these at the same time can exceed available RAM/VRAM, so configure OVMS's
+[idle servable management](../../docs/idle_servable_management.md) (preview feature) to keep only the model used by
+the active mode loaded; switching modes in Cline then wakes up the other model on demand instead of requiring both
+to be resident at once.
 
 ## Usage examples
 
