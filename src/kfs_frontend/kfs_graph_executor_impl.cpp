@@ -1192,6 +1192,7 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
         SPDLOG_DEBUG("Request processing Mediapipe ImageFrame: {}", inputName);
         status = createPacketAndPushIntoGraph<mediapipe::ImageFrame, Holder>(inputName, request, graph, timestamp, nullptr);
     } else if (inputPacketType == mediapipe_packet_type_enum::OVMS_PY_TENSOR) {
+        SPDLOG_DEBUG("Request processing OVMS Python input: {}", inputName);
         status = createPacketAndPushPyTensorIntoGraph(inputName, request, graph, timestamp);
     } else if ((inputPacketType == mediapipe_packet_type_enum::OVTENSOR) ||
                (inputPacketType == mediapipe_packet_type_enum::UNKNOWN)) {
@@ -1295,6 +1296,7 @@ Status onPacketReadySerializeImpl(
         SPDLOG_DEBUG("Response processing Mediapipe Image Frame: {}", packetName);
         status = receiveAndSerializePacket<mediapipe::ImageFrame>(packet, response, packetName);
     } else if (packetType == mediapipe_packet_type_enum::OVMS_PY_TENSOR) {
+        SPDLOG_DEBUG("Response processing Ovms Python Tensor name: {}", packetName);
         status = receiveAndSerializePythonTensorIfSupported(packet, response, packetName);
     } else if ((packetType == mediapipe_packet_type_enum::OVTENSOR) ||
                (packetType == mediapipe_packet_type_enum::UNKNOWN)) {
