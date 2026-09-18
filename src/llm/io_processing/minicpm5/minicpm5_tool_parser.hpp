@@ -89,8 +89,6 @@ struct Minicpm5ToolParserImpl {
 
     std::optional<std::string> getCurrentFunctionName() const;
 
-    Status removeToolCallsFromContentIfNeeded(std::string& outContent);
-
     void reset() {
         resetParsingState();
         toolCallPositions = ToolCallPositions{};
@@ -133,8 +131,6 @@ private:
     void handleInsideParamNameState();
     void handleInsideParamState();
     void handleInsideAfterFunctionState(ToolCalls_t& toolCalls);
-
-    static std::string extractNameAttribute(const std::string& content, size_t nameAttrValueStart, size_t tagEnd);
 };
 
 class Minicpm5ToolParser : public BaseOutputParser {
@@ -186,7 +182,6 @@ public:
     std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 
 private:
-    const std::vector<int64_t> removeReasoningTokens(const std::vector<int64_t>& generatedTokens);
     std::optional<Delta> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
     std::optional<Delta> sendFullDelta(const ToolCalls_t& toolCalls);
     ToolCallDelta wrapCombinedDelta(const ToolCall& toolCall);
