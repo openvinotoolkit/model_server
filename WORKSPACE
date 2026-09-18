@@ -17,7 +17,6 @@
 workspace(name = "ovms")
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # 2023-06-05
@@ -263,10 +262,11 @@ http_archive(
     urls = ["https://github.com/protocolbuffers/protobuf-javascript/archive/refs/tags/v3.21.2.tar.gz"],
 )
 
-git_repository( # Using commit past 0.9.0 that adds cmake 3.26.2 for model api. Be sure to update to 0.10.0 when available.
+http_archive( # Using commit past 0.9.0 that adds cmake 3.26.2 for model api. Be sure to update to 0.10.0 when available.
     name = "rules_foreign_cc",
-    remote = "https://github.com/bazelbuild/rules_foreign_cc.git",
-    commit = "1fb8a1e",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/1fb8a1ed9100236590c2a9441d79811aefaabcf8.tar.gz",
+    sha256 = "9d55e5b295dc9de77dfac8c1c2f365894363f2acc54cccdde41f7555a9b28dc6",
+    strip_prefix = "rules_foreign_cc-1fb8a1ed9100236590c2a9441d79811aefaabcf8",
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
@@ -410,10 +410,11 @@ install_deps()
 ########################################################### Python support end
 
 # minitrace
-new_git_repository(
+http_archive(
     name = "minitrace",
-    remote = "https://github.com/hrydgard/minitrace.git",
-    commit = "020f42b189e8d6ad50e4d8f45d69edee0a6b3f23",
+    url = "https://github.com/hrydgard/minitrace/archive/020f42b189e8d6ad50e4d8f45d69edee0a6b3f23.tar.gz",
+    sha256 = "314bcab4dc069c61f2eb813c9bd649efb2bd1fd75f91205a269a4c5abcd3d66b",
+    strip_prefix = "minitrace-020f42b189e8d6ad50e4d8f45d69edee0a6b3f23",
     build_file_content = """
 cc_library(
     name = "trace",
@@ -576,17 +577,19 @@ http_archive(
     url = "https://codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.11.3",
 )
 # for rest client in unit tests (server_test.cpp)
-git_repository(
+http_archive(
     name = "cpp_httplib",
-    remote = "https://github.com/yhirose/cpp-httplib/",
-    tag = "v0.18.7",
+    url = "https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.18.7.tar.gz",
+    sha256 = "b7b1e9e4e77565a5a9bc95e761d5df3e7c0e8ca37c90fd78b1b031bc6cb90fc1",
+    strip_prefix = "cpp-httplib-0.18.7",
     build_file = "@//third_party/cpp-httplib:BUILD"
 )
 
-new_git_repository(
+http_archive(
     name = "stb",
-    remote = "https://github.com/nothings/stb",
-    commit = "5c205738c191bcb0abc65c4febfa9bd25ff35234",
+    url = "https://github.com/nothings/stb/archive/5c205738c191bcb0abc65c4febfa9bd25ff35234.tar.gz",
+    sha256 = "cfeab9f800961882d6d22ddf36e965523b33002f4f937de08321304c9ba72af3",
+    strip_prefix = "stb-5c205738c191bcb0abc65c4febfa9bd25ff35234",
     build_file_content = """
 cc_library(
     name = "image",
@@ -598,10 +601,11 @@ cc_library(
 """,
 )
 
-new_git_repository(
+http_archive(
     name = "dr_libs",
-    remote = "https://github.com/mackron/dr_libs",
-    commit = "47a4f08e777faddf59a8955c4ea84f69f41020d5",
+    url = "https://github.com/mackron/dr_libs/archive/47a4f08e777faddf59a8955c4ea84f69f41020d5.tar.gz",
+    sha256 = "9f451ba81a65ffa06c14113b13cf257ac70a9193a37782f9a934e5240c371772",
+    strip_prefix = "dr_libs-47a4f08e777faddf59a8955c4ea84f69f41020d5",
     build_file_content = """
 cc_library(
     name = "dr",
@@ -613,10 +617,11 @@ cc_library(
 """,
 )
 
-new_git_repository(
+http_archive(
     name = "winreg",
-    remote = "https://github.com/GiovanniDicanio/WinReg.git",
-    commit = "4e1fab61959ca7a43c2627251ba306ebbbec7f7a", # master Aug 22 2025
+    url = "https://github.com/GiovanniDicanio/WinReg/archive/4e1fab61959ca7a43c2627251ba306ebbbec7f7a.tar.gz",
+    sha256 = "9066cc3eaf2319c23ec49f412b9625f50121608d709ef214ec86a2fd6c0c570e",
+    strip_prefix = "WinReg-4e1fab61959ca7a43c2627251ba306ebbbec7f7a", # master Aug 22 2025
     build_file_content = """
 cc_library(
     name = "winreg",

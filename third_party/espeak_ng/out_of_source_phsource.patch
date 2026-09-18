@@ -11,7 +11,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-Replace configure-time file(COPY) of phsource with a symbolic link.
+Replace configure-time file(COPY) of phsource with a symbolic link and avoid
+fetching disabled Sonic support.
 
 Upstream cmake/data.cmake does:
 
@@ -25,7 +26,16 @@ symlink eliminates the entire copy step and guarantees the build always
 sees the exact source phsource tree. phsource is read-only during the
 build, so a symlink is safe.
 
+OVMS builds with USE_LIBSONIC=OFF, so CMake must not fetch Sonic when it is not
+installed on the builder.
+
 This patch is OVMS-local; see third_party/espeak_ng/espeak_ng.bzl.
+
+--- a/cmake/deps.cmake
++++ b/cmake/deps.cmake
+@@ -18 +18 @@
+-else()
++elseif(USE_LIBSONIC)
 
 --- a/cmake/data.cmake
 +++ b/cmake/data.cmake
