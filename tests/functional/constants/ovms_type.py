@@ -28,7 +28,7 @@ class OvmsType:
     CAPI_DOCKER = "CAPI_DOCKER"
 
 
-# https://github.com/openvinotoolkit/model_server/blob/main/docs/deploying_server.md#deploying-model-server-on-baremetal-without-container
+# https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/docs/deploying_server.md#deploying-model-server-on-baremetal-without-container
 OVMS_BINARY_DEPENDENCIES = {
     OsType.Ubuntu22: "libcurl4-openssl-dev libpugixml1v5 libtbb12 libxml2",
     OsType.Ubuntu24: "libcurl4-openssl-dev libpugixml1v5 libtbb12 libxml2",

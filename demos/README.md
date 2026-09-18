@@ -56,7 +56,7 @@ Integrations <ovms_demos_integrations>
 | Demo | Description |
 |---|---|
 |[Image Classification](image_classification/python/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
-|[Using ONNX Model](using_onnx_model/python/README.md)|Run prediction on a JPEG image using image classification ONNX model via gRPC API in two preprocessing variants. This demo uses [pipeline](../docs/dag_scheduler.md) with [image_transformation custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation).|
+|[Using ONNX Model](using_onnx_model/python/README.md)|Run prediction on a JPEG image using image classification ONNX model via gRPC API in two preprocessing variants. This demo uses [pipeline](../docs/dag_scheduler.md) with [image_transformation custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2026/4/src/custom_nodes/image_transformation).|
 |[Using TensorFlow Model](image_classification_using_tf_model/python/README.md)|Run image classification using directly imported TensorFlow model.|
 |[Classification with PaddlePaddle](classification_using_paddlepaddle_model/python/README.md)|Perform classification on an image with a PaddlePaddle model.|
 |[Age gender recognition](age_gender_recognition/python/README.md)|Run prediction on a JPEG image using age gender recognition model via gRPC API.|

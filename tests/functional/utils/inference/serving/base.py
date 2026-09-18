@@ -149,7 +149,7 @@ class AbstractServingWrapper(metaclass=abc.ABCMeta):
             assert version == str(model.version), f"Expected {model.version} model_version; Actual: {version}"
 
     def cast_type_to_string(self, data_type):
-        # https://github.com/openvinotoolkit/model_server/blob/main/src/kfs_frontend/kfs_utils.cpp
+        # https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/src/kfs_frontend/kfs_utils.cpp
         if data_type == np.float32:
             result = 'FP32'
         elif data_type == np.int32:

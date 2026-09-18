@@ -250,7 +250,7 @@ class BinaryInferenceRequest(InferenceRequest):
         request_header = json.dumps({"inputs": inputs}, separators=(",", ":"))
 
         # https://wiki.ith.intel.com/display/OVMS/Changes+in+KFS+BYTES+format
-        # https://github.com/openvinotoolkit/model_server/blob/main/docs/binary_input_kfs.md
+        # https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/docs/binary_input_kfs.md
         if input_object is not None:
             _ovms_formatted_binary_objects = b"".join([len(x).to_bytes(4, "little") + x for x in input_object])
             binary_data = _ovms_formatted_binary_objects
@@ -1274,7 +1274,7 @@ def run_llm_inference_and_validate_against_reference(
 
 
 def streaming_api_inference_language_models(mediapipe_model, kfs_client, prompts):
-    # Fetched from: https://github.com/openvinotoolkit/model_server/blob/main/demos/python_demos/llm_text_generation/client_stream.py
+    # Fetched from: https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/demos/python_demos/llm_text_generation/client_stream.py
     results_decoded = []
     event, client, results = prepare_streaming_api_inference(mediapipe_model, kfs_client, prompts, results_decoded)
     infer_inputs = streaming_api_inference_prepare_infer_inputs(mediapipe_model, prompts)
