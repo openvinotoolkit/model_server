@@ -5681,7 +5681,7 @@ protected:
 #endif
 
     void SetUp() override {
-        GraphExport::clearInMemoryGraphContent();
+        ovms::Config::instance().setInMemoryGraphPbtxt(std::nullopt);
 #ifdef __linux__
         tempDir = std::filesystem::temp_directory_path().string() + "/LLMStartWithTaskParameter_" + ::testing::UnitTest::GetInstance()->current_test_info()->name();
         std::filesystem::remove_all(tempDir);
@@ -5696,7 +5696,7 @@ protected:
         if (t && t->joinable())
             t->join();
         server.setShutdownRequest(0);
-        GraphExport::clearInMemoryGraphContent();
+        ovms::Config::instance().setInMemoryGraphPbtxt(std::nullopt);
 #ifdef __linux__
         std::filesystem::remove_all(tempDir);
 #else

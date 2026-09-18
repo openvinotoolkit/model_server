@@ -34,6 +34,10 @@
 #include "src/servable_name_checker.hpp"
 #include "src/status.hpp"
 
+#if (MEDIAPIPE_DISABLE == 0)
+#include "src/mediapipe_runtime_api.hpp"
+#endif
+
 namespace ov {
 class Core;
 }  // namespace ov
@@ -50,12 +54,13 @@ class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricConfig;
 class MetricRegistry;
+class MediapipeGraphExecutorInterface;
 class Model;
 class ModelConfig;
 class FileSystem;
-class MediapipeFactory;
 class MediapipeGraphConfig;
 class MediapipeGraphExecutor;
+class MediapipeRuntimeApi;
 class ModelInstance;
 class ServableGroupManager;
 class ServableDefinition;
@@ -90,7 +95,7 @@ protected:
     std::unique_ptr<ServableLoadingQueue> loadingQueue;
     std::unique_ptr<PipelineFactory> pipelineFactory;
 #if (MEDIAPIPE_DISABLE == 0)
-    std::unique_ptr<MediapipeFactory> mediapipeFactory;
+    std::unique_ptr<MediapipeRuntimeApi> mediapipeFactory;
 #endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
@@ -327,10 +332,11 @@ public:
     const PipelineFactory& getPipelineFactory() const;
 
 #if (MEDIAPIPE_DISABLE == 0)
-    const MediapipeFactory& getMediapipeFactory() const {
+    const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
+    const MediapipeRuntimeApi& getMediapipeFactory() const {
         return *mediapipeFactory;
     }
-    MediapipeFactory& getMediapipeFactory() {
+    MediapipeRuntimeApi& getMediapipeFactory() {
         return *mediapipeFactory;
     }
 #endif
@@ -377,8 +383,12 @@ public:
     Status getModelOutputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const override;
     Status hasAutoModelParameters(const std::string& name, model_version_t version, bool& batchAuto, bool& shapeAuto) const override;
 
+#if (MEDIAPIPE_DISABLE == 0)
     Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
         const std::string& name);
+    Status createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
+        const std::string& name);
+#endif
 
     /**
      * @brief Starts model manager using provided config file
