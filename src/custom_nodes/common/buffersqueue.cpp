@@ -26,7 +26,7 @@ BuffersQueue::BuffersQueue(size_t singleBufferSize, int streamsLength) :
     size(singleBufferSize * streamsLength),
     memoryPool(std::make_unique<char[]>(size)) {
     for (int i = 0; i < streamsLength; ++i) {
-        inferRequests.push_back(memoryPool.get() + i * singleBufferSize);
+        inferRequests.insert({i, memoryPool.get() + i * singleBufferSize});
     }
 }
 
