@@ -1926,7 +1926,11 @@ cc_binary(
             "-Wl,-rpath,$$ORIGIN/ovms.runfiles/ovms/external/azure/lib",
             "-Wl,-rpath,$$ORIGIN/ovms.runfiles/azure/lib",
         ],
-        "//src:windows": [],
+        "//src:windows": [
+            "runtimeobject.lib",
+            "oleaut32.lib",
+            "ole32.lib",
+        ],
     }),
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
