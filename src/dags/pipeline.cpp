@@ -21,10 +21,10 @@
 #include <string>
 #include <utility>
 
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "node.hpp"
 #include "nodesession.hpp"
 #include "pipelineeventqueue.hpp"

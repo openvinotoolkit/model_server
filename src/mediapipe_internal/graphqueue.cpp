@@ -28,9 +28,6 @@
 #include <vector>
 
 #include "../queue.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "src/python/pythonnoderesources.hpp"
-#endif
 
 #pragma warning(push)
 #pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005 4456 6246)

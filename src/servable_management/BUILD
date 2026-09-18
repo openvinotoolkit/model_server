@@ -47,7 +47,8 @@ ovms_cc_library(
     deps = select({
         "//conditions:default": [],
         "//:not_disable_mediapipe" : [
-            "//src/mediapipe_internal:libovms_mediapipe",
+            "//src:mediapipe_runtime_api",
+            "//src/mediapipe_internal:mediapipegraphconfig",
         ],
     }) + [
         "servable_loading_queue",
@@ -75,7 +76,6 @@ ovms_cc_library(
         "//src/dags:pipelinedefinition",
         "//src/filesystem:libovmsfilesystem",
         "//src/filesystem:libovmsfilesystemfactory",
-        "//src/graph_export:graph_export",
         "//src/metrics:libovms_metric_provider",
         "//src/metrics:libovmsmetrics",
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -88,17 +88,13 @@ ovms_cc_library(
     name = "servablemanagermodule",
     hdrs = ["servablemanagermodule.hpp"],
     srcs = ["servablemanagermodule.cpp"],
-    deps = select({
-        "//:not_disable_python": [
-            "//src/python:libovmspythonmodule",
-        ],
-        "//:disable_python": []
-    }) + [
+    deps = [
         "//src:cpp_headers",
         "//src:libovms_module",
         "//src:libovmslogging",
         "modelmanager",
         "//src/metrics:libovmsmetrics",
+        "//src/python:python_runtime_module_api_hdrs",
     ],
     visibility = ["//visibility:public"],
 )
