@@ -2,20 +2,24 @@
 
 ## Overview
 
-The script [image_classification.py](https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/demos/image_classification/python/image_classification.py) reads all images and their labels specified in the text file. It then classifies them with [ResNet50](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2023/1/models/intel/resnet50-binary-0001/README.md) model and presents accuracy results.
+The script [image_classification.py](https://github.com/openvinotoolkit/model_server/blob/releases/2026/4/demos/image_classification/python/image_classification.py) reads all images and their labels specified in the text file. It then classifies them with [ResNet50](https://huggingface.co/OpenVINO/resnet50-int8-ov) model and presents accuracy results.
 
 
 ## Download ResNet50 model
 
 ```bash
-mkdir -p model/1
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
-wget -P model/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
+mkdir -p model
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o model/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o model/resnet50.xml
 ```
 
 ## Run OpenVINO Model Server
 ```bash
-docker run -d -v $PWD/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name resnet --port 9000
+docker run -d -u $(id -u) -v $PWD/model:/models -p 9000:9000 \
+  openvino/model_server:latest \
+  --model_path /models/resnet50.xml --model_name resnet \
+  --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
+  --port 9000
 ```
 
 ## Run the client:
@@ -50,7 +54,7 @@ usage: image_classification.py [-h] [--images_list IMAGES_LIST]
 ### Usage example
 
 ```bash
-python image_classification.py --grpc_port 9000 --input_name 0 --output_name 1463 --images_list ../input_images.txt
+python image_classification.py --grpc_port 9000 --input_name image --output_name output --images_list ../input_images.txt
 
 Start processing:
         Model name: resnet

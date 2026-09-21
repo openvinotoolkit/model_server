@@ -30,6 +30,6 @@ node: {
   output_side_packet: "SESSION:resnet50"
   node_options: {
   [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-  servable_name: "resnet50-binary-0001"
+  servable_name: "resnet50"
   servable_version: "1"
 }}}

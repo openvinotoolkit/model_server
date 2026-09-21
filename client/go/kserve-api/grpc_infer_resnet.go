@@ -89,7 +89,7 @@ func ModelInferRequest(client grpc_client.GRPCInferenceServiceClient, fileName s
 	contents.BytesContents = append(contents.BytesContents, bytes) 
 
 	inferInput := grpc_client.ModelInferRequest_InferInputTensor{
-		Name:     "0",
+		Name:     "image",
 		Datatype: "BYTES",
 		Shape:    []int64{1},
 		Contents: &contents,
