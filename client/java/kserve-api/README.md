@@ -194,13 +194,18 @@ java -cp target/grpc-client.jar clients.grpc_infer_dummy --grpc_port 9000 --grpc
 ### Download the Pretrained Model
 Download the model files and store them in the `models` directory
 ```Bash
-mkdir -p models/resnet/1
-curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
 ```
 
 ### Start the Model Server Container with Resnet Model
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --layout NHWC:NCHW --plugin_config '{"PERFORMANCE_HINT":"LATENCY"}'
+docker run --rm -d -u $(id -u) -v ${HOME}/models:/models -p 9000:9000 \
+  openvino/model_server:latest \
+  --model_name resnet --model_path /models/resnet50.xml \
+  --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
+  --port 9000
 ```
 
 Once you finish above steps, you are ready to run the samples.

@@ -27,17 +27,19 @@ In this sample we are going to change one of the ReLU layers type to CustomReLU.
 By doing so this layer will take advantage of cpu_extension.
 
 ```bash
-mkdir -p resnet50-binary-0001/1
-curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o resnet50-binary-0001/1/resnet50-binary-0001.xml
-curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o resnet50-binary-0001/1/resnet50-binary-0001.bin
-sed -i '0,/ReLU/s//CustomReLU/' resnet50-binary-0001/1/resnet50-binary-0001.xml
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o models/resnet50.xml
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o models/resnet50.bin
+sed -i '0,/ReLU/s//CustomReLU/' models/resnet50.xml
 ```
 
 ## Deploying OVMS
 
 ```bash
-$ docker run -it --rm -p 9000:9000 -v `pwd`/lib/${BASE_OS}:/extension:ro -v `pwd`/resnet50-binary-0001:/resnet openvino/model_server \
- --port 9000 --model_name resnet --model_path /resnet --cpu_extension /extension/libcustom_relu_cpu_extension.so
+$ docker run -it --rm -p 9000:9000 -v `pwd`/lib/${BASE_OS}:/extension:ro -v ${HOME}/models:/models openvino/model_server \
+ --port 9000 --model_name resnet --model_path /models/resnet50.xml \
+ --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
+ --cpu_extension /extension/libcustom_relu_cpu_extension.so
 ```
 
 > **NOTE**: Learn more about [OpenVINO extensibility](https://docs.openvino.ai/2026/documentation/openvino-extensibility.html)

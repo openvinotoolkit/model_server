@@ -122,19 +122,20 @@ Click the test that needs to be run:
 
 <details><summary>Run test inference</summary>
 
-1. Download an exemplary model [ResNet50-binary model](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/resnet50-binary-0001/README.md) :
+1. Download an exemplary model [ResNet50 model](https://huggingface.co/OpenVINO/resnet50-int8-ov) :
 
-	```bash
-	source tests/performance/download_model.sh
-	```
-
-	The script stores the model in the user home folder.
+```bash
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
+```
 
 2. Start OVMS docker container with downloaded model
 
 ```bash
-docker run -d --name server-test -v ~/resnet50-binary:/models/resnet50-binary -p 9178:9178 \
-openvino/model_server:latest --model_name resnet-binary --model_path /models/resnet50-binary --port 9178
+docker run -d --name server-test -u $(id -u) -v ${HOME}/models:/models -p 9178:9178 \
+openvino/model_server:latest --model_name resnet --model_path /models/resnet50.xml \
+--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9178
 ```
 
 3. The grpc client connects to the OpenVINO Model Server service that is running on port 9178.
@@ -142,9 +143,9 @@ openvino/model_server:latest --model_name resnet-binary --model_path /models/res
 	```bash
 	make venv
 	source .venv/bin/activate
-	pip3 install -r demos/common/python/requirements.txt
-	python tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
-	--iteration 1000 --model_name resnet-binary --batchsize 1 --report_every 100 --input_name 0 --output_name 1463 --grpc_port 9178
+	cd client/python/kserve-api/samples/
+	pip3 install -r requirements.txt
+	python http_infer_resnet.py --http_port 8000 --images_numpy_path ../imgs_nhwc.npy --labels_numpy_path ../lbs.npy --input_name image --output_name output --model_name resnet --transpose_input False
 	```
 
 Where:
@@ -156,8 +157,8 @@ Where:
 | `iteration 1000` | Run the data 1000 times |
 | `batchsize 1` | Batch size to be used in the inference request |
 | `report_every 10` | Number of iterations followed by results summary report|
-| `input_name 0` | Name of the deployed model input called "0" |
-| `output_name 1463` | Name of the deployed model output called "1463"|
+| `input_name image` | Name of the deployed model input called "image" |
+| `output_name output` | Name of the deployed model output called "output"|
 
 </details>
 
@@ -354,13 +355,14 @@ Debugging options are available. Click on the required option :
 	```
 3.	Prepare resnet50 model for OVMS in /models catalog and recompile the OpenVINO Model Server in docker container with debug symbols using command:
 	```bash
-	mkdir -p /models/1 && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
+	mkdir -p /models/1 && curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o /models/1/resnet50.bin && curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o /models/1/resnet50.xml
 	```
 	```bash
 	bazel build --config=mp_on_py_on //src:ovms -c dbg
 	```
 	```bash
-	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models --port 9178
+	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models \
+	--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9178
 	```
     > **NOTE**: For best results, use the makefile parameter `BAZEL_BUILD_TYPE=dbg` to build the dependencies in debug mode as shown above
 
@@ -382,7 +384,8 @@ Debugging options are available. Click on the required option :
 Download the model files and store them in the `models` directory
 ```bash
 mkdir -p models/resnet/1
-curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o models/resnet/1/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o models/resnet/1/resnet50.xml
 ```
 
 ### Option 1. Use OpenVINO Model Server build image.
@@ -405,7 +408,8 @@ bazel build --config=linux --copt="-DMTR_ENABLED" //src:ovms
 
 4. Run OVMS with `--trace_path` specifying where to save flame graph JSON file.
 ```bash
-bazel-bin/src/ovms --model_name resnet --model_path models/resnet --trace_path trace.json --port 9178
+bazel-bin/src/ovms --model_name resnet --model_path models/resnet \
+--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --trace_path trace.json --port 9178
 ```
 
 5. During app exit, the trace info will be saved into `trace.json`.
@@ -425,7 +429,8 @@ make docker_build MINITRACE=ON
 mkdir traces
 chmod -R 777 traces
 
-docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/traces/trace.json --port 9178
+docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet \
+--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --trace_path /workspace/traces/trace.json --port 9178
 ```
 
 3. During app exit, the trace info will be saved into `${PWD}/traces/trace.json`.

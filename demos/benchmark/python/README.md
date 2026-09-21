@@ -37,29 +37,21 @@ docker build . -t benchmark_client
 
 ## OVMS Deployment
 
-First of all, download a model and create an appropriate directory tree. For example, for resnet50 binary model from Intel's Open Model Zoo:
+First of all, download a model and create an appropriate directory tree. For example, for the resnet50 model:
 
 ```bash
-mkdir workspace workspace/resnet50-binary-0001 workspace/resnet50-binary-0001/1
-cd workspace/resnet50-binary-0001/1
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
-cd ../../..
-```
-
-Model directory looks like that:
-```bash
-workspace
-└── resnet50-binary-0001
-    └── 1
-        ├── resnet50-binary-0001.bin
-        └── resnet50-binary-0001.xml
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
 ```
 
 Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](../../../docs/home.md)):
 ```bash
-docker run -u $(id -u) -p 9000:9000 -p 8000:8000 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
-                     /workspace/resnet50-binary-0001 --model_name resnet50-binary-0001 --port 9000 --rest_port 8000
+docker run --rm -d -u $(id -u) -v ${HOME}/models:/models -p 9000:9000 -p 8000:8000 \
+  openvino/model_server:latest \
+  --model_name resnet --model_path /models/resnet50.xml \
+  --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
+  --port 9000 --rest_port 8000
 ```
 
 ## Selected Commands
@@ -113,7 +105,7 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
           XI worker: try to send request to endpoint: http://localhost:8000/v1/config
           XI worker: received status code is 200.
           XI worker: found models and their status:
-          XI worker:  model: resnet50-binary-0001, version: 1 - AVAILABLE
+          XI worker:  model: resnet, version: 1 - AVAILABLE
 ```
 ## Sample benchmarks
 
@@ -123,18 +115,18 @@ switches and adding `-m <model-name>` and `-v <model-version>` to the command
 line. The option `-i` is used only to add a prefix to the standard output with a name
 of an application instance. For example:
 ```bash
-docker run --network host benchmark_client -a localhost -r 8000 -l -m resnet50-binary-0001 -p 9000 -i id
+docker run --network host benchmark_client -a localhost -r 8000 -l -m resnet -p 9000 -i id
 
 Client 2.7
-NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -l -m resnet50-binary-0001 -p 9000 -i id
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -l -m resnet -p 9000 -i id
           XW id: Finished execution. If you want to run inference remove --list_models.
           XI id: try to send request to endpoint: http://localhost:8000/v1/config
           XI id: received status code is 200.
           XI id: found models and their status:
-          XI id:  model: resnet50-binary-0001, version: 1 - AVAILABLE
-          XI id: request for metadata of model resnet50-binary-0001...
-          XI id: Metadata for model resnet50-binary-0001 is downloaded...
-          XI id: set version of model resnet50-binary-0001: 1
+          XI id:  model: resnet, version: 1 - AVAILABLE
+          XI id: request for metadata of model resnet...
+          XI id: Metadata for model resnet is downloaded...
+          XI id: set version of model resnet: 1
           XI id: inputs:
           XI id:  0:
           XI id:   name: 0
@@ -158,13 +150,13 @@ The workload can be generated only if its length is specified by iteration numbe
 `-n`, `--steps_number` or duration length `-t`, `--duration`. To see report also on warmup time window use `--report_warmup` switch. Example for 8 requests
 will be generated as follows (remember to add `--print_all` to show metrics in stdout):
 ```bash
-docker run --network host benchmark_client -a localhost -r 8000 -m resnet50-binary-0001 -p 9000 -n 8 --report_warmup --print_all
+docker run --network host benchmark_client -a localhost -r 8000 -m resnet -p 9000 -n 8 --report_warmup --print_all
 
 Client 2.7
-NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m resnet50-binary-0001 -p 9000 -n 8 --report_warmup --print_all
-          XI worker: request for metadata of model resnet50-binary-0001...
-          XI worker: Metadata for model resnet50-binary-0001 is downloaded...
-          XI worker: set version of model resnet50-binary-0001: 1
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m resnet -p 9000 -n 8 --report_warmup --print_all
+          XI worker: request for metadata of model resnet...
+          XI worker: Metadata for model resnet is downloaded...
+          XI worker: set version of model resnet: 1
           XI worker: inputs:
           XI worker:  0:
           XI worker:   name: 0
@@ -362,20 +354,22 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
 ```
 ## MediaPipe benchmarking
 
-Start OVMS container with `config.json` including mediapipe servable. OVMS should be built with MediaPipe enabled.
+Reuse the resnet50 model downloaded earlier in the [OVMS Deployment](#ovms-deployment) step (`${HOME}/models`), then start OVMS container with `config.json` including mediapipe servable. OVMS should be built with MediaPipe enabled.
 ```bash
-cp -r ${PWD}/sample_data ${PWD}/workspace/sample_data
-docker run -u $(id -u) -p 9000:9000 -p 8000:8000 -d -v ${PWD}/workspace:/workspace openvino/model_server --port 9000 --rest_port 8000 --config_path /workspace/sample_data/config.json
+docker run -u $(id -u) -p 9000:9000 -p 8000:8000 -d \
+  -v ${HOME}/models:/workspace \
+  -v ${PWD}/sample_data:/workspace/sample_data \
+  openvino/model_server --port 9000 --rest_port 8000 --config_path /workspace/sample_data/config.json
 ```
-Requests for benchmarking are prepared basing on array from a numpy file. This data file is fed to Benchmark Client by specifying switch `-d <data-file>.npy`. Note that we can use numpy data in the same manner also for single models and pipelines if KServe API is set. You can create sample data with `Python3`, specifying array shape and precision. Generated .npy file should be saved to workspace/sample_data directory for this example.
+Requests for benchmarking are prepared basing on array from a numpy file. This data file is fed to Benchmark Client by specifying switch `-d <data-file>.npy`. Note that we can use numpy data in the same manner also for single models and pipelines if KServe API is set. You can create sample data with `Python3`, specifying array shape and precision. Generated .npy file should be saved to sample_data directory for this example.
 ```bash
 python -c 'import numpy as np ; \
 arr = np.ones((1,3,224,224),dtype=np.float32); \
-np.save("workspace/sample_data/resnet50-binary-0001.npy", arr)'
+np.save("sample_data/resnet50.npy", arr)'
 ```
 Having MediaPipe graph file and servable specified in config.json, we call it by its name instead of the model name: `-m <mediapipe-servable-name>`. It is necessary to set `--api KFS` since the Mediapipe graphs are exposed only via KServe API.
 ```bash
-docker run -v ${PWD}/workspace:/workspace --network host benchmark_client -a localhost -r 8000 -m resnet50-binary-0001_mediapipe -p 9000 -n 8 --api KFS -d /workspace/sample_data/resnet50-binary-0001.npy --report_warmup --print_all
+docker run -v ${PWD}/sample_data:/workspace/sample_data --network host benchmark_client -a localhost -r 8000 -m resnet_mediapipe -p 9000 -n 8 --api KFS -d /workspace/sample_data/resnet50.npy --report_warmup --print_all
 ```
 
 Many other client options together with benchmarking examples are presented in
