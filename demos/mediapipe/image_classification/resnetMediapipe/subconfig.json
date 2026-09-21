@@ -3,8 +3,9 @@
         {"config": {
                 "name": "resnet",
                 "base_path": "model",
-                "mean_values": "[123.675,116.28,103.53]",
-                "scale_values": "[58.395,57.12,57.375]"
+                "mean": "[123.675,116.28,103.53]",
+                "scale": "[58.395,57.12,57.375]",
+                "layout": "NCHW"
         	}
 	}
     ]
