@@ -146,7 +146,7 @@ optimum-cli export openvino \
   --trust-remote-code \
   --weight-format int4 \
   --all-layers \
-  models/gemma-4-31b-it-dflash-int4-ov
+  ${HOME}/models/gemma-4-31b-it-dflash-int4-ov
 ```
 
 The main model can then be served with OVMS using `--source_model OpenVINO/gemma-4-31B-it-int4-ov`, so there is no extra local main-model export step for this example.
@@ -154,7 +154,7 @@ The main model can then be served with OVMS using `--source_model OpenVINO/gemma
 Your model directory should contain the exported DFlash draft model alongside any downloaded main model files created at runtime by OVMS:
 
 ```text
-models
+${HOME}/models
 └── gemma-4-31b-it-dflash-int4-ov
     ├── openvino_model.bin
     ├── openvino_model.xml
