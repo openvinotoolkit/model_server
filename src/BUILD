@@ -241,13 +241,24 @@ ovms_cc_library(
     name = "libovms_server_settings",
     hdrs = ["capi_frontend/server_settings.hpp"],
     srcs = ["capi_frontend/server_settings.cpp"],
-    deps = ["libovmsstring_utils"],
+    deps = ["libovmsstring_utils", "libovms_curl_global_init"],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
     name = "libovms_shutdown_state",
     hdrs = ["shutdown_state.hpp"],
     srcs = ["shutdown_state.cpp"],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "libovms_curl_global_init",
+    hdrs = ["curl_global_initializer.hpp"],
+    srcs = ["curl_global_initializer.cpp"],
+    deps = [
+        "//third_party:curl",
+        "libovmslogging",
+        "libovmsstatus",
+    ],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(

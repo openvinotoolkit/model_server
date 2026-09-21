@@ -218,6 +218,10 @@ struct HFSettingsImpl {
 };
 
 struct ServerSettingsImpl {
+    // Ensures process-wide one-time initialization (currently: libcurl) happens as soon as
+    // server settings exist, regardless of entry point (CLI, C-API, tests) - see server_settings.cpp.
+    ServerSettingsImpl();
+
     uint32_t grpcPort = 0;
     uint32_t restPort = 0;
     uint32_t grpcWorkers = 1;
