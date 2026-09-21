@@ -310,8 +310,7 @@ COPY src/ /ovms/src/
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
-RUN if true; then \
-    mkdir -p /opt/intel/openvino/python/openvino-4.dist-info && \
+RUN mkdir -p /opt/intel/openvino/python/openvino-4.dist-info && \
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2026.5' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 

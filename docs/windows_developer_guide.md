@@ -70,7 +70,7 @@ windows_install_build_dependencies.bat my_dir_on_c 1 1
 
 ## COMPILE
 [WARNING] This step consumes up to 13GB of disk space. It can take up to 1h depending on host CPU and internet connection speed.
-This default command compiles ovms.exe without python dependencies, just C++ binary with limited support for chat template processing.
+This default command compiles ovms.exe with Python support, including chat template processing for GENAI LLMs.
 ```bat
 windows_build.bat
 ```
@@ -85,14 +85,9 @@ windows_build.bat my_dir_on_c --with_tests --integrity
 [arg4] --integrity - Add the compilation integrity flag to 0 or 1 - set the additional integritycheck compilation flag when compiling dependencies
 
 # Running unit tests - optional
-The script compiles ovms_test binary with C++ only, downloads and converts test LLM models (src\tests\llm_testing).
+The script compiles the Python-enabled ovms_test binary, downloads and converts test LLM models (src\tests\llm_testing), and installs Python torch and optimum.
 ```bat
 windows_test.bat
-```
-
-The script compiles ovms_test with Python support, downloads and converts test LLM models (src\tests\llm_testing) and installs Python torch and optimum.
-```bat
-windows_test.bat opt
 ```
 
 # Creating deployment package

@@ -2344,7 +2344,7 @@ cc_test(
         "//:disable_mediapipe": [],
     }) + select({
         "//src:windows": [
-            "//src/python:libovmspython.dll",
+            "//src/python:copy_libovmspython",
             "//src/python:libpython_calculators",
         ],
         "//conditions:default": [

@@ -76,7 +76,6 @@
 #include "light_test_utils.hpp"
 #include "test_with_temp_dir.hpp"
 
-#if 1
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
@@ -85,7 +84,6 @@
 #include "../python/pythonnoderesources.hpp"
 namespace py = pybind11;
 using namespace py::literals;
-#endif
 
 using namespace ovms;
 
@@ -308,7 +306,6 @@ public:
     }
 };
 
-#if 1
 class MediapipePyTensorOvTensorConverterTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -321,7 +318,6 @@ public:
         SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_ovtensor_pytensor_converter.json");
     }
 };
-#endif
 
 class MediapipeTfLiteTensorTest : public MediapipeFlowTest {
 public:
@@ -390,7 +386,6 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
-#if 1
 TEST_F(MediapipePyTensorOvTensorConverterTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -460,7 +455,6 @@ TEST_F(MediapipeOvTensorPyTensorConverterTest, Infer) {
     EXPECT_EQ(0, std::memcmp(actualOutput, expectedOutput, dataLengthToCheck))
         << readableError(expectedOutput, actualOutput, dataLengthToCheck / sizeof(float));
 }
-#endif
 
 TEST_F(MediapipeTFTest, Passthrough) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
@@ -3664,7 +3658,6 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
 }
 
-#if 1
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentPytensor = R"(
         input_stream: "OVMS_PY_TENSOR:in"
@@ -3738,7 +3731,6 @@ TEST_F(KFSGRPCContentFieldsSupportTestBytes, PyTensorBytesContentsCheckExpectedS
     this->request.mutable_model_name()->assign(servableName);
     this->performInference(ovms::StatusCode::OK);
 }
-#endif
 
 std::unordered_map<std::type_index, std::pair<ovms::Precision, ovms::StatusCode>> TYPE_TO_OVMS_PRECISION_TO_STATUS_TF_TENSOR{
     {typeid(float), {ovms::Precision::FP32, ovms::StatusCode::OK}},
@@ -4085,14 +4077,11 @@ TEST(WhitelistRegistered, InputStreamHandlers) {
 }
 
 TEST(WhitelistRegistered, MediapipeCalculatorsList) {
-    std::unordered_set<std::string> expected({
-#if 1
-        // Expected when building with python
-        "CalculatorRunnerSinkCalculator",
+    // Expected when building with python
+    std::unordered_set<std::string> expected({"CalculatorRunnerSinkCalculator",
         "CalculatorRunnerSourceCalculator",
         "PyTensorOvTensorConverterCalculator",  // integral OVMS calculator
         "PythonExecutorCalculator",             // integral OVMS calculator
-#endif
         "HttpLLMCalculator",                    // integral OVMS calculator
         "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
@@ -4357,7 +4346,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "VisibilitySmoothingCalculator",
         "WarpAffineCalculator",
         "WarpAffineCalculatorCpu",
-        "WorldLandmarkProjectionCalculator" });
+        "WorldLandmarkProjectionCalculator"});
 
     ASSERT_THAT(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), UnorderedElementsAreArray(expected)) << readableSetError(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), expected);
 }
