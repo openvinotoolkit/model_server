@@ -100,8 +100,6 @@ struct Minicpm5ToolParserImpl {
 private:
     const ToolsParameterTypeMap_t& toolsParametersTypeMap;
     const bool removeNewlineAroundParameters = true;
-    // Resets everything except toolCallPositions, which removeToolCallsFromContentIfNeeded()
-    // still needs to consult after generation ends.
     void resetParsingState() {
         currentState = State::Content;
         currentFunction.clear();

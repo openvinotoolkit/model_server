@@ -257,9 +257,7 @@ std::optional<ToolCalls_t> Minicpm5ToolParserImpl::finalizeOnGenerationEnd() {
     ToolCalls_t toolCalls;
     while (parseUntilStateChange(toolCalls)) {
     }
-    // Generation has ended: nothing more will ever be parsed from streamContent, so leave the
-    // parser in the same clean state a normal completion would (toolCallPositions is kept --
-    // removeToolCallsFromContentIfNeeded() still needs it afterward).
+
     resetParsingState();
     if (!toolCalls.empty()) {
         return std::move(toolCalls);
