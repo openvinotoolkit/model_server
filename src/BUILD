@@ -709,6 +709,7 @@ ovms_cc_library(
         "libovmsstatus",
         "libovmslogging",
         "libovms_servable_definition",
+        "libovms_config",
         "//src/utils:newline_delimited",
     ],
     visibility = ["//visibility:public"],
