@@ -1,22 +1,27 @@
 diff --git a/src/google/protobuf/json/internal/untyped_message.h b/src/google/protobuf/json/internal/untyped_message.h
 --- a/src/google/protobuf/json/internal/untyped_message.h
 +++ b/src/google/protobuf/json/internal/untyped_message.h
-@@
+@@ -15,6 +15,7 @@
+ #include <cstddef>
+ #include <cstdint>
+ #include <memory>
++#include <map>
  #include <string>
  #include <utility>
-+#include <map>
  #include <variant>
- #include <vector>
-@@
--    const ResolverPool::Message* desc_;
--    absl::flat_hash_map<int32_t, Value> fields_;
-+    const ResolverPool::Message* desc_;
+@@ -229,7 +230,14 @@ class UntypedMessage final {
+   absl::Status InsertField(const ResolverPool::Field& field, T&& value);
+ 
+   const ResolverPool::Message* desc_;
+-  absl::flat_hash_map<int32_t, Value> fields_;
 +#if defined(_MSC_VER)
-+    // MSVC can fail during instantiation of absl::flat_hash_map for a
-+    // self-referential Value type that includes UntypedMessage.
-+    // Keep the performance path elsewhere, but avoid the compiler bug on Windows.
-+    std::map<int32_t, Value> fields_;
++  // MSVC can fail during instantiation of absl::flat_hash_map for a
++  // self-referential Value type that includes UntypedMessage.
++  // Keep the performance path elsewhere, but avoid the compiler bug on Windows.
++  std::map<int32_t, Value> fields_;
 +#else
-+    absl::flat_hash_map<int32_t, Value> fields_;
++  absl::flat_hash_map<int32_t, Value> fields_;
 +#endif
-   };
+ };
+ }  // namespace json_internal
+ }  // namespace protobuf

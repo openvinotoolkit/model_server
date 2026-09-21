@@ -15,13 +15,22 @@
 #
 
 cpp:
-	bazel build --jobs=${JOBS} ${CAPI_FLAGS} //src:ovms_shared
+	bazel build --jobs=${JOBS} ${CAPI_FLAGS} //src:ovms_shared '@drogon//:drogon_cmake' '@aws-sdk-cpp//:aws-sdk-cpp_cmake' '@jsoncpp//:jsoncpp' '@libgit2_engine//:libgit2_cmake'
+	EXTRA_STATIC_LIBS="$$(bazel cquery ${CAPI_FLAGS} --output=files '@drogon//:drogon_cmake + @aws-sdk-cpp//:aws-sdk-cpp_cmake + @jsoncpp//:jsoncpp' 2>/dev/null | grep '\.a$$' | sort -u | sed 's|^|/ovms/|')" ; \
+	LIBGIT2_DIR="$$(bazel cquery ${CAPI_FLAGS} --output=files '@libgit2_engine//:libgit2_cmake' 2>/dev/null | grep '\.so$$' | sed 's|^|/ovms/|' | xargs -n1 dirname | sort -u | head -1)" ; \
 	g++ src/main_capi.cpp -I/ovms/src/ -L/ovms/bazel-bin/src/ -L/azure-sdk-install/lib \
-		-Wl,-rpath-link,/azure-sdk-install/lib -lovms_shared -fPIC --std=c++17 -o /ovms/bazel-bin/src/capi_cpp_example
-	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/bazel-bin/src/:/azure-sdk-install/lib /ovms/bazel-bin/src/capi_cpp_example
+		-Wl,-rpath-link,/azure-sdk-install/lib -lovms_shared -fPIC --std=c++17 \
+		-Wl,--start-group $$EXTRA_STATIC_LIBS -Wl,--end-group \
+		-L"$$LIBGIT2_DIR" -lgit2 -Wl,-rpath-link,"$$LIBGIT2_DIR" -lssl -lcrypto -lcurl -luuid -lz \
+		-o /ovms/bazel-bin/src/capi_cpp_example ; \
+	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/bazel-bin/src/:/azure-sdk-install/lib:$$LIBGIT2_DIR /ovms/bazel-bin/src/capi_cpp_example
 
 c:
-	bazel build --jobs=${JOBS} ${CAPI_FLAGS} //src:ovms_shared
-	gcc -c src/main_capi.c -o /ovms/bazel-bin/src/main_capi.o -std=c99
-	gcc -o /ovms/bazel-bin/src/capi_c_example /ovms/bazel-bin/src/main_capi.o -lovms_shared -L/ovms/bazel-bin/src/ -L/azure-sdk-install/lib -Wl,-rpath-link,/azure-sdk-install/lib
-	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/bazel-bin/src/:/azure-sdk-install/lib /ovms/bazel-bin/src/capi_c_example
+	bazel build --jobs=${JOBS} ${CAPI_FLAGS} //src:ovms_shared '@drogon//:drogon_cmake' '@aws-sdk-cpp//:aws-sdk-cpp_cmake' '@jsoncpp//:jsoncpp' '@libgit2_engine//:libgit2_cmake'
+	EXTRA_STATIC_LIBS="$$(bazel cquery ${CAPI_FLAGS} --output=files '@drogon//:drogon_cmake + @aws-sdk-cpp//:aws-sdk-cpp_cmake + @jsoncpp//:jsoncpp' 2>/dev/null | grep '\.a$$' | sort -u | sed 's|^|/ovms/|')" ; \
+	LIBGIT2_DIR="$$(bazel cquery ${CAPI_FLAGS} --output=files '@libgit2_engine//:libgit2_cmake' 2>/dev/null | grep '\.so$$' | sed 's|^|/ovms/|' | xargs -n1 dirname | sort -u | head -1)" ; \
+	gcc -c src/main_capi.c -o /ovms/bazel-bin/src/main_capi.o -std=c99 ; \
+	g++ -o /ovms/bazel-bin/src/capi_c_example /ovms/bazel-bin/src/main_capi.o -lovms_shared -L/ovms/bazel-bin/src/ -L/azure-sdk-install/lib -Wl,-rpath-link,/azure-sdk-install/lib \
+		-Wl,--start-group $$EXTRA_STATIC_LIBS -Wl,--end-group \
+		-L"$$LIBGIT2_DIR" -lgit2 -Wl,-rpath-link,"$$LIBGIT2_DIR" -lssl -lcrypto -lcurl -luuid -lz ; \
+	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/ovms/bazel-bin/src/:/azure-sdk-install/lib:$$LIBGIT2_DIR /ovms/bazel-bin/src/capi_c_example
