@@ -36,6 +36,7 @@ extern std::shared_ptr<spdlog::logger> s2t_calculator_logger;
 extern std::shared_ptr<spdlog::logger> t2s_calculator_logger;
 extern std::shared_ptr<spdlog::logger> embeddings_calculator_logger;
 extern std::shared_ptr<spdlog::logger> rerank_calculator_logger;
+extern std::shared_ptr<spdlog::logger> webrtc_logger;
 #endif
 #if (OV_TRACE == 1)
 extern std::shared_ptr<spdlog::logger> ov_logger;
