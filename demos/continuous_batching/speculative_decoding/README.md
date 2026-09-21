@@ -2,16 +2,16 @@
 
 Speculative (assisted) decoding reduces generation latency without changing the output distribution. A lightweight drafter proposes candidate tokens; the main model validates them in one parallel forward pass. Accepted draft tokens replace sequential decode steps of the main model, yielding end-to-end speedups that are most pronounced at concurrency 1.
 
-OpenVINO GenAI implements three drafting strategies, all exposed through the same `draft_models_path` configuration field in OVMS:
+OpenVINO GenAI implements various drafting strategies, all exposed through the same `draft_models_path` configuration field in OVMS:
 
 | Strategy | How it drafts | Best for | Extra model required |
 |---|---|---|---|
 | **MTP** | Built-in multi-token prediction head | Models with bundled MTP heads (e.g. Qwen3.8-27B) | No — head bundled with the main model |
-| **Fast Draft** | Small off-the-shelf LLM | General-purpose; any target/draft pair | Yes — smaller LLM sharing target's tokenizer |
 | **DFlash** | Specialized draft model using target hidden states and a compact hidden-state verification pass | Strong acceptance on compatible target/draft pairs; works well for VLMs and other models with matching draft metadata | Yes — dedicated DFlash draft model for the target family |
 | **EAGLE3** | Draft head conditioned on target's hidden states | Highest acceptance rate; code and reasoning; supports tree drafting | Yes — EAGLE3 head trained on the target family |
+| **Fast Draft** | Small off-the-shelf LLM | General-purpose; any target/draft pair | Yes — smaller LLM sharing target's tokenizer |
 
-All four strategies share the same server API — only the generation parameters differ.
+All strategies share the same server API — only the generation parameters differ.
 
 ## Prerequisites
 
@@ -172,13 +172,14 @@ docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/
   --model_repository_path /models \
   --source_model OpenVINO/gemma-4-31B-it-int4-ov \
   --draft_model_path /models/gemma-4-31b-it-dflash-int4-ov \
-  --rest_port 8000
+  --rest_port 8000 \
+  --enable_prefix_caching false
 ```
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
 ```text
-ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/gemma-4-31B-it-int4-ov --draft_model_path c:\models\gemma-4-31b-it-dflash-int4-ov
+ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/gemma-4-31B-it-int4-ov --draft_model_path c:\models\gemma-4-31b-it-dflash-int4-ov --enable_prefix_caching false
 ```
 :::
 
