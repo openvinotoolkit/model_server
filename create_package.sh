@@ -30,7 +30,7 @@ find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d \
     ! -name "libgtest.so" ! -name "*gtest*" ! -name "*googletest*" \
     ! -name "*params" ! -name "*.hana.*" ! -name "*runfiles_manifest*" \
     ! -name "py_generate_pipeline.cpython*" ! -name "lib_node_*" \
-    ! -name "libazure-*" ! -name "pyovms.so" \
+    ! -name "libazure-*" ! -name "pyovms.so" ! -name "*.repo_mapping" \
     ! -path "*/_solib_k8/*" ! -path "*test_python_binding*" \
     ! -name "libpython[0-9]*.so*" \
     -exec cp -vP {} /ovms_release/lib/ \;
@@ -173,8 +173,8 @@ if [ "$FUZZER_BUILD" == "0" ]; then
     patchelf --remove-rpath ./ovms && \
     patchelf --set-rpath '$ORIGIN/../lib/' ./ovms
 fi
-find /ovms_release/lib/ -type f -iname '*.so*' -exec patchelf --debug --remove-rpath {} +
-find /ovms_release/lib/ -type f -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} +
+find /ovms_release/lib/ -type f -iname '*.so*' ! -name '*.repo_mapping' -exec patchelf --debug --remove-rpath {} +
+find /ovms_release/lib/ -type f -iname '*.so*' ! -name '*.repo_mapping' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} +
 
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino.so
