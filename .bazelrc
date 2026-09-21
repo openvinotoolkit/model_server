@@ -176,6 +176,7 @@ build:windows --experimental_link_static_libraries_once=false
 # Prevent regressions on those two incompatible changes
 # TODO: remove those flags when they are flipped in the default Bazel version TF uses.
 build:windows --incompatible_enforce_config_setting_visibility
+build:windows --noenable_bzlmod
 
 # Config to use a mostly-static build and disable modular op registration
 # support (this will revert to loading TensorFlow with RTLD_GLOBAL in Python).
