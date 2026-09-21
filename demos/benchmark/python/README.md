@@ -156,7 +156,7 @@ The workload can be generated only if its length is specified by iteration numbe
 `-n`, `--steps_number` or duration length `-t`, `--duration`. To see report also on warmup time window use `--report_warmup` switch. Example for 8 requests
 will be generated as follows (remember to add `--print_all` to show metrics in stdout):
 ```bash
-x
+docker run --network host benchmark_client -a localhost -r 8000 -m resnet -p 9000 -n 8 --report_warmup --print_all
 
 Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m resnet -p 9000 -n 8 --report_warmup --print_all
