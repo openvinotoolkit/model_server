@@ -70,6 +70,13 @@ struct WinServiceEventWrapper {
     ~WinServiceEventWrapper();
 };
 
+enum class ServiceLifecycleState {
+    Starting,
+    Running,
+    StopRequested,
+    Stopped,
+};
+
 class OvmsWindowsServiceManager {
 public:
     OvmsWindowsServiceManager();
@@ -109,7 +116,7 @@ private:
     static SERVICE_STATUS serviceStatus;
     static std::unique_ptr<WinServiceStatusWrapper> statusHandle;
     static std::unique_ptr<WinServiceEventWrapper> serviceStopEvent;
-    static std::atomic<bool> serviceStopRequested;
+    static std::atomic<ServiceLifecycleState> serviceLifecycleState;
     static std::atomic<DWORD> serviceWorkerWin32Error;
 
     // Methods
@@ -122,7 +129,7 @@ private:
     void setServiceStopStatusWithSuccess();
     void setServiceStopStatusWithError(DWORD errorCode);
     void setServiceStopStatusWithExitCode(const int& exitCode);
-    static void setServiceRunningStatus();
+    static bool setServiceRunningStatus();
 
     // Registry manipulation
     static std::string getRegValue(const winreg::RegKey& key, const std::wstring& name, const DWORD& type);

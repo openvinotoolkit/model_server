@@ -160,7 +160,7 @@ int main_windows(int argc, char** argv) {
 SERVICE_STATUS OvmsWindowsServiceManager::serviceStatus = {0};
 std::unique_ptr<WinServiceStatusWrapper> OvmsWindowsServiceManager::statusHandle = std::make_unique<WinServiceStatusWrapper>();
 std::unique_ptr<WinServiceEventWrapper> OvmsWindowsServiceManager::serviceStopEvent = std::make_unique<WinServiceEventWrapper>();
-std::atomic<bool> OvmsWindowsServiceManager::serviceStopRequested{false};
+std::atomic<ServiceLifecycleState> OvmsWindowsServiceManager::serviceLifecycleState{ServiceLifecycleState::Stopped};
 std::atomic<DWORD> OvmsWindowsServiceManager::serviceWorkerWin32Error{ERROR_SUCCESS};
 LPSTR OvmsWindowsServiceManager::serviceName = _T("ovms");
 LPSTR OvmsWindowsServiceManager::serviceDisplayName = _T("OpenVino Model Server");
@@ -198,7 +198,7 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     }
 
     // Create the stop event before the service starts accepting stop controls.
-    serviceStopRequested.store(false);
+    serviceLifecycleState.store(ServiceLifecycleState::Starting);
     serviceWorkerWin32Error.store(ERROR_SUCCESS);
     serviceStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
     serviceStopEvent->handle = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -284,10 +284,11 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
         this->setServiceStopStatusWithError(workerWin32Error);
     } else if (workerExitCode == ERROR_SUCCESS) {
         this->setServiceStopStatusWithSuccess();
+    } else if (workerExitCode == static_cast<DWORD>(OVMS_EX_FAILURE) ||
+        workerExitCode == static_cast<DWORD>(OVMS_EX_WARNING) ||
+        workerExitCode == static_cast<DWORD>(OVMS_EX_USAGE)) {
         // Map known OVMS application exit codes through setServiceStopStatusWithExitCode
         // so SCM receives the established Win32 status translation instead of the raw code.
-        // OVMS_EX_WARNING, OVMS_EX_FAILURE, OVMS_EX_USAGE
-    } else if (workerExitCode <= static_cast<DWORD>(OVMS_EX_USAGE)) {
         this->setServiceStopStatusWithExitCode(static_cast<int>(workerExitCode));
     } else {
         this->setServiceStopStatusWithError(workerExitCode);
@@ -542,8 +543,8 @@ void WINAPI OvmsWindowsServiceManager::serviceCtrlHandler(DWORD CtrlCode) {
         if (serviceStatus.dwCurrentState != SERVICE_STOP_PENDING) {
             setServiceStopStatusPending();
         }
-        // Signal the worker thread to start shutting down
-        serviceStopRequested.store(true);
+        // Atomically prevent the startup path from publishing RUNNING.
+        serviceLifecycleState.store(ServiceLifecycleState::StopRequested);
         if (!SetEvent(serviceStopEvent->handle)) {
             const DWORD setEventError = GetLastError();
             DEBUG_LOG("serviceCtrlHandler: SetEvent returned error");
@@ -572,14 +573,14 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     ovmsService->setup = false;
 
     //  Start OVMS and check for stop
-    while (!serviceStopRequested.load()) {
+    while (serviceLifecycleState.load() != ServiceLifecycleState::StopRequested) {
         // Already started
         if (!ovmsService->setup) {
             std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>* params = (std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>*)lpParam;
             DEBUG_LOG("serviceWorkerThread: Starting ovms from parameters.");
             ovmsService->SetUp(params);
         }
-        if (serviceStopRequested.load()) {
+        if (serviceLifecycleState.load() == ServiceLifecycleState::StopRequested) {
             break;
         }
         // Check thread not exited
@@ -589,17 +590,20 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
         }
 
         if (!ovmsService->started && ovmsService->checkModulesStarted()) {
-            if (serviceStopRequested.load()) {
+            if (serviceLifecycleState.load() == ServiceLifecycleState::StopRequested) {
                 break;
             }
-            // Tell the service controller we are started
-            OvmsWindowsServiceManager::setServiceRunningStatus();
-            ovmsService->started = true;
+            // Publish RUNNING only if startup still owns the lifecycle state.
+            if (OvmsWindowsServiceManager::setServiceRunningStatus()) {
+                ovmsService->started = true;
+            } else {
+                break;
+            }
         }
 
         DWORD waitResult = WaitForSingleObject(serviceStopEvent->handle, SERVICE_WORKER_WAIT_INTERVAL_MS);
         if (waitResult == WAIT_OBJECT_0) {
-            serviceStopRequested.store(true);
+            serviceLifecycleState.store(ServiceLifecycleState::StopRequested);
             break;
         }
         if (waitResult == WAIT_TIMEOUT) {
@@ -610,7 +614,6 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
         DEBUG_LOG("serviceWorkerThread: WaitForSingleObject returned error.");
         serviceReportEvent("WaitForSingleObject", waitError);
         serviceWorkerWin32Error.store(waitError);
-        ovmsService->error = static_cast<int>(waitError);
         break;
     }
 
@@ -649,6 +652,7 @@ void OvmsWindowsServiceManager::setServiceStartStatus() {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusWithError(DWORD errorCode) {
+    serviceLifecycleState.store(ServiceLifecycleState::Stopped);
     serviceStatus.dwControlsAccepted = 0;
     serviceStatus.dwCurrentState = SERVICE_STOPPED;
     serviceStatus.dwWin32ExitCode = errorCode;
@@ -661,6 +665,7 @@ void OvmsWindowsServiceManager::setServiceStopStatusWithError(DWORD errorCode) {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusWithExitCode(const int& exitCode) {
+    serviceLifecycleState.store(ServiceLifecycleState::Stopped);
     DWORD exitToError = static_cast<DWORD>(exitCode);
     // Map known exit code to known win errors for proper service status report on error
     // Check https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499- for details
@@ -696,7 +701,12 @@ void OvmsWindowsServiceManager::setServiceStopStatusWithExitCode(const int& exit
     DEBUG_LOG("ServiceMain: SetServiceStatus stop with exit code");
 }
 
-void OvmsWindowsServiceManager::setServiceRunningStatus() {
+bool OvmsWindowsServiceManager::setServiceRunningStatus() {
+    ServiceLifecycleState expected = ServiceLifecycleState::Starting;
+    if (!OvmsWindowsServiceManager::serviceLifecycleState.compare_exchange_strong(expected, ServiceLifecycleState::Running)) {
+        return false;
+    }
+
     OvmsWindowsServiceManager::serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
     OvmsWindowsServiceManager::serviceStatus.dwCurrentState = SERVICE_RUNNING;
     OvmsWindowsServiceManager::serviceStatus.dwWin32ExitCode = 0;
@@ -705,8 +715,11 @@ void OvmsWindowsServiceManager::setServiceRunningStatus() {
     if (SetServiceStatus(OvmsWindowsServiceManager::statusHandle->handle, &OvmsWindowsServiceManager::serviceStatus) == FALSE) {
         DEBUG_LOG("OvmsWindowsServiceManager: SetServiceStatus returned error");
         serviceReportEvent("SetServiceStatus");
+        OvmsWindowsServiceManager::serviceLifecycleState.store(ServiceLifecycleState::StopRequested);
+        return false;
     }
     DEBUG_LOG("OvmsWindowsServiceManager: SetServiceStatus running");
+    return true;
 }
 
 std::string OvmsWindowsServiceManager::getRegValue(const winreg::RegKey& key, const std::wstring& name, const DWORD& regType) {
@@ -814,7 +827,7 @@ void OvmsWindowsServiceManager::setPythonPathRegistry() {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusPending() {
-    serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+    serviceStatus.dwControlsAccepted = 0;
     serviceStatus.dwCurrentState = SERVICE_STOP_PENDING;
     serviceStatus.dwWin32ExitCode = 0;
     serviceStatus.dwCheckPoint = 4;
@@ -827,6 +840,7 @@ void OvmsWindowsServiceManager::setServiceStopStatusPending() {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusWithSuccess() {
+    serviceLifecycleState.store(ServiceLifecycleState::Stopped);
     serviceStatus.dwControlsAccepted = 0;
     serviceStatus.dwCurrentState = SERVICE_STOPPED;
     serviceStatus.dwWin32ExitCode = 0;
