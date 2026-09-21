@@ -13,6 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-docker build . --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy -t go-client
+docker build . -t go-client
 mkdir build
 docker run -v $PWD:/opt/mount --rm --entrypoint cp go-client:latest -r /app/build/ /opt/mount/
