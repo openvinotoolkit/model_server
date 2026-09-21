@@ -15,8 +15,8 @@
 //*****************************************************************************
 #include "deserialization.hpp"
 
-#include "../itensorfactory.hpp"
-#include "../logging.hpp"
+#include "src/itensorfactory.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,

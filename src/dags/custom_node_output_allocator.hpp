@@ -17,7 +17,7 @@
 
 #include <stddef.h>
 
-#include "../custom_node_interface.h"  // NOLINT
+#include "src/custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
 
 namespace ovms {

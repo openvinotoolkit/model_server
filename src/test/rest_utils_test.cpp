@@ -18,8 +18,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../logging.hpp"
-#include "../rest_utils.hpp"
+#include "src/logging.hpp"
+#include "src/rest_utils.hpp"
 #include "src/status.hpp"
 #include "test_utils.hpp"
 

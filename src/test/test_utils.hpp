@@ -33,28 +33,28 @@
 #include <gtest/gtest.h>
 #include <spdlog/spdlog.h>
 
-#include "../capi_frontend/inferencerequest.hpp"
-#include "../capi_frontend/inferenceresponse.hpp"
-#include "../config.hpp"
-#include "../dags/node_library.hpp"
+#include "src/capi_frontend/inferencerequest.hpp"
+#include "src/capi_frontend/inferenceresponse.hpp"
+#include "src/config.hpp"
+#include "src/dags/node_library.hpp"
 #include "src/execution_context.hpp"
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
+#include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 #include "src/metrics/metric_registry.hpp"
-#include "../modelinstance.hpp"
+#include "src/modelinstance.hpp"
 #include "src/servable_management/modelmanager.hpp"
-#include "../shape.hpp"
+#include "src/shape.hpp"
 #include "src/status.hpp"
-#include "../tensorinfo.hpp"
+#include "src/tensorinfo.hpp"
 
-#include "../kfs_frontend/validation.hpp"
+#include "src/kfs_frontend/validation.hpp"
 
 #if (PYTHON_DISABLE == 0)
-#include "../python/pythonnoderesources.hpp"
+#include "src/python/pythonnoderesources.hpp"
 #endif
 
 #include "test_models.hpp"
@@ -728,7 +728,7 @@ void SetUpServerForDownloadAndStartWithLoras(std::unique_ptr<std::thread>& t, ov
 /*
  *  starts loading OVMS on separate thread but waits until it is ready
  */
-void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "", bool withPython = true);
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "");
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds, const char* task);
 

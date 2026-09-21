@@ -20,7 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../stringutils.hpp"
+#include "src/stringutils.hpp"
 
 using namespace testing;
 

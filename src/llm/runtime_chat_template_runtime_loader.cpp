@@ -27,7 +27,7 @@
 #include <dlfcn.h>
 #endif
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 namespace {

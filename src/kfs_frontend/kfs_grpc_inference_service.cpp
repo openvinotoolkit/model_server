@@ -25,39 +25,44 @@
 #include "deserialization.hpp"
 #include "kfs_utils.hpp"
 #include "kfs_request_utils.hpp"
-#include "../dags/pipeline.hpp"
-#include "../dags/pipeline_factory.hpp"
-#include "../dags/pipelinedefinitionstatus.hpp"
+#include "src/dags/pipeline.hpp"
+#include "src/dags/pipeline_factory.hpp"
+#include "src/dags/pipelinedefinitionstatus.hpp"
 #include "src/execution_context.hpp"
-#include "../grpc_utils.hpp"
+#include "src/grpc_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
-#include "src/mediapipe_internal/mediapipe_graph_executor_interface.hpp"
+// clang-format off
+// kfs_graph_executor_impl needs to be included before mediapipegraphexecutor
+// because it contains functions required by graph execution template
+#include "kfs_graph_executor_impl.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
+// clang-format on
 #endif
 #include "src/metrics/metric.hpp"
-#include "../model.hpp"
-#include "../modelinstance.hpp"
-#include "../deserialization_main.hpp"
-#include "../inference_executor.hpp"
-#include "../modelinstanceunloadguard.hpp"
+#include "src/model.hpp"
+#include "src/modelinstance.hpp"
+#include "src/deserialization_main.hpp"
+#include "src/inference_executor.hpp"
+#include "src/modelinstanceunloadguard.hpp"
 #include "src/servable_management/modelmanager.hpp"
-#include "../ovinferrequestsqueue.hpp"
-#include "../servable_definition.hpp"
-#include "../servable_definition_unload_guard.hpp"
+#include "src/ovinferrequestsqueue.hpp"
+#include "src/servable_definition.hpp"
+#include "src/servable_definition_unload_guard.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
-#include "../single_version_servable_definition.hpp"
+#include "src/server.hpp"
+#include "src/single_version_servable_definition.hpp"
 #include "src/status.hpp"
-#include "../stringutils.hpp"
-#include "../tensorinfo.hpp"
-#include "../timer.hpp"
-#include "../version.hpp"
+#include "src/stringutils.hpp"
+#include "src/tensorinfo.hpp"
+#include "src/timer.hpp"
+#include "src/version.hpp"
 
 namespace {
 enum : unsigned int {
     TOTAL,
     TIMER_END
 };
-}  // namespace
+}
 
 namespace ovms {
 
@@ -112,10 +117,6 @@ Status KFSInferenceServiceImpl::getModelReady(const KFSGetModelStatusRequest* re
     // if no version requested give response for default version
     const auto& name = request->name();
     const auto& versionString = request->version();
-    if (containsEmbeddedNull(name)) {
-        SPDLOG_DEBUG("ModelReady requested model name contains embedded null byte");
-        return StatusCode::MODEL_NAME_MISSING;
-    }
     auto model = manager.findModelByName(name);
     SPDLOG_DEBUG("ModelReady requested name: {}, version: {}", name, versionString);
     if (model == nullptr) {
@@ -191,11 +192,6 @@ Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* contex
 Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context, const KFSModelMetadataRequest* request, KFSModelMetadataResponse* response, ExecutionContext executionContext, KFSModelExtraMetadata& extraMetadata) {
     const auto& name = request->name();
     const auto& versionString = request->version();
-
-    if (containsEmbeddedNull(name)) {
-        SPDLOG_DEBUG("GetModelMetadata requested model name contains embedded null byte");
-        return StatusCode::MODEL_NAME_MISSING;
-    }
 
     auto model = this->modelManager.findModelByName(name);
     SPDLOG_DEBUG("ModelMetadata requested name: {}, version: {}", name, versionString);
@@ -295,12 +291,13 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         if (status == StatusCode::PIPELINE_DEFINITION_NAME_MISSING) {
             SPDLOG_DEBUG("Requested DAG: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
 #if (MEDIAPIPE_DISABLE == 0)
-            std::unique_ptr<MediapipeGraphExecutorInterface> executor;
-            status = this->modelManager.createPipelineHandle(executor, request->model_name());
+            std::unique_ptr<MediapipeGraphExecutor> executor;
+            status = this->modelManager.createPipeline(executor, request->model_name());
             if (!status.ok()) {
                 return status;
             }
-            return executor->infer(request, response, executionContext);
+            status = executor->infer(request, response, executionContext);
+            return status;
 #else
             SPDLOG_DEBUG("Requested DAG: {} does not exist. Mediapipe support was disabled during build process...", request->model_name());
 #endif
@@ -337,8 +334,8 @@ Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* cont
         SPDLOG_DEBUG(status.string());
         return status;
     }
-    std::unique_ptr<MediapipeGraphExecutorInterface> executor;
-    auto status = this->modelManager.createPipelineHandle(executor, firstRequest.model_name());
+    std::unique_ptr<MediapipeGraphExecutor> executor;
+    auto status = this->modelManager.createPipeline(executor, firstRequest.model_name());
     if (!status.ok()) {
         return status;
     }

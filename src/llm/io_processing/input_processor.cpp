@@ -20,8 +20,8 @@
 #include <typeinfo>
 #include <variant>
 
-#include "../../config.hpp"
-#include "../../logging.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
 #include "input_processors/chat_template_processor.hpp"
 #include "input_processors/empty_content_array_normalization_processor.hpp"
 #include "input_processors/empty_tool_calls_array_removing_processor.hpp"

@@ -18,7 +18,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../layout.hpp"
+#include "src/layout.hpp"
 #include "src/status.hpp"
 
 using namespace ovms;

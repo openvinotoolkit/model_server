@@ -28,23 +28,23 @@
 #include <pybind11/embed.h>
 #pragma warning(pop)
 
-#include "../config.hpp"
-#include "../dags/pipelinedefinition.hpp"
-#include "../grpcservermodule.hpp"
-#include "../kfs_frontend/kfs_graph_executor_impl.hpp"
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "src/kfs_python_tensor_bridge.hpp"
-#include "../mediapipe_internal/mediapipefactory.hpp"
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/config.hpp"
+#include "src/dags/pipelinedefinition.hpp"
+#include "src/grpcservermodule.hpp"
+#include "src/kfs_frontend/kfs_graph_executor_impl.hpp"
+#include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/mediapipe_internal/mediapipefactory.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
-#include "../precision.hpp"
-#include "../python/pythonnoderesources.hpp"
+#include "src/precision.hpp"
+#include "src/python/pythoninterpretermodule.hpp"
+#include "src/python/pythonnoderesources.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
-#include "../shape.hpp"
-#include "../stringutils.hpp"
+#include "src/server.hpp"
+#include "src/shape.hpp"
+#include "src/stringutils.hpp"
 #include "src/tensorflow_type_utils.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -53,12 +53,10 @@
 #pragma GCC diagnostic pop
 #include "opencv2/opencv.hpp"
 
-#include "../python/python_backend.hpp"
-#include "../python/python_runtime_module_api.hpp"
+#include "src/python/python_backend.hpp"
 #include "c_api_test_utils.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
-#include "python_environment.hpp"
 #include "test_utils.hpp"
 
 namespace py = pybind11;
@@ -113,19 +111,7 @@ public:
 };
 
 static PythonBackend* getPythonBackend() {
-    auto* pythonModule = ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME);
-    if (auto* pythonRuntimeApi = dynamic_cast<const ovms::PythonRuntimeModuleApi*>(pythonModule)) {
-        auto* pythonBackend = pythonRuntimeApi->getPythonBackend();
-        if (pythonBackend != nullptr) {
-            return pythonBackend;
-        }
-    }
-
-    auto* pythonBackend = getGlobalPythonBackend();
-    if (pythonBackend == nullptr) {
-        throw std::runtime_error("Python backend is not available");
-    }
-    return pythonBackend;
+    return dynamic_cast<const ovms::PythonInterpreterModule*>(ovms::Server::instance().getModule(PYTHON_INTERPRETER_MODULE_NAME))->getPythonBackend();
 }
 
 // --------------------------------------- OVMS initializing Python nodes tests
@@ -1057,32 +1043,6 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
     const float* outputDataPtr = reinterpret_cast<const float*>(response.raw_output_contents().at(0).data());
     outputData.assign(outputDataPtr, outputDataPtr + numElements);
     ASSERT_EQ(expectedOutputData, outputData);
-}
-
-TEST_F(PythonFlowTest, KfsPythonTensorBridgeVTableRegistration) {
-    const auto* original = getKfsPyTensorBridgeVTable();
-
-    const KfsPyTensorBridgeVTable testVtable{
-        KFS_PY_TENSOR_BRIDGE_ABI_VERSION,
-        nullptr,
-        nullptr,
-    };
-
-    ASSERT_TRUE(setKfsPyTensorBridgeVTable(&testVtable));
-    ASSERT_EQ(getKfsPyTensorBridgeVTable(), &testVtable);
-
-    // A vtable with a mismatched ABI version must be rejected and must clear
-    // the previously installed vtable so callers fall back to NOT_IMPLEMENTED.
-    const KfsPyTensorBridgeVTable mismatchedVtable{
-        KFS_PY_TENSOR_BRIDGE_ABI_VERSION + 1,
-        nullptr,
-        nullptr,
-    };
-    ASSERT_FALSE(setKfsPyTensorBridgeVTable(&mismatchedVtable));
-    ASSERT_EQ(getKfsPyTensorBridgeVTable(), nullptr);
-
-    // Restore global state for the rest of the suite.
-    setKfsPyTensorBridgeVTable(original);
 }
 
 // ---------------------------------- PythonExecutorCalculcator tests

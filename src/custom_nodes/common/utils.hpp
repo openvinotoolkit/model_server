@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-#include "../../custom_node_interface.h"
+#include "src/custom_node_interface.h"
 
 #define NODE_ASSERT(cond, msg)                                            \
     if (!(cond)) {                                                        \

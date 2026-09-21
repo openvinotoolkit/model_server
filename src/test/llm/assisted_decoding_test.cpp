@@ -35,19 +35,19 @@
 #pragma warning(pop)
 #endif
 
-#include "../../http_rest_api_handler.hpp"
-#include "../../http_status_code.hpp"
-#include "../../json_parser.hpp"
-#include "../../llm/apis/openai_completions.hpp"
-#include "../../llm/language_model/continuous_batching/servable.hpp"
-#include "../../llm/language_model/continuous_batching/llm_executor.hpp"
-#include "../../llm/text_utils.hpp"
-#include "../../server.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/http_status_code.hpp"
+#include "src/json_parser.hpp"
+#include "src/llm/apis/openai_completions.hpp"
+#include "src/llm/language_model/continuous_batching/servable.hpp"
+#include "src/llm/language_model/continuous_batching/llm_executor.hpp"
+#include "src/llm/text_utils.hpp"
+#include "src/server.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "../test_http_utils.hpp"
-#include "../test_utils.hpp"
+#include "src/test/test_http_utils.hpp"
+#include "src/test/test_utils.hpp"
 
 using namespace ovms;
 

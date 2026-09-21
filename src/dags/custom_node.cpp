@@ -18,8 +18,8 @@
 #include <optional>
 #include <utility>
 
-#include "../custom_node_interface.h"  // NOLINT
-#include "../logging.hpp"
+#include "src/custom_node_interface.h"  // NOLINT
+#include "src/logging.hpp"
 #include "src/status.hpp"
 #include "custom_node_library_internal_manager_wrapper.hpp"
 #include "custom_node_output_allocator.hpp"

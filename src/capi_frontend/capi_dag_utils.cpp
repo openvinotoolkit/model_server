@@ -20,7 +20,7 @@
 #include <utility>
 
 #include "capi_utils.hpp"
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "src/status.hpp"
 #include "buffer.hpp"
 #include "inferencetensor.hpp"

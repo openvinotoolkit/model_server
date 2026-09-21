@@ -26,10 +26,10 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 
-#include "../../../config.hpp"
-#include "../../../logging.hpp"
-#include "../../../tokenize/tokenize_parser.hpp"
-#include "../../text_utils.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
+#include "src/tokenize/tokenize_parser.hpp"
+#include "src/llm/text_utils.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "src/llm/py_jinja_template_processor.hpp"
 #endif

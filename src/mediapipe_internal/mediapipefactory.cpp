@@ -24,17 +24,16 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "src/metrics/metric_provider.hpp"
-#include "../servable_name_checker.hpp"
+#include "src/servable_name_checker.hpp"
 #include "src/status.hpp"
-#include "../stringutils.hpp"
+#include "src/stringutils.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386 6326 6246)
 #include "mediapipe/framework/deps/registration.h"
 #pragma warning(pop)
 #include "mediapipegraphdefinition.hpp"
-#include "mediapipegraphexecutor.hpp"
 
 namespace ovms {
 
@@ -141,17 +140,6 @@ Status MediapipeFactory::create(std::unique_ptr<MediapipeGraphExecutor>& pipelin
     // Unlock before create() which may block on graph queue, avoiding writer starvation.
     lock.unlock();
     return definition.create(pipeline);
-}
-
-Status MediapipeFactory::createHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& pipeline,
-    const std::string& name) const {
-    std::unique_ptr<MediapipeGraphExecutor> concretePipeline;
-    auto status = create(concretePipeline, name);
-    if (!status.ok()) {
-        return status;
-    }
-    pipeline.reset(concretePipeline.release());
-    return StatusCode::OK;
 }
 
 [[nodiscard]] Status MediapipeFactory::wakeUpDefinition(const std::string& graphName, const ServableNameChecker& checker) {

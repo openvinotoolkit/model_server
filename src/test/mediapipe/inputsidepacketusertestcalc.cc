@@ -19,7 +19,7 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../../stringutils.hpp"
+#include "src/stringutils.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"

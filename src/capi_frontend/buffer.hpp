@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-#include "../ovms.h"  // NOLINT
+#include "src/ovms.h"  // NOLINT
 namespace ovms {
 class Buffer {
     size_t byteSize{0};

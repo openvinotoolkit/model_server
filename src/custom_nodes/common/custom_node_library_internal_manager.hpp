@@ -20,8 +20,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "../../custom_node_interface.h"
-#include "../common/buffersqueue.hpp"
+#include "src/custom_node_interface.h"
+#include "src/custom_nodes/common/buffersqueue.hpp"
 
 namespace ovms {
 namespace custom_nodes_common {

@@ -14,8 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #include "kfs_utils.hpp"
-#include "../tensor_conversion.hpp"
-#include "../tensor_conversion_common.hpp"
+#include "src/tensor_conversion.hpp"
+#include "src/tensor_conversion_common.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -26,9 +26,9 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../logging.hpp"
-#include "../deps/opencv.hpp"
-#include "../profiler.hpp"
+#include "src/logging.hpp"
+#include "src/deps/opencv.hpp"
+#include "src/profiler.hpp"
 #include "src/status.hpp"
 
 namespace ovms {
@@ -88,7 +88,7 @@ template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::Inf
 }  // namespace ovms
 
 // we need to see declarations before
-#include "../tensor_conversion_after.hpp"
+#include "src/tensor_conversion_after.hpp"
 
 namespace ovms {
 template Status convertStringRequestToOVTensor2D<KFSTensorInputProto>(const KFSTensorInputProto& src, ov::Tensor& tensor, const std::string* buffer);

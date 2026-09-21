@@ -21,11 +21,11 @@
 
 #include <openvino/runtime/core.hpp>
 
-#include "../capi_frontend/buffer.hpp"
-#include "../capi_frontend/capi_utils.hpp"
-#include "../capi_frontend/inferencerequest.hpp"
-#include "../modelconfig.hpp"
-#include "../predict_request_validation_utils.hpp"
+#include "src/capi_frontend/buffer.hpp"
+#include "src/capi_frontend/capi_utils.hpp"
+#include "src/capi_frontend/inferencerequest.hpp"
+#include "src/modelconfig.hpp"
+#include "src/predict_request_validation_utils.hpp"
 #include "test_utils.hpp"
 
 using ::testing::NiceMock;

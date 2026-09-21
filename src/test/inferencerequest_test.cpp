@@ -19,12 +19,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../capi_frontend/buffer.hpp"
-#include "../capi_frontend/inferenceparameter.hpp"
-#include "../capi_frontend/inferencerequest.hpp"
-#include "../capi_frontend/inferenceresponse.hpp"
-#include "../logging.hpp"
-#include "../shape.hpp"
+#include "src/capi_frontend/buffer.hpp"
+#include "src/capi_frontend/inferenceparameter.hpp"
+#include "src/capi_frontend/inferencerequest.hpp"
+#include "src/capi_frontend/inferenceresponse.hpp"
+#include "src/logging.hpp"
+#include "src/shape.hpp"
 #include "src/status.hpp"
 
 using testing::ElementsAre;

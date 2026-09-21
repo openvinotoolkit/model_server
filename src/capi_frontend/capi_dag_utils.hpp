@@ -21,8 +21,8 @@
 #include <openvino/core/shape.hpp>
 #include <openvino/core/type/element_type.hpp>
 
-#include "../ovms.h"
-#include "../dags/pipelinedefinitionstatus.hpp"
+#include "src/ovms.h"
+#include "src/dags/pipelinedefinitionstatus.hpp"
 
 namespace ovms {
 class InferenceResponse;

@@ -16,9 +16,9 @@
 #include "deserialization.hpp"
 
 #include "buffer.hpp"
-#include "../itensorfactory.hpp"
-#include "../logging.hpp"
-#include "../tensor_conversion.hpp"
+#include "src/itensorfactory.hpp"
+#include "src/logging.hpp"
+#include "src/tensor_conversion.hpp"
 
 namespace ovms {
 ov::Tensor makeTensor(const InferenceTensor& requestInput,

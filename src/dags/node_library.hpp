@@ -17,7 +17,7 @@
 
 #include <string>
 
-#include "../custom_node_interface.h"  // NOLINT
+#include "src/custom_node_interface.h"  // NOLINT
 
 namespace ovms {
 

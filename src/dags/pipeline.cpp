@@ -22,8 +22,8 @@
 #include <utility>
 
 #include "src/execution_context.hpp"
-#include "../logging.hpp"
-#include "../profiler.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
 #include "src/status.hpp"
 #include "node.hpp"
 #include "nodesession.hpp"

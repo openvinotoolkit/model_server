@@ -20,8 +20,8 @@
 #include <utility>
 #include <vector>
 
-#include "../modelversion.hpp"
-#include "../tensorinfo.hpp"
+#include "src/modelversion.hpp"
+#include "src/tensorinfo.hpp"
 
 namespace ovms {
 using capi_tensor_shapes_map_t = std::unordered_map<std::string, std::vector<dimension_value_t>>;

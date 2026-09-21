@@ -17,7 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../embeddings/embeddings_api.hpp"
+#include "src/embeddings/embeddings_api.hpp"
 #include "rapidjson/document.h"
 
 TEST(EmbeddingsDeserialization, singleStringInput) {

@@ -30,25 +30,25 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../capi_frontend/buffer.hpp"
-#include "../capi_frontend/capi_utils.hpp"
-#include "../capi_frontend/inferenceresponse.hpp"
-#include "../capi_frontend/servablemetadata.hpp"
-#include "../config.hpp"
-#include "../dags/pipeline.hpp"
-#include "../dags/pipeline_factory.hpp"
-#include "../dags/pipelinedefinition.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
+#include "src/capi_frontend/buffer.hpp"
+#include "src/capi_frontend/capi_utils.hpp"
+#include "src/capi_frontend/inferenceresponse.hpp"
+#include "src/capi_frontend/servablemetadata.hpp"
+#include "src/config.hpp"
+#include "src/dags/pipeline.hpp"
+#include "src/dags/pipeline_factory.hpp"
+#include "src/dags/pipelinedefinition.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/filesystem/localfilesystem.hpp"
-#include "../logging.hpp"
-#include "../modelconfig.hpp"
-#include "../modelinstance.hpp"
-#include "../prediction_service_utils.hpp"
+#include "src/logging.hpp"
+#include "src/modelconfig.hpp"
+#include "src/modelinstance.hpp"
+#include "src/prediction_service_utils.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
+#include "src/server.hpp"
 #include "src/status.hpp"
-#include "../stringutils.hpp"
+#include "src/stringutils.hpp"
 #include "src/timer.hpp"
 #include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
@@ -872,8 +872,7 @@ const std::string basicMediapipeConfig = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU"
+                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],
@@ -889,8 +888,7 @@ static const std::string basicMediapipeConfigWithAddedGraph = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU"
+                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],
@@ -910,8 +908,7 @@ static const std::string basicMediapipeConfigWithRemovedGraph = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU"
+                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],
@@ -935,7 +932,6 @@ static const std::string basicMediapipeConfigWithReloadedModel = R"({
         {"config": {
                 "name": "dummy",
                 "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
                 "nireq": 47
         }
         }
@@ -952,8 +948,7 @@ static const std::string basicMediapipeConfigWithNewGraphPath = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU"
+                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],
@@ -969,8 +964,7 @@ const std::string basicMediapipeQueueConfig = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU"
+                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],
@@ -986,8 +980,7 @@ static const std::string basicMediapipeQueueConfigWithAddedGraph = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU"
+                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],
@@ -1007,8 +1000,7 @@ static const std::string basicMediapipeQueueConfigWithRemovedGraph = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU"
+                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],
@@ -1032,7 +1024,6 @@ static const std::string basicMediapipeQueueConfigWithReloadedModel = R"({
         {"config": {
                 "name": "dummy",
                 "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
                 "nireq": 47
         }
         }
@@ -1049,8 +1040,7 @@ static const std::string basicMediapipeQueueConfigWithNewGraphPath = R"({
     "model_config_list": [
         {"config": {
                 "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU"
+                "base_path": "/ovms/src/test/dummy"
         }
         }
     ],

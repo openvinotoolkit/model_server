@@ -25,8 +25,8 @@
 
 #include <openvino/runtime/tensor.hpp>
 
-#include "../precision.hpp"
-#include "../shape.hpp"
+#include "src/precision.hpp"
+#include "src/shape.hpp"
 #include "aliases.hpp"
 #include "nodesessionresult.hpp"
 #include "pipelineeventqueue.hpp"

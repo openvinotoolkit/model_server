@@ -24,9 +24,9 @@
 #include <sstream>
 #include <string.h>
 
-#include "../../logging.hpp"
-#include "../../filesystem/filesystem.hpp"
-#include "../../image_conversion.hpp"
+#include "src/logging.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/image_conversion.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)

@@ -25,8 +25,8 @@
 #include <openvino/core/type/element_type.hpp>
 #include <openvino/runtime/tensor.hpp>
 
-#include "../precision.hpp"
-#include "../shape.hpp"
+#include "src/precision.hpp"
+#include "src/shape.hpp"
 #include "nodeinputhandler.hpp"
 #include "nodesessionmetadata.hpp"
 #include "session_id.hpp"

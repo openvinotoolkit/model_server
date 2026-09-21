@@ -29,11 +29,11 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../config.hpp"
-#include "../http_payload.hpp"
-#include "../logging.hpp"
-#include "../mediapipe_internal/mediapipe_utils.hpp"
-#include "../profiler.hpp"
+#include "src/config.hpp"
+#include "src/http_payload.hpp"
+#include "src/logging.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
+#include "src/profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "apis/openai_responses.hpp"
 #include "io_processing/generation_config_builder.hpp"
@@ -41,7 +41,7 @@
 #include "ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
-#include "../tokenize/tokenize_parser.hpp"
+#include "src/tokenize/tokenize_parser.hpp"
 
 namespace ovms {
 

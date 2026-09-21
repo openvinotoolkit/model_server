@@ -24,19 +24,18 @@
 
 #include <nlohmann/json.hpp>
 
-#include "../config.hpp"
+#include "src/config.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "libgit2.hpp"
 #include "optimum_export.hpp"
 #include "curl_downloader.hpp"
 #include "gguf_downloader.hpp"
-#include "../graph_export/graph_export_paths.hpp"
 #include "hf_env_vars.hpp"
-#include "../logging.hpp"
-#include "../mediapipe_runtime_api.hpp"
-#include "../module_names.hpp"
+#include "src/graph_export/graph_export.hpp"
+#include "src/logging.hpp"
+#include "src/module_names.hpp"
 #include "src/status.hpp"
-#include "../stringutils.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 const std::string DEFAULT_EMPTY_ENV_VALUE{""};
@@ -266,13 +265,13 @@ Status HfPullModelModule::clone() {
     if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()) {
         auto& graphSettings = std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings);
         std::unique_ptr<IModelDownloader> draftModelDownloader;
-        draftModelDownloader = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
+        draftModelDownloader = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
         status = draftModelDownloader->downloadModel();
         if (!status.ok()) {
             return status;
         }
 
-        std::cout << "Draft model: " << getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << " downloaded to: " << getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()) << std::endl;
+        std::cout << "Draft model: " << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << " downloaded to: " << GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()) << std::endl;
     }
 
     // Image gen with LoRA adapters case - resolve filenames and download safetensors files
@@ -281,9 +280,8 @@ Status HfPullModelModule::clone() {
         return status;
     }
 
-    PythonBackend* pythonBackend = nullptr;
-    MediapipeRuntimeApi runtimeApi(pythonBackend);
-    status = runtimeApi.createServableConfig(graphDirectory, this->hfSettings);  // when downloading from HF we always create the config file on disk; the in-memory variant is used only in IN_MEMORY_GRAPH_MODE (local model with --task).
+    GraphExport graphExporter;
+    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings, true);  // when downloading from HF we always create config file, but when using local model with --task we create config in memory without writing to file
     if (!status.ok()) {
         return status;
     }

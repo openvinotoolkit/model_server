@@ -37,15 +37,15 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../config.hpp"
-#include "../logging.hpp"
-#include "../mediapipe_internal/mediapipe_utils.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
 #include "src/status.hpp"
 #include "io_processing/chat_template/analyzer.hpp"
 #include "io_processing/chat_template/probe.hpp"
 #include "io_processing/parser_config_validation.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "../stringutils.hpp"
+#include "src/stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
 #include "language_model/continuous_batching/servable_initializer.hpp"
 #include "language_model/legacy/servable_initializer.hpp"
@@ -184,8 +184,13 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 }
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
-    const bool shouldWarnOnEmptyTemplate = (properties->chatTemplateMode == ChatTemplateMode::MINJA);
-    if (shouldWarnOnEmptyTemplate) {
+#if (PYTHON_DISABLE == 0)
+    if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
+        ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
+        loadPyTemplateProcessor(properties, extraGenInfo);
+    } else  // NOLINT(readability/braces)
+#endif
+    {
         if (properties->tokenizer.get_chat_template().empty()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
         }
@@ -239,60 +244,28 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         // Dry-run probes: empirically verify requiresObjectArguments
         // by rendering synthetic messages through GenAI's minja and checking the output.
         // First check if minja can render basic chat at all (catches unsupported Jinja extensions)
-        if (properties->chatTemplateMode == ChatTemplateMode::MINJA) {
+#if (PYTHON_DISABLE == 0)
+        if (properties->chatTemplateMode != ChatTemplateMode::JINJA) {
+#endif
             if (!probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
                 SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
                                                            "Disabling /chat/completions endpoint for this model.");
                 properties->tokenizer.set_chat_template("");
                 return;
             }
+#if (PYTHON_DISABLE == 0)
         }
+#endif
         probeServableChatTemplateCaps(properties);
     }
 
-#if (PYTHON_DISABLE == 0)
-    if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
-        std::string runtimeOutput;
-        RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
-        const auto prepareStatus = prepareRuntimeChatTemplate(
-            chatTemplateDirectory,
-            properties->tokenizer.get_chat_template(),
-            properties->tokenizer.get_bos_token(),
-            properties->tokenizer.get_eos_token(),
-            properties->preparedRuntimeChatTemplate,
-            runtimeOutput,
-            &runtimeError);
-
-        if (prepareStatus == RuntimeChatTemplatePrepareStatus::PREPARED) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Prepared runtime chat template via libovmspython");
-        } else {
-            if (prepareStatus == RuntimeChatTemplatePrepareStatus::UNAVAILABLE) {
-                SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                    "Runtime chat template API is unavailable. In-process PyJinjaTemplateProcessor is disabled in this path.");
-            } else {
-                if (runtimeError == RuntimeChatTemplateError::PYTHON_RUNTIME_INITIALIZATION) {
-                    SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                        "Runtime chat template preparation failed due to Python runtime initialization issue: {}. "
-                        "In-process PyJinjaTemplateProcessor is disabled in this path.",
-                        runtimeOutput.empty() ? std::string("unknown error") : runtimeOutput);
-                } else {
-                    SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                        "Runtime chat template preparation failed: {}. In-process PyJinjaTemplateProcessor is disabled in this path.",
-                        runtimeOutput.empty() ? std::string("unknown error") : runtimeOutput);
-                }
-            }
-        }
-    }
-#endif
-
     // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
-    const bool runtimeTemplatePrepared = properties->preparedRuntimeChatTemplate.isPrepared();
-    properties->inputProcessorContext.config.useMinja =
-        properties->chatTemplateMode == ChatTemplateMode::MINJA;
+    properties->inputProcessorContext.config.useMinja = (properties->chatTemplateMode != ChatTemplateMode::JINJA);
     properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
-    properties->inputProcessorContext.preparedRuntimeChatTemplate =
-        runtimeTemplatePrepared ? &properties->preparedRuntimeChatTemplate : nullptr;
+#if (PYTHON_DISABLE == 0)
+    properties->inputProcessorContext.templateProcessor = &properties->templateProcessor;
+#endif
 }
 
 void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties) {

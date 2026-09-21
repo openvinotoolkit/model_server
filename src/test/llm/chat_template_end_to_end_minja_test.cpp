@@ -26,12 +26,12 @@
 #include <openvino/genai/tokenizer.hpp>
 #pragma GCC diagnostic pop
 
-#include "../../llm/io_processing/chat_template/analyzer.hpp"
-#include "../../llm/io_processing/chat_template/caps.hpp"
-#include "../../llm/io_processing/chat_template/probe.hpp"
-#include "../../llm/io_processing/input_processors/chat_template_adapter.hpp"
-#include "../../utils/env_guard.hpp"
-#include "../platform_utils.hpp"
+#include "src/llm/io_processing/chat_template/analyzer.hpp"
+#include "src/llm/io_processing/chat_template/caps.hpp"
+#include "src/llm/io_processing/chat_template/probe.hpp"
+#include "src/llm/io_processing/input_processors/chat_template_adapter.hpp"
+#include "src/utils/env_guard.hpp"
+#include "src/test/platform_utils.hpp"
 
 using namespace ovms;
 

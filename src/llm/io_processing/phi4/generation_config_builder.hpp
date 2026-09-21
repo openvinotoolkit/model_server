@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include "../base_generation_config_builder.hpp"
+#include "src/llm/io_processing/base_generation_config_builder.hpp"
 
 namespace ovms {
 

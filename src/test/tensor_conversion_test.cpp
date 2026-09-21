@@ -19,11 +19,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../capi_frontend/capi_utils.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../capi_frontend/deserialization.hpp"
-#include "../kfs_frontend/deserialization.hpp"
-#include "../tensor_conversion.hpp"
+#include "src/capi_frontend/capi_utils.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
+#include "src/capi_frontend/deserialization.hpp"
+#include "src/kfs_frontend/deserialization.hpp"
+#include "src/tensor_conversion.hpp"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"

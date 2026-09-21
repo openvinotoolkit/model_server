@@ -23,8 +23,8 @@
 #include <utility>
 #include <vector>
 
-#include "../capi_frontend/server_settings.hpp"
-#include "../ovms_exit_codes.hpp"
+#include "src/capi_frontend/server_settings.hpp"
+#include "src/ovms_exit_codes.hpp"
 #include "src/status.hpp"
 
 namespace ovms {

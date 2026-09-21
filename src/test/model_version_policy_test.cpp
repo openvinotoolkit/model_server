@@ -17,7 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../model_version_policy.hpp"
+#include "src/model_version_policy.hpp"
 
 using namespace ovms;
 

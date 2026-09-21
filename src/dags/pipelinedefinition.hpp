@@ -24,11 +24,11 @@
 #include <utility>
 #include <vector>
 
-#include "../model_metric_reporter.hpp"
-#include "../modelversion.hpp"
-#include "../notifyreceiver.hpp"
-#include "../single_version_servable_definition.hpp"
-#include "../tensorinfo.hpp"
+#include "src/model_metric_reporter.hpp"
+#include "src/modelversion.hpp"
+#include "src/notifyreceiver.hpp"
+#include "src/single_version_servable_definition.hpp"
+#include "src/tensorinfo.hpp"
 #include "aliases.hpp"
 #include "nodeinfo.hpp"
 #include "pipelinedefinitionstatus.hpp"

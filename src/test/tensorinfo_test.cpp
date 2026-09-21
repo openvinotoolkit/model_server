@@ -18,7 +18,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../tensorinfo.hpp"
+#include "src/tensorinfo.hpp"
 
 using namespace ovms;
 

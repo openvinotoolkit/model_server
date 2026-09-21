@@ -23,7 +23,7 @@
 #endif
 
 #include "src/filesystem/filesystem.hpp"
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "src/status.hpp"
 
 namespace ovms {

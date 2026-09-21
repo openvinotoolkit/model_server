@@ -19,7 +19,7 @@
 
 #include <string>
 
-#include "../http_frontend/multi_part_parser_drogon_impl.hpp"
+#include "src/http_frontend/multi_part_parser_drogon_impl.hpp"
 
 // Sanity test, drogon already unit tests it in depth
 TEST(MultiPartParserDrogonImpl, GetFieldName) {

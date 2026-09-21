@@ -18,11 +18,11 @@
 #include <algorithm>
 #include <functional>
 
-#include "../logging.hpp"
-#include "../ov_utils.hpp"
-#include "../profiler.hpp"
+#include "src/logging.hpp"
+#include "src/ov_utils.hpp"
+#include "src/profiler.hpp"
 #include "src/status.hpp"
-#include "../tensorinfo.hpp"
+#include "src/tensorinfo.hpp"
 
 namespace ovms {
 
