@@ -58,6 +58,17 @@ Configuration options for the server are defined only via command-line options a
 | `allowed_local_media_path` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
 | `allowed_media_domains` | `string` | Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restrictions. If unset, URLs in requests are not supported."
 | `verbose_response` | `NA` | When enabled, responses include an extra `__verbose` object with additional debug information. Applies for text generation models |
+| `disable_input_count_validation` | `bool` (default: false) | Disables enforcement for the KServe requests to match all the model inputs. It ignores all inputs which are not used in the model. Not recommended for performance reasons but in some cases might simplify the client. |
+| `idle_unload_timeout_seconds` | `integer` (default: 0) | Unloads servable resources after this many seconds with no inference requests, freeing GPU/CPU memory. Resources are reloaded automatically on the next request. Set to `0` to disable the feature. See [Idle servable unload](#idle-servable-unload). |
+
+### Idle servable unload
+
+When `idle_unload_timeout_seconds` is set to a positive value, the model server unloads the active servable group's heavy resources after the configured period without any inference requests. The first request after an unload transparently reloads the requested servable and is served once it is ready, so the GPU can be used by other workloads while a servable is idle.
+
+Notes:
+- Only inference requests reset the idle timer; status, metrics, and health endpoints do not keep a servable loaded.
+- The first request after an idle unload pays the reload latency. Combine with [model caching](model_cache.md) (`--cache_dir`) so the reload is a fast cache import rather than a full recompile.
+- The servable reports as `AVAILABLE` while idle-unloaded and reloads on demand. The `ovms_graph_loaded` metric reports `1` when loaded and `0` when idle-unloaded.
 
 ## Config management mode options
 

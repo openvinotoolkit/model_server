@@ -37,7 +37,7 @@ import tritonclient
 from google.protobuf.json_format import MessageToJson
 from grpc import RpcError
 from grpc._channel import _InactiveRpcError
-from openai import OpenAI
+from openai import OpenAI, NOT_GIVEN
 from pydantic import BaseModel
 from retry.api import retry_call
 from tritonclient.grpc import service_pb2, service_pb2_grpc
@@ -454,18 +454,19 @@ class LLMInferenceRequest(InferenceRequest):
 
     def create_audio_speech(self, input_text, speech_file_path, model_name=None, timeout=None):
         model = model_name if model_name is not None else self.api_type.model.name
-        voice = self.request_parameters_dict.pop("voice", None)
+        request_parameters = dict(self.request_parameters_dict)
+        voice = request_parameters.pop("voice", NOT_GIVEN)
         with self.openai_client.audio.speech.with_streaming_response.create(
             model=model,
-            voice=voice,  # voice is a required parameter in OpenAI API; OVMS accepts None for default
+            voice=voice,
             input=input_text,
-            **self.request_parameters_dict,
+            **request_parameters,
             timeout=timeout,
         ) as response:
             response.stream_to_file(speech_file_path)
         return response
 
-    def create_audio_transcription(self, audio_file_path, model_name=None, timeout=None):
+    def create_audio_transcription(self, audio_file_path, model_name=None, timeout=None, return_response=False):
         model = model_name if model_name is not None else self.api_type.model.name
         with open(audio_file_path, "rb") as audio_file:
             transcript = self.openai_client.audio.transcriptions.create(
@@ -476,9 +477,9 @@ class LLMInferenceRequest(InferenceRequest):
             )
         if self.stream:
             return self._collect_audio_stream_text(transcript)
-        return transcript.text
+        return transcript if return_response else transcript.text
 
-    def create_audio_translation(self, audio_file_path, model_name=None, timeout=None):
+    def create_audio_translation(self, audio_file_path, model_name=None, timeout=None, return_response=False):
         model = model_name if model_name is not None else self.api_type.model.name
         with open(audio_file_path, "rb") as audio_file:
             translation = self.openai_client.audio.translations.create(
@@ -487,9 +488,7 @@ class LLMInferenceRequest(InferenceRequest):
                 **self.request_parameters_dict,
                 timeout=timeout,
             )
-        if self.stream:
-            return self._collect_audio_stream_text(translation)
-        return translation.text
+        return translation if return_response else translation.text
 
     @staticmethod
     def _collect_audio_stream_text(stream):
@@ -1198,6 +1197,7 @@ def run_audio_inference(
         timeout=None,
         log_request=True,
         wer_threshold=0.4,
+        return_response=False,
         **kwargs,
 ):
     if api_type.type == REST:
@@ -1235,14 +1235,17 @@ def run_audio_inference(
                 if endpoint == OpenAIWrapper.AUDIO_TRANSCRIPTIONS
                 else infer_request.create_audio_translation
             )
-            raw_outputs = create_fn(reference_audio_file, model_name=model_name, timeout=timeout)
+            raw_outputs = create_fn(
+                reference_audio_file, model_name=model_name, timeout=timeout, return_response=return_response,
+            )
+            output_text = raw_outputs.text if return_response else raw_outputs
             if validate_outputs:
                 outputs = GenerativeAIValidationUtils.validate_audio_asr_outputs(
-                    outputs=raw_outputs,
+                    outputs=output_text,
                     allow_empty_response=allow_empty_response,
                 )
                 if validate_output_wer and reference_text:
-                    GenerativeAIValidationUtils.validate_wer(reference_text, raw_outputs, threshold=wer_threshold)
+                    GenerativeAIValidationUtils.validate_wer(reference_text, output_text, threshold=wer_threshold)
         else:
             raise NotImplementedError
 

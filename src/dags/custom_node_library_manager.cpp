@@ -24,7 +24,7 @@
 
 #include "src/filesystem/filesystem.hpp"
 #include "../logging.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 

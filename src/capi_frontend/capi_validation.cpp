@@ -33,7 +33,7 @@
 #include "../logging.hpp"
 #include "../precision.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 #include "../predict_request_validation_utils.hpp"
 namespace ovms {

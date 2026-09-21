@@ -33,9 +33,26 @@ void Environment::SetUp() {
     } else {
         SPDLOG_INFO("Unstable tests will be skipped since RUN_UNSTABLE env variable was not set to 1. Remember to use bazel test parameter --test_env when triggering tests using bazel.");
     }
+    const char* runAllIdleTestsEnv = std::getenv("RUN_ALL_IDLE");
+    if (runAllIdleTestsEnv) {
+        std::string runAllIdleTestsEnvContent(runAllIdleTestsEnv);
+        if (runAllIdleTestsEnvContent == "1") {
+            Environment::runAllIdleTests = true;
+            SPDLOG_INFO("RUN_ALL_IDLE was set to 1. Will run idle servable tests documenting known defects");
+        } else {
+            SPDLOG_WARN("Idle servable tests documenting known defects will be skipped since RUN_ALL_IDLE env variable was not set to 1. It was set to: {}", runAllIdleTestsEnvContent);
+        }
+    } else {
+        SPDLOG_INFO("Idle servable tests documenting known defects will be skipped since RUN_ALL_IDLE env variable was not set to 1. Remember to use bazel test parameter --test_env when triggering tests using bazel.");
+    }
 }
 bool Environment::shouldRunUnstableTests() {
     return Environment::runUnstableTests;
 }
 
+bool Environment::shouldRunAllIdleTests() {
+    return Environment::runAllIdleTests;
+}
+
 bool Environment::runUnstableTests = false;
+bool Environment::runAllIdleTests = false;

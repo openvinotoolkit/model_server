@@ -37,7 +37,7 @@
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../config.hpp"
 #include "../dags/node_library.hpp"
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
@@ -46,9 +46,9 @@
 #endif
 #include "src/metrics/metric_registry.hpp"
 #include "../modelinstance.hpp"
-#include "../modelmanager.hpp"
+#include "src/servable_management/modelmanager.hpp"
 #include "../shape.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../tensorinfo.hpp"
 
 #include "../kfs_frontend/validation.hpp"
@@ -728,7 +728,7 @@ void SetUpServerForDownloadAndStartWithLoras(std::unique_ptr<std::thread>& t, ov
 /*
  *  starts loading OVMS on separate thread but waits until it is ready
  */
-void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "");
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "", bool withPython = true);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds, const char* task);
 
@@ -775,11 +775,29 @@ public:
 
     ovms::GenAiServableMap& getGenAiServableMap() { return this->sidePacketMaps->genAiServableMap; }
 
+    // Test seams for idle-unload concurrency tests.
+    // Drive the underlying state machine directly.
+    void forceReloadEventForTest() { this->status.handle(ovms::ReloadEvent()); }
+    void forceValidationPassedEventForTest() { this->status.handle(ovms::ValidationPassedEvent()); }
+    // Identity of the sidePacketMaps shared_ptr, so a test can detect whether it
+    // was reset/swapped.
+    const void* sidePacketMapsPtrForTest() const { return static_cast<const void*>(this->sidePacketMaps.get()); }
+    bool sidePacketMapsEmptyForTest() { return this->sidePacketMaps->empty(); }
+    // Insert a harmless marker into a side-packet map so we can detect teardown.
+    void insertSidePacketMarkerForTest(const std::string& key) {
+        this->sidePacketMaps->genAiServableMap.insert({key, nullptr});
+    }
+    bool hasSidePacketMarkerForTest(const std::string& key) {
+        return this->sidePacketMaps->genAiServableMap.count(key) > 0;
+    }
+    uint64_t requestsHandlesCounterForTest() const { return this->pendingCreateExecutorCount.load(); }
+
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,
         std::string inputConfig,
-        ovms::PythonBackend* pythonBackend = nullptr) :
-        ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend) {
+        ovms::PythonBackend* pythonBackend = nullptr,
+        bool lazyLoad = false) :
+        ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend, lazyLoad) {
         this->inputConfig = inputConfig;
     }
 

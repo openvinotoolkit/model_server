@@ -84,6 +84,7 @@ class GenerativeAIUtils:
             target_device=None,
             resolution=None,
             apply_short_name=False,
+            enable_word_timestamps=False,
             **kwargs
     ):
         if plugin_config is None:
@@ -127,6 +128,7 @@ class GenerativeAIUtils:
             enable_tool_guided_generation=enable_tool_guided_generation,
             target_device=target_device,
             resolution=resolution,
+            enable_word_timestamps=enable_word_timestamps,
         )
         model.precision = llm.precision
         model.max_position_embeddings = max_position_embeddings
@@ -143,7 +145,7 @@ class GenerativeAIUtils:
         cls, context: Context, model_type, openai_rest_api_type, endpoint, log_level=logging_level_ovms,
             kv_cache_size=kv_cache_size_value, plugin_config=None, max_position_embeddings=None, env=None,
             allowed_local_media_path=None, allowed_media_domains=None, target_device=None, resolution=None,
-            apply_short_name=False, **request_params_kwargs,
+            apply_short_name=False, enable_word_timestamps=False, **request_params_kwargs,
     ):
         if plugin_config is None:
             plugin_config = {GenerativeAIPluginConfig.KV_CACHE_PRECISION: kv_cache_precision_value}
@@ -156,6 +158,7 @@ class GenerativeAIUtils:
             target_device=target_device,
             resolution=resolution,
             apply_short_name=apply_short_name,
+            enable_word_timestamps=enable_word_timestamps,
         )
 
         step("Start OVMS")

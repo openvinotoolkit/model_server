@@ -469,7 +469,7 @@ class OvmsMessages:
     AUDIO_INVALID_TEMPERATURE_TYPE = "Invalid temperature type."
     AUDIO_NEGATIVE_TEMPERATURE = "temperature must be a strictly positive float"
     AUDIO_INVALID_TIMESTAMP_GRANULARITIES = 'Invalid timestamp_granularities type. Allowed types: "segment", "word"'
-    AUDIO_VOICE_NOT_AVAILABLE = "Requested voice not available"
+    AUDIO_VOICE_NOT_AVAILABLE = "not found in available voices"
     AUDIO_STREAMING_NOT_SUPPORTED = "streaming is not supported"
     AUDIO_WORD_TIMESTAMPS_NOT_SUPPORTED = "Word timestamps not supported for this model"
 

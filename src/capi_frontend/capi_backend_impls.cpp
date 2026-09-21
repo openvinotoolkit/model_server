@@ -25,7 +25,7 @@
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
 #include "../ovms.h"  // NOLINT
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "capi_utils.hpp"
 #include "serialization.hpp"
 #include "deserialization.hpp"

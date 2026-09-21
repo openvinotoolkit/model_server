@@ -56,11 +56,11 @@ public:
         uint32_t waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 
 protected:
-    std::atomic<uint64_t> requestsHandlesCounter = 0;
+    std::atomic<uint64_t> pendingCreateExecutorCount = 0;
     std::condition_variable loadedNotify;
 
-    void increaseRequestsHandlesCount() { ++requestsHandlesCounter; }
-    void decreaseRequestsHandlesCount() { --requestsHandlesCounter; }
+    void increaseRequestsHandlesCount() { ++pendingCreateExecutorCount; }
+    void decreaseRequestsHandlesCount() { --pendingCreateExecutorCount; }
 
     virtual StatusCode notLoadedYetCode() const = 0;
     virtual StatusCode notLoadedAnymoreCode() const = 0;
