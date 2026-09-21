@@ -201,7 +201,7 @@ Else:
 **Usage example**
 ```
 $ curl http://localhost:8000/v2/models/resnet
-{"name":"resnet","versions":["1"],"platform":"OpenVINO","inputs":[{"name":"0","datatype":"FP32","shape":[1,224,224,3]}],"outputs":[{"name":"1463","datatype":"FP32","shape":[1,1000]}]}
+{"name":"resnet","versions":["1"],"platform":"OpenVINO","inputs":[{"name":"image","datatype":"FP32","shape":[1,224,224,3]}],"outputs":[{"name":"output","datatype":"FP32","shape":[1,1000]}]}
 ```
 
 For detailed description of the response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#model-metadata).

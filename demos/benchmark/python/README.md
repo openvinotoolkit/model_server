@@ -127,16 +127,23 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
           XI id: request for metadata of model resnet...
           XI id: Metadata for model resnet is downloaded...
           XI id: set version of model resnet: 1
-          XI id: inputs:
-          XI id:  0:
-          XI id:   name: 0
-          XI id:   dtype: DT_FLOAT
-          XI id:   tensorShape: {'dim': [{'size': '1'}, {'size': '3'}, {'size': '224'}, {'size': '224'}]}
-          XI id: outputs:
-          XI id:  1463:
-          XI id:   name: 1463
-          XI id:   dtype: DT_FLOAT
-          XI id:   tensorShape: {'dim': [{'size': '1'}, {'size': '1000'}]}
+          XI id: name: "resnet"
+              versions: "1"
+              platform: "OpenVINO"
+              inputs {
+                name: "image"
+                datatype: "FP32"
+                shape: 1
+                shape: 224
+                shape: 224
+                shape: 3
+              }
+              outputs {
+                name: "output"
+                datatype: "FP32"
+                shape: 1
+                shape: 1000
+              }
 ```
 Be sure the model name specified is identical to the model name shown when using
 the `--list_models` parameter. A model version is not required but it can be added
