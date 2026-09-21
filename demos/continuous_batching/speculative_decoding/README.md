@@ -116,7 +116,7 @@ P99 ITL (ms):                            54.90
 
 # DFlash
 
-DFlash is a general speculative decoding strategy that uses a dedicated draft model and target hidden-state verification to propose multiple tokens efficiently. It is especially attractive for VLM-style deployments, but the same pattern can be used for compatible target/draft pairs beyond a single model family. In OpenVINO GenAI it is auto-detected from the exported draft model metadata, so the server can switch to DFlash without a separate runtime flag.
+DFlash is a general speculative decoding strategy that uses a dedicated draft model and target hidden-state verification to propose multiple tokens efficiently. This algorithm is auto-detected from the draft model metadata. No extra parameters are needed besides pointing to the draft model via `--draft_source_model` or `--draft_model_path`
 
 ## Model considerations
 
@@ -134,7 +134,7 @@ Install the export tooling and create a model directory:
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 
-mkdir -p models
+mkdir -p ${HOME}/models
 ```
 
 Export only the DFlash draft model. The main model is downloaded directly by OVMS from Hugging Face on startup:
@@ -168,7 +168,7 @@ models
 :::{dropdown} **Deploying with Docker**
 ```text
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:ro openvino/model_server:weekly \
+docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly \
   --model_repository_path /models \
   --source_model OpenVINO/gemma-4-31B-it-int4-ov \
   --draft_model_path /models/gemma-4-31b-it-dflash-int4-ov \
@@ -178,10 +178,7 @@ docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/
 
 :::{dropdown} **Deploying on Bare Metal**
 ```text
-ovms --rest_port 8000 \
-  --model_repository_path c:\models \
-  --source_model OpenVINO/gemma-4-31B-it-int4-ov \
-  --draft_model_path c:\models\gemma-4-31b-it-dflash-int4-ov
+ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/gemma-4-31B-it-int4-ov --draft_model_path c:\models\gemma-4-31b-it-dflash-int4-ov
 ```
 :::
 
