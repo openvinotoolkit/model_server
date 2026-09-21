@@ -43,6 +43,7 @@ except ModuleNotFoundError:
 def get_client(xargs):
     if xargs["api"] == "KFS": return KFS_Client
     elif xargs["api"] == "REST": raise NotImplementedError("TODO - add REST support")
+    elif xargs["api"] == "TFS": raise NotImplementedError("TFS is depracated use KFS instead")
     else: return KFS_Client # default client API
 
 
@@ -198,7 +199,7 @@ class Unbuffered(object):
 
 if __name__ == "__main__":
     description = """
-    This is benchmarking client which uses KFS/REST API to communicate with OVMS/KFS/REST-based-services.
+    This is benchmarking client which uses KFS API to communicate with OVMS/KFS-based-services.
     """
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("-i", "--id", required=False, default="worker",

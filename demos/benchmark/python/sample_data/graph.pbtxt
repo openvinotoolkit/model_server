@@ -22,8 +22,8 @@ node: {
   output_stream: "OUTPUT:output"
   node_options: {
         [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-          tag_to_input_tensor_names {key: "INPUT" value: "0"}
-          tag_to_output_tensor_names {key: "OUTPUT" value: "1463"}
+          tag_to_input_tensor_names {key: "INPUT" value: "image"}
+          tag_to_output_tensor_names {key: "OUTPUT" value: "output"}
 }}}
 node: {
   calculator: "OpenVINOModelServerSessionCalculator"

@@ -150,8 +150,8 @@ echo '{
         "config": {
              "name": "resnet",
              "base_path": "/workspace/resnet50.xml",
-             "mean_values": "[123.675,116.28,103.53]",
-             "scale_values": "[58.395,57.12,57.375]",
+             "mean": "[123.675,116.28,103.53]",
+             "scale": "[58.395,57.12,57.375]",
              "layout": "NHWC:NCHW"
         }
      }
