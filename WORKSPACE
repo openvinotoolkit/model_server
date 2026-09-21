@@ -195,6 +195,8 @@ http_archive(
     sha256 = "597071a340acc5346494c119ba3a541825c3f81071fc783521b24e29a485d60f",
     strip_prefix = "protobuf-6.31.1",
     urls = ["https://github.com/protocolbuffers/protobuf/archive/refs/tags/v6.31.1.tar.gz"],
+    patches = ["@ovms//third_party/protobuf:windows_zlib_dependency.patch"],
+    patch_args = ["-p1"],
     repo_mapping = {"@abseil-cpp": "@com_google_absl"},
 )
 
