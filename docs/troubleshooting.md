@@ -129,7 +129,7 @@ Python support is optional in Model Server. The following issues may occur when 
 
 ### Python Node Graph Returns Error When Loaded
 - **Error**: "PythonExecutorCalculator not found" or "Python calculators plugin not available"
-- **Cause**: Python calculators plugin failed to load (see above) or Python support was compiled out (`PYTHON_DISABLE=1`)
+- **Cause**: Python calculators plugin failed to load (see above) or the Python runtime libraries are unavailable.
 - **Resolution**:
   - Follow "Python calculators plugin failed to load" steps above
   - Or use without-Python package if you don't need Python nodes

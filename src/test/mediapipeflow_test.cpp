@@ -76,7 +76,7 @@
 #include "light_test_utils.hpp"
 #include "test_with_temp_dir.hpp"
 
-#if (PYTHON_DISABLE == 0)
+#if 1
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
@@ -106,8 +106,8 @@ protected:
         ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(graphPath).c_str(), graphName);
     }
 
-    void SetUpServer(const char* configPath, bool withPython = true) {
-        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str(), SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, "", withPython);
+    void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str(), SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
     }
 
     void SetUp() override {
@@ -145,7 +145,7 @@ public:
 class MediapipeConfigFlowTestDummyModelMesh : public MediapipeCliFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/model_mesh/config.json", false);
+        SetUpServer("/ovms/src/test/mediapipe/model_mesh/config.json");
     }
 };
 
@@ -308,7 +308,7 @@ public:
     }
 };
 
-#if (PYTHON_DISABLE == 0)
+#if 1
 class MediapipePyTensorOvTensorConverterTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -390,7 +390,7 @@ TEST_F(MediapipeFlowKfsTest, Infer) {
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
-#if (PYTHON_DISABLE == 0)
+#if 1
 TEST_F(MediapipePyTensorOvTensorConverterTest, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -3664,7 +3664,7 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
 }
 
-#if (PYTHON_DISABLE == 0)
+#if 1
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentPytensor = R"(
         input_stream: "OVMS_PY_TENSOR:in"
@@ -4086,7 +4086,7 @@ TEST(WhitelistRegistered, InputStreamHandlers) {
 
 TEST(WhitelistRegistered, MediapipeCalculatorsList) {
     std::unordered_set<std::string> expected({
-#if (PYTHON_DISABLE == 0)
+#if 1
         // Expected when building with python
         "CalculatorRunnerSinkCalculator",
         "CalculatorRunnerSourceCalculator",

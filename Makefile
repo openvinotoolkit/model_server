@@ -65,12 +65,6 @@ NPU ?= 0
 ESPEAK ?= 1
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
-PYTHON_DISABLE ?= 0
-ifeq ($(MEDIAPIPE_DISABLE),1)
-ifeq ($(PYTHON_DISABLE),0)
-$(error PYTHON_DISABLE cannot be 0 when MEDIAPIPE_DISABLE is 1)
-endif
-endif
 FUZZER_BUILD ?= 0
 DOCKER_BUILDKIT ?= 1
 KONFLUX ?= 0
@@ -99,13 +93,9 @@ else
 endif
 
 ifeq ($(MEDIAPIPE_DISABLE),1)
-  DISABLE_PARAMS = " --config=mp_off_py_off"
+	DISABLE_PARAMS = " --config=mp_off"
 else
-  ifeq ($(PYTHON_DISABLE),1)
-    DISABLE_PARAMS = " --config=mp_on_py_off"
-  else
-    DISABLE_PARAMS = " --config=mp_on_py_on"
-  endif
+	DISABLE_PARAMS = " --config=mp_on"
 endif
 
 FUZZER_BUILD_PARAMS ?= ""
@@ -149,7 +139,7 @@ else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
-CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
+CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(REPO_ENV)
 
 # Option to Override release image.
@@ -345,11 +335,6 @@ clang-format-check: clang-format
 .PHONY: docker_build
 docker_build: ovms_builder_image targz_package ovms_release_images
 ovms_builder_image:
-ifeq ($(PYTHON_DISABLE),0)
-  ifeq ($(MEDIAPIPE_DISABLE),1)
-	@echo "Cannot build model server with Python support without building with Mediapipe enabled. Use 'MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 make docker_build'"; exit 1 ;
-  endif
-endif
 ifeq ($(CHECK_COVERAGE),1)
   ifeq ($(RUN_TESTS),0)
 	@echo "Cannot test coverage without running tests. Use 'CHECK_COVERAGE=1 RUN_TESTS=1 make docker_build'"; exit 1 ;

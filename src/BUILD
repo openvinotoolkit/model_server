@@ -103,14 +103,11 @@ cc_shared_library(
             "@flatbuffers//:__subpackages__",],
         "//:disable_mediapipe": []
         })
-     + select({
-        "//:not_disable_python": [
-            "@pybind11//:__subpackages__",
-            "//third_party:=python3//:__subpackages__",
-            "@local_config_python//:__subpackages__",
-            ],
-        "//:disable_python": []
-        })
+      + [
+          "@pybind11//:__subpackages__",
+          "//third_party:=python3//:__subpackages__",
+          "@local_config_python//:__subpackages__",
+          ]
      + select({
             "//conditions:default": [
                 "@boringssl//:__subpackages__",
@@ -827,13 +824,10 @@ ovms_cc_library(
         hdrs = [
             "ovms_internal.h",
         ],
-        deps = select({
-            "//:not_disable_python": [
+        deps = [
                 "//src/python:python_runtime_loader",
                 "//src/python:python_calculators_plugin_loader",
-            ],
-            "//:disable_python": []
-        }) + select({
+            ] + select({
             "//:not_disable_mediapipe" : [
                 "//src/audio:audio_utils",
             ],
@@ -972,20 +966,19 @@ ovms_cc_library(
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
     data = select({
-        "//:is_windows_and_python_is_enabled": [
+        "//src:windows": [
             "//src/python/binding:pyovms.pyd",
         ],
-        "//:disable_python": [],
         "//conditions:default": [
             "//src/python/binding:pyovms.so",
             "//src/python:python_runtime_module_api_hdrs",
         ],
-        }) + select({
-            "//:is_windows_and_python_is_enabled": [
-                "//src/python/binding:copy_pyovms",
-            ],
-            "//conditions:default": [],
-        }),
+    }) + select({
+        "//src:windows": [
+            "//src/python/binding:copy_pyovms",
+        ],
+        "//conditions:default": [],
+    }),
     alwayslink = 1,
 )
 
@@ -2088,19 +2081,14 @@ cc_binary(
             "//:disable_mediapipe" : [],
         }),
     data = select({
-        "//:is_windows_and_python_is_enabled": [
+        "//src:windows": [
             "//src/python/binding:pyovms.pyd",
         ],
-        "//:disable_python": [],
         "//conditions:default": [
             "//src/python/binding:pyovms.so",
-        ],
-    }) + select({
-        "//:not_disable_python": [
             "//src/python:libovmspython",
             "//src/python:libpython_calculators",
         ],
-        "//:disable_python": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
@@ -2213,17 +2201,13 @@ cc_test(
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
             ],
-        }) + select({
-            "//:not_disable_python": [
+        }) + [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
-                # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
                 "test/llm/chat_template_end_to_end_jinja_test.cpp",
-            ],
-            "//:disable_python" : [],
-        }) + [
+        ] + [
             "test/multi_part_parser_drogon_test.cpp",
         ],
     data = [
@@ -2359,11 +2343,10 @@ cc_test(
         ],
         "//:disable_mediapipe": [],
     }) + select({
-        "//:is_windows_and_python_is_enabled": [
+        "//src:windows": [
             "//src/python:libovmspython.dll",
             "//src/python:libpython_calculators",
         ],
-        "//:disable_python": [],
         "//conditions:default": [
             "//src/python:libovmspython.so",
             "//src/python:libpython_calculators.so",
@@ -2440,17 +2423,11 @@ cc_test(
             [
                 "serialization_common",
             ],
-        }) + select({
-            "//:not_disable_python": PYBIND_HEADERS_ONLY + [
+        }) + PYBIND_HEADERS_ONLY + [
                 "//src/python:python_headers_only",
                 "//src/python:libovmspythonmodule",
-                # Keep explicit in-process Python runtime entry points available to
-                # tests and embedded execution paths without pulling the full
-                # runtime into the main ovms link graph.
                 "//src/python:python_runtime_entry_static",
-            ],
-            "//:disable_python": [],
-        }) + select({
+            ] + select({
             "//:not_disable_mediapipe": [
                 "//src/audio/speech_to_text:s2t_streaming_handler",
                 "//src/audio/speech_to_text:s2t_calculator",
@@ -2508,7 +2485,6 @@ cc_test(
             "//src/python:libovmspython.dll",
             "//src/python/binding:pyovms.pyd",
         ],
-        "//:disable_python": [],
         "//conditions:default": [
             "//src/python:libovmspython.so",
             "//src/python/binding:pyovms.so",
@@ -2641,13 +2617,7 @@ cc_library(
         "test/c_api_test_utils.cpp",
         "test/test_utils.cpp",
         ],
-    deps = select({
-        "//:not_disable_python": PYBIND_HEADERS_ONLY,
-        "//:disable_python": [],
-    }) + select({
-        "//:not_disable_python": ["//src/python:python_headers_only"],
-        "//:disable_python": [],
-    }) + [
+    deps = PYBIND_HEADERS_ONLY + ["//src/python:python_headers_only"] + [
         "test_test_models",
         "//src/mediapipe_internal:graph_executor_constants",
         "//src/mediapipe_internal:graph_side_packets",

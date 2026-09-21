@@ -169,12 +169,11 @@ You can also build model server from source by following the [developer guide](w
 
 Model Server supports two deployment configurations:
 
-**With Python Support** (`PYTHON_DISABLE=0`, default):
+**Python runtime support:**
 - Python nodes are available and LLM chat-template handling has broader feature coverage.
 - Requires runtime Python libraries to be available.
 - Can gracefully degrade if Python runtime libraries/plugins are unavailable.
 
-**Without Python Support** (`PYTHON_DISABLE=1`):
 - Lightweight deployment for C++ models only.
 - Python nodes are unavailable.
 - LLM template rendering has reduced feature coverage.

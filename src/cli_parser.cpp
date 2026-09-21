@@ -200,14 +200,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<std::string>()->default_value(""),
                 "API_KEY");
 
-#if (PYTHON_DISABLE == 0)
-        options->add_options()
-            ("with_python",
-                "Enable Python runtime support",
-                cxxopts::value<bool>()->default_value("true"),
-                "WITH_PYTHON");
-#endif
-
         options->add_options("multi model")
             ("config_path",
                 "Absolute path to json configuration file",
@@ -635,10 +627,6 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
 
     if (result->count("rest_workers"))
         serverSettings.restWorkers = result->operator[]("rest_workers").as<uint32_t>();
-
-#if (PYTHON_DISABLE == 0)
-    serverSettings.withPython = result->operator[]("with_python").as<bool>();
-#endif
 
 #ifdef MTR_ENABLED
     if (result->count("trace_path"))

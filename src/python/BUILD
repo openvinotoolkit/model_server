@@ -95,9 +95,6 @@ COPTS_SO = select({
     "//conditions:default": _SHARED_LIB_COPTS_LINUX,
     "//src:windows": _SHARED_LIB_COPTS_WINDOWS,
 }) + select({
-    "//conditions:default": ["-DPYTHON_DISABLE=1"],
-    "//:not_disable_python": ["-DPYTHON_DISABLE=0"],
-}) + select({
     "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
     "//:not_disable_mediapipe": ["-DMEDIAPIPE_DISABLE=0"],
 }) + select({

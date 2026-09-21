@@ -804,17 +804,15 @@ void SetUpServerForDownloadAndStartGGUF(std::unique_ptr<std::thread>& t, ovms::S
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
 
-void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds, std::string api_key, bool withPython) {
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds, std::string api_key) {
     server.setShutdownRequest(0);
     randomizeAndEnsureFree(port);
-    const char* withPythonArg = withPython ? "--with_python=true" : "--with_python=false";
     if (!api_key.empty()) {
         std::vector<std::string> args = {"ovms",
             "--config_path",
             configPath,
             "--port",
             port,
-            withPythonArg,
             "--api_key_file",
             api_key};
         startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
@@ -824,8 +822,7 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
             "--config_path",
             configPath,
             "--port",
-            port,
-            withPythonArg};
+            port};
         startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
         EnsureServerStartedWithTimeout(server, timeoutSeconds);
     }

@@ -258,7 +258,7 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
 // same chat template.
 // ---------------------------------------------------------------------------
 
-#if (PYTHON_DISABLE == 0)
+#if 1
 static std::unique_ptr<ov::genai::Tokenizer> pyJinjaTokenizer;
 static std::unique_ptr<PreparedRuntimeChatTemplate> sharedPreparedRuntimeTemplate;
 
@@ -380,7 +380,7 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, EmptyStringContent_TemplateStillProduce
     ASSERT_TRUE(status.ok()) << status.message();
     EXPECT_FALSE(req.promptText.empty());
 }
-#endif  // PYTHON_DISABLE == 0
+#endif
 
 }  // namespace
 }  // namespace ovms

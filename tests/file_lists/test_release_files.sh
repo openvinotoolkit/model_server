@@ -17,22 +17,15 @@
 # This script should be used inside the release image to check expected file contents
 
 if [ "$#" -ne 1 ]; then
-    printf --  "ERROR: Missing script argument debug bazel flags. Please pass it to the script to configure building options for example to build without Python support run: ./test_release_files.sh PYTHON_DISABLE=1 .\n"
+    printf --  "ERROR: Missing script argument debug bazel flags.\n"
     exit 1
 fi
 
 debug_bazel_flags=$1
 errors=0
 
-printf --  "Detecting Python build mode from debug_bazel_flags=$debug_bazel_flags.\n"
-python_disabled=0
-if [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]] || [[ $debug_bazel_flags == *"py_off"* ]]; then
-    python_disabled=1
-fi
-
-if [[ $python_disabled -eq 0 ]]; then
-    # /ovms/lib - with python
-    input_file="/test/lib_files_python.txt"
+printf --  "Checking Python-enabled release files.\n"
+input_file="/test/lib_files_python.txt"
     test_path="/ovms/lib"
     output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
     if [[ -n $output ]]
@@ -42,19 +35,6 @@ if [[ $python_disabled -eq 0 ]]; then
     else
         printf -- "SUCCESS: $test_path Files list match.\n"
     fi
-else
-    # /ovms/lib - without python
-    input_file="/test/lib_files.txt"
-    test_path="/ovms/lib"
-    output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
-    if [[ -n $output ]]
-    then
-        printf -- "ERROR: $test_path against $input_file- File list mismatch: \n%s\n" "$output"
-        errors=$((errors+1))
-    else
-        printf -- "SUCCESS: $test_path Files list match.\n"
-    fi
-fi
 
 # check for errors
 if [ "$errors" -ne "0" ]; then

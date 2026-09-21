@@ -25,15 +25,9 @@ IF "%~1"=="" (
     set "BAZEL_SHORT_PATH=C:\%1"
 )
 
-IF "%~2"=="--with_python" (
-    echo Building model server with Python
-    set "bazelBuildArgs=--config=win_mp_on_py_on"
-    set "pythonRuntimeTargets=//src/python:libpython_calculators //src/python:libovmspython"
-) ELSE (
-    echo Building model server without Python 
-    set "bazelBuildArgs=--config=win_mp_on_py_off"
-    set "pythonRuntimeTargets="
-)
+echo Building model server with Python
+set "bazelBuildArgs=--config=win_mp_on"
+set "pythonRuntimeTargets=//src/python:libpython_calculators //src/python:libovmspython"
 
 IF "%~3"=="--with_tests" (
     echo Building model server with tests

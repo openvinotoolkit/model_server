@@ -585,9 +585,7 @@ TEST(NodeInitializerRegistryTest, AllExpectedInitializersRegistered) {
         "RerankCalculatorOV",
         "S2tCalculator",
         "T2sCalculator",
-#if (PYTHON_DISABLE == 0)
         "PythonExecutorCalculator",
-#endif
     };
     for (const auto& name : knownCalculators) {
         bool found = std::any_of(initializers.begin(), initializers.end(),
@@ -595,11 +593,7 @@ TEST(NodeInitializerRegistryTest, AllExpectedInitializersRegistered) {
         EXPECT_TRUE(found) << "No NodeInitializer registered for calculator: " << name;
     }
 
-#if (PYTHON_DISABLE == 0)
     constexpr size_t expectedInitializersCount = 7;
-#else
-    constexpr size_t expectedInitializersCount = 6;
-#endif
     EXPECT_EQ(initializers.size(), expectedInitializersCount)
         << "Unexpected number of registered NodeInitializers from static registration/link-time inclusion.";
 }

@@ -248,7 +248,6 @@ struct ServerSettingsImpl {
     uint32_t resourcesCleanerPollWaitSeconds = 300;
     uint32_t idleUnloadTimeoutSeconds = 0;
     std::string cacheDir;
-    bool withPython = false;
     bool startedWithCLI = false;
     ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;

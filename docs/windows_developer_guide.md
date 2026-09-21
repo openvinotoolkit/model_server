@@ -77,10 +77,10 @@ windows_build.bat
 
 Optionally, you add parameter to the windows_build.bat script
 ```bat
-windows_build.bat my_dir_on_c --with_python --with_tests --integrity
+windows_build.bat my_dir_on_c --with_tests --integrity
 ```
 [arg1] This way you can change default dependency location directory to c:\my_dir_on_c
-[arg2] --with_python - this will build the ovms.exe with python dependency and support for python chat templates for GENAI LLM
+[arg2] Python support is always included, including chat templates for GENAI LLM
 [arg3] --with_tests - this will also build ovms_test.exe target
 [arg4] --integrity - Add the compilation integrity flag to 0 or 1 - set the additional integritycheck compilation flag when compiling dependencies
 
@@ -90,21 +90,20 @@ The script compiles ovms_test binary with C++ only, downloads and converts test 
 windows_test.bat
 ```
 
-The optional script compiles ovms_test binary with python support, downloads and converts test LLM models (src\tests\llm_testing) and installs Python torch and optimum.
+The script compiles ovms_test with Python support, downloads and converts test LLM models (src\tests\llm_testing) and installs Python torch and optimum.
 ```bat
-windows_test.bat opt --with_python
+windows_test.bat opt
 ```
 
 # Creating deployment package
 This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.
-The default version creates C++ only version without Python dependency.
+To include the embedded Python runtime in the package, pass `--with_python`.
 ```bat
 windows_create_package.bat
 ```
 
-Optionally you can create a package with Python dependency. Note that to create valid package with Python, you need to build using `--with_python` flag in the previous step as well.
 ```bat
-windows_create_package.bat opt --with_python
+windows_create_package.bat opt
 ```
 
 # Test the Deployment

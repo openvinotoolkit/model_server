@@ -29,7 +29,7 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
-#if (PYTHON_DISABLE == 0)
+#if 1
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
