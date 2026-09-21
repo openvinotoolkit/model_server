@@ -1,0 +1,10 @@
+--- a/mediapipe/framework/BUILD
++++ b/mediapipe/framework/BUILD
+@@ -329,6 +329,7 @@ cc_library(
+     ],
+     visibility = [
+         ":mediapipe_internal",
++        "@ovms//:__subpackages__",
+     ],
+     deps = [
+         ":calculator_base",
