@@ -158,6 +158,7 @@ def check_dir(start_dir):
         "dummy_facebook_template.jinja",
         "mediapipe_model_api_openvino_windows.patch",
         'windows_zlib_dependency.patch',
+        'windows_msvc_untyped_message_hash_fix.patch',
         'ovms_calculator_graph_visibility.diff',
         'model_api_json_archive.patch',
         'com_google_protobuf_fixes.diff',
