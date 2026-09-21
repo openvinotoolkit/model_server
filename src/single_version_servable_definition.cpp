@@ -20,7 +20,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "dags/pipelinedefinitionstatus.hpp"
+#include "mediapipe_internal/pipelinedefinitionstatus.hpp"
 #include "servable_definition_unload_guard.hpp"
 
 namespace ovms {

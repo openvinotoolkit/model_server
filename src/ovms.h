@@ -292,7 +292,7 @@ OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSet
 
 // Set custom node resource cleaner interval server setting.
 // Equivalent of starting server with
-// --custom_node_resources_cleaner_interval_seconds.
+// --resources_cleaner_interval_seconds.
 //
 // \param settings The server settings object to be set
 // \param seconds The value to be set

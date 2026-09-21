@@ -26,7 +26,6 @@
 #include <utility>
 #include <vector>
 
-#include "src/dags/dag_resource_manager.hpp"
 #include "src/metrics/metric_provider.hpp"
 #include "src/model_instance_provider.hpp"
 #include "src/modelconfig.hpp"
@@ -48,10 +47,8 @@ const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
 extern const std::string DEFAULT_MODEL_CACHE_DIRECTORY;
 
 class Config;
-struct CNLIMWrapper;
 struct ModelsSettingsImpl;
 class CustomLoaderConfig;
-class CustomNodeLibraryManager;
 class MetricConfig;
 class MetricRegistry;
 class MediapipeGraphExecutorInterface;
@@ -65,15 +62,13 @@ class ModelInstance;
 class ServableGroupManager;
 class ServableDefinition;
 class ModelInstanceUnloadGuard;
-class Pipeline;
 class ServableLoadingQueue;
-class PipelineFactory;
-struct FunctorResourcesCleaner;
 class PythonBackend;
+struct FunctorResourcesCleaner;
 /**
  * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
  */
-class ModelManager : public ServableNameChecker, public MetricProvider, public ModelInstanceProvider, public ResourcesCleaner, public DagResourceManager {
+class ModelManager : public ServableNameChecker, public MetricProvider, public ModelInstanceProvider, public ResourcesCleaner {
 public:
     /**
      * @brief A default constructor is private
@@ -93,12 +88,9 @@ protected:
     std::unique_ptr<ov::Core> ieCore;
 
     std::unique_ptr<ServableLoadingQueue> loadingQueue;
-    std::unique_ptr<PipelineFactory> pipelineFactory;
 #if (MEDIAPIPE_DISABLE == 0)
     std::unique_ptr<MediapipeRuntimeApi> mediapipeFactory;
 #endif
-    std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
-    std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
     uint32_t waitForModelLoadedTimeoutMs;
 
 private:
@@ -148,11 +140,6 @@ private:
     void cleanerRoutine(uint32_t resourcesCleanupIntervalMillisec, std::future<void> cleanerExitSignal);
 
     /**
-     * @brief Mutex for blocking concurrent add & remove of resources
-     */
-    mutable std::shared_mutex resourcesMtx;
-
-    /**
      * @brief A JSON configuration filename
      */
 protected:
@@ -164,9 +151,6 @@ private:
      */
     std::thread monitor;
 
-    /**
-     * @brief A thread object used for cleanup
-     */
     std::thread cleanerThread;
 
     /**
@@ -184,9 +168,6 @@ private:
      */
     std::promise<void> exitTrigger;
 
-    /**
-     * @brief An exit trigger to notify cleaner thread to exit
-     */
     std::promise<void> cleanerExitTrigger;
 
     /**
@@ -214,12 +195,9 @@ protected:
     uint32_t watcherIntervalMillisec = 1000;
     static const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
 
-protected:
-    /**
-     * Time interval between two consecutive resources cleanup scans (in milliseconds)
-     */
-    uint32_t resourcesCleanupIntervalMillisec = 1000;
+    uint32_t resourcesCleanupIntervalMillisec = 300000;
 
+protected:
     std::unique_ptr<ServableGroupManager> servableGroupManager;
 
 private:
@@ -279,19 +257,8 @@ public:
         return watcherIntervalMillisec;
     }
 
-    /**
-     *  @brief Gets the cleaner resources interval timestep in seconds
-     */
     uint32_t getResourcesCleanupIntervalMillisec() {
         return resourcesCleanupIntervalMillisec;
-    }
-
-    /**
-     *  @brief Adds new resource to watch by the cleaner thread
-     */
-    void addResourceToCleaner(std::shared_ptr<CNLIMWrapper> resource) override {
-        std::unique_lock resourcesLock(resourcesMtx);
-        resources.emplace(resources.end(), std::move(resource));
     }
 
     /**
@@ -324,12 +291,7 @@ public:
 
     const std::vector<std::string> getNamesOfAvailableModels() const;
 
-    /**
-     * @brief Starts monitoring cleanup as new thread
-     */
     void startCleaner();
-
-    const PipelineFactory& getPipelineFactory() const;
 
 #if (MEDIAPIPE_DISABLE == 0)
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
@@ -340,8 +302,6 @@ public:
         return *mediapipeFactory;
     }
 #endif
-
-    const CustomNodeLibraryManager& getCustomNodeLibraryManager() const;
 
     /**
      * @brief Finds model with specific name
@@ -375,13 +335,6 @@ public:
      * @return pointer to ModelInstance or nullptr if not found
      */
     const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const override;
-
-    bool subscribeToModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) override;
-    void unsubscribeFromModel(const std::string& name, model_version_t version, NotifyReceiver& receiver) override;
-
-    Status getModelInputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const override;
-    Status getModelOutputsInfo(const std::string& name, model_version_t version, tensor_map_t& info) const override;
-    Status hasAutoModelParameters(const std::string& name, model_version_t version, bool& batchAuto, bool& shapeAuto) const override;
 
 #if (MEDIAPIPE_DISABLE == 0)
     Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
@@ -504,9 +457,6 @@ public:
      */
     Status updateConfigurationWithoutConfigFile();
 
-    /**
-     * @brief Cleaner thread procedure to cleanup resources that are not used
-     */
     void cleanupResources() override;
 
     bool servableExists(const std::string& name, ServableQueryType check = ServableQueryType::All) const override;
@@ -518,7 +468,5 @@ public:
 
     MetricRegistry* getMetricRegistry() const override { return this->metricRegistry; }
 };
-
-void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, std::future<void>& cleanerExitSignal);
 
 }  // namespace ovms

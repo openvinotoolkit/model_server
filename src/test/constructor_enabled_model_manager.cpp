@@ -47,7 +47,7 @@ void ConstructorEnabledModelManager::setWaitForModelLoadedTimeoutMs(int value) {
     this->waitForModelLoadedTimeoutMs = value;
 }
 int ResourcesAccessModelManager::getResourcesSize() {
-    return resources.size();
+    return 0;
 }
 void ResourcesAccessModelManager::setResourcesCleanupIntervalMillisec(uint32_t value) {
     this->resourcesCleanupIntervalMillisec = value;

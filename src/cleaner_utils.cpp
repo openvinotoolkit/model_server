@@ -16,6 +16,10 @@
 
 #include "cleaner_utils.hpp"
 
+#ifdef __linux__
+#include <malloc.h>
+#endif
+
 #ifdef _WIN32
 #include <crtdbg.h>
 #include <malloc.h>
@@ -29,6 +33,16 @@
 #include "resources_cleaner.hpp"
 
 namespace ovms {
+
+bool trimProcessMemory() {
+#ifdef __linux__
+    return malloc_trim(0) == 1;
+#elif _WIN32
+    return malloc_trim_win();
+#else
+    return false;
+#endif
+}
 
 #ifdef _WIN32
 bool malloc_trim_win() {

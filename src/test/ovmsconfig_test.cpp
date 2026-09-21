@@ -2507,7 +2507,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--rest_bind_address", "2.2.2.2",
         "--grpc_channel_arguments", "grpc_channel_args",
         "--file_system_poll_wait_seconds", "2",
-        "--custom_node_resources_cleaner_interval_seconds", "8",
+        "--resources_cleaner_interval_seconds", "8",
         "--allow_credentials",
         "--allowed_headers", "Content-Type",
         "--allowed_methods", "GET,POST",
@@ -2630,7 +2630,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "grpc_channel_args",
         "--file_system_poll_wait_seconds",
         "2",
-        "--custom_node_resources_cleaner_interval_seconds",
+        "--resources_cleaner_interval_seconds",
         "8",
 #ifdef _WIN32
         "--cpu_extension",

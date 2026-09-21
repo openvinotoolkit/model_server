@@ -19,9 +19,6 @@
 #include <gtest/gtest.h>
 
 #include "../config.hpp"
-#include "../dags/pipeline.hpp"
-#include "../dags/pipeline_factory.hpp"
-#include "../dags/pipelinedefinition.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "src/kfs_frontend/kfs_graph_executor_impl.hpp"
 #endif
@@ -52,7 +49,7 @@ void mediacreate<KFSRequest, KFSResponse>(std::unique_ptr<MediapipeGraphExecutor
 }
 #endif
 
-class StressPipelineConfigChanges : public ConfigChangeStressTest {
+class StressMediapipeChangesBase : public ConfigChangeStressTest {
 public:
     static void SetUpTestSuite() {
 #ifdef _WIN32
@@ -62,7 +59,7 @@ public:
 };
 
 #if (MEDIAPIPE_DISABLE == 0)
-class StressMediapipeChanges : public StressPipelineConfigChanges {
+class StressMediapipeChanges : public StressMediapipeChangesBase {
     const std::string modelName = PIPELINE_1_DUMMY_NAME;
     const std::string modelInputName = "b";
     const std::string modelOutputName = "a";
@@ -72,7 +69,7 @@ public:
         return modelName;
     }
     void SetUp() override {
-        SetUpCAPIServerInstance(createStressTestPipelineOneDummyConfig());
+        SetUpCAPIServerInstance(createStressTestOneDummyConfigWithMetrics());
     }
 };
 TEST_F(StressMediapipeChanges, AddGraphDuringPredictLoad) {
@@ -213,7 +210,7 @@ TEST_F(StressMediapipeChanges, ReloadMediapipeGraphDuringMetadataLoad) {
         allowedLoadResults);
 }
 
-class StressMediapipeQueueChanges : public StressPipelineConfigChanges {
+class StressMediapipeQueueChanges : public StressMediapipeChangesBase {
     const std::string modelName = PIPELINE_1_DUMMY_NAME;
     const std::string modelInputName = "b";
     const std::string modelOutputName = "a";
@@ -223,7 +220,7 @@ public:
         return modelName;
     }
     void SetUp() override {
-        SetUpCAPIServerInstance(createStressTestPipelineOneDummyConfig());
+        SetUpCAPIServerInstance(createStressTestOneDummyConfigWithMetrics());
     }
 };
 TEST_F(StressMediapipeQueueChanges, AddGraphDuringPredictLoad) {

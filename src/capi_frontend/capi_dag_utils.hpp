@@ -22,7 +22,7 @@
 #include <openvino/core/type/element_type.hpp>
 
 #include "../ovms.h"
-#include "../dags/pipelinedefinitionstatus.hpp"
+#include "../mediapipe_internal/pipelinedefinitionstatus.hpp"
 
 namespace ovms {
 class InferenceResponse;

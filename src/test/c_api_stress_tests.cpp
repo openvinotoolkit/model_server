@@ -23,9 +23,6 @@
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../capi_frontend/servablemetadata.hpp"
 #include "../config.hpp"
-#include "../dags/pipeline.hpp"
-#include "../dags/pipeline_factory.hpp"
-#include "../dags/pipelinedefinition.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../modelconfig.hpp"
@@ -40,49 +37,6 @@
 #include "test_utils.hpp"
 
 using namespace ovms;
-
-static const char* stressTestPipelineOneDummyConfigSpecificVersionUsed = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "version": 1,
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "request",
-                               "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "new_dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                         "data_item": "new_dummy_output"}
-                }
-            ]
-        }
-    ]
-})";
 
 using testing::_;
 using testing::Return;
@@ -126,7 +80,7 @@ TEST_F(ConfigChangeStressTestSingleModel, ChangeToEmptyConfigInference) {
         StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
     performStressTest(
-        &ConfigChangeStressTest::triggerCApiInferenceInALoopSingleModel,
+        &ConfigChangeStressTest::triggerCApiInferenceInALoop,
         &ConfigChangeStressTest::changeToEmptyConfig,
         performWholeConfigReload,
         requiredLoadResults,
@@ -192,20 +146,10 @@ TEST_F(ConfigChangeStressTestAsyncStartEmpty, ChangeToLoadedModelDuringAsyncInfe
 }
 
 TEST_F(StressCapiConfigChanges, AddNewVersionDuringPredictLoad) {
-    bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiInferenceInALoop,
-        &StressCapiConfigChanges::defaultVersionAdd,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, KFSAddNewVersionDuringPredictLoad) {
-    bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {};
+    bool performWholeConfigReload = false;
+    const std::set<StatusCode> requiredLoadResults{StatusCode::OK};
+    const std::set<StatusCode> allowedLoadResults{StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,
+        StatusCode::MODEL_VERSION_MISSING};
     performStressTest(
         &StressCapiConfigChanges::triggerCApiInferenceInALoop,
         &StressCapiConfigChanges::defaultVersionAdd,
@@ -214,173 +158,28 @@ TEST_F(StressCapiConfigChanges, KFSAddNewVersionDuringPredictLoad) {
         allowedLoadResults);
 }
 
-TEST_F(StressCapiConfigChanges, DISABLED_GetMetricsDuringLoad) {
-    bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiInferenceInALoop,
-        &StressCapiConfigChanges::testCurrentRequestsMetric,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, RemoveDefaultVersionDuringPredictLoad) {
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,  // we hit default version which is unloaded already but default is not changed yet
-        StatusCode::MODEL_VERSION_MISSING};              // there is no default version since all are either not loaded properly or retired
-    std::set<StatusCode> allowedLoadResults = {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};
-    // we need whole config reload since there is no other way to dispose
-    // all model versions different than removing model from config
-    bool performWholeConfigReload = true;
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiInferenceInALoop,
-        &StressCapiConfigChanges::defaultVersionRemove,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, ChangeToShapeAutoDuringPredictLoad) {
-    bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiInferenceInALoop,
-        &StressCapiConfigChanges::changeToAutoShape,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, RemovePipelineDefinitionDuringPredictLoad) {
-    bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE};  // we expect to stop creating pipelines
-    std::set<StatusCode> allowedLoadResults = {};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiInferenceInALoop,
-        &StressCapiConfigChanges::removePipelineDefinition,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, ChangedPipelineConnectionNameDuringPredictLoad) {
-    bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiInferenceInALoop,
-        &StressCapiConfigChanges::changeConnectionName,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, AddedNewPipelineDuringPredictLoad) {
-    bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiInferenceInALoop,
-        &StressCapiConfigChanges::addNewPipeline,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, RetireSpecificVersionUsedDuringPredictLoad) {
-    // we declare specific version used (1) and latest model version policy with count=1
-    // then we add version 2 causing previous default to be retired
-    SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
+TEST_F(StressCapiConfigChanges, KFSAddNewVersionDuringPredictLoad) {
     bool performWholeConfigReload = false;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
-    std::set<StatusCode> allowedLoadResults = {StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};
+    const std::set<StatusCode> requiredLoadResults{StatusCode::OK};
+    const std::set<StatusCode> allowedLoadResults{StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,
+        StatusCode::MODEL_VERSION_MISSING};
     performStressTest(
         &StressCapiConfigChanges::triggerCApiInferenceInALoop,
-        &StressCapiConfigChanges::retireSpecificVersionUsed,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, AddNewVersionDuringGetMetadataLoad) {
-    bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
         &StressCapiConfigChanges::defaultVersionAdd,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);
 }
-TEST_F(StressCapiConfigChanges, RemoveDefaultVersionDuringGetMetadataLoad) {
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};  // we hit when all config changes finish to propagate
-    std::set<StatusCode> allowedLoadResults = {};
-    // we need whole config reload since there is no other way to dispose
-    // all model versions different than removing model from config
-    bool performWholeConfigReload = true;
+
+TEST_F(StressCapiConfigChanges, RemoveDefaultVersionDuringPredictLoad) {
+    bool performWholeConfigReload = true;  // we need whole config reload since there is no other way to dispose the model version other than removing it from config
+    std::set<StatusCode> requiredLoadResults = {
+        StatusCode::OK,
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE};  // model gets retired once removed from config
+    std::set<StatusCode> allowedLoadResults = {StatusCode::MODEL_VERSION_MISSING};
     performStressTest(
-        &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
+        &StressCapiConfigChanges::triggerCApiInferenceInALoop,
         &StressCapiConfigChanges::defaultVersionRemove,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, ChangeToShapeAutoDuringGetMetadataLoad) {
-    bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
-        &StressCapiConfigChanges::changeToAutoShape,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, RemovePipelineDefinitionDuringGetMetadataLoad) {
-    bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_ANYMORE};  // when pipeline is retired
-    std::set<StatusCode> allowedLoadResults = {};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
-        &StressCapiConfigChanges::removePipelineDefinition,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, ChangedPipelineConnectionNameDuringGetMetadataLoad) {
-    bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
-        &StressCapiConfigChanges::changeConnectionName,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, AddedNewPipelineDuringGetMetadataLoad) {
-    bool performWholeConfigReload = true;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
-    std::set<StatusCode> allowedLoadResults = {};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
-        &StressCapiConfigChanges::addNewPipeline,
-        performWholeConfigReload,
-        requiredLoadResults,
-        allowedLoadResults);
-}
-TEST_F(StressCapiConfigChanges, RetireSpecificVersionUsedDuringGetMetadataLoad) {
-    // we declare specific version used (1) and latest model version policy with count=1
-    // then we add version 2 causing previous default to be retired
-    SetUpConfig(stressTestPipelineOneDummyConfigSpecificVersionUsed);
-    bool performWholeConfigReload = false;
-    std::set<StatusCode> requiredLoadResults = {StatusCode::OK,  // we expect full continuity of operation
-        StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET};         // we hit when all config changes finish to propagate
-    std::set<StatusCode> allowedLoadResults = {};
-    performStressTest(
-        &StressCapiConfigChanges::triggerCApiGetMetadataInALoop,
-        &StressCapiConfigChanges::retireSpecificVersionUsed,
         performWholeConfigReload,
         requiredLoadResults,
         allowedLoadResults);

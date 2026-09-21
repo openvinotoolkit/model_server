@@ -36,7 +36,6 @@
 #include "../capi_frontend/inferencerequest.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../config.hpp"
-#include "../dags/node_library.hpp"
 #include "src/execution_context.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
@@ -468,17 +467,6 @@ void SetReadonlyFileAttributeFromDir(std::string& directoryPath);
  */
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
 void waitForOVMSResourcesCleanup(ovms::ModelManager& manager);
-
-template <typename T>
-static ovms::NodeLibrary createLibraryMock() {
-    return ovms::NodeLibrary{
-        T::initialize,
-        T::deinitialize,
-        T::execute,
-        T::getInputsInfo,
-        T::getOutputsInfo,
-        T::release};
-}
 
 bool isShapeTheSame(const KFSShapeType&, const std::vector<int64_t>&&);
 

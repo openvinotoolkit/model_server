@@ -25,9 +25,7 @@
 #include "deserialization.hpp"
 #include "kfs_utils.hpp"
 #include "kfs_request_utils.hpp"
-#include "../dags/pipeline.hpp"
-#include "../dags/pipeline_factory.hpp"
-#include "../dags/pipelinedefinitionstatus.hpp"
+#include "../mediapipe_internal/pipelinedefinitionstatus.hpp"
 #include "src/execution_context.hpp"
 #include "../grpc_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
@@ -76,13 +74,6 @@ Status KFSInferenceServiceImpl::getModelInstance(const KFSRequest* request,
         }
     }
     return this->modelManager.getModelInstance(request->model_name(), requestedVersion, modelInstance, modelInstanceUnloadGuardPtr);
-}
-
-Status KFSInferenceServiceImpl::getPipeline(const KFSRequest* request,
-    KFSResponse* response,
-    std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
-    OVMS_PROFILE_FUNCTION();
-    return this->modelManager.getPipelineFactory().create(pipelinePtr, request->model_name(), request, response, this->modelManager);
 }
 
 const std::string PLATFORM = "OpenVINO";
@@ -284,27 +275,22 @@ Status KFSInferenceServiceImpl::ModelMetadataImpl(::grpc::ServerContext* context
 Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, const KFSRequest* request, KFSResponse* response, ExecutionContext executionContext, ServableMetricReporter*& reporterOut) {
     OVMS_PROFILE_FUNCTION();
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     SPDLOG_DEBUG("ModelInfer requested name: {}, version: {}", request->model_name(), request->model_version());
     auto status = getModelInstance(request, modelInstance, modelInstanceUnloadGuard);
     if (status == StatusCode::MODEL_NAME_MISSING) {
-        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", request->model_name());
-        status = getPipeline(request, response, pipelinePtr);
-        if (status == StatusCode::PIPELINE_DEFINITION_NAME_MISSING) {
-            SPDLOG_DEBUG("Requested DAG: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
 #if (MEDIAPIPE_DISABLE == 0)
-            std::unique_ptr<MediapipeGraphExecutorInterface> executor;
-            status = this->modelManager.createPipelineHandle(executor, request->model_name());
-            if (!status.ok()) {
-                return status;
-            }
-            return executor->infer(request, response, executionContext);
-#else
-            SPDLOG_DEBUG("Requested DAG: {} does not exist. Mediapipe support was disabled during build process...", request->model_name());
-#endif
+        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
+        std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+        status = this->modelManager.createPipelineHandle(executor, request->model_name());
+        if (!status.ok()) {
+            return status;
         }
+        return executor->infer(request, response, executionContext);
+#else
+        SPDLOG_DEBUG("Requested model: {} does not exist. Mediapipe support was disabled during build process...", request->model_name());
+#endif
     }
     if (!status.ok()) {
         if (modelInstance) {
@@ -313,10 +299,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return status;
     }
-    if (pipelinePtr) {
-        reporterOut = &pipelinePtr->getMetricReporter();
-        status = pipelinePtr->execute(executionContext);
-    } else if (modelInstance) {
+    if (modelInstance) {
         reporterOut = &modelInstance->getMetricReporter();
         status = infer(*modelInstance, request, response, modelInstanceUnloadGuard);
     }

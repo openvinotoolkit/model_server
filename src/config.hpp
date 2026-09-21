@@ -312,13 +312,13 @@ public:
      * @return uint32_t 
      */
     uint32_t filesystemPollWaitMilliseconds() const;
+    uint32_t resourcesCleanerPollWaitSeconds() const;
 
     /**
      * @brief Get the resources cleanup poll wait time in seconds
      * 
      * @return uint32_t
      */
-    uint32_t resourcesCleanerPollWaitSeconds() const;
 
     uint32_t idleUnloadTimeoutSeconds() const;
 

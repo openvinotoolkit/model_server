@@ -25,8 +25,6 @@
 
 #include "../cleaner_utils.hpp"
 #include "../config.hpp"
-#include "../dags/custom_node_library_internal_manager_wrapper.hpp"
-#include "../dags/node_library.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
@@ -166,10 +164,6 @@ public:
     }
     std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
         return modelMock;
-    }
-
-    int getResourcesSize() {
-        return resources.size();
     }
 
     void setResourcesCleanupIntervalMillisec(uint32_t value) {
@@ -571,60 +565,6 @@ TEST_F(ModelManager, ConfigParseNodeConfigWihoutBasePathKey) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
-TEST_F(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
-    const char* configWithPipelineDefinitionMatchSchema = R"({
-        "model_config_list": [
-            {
-                "config": {
-                    "name": "alpha",
-                    "base_path": "/tmp/ModelManager/parseConfigWhenPipelineDefinitionMatchSchema/models/dummy1"
-                }
-            },
-            {
-                "config": {
-                    "name": "beta",
-                    "base_path": "/tmp/ModelManager/parseConfigWhenPipelineDefinitionMatchSchema/models/dummy2"
-                }
-            }
-        ],
-        "pipeline_config_list": 
-        [
-            {
-                "name": "ensemble_name1", 
-                "inputs": ["in"], 
-                "outputs": [{"a":{"node_name": "beta","data_item": "text"}}], 
-                "nodes": [  
-                    { 
-                        "name": "alpha", 
-                        "model_name": "dummy",
-                        "type": "DL model", 
-                        "inputs": [{"a":{"node_name": "input","data_item": "in"}}], 
-                        "outputs": [{"data_item": "prob","alias": "prob"}] 
-                    }, 
-                    { 
-                        "name": "beta", 
-                        "model_name": "dummy",
-                        "type": "DL model",
-                        "inputs": [{"a":{"node_name": "alpha","data_item": "prob"}}],
-                        "outputs": [{"data_item": "text","alias": "text"}] 
-                    }
-                ]
-            }
-        ]
-    })";
-    std::filesystem::create_directories(this->getFilePath("/models/dummy1/1"));
-    std::filesystem::create_directories(this->getFilePath("/models/dummy2/1"));
-    std::string configFile = this->getFilePath("/ovms_config_file.json");
-    createConfigFileWithContent(configWithPipelineDefinitionMatchSchema, configFile);
-    modelMock = std::make_shared<MockModel>();
-    MockModelManager manager;
-
-    auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-    manager.join();
-    modelMock.reset();
-}
-
 static void setupModelsDirs() {
     std::filesystem::create_directory(getGenericFullPathForTmp("/tmp/models"));
     std::filesystem::create_directory(getGenericFullPathForTmp("/tmp/models/dummy1"));
@@ -805,38 +745,6 @@ public:
         std::filesystem::create_directory(this->getFilePath("/models/dummy2"));
     }
 };
-
-TEST_F(ModelManagerWatcher, parseConfigWhenOnlyPipelineDefinitionProvided) {
-    const char* configWithOnlyPipelineDefinitionProvided = R"({
-    "pipeline_config_list": 
-    {
-    "name": "ensemble_name1", 
-    "inputs": ["in"], 
-    "outputs": [{"out1": {"node_name": "beta","data_item": "text"}}], 
-    "nodes": [  
-    { 
-    "name": "alpha", 
-    "type": "DL Model", 
-    "inputs": [{"data": {"node_name": "input","data_item": "in"}}], 
-    "outputs": [{"data_item": "prob","alias": "prob"}] 
-    }, 
-    { 
-    "name": "beta", 
-    "type": "DL Model",
-    "inputs": [{"data": {"node_name": "alpha","data_item": "prob"}}],
-    "outputs": [{"data_item": "text","alias": "text"}] 
-    }]}})";
-
-    std::string configFile = this->getFilePath("/ovms_config_file.json");
-    createConfigFileWithContent(configWithOnlyPipelineDefinitionProvided, configFile);
-    modelMock = std::make_shared<MockModel>();
-    MockModelManager manager;
-
-    auto status = manager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
-    manager.join();
-    modelMock.reset();
-}
 
 TEST_F(ModelManager, ReadsVersionsFromDisk) {
     const std::string path = getGenericFullPathForTmp("/tmp/test_model/");
@@ -1124,126 +1032,6 @@ TEST_F(ModelManagerWatcher, ConfigReloadingShouldAddNewModelRelativePath) {
     EXPECT_EQ(models, 2);
     manager.join();
     modelMock.reset();
-}
-
-struct CNLIMWrapperMock : public ovms::CNLIMWrapper {
-    inline static int deinitializeSum = 0;
-
-public:
-    CNLIMWrapperMock(void* CNLIM, ovms::deinitialize_fn deinitialize) :
-        ovms::CNLIMWrapper(CNLIM, deinitialize) {}
-
-    ~CNLIMWrapperMock() {
-        deinitializeSum += deinitialize(ptr);
-    }
-};
-
-struct MockedFunctorResourcesCleaner : public ovms::FunctorResourcesCleaner {
-public:
-    MockedFunctorResourcesCleaner(ovms::ModelManager& modelManager) :
-        ovms::FunctorResourcesCleaner(modelManager) {}
-
-    MOCK_METHOD(void, cleanup, (), (override));
-};
-
-class ModelManagerCleanerThread : public ::testing::Test {
-public:
-    ModelManagerCleanerThread() :
-        mockedFunctorResourcesCleaner(modelManager) {}
-    void SetUp() {
-        exitSignal = cleanerExitTrigger.get_future();
-    }
-
-    MockModelManager modelManager;
-
-    MockedFunctorResourcesCleaner mockedFunctorResourcesCleaner;
-
-    std::promise<void> cleanerExitTrigger;
-    std::future<void> exitSignal;
-
-    const float TIMEOUT_MULTIPLIER_FACTOR = 10;
-};
-
-TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
-    std::mutex mx[2];
-    std::mutex singleSignalMutex;
-    std::condition_variable cv[2];
-    std::atomic<int> waitingCount{0};
-
-    auto waitForCleanerCycleFinishSignal = [&mx, &cv]() {
-        std::unique_lock<std::mutex> lock(mx[1]);
-        SPDLOG_INFO("Waiting for cleaner to signal that cleanup cycle is finished");
-        cv[1].wait(lock);
-    };
-    auto signalCleanerThatNextCycleCanContinue = [&cv, &waitingCount, &singleSignalMutex]() {
-        SPDLOG_INFO("Signaling the cleaner thread that next cycle can start");
-        std::unique_lock<std::mutex> lock(singleSignalMutex);
-        while (waitingCount.load() == 0) {
-            std::this_thread::yield();  // Spin-wait until someone is waiting
-        }
-        cv[0].notify_one();
-        --waitingCount;
-    };
-    auto waitForSignalThatCleanerCycleCanContinue = [&mx, &cv, &waitingCount]() {
-        std::unique_lock<std::mutex> lock(mx[0]);
-        SPDLOG_INFO("Waiting for signal that cleaner cycle can continue");
-        ++waitingCount;
-        cv[0].wait(lock);
-    };
-    auto signalMainThreadThatCleanerCycleFinished = [&cv]() {
-        SPDLOG_INFO("Signaling the main thread that the cleaner cycle finished");
-        cv[1].notify_one();
-    };
-    ASSERT_EQ(modelManager.getResourcesSize(), 0);
-    EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).WillRepeatedly(testing::Invoke([this, &waitForSignalThatCleanerCycleCanContinue, &signalMainThreadThatCleanerCycleFinished]() {
-        signalMainThreadThatCleanerCycleFinished();
-        waitForSignalThatCleanerCycleCanContinue();
-        this->mockedFunctorResourcesCleaner.ovms::FunctorResourcesCleaner::cleanup();  // fall back to actual work
-    }));
-    // Reset mocked wrapper deinitializeSum
-    CNLIMWrapperMock::deinitializeSum = 0;
-    uint32_t resourcesIntervalMiliseconds = 20;
-    std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), std::ref(exitSignal));
-
-    waitForCleanerCycleFinishSignal();
-
-    int num1 = 1;
-    int num2 = 19;
-    int num3 = 11;
-    {
-        std::shared_ptr<CNLIMWrapperMock> ptr1 = std::make_shared<CNLIMWrapperMock>(&num1, [](void* ptr) {
-            int* number = static_cast<int*>(ptr);
-            return *number;
-        });
-        std::shared_ptr<CNLIMWrapperMock> ptr2 = std::make_shared<CNLIMWrapperMock>(&num2, [](void* ptr) {
-            int* number = static_cast<int*>(ptr);
-            return *number;
-        });
-        std::shared_ptr<CNLIMWrapperMock> ptr3 = std::make_shared<CNLIMWrapperMock>(&num3, [](void* ptr) {
-            int* number = static_cast<int*>(ptr);
-            return *number;
-        });
-        modelManager.addResourceToCleaner(ptr1);
-        modelManager.addResourceToCleaner(ptr2);
-        modelManager.addResourceToCleaner(std::move(ptr3));
-        ASSERT_EQ(modelManager.getResourcesSize(), 3);
-
-        signalCleanerThatNextCycleCanContinue();  // signal after one of the resource lifetime is ended (ptr3)
-        waitForCleanerCycleFinishSignal();
-        ASSERT_EQ(modelManager.getResourcesSize(), 2);
-        ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, num3);
-    }
-    signalCleanerThatNextCycleCanContinue();  // signals after scope of all resources end
-    waitForCleanerCycleFinishSignal();
-
-    ASSERT_EQ(modelManager.getResourcesSize(), 0);
-    ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, (num1 + num2 + num3));
-
-    cleanerExitTrigger.set_value();
-    signalCleanerThatNextCycleCanContinue();  // Just to unlock so cleaner exit trigger can take effect
-    if (t.joinable()) {
-        t.join();
-    }
 }
 
 TEST_F(ModelManager, ConfigReloadingWithWrongInputName) {
