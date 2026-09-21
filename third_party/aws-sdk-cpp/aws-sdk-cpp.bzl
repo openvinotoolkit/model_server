@@ -127,7 +127,7 @@ cmake(
             "libaws-c-common.a",
         ],
     tags = ["requires-network"],
-    alwayslink = False,
+    alwayslink = True,
     visibility = ["//visibility:public"],
 )
 
@@ -137,7 +137,7 @@ cc_library(
         ":aws-sdk-cpp_cmake",
     ],
     visibility = ["//visibility:public"],
-    alwayslink = False,
+    alwayslink = True,
 )
 
 """

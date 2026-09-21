@@ -134,6 +134,7 @@ cmake(
     {out_static}
     tags = ["requires-network"],
     visibility = ["//visibility:public"],
+    alwayslink = True,
     lib_name = "{lib_name}",
     deps = []
 )
@@ -144,6 +145,7 @@ cc_library(
         ":libgit2_cmake",
     ],
     visibility = ["//visibility:public"],
+    alwayslink = True,
 )
 """
     repository_ctx.file("BUILD", build_file_content.format(http_proxy=http_proxy, https_proxy=https_proxy,

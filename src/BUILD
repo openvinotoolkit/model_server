@@ -54,6 +54,7 @@ cc_shared_library(
         "@com_github_gabime_spdlog//:__subpackages__",
         "@fmtlib//:__subpackages__",
         "@com_github_jarro2783_cxxopts//:__subpackages__",
+        "@aws-sdk-cpp//:__pkg__",
         "@aws-sdk-cpp//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
         "//third_party:curl//:__subpackages__",
@@ -88,6 +89,8 @@ cc_shared_library(
         "@flatbuffers//:__subpackages__",
         "@ruy//:__subpackages__",
         "@azure//:__subpackages__",
+        "@drogon//:__pkg__",
+        "@libgit2_engine//:__pkg__",
         "//third_party:opencv//:__subpackages__",
     ] + select({
         "//:not_disable_mediapipe": [

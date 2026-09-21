@@ -200,6 +200,7 @@ cmake(
     # linking order
     out_static_libs = {out_static_libs},
     tags = ["requires-network"],
+    alwayslink = True,
     visibility = ["//visibility:public"],
 )
 """
