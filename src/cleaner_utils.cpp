@@ -16,13 +16,12 @@
 
 #include "cleaner_utils.hpp"
 
-#ifdef __linux__
+#if defined(__linux__) || defined(_WIN32)
 #include <malloc.h>
 #endif
 
 #ifdef _WIN32
 #include <crtdbg.h>
-#include <malloc.h>
 #include <windows.h>
 
 #include <string>

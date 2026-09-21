@@ -47,7 +47,6 @@
 #include "../single_version_servable_definition.hpp"
 #include "src/status.hpp"
 #include "../timer.hpp"
-#include "../mediapipe_internal/pipelinedefinitionstatus.hpp"
 #include "buffer.hpp"
 #include "capi_dag_utils.hpp"
 #include "inferenceparameter.hpp"
