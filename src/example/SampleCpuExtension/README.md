@@ -28,9 +28,9 @@ By doing so this layer will take advantage of cpu_extension.
 
 ```bash
 mkdir -p ${HOME}/models
-curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o models/resnet50.xml
-curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o models/resnet50.bin
-sed -i '0,/ReLU/s//CustomReLU/' models/resnet50.xml
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+sed -i '0,/ReLU/s//CustomReLU/' ${HOME}/models/resnet50.xml
 ```
 
 ## Deploying OVMS

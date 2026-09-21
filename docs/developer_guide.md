@@ -90,7 +90,6 @@ In-case of problems, see [Debugging](#debugging).
 	```
 	OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make docker_build
     OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make test_functional
-    OVMS_CPP_CONTAINER_PORT=<unique_network_port> make test_perf
 	```
 
 	* Without a Docker cache :
@@ -145,7 +144,7 @@ openvino/model_server:latest --model_name resnet --model_path /models/resnet50.x
 	source .venv/bin/activate
 	cd client/python/kserve-api/samples/
 	pip3 install -r requirements.txt
-	python http_infer_resnet.py --http_port 8000 --images_numpy_path ../imgs_nhwc.npy --labels_numpy_path ../lbs.npy --input_name image --output_name output --model_name resnet --transpose_input False
+	python grpc_infer_resnet.py --grpc_port 9178 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name image --output_name output --model_name resnet --transpose_input False
 	```
 
 Where:
@@ -198,56 +197,6 @@ export IMAGE="openvino/model_server:latest"
 
 ```python
 os.environ["IMAGE"] = "openvino/model_server"
-```
-</details>
-
-<details><summary>Run performance tests</summary>
-
-Automated tests are configured to use the ResNet50 model.
-
-1. Execute command to run latency test
-```bash
-make test_perf
-```
-- Output
-```bash
-Running latency test
-[--] Starting iterations
-[--] Iteration   100/ 1000; Current latency: 10.52ms; Average latency: 11.35ms
-[--] Iteration   200/ 1000; Current latency: 10.99ms; Average latency: 11.03ms
-[--] Iteration   300/ 1000; Current latency: 9.60ms; Average latency: 11.02ms
-[--] Iteration   400/ 1000; Current latency: 10.20ms; Average latency: 10.93ms
-[--] Iteration   500/ 1000; Current latency: 10.45ms; Average latency: 10.84ms
-[--] Iteration   600/ 1000; Current latency: 10.70ms; Average latency: 10.82ms
-[--] Iteration   700/ 1000; Current latency: 9.47ms; Average latency: 10.88ms
-[--] Iteration   800/ 1000; Current latency: 10.70ms; Average latency: 10.83ms
-[--] Iteration   900/ 1000; Current latency: 11.09ms; Average latency: 10.85ms
-[--] Iterations:  1000; Final average latency: 10.86ms; Classification accuracy: 100.0%
-```
-
-2. Execute command to run throughput test
-```bash
-make test_throughput
-```
-- Output
-
-```bash
-Running throughput test
-[25] Starting iterations
-[23] Starting iterations
-...
-[11] Starting iterations
-[24] Iterations:   500; Final average latency: 20.50ms; Classification accuracy: 100.0%
-[25] Iterations:   500; Final average latency: 20.81ms; Classification accuracy: 100.0%
-[6 ] Iterations:   500; Final average latency: 20.80ms; Classification accuracy: 100.0%
-[26] Iterations:   500; Final average latency: 20.80ms; Classification accuracy: 100.0%
-...
-[11] Iterations:   500; Final average latency: 20.84ms; Classification accuracy: 100.0%
-
-real	0m13.397s
-user	1m22.277s
-sys	0m39.333s
-1076 FPS
 ```
 </details>
 
