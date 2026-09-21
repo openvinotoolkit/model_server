@@ -77,10 +77,9 @@ usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
                [--sync_interval SYNC_INTERVAL]
                [--quantile_list [QUANTILE_LIST ...]]
                [--hist_factor HIST_FACTOR] [--hist_base HIST_BASE]
-               [--internal_version] [--unbuffered] [--api {TFS,KFS,REST}]
+               [--internal_version] [--unbuffered] [--api {KFS,REST}]
 
-This is benchmarking client which uses TFS/KFS API to communicate with
-OVMS/TFS/KFS-based-services.
+    This is benchmarking client which uses KFS/REST API to communicate with OVMS/KFS/REST-based-services.
 ```
 
 The version can be checked by using `--internal_version` switch as follows:
@@ -157,105 +156,113 @@ The workload can be generated only if its length is specified by iteration numbe
 `-n`, `--steps_number` or duration length `-t`, `--duration`. To see report also on warmup time window use `--report_warmup` switch. Example for 8 requests
 will be generated as follows (remember to add `--print_all` to show metrics in stdout):
 ```bash
-docker run --network host benchmark_client -a localhost -r 8000 -m resnet -p 9000 -n 8 --report_warmup --print_all
+x
 
 Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m resnet -p 9000 -n 8 --report_warmup --print_all
-          XI worker: request for metadata of model resnet...
+         XI worker: request for metadata of model resnet...
           XI worker: Metadata for model resnet is downloaded...
           XI worker: set version of model resnet: 1
-          XI worker: inputs:
-          XI worker:  0:
-          XI worker:   name: 0
-          XI worker:   dtype: DT_FLOAT
-          XI worker:   tensorShape: {'dim': [{'size': '1'}, {'size': '3'}, {'size': '224'}, {'size': '224'}]}
-          XI worker: outputs:
-          XI worker:  1463:
-          XI worker:   name: 1463
-          XI worker:   dtype: DT_FLOAT
-          XI worker:   tensorShape: {'dim': [{'size': '1'}, {'size': '1000'}]}
+          XI worker: name: "resnet"
+              versions: "1"
+              platform: "OpenVINO"
+              inputs {
+                name: "image"
+                datatype: "FP32"
+                shape: 1
+                shape: 224
+                shape: 224
+                shape: 3
+              }
+              outputs {
+                name: "output"
+                datatype: "FP32"
+                shape: 1
+                shape: 1000
+              }
           XI worker: new random range: 0.0, 255.0
           XI worker: batchsize sequence: [1]
-          XI worker: dataset length (0): 1
+          XI worker: dataset length (image): 1
           XI worker: --> dim: 1
+          XI worker: --> dim: 224
+          XI worker: --> dim: 224
           XI worker: --> dim: 3
-          XI worker: --> dim: 224
-          XI worker: --> dim: 224
-          XI worker: Generated data shape: (1, 3, 224, 224)
+          XI worker: Generated data shape: (1, 224, 224, 3)
           XI worker: start workload...
-          XI worker: stop warmup: 9408188.83686497
+          XI worker: stop warmup: 6308546.650373343
           XI worker: stop window: inf
           XI worker: Workload started!
-          XI worker: Warmup normally stopped: 9408188.848778868
-          XI worker: Window normally start: 9408188.848811286
-          XI worker: Window stopped: 9408188.893217305
-          XI worker: total_duration: 0.0563836432993412
+          XI worker: Warmup normally stopped: 6308546.655597869
+          XI worker: Window normally start: 6308546.655628495
+          XI worker: Window stopped: 6308546.677919754
+          XI worker: total_duration: 0.027586651034653187
           XI worker: total_batches: 8
           XI worker: total_frames: 8
-          XI worker: start_timestamp: 9408188.836864596
-          XI worker: stop_timestamp: 9408188.89324824
+          XI worker: start_timestamp: 6308546.65037293
+          XI worker: stop_timestamp: 6308546.677959581
           XI worker: pass_batches: 8
           XI worker: fail_batches: 0
           XI worker: pass_frames: 8
           XI worker: fail_frames: 0
-          XI worker: first_latency: 0.011858431622385979
-          XI worker: pass_max_latency: 0.011858431622385979
+          XI worker: first_latency: 0.00516059435904026
+          XI worker: pass_max_latency: 0.00516059435904026
           XI worker: fail_max_latency: 0.0
-          XI worker: brutto_batch_rate: 141.88512007867135
-          XI worker: brutto_frame_rate: 141.88512007867135
-          XI worker: netto_batch_rate: 142.7839056346449
-          XI worker: netto_frame_rate: 142.7839056346449
+          XI worker: brutto_batch_rate: 289.9953310733781
+          XI worker: brutto_frame_rate: 289.9953310733781
+          XI worker: netto_batch_rate: 293.82200804483256
+          XI worker: netto_frame_rate: 293.82200804483256
           XI worker: frame_passrate: 1.0
           XI worker: batch_passrate: 1.0
-          XI worker: mean_latency: 0.00700359046459198
-          XI worker: mean_latency2: 5.376289226632219e-05
-          XI worker: stdev_latency: 0.002170855331568294
-          XI worker: cv_latency: 0.309963202809113
-          XI worker: pass_mean_latency: 0.00700359046459198
-          XI worker: pass_mean_latency2: 5.376289226632219e-05
-          XI worker: pass_stdev_latency: 0.002170855331568294
-          XI worker: pass_cv_latency: 0.309963202809113
+          XI worker: mean_latency: 0.003403421025723219
+          XI worker: mean_latency2: 1.2081388128051991e-05
+          XI worker: stdev_latency: 0.0007057715279869992
+          XI worker: cv_latency: 0.20737120757400987
+          XI worker: pass_mean_latency: 0.003403421025723219
+          XI worker: pass_mean_latency2: 1.2081388128051991e-05
+          XI worker: pass_stdev_latency: 0.0007057715279869992
+          XI worker: pass_cv_latency: 0.20737120757400987
           XI worker: fail_mean_latency: 0.0
           XI worker: fail_mean_latency2: 0.0
           XI worker: fail_stdev_latency: 0.0
           XI worker: fail_cv_latency: 0.0
-          XI worker: window_total_duration: 0.044406019151210785
+          XI worker: window_total_duration: 0.02229125890880823
           XI worker: window_total_batches: 8
           XI worker: window_total_frames: 8
-          XI worker: window_start_timestamp: 9408188.848811286
-          XI worker: window_stop_timestamp: 9408188.893217305
+          XI worker: window_start_timestamp: 6308546.655628495
+          XI worker: window_stop_timestamp: 6308546.677919754
           XI worker: window_pass_batches: 8
           XI worker: window_fail_batches: 0
           XI worker: window_pass_frames: 8
           XI worker: window_fail_frames: 0
-          XI worker: window_first_latency: 0.011858431622385979
-          XI worker: window_pass_max_latency: 0.011858431622385979
+          XI worker: window_first_latency: 0.00516059435904026
+          XI worker: window_pass_max_latency: 0.00516059435904026
           XI worker: window_fail_max_latency: 0.0
-          XI worker: window_brutto_batch_rate: 180.15575710037206
-          XI worker: window_brutto_frame_rate: 180.15575710037206
-          XI worker: window_netto_batch_rate: 142.7839056346449
-          XI worker: window_netto_frame_rate: 142.7839056346449
+          XI worker: window_brutto_batch_rate: 358.88506937752436
+          XI worker: window_brutto_frame_rate: 358.88506937752436
+          XI worker: window_brutto_batch_rate: 358.88506937752436
+          XI worker: window_brutto_frame_rate: 358.88506937752436
+          XI worker: window_netto_batch_rate: 293.82200804483256
+          XI worker: window_netto_frame_rate: 293.82200804483256
           XI worker: window_frame_passrate: 1.0
           XI worker: window_batch_passrate: 1.0
-          XI worker: window_mean_latency: 0.00700359046459198
-          XI worker: window_mean_latency2: 5.376289226632219e-05
-          XI worker: window_stdev_latency: 0.002170855331568294
-          XI worker: window_cv_latency: 0.309963202809113
-          XI worker: window_pass_mean_latency: 0.00700359046459198
-          XI worker: window_pass_mean_latency2: 5.376289226632219e-05
-          XI worker: window_pass_stdev_latency: 0.002170855331568294
-          XI worker: window_pass_cv_latency: 0.309963202809113
+          XI worker: window_mean_latency: 0.003403421025723219
+          XI worker: window_mean_latency2: 1.2081388128051991e-05
+          XI worker: window_stdev_latency: 0.0007057715279869992
+          XI worker: window_cv_latency: 0.20737120757400987
+          XI worker: window_pass_mean_latency: 0.003403421025723219
+          XI worker: window_pass_mean_latency2: 1.2081388128051991e-05
+          XI worker: window_pass_stdev_latency: 0.0007057715279869992
+          XI worker: window_pass_cv_latency: 0.20737120757400987
           XI worker: window_fail_mean_latency: 0.0
           XI worker: window_fail_mean_latency2: 0.0
           XI worker: window_fail_stdev_latency: 0.0
           XI worker: window_fail_cv_latency: 0.0
-          XI worker: window_hist_latency_1: 1
-          XI worker: window_hist_latency_0: 7
-          XI worker: warmup_total_duration: 0.011916300281882286
+          XI worker: window_hist_latency_0: 8
+          XI worker: warmup_total_duration: 0.0052260542288422585
           XI worker: warmup_total_batches: 0
           XI worker: warmup_total_frames: 0
-          XI worker: warmup_start_timestamp: 9408188.836862568
-          XI worker: warmup_stop_timestamp: 9408188.848778868
+          XI worker: warmup_start_timestamp: 6308546.650371815
+          XI worker: warmup_stop_timestamp: 6308546.655597869
           XI worker: warmup_pass_batches: 0
           XI worker: warmup_fail_batches: 0
           XI worker: warmup_pass_frames: 0
