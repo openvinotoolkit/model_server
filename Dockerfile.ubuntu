@@ -291,21 +291,12 @@ COPY package.json /ovms/
 
 # prebuild dependencies before copying sources & test dependencies for caching
 # hadolint ignore=DL3059
+
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false \
     bazel build --repo_env=GIT_CONFIG_GLOBAL=/root/.gitconfig \
         --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
 COPY src/ /ovms/src/
-
-# hadolint ignore=DL3059
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$BASE_OS" == "ubuntu24" ] ; then \
-        bazel build --jobs=$JOBS ${debug_bazel_flags} \
-            --action_env=PYTHON_BIN_PATH=/usr/bin/python3.10 \
-            --define=PYTHON_BIN_PATH=/usr/bin/python3.10 \
-            @org_tensorflow//tensorflow/core:framework; \
-    else \
-        bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework; \
-    fi
 
 # hadolint ignore=DL3059
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 2; fi
