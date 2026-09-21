@@ -215,6 +215,7 @@ git_repository(
     patches = [
         "@ovms//third_party/mediapipe:ovms_strip.diff",
         "@ovms//third_party/mediapipe:ovms_no_litert.diff",
+        "@ovms//third_party/mediapipe:ovms_calculator_graph_visibility.diff",
     ],
     patch_args = ["-p1"],
     patch_tool = "patch",
@@ -392,6 +393,10 @@ http_archive(
 )
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 python_configure(name = "local_config_python")
+bind(
+    name = "python_headers",
+    actual = "@local_config_python//:python_headers",
+)
 
 load("@rules_python//python:repositories.bzl", "py_repositories")
 py_repositories()

@@ -84,9 +84,10 @@ build:avx_win --copt=/arch=AVX
 build:avx2_win --copt=/arch=AVX2
 
 # Linux settings #######################################################################################################
-# LLVM, MLIR and TF require C++14, we use C++17 in project
-build:linux --cxxopt=-std=c++17
-build:linux --host_cxxopt=-std=c++17
+# LLVM, MLIR and TF require C++14, we use C++20 in project
+# mediapipe upstream (api3, compile_time_string.h) now requires consteval/C++20 features.
+build:linux --cxxopt=-std=c++20
+build:linux --host_cxxopt=-std=c++20
 build:linux --action_env=HOME=/root
 build:linux --repo_env=HOME=/root
 
@@ -107,6 +108,12 @@ build:linux --cxxopt=-Wformat-security
 build:linux --cxxopt=-Werror=format-security
 # TODO: Add equivalent windows flag
 build:linux --force_pic
+
+# Bzlmod must stay disabled: with it enabled Bazel resolves an extra
+# "protobuf" repo from the registry alongside the WORKSPACE-declared
+# "com_google_protobuf", causing ODR conflicts (e.g. duplicate/mismatched
+# FieldMask symbols in field_mask_util.cc).
+build:linux --noenable_bzlmod
 
 build:mp_on_py_on --config=linux
 build:mp_on_py_on --define=MEDIAPIPE_DISABLE=0
