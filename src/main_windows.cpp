@@ -285,8 +285,8 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     } else if (workerExitCode == ERROR_SUCCESS) {
         this->setServiceStopStatusWithSuccess();
     } else if (workerExitCode == static_cast<DWORD>(OVMS_EX_FAILURE) ||
-        workerExitCode == static_cast<DWORD>(OVMS_EX_WARNING) ||
-        workerExitCode == static_cast<DWORD>(OVMS_EX_USAGE)) {
+               workerExitCode == static_cast<DWORD>(OVMS_EX_WARNING) ||
+               workerExitCode == static_cast<DWORD>(OVMS_EX_USAGE)) {
         // Map known OVMS application exit codes through setServiceStopStatusWithExitCode
         // so SCM receives the established Win32 status translation instead of the raw code.
         this->setServiceStopStatusWithExitCode(static_cast<int>(workerExitCode));
