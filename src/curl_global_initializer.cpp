@@ -15,29 +15,23 @@
 //*****************************************************************************
 #include "curl_global_initializer.hpp"
 
-#include <cstdlib>
-#include <mutex>
-
 #include <curl/curl.h>
 
 #include "logging.hpp"
 
 namespace ovms {
 
-Status ensureCurlGlobalInit() {
-    static std::once_flag initFlag;
-    static CURLcode initResult = CURLE_OK;
-    std::call_once(initFlag, []() {
-        initResult = curl_global_init(CURL_GLOBAL_DEFAULT);
-        if (initResult == CURLE_OK) {
-            std::atexit([]() { curl_global_cleanup(); });
-        }
-    });
+Status initializeCurlGlobal() {
+    const CURLcode initResult = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (initResult != CURLE_OK) {
         SPDLOG_ERROR("curl error: {}. Error code: {}", curl_easy_strerror(initResult), (int)initResult);
         return StatusCode::INTERNAL_ERROR;
     }
     return StatusCode::OK;
+}
+
+void cleanupCurlGlobal() {
+    curl_global_cleanup();
 }
 
 }  // namespace ovms

@@ -241,7 +241,7 @@ ovms_cc_library(
     name = "libovms_server_settings",
     hdrs = ["capi_frontend/server_settings.hpp"],
     srcs = ["capi_frontend/server_settings.cpp"],
-    deps = ["libovmsstring_utils", "libovms_curl_global_init"],
+    deps = ["libovmsstring_utils"],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -854,6 +854,7 @@ ovms_cc_library(
             "libmultipart_parser_drogon_impl",
             "cpp_headers",
             "libovms_shutdown_state",
+            "libovms_curl_global_init",
             "ovms_header",
             "capi_backend_impl",
             "config_status_utils",

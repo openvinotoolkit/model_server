@@ -17,18 +17,9 @@
 #include <string>
 
 #include "server_settings.hpp"
-#include "../curl_global_initializer.hpp"
-#include "../logging.hpp"
 #include "../stringutils.hpp"
 
 namespace ovms {
-
-ServerSettingsImpl::ServerSettingsImpl() {
-    auto status = ensureCurlGlobalInit();
-    if (!status.ok()) {
-        SPDLOG_ERROR("Failed to initialize libcurl: {}", status.string());
-    }
-}
 
 std::string enumToString(ConfigExportType type) {
     auto it = configExportTypeToString.find(type);

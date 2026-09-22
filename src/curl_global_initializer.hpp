@@ -19,11 +19,7 @@
 
 namespace ovms {
 
-// Lazily performs a single, process-wide curl_global_init() call and registers a
-// matching curl_global_cleanup() via atexit. Safe to call from any thread and any
-// number of times/places (module lifecycle, CLI paths, unit tests) - only the first
-// caller actually initializes curl, and cleanup runs once, after all curl users in
-// the process are done.
-Status ensureCurlGlobalInit();
+Status initializeCurlGlobal();
+void cleanupCurlGlobal();
 
 }  // namespace ovms
