@@ -852,7 +852,7 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
 
 void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
     for (SizeType i = 0; i < scope.Size(); i++) {
-        Value data = scope[i].GetObject()["shape"].GetArray();
+        const auto data = scope[i].GetObject()["shape"].GetArray();
         Value shape(rapidjson::kArrayType);
         for (SizeType j = 0; j < data.Size(); j++) {
             shape.PushBack(atoi(data[j].GetString()), doc.GetAllocator());
