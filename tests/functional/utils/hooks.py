@@ -351,7 +351,6 @@ def get_ovms_binary_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binar
     ovms_test_image = calculate_ovms_test_image_name(ovms_image) if build_test_image else base_image
     cpu_extensions_path = Paths.ROOT_PATH_CPU_EXTENSIONS if build_test_image else DOCKER_CONTAINER_TMP_PATH
     custom_loader_path = Paths.CUSTOM_LOADER_LIBRARIES_PATH_INTERNAL if build_test_image else DOCKER_CONTAINER_TMP_PATH
-    custom_nodes_path = Paths.CUSTOM_NODE_LIBRARIES_PATH_INTERNAL if build_test_image else DOCKER_CONTAINER_TMP_PATH
     cmd = (
         f"docker build -f {dockerfile} -t {ovms_binary_image_name} . "
         f"--build-arg BASE_IMAGE={base_image} "
@@ -360,7 +359,6 @@ def get_ovms_binary_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binar
         f"--build-arg OVMS_DEPENDENCIES='{OVMS_BINARY_DEPENDENCIES[base_os]}' "
         f"--build-arg CPU_EXTENSIONS_PATH={cpu_extensions_path} "
         f"--build-arg CUSTOM_LOADER_PATH={custom_loader_path} "
-        f"--build-arg CUSTOM_NODES_PATH={custom_nodes_path} "
         f"--build-arg http_proxy={http_proxy} "
         f"--build-arg https_proxy={https_proxy} "
         f"--build-arg no_proxy={no_proxy} "
