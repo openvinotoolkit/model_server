@@ -108,6 +108,18 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
         "additionalProperties": false
     }})";
 
+#if (MEDIAPIPE_DISABLE == 0)
+const char* MEDIAPIPE_CONFIG_LIST_SCHEMA = R"(,
+        "mediapipe_config_list": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/mediapipe_config"
+            }
+        })";
+#else
+const char* MEDIAPIPE_CONFIG_LIST_SCHEMA = "";
+#endif
+
 const std::string MODELS_CONFIG_SCHEMA = R"({
     "definitions": {)" + MODEL_CONFIG_DEFINITION +
                                          "," + R"(
@@ -243,15 +255,8 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
             "items": {
                 "$ref": "#/definitions/model_config"
             }
-        },
-#if (MEDIAPIPE_DISABLE == 0)
-        "mediapipe_config_list": {
-		"type": "array",
-		"items": {
-			"$ref": "#/definitions/mediapipe_config"
-		}
-        },
-#endif
+        })" + MEDIAPIPE_CONFIG_LIST_SCHEMA +
+                                         R"(,
     "monitoring": {
             "maxProperties": 1,
 			"type": "object",

@@ -2282,7 +2282,6 @@ cc_test(
             ":graph_export_test",
             ":lora_graph_export_test",
             ":config_export_test",
-            ":config_export_full_test",
             ":test_constructor_enabled_model_manager",
             ":test_test_models",
             ":test_test_models_configs",
@@ -2300,7 +2299,8 @@ cc_test(
                     "@mediapipe//mediapipe/framework/port:gtest_main",
                     ],
             })  + select({
-            "//conditions:default": [
+                "//:not_disable_mediapipe": [
+                    ":config_export_full_test",
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
                 ":test_llm_output_parser_tests",
@@ -2325,8 +2325,7 @@ cc_test(
                 "//src/mediapipe_internal:mediapipe_utils",
                 "tensorflow_type_utils",
             ],
-            "//:disable_mediapipe" :
-            [
+            "//:disable_mediapipe": [
                 "serialization_common",
             ],
         }) + select({
@@ -2538,16 +2537,20 @@ cc_library(
         "//:disable_python": [],
     }) + [
         "test_test_models",
-        "//src/mediapipe_internal:graph_executor_constants",
-        "//src/mediapipe_internal:graph_side_packets",
-        "//src/mediapipe_internal:graphqueue",
-        "//src/mediapipe_internal:libovms_mediapipe",
         "//src:ovms_lib",
         "//src:network_utils",
         "//src:test_platform_utils",
         "//src:test_light_test_utils",
         "@com_google_googletest//:gtest",
-    ],
+    ] + select({
+        "//:not_disable_mediapipe": [
+            "//src/mediapipe_internal:graph_executor_constants",
+            "//src/mediapipe_internal:graph_side_packets",
+            "//src/mediapipe_internal:graphqueue",
+            "//src/mediapipe_internal:libovms_mediapipe",
+        ],
+        "//:disable_mediapipe": [],
+    }),
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
