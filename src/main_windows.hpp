@@ -77,9 +77,9 @@ public:
     // Members
     ConsoleParameters ovmsParams;
     std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl> parsedParameters;
-    static LPSTR serviceName;
-    static LPSTR serviceDisplayName;
-    static LPSTR serviceDesc;
+    static CHAR serviceName[];
+    static CHAR serviceDisplayName[];
+    static CHAR serviceDesc[];
 
     // Methods
     static OvmsWindowsServiceManager& instance();
