@@ -197,6 +197,7 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/wd6385",
                         "/wd6386",
                         "/wd6294",
+                        "/wd6001",
                         "/guard:cf",
                         "/utf-8",
 ]
