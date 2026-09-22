@@ -290,7 +290,7 @@ OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings
 OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSettings* settings,
     uint32_t minutes);
 
-// Set custom node resource cleaner interval server setting.
+// Set the process-memory resources cleaner interval server setting.
 // Equivalent of starting server with
 // --resources_cleaner_interval_seconds.
 //

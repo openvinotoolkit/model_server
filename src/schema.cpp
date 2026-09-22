@@ -244,12 +244,14 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
                 "$ref": "#/definitions/model_config"
             }
         },
+#if (MEDIAPIPE_DISABLE == 0)
         "mediapipe_config_list": {
 		"type": "array",
 		"items": {
 			"$ref": "#/definitions/mediapipe_config"
 		}
         },
+#endif
     "monitoring": {
             "maxProperties": 1,
 			"type": "object",

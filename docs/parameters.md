@@ -20,7 +20,6 @@
 | `"target_device"` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"NPU"/"HETERO"/"`. By default server selects the device with this priority: dGPU if present, iGPU if present, CPU. If several discrete GPUs are present, the one with most available VRAM will be selected. |
 | `"metrics_enable"` | `bool` | Flag enabling [metrics](metrics.md) endpoint on rest_port. |
 | `"metrics_list"` | `string` | Comma separated list of [metrics](metrics.md). If unset, only default metrics will be enabled.|
-| `resources_cleaner_interval_seconds` | `integer` | Time interval (in seconds) between periodic process-memory trimming. Default is 300. Zero disables periodic trimming. |
 
 > **Note** : Specifying config_path is mutually exclusive with putting model parameters in the CLI ([serving multiple models](./starting_server.md)).
 
@@ -41,7 +40,7 @@ Configuration options for the server are defined only via command-line options a
 | `grpc_workers` | `integer` | Number of the gRPC server instances (must be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. |
 | `rest_workers` | `integer` | Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. |
 | `file_system_poll_wait_seconds` | `integer` | Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. |
-| `custom_node_resources_cleaner_interval_seconds` | `integer` | Time interval (in seconds) between two consecutive resources cleanup scans. Default is 1. |
+| `resources_cleaner_interval_seconds` | `integer` | Time interval (in seconds) between periodic process-memory trimming. Default is 300. Zero disables periodic trimming. |
 | `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvino.ai/2026/documentation/openvino-extensibility.html). |
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level |
 | `log_path` | `string` | Optional path to the log file. |

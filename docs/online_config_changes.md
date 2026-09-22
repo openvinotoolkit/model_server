@@ -14,7 +14,7 @@ Configuration reload triggers the following operations:
 - changes to the configuration of deployed models and [MediaPipe Graphs](./mediapipe.md) are applied.
 - all model versions will be reloaded when there is a change to the model configuration.
 - when a deployed model or [MediaPipe Graph](./mediapipe.md) is deleted from `config.json`, it will be unloaded completely from the server after already running inference operations have been completed.
-- changes to [custom loaders](./custom_model_loader.md) and custom node library configs are applied.
+- changes to [custom loaders](./custom_model_loader.md) are applied.
 
 Model Server behavior in case of errors during configuration reloading:
 
