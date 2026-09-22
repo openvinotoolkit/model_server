@@ -37,9 +37,6 @@ void connectPeers(WebRtcPeerConnection& offerer, WebRtcPeerConnection& answerer,
     });
     offerer.onLocalDescription([&answerer](const std::string& sdp, const std::string& type) {
         answerer.setRemoteDescription(sdp, type);
-        if (type == "offer") {
-            answerer.createAnswer();
-        }
     });
     answerer.onLocalDescription([&offerer, answerSdp](const std::string& sdp, const std::string& type) {
         if (answerSdp) {
@@ -64,6 +61,72 @@ TEST(WebRtcPeerConnectionTest, OfferContainsOpusAudioTrack) {
     ASSERT_FALSE(localSdp.empty());
     EXPECT_NE(localSdp.find("m=audio"), std::string::npos);
     EXPECT_NE(localSdp.find("opus"), std::string::npos);
+}
+
+TEST(WebRtcPeerConnectionTest, DirectLibDataChannelPeersOpenAudioTracks) {
+    auto offerer = std::make_shared<rtc::PeerConnection>(rtc::Configuration{});
+    auto answerer = std::make_shared<rtc::PeerConnection>(rtc::Configuration{});
+    std::mutex mutex;
+    std::condition_variable condition;
+    bool offererConnected = false;
+    bool answererConnected = false;
+    std::shared_ptr<rtc::Track> answererRemoteTrack;
+
+    offerer->onLocalCandidate([&](rtc::Candidate candidate) {
+        answerer->addRemoteCandidate(rtc::Candidate(candidate.candidate(), candidate.mid()));
+    });
+    answerer->onLocalCandidate([&](rtc::Candidate candidate) {
+        offerer->addRemoteCandidate(rtc::Candidate(candidate.candidate(), candidate.mid()));
+    });
+    offerer->onLocalDescription([&](rtc::Description description) {
+        answerer->setRemoteDescription(rtc::Description(std::string(description), description.typeString()));
+    });
+    answerer->onLocalDescription([&](rtc::Description description) {
+        offerer->setRemoteDescription(rtc::Description(std::string(description), description.typeString()));
+    });
+    offerer->onStateChange([&](rtc::PeerConnection::State state) {
+        if (state == rtc::PeerConnection::State::Connected) {
+            std::lock_guard<std::mutex> lock(mutex);
+            offererConnected = true;
+            condition.notify_all();
+        }
+    });
+    answerer->onStateChange([&](rtc::PeerConnection::State state) {
+        if (state == rtc::PeerConnection::State::Connected) {
+            std::lock_guard<std::mutex> lock(mutex);
+            answererConnected = true;
+            condition.notify_all();
+        }
+    });
+    answerer->onTrack([&](std::shared_ptr<rtc::Track> track) {
+        ASSERT_EQ(track->description().type(), "audio");
+        track->setMediaHandler(std::make_shared<rtc::OpusRtpDepacketizer>());
+        std::lock_guard<std::mutex> lock(mutex);
+        answererRemoteTrack = std::move(track);
+        condition.notify_all();
+    });
+    offerer->onTrack([](std::shared_ptr<rtc::Track>) {});
+
+    rtc::Description::Audio audio("audio", rtc::Description::Direction::SendOnly);
+    audio.addOpusCodec(111);
+    audio.addSSRC(1, "ovms-audio", "ovms-audio", "ovms-audio");
+    auto track = offerer->addTrack(audio);
+    auto packetizationConfig = std::make_shared<rtc::RtpPacketizationConfig>(1, "ovms", 111, 48000);
+    track->setMediaHandler(std::make_shared<rtc::OpusRtpPacketizer>(std::move(packetizationConfig)));
+    offerer->setLocalDescription();
+
+    std::unique_lock<std::mutex> lock(mutex);
+    ASSERT_TRUE(condition.wait_for(lock, std::chrono::seconds(5), [&] {
+        return offererConnected && answererConnected && answererRemoteTrack;
+    }));
+    lock.unlock();
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while ((!track->isOpen() || !answererRemoteTrack->isOpen()) &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::yield();
+    }
+    ASSERT_TRUE(track->isOpen());
+    ASSERT_TRUE(answererRemoteTrack->isOpen());
 }
 
 TEST(WebRtcPeerConnectionTest, OfferContainsAudioSsrc) {
@@ -184,6 +247,7 @@ TEST(WebRtcPeerConnectionTest, EncodedAudioFrameCanBeSentAfterTrackOpens) {
     bool offererConnected = false;
     bool answererConnected = false;
     bool answererAudioTrackReceived = false;
+    bool answererAudioTrackOpen = false;
     size_t receivedFrameSize = 0;
     std::string answerSdp;
 
@@ -207,6 +271,11 @@ TEST(WebRtcPeerConnectionTest, EncodedAudioFrameCanBeSentAfterTrackOpens) {
         answererAudioTrackReceived = true;
         condition.notify_all();
     });
+    answerer.onAudioTrackOpen([&] {
+        std::lock_guard<std::mutex> lock(mutex);
+        answererAudioTrackOpen = true;
+        condition.notify_all();
+    });
     answerer.onAudioFrame([&](rtc::binary data, rtc::FrameInfo) {
         std::lock_guard<std::mutex> lock(mutex);
         receivedFrameSize = data.size();
@@ -218,6 +287,9 @@ TEST(WebRtcPeerConnectionTest, EncodedAudioFrameCanBeSentAfterTrackOpens) {
     std::unique_lock<std::mutex> lock(mutex);
     ASSERT_TRUE(condition.wait_for(lock, std::chrono::seconds(5), [&] {
         return offererConnected && answererConnected && answererAudioTrackReceived;
+    }));
+    ASSERT_TRUE(condition.wait_for(lock, std::chrono::seconds(5), [&] {
+        return answererAudioTrackOpen;
     }));
     ASSERT_NE(answerSdp.find("m=audio"), std::string::npos) << answerSdp;
     ASSERT_NE(answerSdp.find("a=recvonly"), std::string::npos) << answerSdp;

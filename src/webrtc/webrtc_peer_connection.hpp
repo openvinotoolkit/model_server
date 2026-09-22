@@ -18,6 +18,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <rtc/rtc.hpp>
 
@@ -64,6 +65,8 @@ private:
 
     std::shared_ptr<rtc::PeerConnection> peerConnection_;
     std::shared_ptr<rtc::Track> audioTrack_;
+    std::vector<std::shared_ptr<rtc::Track>> remoteAudioTracks_;
+    bool audioTrackCallbacksConfigured_ = false;
     AudioFrameCallback audioFrameCallback_;
     AudioTrackCallback audioTrackCallback_;
     AudioTrackOpenCallback audioTrackOpenCallback_;
