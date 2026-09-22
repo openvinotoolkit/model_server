@@ -222,6 +222,7 @@ git_repository(
         "@ovms//third_party/mediapipe:ovms_no_litert.diff",
         "@ovms//third_party/mediapipe:ovms_calculator_graph_visibility.diff",
         "@ovms//third_party/mediapipe:ovms_constinit_definition.diff",
+        "@ovms//third_party/mediapipe:ovms_msvc_api3_calculator_context.diff",
     ],
     patch_args = ["-p1"],
     patch_tool = "patch",
