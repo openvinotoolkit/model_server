@@ -31,17 +31,28 @@ public:
     using DescriptionCallback = std::function<void(const std::string& sdp, const std::string& type)>;
     using CandidateCallback = std::function<void(const std::string& candidate, const std::string& mid)>;
     using StateCallback = std::function<void(rtc::PeerConnection::State state)>;
+    using AudioFrameCallback = std::function<void(rtc::binary data, rtc::FrameInfo info)>;
+    using AudioTrackCallback = std::function<void()>;
+    using AudioTrackOpenCallback = std::function<void()>;
 
     explicit WebRtcPeerConnection(rtc::Configuration configuration);
 
     void onLocalDescription(DescriptionCallback callback);
     void onLocalCandidate(CandidateCallback callback);
     void onStateChange(StateCallback callback);
+    void onAudioFrame(AudioFrameCallback callback);
+    void onAudioTrack(AudioTrackCallback callback);
+    void onAudioTrackOpen(AudioTrackOpenCallback callback);
+    void onLocalAudioTrackOpen(AudioTrackOpenCallback callback);
+    bool isLocalAudioTrackOpen() const;
 
-    // Adds a single bidirectional Opus audio track (PT 111, the standard WebRTC dynamic payload type).
-    void addAudioTrack();
+    // Adds a single Opus audio track (PT 111, the standard WebRTC dynamic payload type).
+    void addAudioTrack(rtc::Description::Direction direction = rtc::Description::Direction::SendRecv);
     // Triggers local SDP offer generation; result is delivered via the onLocalDescription callback.
     void createOffer();
+    // Triggers local SDP answer generation after a remote offer is set.
+    void createAnswer();
+    bool sendAudioFrame(rtc::binary data, rtc::FrameInfo info);
 
     void setRemoteDescription(const std::string& sdp, const std::string& type);
     void addRemoteCandidate(const std::string& candidate, const std::string& mid);
@@ -49,8 +60,14 @@ public:
     rtc::PeerConnection::State state() const;
 
 private:
+    void configureAudioTrackCallbacks();
+
     std::shared_ptr<rtc::PeerConnection> peerConnection_;
     std::shared_ptr<rtc::Track> audioTrack_;
+    AudioFrameCallback audioFrameCallback_;
+    AudioTrackCallback audioTrackCallback_;
+    AudioTrackOpenCallback audioTrackOpenCallback_;
+    AudioTrackOpenCallback localAudioTrackOpenCallback_;
 };
 
 }  // namespace ovms

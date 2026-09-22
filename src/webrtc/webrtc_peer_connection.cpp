@@ -17,6 +17,9 @@
 
 #include "src/logging.hpp"
 
+#include <rtc/rtpdepacketizer.hpp>
+#include <rtc/rtppacketizer.hpp>
+
 namespace ovms {
 
 WebRtcPeerConnection::WebRtcPeerConnection(rtc::Configuration configuration) :
@@ -24,6 +27,7 @@ WebRtcPeerConnection::WebRtcPeerConnection(rtc::Configuration configuration) :
     peerConnection_->onStateChange([](rtc::PeerConnection::State state) {
         SPDLOG_LOGGER_DEBUG(webrtc_logger, "PeerConnection state changed: {}", static_cast<int>(state));
     });
+    configureAudioTrackCallbacks();
 }
 
 void WebRtcPeerConnection::onLocalDescription(DescriptionCallback callback) {
@@ -47,14 +51,73 @@ void WebRtcPeerConnection::onStateChange(StateCallback callback) {
     });
 }
 
-void WebRtcPeerConnection::addAudioTrack() {
-    rtc::Description::Audio audio("audio", rtc::Description::Direction::SendRecv);
+void WebRtcPeerConnection::onAudioFrame(AudioFrameCallback callback) {
+    audioFrameCallback_ = std::move(callback);
+}
+
+void WebRtcPeerConnection::onAudioTrackOpen(AudioTrackOpenCallback callback) {
+    audioTrackOpenCallback_ = std::move(callback);
+}
+
+void WebRtcPeerConnection::onAudioTrack(AudioTrackCallback callback) {
+    audioTrackCallback_ = std::move(callback);
+}
+
+void WebRtcPeerConnection::onLocalAudioTrackOpen(AudioTrackOpenCallback callback) {
+    localAudioTrackOpenCallback_ = std::move(callback);
+    if (audioTrack_) {
+        audioTrack_->onOpen(localAudioTrackOpenCallback_);
+    }
+}
+
+bool WebRtcPeerConnection::isLocalAudioTrackOpen() const {
+    return audioTrack_ && audioTrack_->isOpen();
+}
+
+void WebRtcPeerConnection::configureAudioTrackCallbacks() {
+    peerConnection_->onTrack([this](std::shared_ptr<rtc::Track> track) {
+        if (track->description().type() != "audio") {
+            return;
+        }
+        if (audioTrackCallback_) {
+            audioTrackCallback_();
+        }
+        if (audioFrameCallback_) {
+            track->setMediaHandler(std::make_shared<rtc::OpusRtpDepacketizer>());
+            track->onFrame(audioFrameCallback_);
+        }
+        if (audioTrackOpenCallback_) {
+            track->onOpen(audioTrackOpenCallback_);
+        }
+    });
+}
+
+void WebRtcPeerConnection::addAudioTrack(rtc::Description::Direction direction) {
+    rtc::Description::Audio audio("audio", direction);
     audio.addOpusCodec(111);
+    audio.addSSRC(1, "ovms-audio", "ovms-audio", "ovms-audio");
     audioTrack_ = peerConnection_->addTrack(audio);
+    auto packetizationConfig = std::make_shared<rtc::RtpPacketizationConfig>(1, "ovms", 111, 48000);
+    audioTrack_->setMediaHandler(std::make_shared<rtc::OpusRtpPacketizer>(std::move(packetizationConfig)));
+    if (localAudioTrackOpenCallback_) {
+        audioTrack_->onOpen(localAudioTrackOpenCallback_);
+    }
 }
 
 void WebRtcPeerConnection::createOffer() {
     peerConnection_->setLocalDescription();
+}
+
+void WebRtcPeerConnection::createAnswer() {
+    peerConnection_->setLocalDescription();
+}
+
+bool WebRtcPeerConnection::sendAudioFrame(rtc::binary data, rtc::FrameInfo info) {
+    if (!audioTrack_) {
+        return false;
+    }
+    audioTrack_->sendFrame(std::move(data), info);
+    return true;
 }
 
 void WebRtcPeerConnection::setRemoteDescription(const std::string& sdp, const std::string& type) {

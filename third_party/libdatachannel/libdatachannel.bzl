@@ -16,14 +16,13 @@
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 
-_LIBDATACHANNEL_TAG = "v0.24.5"  # https://github.com/paullouisageneau/libdatachannel/releases/tag/v0.24.5
+_LIBDATACHANNEL_COMMIT = "443f6934d9007eb7076ab7825ba330f355fcbead"
 
 def libdatachannel_repository():
-    # Submodules provide usrsctp (data channels), libjuice (ICE) and libsrtp (media transport).
     new_git_repository(
         name = "libdatachannel",
         remote = "https://github.com/paullouisageneau/libdatachannel",
-        tag = _LIBDATACHANNEL_TAG,
+        commit = _LIBDATACHANNEL_COMMIT,
         init_submodules = True,
         recursive_init_submodules = True,
         build_file = "@ovms//third_party/libdatachannel:BUILD",
