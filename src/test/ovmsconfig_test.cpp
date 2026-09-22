@@ -77,7 +77,7 @@ public:
 
         return found ? ::testing::AssertionSuccess() : testing::AssertionFailure() << "message not found.";
     }
-    static std::string createCmd(int argc, char** argv) {
+    static std::string createCmd(int argc, const char* const* argv) {
         std::string result;
         for (int i = 0; i < argc; ++i) {
             result += argv[i];
@@ -98,7 +98,7 @@ TEST_F(OvmsConfigDeathTest, bufferTest) {
 }
 
 TEST_F(OvmsConfigDeathTest, emptyInput) {
-    char* n_argv[] = {"ovms"};
+    const char* n_argv[] = {"ovms"};
     int arg_count = 1;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_OK), "");
 
@@ -106,7 +106,7 @@ TEST_F(OvmsConfigDeathTest, emptyInput) {
 }
 
 TEST_F(OvmsConfigDeathTest, helpInput) {
-    char* n_argv[] = {"ovms", "--help"};
+    const char* n_argv[] = {"ovms", "--help"};
     int arg_count = 2;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_OK), "");
 
@@ -114,110 +114,110 @@ TEST_F(OvmsConfigDeathTest, helpInput) {
 }
 
 TEST_F(OvmsConfigDeathTest, versionInput) {
-    char* n_argv[] = {"ovms", "--version"};
+    const char* n_argv[] = {"ovms", "--version"};
     int arg_count = 2;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_OK), "");
 }
 
 TEST_F(OvmsConfigDeathTest, badInput) {
-    char* n_argv[] = {"ovms", "--bad_option"};
+    const char* n_argv[] = {"ovms", "--bad_option"};
     int arg_count = 2;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeTwoParams) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--model_name", "some_name"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--model_name", "some_name"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Use either config_path or model_path");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithBatchSize) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--batch_size", "5"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--batch_size", "5"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithShape) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--shape", "(1,2)"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--shape", "(1,2)"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithNireq) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--nireq", "3"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--nireq", "3"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithModelVersionPolicy) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--model_version_policy", "policy"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--model_version_policy", "policy"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithTargetDevice) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--target_device", "GPU"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--target_device", "GPU"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
 TEST_F(OvmsConfigDeathTest, OVMSDuplicatedMetricsConfig) {
-    char* n_argv[] = {"ovms", "--config_path", "/path/to/config", "--metrics_enable", "--rest_port", "8080"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path/to/config", "--metrics_enable", "--rest_port", "8080"};
     int arg_count = 6;
     ovms::Config::instance().parse(arg_count, n_argv);
     EXPECT_TRUE(ovms::Config::instance().validate());
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithPluginConfig) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--plugin_config", "setting"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--plugin_config", "setting"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingPathAndName) {
-    char* n_argv[] = {"ovms", "--rest_port", "8080"};
+    const char* n_argv[] = {"ovms", "--rest_port", "8080"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Use config_path or model_path");
 }
 
 TEST_F(OvmsConfigDeathTest, metricMissingRestPort) {
-    char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--metrics_enable"};
+    const char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--metrics_enable"};
     int arg_count = 6;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_port setting is missing, metrics are enabled on rest port");
 }
 
 TEST_F(OvmsConfigDeathTest, metricEnableMissing) {
-    char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--metrics_list", "metric1,metric2"};
+    const char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--metrics_list", "metric1,metric2"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "metrics_enable setting is missing, required when metrics_list is provided");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingName) {
-    char* n_argv[] = {"ovms", "--model_path", "/path/to/model"};
+    const char* n_argv[] = {"ovms", "--model_path", "/path/to/model"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Use config_path or model_path");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingPath) {
-    char* n_argv[] = {"ovms", "--model_name", "model"};
+    const char* n_argv[] = {"ovms", "--model_name", "model"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Use config_path or model_path");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeSamePorts) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8080"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8080"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port and rest_port cannot");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeRestPortGrpcPortBothNotSet) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port and rest_port cannot");
 }
 
 TEST_F(OvmsConfigDeathTest, restWorkersTooLarge) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081", "--rest_workers", "100001"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081", "--rest_workers", "100001"};
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count should be from 2 to ");
 }
@@ -233,7 +233,7 @@ TEST_F(OvmsConfigDeathTest, restWorkersDefaultReducedForOpenFilesLimit) {
     std::cout << "Setting open files limit to " << newLimit.rlim_cur << " to test that default rest_workers count is reduced based on open files limit" << std::endl;
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &newLimit), 0);
 
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081"};
     int arg_count = 7;
     ovms::Config::instance().parse(arg_count, n_argv);
     EXPECT_TRUE(ovms::Config::instance().validate());
@@ -247,44 +247,44 @@ TEST_F(OvmsConfigDeathTest, restWorkersTooLargeForOpenFilesLimit) {
     struct rlimit newLimit = {std::min(static_cast<rlim_t>(1024), limit.rlim_max), limit.rlim_max};
     std::cout << "Setting open files limit to " << newLimit.rlim_cur << " to test that rest_workers count is too large for the limit based on number of cpu cores alone" << std::endl;
     ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &newLimit), 0);
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081", "--rest_workers", "1000"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081", "--rest_workers", "1000"};
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count cannot be larger than .* due to open files limit. Current open files limit: .*1024");
 }
 #endif
 
 TEST_F(OvmsConfigDeathTest, restWorkersDefinedRestPortUndefined) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--rest_workers", "60"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--rest_workers", "60"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers is set but rest_port is not set");
 }
 
 TEST_F(OvmsConfigDeathTest, invalidRestBindAddress) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8081", "--port", "8080", "--rest_bind_address", "192.0.2"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8081", "--port", "8080", "--rest_bind_address", "192.0.2"};
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_bind_address has invalid format");
 }
 
 TEST_F(OvmsConfigDeathTest, invalidGrpcBindAddress) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--grpc_bind_address", "192.0.2"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "8080", "--grpc_bind_address", "192.0.2"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "grpc_bind_address has invalid format");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMultiParams) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--batch_size", "10"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--batch_size", "10"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive");
 }
 
 TEST_F(OvmsConfigDeathTest, missingParams) {
-    char* n_argv[] = {"ovms", "--batch_size", "10"};
+    const char* n_argv[] = {"ovms", "--batch_size", "10"};
     int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Use config_path or model_path");
 }
 
 TEST_F(OvmsConfigDeathTest, negativePortMin) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "-1"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "-1"};
     int arg_count = 5;
 #ifdef __linux__
     std::string error = "‘-1’";
@@ -295,7 +295,7 @@ TEST_F(OvmsConfigDeathTest, negativePortMin) {
 }
 
 TEST_F(OvmsConfigDeathTest, negativeRestPortMin) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "-1"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "-1"};
     int arg_count = 5;
 #ifdef __linux__
     std::string error = "‘-1’";
@@ -306,67 +306,67 @@ TEST_F(OvmsConfigDeathTest, negativeRestPortMin) {
 }
 
 TEST_F(OvmsConfigDeathTest, negativePortRange) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "65536"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "65536"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port number out of range from 0");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeRestPortRange) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "65536"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "65536"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port number out of range from 0");
 }
 
 TEST_F(OvmsConfigDeathTest, negativePortMax) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "72817"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "72817"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port number out of range");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeRestPortMax) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "72817"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "72817"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_port number out of range");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeGrpcWorkersMax) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--grpc_workers", "10000"};
+    const char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--grpc_workers", "10000"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "grpc_workers count should be from 1");
 }
 
 TEST_F(OvmsConfigDeathTest, cpuExtensionMissingPath) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--cpu_extension", "/wrong/dir", "--port", "9178"};
+    const char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--cpu_extension", "/wrong/dir", "--port", "9178"};
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "File path provided as an --cpu_extension parameter does not exist in the filesystem");
 }
 
 TEST_F(OvmsConfigDeathTest, nonExistingLogLevel) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--log_level", "WRONG", "--port", "9178"};
+    const char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--log_level", "WRONG", "--port", "9178"};
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "log_level should be one of");
 }
 
 TEST_F(OvmsConfigDeathTest, RestPortNegativeUint64Max) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "0xffffffffffffffff"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "0xffffffffffffffff"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_port number out of range from 0 to 65535");
 }
 
 TEST_F(OvmsConfigDeathTest, NegativeListModelsWithoutModelRepositoryPath) {
-    char* n_argv[] = {"ovms", "--list_models"};
+    const char* n_argv[] = {"ovms", "--list_models"};
     int arg_count = 2;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Use --list_models with --model_repository_path");
 }
 
 TEST_F(OvmsConfigDeathTest, NegativeInvalidAPIKeyFile) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--api_key_file", "/wrong/dir", "--port", "44"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--api_key_file", "/wrong/dir", "--port", "44"};
     int arg_count = 7;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::filesystem::filesystem_error);
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingDashes) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--config_path",
         "/config.json",
@@ -380,7 +380,7 @@ TEST_F(OvmsConfigDeathTest, negativeMissingDashes) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfWrongTask) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -395,7 +395,7 @@ TEST_F(OvmsConfigDeathTest, hfWrongTask) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfNoTaskParameter) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -408,7 +408,7 @@ TEST_F(OvmsConfigDeathTest, hfNoTaskParameter) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -425,7 +425,7 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadRerankGraphParameter) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -442,7 +442,7 @@ TEST_F(OvmsConfigDeathTest, hfBadRerankGraphParameter) {
 }
 
 TEST_F(OvmsConfigDeathTest, notSupportedImageGenerationGraphParameter) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -460,7 +460,7 @@ TEST_F(OvmsConfigDeathTest, notSupportedImageGenerationGraphParameter) {
 }
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_NumStreamsZero) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -477,7 +477,7 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_NumStreamsZero) {
 }
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxResolutionWrongFormat) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -494,7 +494,7 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxResolutionWrongForma
 }
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultResolutionWrongFormat) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -511,7 +511,7 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultResolutionWrongF
 }
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumberImagesPerPromptZero) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -528,7 +528,7 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumberImagesPerPromp
 }
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultNumInferenceStepsZero) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -545,7 +545,7 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultNumInferenceStep
 }
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsZero) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -562,7 +562,7 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsZer
 }
 
 TEST(OvmsGraphConfigTest, negativeEmbeddingsGraph_MaxLengthZero) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -580,7 +580,7 @@ TEST(OvmsGraphConfigTest, negativeEmbeddingsGraph_MaxLengthZero) {
 }
 
 TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyAlias) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -598,7 +598,7 @@ TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyAlias) {
 }
 
 TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyRepo) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -616,7 +616,7 @@ TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyRepo) {
 }
 
 TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyFilenameAfterAt) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -634,7 +634,7 @@ TEST(OvmsGraphConfigTest, negativeImageGenerationGraph_SourceLorasEmptyFilenameA
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphParameter) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -651,7 +651,7 @@ TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphParameter) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphParameter) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -668,7 +668,7 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphParameter) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameterName) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -685,7 +685,7 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameterName) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadRerankGraphParameterName) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -702,7 +702,7 @@ TEST_F(OvmsConfigDeathTest, hfBadRerankGraphParameterName) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphParameterName) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -719,7 +719,7 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphParameterName) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphParameterName) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -736,7 +736,7 @@ TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphParameterName) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphNoPull) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--source_model",
         "some/model",
@@ -752,7 +752,7 @@ TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphNoPull) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphNoPull) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--source_model",
         "some/model",
@@ -768,7 +768,7 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphNoPull) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadRerankGraphNoPull) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--source_model",
         "some/model",
@@ -784,7 +784,7 @@ TEST_F(OvmsConfigDeathTest, hfBadRerankGraphNoPull) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphNoPort) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--source_model",
         "OpenVINO/model",
@@ -800,7 +800,7 @@ TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphNoPort) {
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableButMissingModelPath) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--model_name",
         "name",
@@ -812,7 +812,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableButMissingModelPath) {
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableWithBadAdditionalParameters) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--model_name",
         "name",
@@ -830,7 +830,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableWithBadAdditionalParameters) 
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--remove_from_config",
         "--config_path",
@@ -840,7 +840,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelName) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--model_repository_path",
         "/repo/path",
@@ -852,7 +852,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelName) {
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--model_path",
         "/path1",
@@ -863,7 +863,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config/remove_from_config");
 }
 TEST_F(OvmsConfigDeathTest, hfBadImageGenerationGraphNoPull) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--source_model",
         "some/model",
@@ -879,7 +879,7 @@ TEST_F(OvmsConfigDeathTest, hfBadImageGenerationGraphNoPull) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfPullNoSourceModel) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--model_repository_path",
@@ -894,7 +894,7 @@ TEST_F(OvmsConfigDeathTest, hfPullNoSourceModel) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTask) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--source_model",
         "some/model",
@@ -908,7 +908,7 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTask) {
 TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskInvalidArchitectureLocal) {
     auto currentPath = std::filesystem::current_path();
     auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--source_model",
         "invalid_architecture",
@@ -922,7 +922,7 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskInvalidArchitectureLocal) {
 TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskNoArchitecturesLocal) {
     auto currentPath = std::filesystem::current_path();
     auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--source_model",
         "no_architectures",
@@ -934,7 +934,7 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskNoArchitecturesLocal) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -949,7 +949,7 @@ TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfPullWrongPrecisionParameter) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -966,7 +966,7 @@ TEST_F(OvmsConfigDeathTest, hfPullWrongPrecisionParameter) {
 }
 
 TEST_F(OvmsConfigDeathTest, hfPullWrongQuantizationParameter) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -983,7 +983,7 @@ TEST_F(OvmsConfigDeathTest, hfPullWrongQuantizationParameter) {
 }
 
 TEST_F(OvmsConfigDeathTest, WrongPrecisionParameter) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--config_path",
         "/config.json",
@@ -997,7 +997,7 @@ TEST_F(OvmsConfigDeathTest, WrongPrecisionParameter) {
 }
 
 TEST_F(OvmsConfigDeathTest, WrongQuantizationParameter) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--config_path",
         "/config.json",
@@ -1011,7 +1011,7 @@ TEST_F(OvmsConfigDeathTest, WrongQuantizationParameter) {
 }
 
 TEST_F(OvmsConfigDeathTest, simultaneousPullAndListModels) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -1030,7 +1030,7 @@ TEST_F(OvmsConfigDeathTest, simultaneousAddToConfigAndListModels) {
     std::string modelName = "name1";
     std::string modelPath = "/path/for/name1";
     std::string configPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--add_to_config",
         (char*)"--config_path",
@@ -1048,7 +1048,7 @@ TEST_F(OvmsConfigDeathTest, simultaneousAddToConfigAndListModels) {
 TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndListModels) {
     std::string modelName = "name1";
     std::string configPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--remove_from_config",
         (char*)"--config_path",
@@ -1064,7 +1064,7 @@ TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndListModels) {
 TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndModelPath) {
     std::string modelName = "name1";
     std::string configPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--remove_from_config",
         (char*)"--config_path",
@@ -1082,7 +1082,7 @@ TEST_F(OvmsConfigDeathTest, simultaneousPullAndAdd) {
     std::string modelName = "name1";
     std::string modelPath = "/path/for/name1";
     std::string configPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -1107,7 +1107,7 @@ TEST_F(OvmsConfigDeathTest, simultaneousPullAndAdd) {
 TEST_F(OvmsConfigDeathTest, simultaneousPullAndRemove) {
     std::string modelName = "name1";
     std::string configPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -1130,7 +1130,7 @@ TEST_F(OvmsConfigDeathTest, simultaneousPullAndRemove) {
 TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1203,7 +1203,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextGeneration) {
 TEST(OvmsGraphConfigTest, positiveSomeChangedTextGeneration) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1248,7 +1248,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedTextGeneration) {
 TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1286,7 +1286,7 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
 TEST(OvmsExportHfSettingsTest, positiveDefault) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1315,7 +1315,7 @@ TEST(OvmsExportHfSettingsTest, positiveDefault) {
 TEST(OvmsExportHfSettingsTest, pullFromHfOutsideOvOrg) {
     std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1340,7 +1340,7 @@ TEST(OvmsExportHfSettingsTest, pullFromHfOutsideOvOrg) {
 TEST(OvmsExportHfSettingsTest, allChanged) {
     std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1385,7 +1385,7 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
 TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
     std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--rest_port",
         (char*)"8080",
@@ -1428,7 +1428,7 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
 TEST(OvmsGraphConfigTest, positiveDefault) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1466,7 +1466,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
 TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--source_model",
         (char*)modelName.c_str(),
@@ -1506,7 +1506,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
 TEST(OvmsGraphConfigTest, positiveTargetDeviceHetero) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1530,7 +1530,7 @@ TEST(OvmsGraphConfigTest, positiveTargetDeviceHetero) {
 TEST(OvmsGraphConfigTest, positiveTargetDeviceSpecificGPU) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1554,7 +1554,7 @@ TEST(OvmsGraphConfigTest, positiveTargetDeviceSpecificGPU) {
 TEST(OvmsGraphConfigTest, negativePipelineType) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1574,7 +1574,7 @@ TEST(OvmsGraphConfigTest, negativePipelineType) {
 TEST(OvmsGraphConfigTest, negativeTargetDevice) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1594,7 +1594,7 @@ TEST(OvmsGraphConfigTest, negativeTargetDevice) {
 TEST(OvmsGraphConfigTest, negativeEnablePrefixCaching) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1614,7 +1614,7 @@ TEST(OvmsGraphConfigTest, negativeEnablePrefixCaching) {
 TEST(OvmsGraphConfigTest, negativeDynamicSplitFuse) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1635,7 +1635,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1681,7 +1681,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--source_model",
         (char*)modelName.c_str(),
@@ -1723,7 +1723,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1756,7 +1756,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1794,7 +1794,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
 TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1861,7 +1861,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
 TEST(OvmsGraphConfigTest, positiveImageGenerationWithSourceLoras) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1894,7 +1894,7 @@ TEST(OvmsGraphConfigTest, positiveImageGenerationWithSourceLoras) {
 TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1929,7 +1929,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -1986,7 +1986,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--source_model",
         (char*)modelName.c_str(),
@@ -2034,7 +2034,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
 TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -2069,7 +2069,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -2112,7 +2112,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextToSpeech) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -2148,7 +2148,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextToSpeechStart) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--source_model",
         (char*)modelName.c_str(),
@@ -2184,7 +2184,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedTextToSpeechStart) {
 TEST(OvmsGraphConfigTest, positiveDefaultTextToSpeech) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -2213,7 +2213,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedTextToSpeech) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -2247,7 +2247,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedSpeechToText) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -2283,7 +2283,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedSpeechToTextStart) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--source_model",
         (char*)modelName.c_str(),
@@ -2319,7 +2319,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedSpeechToTextStart) {
 TEST(OvmsGraphConfigTest, positiveDefaultSpeechToText) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -2348,7 +2348,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedSpeechToText) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     std::string servingName = "FastDraft";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
@@ -2387,7 +2387,7 @@ TEST(OvmsAPIKeyConfig, positiveAPIKeyFile) {
     std::string modelPath = "model_path";
     std::string apiKeyFile = "api_key.txt";
     std::string rest_port = "8080";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--model_path",
         (char*)modelPath.c_str(),
@@ -2415,7 +2415,7 @@ TEST(OvmsAPIKeyConfig, positiveAPIKeyEnv) {
     std::string modelPath = "model_path";
     std::string apiKeyFile = "api_key.txt";
     std::string rest_port = "8080";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--model_path",
         (char*)modelPath.c_str(),
@@ -2499,7 +2499,7 @@ TEST(OvmsConfigTest, positiveMulti) {
     std::filesystem::create_directory(cpu_extension_lib_path);
 #endif
 
-    char* n_argv[] = {"ovms",
+    const char* n_argv[] = {"ovms",
         "--port", "44",
         "--rest_workers", "46",
         "--grpc_bind_address", "1.1.1.1",
@@ -2574,7 +2574,7 @@ TEST(OvmsConfigTest, positiveMulti) {
 }
 
 TEST(OvmsConfigTest, disableInputCountValidationDefaultsToFalse) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--rest_port",
         "45",
@@ -2590,7 +2590,7 @@ TEST(OvmsConfigTest, disableInputCountValidationDefaultsToFalse) {
 }
 
 TEST(OvmsConfigTest, allowedLocalMediaPathRelativeIsNormalized) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--rest_port", "45",
         "--allowed_local_media_path",
@@ -2614,7 +2614,7 @@ TEST(OvmsConfigTest, positiveSingle) {
     std::filesystem::create_directory(cpu_extension_lib_path);
 #endif
 
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--port",
         "44",
@@ -2725,7 +2725,7 @@ TEST(OvmsConfigTest, positiveSingle) {
 }
 
 TEST(OvmsConfigTest, positiveModelPreprocessingParams) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--port",
         "44",
@@ -2758,7 +2758,7 @@ TEST(OvmsConfigTest, positiveModelPreprocessingParams) {
 }
 
 TEST(OvmsConfigTest, missingLayoutModelPreprocessingMean) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--port",
         "44",
@@ -2774,7 +2774,7 @@ TEST(OvmsConfigTest, missingLayoutModelPreprocessingMean) {
 }
 
 TEST(OvmsConfigTest, missingLayoutModelPreprocessingScale) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--port",
         "44",
@@ -2790,7 +2790,7 @@ TEST(OvmsConfigTest, missingLayoutModelPreprocessingScale) {
 }
 
 TEST(OvmsConfigTest, missingLayoutModelPreprocessingColorFormat) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--port",
         "44",
@@ -2806,7 +2806,7 @@ TEST(OvmsConfigTest, missingLayoutModelPreprocessingColorFormat) {
 }
 
 TEST(OvmsConfigTest, missingLayoutModelPreprocessingPrecision) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--port",
         "44",
@@ -2825,7 +2825,7 @@ TEST(OvmsConfigManipulationTest, positiveEnableModel) {
     std::string modelName = "name1";
     std::string modelPath = "/path/for/name1";
     std::string configPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--add_to_config",
         (char*)"--config_path",
@@ -2852,7 +2852,7 @@ TEST(OvmsConfigManipulationTest, positiveEnableModelRepoParam) {
     std::string modelName = "name1";
     std::string modelPath = "/path/for/name1";
     std::string configPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--add_to_config",
         (char*)"--config_path",
@@ -2878,7 +2878,7 @@ TEST(OvmsConfigManipulationTest, positiveEnableModelRepoParam) {
 TEST(OvmsConfigManipulationTest, positiveDisableModel) {
     std::string modelName = "name1";
     std::string configPath = "test/repository";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--remove_from_config",
         (char*)"--config_path",
@@ -2944,7 +2944,7 @@ TEST_F(OvmsInferredTaskTest, positiveSourceModelInferTaskFromLocalRepo) {
         FAIL() << "Test prerequisite missing: " << llamaConfig.string();
     }
     const std::string sourceModel = "llama";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--source_model",
         (char*)sourceModel.c_str(),
@@ -2971,7 +2971,7 @@ TEST_F(OvmsInferredTaskTest, positiveModelPathNoGraphPbtxtInferTask) {
     // Verify the test fixture truly has no graph.pbtxt so the scenario is meaningful.
     ASSERT_FALSE(std::filesystem::exists(std::filesystem::path(modelPath) / "graph.pbtxt"))
         << "Unexpected graph.pbtxt in test model dir " << modelPath;
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--model_path",
         (char*)modelPath.c_str(),
@@ -2996,7 +2996,7 @@ TEST_F(OvmsInferredTaskTest, positiveSourceModelInferEmbeddingsForAmbiguousArchi
     if (!std::filesystem::exists(configJson)) {
         FAIL() << "Test prerequisite missing: " << configJson.string();
     }
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--source_model",
         (char*)sourceModel.c_str(),
@@ -3022,7 +3022,7 @@ TEST_F(OvmsInferredTaskTest, positiveModelPathInferRerankForAmbiguousArchitectur
     }
     ASSERT_FALSE(std::filesystem::exists(std::filesystem::path(modelPath) / "graph.pbtxt"))
         << "Unexpected graph.pbtxt in test model dir " << modelPath;
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--model_path",
         (char*)modelPath.c_str(),
@@ -3047,7 +3047,7 @@ TEST_F(OvmsInferredTaskTest, positiveSourceModelQwen3WithoutKeywordInfersTextGen
     if (!std::filesystem::exists(configJson)) {
         FAIL() << "Test prerequisite missing: " << configJson.string();
     }
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--source_model",
         (char*)sourceModel.c_str(),
@@ -3071,7 +3071,7 @@ TEST_F(OvmsInferredTaskTest, positiveSourceModelInferText2SpeechForNullArchitect
     if (!std::filesystem::exists(configJson)) {
         FAIL() << "Test prerequisite missing: " << configJson.string();
     }
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--source_model",
         (char*)sourceModel.c_str(),
@@ -3092,7 +3092,7 @@ TEST_F(OvmsConfigDeathTest, negativeSourceModelNullArchitecturesWithoutSpecialFi
     auto currentPath = std::filesystem::current_path();
     auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
     const std::string sourceModel = "NullArch";
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--source_model",
         (char*)sourceModel.c_str(),
@@ -3111,7 +3111,7 @@ TEST_F(OvmsConfigDeathTest, negativeModelPathInferredTaskWithMismatchedParam) {
     if (!std::filesystem::exists(std::filesystem::path(modelPath) / "config.json")) {
         FAIL() << "Test prerequisite missing: " << modelPath << "/config.json";
     }
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--model_path", (char*)modelPath.c_str(),
         (char*)"--model_name", (char*)"llama",
@@ -3281,7 +3281,7 @@ TEST_F(OvmsInferredTaskTest, positiveConfigureModeInfersTaskFromModel) {
     if (!std::filesystem::exists(configJson)) {
         FAIL() << "Test prerequisite missing: " << configJson.string();
     }
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--configure",
         (char*)"--model_path",
@@ -3297,7 +3297,7 @@ TEST_F(OvmsInferredTaskTest, positiveConfigureModeInfersTaskFromModel) {
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigureModeRequiresTaskWhenCannotInfer) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--configure",
         (char*)"--model_path",
@@ -3310,7 +3310,7 @@ TEST_F(OvmsConfigDeathTest, negativeConfigureModeRequiresTaskWhenCannotInfer) {
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigureModeCannotBeUsedWithModelName) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         (char*)"ovms",
         (char*)"--configure",
         (char*)"--model_path",
