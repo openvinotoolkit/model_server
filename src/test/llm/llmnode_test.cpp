@@ -6856,7 +6856,7 @@ TEST_P(LLMTokenizeHttpTest, tokenizePositiveMaxLenParam) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    AssertTokenizationResult(response, {params.world, params.world, params.world}); // this model is exported to cut the sequence from right
+    AssertTokenizationResult(response, {params.world, params.world, params.world});  // this model is exported to cut the sequence from right
 }
 
 TEST_P(LLMTokenizeHttpTest, tokenizePositivePadToMaxLenParam) {
