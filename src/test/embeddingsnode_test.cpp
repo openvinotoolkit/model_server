@@ -852,6 +852,18 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveMaxLenParam) {
     AssertTokenizationResult(response, expectedTokens);
 }
 
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeMaxLenParamAboveLimit) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov",
+            "text": "hello world",
+            "max_length": 1000001
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositivePadToMaxLenParam) {
     std::string requestBody = R"(
         {

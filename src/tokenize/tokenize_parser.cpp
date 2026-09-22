@@ -16,6 +16,7 @@
 
 #include "tokenize_parser.hpp"
 
+#include <string>
 #include <utility>
 
 #include "src/port/rapidjson_writer.hpp"
@@ -58,7 +59,7 @@ absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buff
     return absl::OkStatus();
 }
 
-std::variant<TokenizeRequest, std::string> TokenizeParser::validateTokenizeRequest(rapidjson::Document& parsedJson) {
+std::variant<TokenizeRequest, std::string> TokenizeParser::validateTokenizeRequest(rapidjson::Document& parsedJson, std::optional<size_t> maxModelLength) {
     TokenizeRequest request;
     if (parsedJson.HasParseError()) {
         return "Failed to parse JSON";
@@ -85,6 +86,14 @@ std::variant<TokenizeRequest, std::string> TokenizeParser::validateTokenizeReque
             size_t max_length = it->value.GetUint();
             if (max_length == 0) {
                 return "max_length should be greater than 0";
+            }
+            // Guards against unbounded allocation, since max_length drives padding of the output tensor.
+            size_t limit = maxModelLength.value_or(0);
+            if (limit < MAX_LENGTH_LIMIT) {
+                limit = MAX_LENGTH_LIMIT;
+            }
+            if (max_length > limit) {
+                return "max_length " + std::to_string(max_length) + " exceeds the allowed limit of " + std::to_string(limit);
             }
 
             request.parameters["max_length"] = max_length;
@@ -223,8 +232,8 @@ std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseI
     }
 }
 
-absl::Status TokenizeParser::parseTokenizeRequest(rapidjson::Document& parsedJson, TokenizeRequest& request) {
-    auto validated = TokenizeParser::validateTokenizeRequest(parsedJson);
+absl::Status TokenizeParser::parseTokenizeRequest(rapidjson::Document& parsedJson, TokenizeRequest& request, std::optional<size_t> maxModelLength) {
+    auto validated = TokenizeParser::validateTokenizeRequest(parsedJson, maxModelLength);
     if (auto error = std::get_if<std::string>(&validated)) {
         return absl::InvalidArgumentError(*error);
     }
