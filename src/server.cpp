@@ -575,6 +575,11 @@ int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSe
 
     try {
         Status ret = startFromSettings(&serverSettings, &modelsSettings);
+        if (ret == StatusCode::SERVER_ALREADY_STARTED ||
+            ret == StatusCode::SERVER_ALREADY_STARTING ||
+            ret == StatusCode::OPTIONS_USAGE_ERROR) {
+            return statusToExitCode(ret);
+        }
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {
             return statusToExitCode(ret);
