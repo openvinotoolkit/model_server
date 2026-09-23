@@ -110,7 +110,7 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
 
 absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     ovms::TokenizeRequest tokenizeRequest;
-    auto status = ovms::TokenizeParser::parseTokenizeRequest(*executionContext->payload.parsedJson, tokenizeRequest);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(*executionContext->payload.parsedJson, tokenizeRequest, getProperties()->maxModelLength);
     if (status != absl::OkStatus()) {
         return status;
     }
