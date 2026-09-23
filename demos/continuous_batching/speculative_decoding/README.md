@@ -2,15 +2,16 @@
 
 Speculative (assisted) decoding reduces generation latency without changing the output distribution. A lightweight drafter proposes candidate tokens; the main model validates them in one parallel forward pass. Accepted draft tokens replace sequential decode steps of the main model, yielding end-to-end speedups that are most pronounced at concurrency 1.
 
-OpenVINO GenAI implements three drafting strategies, all exposed through the same `draft_models_path` configuration field in OVMS:
+OpenVINO GenAI implements various drafting strategies, all exposed through the same `draft_models_path` configuration field in OVMS:
 
 | Strategy | How it drafts | Best for | Extra model required |
 |---|---|---|---|
 | **MTP** | Built-in multi-token prediction head | Models with bundled MTP heads (e.g. Qwen3.8-27B) | No — head bundled with the main model |
-| **Fast Draft** | Small off-the-shelf LLM | General-purpose; any target/draft pair | Yes — smaller LLM sharing target's tokenizer |
+| **DFlash** | Specialized draft model using target hidden states and a compact hidden-state verification pass | Strong acceptance on compatible target/draft pairs; works well for VLMs and other models with matching draft metadata | Yes — dedicated DFlash draft model for the target family |
 | **EAGLE3** | Draft head conditioned on target's hidden states | Highest acceptance rate; code and reasoning; supports tree drafting | Yes — EAGLE3 head trained on the target family |
+| **Fast Draft** | Small off-the-shelf LLM | General-purpose; any target/draft pair | Yes — smaller LLM sharing target's tokenizer |
 
-All three strategies share the same server API — only the generation parameters differ.
+All strategies share the same server API — only the generation parameters differ.
 
 ## Prerequisites
 
@@ -112,6 +113,96 @@ P99 ITL (ms):                            54.90
 ==================================================
 ```
 
+
+# DFlash
+
+DFlash is a general speculative decoding strategy that uses a dedicated draft model and target hidden-state verification to propose multiple tokens efficiently. This algorithm is auto-detected from the draft model metadata. No extra parameters are needed besides pointing to the draft model via `--draft_source_model` or `--draft_model_path`
+
+## Model considerations
+
+For this example we use:
+- [OpenVINO/gemma-4-31B-it-int4-ov](https://huggingface.co/OpenVINO/gemma-4-31B-it-int4-ov) as the main model
+- [z-lab/gemma-4-31B-it-DFlash](https://huggingface.co/z-lab/gemma-4-31B-it-DFlash) as the draft model
+
+This example uses Gemma 4 because it is a published reference pair, but the same DFlash setup is intended for compatible target/draft combinations. Only the DFlash draft model needs to be exported locally; the main model can be pulled by OVMS directly from Hugging Face when `--source_model` is used.
+
+## Model preparation
+
+Install the export tooling and create a model directory:
+
+```text
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+
+mkdir -p ${HOME}/models
+```
+
+Export only the DFlash draft model. The main model is downloaded directly by OVMS from Hugging Face on startup:
+
+```text
+optimum-cli export openvino \
+  --model z-lab/gemma-4-31B-it-DFlash \
+  --task text-generation-with-past \
+  --trust-remote-code \
+  --weight-format int4 \
+  --all-layers \
+  ${HOME}/models/gemma-4-31b-it-dflash-int4-ov
+```
+
+The main model can then be served with OVMS using `--source_model OpenVINO/gemma-4-31B-it-int4-ov`, so there is no extra local main-model export step for this example.
+
+Your model directory should contain the exported DFlash draft model alongside any downloaded main model files created at runtime by OVMS:
+
+```text
+${HOME}/models
+└── gemma-4-31b-it-dflash-int4-ov
+    ├── openvino_model.bin
+    ├── openvino_model.xml
+    ├── config.json
+    ├── generation_config.json
+    └── ...
+```
+
+## Server Deployment
+
+:::{dropdown} **Deploying with Docker**
+```text
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly \
+  --model_repository_path /models \
+  --source_model OpenVINO/gemma-4-31B-it-int4-ov \
+  --draft_model_path /models/gemma-4-31b-it-dflash-int4-ov \
+  --rest_port 8000 \
+  --enable_prefix_caching false
+```
+:::
+
+:::{dropdown} **Deploying on Bare Metal**
+```text
+ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/gemma-4-31B-it-int4-ov --draft_model_path c:\models\gemma-4-31b-it-dflash-int4-ov --enable_prefix_caching false
+```
+:::
+
+## Request Generation
+
+Use the standard chat completions API with `num_assistant_tokens` set to the draft budget. DFlash uses the same request interface as other speculative decoding modes; the draft strategy is selected automatically from the exported model metadata.
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
+
+response = client.chat.completions.create(
+    model="OpenVINO/gemma-4-31B-it-int4-ov",
+    messages=[{"role": "user", "content": "Describe the scene in this image."}],
+    temperature=0,
+    max_tokens=200,
+    extra_body={"num_assistant_tokens": 5},
+)
+print(response.choices[0].message.content)
+```
+
+`num_assistant_tokens` controls how many DFlash candidates are proposed per target step. The exact value should be tuned to the workload; larger values generally help on high-acceptance multimodal prompts, while very large values can increase verification overhead.
 
 # EAGLE3
 
