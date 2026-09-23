@@ -41,7 +41,7 @@ except ModuleNotFoundError:
     from db_exporter import DBExporter
 
 def get_client(xargs):
-    if xargs["api"] == "KFS": return KFS_Client
+    if xargs["api"] == "GRPC": return KFS_Client
     elif xargs["api"] == "REST": raise NotImplementedError("TODO - add REST support")
     elif xargs["api"] == "TFS": raise NotImplementedError("TFS is deprecated use KFS instead")
     else: return KFS_Client # default client API
@@ -286,7 +286,7 @@ if __name__ == "__main__":
                         help="flag to print internal version")
     parser.add_argument("--unbuffered", required=False, action="store_true",
                         help="flag to print stdout/stderr immediately rather than buffer")
-    parser.add_argument("--api", required=False, default="KFS", choices=["KFS", "REST"],
+    parser.add_argument("--api", required=False, default="GRPC", choices=["GRPC", "REST"],
                         help="flag to choose which API to use")
     xargs = vars(parser.parse_args())
     if xargs["internal_version"]:
