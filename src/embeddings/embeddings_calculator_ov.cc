@@ -256,7 +256,7 @@ public:
                 handler.setPromptTokensUsage(numberOfTokens);
 
                 {
-                    size_t numInputTensors = 2 + (embeddings_session->getNumberOfModelInputs() == 3 ? 1 : 0);
+                    size_t numInputTensors = embeddings_session->getNumberOfModelInputs();
                     size_t projectedInputBytes = receivedBatchSize * tokenCountOfLongestDocument * sizeof(int64_t) * numInputTensors;
                     auto byteSizeCheckStatus = this->isInputByteSizeOk(projectedInputBytes);
                     if (!byteSizeCheckStatus.ok()) {
