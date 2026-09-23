@@ -50,7 +50,7 @@ def getJpeg(path, size, rgb_image=0):
     #convert to RGB instead of BGR if required by model
     if rgb_image:
         img = img[:, :, [2, 1, 0]]
-    img = img.reshape(1,size,size,3)
+    img = img.transpose(2,0,1).reshape(1,3,size,size)
     print(path, img.shape, "; data range:",np.amin(img),":",np.amax(img))
     return img
 
