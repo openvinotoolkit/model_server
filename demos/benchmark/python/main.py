@@ -43,7 +43,7 @@ except ModuleNotFoundError:
 def get_client(xargs):
     if xargs["api"] == "KFS": return KFS_Client
     elif xargs["api"] == "REST": raise NotImplementedError("TODO - add REST support")
-    elif xargs["api"] == "TFS": raise NotImplementedError("TFS is depracated use KFS instead")
+    elif xargs["api"] == "TFS": raise NotImplementedError("TFS is deprecated use KFS instead")
     else: return KFS_Client # default client API
 
 
