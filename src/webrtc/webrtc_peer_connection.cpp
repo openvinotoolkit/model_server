@@ -17,6 +17,8 @@
 
 #include "src/logging.hpp"
 
+#include <cstddef>
+
 #include <rtc/rtpdepacketizer.hpp>
 #include <rtc/rtppacketizer.hpp>
 
@@ -52,6 +54,12 @@ void WebRtcPeerConnection::onStateChange(StateCallback callback) {
 
 void WebRtcPeerConnection::onAudioFrame(AudioFrameCallback callback) {
     audioFrameCallback_ = std::move(callback);
+    configureAudioTrackCallbacks();
+}
+
+void WebRtcPeerConnection::onProcessedAudioFrame(StreamingAudioProcessor& processor, ProcessedAudioFrameCallback callback) {
+    audioProcessor_ = &processor;
+    processedAudioFrameCallback_ = std::move(callback);
     configureAudioTrackCallbacks();
 }
 
@@ -93,9 +101,30 @@ void WebRtcPeerConnection::configureAudioTrackCallbacks() {
         if (audioTrackCallback_) {
             audioTrackCallback_();
         }
-        if (audioFrameCallback_) {
+        if (audioFrameCallback_ || audioProcessor_) {
             track->setMediaHandler(std::make_shared<rtc::OpusRtpDepacketizer>());
-            track->onFrame(audioFrameCallback_);
+            track->onFrame([this](rtc::binary data, rtc::FrameInfo info) {
+                if (audioFrameCallback_) {
+                    audioFrameCallback_(data, info);
+                }
+                if (audioProcessor_) {
+                    const uint64_t timestampUs = info.timestampSeconds ?
+                        static_cast<uint64_t>(info.timestampSeconds->count() * 1000000.0) :
+                        static_cast<uint64_t>(info.timestamp);
+                    std::vector<uint8_t> encoded(data.size());
+                    for (size_t index = 0; index < data.size(); ++index) {
+                        encoded[index] = std::to_integer<uint8_t>(data[index]);
+                    }
+                    const auto processed = audioProcessor_->process(encoded, timestampUs);
+                    if (processedAudioFrameCallback_) {
+                        rtc::binary output(processed.size());
+                        for (size_t index = 0; index < processed.size(); ++index) {
+                            output[index] = static_cast<std::byte>(processed[index]);
+                        }
+                        processedAudioFrameCallback_(std::move(output), info);
+                    }
+                }
+            });
         }
         if (audioTrackOpenCallback_) {
             if (track->isOpen()) {

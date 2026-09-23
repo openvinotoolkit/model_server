@@ -22,9 +22,15 @@
 
 #include <gtest/gtest.h>
 
+#include "mock_echo_streaming_audio_model.hpp"
+#include "opus_audio_codec.hpp"
+#include "streaming_audio_processor.hpp"
 #include "webrtc_peer_connection.hpp"
 
 using ovms::WebRtcPeerConnection;
+using ovms::MockEchoStreamingAudioModel;
+using ovms::OpusAudioCodec;
+using ovms::StreamingAudioProcessor;
 
 namespace {
 
@@ -408,4 +414,76 @@ TEST(WebRtcPeerConnectionTest, LocalPeersConnectAndExchangeAudioFrame) {
     ASSERT_TRUE(condition.wait_for(lock, std::chrono::seconds(5), [&] {
         return receivedFrameSize > 0;
     }));
+}
+
+TEST(WebRtcPeerConnectionTest, ProcessesIncomingOpusThroughStreamingModel) {
+    WebRtcPeerConnection offerer(rtc::Configuration{});
+    WebRtcPeerConnection answerer(rtc::Configuration{});
+    OpusAudioCodec codec(48000, 1);
+    MockEchoStreamingAudioModel model(48000, 0.5f, 0.5f);
+    StreamingAudioProcessor processor(codec, model);
+    std::mutex mutex;
+    std::condition_variable condition;
+    bool offererConnected = false;
+    bool answererConnected = false;
+    bool trackReceived = false;
+    rtc::binary processedOutput;
+    rtc::FrameInfo processedInfo(0);
+
+    connectPeers(offerer, answerer);
+    offerer.onStateChange([&](rtc::PeerConnection::State state) {
+        if (state == rtc::PeerConnection::State::Connected) {
+            std::lock_guard<std::mutex> lock(mutex);
+            offererConnected = true;
+            condition.notify_all();
+        }
+    });
+    answerer.onStateChange([&](rtc::PeerConnection::State state) {
+        if (state == rtc::PeerConnection::State::Connected) {
+            std::lock_guard<std::mutex> lock(mutex);
+            answererConnected = true;
+            condition.notify_all();
+        }
+    });
+    answerer.onProcessedAudioFrame(processor, [&](rtc::binary data, rtc::FrameInfo info) {
+        std::lock_guard<std::mutex> lock(mutex);
+        processedOutput = std::move(data);
+        processedInfo = info;
+        trackReceived = true;
+        condition.notify_all();
+    });
+
+    offerer.addAudioTrack(rtc::Description::Direction::SendOnly);
+    offerer.createOffer();
+
+    std::unique_lock<std::mutex> lock(mutex);
+    ASSERT_TRUE(condition.wait_for(lock, std::chrono::seconds(5), [&] {
+        return offererConnected && answererConnected;
+    }));
+    lock.unlock();
+
+    std::vector<float> input(OpusAudioCodec::FrameSamples, 0.25f);
+    const auto encodedInput = codec.encode(input);
+    rtc::binary inputFrame(encodedInput.size());
+    for (size_t index = 0; index < encodedInput.size(); ++index) {
+        inputFrame[index] = static_cast<std::byte>(encodedInput[index]);
+    }
+    rtc::FrameInfo inputInfo(960);
+    inputInfo.payloadType = 111;
+    ASSERT_TRUE(offerer.sendAudioFrame(std::move(inputFrame), inputInfo));
+
+    lock.lock();
+    ASSERT_TRUE(condition.wait_for(lock, std::chrono::seconds(5), [&] {
+        return trackReceived;
+    }));
+    lock.unlock();
+
+    std::vector<uint8_t> encodedOutput(processedOutput.size());
+    for (size_t index = 0; index < processedOutput.size(); ++index) {
+        encodedOutput[index] = std::to_integer<uint8_t>(processedOutput[index]);
+    }
+    const auto decodedOutput = codec.decode(encodedOutput);
+    EXPECT_EQ(decodedOutput.size(), OpusAudioCodec::FrameSamples);
+    EXPECT_EQ(processedInfo.timestamp, inputInfo.timestamp);
+    EXPECT_NE(decodedOutput, input);
 }

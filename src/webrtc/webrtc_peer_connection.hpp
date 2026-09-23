@@ -22,6 +22,8 @@
 
 #include <rtc/rtc.hpp>
 
+#include "streaming_audio_processor.hpp"
+
 namespace ovms {
 
 // POC scaffold: terminates a single WebRTC peer connection so the rest of the
@@ -35,6 +37,7 @@ public:
     using AudioFrameCallback = std::function<void(rtc::binary data, rtc::FrameInfo info)>;
     using AudioTrackCallback = std::function<void()>;
     using AudioTrackOpenCallback = std::function<void()>;
+    using ProcessedAudioFrameCallback = std::function<void(rtc::binary data, rtc::FrameInfo info)>;
 
     explicit WebRtcPeerConnection(rtc::Configuration configuration);
 
@@ -42,6 +45,7 @@ public:
     void onLocalCandidate(CandidateCallback callback);
     void onStateChange(StateCallback callback);
     void onAudioFrame(AudioFrameCallback callback);
+    void onProcessedAudioFrame(StreamingAudioProcessor& processor, ProcessedAudioFrameCallback callback);
     void onAudioTrack(AudioTrackCallback callback);
     void onAudioTrackOpen(AudioTrackOpenCallback callback);
     void onLocalAudioTrackOpen(AudioTrackOpenCallback callback);
@@ -68,6 +72,8 @@ private:
     std::vector<std::shared_ptr<rtc::Track>> remoteAudioTracks_;
     bool audioTrackCallbacksConfigured_ = false;
     AudioFrameCallback audioFrameCallback_;
+    StreamingAudioProcessor* audioProcessor_ = nullptr;
+    ProcessedAudioFrameCallback processedAudioFrameCallback_;
     AudioTrackCallback audioTrackCallback_;
     AudioTrackOpenCallback audioTrackOpenCallback_;
     AudioTrackOpenCallback localAudioTrackOpenCallback_;

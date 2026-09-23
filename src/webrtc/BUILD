@@ -17,11 +17,52 @@
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
+    name = "webrtc_signaling_session",
+    srcs = ["webrtc_signaling_session.cpp"],
+    hdrs = ["webrtc_signaling_session.hpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "streaming_audio_model",
+    hdrs = ["streaming_audio_model.hpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "mock_echo_streaming_audio_model",
+    srcs = ["mock_echo_streaming_audio_model.cpp"],
+    hdrs = ["mock_echo_streaming_audio_model.hpp"],
+    deps = [":streaming_audio_model"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "opus_audio_codec",
+    srcs = ["opus_audio_codec.cpp"],
+    hdrs = ["opus_audio_codec.hpp"],
+    deps = ["@libopus//:libopus"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "streaming_audio_processor",
+    srcs = ["streaming_audio_processor.cpp"],
+    hdrs = ["streaming_audio_processor.hpp"],
+    deps = [
+        ":opus_audio_codec",
+        ":streaming_audio_model",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "webrtc_peer_connection",
     srcs = ["webrtc_peer_connection.cpp"],
     hdrs = ["webrtc_peer_connection.hpp"],
     deps = [
         "//src:libovmslogging",
+        ":streaming_audio_processor",
         "@libdatachannel//:libdatachannel",
     ],
     visibility = ["//visibility:public"],
@@ -36,7 +77,43 @@ cc_test(
     # dynamic linking against the .so can't see these symbols; link statically.
     linkstatic = 1,
     deps = [
+        ":mock_echo_streaming_audio_model",
+        ":opus_audio_codec",
+        ":streaming_audio_processor",
         ":webrtc_peer_connection",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+
+cc_test(
+    name = "webrtc_signaling_session_test",
+    srcs = ["webrtc_signaling_session_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":webrtc_signaling_session",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "streaming_audio_model_test",
+    srcs = ["streaming_audio_model_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":mock_echo_streaming_audio_model",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "opus_audio_codec_test",
+    srcs = ["opus_audio_codec_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":mock_echo_streaming_audio_model",
+        ":opus_audio_codec",
+        ":streaming_audio_processor",
         "@com_google_googletest//:gtest_main",
     ],
 )
