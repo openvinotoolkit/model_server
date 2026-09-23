@@ -72,9 +72,12 @@ To enable default metrics set you need to specify the `metrics_enable` flag or j
 ### Option 1: CLI
 
  ```bash
-wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
-       --model_name resnet --model_path /models/resnet50 --port 9000 \
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
+docker run -d -u $(id -u) -v ${HOME}/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+       --model_name resnet --model_path /models/resnet50.xml \
+       --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000 \
        --rest_port 8000 \
        --metrics_enable
  ```
@@ -82,14 +85,18 @@ docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 ope
 ### Option 2: Configuration file
 
 ```bash
-mkdir workspace
-wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P workspace/models/resnet50/1
+mkdir -p workspace
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o workspace/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o workspace/resnet50.xml
 echo '{
  "model_config_list": [
      {
         "config": {
              "name": "resnet",
-             "base_path": "/workspace/models/resnet50"
+             "base_path": "/workspace/resnet50.xml",
+             "mean_values": "[123.675,116.28,103.53]",
+             "scale_values": "[58.395,57.12,57.375]",
+             "layout": "NHWC:NCHW"
         }
      }
  ],
@@ -120,9 +127,12 @@ To enable specific set of metrics you need to specify the metrics_list flag or j
 ### Option 1: CLI
 
 ```bash
-wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
-      --model_name resnet --model_path /models/resnet50  --port 9000 \
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
+docker run -d -u $(id -u) -v ${HOME}/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+      --model_name resnet --model_path /models/resnet50.xml \
+      --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000 \
       --rest_port 8000 \
       --metrics_enable \
       --metrics_list ovms_requests_success,ovms_infer_req_queue_size
@@ -131,13 +141,18 @@ docker run -d -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 ope
 ### Option 2: Configuration file
 
 ```bash
-wget -N https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
+mkdir -p workspace
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o workspace/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o workspace/resnet50.xml
 echo '{
  "model_config_list": [
      {
         "config": {
              "name": "resnet",
-             "base_path": "/workspace/models/resnet50"
+             "base_path": "/workspace/resnet50.xml",
+             "mean": "[123.675,116.28,103.53]",
+             "scale": "[58.395,57.12,57.375]",
+             "layout": "NHWC:NCHW"
         }
      }
  ],

@@ -69,9 +69,9 @@ ovms --model_path <path_to_model> --model_name <model_name> --rest_port 8000 --l
 **Example using a ResNet model:**
 
 ```bash
-mkdir -p models/resnet/1
-wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
-wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
 ```
 
 ::::{tab-set}
@@ -80,8 +80,10 @@ wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_mo
 **Required:** Docker Engine installed
 
 ```bash
-docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
---model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 8000 --log_level DEBUG
+docker run -d --rm -u $(id -u) -v ${HOME}/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+--model_path /models/resnet50.xml --model_name resnet \
+--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
+--port 9000 --rest_port 8000 --log_level DEBUG
 ```
 :::
 

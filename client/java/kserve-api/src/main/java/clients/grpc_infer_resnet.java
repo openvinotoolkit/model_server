@@ -98,7 +98,7 @@ public class grpc_infer_resnet {
 		// Populate the inputs in inference request
 		ModelInferRequest.InferInputTensor.Builder input = ModelInferRequest.InferInputTensor
 				.newBuilder();
-		String defaultInputName = "0";
+		String defaultInputName = "image";
 		input.setName(cmd.getOptionValue("i", defaultInputName));
 		input.setDatatype("BYTES");
 		input.addShape(1);
