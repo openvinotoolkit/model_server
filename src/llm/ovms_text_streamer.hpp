@@ -84,7 +84,7 @@ public:
     ov::genai::StreamingStatus write(const std::vector<int64_t>& tokens) override;
     void end() override;
 
-    // True when the output parser threw during a flush. 
+    // True when the output parser threw during a flush.
     // In legacy executors, callers must check this after generate()
     // returns for proper error handling.
     bool hadParserError() const { return m_had_parser_error; }
