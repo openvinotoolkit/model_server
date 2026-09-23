@@ -138,6 +138,43 @@ protected:
     // Assemble a ParsedOutput from a sequence of streaming Delta variants produced by OVMSTextStreamer.
     static ParsedOutput parsedOutputFromDeltas(const std::vector<Delta>& deltas);
 
+    // OpenAI defaults parallel_tool_calls to true. Parse it before model-specific
+    // generation policy consumes request.parallelToolCalls.
+    absl::Status parseParallelToolCallsPolicy() {
+        auto it = doc.FindMember("parallel_tool_calls");
+        if (it == doc.MemberEnd() || it->value.IsNull())
+            return absl::OkStatus();
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("parallel_tool_calls is not a bool");
+        request.parallelToolCalls = it->value.GetBool();
+        return absl::OkStatus();
+    }
+
+    // Keep hard/named tool choices fail-closed. The generic upstream parser turns
+    // a request with no tools into toolChoice=none; for required/named choices that
+    // silently converts a constrained request into unconstrained generation.
+    absl::Status validateHardToolChoiceHasTools() const {
+        auto choiceIt = doc.FindMember("tool_choice");
+        if (choiceIt == doc.MemberEnd() || choiceIt->value.IsNull())
+            return absl::OkStatus();
+
+        bool hardChoice = false;
+        if (choiceIt->value.IsString()) {
+            hardChoice = std::string(choiceIt->value.GetString()) == "required";
+        } else if (choiceIt->value.IsObject()) {
+            hardChoice = true;
+        }
+        if (!hardChoice)
+            return absl::OkStatus();
+
+        auto toolsIt = doc.FindMember("tools");
+        if (toolsIt == doc.MemberEnd() || toolsIt->value.IsNull() ||
+            (toolsIt->value.IsArray() && toolsIt->value.Empty())) {
+            return absl::InvalidArgumentError("tool_choice requires at least one tool");
+        }
+        return absl::OkStatus();
+    }
+
 public:
     OpenAIApiHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
         ov::genai::Tokenizer tokenizer, const std::string& toolParserName = "", const std::string& reasoningParserName = "") :
@@ -160,8 +197,9 @@ public:
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
         std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
 
-    // Shared parsing (non-virtual)
-    absl::Status parseTools();
+    // Shared parsing. Endpoint handlers override parseTools only to establish
+    // endpoint-wide policy before delegating to the upstream schema parser.
+    virtual absl::Status parseTools();
     absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseToolsToJsonContainer();
     absl::StatusOr<std::optional<ov::genai::JsonContainer>> parseChatTemplateKwargsToJsonContainer();
     const bool areToolsAvailable() const;

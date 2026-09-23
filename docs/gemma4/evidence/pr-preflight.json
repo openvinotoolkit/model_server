@@ -1,0 +1,27 @@
+{
+  "license_scanner": {
+    "result": "PASS",
+    "method": "Unchanged upstream ci/lib_search.py check_dir, Linux path separators and UTF-8; only upstream exclusions",
+    "not_claimed": "Complete Jenkins/style pipeline"
+  },
+  "raw_trace_archive": {
+    "result": "PASS",
+    "files": 40,
+    "method": "SHA256 equality of each archived member and original bytes"
+  },
+  "genai_companion": {
+    "url": "https://github.com/openvinotoolkit/openvino.genai/pull/4477",
+    "head": "33bfec6e44d5c2a1bc5ad12c375f65d59929da85",
+    "base": "7ea2546852a382cd16bd22dea0cfad2db70ed744",
+    "original_header": "RED: compile fails, field and two-argument constructor absent",
+    "transferred_header": "GREEN: MSVC real-header executable, legacy/bounded/zero/equality assertions",
+    "full_build_and_native_gtests": "NOT RUN"
+  },
+  "jenkins_initial_ovms_head": {
+    "head": "dd7ac8de89fe76cfe00d04d4f69620e00e5aa37e",
+    "job": "https://ci.iotg.sclab.intel.com/job/ovmsc/job/Oncommit_ovms_build/job/PR-4563/1/display/redirect",
+    "reported_status": "ERROR",
+    "console_access": "BLOCKED: hostname resolution timeout on preparation host",
+    "failure_cause": "UNCLASSIFIED"
+  }
+}

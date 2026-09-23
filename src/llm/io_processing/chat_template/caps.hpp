@@ -25,17 +25,25 @@ struct ChatTemplateCaps {
     // Some templates require tool_call arguments to be a dict/object rather than a stringified JSON.
     bool requiresObjectArguments = false;
 
+    // Some Gemma4 templates expect role:tool JSON object content as a mapping. This is
+    // intentionally separate from response-field support because Google-style templates
+    // that iterate content parts with part.get(...) must keep tool content as a string.
+    bool parseToolResponseJsonContent = false;
+
     std::string missnamedReasoningField = "";
 
+    // Some templates reject the optional OpenAI function.response field and require it
+    // to be stripped before rendering. This capability comes from upstream 2026.5.
     bool supportsResponseFieldInToolDefinition = false;
 
     bool needsWorkarounds() const {
-        return requiresObjectArguments || !missnamedReasoningField.empty() || supportsResponseFieldInToolDefinition;
+        return requiresObjectArguments || parseToolResponseJsonContent || !missnamedReasoningField.empty() || supportsResponseFieldInToolDefinition;
     }
 
     std::string toString() const {
         return std::string("supportsToolCalls=") + (supportsToolCalls ? "true" : "false") +
                ", requiresObjectArguments=" + (requiresObjectArguments ? "true" : "false") +
+               ", parseToolResponseJsonContent=" + (parseToolResponseJsonContent ? "true" : "false") +
                ", missnamedReasoningField=" + missnamedReasoningField +
                ", supportsResponseFieldInToolDefinition=" + (supportsResponseFieldInToolDefinition ? "true" : "false");
     }
