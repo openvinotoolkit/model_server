@@ -45,7 +45,6 @@ void VisualLanguageModelLegacyExecutor::processRequest() {
             auto streamer = std::dynamic_pointer_cast<OVMSTextStreamer>(requestExecutionContext->textStreamer);
             if (streamer != nullptr && streamer->hadParserError()) {
                 requestExecutionContext->success = false;
-                SPDLOG_LOGGER_ERROR(llm_executor_logger, "VLM pipeline generation failed: output parser reported an error.");
             }
         } catch (std::exception& e) {
             requestExecutionContext->success = false;

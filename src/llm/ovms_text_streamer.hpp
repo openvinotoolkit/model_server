@@ -84,11 +84,9 @@ public:
     ov::genai::StreamingStatus write(const std::vector<int64_t>& tokens) override;
     void end() override;
 
-    // True when the output parser threw during a flush. Generation is cancelled
-    // gracefully (StreamingStatus::CANCEL) rather than letting the exception unwind
-    // GenAI's internal generate() loop, which would leave the underlying InferRequest
-    // stuck "busy" for the next request. Callers must check this after generate()
-    // returns to report the failure (e.g. set their own success flag).
+    // True when the output parser threw during a flush. 
+    // In legacy executors, callers must check this after generate()
+    // returns for proper error handling.
     bool hadParserError() const { return m_had_parser_error; }
 
 private:
