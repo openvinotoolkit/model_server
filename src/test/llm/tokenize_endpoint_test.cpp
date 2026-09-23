@@ -440,6 +440,20 @@ TEST_P(LLMTokenizeTests, tokenizeStringWithAddSpecialTokens) {
     ASSERT_GE(tokens.Size(), params.expectedTokens.size());
 }
 
+TEST_P(LLMTokenizeTests, tokenizeNegativeMaxLenParamAboveLimit) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "text": "hello world",
+            "max_length": 1000001
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
 TEST_P(LLMTokenizeTests, tokenizeEmptyNestedArray) {
     auto params = GetParam();
     assertTokenizeWithInvalidTextReturnsError(handler.get(), params.modelName, "[[]]", response, comp, responseComponents, writer, multiPartParser);
