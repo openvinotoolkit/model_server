@@ -106,7 +106,7 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 			"additionalProperties": false
 		},
         "additionalProperties": false
-    }})";
+    })";
 
 #if (MEDIAPIPE_DISABLE == 0)
 const char* MEDIAPIPE_CONFIG_LIST_SCHEMA = R"(,
@@ -122,7 +122,7 @@ const char* MEDIAPIPE_CONFIG_LIST_SCHEMA = "";
 
 const std::string MODELS_CONFIG_SCHEMA = R"({
     "definitions": {)" + MODEL_CONFIG_DEFINITION +
-                                         "," + R"(
+                                         R"(},
 		"custom_loader_config": {
 			"type": "object",
 			"required": ["config"],
