@@ -146,7 +146,6 @@ RUN python3.10 -m pip install "numpy<2.0.0" --no-cache-dir
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update ; apt-get install python3.12-dev -y --no-install-recommends ; apt-get clean && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     python3.12 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" "numpy<2.0.0" --no-cache-dir ; fi
-RUN if [ "$BASE_OS" == "ubuntu22" ] ; then python3 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" --no-cache-dir ; fi
 
 ARG JOBS=8
 ARG ov_use_binary=0
@@ -452,15 +451,9 @@ RUN apt-get update ; \
     if [ "$NPU" == "1" ] ; then \
         mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
         apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
-        if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.26.0/linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
-            tar -xf linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
-            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb     ; \
-        else \
-            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.35.0/linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz && \
-            tar -xf linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz && \
-            curl -fL -O https://github.com/oneapi-src/level-zero/releases/download/v1.33.1/libze1_1.33.1+u24.04_amd64.deb || exit 1 ; \
-        fi ; \
+        curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.35.0/linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz && \
+        tar -xf linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz && \
+        curl -fL -O https://github.com/oneapi-src/level-zero/releases/download/v1.33.1/libze1_1.33.1+u24.04_amd64.deb || exit 1 ; \
         dpkg -i ./*.deb || exit 1; rm -Rf /tmp/npu_deps ; \
     fi ; \
     apt-get clean ; \
@@ -480,7 +473,7 @@ COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python
 # For image with Python enabled install Python library
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     apt-get update -y ; \
-    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.12; fi; \
+    python_version=3.12; \
     apt-get install libpython$python_version --no-install-recommends -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 

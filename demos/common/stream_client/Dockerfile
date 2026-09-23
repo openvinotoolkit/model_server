@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-FROM ubuntu:22.04 as BASE
+FROM ubuntu:24.04 as BASE
 ARG DEBIAN_FRONTEND=noninteractive
 ARG JOBS
 RUN apt-get update -qq && apt-get --no-install-recommends -y install \
@@ -100,7 +100,7 @@ RUN git clone https://github.com/opencv/opencv.git /opencv --branch 4.8.1 && \
 
 RUN mkdir /cvlib && find /lib/x86_64-linux-gnu/ -name 'libopencv*' -print | xargs -I % cp % /cvlib
 RUN mkdir /fflib && ldd /bin/ffmpeg | awk '{print $3}' | sed '/^\s*$/d' | xargs -I % cp % /fflib
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 ARG DEBIAN_FRONTEND=noninteractive
 COPY --from=BASE /lib/python3/dist-packages/cv2 /lib/python3/dist-packages/cv2
 COPY --from=BASE /bin/ffmpeg /bin/ffmpeg
