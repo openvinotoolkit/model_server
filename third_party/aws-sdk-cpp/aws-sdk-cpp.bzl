@@ -33,11 +33,9 @@ def _impl(repository_ctx):
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
 
     result = repository_ctx.execute(["cat","/etc/os-release"],quiet=False)
-    ubuntu20_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
-    ubuntu22_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 22")
     ubuntu24_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 24")
 
-    if ubuntu24_count == 1 or ubuntu22_count == 1:
+    if ubuntu24_count == 1:
         lib_path = "lib"
     else: # for redhat
         lib_path = "lib64"

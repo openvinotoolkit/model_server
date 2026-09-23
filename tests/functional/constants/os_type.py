@@ -20,13 +20,11 @@ import distro
 
 class OsType:
     Redhat = "redhat"
-    Ubuntu22 = "ubuntu22"
     Ubuntu24 = "ubuntu24"
     Windows = "windows"
 
 
 UBUNTU = "ubuntu"
-UBUNTU_22_OS_VERSION = "22.04"
 UBUNTU_24_OS_VERSION = "24.04"
 WINDOWS_MSYS_NT = "msys_nt"
 
@@ -36,9 +34,7 @@ def get_host_os():
     result = distro.id() if distro.id() else platform.system()
     if result == UBUNTU:
         ubuntu_version = get_host_os_version()
-        if ubuntu_version == UBUNTU_22_OS_VERSION:
-            return OsType.Ubuntu22
-        elif ubuntu_version == UBUNTU_24_OS_VERSION:
+        if ubuntu_version == UBUNTU_24_OS_VERSION:
             return OsType.Ubuntu24
     elif result == "rhel":
         return OsType.Redhat

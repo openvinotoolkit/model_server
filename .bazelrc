@@ -39,7 +39,7 @@ build:nativeopt --copt=-march=native
 build:nativeopt --host_copt=-march=native
 build:nativeopt --copt=-O3
 
-# those below are required for XNNPACK build with gcc <12 (ubuntu 22 default is 11)
+# those below are required for XNNPACK builds with older GCC versions
 build --define=xnn_enable_avxvnniint8=false
 build --define=xnn_enable_avx512fp16=false
 build --define=xnn_enable_avx512amx=false

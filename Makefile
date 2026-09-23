@@ -73,6 +73,7 @@ endif
 endif
 FUZZER_BUILD ?= 0
 DOCKER_BUILDKIT ?= 1
+export DOCKER_BUILDKIT
 KONFLUX ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section

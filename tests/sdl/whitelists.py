@@ -18,9 +18,6 @@ from enum import Enum, auto
 
 
 class OvmsType(Enum):
-    UBUNTU22 = auto()
-    UBUNTU22_GPU = auto()
-    UBUNTU22_NGINX = auto()
     UBUNTU24 = auto()
     UBUNTU24_GPU = auto()
     UBUNTU24_NGINX = auto()
@@ -33,10 +30,8 @@ class OvmsType(Enum):
 class OvmsBaseType(Enum):
     COMMON = "common"
     UBUNTU = "ubuntu"
-    UBUNTU22 = "ubuntu22"
     UBUNTU24 = "ubuntu24"
     UBUNTU_PYTHON = "ubuntu_python"
-    UBUNTU22_PYTHON = "ubuntu22_python"
     UBUNTU24_PYTHON = "ubuntu24_python"
     UBUNTU_GPU = "ubuntu_gpu"
     UBUNTU_NGINX = "ubuntu_nginx"
@@ -58,8 +53,6 @@ dynamic_libraries = {
     },
     OvmsBaseType.UBUNTU: {'libicuuc.so', 'libicudata.so',},
     OvmsBaseType.UBUNTU_PYTHON: {'libexpat.so',},
-    OvmsBaseType.UBUNTU22: {'libdl.so', 'libm.so', 'libpthread.so',},
-    OvmsBaseType.UBUNTU22_PYTHON: {'libpython3.10.so',},
     OvmsBaseType.UBUNTU24: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.UBUNTU24_PYTHON: set(),
     OvmsBaseType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so',},
@@ -67,12 +60,6 @@ dynamic_libraries = {
 }
 
 whitelisted_dynamic_libraries = {
-    OvmsType.UBUNTU22: {"default": dynamic_libraries[OvmsBaseType.COMMON] | dynamic_libraries[OvmsBaseType.UBUNTU] | dynamic_libraries[OvmsBaseType.UBUNTU22],
-                             "python": dynamic_libraries[OvmsBaseType.UBUNTU_PYTHON] | dynamic_libraries[OvmsBaseType.UBUNTU22_PYTHON]},
-    OvmsType.UBUNTU22_GPU: {"default": dynamic_libraries[OvmsBaseType.COMMON] | dynamic_libraries[OvmsBaseType.UBUNTU] | dynamic_libraries[OvmsBaseType.UBUNTU22],
-                                  "python": dynamic_libraries[OvmsBaseType.UBUNTU_PYTHON] | dynamic_libraries[OvmsBaseType.UBUNTU22_PYTHON]},
-    OvmsType.UBUNTU22_NGINX: {"default": dynamic_libraries[OvmsBaseType.COMMON]  | dynamic_libraries[OvmsBaseType.UBUNTU] | dynamic_libraries[OvmsBaseType.UBUNTU22],
-                                   "python": dynamic_libraries[OvmsBaseType.UBUNTU_PYTHON] | dynamic_libraries[OvmsBaseType.UBUNTU22_PYTHON]},
     OvmsType.UBUNTU24: {"default": dynamic_libraries[OvmsBaseType.COMMON] | dynamic_libraries[OvmsBaseType.UBUNTU] | dynamic_libraries[OvmsBaseType.UBUNTU24],
                              "python": dynamic_libraries[OvmsBaseType.UBUNTU24_PYTHON]},
     OvmsType.UBUNTU24_GPU: {"default": dynamic_libraries[OvmsBaseType.COMMON] | dynamic_libraries[OvmsBaseType.UBUNTU] | dynamic_libraries[OvmsBaseType.UBUNTU24],
@@ -130,13 +117,7 @@ libraries = {
         'libopenvino_intel_npu_plugin.so',
         'libopenvino_intel_npu_vm_runtime.so',
     },
-    OvmsBaseType.UBUNTU22: set(),
     OvmsBaseType.UBUNTU24: set(),
-    OvmsBaseType.UBUNTU22_PYTHON: {
-        'libovmspython.so',
-        'libovms_mediapipe_runtime_shared.so',
-        'libpython_calculators.so',
-    },
     OvmsBaseType.UBUNTU24_PYTHON: {
         'libovmspython.so',
         'libovms_mediapipe_runtime_shared.so',
@@ -211,12 +192,6 @@ libraries = {
 }
 
 whitelisted_libraries = {
-    OvmsType.UBUNTU22: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU22],
-                             "python": libraries[OvmsBaseType.UBUNTU22_PYTHON]},
-    OvmsType.UBUNTU22_GPU: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU22],
-                                  "python": libraries[OvmsBaseType.UBUNTU22_PYTHON]},
-    OvmsType.UBUNTU22_NGINX: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU22],
-                                   "python": libraries[OvmsBaseType.UBUNTU22_PYTHON]},
     OvmsType.UBUNTU24: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU24],
                              "python": libraries[OvmsBaseType.UBUNTU24_PYTHON]},
     OvmsType.UBUNTU24_GPU: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU24],
@@ -242,17 +217,6 @@ packages = {
         'libexpat1',
         'libsqlite3-0',
         'readline-common',
-    },
-    OvmsBaseType.UBUNTU22: {
-        'libicu70'
-    },
-    OvmsBaseType.UBUNTU22_PYTHON: {
-        'libmpdec3',
-        'libreadline8',
-        'libpython3.10',
-        'libpython3.10-minimal',
-        'libpython3.10-stdlib',
-        'media-types',
     },
     OvmsBaseType.UBUNTU24: {
         'libicu74',
@@ -318,12 +282,6 @@ packages = {
 }
 
 whitelisted_packages = {
-    OvmsType.UBUNTU22: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU22],
-                             "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU22_PYTHON]},
-    OvmsType.UBUNTU22_GPU: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU22] | packages[OvmsBaseType.UBUNTU_GPU],
-                                 "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU22_PYTHON]},
-    OvmsType.UBUNTU22_NGINX: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU22] | packages[OvmsBaseType.UBUNTU_NGINX],
-                                   "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU22_PYTHON]},
     OvmsType.UBUNTU24: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU24],
                              "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU24_PYTHON]},
     OvmsType.UBUNTU24_GPU: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU24] | packages[OvmsBaseType.UBUNTU_GPU],

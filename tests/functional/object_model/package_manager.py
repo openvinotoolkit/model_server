@@ -45,7 +45,7 @@ class PackageManager(ABC):
     def create(base_os=OsType.Ubuntu24):
         if OsType.Redhat in base_os:
             return MicrodnfPackageManager()
-        elif OsType.Ubuntu22 in base_os or OsType.Ubuntu24 in base_os:
+        elif OsType.Ubuntu24 in base_os:
             return AptPackageManager()
 
         raise NotImplementedError()

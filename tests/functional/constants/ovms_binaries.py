@@ -33,7 +33,7 @@ from tests.functional.constants.paths import Paths
 logger = get_logger(__name__)
 
 
-def calculate_ovms_binary_name(base_os=OsType.Ubuntu22):
+def calculate_ovms_binary_name(base_os=OsType.Ubuntu24):
     if len(ovms_c_release_artifacts_path) == 1:
         return ovms_c_release_artifacts_path[0]
     for binary_name in ovms_c_release_artifacts_path:
