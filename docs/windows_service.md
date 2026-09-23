@@ -15,6 +15,13 @@ sc start ovms
 ```
 Change the script parameter with model repository path if needed
 
+> **Security note:** The service runs as LocalSystem and reloads `config.json` from the model repository directory
+> automatically, including any `custom_node_library_config_list` entries, which are loaded as native DLLs.
+> `install_ovms_service.bat` restricts the model repository directory to Administrators and SYSTEM only.
+> Do not point the service at a directory that non-administrator accounts can write to, and do not relax
+> its permissions afterward — anyone able to modify `config.json` can execute arbitrary code as LocalSystem.
+
+
 During the installation, model repository path will be set in environment variable OVMS_MODEL_REPOSITORY_PATH, which defines default parameters for ovms CLI to interact with the service.
 
 Optionally you can change the default service parameters like below:

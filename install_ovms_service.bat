@@ -52,6 +52,13 @@ IF /I EXIST "!config_path!" (
 )
 popd
 
+::::::::::::::::::::::: Restrict repository ACL: config.json controls native code loading, must not be writable by non-admins
+echo [INFO] Restricting model repository permissions to Administrators and SYSTEM
+icacls "!OVMS_MODEL_REPOSITORY_PATH!" /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" >nul
+if !errorlevel! neq 0 (
+    echo [WARNING] Failed to restrict permissions on !OVMS_MODEL_REPOSITORY_PATH!. Ensure only administrators can write to this directory.
+)
+
 echo Using model repository path !OVMS_MODEL_REPOSITORY_PATH!
 
 set "OVMS_DIR=%~dp0"
