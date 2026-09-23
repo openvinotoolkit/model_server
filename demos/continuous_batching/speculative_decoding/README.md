@@ -196,6 +196,7 @@ response = client.chat.completions.create(
     model="OpenVINO/gemma-4-31B-it-int4-ov",
     messages=[{"role": "user", "content": "Describe the scene in this image."}],
     temperature=0,
+    max_tokens=200,
     extra_body={"num_assistant_tokens": 5},
 )
 print(response.choices[0].message.content)
