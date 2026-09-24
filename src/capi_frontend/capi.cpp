@@ -465,12 +465,9 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVM
 
 DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds) {
-    if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
-    }
-    auto* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
-    serverSettings->resourcesCleanerPollWaitSeconds = seconds;
-    return nullptr;
+    (void)settings;
+    (void)seconds;
+    return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NOT_IMPLEMENTED, "DAGs are no longer supported"));
 }
 
 DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetCpuExtensionPath(OVMS_ServerSettings* settings,

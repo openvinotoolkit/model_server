@@ -166,8 +166,8 @@ public:
         return modelMock;
     }
 
-    void setResourcesCleanupIntervalMillisec(uint32_t value) {
-        this->resourcesCleanupIntervalMillisec = value;
+    void setMemoryTrimmingIntervalMilliseconds(uint32_t value) {
+        this->memoryTrimmingIntervalMilliseconds = value;
     }
 };
 

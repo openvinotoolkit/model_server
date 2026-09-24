@@ -253,7 +253,7 @@ ModelManager::~ModelManager() {
 
 Status ModelManager::start(const Config& config) {
     this->watcherIntervalMillisec = config.filesystemPollWaitMilliseconds();
-    this->resourcesCleanupIntervalMillisec = config.resourcesCleanerPollWaitSeconds() * 1000;
+    this->memoryTrimmingIntervalMilliseconds = config.memoryTrimmingIntervalSeconds() * 1000;
     Status status;
     this->startedWithConfigFile = (config.configPath() != "");
 
@@ -273,7 +273,7 @@ Status ModelManager::start(const Config& config) {
         return status;
     }
     startWatcher(isStartedWithConfigFile());
-    if (resourcesCleanupIntervalMillisec > 0)
+    if (this->memoryTrimmingIntervalMilliseconds > 0)
         startCleaner();
     return status;
 }
@@ -290,7 +290,7 @@ void ModelManager::startWatcher(bool watchConfigFile) {
 void ModelManager::startCleaner() {
     if (!cleanerStarted) {
         std::future<void> exitSignal = cleanerExitTrigger.get_future();
-        cleanerThread = std::thread(&ModelManager::cleanerRoutine, this, resourcesCleanupIntervalMillisec, std::move(exitSignal));
+        cleanerThread = std::thread(&ModelManager::cleanerRoutine, this, memoryTrimmingIntervalMilliseconds, std::move(exitSignal));
         cleanerStarted = true;
     }
 }
@@ -1161,10 +1161,10 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
 }
 
-void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalMilliseconds, std::future<void> cleanerExitSignal) {
+void ModelManager::cleanerRoutine(uint32_t memoryTrimmingIntervalMilliseconds, std::future<void> cleanerExitSignal) {
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Started cleaner thread");
     FunctorResourcesCleaner cleaner(*this);
-    while (cleanerExitSignal.wait_for(std::chrono::milliseconds(resourcesCleanupIntervalMilliseconds)) == std::future_status::timeout) {
+    while (cleanerExitSignal.wait_for(std::chrono::milliseconds(memoryTrimmingIntervalMilliseconds)) == std::future_status::timeout) {
         cleaner.cleanup();
     }
 }

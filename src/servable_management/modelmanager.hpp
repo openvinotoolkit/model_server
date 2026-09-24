@@ -137,7 +137,7 @@ private:
     /**
      * @brief Cleaner thread for resources cleanup
      */
-    void cleanerRoutine(uint32_t resourcesCleanupIntervalMillisec, std::future<void> cleanerExitSignal);
+    void cleanerRoutine(uint32_t memoryTrimmingIntervalMilliseconds, std::future<void> cleanerExitSignal);
 
     /**
      * @brief A JSON configuration filename
@@ -195,7 +195,7 @@ protected:
     uint32_t watcherIntervalMillisec = 1000;
     static const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
 
-    uint32_t resourcesCleanupIntervalMillisec = 300000;
+    uint32_t memoryTrimmingIntervalMilliseconds = 300000;
 
 protected:
     std::unique_ptr<ServableGroupManager> servableGroupManager;
@@ -257,8 +257,8 @@ public:
         return watcherIntervalMillisec;
     }
 
-    uint32_t getResourcesCleanupIntervalMillisec() {
-        return resourcesCleanupIntervalMillisec;
+    uint32_t getMemoryTrimmingIntervalMilliseconds() {
+        return memoryTrimmingIntervalMilliseconds;
     }
 
     /**
