@@ -1,4 +1,3 @@
-#pragma once
 //*****************************************************************************
 // Copyright 2026 Intel Corporation
 //
@@ -14,18 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <cstddef>
-#include <string>
+#include "curl_global_initializer.hpp"
+
+#include <curl/curl.h>
+
+#include "logging.hpp"
 
 namespace ovms {
-class Status;
 
-Status downloadFileWithCurl(const std::string& url, const std::string& filePath);
-Status downloadFileWithCurl(const std::string& url, const std::string& filePath, const std::string& authTokenHF);
-Status fetchUrlToString(const std::string& url, const std::string& authToken, std::string& responseBody);
+Status initializeCurlGlobal() {
+    const CURLcode initResult = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (initResult != CURLE_OK) {
+        SPDLOG_ERROR("curl error: {}. Error code: {}", curl_easy_strerror(initResult), (int)initResult);
+        return StatusCode::INTERNAL_ERROR;
+    }
+    return StatusCode::OK;
+}
 
-// Number of filled cells in a barWidth-wide progress bar for count out of max bytes,
-// clamped to [0, barWidth]. max == 0 means the server sent no Content-Length
-int computeProgressBarCells(size_t count, size_t max, int barWidth);
+void cleanupCurlGlobal() {
+    curl_global_cleanup();
+}
 
 }  // namespace ovms
