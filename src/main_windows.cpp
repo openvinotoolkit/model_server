@@ -158,6 +158,7 @@ int main_windows(int argc, char** argv) {
 }
 
 SERVICE_STATUS OvmsWindowsServiceManager::serviceStatus = {0};
+std::mutex OvmsWindowsServiceManager::serviceStateMutex;
 std::unique_ptr<WinServiceStatusWrapper> OvmsWindowsServiceManager::statusHandle = std::make_unique<WinServiceStatusWrapper>();
 std::unique_ptr<WinServiceEventWrapper> OvmsWindowsServiceManager::serviceStopEvent = std::make_unique<WinServiceEventWrapper>();
 std::atomic<ServiceLifecycleState> OvmsWindowsServiceManager::serviceLifecycleState{ServiceLifecycleState::Stopped};
@@ -535,16 +536,18 @@ void WINAPI OvmsWindowsServiceManager::serviceCtrlHandler(DWORD CtrlCode) {
     switch (CtrlCode) {
     case SERVICE_CONTROL_STOP:
         DEBUG_LOG("serviceCtrlHandler: SERVICE_CONTROL_STOP Request");
-        if (serviceStatus.dwCurrentState != SERVICE_RUNNING &&
-            serviceStatus.dwCurrentState != SERVICE_START_PENDING &&
-            serviceStatus.dwCurrentState != SERVICE_STOP_PENDING)
-            break;
+        {
+            std::lock_guard<std::mutex> lock(serviceStateMutex);
+            if (serviceStatus.dwCurrentState != SERVICE_RUNNING &&
+                serviceStatus.dwCurrentState != SERVICE_START_PENDING &&
+                serviceStatus.dwCurrentState != SERVICE_STOP_PENDING)
+                break;
 
-        if (serviceStatus.dwCurrentState != SERVICE_STOP_PENDING) {
-            setServiceStopStatusPending();
+            if (serviceStatus.dwCurrentState != SERVICE_STOP_PENDING) {
+                setServiceStopStatusPending();
+            }
+            serviceLifecycleState.store(ServiceLifecycleState::StopRequested);
         }
-        // Atomically prevent the startup path from publishing RUNNING.
-        serviceLifecycleState.store(ServiceLifecycleState::StopRequested);
         if (!SetEvent(serviceStopEvent->handle)) {
             const DWORD setEventError = GetLastError();
             DEBUG_LOG("serviceCtrlHandler: SetEvent returned error");
@@ -636,6 +639,7 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
 }
 
 void OvmsWindowsServiceManager::setServiceStartStatus() {
+    std::lock_guard<std::mutex> lock(serviceStateMutex);
     ZeroMemory(&serviceStatus, sizeof(serviceStatus));
     serviceStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
     serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
@@ -652,6 +656,7 @@ void OvmsWindowsServiceManager::setServiceStartStatus() {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusWithError(DWORD errorCode) {
+    std::lock_guard<std::mutex> lock(serviceStateMutex);
     serviceLifecycleState.store(ServiceLifecycleState::Stopped);
     serviceStatus.dwControlsAccepted = 0;
     serviceStatus.dwCurrentState = SERVICE_STOPPED;
@@ -665,6 +670,7 @@ void OvmsWindowsServiceManager::setServiceStopStatusWithError(DWORD errorCode) {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusWithExitCode(const int& exitCode) {
+    std::lock_guard<std::mutex> lock(serviceStateMutex);
     serviceLifecycleState.store(ServiceLifecycleState::Stopped);
     DWORD exitToError = static_cast<DWORD>(exitCode);
     // Map known exit code to known win errors for proper service status report on error
@@ -702,6 +708,7 @@ void OvmsWindowsServiceManager::setServiceStopStatusWithExitCode(const int& exit
 }
 
 bool OvmsWindowsServiceManager::setServiceRunningStatus() {
+    std::lock_guard<std::mutex> lock(serviceStateMutex);
     ServiceLifecycleState expected = ServiceLifecycleState::Starting;
     if (!OvmsWindowsServiceManager::serviceLifecycleState.compare_exchange_strong(expected, ServiceLifecycleState::Running)) {
         return false;
@@ -827,6 +834,7 @@ void OvmsWindowsServiceManager::setPythonPathRegistry() {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusPending() {
+    serviceLifecycleState.store(ServiceLifecycleState::StopRequested);
     serviceStatus.dwControlsAccepted = 0;
     serviceStatus.dwCurrentState = SERVICE_STOP_PENDING;
     serviceStatus.dwWin32ExitCode = 0;
@@ -840,6 +848,7 @@ void OvmsWindowsServiceManager::setServiceStopStatusPending() {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusWithSuccess() {
+    std::lock_guard<std::mutex> lock(serviceStateMutex);
     serviceLifecycleState.store(ServiceLifecycleState::Stopped);
     serviceStatus.dwControlsAccepted = 0;
     serviceStatus.dwCurrentState = SERVICE_STOPPED;

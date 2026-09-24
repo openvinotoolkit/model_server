@@ -19,6 +19,7 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <Windows.h>
@@ -114,6 +115,7 @@ public:
 private:
     // Members
     static SERVICE_STATUS serviceStatus;
+    static std::mutex serviceStateMutex;
     static std::unique_ptr<WinServiceStatusWrapper> statusHandle;
     static std::unique_ptr<WinServiceEventWrapper> serviceStopEvent;
     static std::atomic<ServiceLifecycleState> serviceLifecycleState;
