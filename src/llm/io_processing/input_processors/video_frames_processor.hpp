@@ -25,8 +25,9 @@ namespace ovms {
 
 // Decodes video_url content entries from ChatHistory messages into video tensors
 // and rewrites each video_url part into a text part carrying an
-// <ov_genai_video_N> tag. Runs before ImageDecodingProcessor, which then flattens
-// the message content (text + image tags + video tags) into a single string.
+// <ov_genai_video_N> tag. Runs after ImageDecodingProcessor and before
+// TextContentNormalizationProcessor, which then flattens the message content
+// (text + image tags + video tags) into a single string.
 // Each video_url entry carries a "url" array of already-decoded frame references
 // (base64 data URIs, HTTP/HTTPS URLs or local file paths); mp4 decoding is done
 // on the client side.
