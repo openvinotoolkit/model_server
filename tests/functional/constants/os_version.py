@@ -19,6 +19,7 @@ from tests.functional.constants.os_type import OsType
 REDHAT_MINIMAL_BASE_IMAGE = "registry.access.redhat.com/ubi9/ubi-minimal:9.7"
 REDHAT_COMMON_BASE_IMAGE = "registry.access.redhat.com/ubi9/ubi:9.7"
 UBUNTU_24_BASE_IMAGE = "ubuntu:24.04"
+UBUNTU_22_BASE_IMAGE = UBUNTU_24_BASE_IMAGE
 
 os_type_to_base_image = {
     OsType.Redhat: REDHAT_COMMON_BASE_IMAGE,
