@@ -68,7 +68,7 @@ and run make release_image with parameter: INSTALL_DRIVER_VERSION=dg2.
 
 Example:
 ```bash
-make release_image BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
+make release_image BASE_OS=ubuntu24 INSTALL_DRIVER_VERSION=dg2
 ```
 
 <hr />

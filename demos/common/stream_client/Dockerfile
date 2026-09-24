@@ -92,8 +92,8 @@ RUN git clone https://github.com/opencv/opencv.git /opencv --branch 4.8.1 && \
   -DPYTHON_EXECUTABLE=$(which python) -DBUILD_opencv_python2=OFF \
   -DCMAKE_INSTALL_PREFIX=$(python3 -c "import sys; print(sys.prefix)") \
   -DPYTHON3_EXECUTABLE=$(which python3) \
-  -DPYTHON3_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
-  -DPYTHON3_PACKAGES_PATH=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") .. && \
+  -DPYTHON3_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_path('include'))") \
+  -DPYTHON3_PACKAGES_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_path('purelib'))") .. && \
   make -j $JOBS && \
   make install
 
@@ -109,7 +109,7 @@ RUN ln -s /lib/libvpl.so /lib/libvpl.so.2
 COPY --from=BASE /lib64 /lib64
 COPY --from=BASE /cvlib /lib/x86_64-linux-gnu/
 COPY --from=BASE /fflib /lib/x86_64-linux-gnu/
-RUN apt-get update -qq && apt-get --no-install-recommends -y install python3 python3-pip libavcodec58 libavformat58 libswscale5 libgstreamer-opencv1.0-0 gstreamer1.0* && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -qq && apt-get --no-install-recommends -y install python3 python3-pip libavcodec60 libavformat60 libswscale7 libgstreamer-opencv1.0-0 gstreamer1.0* && rm -rf /var/lib/apt/lists/*
 COPY ./requirements.txt ./requirements.txt 
 RUN sed -i '/opencv-python/d' requirements.txt && pip3 install -r requirements.txt
 RUN python3 -c "import cv2 ; print(cv2.getBuildInformation()) "

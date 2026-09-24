@@ -28,14 +28,15 @@ BASE_OS_TAG_REDHAT ?= 8.10
 NODES ?= add_one east_ocr face_blur horizontal_ocr image_transformation model_zoo_intel_object_detection
 NODE_TYPE ?= cpp
 
-ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+ifeq ($(BASE_OS),$(filter $(BASE_OS),ubuntu ubuntu24))
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
   DIST_OS=ubuntu
-endif
-ifeq ($(BASE_OS),redhat)
+else ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
+else
+  $(error BASE_OS must be either ubuntu, ubuntu24 or redhat)
 endif
 BASE_IMAGE=$(DIST_OS):$(BASE_OS_TAG)
 
