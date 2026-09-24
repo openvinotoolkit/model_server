@@ -23,7 +23,7 @@ Running this command starts the container:
 mkdir -p models
 # in case GPU is available
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:2026.4.0-gpu --rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path /models --allowed_media_domains raw.githubusercontent.com
+docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw -e OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 openvino/model_server:2026.4.0-gpu --rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path /models --allowed_media_domains raw.githubusercontent.com
 ```
 :::
 
@@ -33,6 +33,7 @@ If you run on GPU make sure to have appropriate drivers installed, so the device
 
 ```bat
 mkdir c:\models
+set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1
 ovms --rest_port 8000 --source_model OpenVINO/Qwen3.6-35B-A3B-int4-ov --model_repository_path c:\models --allowed_media_domains raw.githubusercontent.com
 ```
 
