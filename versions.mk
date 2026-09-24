@@ -19,9 +19,9 @@
 # Any variable can be overridden by the environment or command-line.
 
 # Source repository git commits / branches (used for source builds)
-OV_SOURCE_BRANCH ?= 4977f92a234f07b963ad2baf028eab837d1b5869
-OV_TOKENIZERS_BRANCH ?= b40486a0aac26255806ea9895ec9aa8b3cef6b9c
-OV_GENAI_BRANCH ?= fe818c0467feb17b87c5adfb3f7e28dd70b76e99
+OV_SOURCE_BRANCH ?= db5e03ddf37b5f09f0bb34a2e6d9d928b0a5af5f
+OV_TOKENIZERS_BRANCH ?= 16a2df6f755d9e962d918a4435aab20ddb37e860
+OV_GENAI_BRANCH ?= 7c73aff690accf01f68748a83aeda9818355b83d
 
 # Source repository organizations
 OV_SOURCE_ORG ?= openvinotoolkit
@@ -29,10 +29,10 @@ OV_GENAI_ORG ?= openvinotoolkit
 OV_TOKENIZERS_ORG ?= openvinotoolkit	
 
 # Binary package URLs for each supported platform.
-DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20260911/openvino_genai_ubuntu24_2026.5.0.0.dev20260911_x86_64.tar.gz
-DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20260911/openvino_genai_ubuntu22_2026.5.0.0.dev20260911_x86_64.tar.gz
-DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20260911/openvino_genai_rhel9_2026.5.0.0.dev20260911_x86_64.tar.gz
-GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20260911/openvino_genai_windows_2026.5.0.0.dev20260911_x86_64.zip
+DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20260923/openvino_genai_ubuntu24_2026.5.0.0.dev20260923_x86_64.tar.gz
+DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20260923/openvino_genai_ubuntu22_2026.5.0.0.dev20260923_x86_64.tar.gz
+DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20260923/openvino_genai_rhel9_2026.5.0.0.dev20260923_x86_64.tar.gz
+GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20260923/openvino_genai_windows_2026.5.0.0.dev20260923_x86_64.zip
 
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.14.0
