@@ -30,6 +30,7 @@
 #include "rest_parser.hpp"
 #include "status.hpp"
 #include "tensorinfo_fwd.hpp"
+#include "webrtc/webrtc_session_controller.hpp"
 
 namespace ovms {
 class ServableMetricReporter;
@@ -50,6 +51,10 @@ enum RequestType { ConfigReload,
     V3_RetrieveModel,
     V3,
     Metrics,
+    WebRTC_CreateSession,
+    WebRTC_AddCandidate,
+    WebRTC_GetCandidates,
+    WebRTC_RemoveSession,
     Options };
 
 struct HttpRequestComponents {
@@ -60,6 +65,7 @@ struct HttpRequestComponents {
     std::optional<std::string_view> model_version_label;
     std::string processing_method;
     std::string model_subresource;
+    std::string webrtc_session_id;
     std::optional<int> inferenceHeaderContentLength;
     std::unordered_map<std::string, std::string> headers;
 };
@@ -95,6 +101,9 @@ public:
     static const std::string kfs_inferRegexExp;
 
     static const std::string metricsRegexExp;
+    static const std::string webrtcSessionRegexExp;
+    static const std::string webrtcCandidatesRegexExp;
+    static const std::string webrtcCloseRegexExp;
 
     static const std::string kfs_serverreadyRegexExp;
     static const std::string kfs_serverliveRegexExp;
@@ -162,6 +171,10 @@ public:
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
     Status processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body);
+    Status processWebRtcCreateSession(std::string& response, const std::string& request_body);
+    Status processWebRtcAddCandidate(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processWebRtcGetCandidates(const HttpRequestComponents& request_components, std::string& response);
+    Status processWebRtcRemoveSession(const HttpRequestComponents& request_components, std::string& response);
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
@@ -191,6 +204,9 @@ private:
     const std::regex v3_Regex;
 
     const std::regex metricsRegex;
+    const std::regex webrtcSessionRegex;
+    const std::regex webrtcCandidatesRegex;
+    const std::regex webrtcCloseRegex;
 
     std::map<RequestType, HandlerCallbackFn> handlers;
     int timeout_in_ms;
@@ -198,6 +214,7 @@ private:
     ovms::Server& ovmsServer;
     ovms::KFSInferenceServiceImpl& kfsGrpcImpl;
     ovms::ModelManager& modelManager;
+    WebRtcSessionController webRtcSessionController;
 
     Status getReporter(const HttpRequestComponents& components, ovms::ServableMetricReporter*& reporter);
     Status getPipelineInputsAndReporter(const std::string& modelName, ovms::tensor_map_t& inputs, ovms::ServableMetricReporter*& reporter);

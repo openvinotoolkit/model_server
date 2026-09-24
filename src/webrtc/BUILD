@@ -68,6 +68,20 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
+ovms_cc_library(
+    name = "webrtc_session_controller",
+    srcs = ["webrtc_session_controller.cpp"],
+    hdrs = ["webrtc_session_controller.hpp"],
+    deps = [
+        ":mock_echo_streaming_audio_model",
+        ":opus_audio_codec",
+        ":streaming_audio_processor",
+        ":webrtc_peer_connection",
+        "@libdatachannel//:libdatachannel",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 # Standalone smoke test, isolated from the monolithic //src:ovms_test binary
 # so this POC module can be iterated on without rebuilding the full test suite.
 cc_test(
@@ -92,6 +106,16 @@ cc_test(
     linkstatic = 1,
     deps = [
         ":webrtc_signaling_session",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "webrtc_session_controller_test",
+    srcs = ["webrtc_session_controller_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":webrtc_session_controller",
         "@com_google_googletest//:gtest_main",
     ],
 )

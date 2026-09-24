@@ -1,0 +1,40 @@
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "HuggingFaceTB/SmolLM2-360M-Instruct",
+                "base_path": "src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct"
+            }
+        },
+        {
+            "config": {
+                "name": "facebook/opt-125m",
+                "base_path": "src/test/llm_testing/facebook/opt-125m"
+            }
+        },
+        {
+            "config": {
+                "name": "hexgrad/Kokoro-82M",
+                "base_path": "src/test/llm_testing/hexgrad/Kokoro-82M"
+            }
+        },
+        {
+            "config": {
+                "name": "openai/whisper-tiny",
+                "base_path": "src/test/llm_testing/openai/whisper-tiny"
+            }
+        },
+        {
+            "config": {
+                "name": "thenlper/gte-small/ov",
+                "base_path": "src/test/llm_testing/thenlper/gte-small/ov"
+            }
+        },
+        {
+            "config": {
+                "name": "BAAI/bge-reranker-base/ov",
+                "base_path": "src/test/llm_testing/BAAI/bge-reranker-base/ov"
+            }
+        }
+    ]
+}

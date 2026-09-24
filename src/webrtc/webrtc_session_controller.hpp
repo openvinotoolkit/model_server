@@ -16,8 +16,9 @@
 #pragma once
 
 #include <cstddef>
-#include <memory>
+#include <condition_variable>
 #include <mutex>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -47,6 +48,7 @@ public:
 
     bool createSession(const std::string& offerSdp, const std::string& offerType, OfferResult& result);
     bool addCandidate(const std::string& sessionId, const std::string& candidate, const std::string& mid);
+    bool getCandidates(const std::string& sessionId, std::vector<Candidate>& candidates) const;
     bool removeSession(const std::string& sessionId);
     size_t sessionCount() const;
 
@@ -61,6 +63,8 @@ private:
         std::vector<Candidate> localCandidates;
         std::string localType;
         std::string localSdp;
+        std::condition_variable descriptionReady;
+        std::mutex mutex;
     };
 
     mutable std::mutex mutex_;

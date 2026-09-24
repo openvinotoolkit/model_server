@@ -24,21 +24,44 @@
 
 namespace ovms {
 
+namespace {
+const char* toString(rtc::PeerConnection::State state) {
+    switch (state) {
+    case rtc::PeerConnection::State::New:
+        return "New";
+    case rtc::PeerConnection::State::Connecting:
+        return "Connecting";
+    case rtc::PeerConnection::State::Connected:
+        return "Connected";
+    case rtc::PeerConnection::State::Disconnected:
+        return "Disconnected";
+    case rtc::PeerConnection::State::Failed:
+        return "Failed";
+    case rtc::PeerConnection::State::Closed:
+        return "Closed";
+    default:
+        return "Unknown";
+    }
+}
+}  // namespace
+
 WebRtcPeerConnection::WebRtcPeerConnection(rtc::Configuration configuration) :
     peerConnection_(std::make_shared<rtc::PeerConnection>(std::move(configuration))) {
     peerConnection_->onStateChange([](rtc::PeerConnection::State state) {
-        SPDLOG_LOGGER_DEBUG(webrtc_logger, "PeerConnection state changed: {}", static_cast<int>(state));
+        SPDLOG_LOGGER_INFO(webrtc_logger, "PeerConnection state changed: {}", toString(state));
     });
 }
 
 void WebRtcPeerConnection::onLocalDescription(DescriptionCallback callback) {
     peerConnection_->onLocalDescription([callback](rtc::Description description) {
+        SPDLOG_LOGGER_INFO(webrtc_logger, "Local description created, type: {}", description.typeString());
         callback(std::string(description), description.typeString());
     });
 }
 
 void WebRtcPeerConnection::onLocalCandidate(CandidateCallback callback) {
     peerConnection_->onLocalCandidate([callback](rtc::Candidate candidate) {
+        SPDLOG_LOGGER_DEBUG(webrtc_logger, "Local ICE candidate gathered, mid: {}, candidate: {}", candidate.mid(), candidate.candidate());
         callback(candidate.candidate(), candidate.mid());
     });
 }
@@ -47,7 +70,7 @@ void WebRtcPeerConnection::onStateChange(StateCallback callback) {
     // libdatachannel keeps a single onStateChange handler, so wrap the caller's
     // callback to preserve the constructor's debug logging.
     peerConnection_->onStateChange([callback](rtc::PeerConnection::State state) {
-        SPDLOG_LOGGER_DEBUG(webrtc_logger, "PeerConnection state changed: {}", static_cast<int>(state));
+        SPDLOG_LOGGER_INFO(webrtc_logger, "PeerConnection state changed: {}", toString(state));
         callback(state);
     });
 }
@@ -95,15 +118,24 @@ void WebRtcPeerConnection::configureAudioTrackCallbacks() {
     audioTrackCallbacksConfigured_ = true;
     peerConnection_->onTrack([this](std::shared_ptr<rtc::Track> track) {
         if (track->description().type() != "audio") {
+            SPDLOG_LOGGER_DEBUG(webrtc_logger, "Ignoring non-audio track, mid: {}", track->mid());
             return;
         }
+        SPDLOG_LOGGER_INFO(webrtc_logger, "Received remote audio track, mid: {}", track->mid());
         remoteAudioTracks_.push_back(track);
         if (audioTrackCallback_) {
             audioTrackCallback_();
         }
         if (audioFrameCallback_ || audioProcessor_) {
-            track->setMediaHandler(std::make_shared<rtc::OpusRtpDepacketizer>());
+            // Chain a packetizer after the depacketizer so this same (sendrecv)
+            // remote track can also be used to send processed audio back,
+            // without adding a second local m-line via addAudioTrack().
+            auto depacketizer = std::make_shared<rtc::OpusRtpDepacketizer>();
+            auto packetizationConfig = std::make_shared<rtc::RtpPacketizationConfig>(1, "ovms", 111, 48000);
+            depacketizer->addToChain(std::make_shared<rtc::OpusRtpPacketizer>(std::move(packetizationConfig)));
+            track->setMediaHandler(depacketizer);
             track->onFrame([this](rtc::binary data, rtc::FrameInfo info) {
+                SPDLOG_LOGGER_TRACE(webrtc_logger, "Received audio frame, {} bytes, timestamp: {}", data.size(), info.timestamp);
                 if (audioFrameCallback_) {
                     audioFrameCallback_(data, info);
                 }
@@ -116,6 +148,7 @@ void WebRtcPeerConnection::configureAudioTrackCallbacks() {
                         encoded[index] = std::to_integer<uint8_t>(data[index]);
                     }
                     const auto processed = audioProcessor_->process(encoded, timestampUs);
+                    SPDLOG_LOGGER_TRACE(webrtc_logger, "Processed audio frame, {} bytes in, {} bytes out", encoded.size(), processed.size());
                     if (processedAudioFrameCallback_) {
                         rtc::binary output(processed.size());
                         for (size_t index = 0; index < processed.size(); ++index) {
@@ -128,15 +161,20 @@ void WebRtcPeerConnection::configureAudioTrackCallbacks() {
         }
         if (audioTrackOpenCallback_) {
             if (track->isOpen()) {
+                SPDLOG_LOGGER_INFO(webrtc_logger, "Remote audio track already open, mid: {}", track->mid());
                 audioTrackOpenCallback_();
             } else {
-                track->onOpen(audioTrackOpenCallback_);
+                track->onOpen([this, track, callback = audioTrackOpenCallback_] {
+                    SPDLOG_LOGGER_INFO(webrtc_logger, "Remote audio track opened, mid: {}", track->mid());
+                    callback();
+                });
             }
         }
     });
 }
 
 void WebRtcPeerConnection::addAudioTrack(rtc::Description::Direction direction) {
+    SPDLOG_LOGGER_INFO(webrtc_logger, "Adding local audio track, direction: {}", static_cast<int>(direction));
     rtc::Description::Audio audio("audio", direction);
     audio.addOpusCodec(111);
     audio.addSSRC(1, "ovms-audio", "ovms-audio", "ovms-audio");
@@ -153,26 +191,35 @@ void WebRtcPeerConnection::addAudioTrack(rtc::Description::Direction direction) 
 }
 
 void WebRtcPeerConnection::createOffer() {
+    SPDLOG_LOGGER_INFO(webrtc_logger, "Creating local SDP offer");
     peerConnection_->setLocalDescription();
 }
 
 void WebRtcPeerConnection::createAnswer() {
+    SPDLOG_LOGGER_INFO(webrtc_logger, "Creating local SDP answer");
     peerConnection_->setLocalDescription();
 }
 
 bool WebRtcPeerConnection::sendAudioFrame(rtc::binary data, rtc::FrameInfo info) {
-    if (!audioTrack_) {
+    // Answering a browser's single sendrecv m-line reuses that remote track for
+    // sending back; a distinct local track is only added when we are the offerer.
+    const auto& track = audioTrack_ ? audioTrack_ : (remoteAudioTracks_.empty() ? nullptr : remoteAudioTracks_.back());
+    if (!track) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Cannot send audio frame, no local or remote audio track available");
         return false;
     }
-    audioTrack_->sendFrame(std::move(data), info);
+    SPDLOG_LOGGER_TRACE(webrtc_logger, "Sending audio frame, {} bytes, timestamp: {}", data.size(), info.timestamp);
+    track->sendFrame(std::move(data), info);
     return true;
 }
 
 void WebRtcPeerConnection::setRemoteDescription(const std::string& sdp, const std::string& type) {
+    SPDLOG_LOGGER_INFO(webrtc_logger, "Setting remote description, type: {}", type);
     peerConnection_->setRemoteDescription(rtc::Description(sdp, type));
 }
 
 void WebRtcPeerConnection::addRemoteCandidate(const std::string& candidate, const std::string& mid) {
+    SPDLOG_LOGGER_DEBUG(webrtc_logger, "Adding remote ICE candidate, mid: {}, candidate: {}", mid, candidate);
     peerConnection_->addRemoteCandidate(rtc::Candidate(candidate, mid));
 }
 

@@ -60,6 +60,7 @@
 #include "rest_utils.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
 #include "server.hpp"
+#include "src/logging.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
 #include "timer.hpp"
@@ -116,6 +117,9 @@ const std::string HttpRestApiHandler::v3_RegexExp =
     R"((?:/v3/|/v1/).*?(/|$))";
 
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics(\?(.*))?)";
+const std::string HttpRestApiHandler::webrtcSessionRegexExp = R"(\/v1\/webrtc\/sessions)";
+const std::string HttpRestApiHandler::webrtcCandidatesRegexExp = R"(\/v1\/webrtc\/sessions\/([^/]+)\/candidates)";
+const std::string HttpRestApiHandler::webrtcCloseRegexExp = R"(\/v1\/webrtc\/sessions\/([^/]+)\/close)";
 
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms, const std::string& apiKey) :
     apiKey(apiKey),
@@ -131,6 +135,9 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     v3_RetrieveModelRegex(v3_RetrieveModelRegexExp),
     v3_Regex(v3_RegexExp),
     metricsRegex(metricsRegexExp),
+    webrtcSessionRegex(webrtcSessionRegexExp),
+    webrtcCandidatesRegex(webrtcCandidatesRegexExp),
+    webrtcCloseRegex(webrtcCloseRegexExp),
     timeout_in_ms(timeout_in_ms),
     ovmsServer(ovmsServer),
 
@@ -199,6 +206,18 @@ void HttpRestApiHandler::registerAll() {
     });
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processMetrics(request_components, response_components, response, request_body);
+    });
+    registerHandler(WebRTC_CreateSession, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
+        return processWebRtcCreateSession(response, request_body);
+    });
+    registerHandler(WebRTC_AddCandidate, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
+        return processWebRtcAddCandidate(request_components, response, request_body);
+    });
+    registerHandler(WebRTC_GetCandidates, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
+        return processWebRtcGetCandidates(request_components, response);
+    });
+    registerHandler(WebRTC_RemoveSession, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
+        return processWebRtcRemoveSession(request_components, response);
     });
     registerHandler(Options, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processOptions(request_components, response, request_body);
@@ -961,6 +980,20 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     }
 
     if (http_method == "POST") {
+        if (std::regex_match(request_path, sm, webrtcCloseRegex)) {
+            requestComponents.type = WebRTC_RemoveSession;
+            requestComponents.webrtc_session_id = urlDecode(sm[1]);
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, webrtcCandidatesRegex)) {
+            requestComponents.type = WebRTC_AddCandidate;
+            requestComponents.webrtc_session_id = urlDecode(sm[1]);
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, webrtcSessionRegex)) {
+            requestComponents.type = WebRTC_CreateSession;
+            return StatusCode::OK;
+        }
         if (std::regex_match(request_path, sm, kfs_inferRegex, std::regex_constants::match_any)) {
             requestComponents.type = KFS_Infer;
             requestComponents.model_name = urlDecode(sm[1]);
@@ -999,6 +1032,11 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
                    : StatusCode::REST_INVALID_URL;
 
     } else if (http_method == "GET") {
+        if (std::regex_match(request_path, sm, webrtcCandidatesRegex)) {
+            requestComponents.type = WebRTC_GetCandidates;
+            requestComponents.webrtc_session_id = urlDecode(sm[1]);
+            return StatusCode::OK;
+        }
         if (std::regex_match(request_path, sm, configStatusRegex)) {
             requestComponents.type = ConfigStatus;
             return StatusCode::OK;
@@ -1060,6 +1098,108 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         return StatusCode::OK;
     }
     return StatusCode::REST_INVALID_URL;
+}
+
+Status HttpRestApiHandler::processWebRtcCreateSession(std::string& response, const std::string& request_body) {
+    SPDLOG_LOGGER_INFO(webrtc_logger, "Received WebRTC session creation request over REST");
+    Document document;
+    document.Parse(request_body.c_str());
+    if (document.HasParseError() || !document.IsObject()) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Invalid JSON body in WebRTC session creation request");
+        return StatusCode::JSON_INVALID;
+    }
+    const auto sdp = document.FindMember("sdp");
+    const auto type = document.FindMember("type");
+    if (sdp == document.MemberEnd() || !sdp->value.IsString() || type == document.MemberEnd() || !type->value.IsString()) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Missing sdp/type fields in WebRTC session creation request");
+        return StatusCode::JSON_INVALID;
+    }
+
+    WebRtcSessionController::OfferResult result;
+    if (!webRtcSessionController.createSession(sdp->value.GetString(), type->value.GetString(), result)) {
+        SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to create WebRTC session");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    SPDLOG_LOGGER_INFO(webrtc_logger, "Returning WebRTC session {} to client", result.sessionId);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("session_id");
+    writer.String(result.sessionId.c_str());
+    writer.Key("type");
+    writer.String(result.type.c_str());
+    writer.Key("sdp");
+    writer.String(result.sdp.c_str());
+    writer.Key("candidates");
+    writer.StartArray();
+    for (const auto& candidate : result.candidates) {
+        writer.StartObject();
+        writer.Key("candidate");
+        writer.String(candidate.candidate.c_str());
+        writer.Key("mid");
+        writer.String(candidate.mid.c_str());
+        writer.EndObject();
+    }
+    writer.EndArray();
+    writer.EndObject();
+    response = buffer.GetString();
+    return StatusCode::OK;
+}
+
+Status HttpRestApiHandler::processWebRtcAddCandidate(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    Document document;
+    document.Parse(request_body.c_str());
+    if (document.HasParseError() || !document.IsObject()) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Invalid JSON body in ICE candidate request for session {}", request_components.webrtc_session_id);
+        return StatusCode::JSON_INVALID;
+    }
+    const auto candidate = document.FindMember("candidate");
+    const auto mid = document.FindMember("mid");
+    if (candidate == document.MemberEnd() || !candidate->value.IsString() || mid == document.MemberEnd() || !mid->value.IsString()) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Missing candidate/mid fields for session {}", request_components.webrtc_session_id);
+        return StatusCode::JSON_INVALID;
+    }
+    if (!webRtcSessionController.addCandidate(request_components.webrtc_session_id, candidate->value.GetString(), mid->value.GetString())) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Failed to add ICE candidate for session {}", request_components.webrtc_session_id);
+        return StatusCode::REST_NOT_FOUND;
+    }
+    response = "{}";
+    return StatusCode::OK;
+}
+
+Status HttpRestApiHandler::processWebRtcGetCandidates(const HttpRequestComponents& request_components, std::string& response) {
+    std::vector<WebRtcSessionController::Candidate> candidates;
+    if (!webRtcSessionController.getCandidates(request_components.webrtc_session_id, candidates)) {
+        return StatusCode::REST_NOT_FOUND;
+    }
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("candidates");
+    writer.StartArray();
+    for (const auto& candidate : candidates) {
+        writer.StartObject();
+        writer.Key("candidate");
+        writer.String(candidate.candidate.c_str());
+        writer.Key("mid");
+        writer.String(candidate.mid.c_str());
+        writer.EndObject();
+    }
+    writer.EndArray();
+    writer.EndObject();
+    response = buffer.GetString();
+    return StatusCode::OK;
+}
+
+Status HttpRestApiHandler::processWebRtcRemoveSession(const HttpRequestComponents& request_components, std::string& response) {
+    SPDLOG_LOGGER_INFO(webrtc_logger, "Received WebRTC session close request for session {}", request_components.webrtc_session_id);
+    if (!webRtcSessionController.removeSession(request_components.webrtc_session_id)) {
+        return StatusCode::REST_NOT_FOUND;
+    }
+    response = "{}";
+    return StatusCode::OK;
 }
 
 Status HttpRestApiHandler::processRequest(

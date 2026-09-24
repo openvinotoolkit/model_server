@@ -864,6 +864,7 @@ ovms_cc_library(
             "rest_parser_utils",
             "libovms_cliparser",
             "libovms_config",
+            "//src/webrtc:webrtc_session_controller",
             "//src/dags:pipelinedefinitionstatus",
             "//src/dags:aliases",
             "//src/dags:pipeline",
