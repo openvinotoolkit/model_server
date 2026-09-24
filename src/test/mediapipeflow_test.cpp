@@ -219,7 +219,6 @@ TEST_F(MediapipeCliFlowTestDummyModelMesh, Infer) {
 }
 
 TEST_F(MediapipeConfigFlowTestDummyModelMesh, Infer) {
-    GTEST_SKIP() << "Temporarily skipped while diagnosing Python runtime startup interaction";
     Infer(server);
 }
 
