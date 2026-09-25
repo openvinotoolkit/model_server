@@ -95,7 +95,7 @@ bool loadLlmCalculatorsPlugin() {
 #ifdef _WIN32
         llmPluginHandle = LoadLibraryA(candidate.c_str());
 #else
-    llmPluginHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
+        llmPluginHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
 #endif
         if (llmPluginHandle != nullptr) {
             SPDLOG_TRACE("LLM calculators plugin loaded from: {}", candidate);

@@ -204,11 +204,11 @@ std::string toAbsolutePath(const std::string& candidate) {
 
 void logLikelyMissingWindowsDependencies() {
     const std::vector<std::string> likelyDependencies = {
-        "libpython_calculators.dll",          // The plugin itself
-        "libovmspython.dll",                  // Python runtime support
-        "python312.dll",                      // Python interpreter
-        "openvino.dll",                       // OpenVINO core
-        "openvino_genai.dll",                 // OpenVINO GenAI
+        "libpython_calculators.dll",  // The plugin itself
+        "libovmspython.dll",          // Python runtime support
+        "python312.dll",              // Python interpreter
+        "openvino.dll",               // OpenVINO core
+        "openvino_genai.dll",         // OpenVINO GenAI
     };
     for (const auto& dependency : likelyDependencies) {
         char resolvedPath[MAX_PATH] = {0};
@@ -312,7 +312,7 @@ bool loadPythonCalculatorsPlugin() {
     // framework handlers twice.
     if (!forceInProcessForTests && !forcePluginDlopen) {
         SPDLOG_INFO("Skipping explicit libpython_calculators.so dlopen. "
-                "Python calculators are owned by the in-process runtime; "
+                    "Python calculators are owned by the in-process runtime; "
                     "set OVMS_PYTHON_CALCULATORS_PLUGIN_DLOPEN=1 to force plugin loading.");
         return true;
     }
