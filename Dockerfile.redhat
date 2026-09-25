@@ -51,7 +51,10 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
 ####### Azure SDK (modern azure-sdk-for-cpp: azure-core, azure-storage-blobs, azure-storage-files-shares)
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 WORKDIR /azure-sdk-for-cpp
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git clone --depth 1 --branch azure-storage-blobs_12.18.0 https://github.com/Azure/azure-sdk-for-cpp.git . && \
+RUN curl -fsSL https://github.com/Azure/azure-sdk-for-cpp/archive/refs/tags/azure-storage-blobs_12.18.0.tar.gz -o /tmp/azure-sdk-for-cpp.tar.gz && \
+    echo "0f266f91cf00b79bb6c7c6f99e44942b43a7141db565556a4298f6ebe3a86fcc  /tmp/azure-sdk-for-cpp.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/azure-sdk-for-cpp.tar.gz --strip-components=1 && \
+    rm /tmp/azure-sdk-for-cpp.tar.gz && \
     echo "# no-op: use system libcurl and openssl" > /azure-sdk-toolchain.cmake && \
     cmake -S sdk/core/azure-core -B build/azure-core \
         -DCMAKE_TOOLCHAIN_FILE=/azure-sdk-toolchain.cmake \
@@ -104,7 +107,11 @@ COPY third_party/pugixml /ovms/third_party/pugixml
 
 # Build and install pugixml
 # hadolint ignore=DL3003
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git clone -b v1.13 https://github.com/zeux/pugixml && \
+RUN curl -fsSL https://github.com/zeux/pugixml/archive/refs/tags/v1.13.tar.gz -o /tmp/pugixml.tar.gz && \
+    echo "5c5ad5d7caeb791420408042a7d88c2c6180781bf218feca259fd9d840a888e1  /tmp/pugixml.tar.gz" | sha256sum -c - && \
+    mkdir pugixml && \
+    tar -xzf /tmp/pugixml.tar.gz --strip-components=1 -C pugixml && \
+    rm /tmp/pugixml.tar.gz && \
     cd pugixml && \
     patch -p1 < /ovms/third_party/pugixml/pugixml_v1.13_flags.patch && \
     cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_LOGS} \

@@ -14,14 +14,15 @@
 # limitations under the License.
 #
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+DROGON_COMMIT = "686f68a12ff82c6c3114a4c48502334261f258f6"
+TRANTOR_COMMIT = "8bf280ba043eb77c3eb02121065e0891a9a4f431"
 
 def _is_windows(ctx):
     return ctx.os.name.lower().find("windows") != -1
 
 def drogon_cpp():
-    drogon_cpp_repository(name="_drogon_cpp")
     http_archive(
         name = "jsoncpp",
         sha256 = "f93b6dd7ce796b13d02c108bc9f79812245a82e577581c4c9aabe57075c90ea2",
@@ -43,19 +44,11 @@ cc_library(
 )
         """,
     )
-    new_git_repository(
+    drogon_cpp_repository(
         name = "drogon",
-        remote = "https://github.com/drogonframework/drogon",
-        commit = "686f68a12ff82c6c3114a4c48502334261f258f6",  # Jan 8 2025 - commit from master: Add setConnectionCallback (#2204)
-        build_file = "@_drogon_cpp//:BUILD",
-        init_submodules = True,
-        recursive_init_submodules = True,
         patches = [
-            # Contains submodule (trantor) patches generated using:
-            # git --no-pager diff --no-color --submodule=diff
             "@ovms//third_party/drogon:ovms_drogon_trantor.patch",
         ],
-        patch_args = ["-p1"],
     )
 
 def _impl(repository_ctx):
@@ -66,6 +59,20 @@ def _impl(repository_ctx):
     https_proxy = repository_ctx.os.environ.get("https_proxy", "")
     if https_proxy == "":
         https_proxy = repository_ctx.os.environ.get("HTTPS_PROXY", "")
+
+    repository_ctx.download_and_extract(
+        url = "https://github.com/drogonframework/drogon/archive/{}.tar.gz".format(DROGON_COMMIT),
+        sha256 = "47baf8d02acb21ef3ccaca407aeef9bc3c692e9b9a12d5f8f8431ec486eeea28",
+        stripPrefix = "drogon-{}".format(DROGON_COMMIT),
+    )
+    repository_ctx.download_and_extract(
+        url = "https://github.com/an-tao/trantor/archive/{}.tar.gz".format(TRANTOR_COMMIT),
+        output = "trantor",
+        sha256 = "f32272fe923bdbc20143fe5de4b66908747b25b7e32e068c0e83f58171197990",
+        stripPrefix = "trantor-{}".format(TRANTOR_COMMIT),
+    )
+    for patch in repository_ctx.attr.patches:
+        repository_ctx.patch(patch, strip = 1)
 
     # Create the Python script dynamically
     repository_ctx.file("remove_japanese_txt.py", """
@@ -85,7 +92,7 @@ def remove_japanese_txt(directory):
                 print(f"Failed to remove {file_path}: {e}", file=sys.stderr)
 
 if __name__ == "__main__":
-    directory = f"{os.getcwd()}/../drogon/lib/tests/integration_test/server/"
+    directory = f"{os.getcwd()}/lib/tests/integration_test/server/"
     print(f"Working in {directory}")
     remove_japanese_txt(directory)
 """)
@@ -209,5 +216,8 @@ cmake(
 
 drogon_cpp_repository = repository_rule(
     implementation = _impl,
+    attrs = {
+        "patches": attr.label_list(),
+    },
     local=False,
 )
