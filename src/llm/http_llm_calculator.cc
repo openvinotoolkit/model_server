@@ -21,8 +21,12 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_framework.h"
+#include "mediapipe/framework/calculator_base.h"
+#include "mediapipe/framework/calculator_context.h"
+#include "mediapipe/framework/calculator_contract.h"
+#include "mediapipe/framework/calculator_registry.h"
 #include "mediapipe/framework/port/canonical_errors.h"
+#include "mediapipe/framework/timestamp.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 

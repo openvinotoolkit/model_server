@@ -169,7 +169,8 @@ ovms_cc_library(
         ":graphqueue",
         ":mediapipe_utils",
         ":side_packet_builder",
-        "//src/llm:execution_context_utils",
+    ] + [
+        "//src/llm:execution_context_utils_no_python",
         "//src:model_metric_reporter",
         "//src:libovms_execution_context",
         "//src:libovmsprofiler",
@@ -198,9 +199,6 @@ ovms_cc_library(
         ":mediapipe_utils",
         ":side_packet_builder",
         "//src:mediapipe_executor_interface",
-        # Keep the in-process Python calculator bridge available for test/runtime
-        # use without forcing the main ovms binary to link Python directly.
-        "//src/python:python_calculators_runtime_objects",
         "//src/dags:pipelinedefinitionstatus",
         "//src:libovms_single_version_servable_definition",
         "//src:libovms_tensorinfo",
@@ -215,12 +213,14 @@ ovms_cc_library(
         "//src/metrics:libovms_metric_provider",
         "//src/filesystem:libovmsfilesystem",
         "//src/graph_export:graph_export",
+        "//src/llm:llm_calculators_plugin_loader",
         "//src:libovms_version",
         "//src:libovms_execution_context",
         "//src:libovmstimer",
         "//src:libovms_time_utils",
         "//src:libovmsprofiler",
-        "//src/llm:execution_context_utils",
+    ] + [
+        "//src/llm:execution_context_utils_no_python",
         "//src/utils:env_guard",
     ],
     implementation_deps = [
@@ -237,17 +237,32 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "libovms_mediapipe_runtime_owner",
+    name = "libovms_mediapipe_runtime_owner_no_python_calculators",
     deps = [
         ":libovms_mediapipe",
+        "//src/llm:llmcalculator_registration",
         "//src:kfs_graph_executor_impl",
         "//src:libovms_mediapipe_http_executor",
         "//src/embeddings:embeddingscalculator_ov",
         "//src/rerank:rerankcalculator_ov",
-        "//src/llm:llmcalculator",
         "//src/image_gen:image_gen_calculator",
         "//src/audio/speech_to_text:s2t_calculator",
         "//src/audio/text_to_speech:t2s_calculator",
+    ] + select({
+        "//:not_disable_python": ["//src/python:python_calculators_runtime_objects"],
+        "//:disable_python": [],
+    }),
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_runtime_owner",
+    deps = [
+        ":libovms_mediapipe_runtime_owner_no_python_calculators",
+        "//src/llm:execution_context_utils",
+        "//src/llm:llmcalculator_registration",
+        "//src/python:python_calculators_runtime_objects",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

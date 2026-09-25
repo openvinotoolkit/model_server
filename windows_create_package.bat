@@ -58,7 +58,6 @@ md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-copy %cd%\bazel-out\x64_windows-opt\bin\src\ovms_mediapipe_runtime_shared.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms

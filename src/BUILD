@@ -143,26 +143,6 @@ ovms_cc_library(
     linkstatic = 1,
 )
 
-# DO NOT REMOVE: loaded at runtime by mediapipe_runtime_api and plugin loader.
-# This is the runtime boundary for MediaPipe factory symbols and registration.
-# Build OVMS MediaPipe integration as a shared runtime component to avoid
-# embedding calculator/extension registration directly into ovms executable.
-cc_binary(
-    name = "ovms_mediapipe_runtime_shared",
-    srcs = [],
-    deps = [
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
-        ":libovms_version_impl",
-    ],
-    linkopts = select({
-        "//conditions:default": ["-Wl,--allow-shlib-undefined"],
-        "//src:windows": ["/FORCE:UNRESOLVED"],
-    }),
-    linkshared = 1,
-    visibility = ["//visibility:public"],
-)
-
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 mediapipe_proto_library(
@@ -2016,9 +1996,10 @@ cc_binary(
     deps = [
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",
-        # NOTE: the MediaPipe runtime shared object is NOT linked into the main binary.
-        # Runtime loading keeps registration ownership outside of ovms and avoids
-        # duplicate symbol/registration conflicts.
+        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
+        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+        ":libovms_version_impl",
+        "//src/llm:llmcalculator_proto_owner",
     ]
     + select({
             "//conditions:default": [],
@@ -2042,6 +2023,11 @@ cc_binary(
             "//src/python:libpython_calculators",
         ],
         "//:disable_python": [],
+    }) + select({
+        "//:not_disable_mediapipe": [
+            "//src/llm:libovms_llm_calculators.so",
+        ],
+        "//:disable_mediapipe": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
@@ -2053,21 +2039,14 @@ sh_test(
 )
 
 sh_test(
-    name = "ovms_no_duplicate_calculator_extensions_smoke_test",
-    srcs = ["test/ovms_no_duplicate_calculator_extensions_smoke.sh"],
-    data = [
-        ":ovms",
-        ":ovms_mediapipe_runtime_shared",
-    ],
+    name = "ovms_mediapipe_runtime_inprocess_smoke_test",
+    srcs = ["test/ovms_mediapipe_runtime_inprocess_smoke.sh"],
+    data = [":ovms"],
 )
 
 cc_test(
     name = "ovms_test",
     linkstatic = 1,
-    env = {
-        "OVMS_TEST_PYTHON_CALCULATORS_INPROCESS": "1",
-        "OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS": "1",
-    },
     srcs = [
         "test/c_api_stress_tests.cpp",
         "test/c_api_tests.cpp",
@@ -2292,7 +2271,7 @@ cc_test(
         "//src:lib_node_choose_maximum.so",
     ] + glob(["test/models_config_json/**"]) + select({
         "//:not_disable_mediapipe": [
-            "//src:ovms_mediapipe_runtime_shared",
+            "//src/llm:libovms_llm_calculators.so",
         ],
         "//:disable_mediapipe": [],
     }) + select({
@@ -2371,6 +2350,7 @@ cc_test(
                 ":embeddings_handler_tests",
                 ":test_idle_mediapipe_test",
                 "//src/mediapipe_internal:mediapipe_utils",
+                "//src/llm:llmcalculator_proto_owner",
             ],
             "//:disable_mediapipe" :
             [
@@ -2384,6 +2364,7 @@ cc_test(
                 # tests and embedded execution paths without pulling the full
                 # runtime into the main ovms link graph.
                 "//src/python:python_runtime_entry_static",
+                "//src/python:python_calculators_runtime_objects",
             ],
             "//:disable_python": [],
         }) + select({

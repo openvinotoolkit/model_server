@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,27 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
 #pragma once
 
-#include <memory>
-#include <string>
-
-#include <openvino/genai/scheduler_config.hpp>
-
-#pragma warning(push)
-#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator.pb.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
-#include "../../servable_initializer.hpp"
-
 namespace ovms {
-class Status;
 
-class LegacyServableInitializer : public GenAiServableInitializer {
-public:
-    Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) override;
-};
+bool loadLlmCalculatorsPlugin();
+
 }  // namespace ovms
