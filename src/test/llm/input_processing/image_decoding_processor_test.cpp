@@ -17,7 +17,6 @@
 #include <string>
 #include <system_error>
 
-#include "absl/strings/escaping.h"
 #include <gtest/gtest.h>
 #include <openvino/genai/chat_history.hpp>
 
