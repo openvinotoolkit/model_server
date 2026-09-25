@@ -173,6 +173,50 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithoutToolCall) {
     }
 }
 
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithCorruptedKeyword) {
+    std::string input = "<|channel>_thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "Some reasoning content");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithDegenerateKeyword) {
+    std::string input = "<|channel>works\n<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithMissingOpenerTag) {
+    std::string input = "thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "Some reasoning content");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithNoKeywordLineAtAll) {
+    std::string input = "<|channel>Acquired information: the door is now unlocked.<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "Acquired information: the door is now unlocked.");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
     std::string inputWithProperClosure = "<|tool_call>call:example_tool{arg1:<|\"|>value1<|\"|>,arg2:42}<tool_call|>";
     std::string inputWithoutSpecialTokens = "call:example_tool{arg1:value1,arg2:42}";
@@ -917,6 +961,27 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingNestedJ
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "send");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"payload":"{'key': 'value', 'count': 42}","endpoint":"api"})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithPythonReprArtifactInValue) {
+    std::string input = "<|tool_call>call:startEngine{ignitionMode:s'START'}<tool_call|>";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "startEngine");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"ignitionMode":"s'START'"})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithUnwrappedValueLeadingSpace) {
+    std::string input = R"(<|tool_call>call:cp{destination:<|"|>backup_tests<|"|>,source: raw_value<|"|>rest<|"|>}<tool_call|>)";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "cp");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"destination":"backup_tests","source":"raw_value<|\"|>rest<|\"|>"})");
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithEmptyStringArgument) {

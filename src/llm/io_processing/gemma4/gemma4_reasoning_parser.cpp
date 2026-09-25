@@ -22,24 +22,53 @@
 #include "gemma4_reasoning_parser.hpp"
 
 namespace ovms {
-void Gemma4ReasoningParser::skipToken(const std::vector<int64_t>& generatedTokens, size_t& pos, int64_t tokenId) {
-    if (pos < generatedTokens.size() && generatedTokens[pos] == tokenId) {
-        pos++;
-    }
-}
-
 std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
-    if (chunk.empty()) {
+    if (chunk.empty() && finishReason == ov::genai::GenerationFinishReason::NONE) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Gemma4ReasoningParser");
         return std::nullopt;
     }
 
-    if (chunk.find(parsingConfig.startTags[0]) != std::string::npos || chunk.find(parsingConfig.endTag) != std::string::npos ||
-        chunk.find(parsingConfig.preambleStartTags[0]) != std::string::npos) {
-        return std::nullopt;
-    } else {
-        return ReasoningDelta{chunk};
+    std::string text = chunk;
+
+    if (phase == Phase::AwaitingOpener) {
+        if (isImplicitStart()) {
+            // Prompt already supplied the opener - nothing to strip.
+            phase = Phase::Body;
+        } else {
+            const std::string& opener = parsingConfig.startTags[0];  // "<|channel>"
+            const size_t openerPos = text.find(opener);
+            if (openerPos != std::string::npos) {
+                text = text.substr(openerPos + opener.size());
+            }
+            phase = Phase::AwaitingChannelHeader;
+        }
     }
-    return std::nullopt;
+
+    if (phase == Phase::AwaitingChannelHeader) {
+        pendingChannelHeaderText += text;
+        const size_t newlinePos = pendingChannelHeaderText.find('\n');
+        const bool endTagSeen = pendingChannelHeaderText.find(parsingConfig.endTag) != std::string::npos;
+        if (newlinePos != std::string::npos) {
+            text = pendingChannelHeaderText.substr(newlinePos + 1);
+        } else if (endTagSeen || finishReason != ov::genai::GenerationFinishReason::NONE) {
+            // No header line ever materialized (e.g. keyword missing entirely) - the whole
+            // span is reasoning body.
+            text = pendingChannelHeaderText;
+        } else {
+            return std::nullopt;
+        }
+        pendingChannelHeaderText.clear();
+        phase = Phase::Body;
+    }
+
+    const size_t endTagPos = text.rfind(parsingConfig.endTag);
+    if (endTagPos != std::string::npos) {
+        text = text.substr(0, endTagPos);
+    }
+
+    if (text.empty()) {
+        return std::nullopt;
+    }
+    return ReasoningDelta{text};
 }
 }  // namespace ovms

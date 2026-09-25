@@ -140,6 +140,10 @@ TEST(FindInStringTest, SingleQuoteClosedWithSpaceBeforeDelimiter) {
     EXPECT_EQ(input[pos], ',');
 }
 
+TEST(FindInStringTest, LeadingLetterApostropheValueDoesNotOpenOnClosingQuote) {
+    EXPECT_EQ(findInStringRespectingSpecialChars("ignitionMode:s'START'}", "}", 0), 21u);
+}
+
 // ── trimSurroundingQuotes: tag-attribute quote normalization (issue #4487) ───
 
 TEST(TrimSurroundingQuotesTest, RemovesWrappingDoubleQuotes) {
