@@ -20,6 +20,7 @@
 
 #include "../../../llm/io_processing/input_processors/video_frames_processor.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
+#include "../../../llm/io_processing/video_utils.hpp"
 
 using namespace ovms;
 
@@ -188,6 +189,30 @@ TEST(VideoFramesProcessorTest, MismatchingFrameResolutionRejected) {
     msg["content"] = ov::genai::JsonContainer::from_json_string(
         R"([{"type":"video_url","video_url":{"url":[")" + FRAME_BASE64 + R"(",")" +
         FRAME_BASE64_2X2 + R"("]}}])");
+    history.push_back(msg);
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_TRUE(req.inputVideos.empty());
+}
+
+TEST(VideoFramesProcessorTest, OversizedFrameArrayRejected) {
+    // A frame array larger than MAX_VIDEO_FRAMES must be rejected before any
+    // frame is copied or decoded. The url entries can be short placeholders
+    // since the size check triggers before decoding.
+    std::string urls;
+    for (int64_t i = 0; i < MAX_VIDEO_FRAMES + 1; i++) {
+        urls += (i ? ",\"x\"" : "\"x\"");
+    }
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(
+        R"([{"type":"video_url","video_url":{"url":[)" + urls + R"(]}}])");
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);

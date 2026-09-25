@@ -82,6 +82,11 @@ absl::Status VideoFramesProcessor::process(InputRequest& req) {
             const auto part = content[j];
             if (part["type"].as_string().value_or("") == "video_url") {
                 const auto urls = part["video_url"]["url"];
+                // Reject oversized frame arrays before reserving/copying to avoid
+                // allocating unbounded memory from an untrusted array length.
+                if (static_cast<int64_t>(urls.size()) > MAX_VIDEO_FRAMES) {
+                    return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES));
+                }
                 std::vector<std::string> frameSources;
                 frameSources.reserve(urls.size());
                 for (size_t k = 0; k < urls.size(); k++) {
