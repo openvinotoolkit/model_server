@@ -170,8 +170,8 @@ TEST_F(AudioUtilsSampleRateTest, mp3FileRejectedWhenExceedsMaxFileSizeEnv) {
     mp3.push_back(static_cast<char>(0x40));
     mp3.append(413, '\0');
     std::string_view view(mp3);
-    // For this frame, actual decoded size is 2304 samples (stereo or decoder output)
-    size_t expectedDecodedSize = 2304 * sizeof(float);
+    // This joint-stereo frame decodes to 1152 PCM frames, returned as 1152 mono samples.
+    size_t expectedDecodedSize = 1152 * sizeof(float);
     SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(expectedDecodedSize - 1));
     std::vector<float> decoded;
     EXPECT_THROW({ decoded = readMp3(view); }, std::runtime_error);
@@ -187,12 +187,31 @@ TEST_F(AudioUtilsSampleRateTest, mp3FileAcceptedWhenAtMaxFileSizeEnv) {
     mp3.push_back(static_cast<char>(0x40));
     mp3.append(413, '\0');
     std::string_view view(mp3);
-    // For this frame, actual decoded size is 2304 samples (stereo or decoder output)
-    size_t expectedDecodedSize = 2304 * sizeof(float);
+    // This joint-stereo frame decodes to 1152 PCM frames, returned as 1152 mono samples.
+    size_t expectedDecodedSize = 1152 * sizeof(float);
     SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(expectedDecodedSize));
     std::vector<float> decoded;
     EXPECT_NO_THROW({ decoded = readMp3(view); });
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
+}
+
+// readMp3 is documented to return mono float32 PCM samples, and readWav already
+// down-mixes stereo. A 2-channel MP3 must therefore yield one sample per PCM frame,
+// not one per channel - otherwise the interleaved stream is read downstream as a
+// mono waveform of twice the real duration.
+TEST_F(AudioUtilsSampleRateTest, mp3StereoIsDownmixedToMono) {
+    std::string mp3;
+    mp3.reserve(417);
+    mp3.push_back(static_cast<char>(0xFF));
+    mp3.push_back(static_cast<char>(0xFB));
+    mp3.push_back(static_cast<char>(0x90));
+    mp3.push_back(static_cast<char>(0x40));  // channel mode 01: joint stereo
+    mp3.append(413, '\0');
+    std::string_view view(mp3);
+    std::vector<float> decoded;
+    ASSERT_NO_THROW({ decoded = readMp3(view, DISABLED_RESAMPLING_SAMPLE_RATE); });
+    // 1152 PCM frames from a single MPEG-1 Layer III frame, down-mixed to 1152 samples.
+    EXPECT_EQ(decoded.size(), 1152u);
 }
 
 // Validates that validateAudioFileSize correctly rejects when inputSamples * targetRate
