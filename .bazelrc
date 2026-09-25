@@ -84,9 +84,10 @@ build:avx_win --copt=/arch=AVX
 build:avx2_win --copt=/arch=AVX2
 
 # Linux settings #######################################################################################################
-# LLVM, MLIR and TF require C++14, we use C++17 in project
-build:linux --cxxopt=-std=c++17
-build:linux --host_cxxopt=-std=c++17
+# LLVM, MLIR and TF require C++14, we use C++20 in project
+# mediapipe upstream (api3, compile_time_string.h) now requires consteval/C++20 features.
+build:linux --cxxopt=-std=c++20
+build:linux --host_cxxopt=-std=c++20
 build:linux --action_env=HOME=/root
 build:linux --repo_env=HOME=/root
 
@@ -107,6 +108,12 @@ build:linux --cxxopt=-Wformat-security
 build:linux --cxxopt=-Werror=format-security
 # TODO: Add equivalent windows flag
 build:linux --force_pic
+
+# Bzlmod must stay disabled: with it enabled Bazel resolves an extra
+# "protobuf" repo from the registry alongside the WORKSPACE-declared
+# "com_google_protobuf", causing ODR conflicts (e.g. duplicate/mismatched
+# FieldMask symbols in field_mask_util.cc).
+build:linux --noenable_bzlmod
 
 build:mp_on_py_on --config=linux
 build:mp_on_py_on --define=MEDIAPIPE_DISABLE=0
@@ -134,8 +141,8 @@ build:verbose_logs --output_filter=
 build:v1 --define=tf_api_version=1 --action_env=TF2_BEHAVIOR=0
 build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
 
-build:windows --host_cxxopt=/std:c++17
-build:windows --cxxopt=/std:c++17
+build:windows --host_cxxopt=/std:c++20
+build:windows --cxxopt=/std:c++20
 # TODO Windows: may impact python nodes execution
 build:windows --noenable_bzlmod
 
@@ -143,6 +150,7 @@ build:windows --noenable_bzlmod
 # TensorFlow Bazel configuration file.
 build:windows --define=use_fast_cpp_protos=true
 build:windows --define=allow_oversize_protos=true
+build:windows --define=protobuf_allow_msvc=true
 
 # Make Bazel print out all options from rc files.
 build:windows --announce_rc
@@ -169,6 +177,7 @@ build:windows --experimental_link_static_libraries_once=false
 # Prevent regressions on those two incompatible changes
 # TODO: remove those flags when they are flipped in the default Bazel version TF uses.
 build:windows --incompatible_enforce_config_setting_visibility
+build:windows --noenable_bzlmod
 
 # Config to use a mostly-static build and disable modular op registration
 # support (this will revert to loading TensorFlow with RTLD_GLOBAL in Python).

@@ -1,0 +1,14 @@
+diff --git a/src/google/protobuf/io/BUILD.bazel b/src/google/protobuf/io/BUILD.bazel
+--- a/src/google/protobuf/io/BUILD.bazel
++++ b/src/google/protobuf/io/BUILD.bazel
+@@ -160,7 +160,5 @@
+         "//src/google/protobuf/stubs",
+         "@abseil-cpp//absl/log:absl_check",
+         "@abseil-cpp//absl/log:absl_log",
+-    ] + select({
+-        "//build_defs:config_msvc": [],
+-        "//conditions:default": ["@zlib"],
+-    }),
++        "@zlib",
++    ],
+ )

@@ -272,11 +272,6 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validation context for mediapipe: {} graph_path: {} subconfig_path: {}", getName(), this->mgconfig.getGraphPath(), this->mgconfig.getSubconfigPath());
-#if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Build flag OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME is enabled for mediapipe: {}", getName());
-#else
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Build flag OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME is disabled for mediapipe: {}", getName());
-#endif
     if (!this->sidePacketMaps->empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;

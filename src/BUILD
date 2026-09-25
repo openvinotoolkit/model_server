@@ -62,7 +62,6 @@ cc_shared_library(
         "@com_github_libevent_libevent//:__subpackages__",
         "@com_google_protobuf//:__subpackages__",
         "@com_github_tencent_rapidjson//:__subpackages__",
-        "@org_tensorflow//:__subpackages__",
         "@com_google_absl//:__subpackages__",
         "@gif//:__subpackages__",
         "@libjpeg_turbo//:__subpackages__",
@@ -135,14 +134,7 @@ ovms_cc_library(
             "@mediapipe//mediapipe/framework/formats:image_frame",
             "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
             "@mediapipe//mediapipe/framework/formats:tensor",
-            "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
-            "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
             "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
-            "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
-            "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
-            "@mediapipe//mediapipe/calculators/geti/utils:utils",
-            "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
-            "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
             "opencv_dep",
         ],
         "//:disable_mediapipe": [],
@@ -620,7 +612,6 @@ ovms_cc_library(
         "kfs_python_tensor_bridge",
         "//src/mediapipe_internal:mediapipegraphexecutor_h",
         "predict_request_validation_utils",
-        "tensorflow_type_utils",
         "libovms_kfs_utils",
         "libovms_kfs_grpc_inference_service_h",
         "libovms_single_version_servable_definition",
@@ -634,33 +625,6 @@ ovms_cc_library(
     additional_copts = select({
         "//conditions:default": ["-fvisibility=default"],
         "//src:windows": [],
-    }),
-    visibility = ["//visibility:public",],
-    alwayslink = 1,
-)
-ovms_cc_library(
-    name = "kfs_graph_executor_impl_runtime",
-    srcs = [
-        "kfs_frontend/kfs_graph_executor_impl.cpp",
-        "kfs_frontend/kfs_graph_executor_impl.hpp",
-    ],
-    deps = [
-        "kfs_python_tensor_bridge",
-        "//src/mediapipe_internal:mediapipegraphexecutor_h",
-        "predict_request_validation_utils",
-        "libovms_kfs_utils",
-        "libovms_kfs_grpc_inference_service_h",
-        "libovms_single_version_servable_definition",
-        "libovms_time_utils",
-        "//src/kfserving_api:kfserving_api_cpp",
-        "opencv_dep",
-        "@mediapipe//mediapipe/framework/formats:image_frame",
-        "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
-        "@mediapipe//mediapipe/framework/formats:tensor",
-    ],
-    additional_copts = select({
-        "//conditions:default": ["-fvisibility=default", "-DOVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME=1"],
-        "//src:windows": ["-DOVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME=1"],
     }),
     visibility = ["//visibility:public",],
     alwayslink = 1,
@@ -751,15 +715,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
-ovms_cc_library(
-    name = "libovms_mediapipe_runtime_tensorflow_owner",
-    deps = [
-        "@org_tensorflow//tensorflow/core:framework",
-        "@org_tensorflow//tensorflow/lite/c:c_api",
-    ],
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
 ovms_cc_library(
     name = "customloaders",
     hdrs = [
@@ -1256,19 +1211,6 @@ cc_import(
   name = "shared_lib",
   hdrs = ["ovms.h"],
   shared_library = "ovms_shared",
-)
-
-ovms_cc_library(
-
-    name = "tensorflow_type_utils",
-    hdrs = ["tensorflow_type_utils.hpp"],
-    srcs = ["tensorflow_type_utils.cpp"],
-    deps = [
-        "@org_tensorflow//tensorflow/core:framework",
-        "libovmsprecision",
-        "libovmsstatus",
-    ],
-    visibility = ["//visibility:public"],
 )
 
 ovms_cc_library(
@@ -2086,7 +2028,6 @@ cc_binary(
     deps = [
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",
-        "//src:libovms_mediapipe_runtime_tensorflow_owner",
         # NOTE: the MediaPipe runtime shared object is NOT linked into the main binary.
         # Runtime loading keeps registration ownership outside of ovms and avoids
         # duplicate symbol/registration conflicts.
@@ -2293,7 +2234,6 @@ cc_test(
         "test/mediapipe/config_mediapipe_two_inputs.json",
         "test/mediapipe/config_mediapipe_two_outputs_dag.json",
         "test/mediapipe/config_mediapipe_multipart_mock.json",
-        "test/mediapipe/config_mp_tf_passthrough.json",
         "test/mediapipe/config_standard_add.json",
         "test/mediapipe/config_standard_dummy.json",
         "test/mediapipe/graph_two_inputs_model.pbtxt",
@@ -2301,11 +2241,9 @@ cc_test(
         "test/mediapipe/graph_gpt.pbtxt",
         "test/mediapipe/graphadd.pbtxt",
         "test/mediapipe/graphaddadapterfull.pbtxt",
-        "test/mediapipe/graphdummy_tf.pbtxt",
         "test/mediapipe/graphdummy.pbtxt",
         "test/mediapipe/graphdummyadapterfull.pbtxt",
         "test/mediapipe/graphdummynonexistentcalculator.pbtxt",
-        "test/mediapipe/graphtfpassthrough.pbtxt",
         "test/mediapipe/graphscalar.pbtxt",
         "test/mediapipe/graphWithParams.pbtxt",
         "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
@@ -2325,7 +2263,6 @@ cc_test(
         "test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json",
         "test/mediapipe/relative_paths/config_relative_add_subconfig.json",
         "test/mediapipe/relative_paths/config_relative_dummy.json",
-        "test/mediapipe/relative_paths/config_tflite_passthrough.json",
         "test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json",
         "test/mediapipe/relative_paths/graph1/dummy1/1/dummy.xml",
         "test/mediapipe/relative_paths/graph1/graph.pbtxt",
@@ -2439,14 +2376,13 @@ cc_test(
                 ":test_llm_input_processing_integration_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
-                "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+                "//src/mediapipe_calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
                 ":text2image_test",
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
                 ":test_idle_mediapipe_test",
                 "//src/mediapipe_internal:mediapipe_utils",
-                "tensorflow_type_utils",
             ],
             "//:disable_mediapipe" :
             [

@@ -156,9 +156,9 @@ int main_windows(int argc, char** argv) {
 SERVICE_STATUS OvmsWindowsServiceManager::serviceStatus = {0};
 std::unique_ptr<WinServiceStatusWrapper> OvmsWindowsServiceManager::statusHandle = std::make_unique<WinServiceStatusWrapper>();
 std::unique_ptr<WinServiceEventWrapper> OvmsWindowsServiceManager::serviceStopEvent = std::make_unique<WinServiceEventWrapper>();
-LPSTR OvmsWindowsServiceManager::serviceName = _T("ovms");
-LPSTR OvmsWindowsServiceManager::serviceDisplayName = _T("OpenVino Model Server");
-LPSTR OvmsWindowsServiceManager::serviceDesc = _T("Hosts models and makes them accessible to software components over standard network protocols.");
+CHAR OvmsWindowsServiceManager::serviceName[] = "ovms";
+CHAR OvmsWindowsServiceManager::serviceDisplayName[] = "OpenVino Model Server";
+CHAR OvmsWindowsServiceManager::serviceDesc[] = "Hosts models and makes them accessible to software components over standard network protocols.";
 OvmsWindowsServiceManager::OvmsWindowsServiceManager() {
     DEBUG_LOG("OvmsWindowsServiceManager constructor");
     ovmsParams = {};

@@ -1,0 +1,250 @@
+--- a/mediapipe/framework/tool/mediapipe_proto.bzl
++++ b/mediapipe/framework/tool/mediapipe_proto.bzl
+@@ -7,7 +7,6 @@
+ load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+ load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
+ load("@rules_proto//proto:defs.bzl", _proto_library = "proto_library")
+-load("@rules_proto_grpc_js//:defs.bzl", "js_proto_library")
+ 
+ java_proto_library = native.java_proto_library
+ java_lite_proto_library = native.java_lite_proto_library
+@@ -440,37 +439,8 @@
+         visibility = None,
+         testonly = 0,
+         compatible_with = None):
+-    """Generate js_proto_library for mediapipe open source version.
+-
+-    Args:
+-      name: the name of the js_proto_library.
+-      srcs: the .proto files of the js_proto_library for Bazel use.
+-      deps: a list of dependency labels for bazel use ; must be proto_library.
+-      lib_proto_deps: a list of "_proto" dependency labels.
+-      visibility: Visibility of this target.
+-      testonly: test only proto or not.
+-      compatible_with: a list of environments the rule is compatible with.
+-    """
+-    _ignore = [deps, testonly, compatible_with]
+-
+-    js_deps = replace_deps(lib_proto_deps, "_proto", "_jspb_proto", False)
+-    js_deps = [d for d in js_deps if not d.endswith("cc_wkt_protos")]
+-    _proto_library(
+-        name = replace_suffix(name, "_jspb_proto", "_lib_proto"),
+-        srcs = srcs,
+-        deps = lib_proto_deps,
+-        visibility = visibility,
+-    )
+-    js_proto_library(
+-        name = name,
+-        protos = [replace_suffix(name, "_jspb_proto", "_lib_proto")],
+-        output_mode = "NO_PREFIX_FLAT",
+-        # Need to specify this to work around bug in js_proto_library()
+-        # https://github.com/bazelbuild/rules_nodejs/issues/3503
+-        legacy_path = "unused",
+-        deps = js_deps,
+-        visibility = visibility,
+-    )
++    """OVMS build stub - JS proto generation is unused; keep signature only."""
++    _ignore = [name, srcs, deps, lib_proto_deps, visibility, testonly, compatible_with]
+ 
+ def mediapipe_js_proto_library(**kwargs):
+     mediapipe_js_proto_library_oss(**kwargs)
+--- a/mediapipe/framework/port/build_config.bzl
++++ b/mediapipe/framework/port/build_config.bzl
+@@ -3,7 +3,6 @@
+ 
+ """.bzl file for mediapipe open source build configs."""
+ 
+-load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+ load(
+     "//mediapipe/framework/tool:mediapipe_proto.bzl",
+     _mediapipe_cc_proto_library = "mediapipe_cc_proto_library",
+@@ -28,48 +27,8 @@
+         deps = [],
+         testonly = 0,
+         allow_unoptimized_namespaces = False):
+-    """Generate ts_project for MediaPipe open source version.
+-
+-    Args:
+-        name: The name of the target.
+-        srcs: The list of source files.
+-        visibility: The visibility of the target.
+-        deps: The list of dependencies.
+-        testonly: Whether the target is testonly.
+-        allow_unoptimized_namespaces: Whether to allow unoptimized namespaces.
+-    """
+-    _ignore = [allow_unoptimized_namespaces]  # buildifier: disable=unused-variable
+-
+-    # aspect_rules_ts automatically generates a `{name}_types`
+-    # target when `declaration = True`. By suffixing the underlying ts_project
+-    # target name and exposing an alias, we dodge collisions with existing
+-    # explicit `_types` targets (like ts_declaration) defined in MediaPipe
+-    # BUILDs.
+-    internal_name = name + "_internal"
+-
+-    ts_project(**provided_args(
+-        name = internal_name,
+-        srcs = srcs,
+-        visibility = visibility,
+-        deps = deps + [
+-            "//:node_modules/@types/jasmine",
+-            "//:node_modules/@types/node",
+-            "//:node_modules/@types/offscreencanvas",
+-            "//:node_modules/@types/google-protobuf",
+-            "//:node_modules/@webgpu/types",
+-        ],
+-        testonly = testonly,
+-        declaration = True,
+-        transpiler = "tsc",
+-        tsconfig = "//:tsconfig",
+-    ))
+-
+-    # Proxy the internal target back to the requested name.
+-    native.alias(
+-        name = name,
+-        actual = internal_name,
+-        visibility = visibility,
+-    )
++    """OVMS build stub - TypeScript targets are unused."""
++    _ignore = [name, srcs, visibility, deps, testonly, allow_unoptimized_namespaces]
+ 
+ def ts_declaration(
+         name,
+--- a/mediapipe/framework/tool/mediapipe_graph.bzl
++++ b/mediapipe/framework/tool/mediapipe_graph.bzl
+@@ -25,7 +25,19 @@
+ # buildifier: disable=out-of-order-load
+ # buildifier: disable=same-origin-load
+ load("//mediapipe/framework/deps:descriptor_set.bzl", "direct_descriptor_set", "transitive_descriptor_set")
+-load("@litert//tflite/core/shims:cc_library_with_tflite.bzl", "cc_library_with_tflite")
++# OVMS stub - no tflite integration is used; delegate to plain native.cc_library.
++def cc_library_with_tflite(name, srcs = [], hdrs = [], tflite_deps = [], deps = [], alwayslink = None, visibility = None, testonly = None, **kwargs):
++    _ignore = [tflite_deps]
++    native.cc_library(
++        name = name,
++        srcs = srcs,
++        hdrs = hdrs,
++        deps = deps,
++        alwayslink = alwayslink,
++        visibility = visibility,
++        testonly = testonly,
++        **kwargs
++    )
+ 
+ def mediapipe_binary_graph(name, graph = None, output_name = None, deps = [], testonly = None, compatible_with = None, **kwargs):
+     """Converts a graph from text format to binary format.
+--- a/mediapipe/gpu/BUILD
++++ b/mediapipe/gpu/BUILD
+@@ -16,8 +16,7 @@
+ load("@rules_cc//cc:objc_library.bzl", "objc_library")
+ load("@rules_cc//cc:cc_library.bzl", "cc_library")
+ load("@bazel_skylib//lib:selects.bzl", "selects")  # buildifier: disable=out-of-order-load
+-load("@build_bazel_rules_apple//apple:resources.bzl", metal_library = "apple_metal_library")
+-load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
++load("@mediapipe//mediapipe/gpu:ovms_apple_stub.bzl", metal_library = "apple_metal_library", ios_unit_test = "ios_unit_test")
+ load("//mediapipe/framework/port:build_config.bzl", "mediapipe_proto_library")  # buildifier: disable=out-of-order-load
+ load("//mediapipe/framework:mediapipe_cc_test.bzl", "mediapipe_cc_test")  # buildifier: disable=out-of-order-load
+ load("//mediapipe/framework:more_selects.bzl", "more_selects")
+diff --git a/mediapipe/gpu/ovms_apple_stub.bzl b/mediapipe/gpu/ovms_apple_stub.bzl
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/mediapipe/gpu/ovms_apple_stub.bzl
+@@ -0,0 +1,14 @@
++"""OVMS stubs for iOS/Apple-only rules used inside mediapipe/gpu/BUILD.
++
++OVMS does not target Apple platforms, so these rules are unused at build
++time. Providing no-op definitions keeps mediapipe/gpu/BUILD parseable
++without pulling in @build_bazel_rules_apple.
++"""
++
++def apple_metal_library(name, **kwargs):
++    _ignore = kwargs
++    native.filegroup(name = name, srcs = [])
++
++def ios_unit_test(name, **kwargs):
++    _ignore = kwargs
++    native.filegroup(name = name, srcs = [])
+--- a/mediapipe/framework/deps/status_macros.h
++++ b/mediapipe/framework/deps/status_macros.h
+@@ -85,6 +85,7 @@
+ //     ABSL_RETURN_IF_ERROR(foo.Method(args...));
+ //     return absl::OkStatus();
+ //   }
++#undef ABSL_RETURN_IF_ERROR
+ #define ABSL_RETURN_IF_ERROR(expr)                                   \
+   MP_STATUS_MACROS_IMPL_ELSE_BLOCKER_                                \
+   if (mediapipe::status_macro_internal::StatusAdaptorForMacros       \
+@@ -138,6 +139,7 @@
+ // Example: Logging the error on failure.
+ //   ABSL_ASSIGN_OR_RETURN(ValueType value, MaybeGetValue(query), _.LogError());
+ //
++#undef ABSL_ASSIGN_OR_RETURN
+ #define ABSL_ASSIGN_OR_RETURN(...)                             \
+   MP_STATUS_MACROS_IMPL_GET_VARIADIC_(                         \
+       (__VA_ARGS__, MP_STATUS_MACROS_IMPL_ASSIGN_OR_RETURN_3_, \
+--- a/mediapipe/calculators/tensor/BUILD
++++ b/mediapipe/calculators/tensor/BUILD
+@@ -14,7 +14,7 @@
+ #
+ 
+ load("@bazel_skylib//lib:selects.bzl", "selects")
+-load("@litert//tflite/core/shims:cc_library_with_tflite.bzl", "cc_library_with_tflite")
++load("@mediapipe//mediapipe/gpu:ovms_apple_stub.bzl", cc_library_with_tflite = "apple_metal_library")
+ load("@rules_cc//cc:cc_library.bzl", "cc_library")
+ load("@rules_cc//cc:cc_test.bzl", "cc_test")
+ load("@rules_cc//cc:objc_library.bzl", "objc_library")
+--- a/mediapipe/framework/formats/motion/optical_flow_field.h
++++ b/mediapipe/framework/formats/motion/optical_flow_field.h
+@@ -24,7 +24,6 @@
+ #include "mediapipe/framework/formats/motion/optical_flow_field_data.pb.h"
+ #include "mediapipe/framework/port/opencv_imgproc_inc.h"
+ #include "mediapipe/framework/port/status.h"
+-#include "tensorflow/core/framework/tensor.h"
+ 
+ namespace mediapipe {
+ 
+@@ -67,9 +66,6 @@
+   const cv::Mat& flow_data() const { return flow_data_; }
+   cv::Mat& mutable_flow_data() { return flow_data_; }
+ 
+-  // Converts from a tensorflow H x W x 2 float Tensor. The internal storage
+-  // for the optical flow field is reallocated.
+-  void CopyFromTensor(const tensorflow::Tensor& tensor);
+ 
+   // Converts to/from associated proto.
+   void SetFromProto(const OpticalFlowFieldData& proto);
+--- a/mediapipe/framework/formats/motion/optical_flow_field.cc
++++ b/mediapipe/framework/formats/motion/optical_flow_field.cc
+@@ -147,22 +147,6 @@
+   }
+ }
+ 
+-void OpticalFlowField::CopyFromTensor(const tensorflow::Tensor& tensor) {
+-  ABSL_CHECK_EQ(tensorflow::DT_FLOAT, tensor.dtype());
+-  ABSL_CHECK_EQ(3, tensor.dims()) << "Tensor must be height x width x 2.";
+-  ABSL_CHECK_EQ(2, tensor.dim_size(2)) << "Tensor must be height x width x 2.";
+-  const int height = tensor.dim_size(0);
+-  const int width = tensor.dim_size(1);
+-  Allocate(width, height);
+-  typename tensorflow::TTypes<float, 3>::ConstTensor input_flow =
+-      tensor.shaped<float, 3>({height, width, 2});
+-  for (int r = 0; r < height; ++r) {
+-    for (int c = 0; c < width; ++c) {
+-      flow_data_(r, c) = cv::Point2f(input_flow(r, c, 0), input_flow(r, c, 1));
+-    }
+-  }
+-}
+-
+ void OpticalFlowField::SetFromProto(const OpticalFlowFieldData& proto) {
+   ABSL_CHECK_EQ(proto.width() * proto.height(), proto.dx_size());
+   ABSL_CHECK_EQ(proto.width() * proto.height(), proto.dy_size());
+--- a/mediapipe/framework/formats/motion/BUILD
++++ b/mediapipe/framework/formats/motion/BUILD
+@@ -48,7 +48,6 @@
+         "@com_google_absl//absl/log:absl_check",
+         "@com_google_absl//absl/log:absl_log",
+         "@com_google_absl//absl/strings",
+-        "@org_tensorflow//tensorflow/core:framework",
+     ],
+     alwayslink = 1,
+ )
