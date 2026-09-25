@@ -57,6 +57,8 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
     static const std::string EMBEDDINGS_MODEL_INPUT_IDS_NAME;
     static const std::string EMBEDDINGS_MODEL_ATTENTION_MASK_NAME;
     static const std::string EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME;
+    static const size_t MAX_BATCH_SIZE;
+    static const size_t MAX_INPUT_TENSORS_BYTE_SIZE;
 
     absl::Status tokenizeStrings(ov::genai::Tokenizer& tokenizer, const std::vector<std::string>& inputStrings, const ov::AnyMap& parameters, ov::genai::TokenizedInputs& tokens) {
         tokens = tokenizer.encode(inputStrings, parameters);
@@ -69,6 +71,22 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
         if (inputIdsSize > maxContextLength) {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds maxContextLength {}", inputIdsSize, maxContextLength);
             return absl::InvalidArgumentError(absl::StrCat("Input length ", inputIdsSize, " longer than allowed ", maxContextLength));
+        }
+        return absl::OkStatus();
+    }
+
+    absl::Status isBatchSizeOk(size_t batchSize) {
+        if (batchSize > MAX_BATCH_SIZE) {
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Batch size {} exceeds maxBatchSize {}", batchSize, MAX_BATCH_SIZE);
+            return absl::InvalidArgumentError(absl::StrCat("Batch size ", batchSize, " exceeds allowed maximum of ", MAX_BATCH_SIZE));
+        }
+        return absl::OkStatus();
+    }
+
+    absl::Status isInputByteSizeOk(size_t totalBytes) {
+        if (totalBytes > MAX_INPUT_TENSORS_BYTE_SIZE) {
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Total input tensors size {} bytes exceeds allowed maximum of {} bytes", totalBytes, MAX_INPUT_TENSORS_BYTE_SIZE);
+            return absl::InvalidArgumentError(absl::StrCat("Total input tensors size ", totalBytes, " bytes exceeds allowed maximum of ", MAX_INPUT_TENSORS_BYTE_SIZE, " bytes"));
         }
         return absl::OkStatus();
     }
@@ -170,6 +188,10 @@ public:
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
                 ov::AnyMap& params = handler.getParameters();
                 receivedBatchSize = strings->size();
+                auto batchSizeCheckStatus = this->isBatchSizeOk(receivedBatchSize);
+                if (!batchSizeCheckStatus.ok()) {
+                    return batchSizeCheckStatus;
+                }
                 if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate() && params.find("max_length") == params.end()) {
                     params["max_length"] = maxContextLength;
                 }
@@ -186,6 +208,16 @@ public:
                 auto sizeCheckStatus = this->isInputIdSizeOk(inputIdsSize, maxContextLength);
                 if (!sizeCheckStatus.ok()) {
                     return sizeCheckStatus;
+                }
+
+                // token_type_ids (if present) always mirrors input_ids shape/type, so its size can be derived without allocating it yet.
+                size_t totalInputBytes = tokens.input_ids.get_byte_size() + tokens.attention_mask.get_byte_size();
+                if (embeddings_session->getNumberOfModelInputs() == 3) {
+                    totalInputBytes += tokens.input_ids.get_byte_size();
+                }
+                auto byteSizeCheckStatus = this->isInputByteSizeOk(totalInputBytes);
+                if (!byteSizeCheckStatus.ok()) {
+                    return byteSizeCheckStatus;
                 }
 
                 if (embeddings_session->getNumberOfModelInputs() == 3) {
@@ -211,6 +243,10 @@ public:
                 handler.setPromptTokensUsage(attendedTokens);
             } else if (auto tokenizedDocuments = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
                 receivedBatchSize = tokenizedDocuments->size();
+                auto batchSizeCheckStatus = this->isBatchSizeOk(receivedBatchSize);
+                if (!batchSizeCheckStatus.ok()) {
+                    return batchSizeCheckStatus;
+                }
                 size_t numberOfTokens = 0;
                 size_t tokenCountOfLongestDocument = 0;
                 for (const auto& document_tokens : *tokenizedDocuments) {
@@ -218,6 +254,16 @@ public:
                     numberOfTokens += document_tokens.size();
                 }
                 handler.setPromptTokensUsage(numberOfTokens);
+
+                {
+                    size_t numInputTensors = embeddings_session->getNumberOfModelInputs();
+                    size_t projectedInputBytes = receivedBatchSize * tokenCountOfLongestDocument * sizeof(int64_t) * numInputTensors;
+                    auto byteSizeCheckStatus = this->isInputByteSizeOk(projectedInputBytes);
+                    if (!byteSizeCheckStatus.ok()) {
+                        return byteSizeCheckStatus;
+                    }
+                }
+
                 tokens.input_ids = ov::Tensor{
                     ov::element::i64,
                     ov::Shape{receivedBatchSize, tokenCountOfLongestDocument}};
@@ -406,6 +452,8 @@ const std::string EmbeddingsCalculatorOV::OUTPUT_TAG_NAME{"RESPONSE_PAYLOAD"};
 const std::string EmbeddingsCalculatorOV::EMBEDDINGS_MODEL_INPUT_IDS_NAME{"input_ids"};
 const std::string EmbeddingsCalculatorOV::EMBEDDINGS_MODEL_ATTENTION_MASK_NAME{"attention_mask"};
 const std::string EmbeddingsCalculatorOV::EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME{"token_type_ids"};
+const size_t EmbeddingsCalculatorOV::MAX_BATCH_SIZE{1024};
+const size_t EmbeddingsCalculatorOV::MAX_INPUT_TENSORS_BYTE_SIZE{1024ull * 1024 * 1024};  // 1 GB
 
 REGISTER_CALCULATOR(EmbeddingsCalculatorOV);
 
