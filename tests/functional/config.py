@@ -314,10 +314,9 @@ performance_test_timeout_minutes = get_int("TT_PERFORMANCE_TEST_TIMEOUT_MINUTES"
 
 """ TT_BASE_OS - os type used for calculating ovms_image name (if not given explicitly). 
         Possible options (case insensitive): 
-        ubuntu22 - use default Ubuntu 22.04 image
         ubuntu24 - use default Ubuntu 24.04 image
         redhat - use UBI 9.7 based
-        ubuntu22,ubuntu24,redhat - iterate all tests both for ubuntu and redhat   
+        ubuntu24,redhat - iterate all tests both for ubuntu and redhat
         windows - can't iterate (supports only BINARY ovms type)
 """
 __base_os = os.environ.get("BASE_OS", OsType.Ubuntu24)

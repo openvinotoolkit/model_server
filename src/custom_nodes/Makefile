@@ -19,26 +19,24 @@ OPENCV_HEADER_FILE_PATH ?= ../deps/opencv.hpp
 OPENCV_BUILD_FLAGS ?= ../../third_party/opencv/opencv_cmake_flags.txt
 OPENCV_INSTALL_SCRIPT ?= ../../third_party/opencv/install_opencv.sh
 
-BASE_OS ?= ubuntu22
+BASE_OS ?= ubuntu24
 
-BASE_OS_TAG_UBUNTU ?= 22.04
+BASE_OS_TAG_UBUNTU ?= 24.04
 BASE_OS_TAG_REDHAT ?= 8.10
 
 
 NODES ?= add_one east_ocr face_blur horizontal_ocr image_transformation model_zoo_intel_object_detection
 NODE_TYPE ?= cpp
 
-ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+ifeq ($(BASE_OS),$(filter $(BASE_OS),ubuntu ubuntu24))
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
-  ifeq ($(BASE_OS),ubuntu22)
-	BASE_OS_TAG=22.04
-  endif
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
   DIST_OS=ubuntu
-endif
-ifeq ($(BASE_OS),redhat)
+else ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
+else
+  $(error BASE_OS must be either ubuntu, ubuntu24 or redhat)
 endif
 BASE_IMAGE=$(DIST_OS):$(BASE_OS_TAG)
 

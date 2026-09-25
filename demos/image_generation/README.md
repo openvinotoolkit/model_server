@@ -13,7 +13,7 @@ Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/s
 
 > **Note:** Please note that FLUX models are not supported on NPU.
 
-> **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770, Intel® Arc™ B580 on Ubuntu 22/24, RedHat 9 and Windows 11.
+> **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770, Intel® Arc™ B580 on Ubuntu 24, RedHat 9 and Windows 11.
 
 ## Prerequisites
 

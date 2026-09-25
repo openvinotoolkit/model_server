@@ -739,9 +739,7 @@ def parametrize_base_os(metafunc):
             image = calculate_ovms_image_name(config.target_devices[0], _os)
             env_info = EnvironmentInfo.get_instance(class_info=OvmsInfo, image=image)
             dist_name = env_info.get_os_distname()
-            if dist_name.startswith("Ubuntu 22.04") or dist_name.startswith(OsType.Ubuntu22):
-                os_name = OsType.Ubuntu22
-            elif dist_name.startswith("Ubuntu 24.04") or dist_name.startswith(OsType.Ubuntu24):
+            if dist_name.startswith("Ubuntu 24.04") or dist_name.startswith(OsType.Ubuntu24):
                 os_name = OsType.Ubuntu24
             elif dist_name.startswith("Red Hat") or dist_name.startswith(OsType.Redhat):
                 os_name = OsType.Redhat
@@ -926,7 +924,7 @@ def set_item_image_parameter(item):
     if getattr(item, "callspec", None):
         # Store calculated image for later use.
         ovms_type = item.callspec.params.get(OVMS_TYPE_PARAM_NAME, OvmsType.DOCKER)
-        base_os = item.callspec.params.get(BASE_OS_PARAM_NAME, OsType.Ubuntu22)
+        base_os = item.callspec.params.get(BASE_OS_PARAM_NAME, OsType.Ubuntu24)
         if ovms_type == OvmsType.BINARY or ovms_type == OvmsType.CAPI:
             item._image = calculate_ovms_binary_name(base_os=base_os)
         else:

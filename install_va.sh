@@ -23,7 +23,7 @@ apt update
 apt install -y gpg-agent wget
 # 2.
 . /etc/os-release
-if [[ ! " jammy " =~ " ${VERSION_CODENAME} " ]]; then
+if [[ ! " noble " =~ " ${VERSION_CODENAME} " ]]; then
   echo "Ubuntu version ${VERSION_CODENAME} not supported"
 else
   wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \

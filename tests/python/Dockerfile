@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from ubuntu:22.04
+from ubuntu:24.04
 
 env DEBIAN_FRONTEND=noninteractive
 run apt-get update && apt-get install -y git software-properties-common && add-apt-repository ppa:deadsnakes/ppa && apt-get update && apt-get install -y \

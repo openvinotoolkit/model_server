@@ -35,7 +35,7 @@ do
             shift;
 done
 if [ "$HELP" = true ] ; then
-    echo 'Example usage: publish_image_to_docker_hub.sh --image registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu22_main --image_gpu registry.toolbox.iotg.sclab.intel.com/openvino/model_server-gpu:ubuntu22_main --release_tag 2024.3'
+    echo 'Example usage: publish_image_to_docker_hub.sh --image registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main --image_gpu registry.toolbox.iotg.sclab.intel.com/openvino/model_server-gpu:ubuntu24_main --release_tag 2024.3'
     exit 1
 fi
 

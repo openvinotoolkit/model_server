@@ -99,7 +99,7 @@ def update_openvino():
         makefile_content = file.readlines()
 
     # OS identifiers
-    os_identifiers = ['ubuntu24', 'ubuntu22', 'rhel8']
+    os_identifiers = ['ubuntu24', 'rhel8']
 
     # Update Makefile content with package links and OV commit
     new_makefile_content = []

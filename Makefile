@@ -45,7 +45,7 @@ JOBS ?= $(CORES_TOTAL)
 
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
-# Currently supported BASE_OS values are: ubuntu24 ubuntu22 redhat
+# Currently supported BASE_OS values are: ubuntu24 redhat
 BASE_OS ?= ubuntu24
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
@@ -73,6 +73,7 @@ endif
 endif
 FUZZER_BUILD ?= 0
 DOCKER_BUILDKIT ?= 1
+export DOCKER_BUILDKIT
 KONFLUX ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -132,22 +133,17 @@ else
   OV_TRACING_PARAMS = ""
 endif
 
-ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+ifeq ($(BASE_OS),ubuntu24)
   TARGET_DISTRO_PARAMS = " --//:distro=ubuntu"
   OV_USE_BINARY ?= 1
-  ifeq ($(findstring ubuntu22,$(BASE_OS)),ubuntu22)
-	ifeq ($(OV_USE_BINARY),0)
-  		$(error OV_USE_BINARY = 0 not supported on Ubuntu22 OS)
-  	endif
-  endif
 else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
   TARGET_DISTRO_PARAMS = " --//:distro=redhat"
   OV_USE_BINARY ?= 0
   ifeq ($(OV_USE_BINARY),1)
-  	$(error OV_USE_BINARY = 1 not supported on RHEL OS)
+		$(error OV_USE_BINARY = 1 not supported on RHEL OS)
   endif
 else
-  $(error BASE_OS must be either ubuntu or redhat)
+	$(error BASE_OS must be either ubuntu24 or redhat)
 endif
 CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off_py_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(REPO_ENV)
@@ -157,26 +153,15 @@ BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$
 DIST_OS ?= $(BASE_OS)
 DIST_OS_TAG ?= $(BASE_OS_TAG)
 
-ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+ifeq ($(BASE_OS),ubuntu24)
   BASE_OS_TAG=$(BASE_OS_TAG_UBUNTU)
   DIST_OS=ubuntu
-  ifeq ($(BASE_OS),ubuntu22)
-	BASE_OS_TAG=22.04
-  endif
-  ifeq ($(BASE_OS),ubuntu24)
 	BASE_OS_TAG=24.04
-  endif
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
   BASE_IMAGE_RELEASE=$(BASE_IMAGE)
-  ifeq ($(BASE_OS_TAG),24.04)
-        OS=ubuntu24
+	OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "26.31.39395"
 	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU24)
-  else ifeq  ($(BASE_OS_TAG),22.04)
-        OS=ubuntu22
-	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU22)
-  endif
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)

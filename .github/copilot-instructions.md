@@ -136,7 +136,7 @@ The Makefile orchestrates full Docker-based builds. Key targets:
 make docker_build BASE_OS=redhat
 ```
 
-**Supported `BASE_OS` values:** `ubuntu24`, `ubuntu22`, `redhat`
+**Supported `BASE_OS` values:** `ubuntu24`, `redhat`
 
 ### Dockerfile stages
 

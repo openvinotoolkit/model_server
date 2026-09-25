@@ -5,7 +5,7 @@ This document gives information how to build docker images and the binary packag
 ## Prerequisites
 
 1. [Docker Engine](https://docs.docker.com/engine/)
-1. Ubuntu 22.04, Ubuntu 24.04 or RedHat 9.6 host
+1. Ubuntu 24.04 or RedHat 9.6 host
 1. make
 1. bash
 
@@ -28,7 +28,6 @@ To build the image with non default configuration, add parameters described belo
 ### `BASE_OS`
 
 Select base OS:
-- `ubuntu22` for Ubuntu 22.04 (default)
 - `ubuntu24` for Ubuntu 24.04
 - `redhat` for Red Hat UBI 9.6
 
@@ -45,7 +44,6 @@ Example:
 Parameter used to control which GPU driver version will be installed. Supported versions:
 | OS | Versions |
 |---|---|
-| Ubuntu22 | 24.39.31294 (default), <br /> 24.26.30049 (default), <br /> 23.22.26516|
 | Ubuntu24 | 24.52.32224 (default), <br /> 24.39.31294 |
 | RedHat | 23.22.26516 (default), <br /> 24.26.30049, <br />23.22.26516, <br /> 22.10.22597 |
 
@@ -70,7 +68,7 @@ and run make release_image with parameter: INSTALL_DRIVER_VERSION=dg2.
 
 Example:
 ```bash
-make release_image BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
+make release_image BASE_OS=ubuntu24 INSTALL_DRIVER_VERSION=dg2
 ```
 
 <hr />
@@ -147,11 +145,11 @@ The binary packages includes the `ovms` executable and linked libraries for bare
 
 ```bash
 make targz_package PYTHON_DISABLE=1
-tree dist/ubuntu22
+tree dist/ubuntu24
 ````
 
 ```bash
-dist/ubuntu22
+dist/ubuntu24
 ├── ovms.tar.gz
 └── ovms.tar.gz.sha256
 ```

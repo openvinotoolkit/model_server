@@ -1,7 +1,7 @@
 ## Deploying Model Server on Baremetal {#ovms_docs_deploying_server_baremetal}
 
 It is possible to deploy Model Server outside of container.
-To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubuntu24, RHEL9 or Windows 11.
+To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu24, RHEL9 or Windows 11.
 
 You can download model server package in two configurations. One with Python support (containing Python environment for Python code execution) and another without Python dependency - C++ only. Lack of support for Python code execution comes with the following limitations in model server from C++ only package:
 
@@ -13,41 +13,6 @@ You can download model server package in two configurations. One with Python sup
 For advanced LLM chat-template scenarios, the package with Python support is recommended, but it is not a universal fix for every template issue. Final rendering still depends on template correctness and model-specific expectations.
 
 ::::{tab-set}
-:::{tab-item} Ubuntu 22.04
-:sync: ubuntu-22-04
-Download precompiled package (without python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_ubuntu22_2026.3.0_python_off.tar.gz
-tar -xzvf ovms_ubuntu22_2026.3.0_python_off.tar.gz
-```
-or precompiled package (with python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_ubuntu22_2026.3.0_python_on.tar.gz
-tar -xzvf ovms_ubuntu22_2026.3.0_python_on.tar.gz
-```
-Install required libraries:
-```{code} sh
-sudo apt update -y && sudo apt install -y libxml2 curl
-```
-Set path to the libraries and add binary to the `PATH`
-```{code} sh
-export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH:${PWD}/ovms/bin
-```
-In case of the version with python run also:
-```{code} sh
-export PYTHONPATH=${PWD}/ovms/lib/python
-sudo apt -y install python3-pip
-pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
-```
-and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will also need to install NumPy:
-```{code} sh
-pip3 install numpy
-```
-**Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
-Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
-
-:::
 :::{tab-item} Ubuntu 24.04
 :sync: ubuntu-24-04
 Download precompiled package (without python):
