@@ -100,32 +100,48 @@ Status PythonInterpreterModule::initialize() {
 Status PythonInterpreterModule::start(const ovms::Config&) {
     std::promise<Status> initializationPromise;
     std::future<Status> initializationResult = initializationPromise.get_future();
-    lifecycleThread = std::thread([this, promise = std::move(initializationPromise)]() mutable {
-        Status status;
-        try {
-            status = initialize();
-        } catch (const std::exception& e) {
-            SPDLOG_ERROR("Unexpected exception during {} initialization: {}", PYTHON_INTERPRETER_MODULE_NAME, e.what());
-            status = Status(StatusCode::INTERNAL_ERROR, e.what());
-        } catch (...) {
-            SPDLOG_ERROR("Unknown exception during {} initialization", PYTHON_INTERPRETER_MODULE_NAME);
-            status = StatusCode::INTERNAL_ERROR;
+    {
+        std::lock_guard lifecycleControlLock(lifecycleControlMtx);
+        if (startCalled) {
+            SPDLOG_ERROR("Cannot start {} - module lifecycle is already active", PYTHON_INTERPRETER_MODULE_NAME);
+            return Status(StatusCode::INTERNAL_ERROR, "Python interpreter module lifecycle is already active");
         }
-        promise.set_value(status);
-        if (!status.ok()) {
-            shutdownOnLifecycleThread();
-            return;
-        }
+#if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
+        lifecycleThread = std::jthread([this, promise = std::move(initializationPromise)](std::stop_token stopToken) mutable {
+#else
+        lifecycleThread = std::thread([this, promise = std::move(initializationPromise)]() mutable {
+#endif
+            Status status;
+            try {
+                status = initialize();
+            } catch (const std::exception& e) {
+                SPDLOG_ERROR("Unexpected exception during {} initialization: {}", PYTHON_INTERPRETER_MODULE_NAME, e.what());
+                status = Status(StatusCode::INTERNAL_ERROR, e.what());
+            } catch (...) {
+                SPDLOG_ERROR("Unknown exception during {} initialization", PYTHON_INTERPRETER_MODULE_NAME);
+                status = StatusCode::INTERNAL_ERROR;
+            }
+            promise.set_value(status);
+            if (!status.ok()) {
+                shutdownOnLifecycleThread();
+                return;
+            }
 
-        std::unique_lock lock(lifecycleMtx);
-        shutdownCondition.wait(lock, [this]() { return shutdownRequested; });
-        lock.unlock();
-        shutdownOnLifecycleThread();
-    });
+            std::unique_lock lock(lifecycleMtx);
+#if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
+            shutdownCondition.wait(lock, stopToken, []() { return false; });
+#else
+            shutdownCondition.wait(lock, [this]() { return shutdownRequested; });
+#endif
+            lock.unlock();
+            shutdownOnLifecycleThread();
+        });
+        startCalled = true;
+    }
 
     Status status = initializationResult.get();
     if (!status.ok()) {
-        lifecycleThread.join();
+        shutdown();
     }
     return status;
 }
@@ -140,31 +156,55 @@ void PythonInterpreterModule::loadPythonCalculatorsPlugin() {
 }
 
 void PythonInterpreterModule::shutdown() {
-    std::lock_guard shutdownLock(shutdownMtx);
-    if (!lifecycleThread.joinable()) {
-        return;
-    }
-
+    LifecycleThread threadToJoin;
     {
-        std::lock_guard lifecycleLock(lifecycleMtx);
-        shutdownRequested = true;
+        std::lock_guard lifecycleControlLock(lifecycleControlMtx);
+        if (!lifecycleThread.joinable()) {
+            return;
+        }
+
+#if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
+        lifecycleThread.request_stop();
+#else
+        {
+            std::lock_guard lifecycleLock(lifecycleMtx);
+            shutdownRequested = true;
+        }
+        shutdownCondition.notify_one();
+#endif
+        if (std::this_thread::get_id() == lifecycleThread.get_id()) {
+            return;
+        }
+        threadToJoin = std::move(lifecycleThread);
     }
-    shutdownCondition.notify_one();
-    lifecycleThread.join();
+    try {
+        threadToJoin.join();
+    } catch (const std::system_error& e) {
+        SPDLOG_ERROR("Failed to join {} lifecycle thread: {}", PYTHON_INTERPRETER_MODULE_NAME, e.what());
+        if (threadToJoin.joinable()) {
+            threadToJoin.detach();
+        }
+    }
 }
 
-void PythonInterpreterModule::shutdownOnLifecycleThread() {
+void PythonInterpreterModule::shutdownOnLifecycleThread() noexcept {
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", PYTHON_INTERPRETER_MODULE_NAME);
-    if (ownsInterpreter && GILScopedRelease != nullptr) {
-        reacquireGILForThisThread();
+    try {
+        if (ownsInterpreter && GILScopedRelease != nullptr) {
+            reacquireGILForThisThread();
+        }
+        pythonBackend.reset();
+        if (ownsInterpreter) {
+            py::finalize_interpreter();
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Exception during {} shutdown: {}", PYTHON_INTERPRETER_MODULE_NAME, e.what());
+    } catch (...) {
+        SPDLOG_ERROR("Unknown exception during {} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
     }
-    pythonBackend.reset();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
-    if (ownsInterpreter) {
-        py::finalize_interpreter();
-    }
 }
 
 void PythonInterpreterModule::releaseGILFromThisThread() const {
