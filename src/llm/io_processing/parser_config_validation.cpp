@@ -46,6 +46,7 @@ const std::vector<std::string>& getSupportedReasoningParserNames() {
         "onyx",
         "minicpm5",
         "lfm2",
+        "granite42",
     };
     return names;
 }

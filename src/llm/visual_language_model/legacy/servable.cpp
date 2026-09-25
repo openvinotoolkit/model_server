@@ -206,13 +206,16 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
         legacyExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : legacyExecutionContext->results.finish_reasons[0];
 
     std::vector<Delta> deltas = executionContext->deltaChannel.drain();
-
     if (executionContext->apiHandler->isVerboseResponse()) {
         for (const auto& delta : deltas) {
             if (const auto* cd = std::get_if<ContentDelta>(&delta)) {
                 executionContext->apiHandler->appendVerboseRawText(cd->text);
             }
         }
+    }
+
+    if (const auto& outputParser = executionContext->apiHandler->getOutputParser()) {
+        outputParser->finalizeUnaryDeltas(deltas);
     }
 
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(

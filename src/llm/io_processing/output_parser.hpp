@@ -92,6 +92,16 @@ private:
     ProcessingPhase processingPhase = UNKNOWN;
     StreamOutputCache streamOutputCache;
     bool implicitReasoningStart = false;
+    // True when the rendered prompt already closed the reasoning span (the
+    // disabled-thinking Granite template ends in <think></think>). This is
+    // an initial phase fact, so resetStreamingState() must restore CONTENT for
+    // every choice rather than reopening markerless output as reasoning.
+    bool promptReasoningEnded = false;
+    // Per-generation facts retained for parsers whose unary grammar differentiates
+    // no text after the first reasoning segment from text that normalizes to empty.
+    // They deliberately remain private to parsing; ParsedOutput stays string-only.
+    bool reasoningPhaseCompleted = false;
+    bool finalContentWasPresent = false;
 
     // Baseline decode mode for content/unknown phases — true when the model/output format
     // needs special tokens visible before any parser-owned phase becomes active.
@@ -114,7 +124,8 @@ private:
 
 public:
     OutputParser() = delete;
-    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap);
+    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap,
+        bool granitePromoteReasoningToContent = false);
 
     bool isToolParserAvailable() const;
     bool isReasoningParserAvailable() const;
@@ -125,6 +136,10 @@ public:
 
     // Auto-detect and apply implicit reasoning start based on the prompt produced by the chat template.
     void detectAndSetImplicitReasoningStart(const std::string& renderedPrompt);
+
+    // Applies the configured parser's unary-only post-processing to one
+    // completed generation before its deltas enter common response aggregation.
+    void finalizeUnaryDeltas(std::vector<Delta>& deltas) const;
 
     // Parse one decoded chunk in streaming mode.
     //
