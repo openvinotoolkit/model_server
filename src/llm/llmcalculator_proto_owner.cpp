@@ -16,6 +16,12 @@
 
 #include "src/llm/llm_calculator.pb.h"
 
-extern "C" __attribute__((visibility("default"))) const void* OVMS_LLMCalculatorProtoOwnerAnchor() {
+#if defined(_WIN32)
+#define OVMS_LLM_EXPORT extern "C" __declspec(dllexport)
+#else
+#define OVMS_LLM_EXPORT extern "C" __attribute__((visibility("default")))
+#endif
+
+OVMS_LLM_EXPORT const void* OVMS_LLMCalculatorProtoOwnerAnchor() {
     return &mediapipe::LLMCalculatorOptions::default_instance();
 }
