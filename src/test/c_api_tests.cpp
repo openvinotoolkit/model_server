@@ -192,7 +192,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->grpcMaxThreads, 100);
     EXPECT_EQ(serverSettings->grpcMemoryQuota, (size_t)1000000);
     EXPECT_EQ(serverSettings->filesystemPollWaitMilliseconds, 2000);
-    EXPECT_EQ(serverSettings->memoryTrimmingIntervalSeconds, 4);
+    EXPECT_EQ(serverSettings->memoryTrimmingIntervalSeconds, 300);
     EXPECT_EQ(serverSettings->cacheDir, getGenericFullPathForTmp("/tmp/cache"));
 
     testDefaultSingleModelOptions(modelsSettings);
@@ -221,7 +221,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     // trace path  // not tested since it is not supported in C-API
     EXPECT_EQ(cfg.grpcChannelArguments(), "grpcargs");
     EXPECT_EQ(cfg.filesystemPollWaitMilliseconds(), 2000);
-    EXPECT_EQ(cfg.memoryTrimmingIntervalSeconds(), 4);
+    EXPECT_EQ(cfg.memoryTrimmingIntervalSeconds(), 300);
     EXPECT_EQ(cfg.cacheDir(), getGenericFullPathForTmp("/tmp/cache"));
 
     EXPECT_EQ(cfg.modelName(), "");
