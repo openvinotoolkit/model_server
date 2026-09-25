@@ -101,7 +101,7 @@ Python support is optional in Model Server. The following issues may occur when 
 - **Cause**: System Python library (`libpython.so`) is not found
 - **Symptoms**: Server starts, but Python features are unavailable; logs mention Python runtime initialization failure and fallback
 - **Resolution**:
-  - Verify you deployed a with-Python package, not without-Python package
+  - Verify the required Python runtime libraries are present and discoverable by the process
   - Install system Python development libraries:
     - **Ubuntu/Debian**: `sudo apt install libpython3.12-dev` (adjust version as needed)
     - **RHEL/CentOS**: `sudo yum install python312-devel`
@@ -129,23 +129,24 @@ Python support is optional in Model Server. The following issues may occur when 
 
 ### Python Node Graph Returns Error When Loaded
 - **Error**: "PythonExecutorCalculator not found" or "Python calculators plugin not available"
-- **Cause**: Python calculators plugin failed to load (see above) or Python support was compiled out (`PYTHON_DISABLE=1`)
+- **Cause**: Python calculators plugin failed to load (see above) or the Python runtime libraries are unavailable.
 - **Resolution**:
   - Follow "Python calculators plugin failed to load" steps above
-  - Or use without-Python package if you don't need Python nodes
+  - If Python nodes are not required, no action is needed; OVMS continues serving non-Python models with Python features disabled
 
 ### LLM Models with Complex Jinja2 Templates Don't Render Correctly
 - **Symptoms**: Chat template output is missing parts or shows literal template syntax
-- **Cause**: Without-Python package in use; complex template features require Python
+- **Cause**: Python runtime libraries or dependencies are unavailable; complex template features require Python
 - **Resolution**:
-  - Use with-Python package instead of without-Python package
-  - Follow Python setup steps above (PYTHONPATH, dependencies)
+  - Verify `libovmspython` and the Python runtime libraries are available
+  - Follow the Python setup steps above for `PYTHONPATH` and dependencies
+  - If the runtime remains unavailable, OVMS falls back to reduced template support and continues serving non-Python models
 
 ### Verify Python Support Status
 - OVMS loads Python runtime dynamically, so `ldd ${OVMS_BIN}` may not list Python-related libraries; instead verify `${OVMS_LIB_PATH}/libovmspython.*` is present and check logs for `Python runtime library loaded successfully` / `Python calculators plugin loaded successfully`.
 - Check server logs for `KFS Python tensor bridge activated` or `Python calculators plugin libpython_calculators.so failed to load`.
 - Submit a Python node graph request; when Python support is unavailable, the request fails gracefully with a clear error.
-- Confirm OVMS Python package files exist (for with-Python package), for example under `${OVMS_PACKAGE_PATH}/lib/python`.
+- Confirm OVMS Python package files exist, when an embedded Python environment was packaged, for example under `${OVMS_PACKAGE_PATH}/lib/python`.
 
 ## Client Request Issues
 - When the model server starts successfully and all the models are imported, there could be a couple of reasons for errors in the request handling.

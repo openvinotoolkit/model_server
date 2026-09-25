@@ -55,7 +55,6 @@ build --define=grpc_no_ares=true
 build --define=MEDIAPIPE_DISABLE_GPU=1
 build --define=MEDIAPIPE_DISABLE=0
 build --define=CLOUD_DISABLE=0
-build --define=PYTHON_DISABLE=0
 
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
@@ -108,22 +107,16 @@ build:linux --cxxopt=-Werror=format-security
 # TODO: Add equivalent windows flag
 build:linux --force_pic
 
-build:mp_on_py_on --config=linux
-build:mp_on_py_on --define=MEDIAPIPE_DISABLE=0
-build:mp_on_py_on --define=PYTHON_DISABLE=0
-build:mp_on_py_on --disk_cache=/root/.cache/bazel_mp_on_py_on
-build:mp_on_py_off --config=linux
-build:mp_on_py_off --define=MEDIAPIPE_DISABLE=0
-build:mp_on_py_off --define=PYTHON_DISABLE=1
-build:mp_on_py_off --disk_cache=/root/.cache/bazel_mp_on_py_off
-build:mp_off_py_off --config=linux
-build:mp_off_py_off --define=MEDIAPIPE_DISABLE=1
-build:mp_off_py_off --define=PYTHON_DISABLE=1
-build:mp_off_py_off --disk_cache=/root/.cache/bazel_mp_off_py_off
+build:mp_on --config=linux
+build:mp_on --define=MEDIAPIPE_DISABLE=0
+build:mp_on --disk_cache=/root/.cache/bazel_mp_on
+build:mp_off --config=linux
+build:mp_off --define=MEDIAPIPE_DISABLE=1
+build:mp_off --disk_cache=/root/.cache/bazel_mp_off
 #build --remote_header=x-build-event-log=DEBUG
 
 # Coverity needs remote and disk cache disabled
-build:coverity --config=mp_on_py_on
+build:coverity --config=mp_on
 build:coverity --disk_cache=
 
 # Windows settings ######################################################################################################
@@ -244,7 +237,6 @@ build:windows --override_repository="boringssl=C:\\opt\\boringSSL-SwiftPM"
 
 # Windows config default flags
 build:windows --define=CLOUD_DISABLE=1
-build:windows --define=PYTHON_DISABLE=1
 build:windows --define=MEDIAPIPE_DISABLE=0
 
 # Change this path alongside WORKSPACE:"windows_openvino" path for model_api cmake compilation.
@@ -253,12 +245,8 @@ build:windows --action_env OpenCV_DIR="c:/opt/opencv_4.14.0"
 
 build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.12
 
-build:win_mp_on_py_on --config=windows
-build:win_mp_on_py_on --define=MEDIAPIPE_DISABLE=0
-build:win_mp_on_py_on --define=PYTHON_DISABLE=0
-build:win_mp_on_py_off --config=windows
-build:win_mp_on_py_off --define=MEDIAPIPE_DISABLE=0
-build:win_mp_on_py_off --define=PYTHON_DISABLE=1
+build:win_mp_on --config=windows
+build:win_mp_on --define=MEDIAPIPE_DISABLE=0
 
 # Tests settings ############################################################################################################################
 test --test_timeout=1200

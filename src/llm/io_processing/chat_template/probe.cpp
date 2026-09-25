@@ -23,9 +23,7 @@
 #include <spdlog/spdlog.h>
 
 #include "../../../logging.hpp"
-#if (PYTHON_DISABLE == 0)
 #include "src/llm/py_jinja_template_processor.hpp"
-#endif
 
 namespace ovms {
 
@@ -252,8 +250,6 @@ bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
     return analyzeProbeToolArgumentResults(strOk, strOut, objOk, objOut, caps);
 }
 
-#if (PYTHON_DISABLE == 0)
-
 bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, ChatTemplateCaps& caps) {
     // For now the capabilities are only related to tool calls, therefore we early exit here.
     // In the future, if we add more capabilities to probe, we will need to remove this early exit and probe for those capabilities as well.
@@ -285,6 +281,5 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, Cha
 
     return analyzeProbeToolArgumentResults(strOk, strOut, objOk, objOut, caps);
 }
-#endif
 
 }  // namespace ovms

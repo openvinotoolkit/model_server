@@ -160,14 +160,12 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
         return;
     }
 
-#if (PYTHON_DISABLE == 0)
     if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->templateProcessor.chatTemplate != nullptr) {
         if (!probeChatTemplateCapsJinja(properties->templateProcessor, properties->chatTemplateCaps)) {
             SPDLOG_LOGGER_WARN(llm_calculator_logger, "Jinja cannot render this template's tool calls correctly");
         }
         return;
     }
-#endif
 
     // Minja path — use the shared probe component
     if (!probeChatTemplateCapsMinja(properties->tokenizer, properties->chatTemplateCaps)) {
@@ -250,7 +248,6 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         probeServableChatTemplateCaps(properties);
     }
 
-#if (PYTHON_DISABLE == 0)
     if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
         std::string runtimeOutput;
         RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
@@ -283,7 +280,6 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
             }
         }
     }
-#endif
 
     // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
@@ -313,7 +309,6 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
     }
 }
 
-#if (PYTHON_DISABLE == 0)
 // Helper function for case-insensitive comparison of file extensions
 static bool hasGGUFExtension(const std::filesystem::path& path) {
     auto ext = path.extension().string();
@@ -538,7 +533,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
     }
 }
-#endif
 
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath) {
     auto fsModelsPath = std::filesystem::path(modelsPath);

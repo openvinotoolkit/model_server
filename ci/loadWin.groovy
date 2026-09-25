@@ -122,7 +122,7 @@ def clean() {
 
 def build(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
-    def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"
+    def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "" : "--with_python"
     def status = bat(returnStatus: true, script: '@windows_build.bat ' + get_short_bazel_path() + ' ' + pythonOption + ' --with_tests') 
     status = bat(returnStatus: true, script: '@grep "Build completed successfully" win_build.log"')
     if (status != 0) {
@@ -255,7 +255,7 @@ def download_package(){
 
 def unit_test(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
-    def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"
+    def pythonOption = ""
     boolean hasError = false
     def errorReasons = []
 

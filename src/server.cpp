@@ -67,9 +67,7 @@
 #include "profiler.hpp"
 #include "profilermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
-#if (PYTHON_DISABLE == 0)
 #include "python/python_runtime_loader.hpp"
-#endif
 #include "mediapipe_runtime_api.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
 #include "shutdown_state.hpp"
@@ -352,7 +350,6 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<HTTPServerModule>(*this);
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
-#if (PYTHON_DISABLE == 0)
     if (name == PYTHON_INTERPRETER_MODULE_NAME) {
         auto pythonModule = ensurePythonRuntimeLoaded();
         if (pythonModule == nullptr) {
@@ -360,7 +357,6 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         }
         return std::unique_ptr<Module>(pythonModule);
     }
-#endif
     if (name == METRICS_MODULE_NAME)
         return std::make_unique<MetricModule>();
     if (name == CAPI_MODULE_NAME)
@@ -441,26 +437,22 @@ Status Server::startModules(ovms::Config& config) {
         return status;
     }
 
-#if (PYTHON_DISABLE == 0)
-    if (config.getServerSettings().withPython) {
-        auto pythonModule = this->createModule(PYTHON_INTERPRETER_MODULE_NAME);
-        if (pythonModule == nullptr) {
-            SPDLOG_WARN("Python requested in configuration, but runtime library could not be loaded. Continuing with Python features disabled.");
+    auto pythonModule = this->createModule(PYTHON_INTERPRETER_MODULE_NAME);
+    if (pythonModule == nullptr) {
+        SPDLOG_DEBUG("Python runtime library is unavailable. Continuing with Python features disabled.");
+    } else {
+        // Try to start Python support first; if runtime is not operational,
+        // continue without Python-dependent features instead of failing server startup.
+        status = pythonModule->start(config);
+        if (!status.ok()) {
+            SPDLOG_WARN("Python runtime is not operational ({}). Continuing with Python features disabled.", status.string());
         } else {
-            // Try to start Python support first; if runtime is not operational,
-            // continue without Python-dependent features instead of failing server startup.
-            status = pythonModule->start(config);
-            if (!status.ok()) {
-                SPDLOG_WARN("Python runtime is not operational ({}). Continuing with Python features disabled.", status.string());
-            } else {
-                std::unique_lock lock(modulesMtx);
-                std::tie(it, inserted) = this->modules.emplace(PYTHON_INTERPRETER_MODULE_NAME, std::move(pythonModule));
-                if (!inserted)
-                    return Status(StatusCode::MODULE_ALREADY_INSERTED, PYTHON_INTERPRETER_MODULE_NAME);
-            }
+            std::unique_lock lock(modulesMtx);
+            std::tie(it, inserted) = this->modules.emplace(PYTHON_INTERPRETER_MODULE_NAME, std::move(pythonModule));
+            if (!inserted)
+                return Status(StatusCode::MODULE_ALREADY_INSERTED, PYTHON_INTERPRETER_MODULE_NAME);
         }
     }
-#endif
 #if MTR_ENABLED
     INSERT_MODULE(PROFILER_MODULE_NAME, it);
     START_MODULE(it);
@@ -511,8 +503,17 @@ Status Server::startModules(ovms::Config& config) {
 void Server::ensureModuleShutdown(const std::string& name) {
     std::shared_lock lock(modulesMtx);
     auto it = modules.find(name);
-    if (it != modules.end())
+    if (it == modules.end())
+        return;
+    // A throwing shutdown() (e.g. Python module deleted from a thread other than the one
+    // that started it) must not skip modules.clear() below, or Server stays "live" forever.
+    try {
         it->second->shutdown();
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Exception during shutdown of module: {} - {}", name, e.what());
+    } catch (...) {
+        SPDLOG_ERROR("Unknown exception during shutdown of module: {}", name);
+    }
 }
 
 class ModulesShutdownGuard {
@@ -552,11 +553,7 @@ void Server::shutdownModules() {
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
-#if (PYTHON_DISABLE == 0)
-    if (ovms::Config::instance().getServerSettings().withPython) {
-        ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
-    }
-#endif
+    ensureModuleShutdown(PYTHON_INTERPRETER_MODULE_NAME);
     ovms::Config::instance().setInMemoryGraphPbtxt(std::nullopt);
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again

@@ -28,7 +28,7 @@ pipeline {
                           }
                           def python_presence = ""
                           if (env.OVMS_PYTHON_ENABLED == "1") {
-                              python_presence = "with_python"
+                              python_presence = "enabled"
                           } else {
                               python_presence = "without_python"
                           }

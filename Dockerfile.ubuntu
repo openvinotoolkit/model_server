@@ -108,7 +108,7 @@ ARG BASE_OS
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=ubuntu"
+ARG debug_bazel_flags="--strip=always  --config=mp_on --//:distro=ubuntu"
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update && \
     apt-get install -y software-properties-common --no-install-recommends; add-apt-repository 'ppa:deadsnakes/ppa' -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* ; fi
@@ -175,7 +175,7 @@ ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -fPIE -pie -fstack-protector-str
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then \
-    if [[ $debug_bazel_flags == *"py_off"* ]]; then \
+    if false; then \
         cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. ; \
     else \
         cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. ; \
@@ -188,8 +188,8 @@ RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
     ln -s /usr/local/runtime /opt/intel/openvino && \
     ln -s /openvino/scripts/setupvars/setupvars.sh /opt/intel/openvino/setupvars.sh && \
     ln -s /opt/intel/openvino /opt/intel/openvino_2026
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/${CMAKE_BUILD_TYPE}/python /opt/intel/openvino/
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; mkdir -p /opt/intel/openvino && cp -r /openvino/bin/intel64/${CMAKE_BUILD_TYPE}/python /opt/intel/openvino/
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; cp -r /openvino/tools/ovc/* /opt/intel/openvino/python
 
 ################## END OF OPENVINO SOURCE BUILD ######################
 
@@ -220,20 +220,18 @@ ARG ov_tokenizers_branch=master
 ARG ov_tokenizers_org=openvinotoolkit
 # hadolint ignore=DL3003
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
-RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
-    mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
+RUN mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp -r python/* /opt/intel/openvino/python/ ; \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2026.5.dist-info ; \
     mkdir -p /opt/intel/openvino/python/bin ; \
     echo $'#!/usr/bin/python3\n# -*- coding: utf-8 -*-\nimport re\nimport sys\nfrom openvino_tokenizers.cli_tools.convert_tokenizer import convert_hf_tokenizer\nif __name__ == \'__main__\':\n    sys.argv[0] = re.sub(r\'(-script\.pyw|\.exe)?\$\', \'\', sys.argv[0])\n    sys.exit(convert_hf_tokenizer())' > /opt/intel/openvino/python/bin/convert_tokenizer ; \
     chmod 755 /opt/intel/openvino/python/bin/convert_tokenizer ; \
     echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2026.5\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2026.5.0' > /opt/intel/openvino/python/openvino_tokenizers-2026.5.dist-info/METADATA ; \
-    ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; \
-    fi
+    ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
     cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} " -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
-    if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
+    if true; then \
     cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
     fi
 ARG ov_genai_branch=master
@@ -246,7 +244,7 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [
     cmake --build ./build/ --parallel $JOBS && cp /openvino_genai/build/openvino_genai/lib*.so* /opt/intel/openvino/runtime/lib/intel64/ && \
     cp -r /openvino_genai/src/cpp/include/* /opt/intel/openvino/runtime/include/ && \
     cp /openvino_genai/build/src/cpp/openvino/genai/version.hpp /opt/intel/openvino/runtime/include/openvino/genai/ && \
-    if ! [[ $debug_bazel_flags == *"py_off"* ]]; then \
+    if true; then \
         cp -r /openvino_genai/build/openvino_genai/*py* /opt/intel/openvino/python/ ; \
     fi ; \
 fi
@@ -314,8 +312,7 @@ RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bi
 WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make && cp libcustom_relu_cpu_extension.so /opt
 
-RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2026.5.dist-info && \
+RUN mkdir -p /opt/intel/openvino/python/openvino-2026.5.dist-info && \
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2026.5' > /opt/intel/openvino/python/openvino-2026.5.dist-info/METADATA
 
 WORKDIR /ovms
@@ -349,7 +346,7 @@ ARG OPTIMIZE_BUILDING_TESTS=0
 # hadolint ignore=SC2046
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms \
     $(if [[ "${debug_bazel_flags}" != *"mp_off"* ]]; then echo -n "//src:ovms_mediapipe_runtime_shared"; fi) \
-    $(if [[ "${debug_bazel_flags}" != *"py_off"* ]]; then echo -n "//src/python:libovmspython //src/python:libpython_calculators"; fi) \
+    //src/python:libovmspython //src/python:libpython_calculators \
     $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n "//src:ovms_test //src:python_runtime_library_test"; fi); fi;
 
 # espeak-ng is built as a separate step, independent of the OVMS binary.
@@ -375,7 +372,7 @@ FROM $BUILD_IMAGE as capi-build
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 # C api shared library
 # hadolint ignore=DL3059
-ARG CAPI_FLAGS="--strip=always --config mp_off_py_off --//:distro=ubuntu"
+ARG CAPI_FLAGS="--strip=always --config mp_off --//:distro=ubuntu"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
 WORKDIR /ovms
@@ -478,8 +475,7 @@ COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info 
 COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe/
 
 # For image with Python enabled install Python library
-RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-    apt-get update -y ; \
+RUN apt-get update -y ; \
     if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then python_version=3.10; else python_version=3.12; fi; \
     apt-get install libpython$python_version --no-install-recommends -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*

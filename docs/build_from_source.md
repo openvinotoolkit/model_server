@@ -104,25 +104,14 @@ make release_image JOBS=2
 ```
 <hr />
 
-### `PYTHON_DISABLE`
-
-When set to `0`, OpenVINO&trade Model Server will be built with [Python Nodes](python_support/quickstart.md) support. Default value: `0`.
-
-Example:
-```bash
-make release_image PYTHON_DISABLE=1
-```
-
 ### `MEDIAPIPE_DISABLE`
 
 When set to `0`, OpenVINO&trade Model Server will be built with [MediaPipe](mediapipe.md) support. Default value: `0`.
 
 Example:
 ```bash
-make release_image MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
+make release_image MEDIAPIPE_DISABLE=1
 ```
-
- > **Note**: In order to build the image with python nodes support (PYTHON_DISABLE=0) mediapipe have to be enabled (MEDIAPIPE_DISABLE=0)
 
 ### `GPU`
 
@@ -138,7 +127,7 @@ make release_image GPU=1
 Building minimalistic OVMS docker image requires disabling all optional features:
 
 ```bash
-make release_image GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
+make release_image GPU=0 MEDIAPIPE_DISABLE=1
 ```
 
 ## Building Binary Package
@@ -146,7 +135,7 @@ make release_image GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
 The binary packages includes the `ovms` executable and linked libraries for bare metal deployments. It includes also a shared library for the model server CAPI interface. Building `ovms.tar.gz` package is possible by using `targz_package` target:
 
 ```bash
-make targz_package PYTHON_DISABLE=1
+make targz_package
 tree dist/ubuntu22
 ````
 

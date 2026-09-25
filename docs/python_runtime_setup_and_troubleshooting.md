@@ -16,12 +16,11 @@ For installation steps of baremetal packages, see [Deploying Model Server on Bar
 
 Model Server supports two deployment configurations:
 
-**With Python Support** (`PYTHON_DISABLE=0`, default):
+**Python runtime support:**
 - Python nodes are available.
 - LLM chat-template handling has broader feature coverage.
 - Runtime Python libraries must be available.
 
-**Without Python Support** (`PYTHON_DISABLE=1`):
 - Lightweight deployment for C++ models only.
 - Python nodes cannot be used.
 - LLM template rendering has limitations.
