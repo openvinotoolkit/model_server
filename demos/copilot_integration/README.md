@@ -7,16 +7,32 @@ GitHub Copilot in Visual Studio Code can talk to **any** OpenAI-compatible endpo
 feature. This demo shows how to serve a local model with OpenVINO Model Server (OVMS) and use it as
 the backing model for Copilot Chat / Agent mode - keeping your code and prompts on your own hardware.
 
-In the walkthrough below we use the vision- and tool-calling-capable model
-[`OpenVINO/Muse-Glimmer-30B-int4-ov`](https://huggingface.co/OpenVINO/Muse-Glimmer-30B-int4-ov)
-running on an Intel Arc GPU, and let Copilot Agent build a small full-stack application end to end.
+In the walkthrough below we let Copilot Agent build a small full-stack application end to end, backed
+by a model of your choice from the [Suggested models](#suggested-models) table running on OVMS.
 
 ## Requirements
 
 - Visual Studio Code with GitHub Copilot enabled
-- An OVMS endpoint serving a chat-completions model (see [Deploy OVMS](#1-deploy-ovms))
-- For self-hosting: Linux with Docker and an Intel GPU with at least 16 GB of VRAM
-  (`Muse-Glimmer-30B-int4-ov` is a 30B model with ~15 GB of INT4 weights)
+- An OVMS endpoint serving a chat-completions model with tool-calling support. Either deploy one
+  yourself (see [Deploy OVMS](#1-deploy-ovms)), or if someone else already has one running for you,
+  skip straight to [Configure VS Code](#2-configure-vs-code) - you'll only need its endpoint URL and
+  served model name.
+- For self-hosting: Linux with Docker and an Intel GPU
+- Memory requirements depend on the chosen model (see table below)
+
+## Suggested models
+
+| Model | HF Link | Notes |
+|---|---|---|
+| `OpenVINO/Qwen3.8-27B-int8-ov` | [link](https://huggingface.co/OpenVINO/Qwen3.8-27B-int8-ov) | Vision-capable (VLM); general purpose chat/agent model |
+| `OpenVINO/Qwen3.6-35B-A3B-int4-ov` | [link](https://huggingface.co/OpenVINO/Qwen3.6-35B-A3B-int4-ov) | Vision-capable (VLM); general purpose chat/agent model |
+| `OpenVINO/Muse-Glimmer-30B-int4-ov` | [link](https://huggingface.co/OpenVINO/Muse-Glimmer-30B-int4-ov) | Vision-capable (VLM); general purpose chat/agent model; used and tested in the walkthrough below |
+| `OpenVINO/gpt-oss-20b-int4-ov` | [link](https://huggingface.co/OpenVINO/gpt-oss-20b-int4-ov) | General purpose chat/agent model |
+| `OpenVINO/Qwen3-Coder-Next` | **To be published soon** | Big coding model; available only on iGPU with minimum 64GB of RAM |
+| `OpenVINO/Qwen3.5-9B-int4-ov` | [link](https://huggingface.co/OpenVINO/Qwen3.5-9B-int4-ov) | Smaller model, use when RAM/VRAM is limited or for quick, low-latency edits; not recommended for harder coding tasks |
+
+The walkthrough below was tested with `Muse-Glimmer-30B-int4-ov` on a discrete Intel Arc B70 GPU; the
+other models are suggested but not verified with this specific demo.
 
 > **Note:** Any OpenAI chat-completions model served by OVMS will work with the VS Code steps below -
 > just adjust the model id/name accordingly.
@@ -28,26 +44,28 @@ running on an Intel Arc GPU, and let Copilot Agent build a small full-stack appl
 > You only need the endpoint URL and the served model name.
 
 Deploy the model with Docker on a Linux host with an Intel GPU. The command below exposes the REST
-API on port `10000`, matching the URL used later in VS Code (`http://localhost:10000`):
+API on port `8000`, matching the URL used later in VS Code (`http://localhost:8000`). Only
+`--source_model` needs to change to deploy a different model from the [Suggested models](#suggested-models)
+table:
 
 ```bash
+mkdir -p ${HOME}/models/cache
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm \
-    -p 10000:10000 -v ${HOME}/models:/models:rw \
+    -p 8000:8000 -v ${HOME}/models:/models:rw \
     openvino/model_server:latest-gpu \
-    --rest_port 10000 --model_repository_path /models \
-    --source_model OpenVINO/Muse-Glimmer-30B-int4-ov \
-    --model_name Muse-Glimmer-30B-int4-ov \
-    --target_device GPU
+    --rest_port 8000 --model_repository_path /models --cache_dir /models/cache \
+    --source_model OpenVINO/Muse-Glimmer-30B-int4-ov
 ```
 
 > **Note:** The first launch downloads the model into `${HOME}/models` and compiles it for the GPU,
-> which can take a while. Subsequent starts reuse the cached model and are fast.
+> which can take a while depending on your connection and hardware. Subsequent starts reuse the
+> downloaded model and the compiled-model cache in `${HOME}/models/cache`, and are ready in a few seconds.
 
 Verify the model is being served:
 
 ```bash
-curl http://localhost:10000/v1/models
+curl http://localhost:8000/v1/models
 ```
 
 ## 2. Configure VS Code
@@ -59,14 +77,17 @@ Add the OVMS endpoint as a custom model in Copilot's language model picker.
 3. Choose **Custom Endpoint**.
 4. Enter a **group name** that identifies the endpoint, e.g. `OVMS on B70`
    (here `B70` refers to the Intel Arc GPU running OVMS).
-5. Leave the **API key** empty (OVMS does not require one).
+5. Leave the **API key** empty, or set one if OVMS is configured to require it (must match on both sides).
 6. Select the **API type** - this demo uses **chat completions**.
 7. Fill in the model details in the generated configuration:
    - **name** - display name shown in VS Code, e.g. `OVMS Muse-Glimmer-30B-int4`
-   - **id** - the model name as deployed in OVMS (`--model_name`), here `Muse-Glimmer-30B-int4-ov`
-   - **url** - the OVMS endpoint URL, here `http://localhost:10000`
+   - **id** - the model name as deployed in OVMS (`--source_model`), here `OpenVINO/Muse-Glimmer-30B-int4-ov`
+   - **url** - the OVMS endpoint URL, here `http://localhost:8000`
 
 ![Fill in model name, id and url](images/FillModelIdNameUrl.png)
+
+> See VS Code's [model configuration reference](https://code.visualstudio.com/docs/agent-customization/language-models#_model-configuration-reference)
+> for the full list of available fields (including `toolCalling` and `vision`).
 
 > **Note:** The **id** must exactly match the model name served by OVMS (the `--model_name` value, or
 > the `--source_model` string if `--model_name` is omitted). `toolCalling` and `vision` are enabled
@@ -76,6 +97,9 @@ Add the OVMS endpoint as a custom model in Copilot's language model picker.
 
 1. Start a new Copilot Chat / Agent session and select your model (e.g. `OVMS Muse-Glimmer-30B-int4`)
    from the model picker.
+
+![Select model](images/SelectModel.png)
+
 2. Enter your prompt.
 3. When Copilot asks for permission to edit files or run commands, click **Allow**, then wait for the
    model to finish.
@@ -84,20 +108,13 @@ Add the OVMS endpoint as a custom model in Copilot's language model picker.
 
 This prompt is adapted from Intel's
 [Coding Agentic Workflow](https://github.com/intel-samples/agentic-demos/tree/main/CodingAgenticWorkflow)
-sample. It references two reference UI mock-up images that guide the generated interface. Download them
-first and update the paths in the prompt to match where you saved them:
+sample. It references two reference UI mock-up images that guide the generated interface:
 
 - [feedback-input.png](https://github.com/intel-samples/agentic-demos/blob/main/CodingAgenticWorkflow/assets/feedback-input.png)
 - [admin-dashboard-ui.png](https://github.com/intel-samples/agentic-demos/blob/main/CodingAgenticWorkflow/assets/admin-dashboard-ui.png)
 
-```bash
-mkdir -p ~/Downloads
-curl -L -o ~/Downloads/feedback-input.png https://raw.githubusercontent.com/intel-samples/agentic-demos/main/CodingAgenticWorkflow/assets/feedback-input.png
-curl -L -o ~/Downloads/admin-dashboard-ui.png https://raw.githubusercontent.com/intel-samples/agentic-demos/main/CodingAgenticWorkflow/assets/admin-dashboard-ui.png
-```
-
-> **Note:** The prompt below references the images by local file path (e.g.
-> `/home/<user>/Downloads/admin-dashboard-ui.png`). Adjust these paths to your own download location.
+> **Note:** Download the images and paste them directly into the Copilot Chat input (as image attachments)
+> alongside the prompt below.
 
 ```text
 Build a full-stack Customer Feedback Triage application from scratch.
@@ -127,9 +144,7 @@ Follow these exact architectural requirements:
 
 5. Please test the backend API.
 
-Reference implementation images:
-/home/<user>/Downloads/admin-dashboard-ui.png
-/home/<user>/Downloads/feedback-input.png
+Reference implementation images are attached.
 
 Notes:
 - Execute this incrementally. Read your own compiler errors, run the installation commands, create the files, and let me know when it's fully operational.
