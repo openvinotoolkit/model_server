@@ -23,7 +23,8 @@ By the end of this demo you will have:
 Requirements:
 - Linux or Windows
 - Python 3.12+
-- Docker (Docker Engine on Linux, Docker Desktop on Windows)
+- On Linux: Docker Engine
+- On Windows: OVMS installed as a standalone app (`ovms.exe` on `PATH`). See the [OVMS Windows installation guide](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server.html#deploying-model-server-on-baremetal).
 
 ### Step 1: Prepare model directory
 
@@ -32,14 +33,12 @@ Requirements:
 :sync: Linux
 ```bash
 mkdir -p ${HOME}/models
-export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 ```
 :::
 :::{tab-item} Windows
 :sync: Windows
 ```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\models" | Out-Null
-$env:MODELS_DIR = "$env:USERPROFILE\models"
+mkdir c:\models
 ```
 :::
 ::::
@@ -52,6 +51,7 @@ If OVMS is already running with the required models, you can skip this step.
 :::{tab-item} Linux
 :sync: Linux
 ```bash
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 docker run --rm ${GPU_ARGS} -u $(id -u):$(id -g) \
   -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -e "no_proxy=${no_proxy}" \
   -v ${HOME}/models:/models openvino/model_server:latest-gpu \
@@ -73,19 +73,14 @@ docker run --rm -u $(id -u):$(id -g) -v ${HOME}/models:/models openvino/model_se
 :::
 :::{tab-item} Windows
 :sync: Windows
-```powershell
-docker run --rm -v ${env:MODELS_DIR}:/models openvino/model_server:latest `
-  --pull --source_model OpenVINO/Qwen3.8-27B-int4-ov --model_repository_path /models
+```bat
+ovms.exe --pull --source_model OpenVINO/Qwen3.8-27B-int4-ov --model_repository_path c:\models
+ovms.exe --pull --source_model OpenVINO/Qwen3-8B-int8-ov --model_repository_path c:\models
 
-docker run --rm -v ${env:MODELS_DIR}:/models openvino/model_server:latest `
-  --pull --source_model OpenVINO/Qwen3-8B-int8-ov --model_repository_path /models
-
-docker run --rm -v ${env:MODELS_DIR}:/models openvino/model_server:latest `
-  --add_to_config --config_path /models/config.json `
+ovms.exe --add_to_config --config_path c:\models\config.json ^
   --model_path OpenVINO/Qwen3.8-27B-int4-ov --model_name OpenVINO/Qwen3.8-27B-int4-ov
 
-docker run --rm -v ${env:MODELS_DIR}:/models openvino/model_server:latest `
-  --add_to_config --config_path /models/config.json `
+ovms.exe --add_to_config --config_path c:\models\config.json ^
   --model_path OpenVINO/Qwen3-8B-int8-ov --model_name OpenVINO/Qwen3-8B-int8-ov
 ```
 :::
@@ -97,6 +92,7 @@ docker run --rm -v ${env:MODELS_DIR}:/models openvino/model_server:latest `
 :::{tab-item} Linux
 :sync: Linux
 ```bash
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) \
   -v ${HOME}/models:/models -p 8000:8000 openvino/model_server:latest-gpu \
   --rest_port 8000 --config_path /models/config.json --log_path /models/ovms-log.txt
@@ -104,9 +100,8 @@ docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) \
 :::
 :::{tab-item} Windows
 :sync: Windows
-```powershell
-docker run -d -v ${env:MODELS_DIR}:/models -p 8000:8000 openvino/model_server:latest `
-  --rest_port 8000 --config_path /models/config.json --log_path /models/ovms-log.txt
+```bat
+ovms.exe --rest_port 8000 --config_path c:\models\config.json --log_path c:\models\ovms-log.txt
 ```
 :::
 ::::
@@ -181,7 +176,7 @@ python -m pip install deepagents-code mcp colorama
 
 dcode uses git to track file state and diffs it applies during the session. If the demo directory is not already inside a git repository, initialize one once:
 
-```bash
+```console
 git init
 ```
 
@@ -189,34 +184,15 @@ If you cloned the `model_server` repository, this step can be skipped — the su
 
 Run deepagents code with limited set of tools:
 
-::::{tab-set}
-:::{tab-item} Linux
-:sync: Linux
-```bash
-dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov \
-  --allow-fs-tools read_file,write_file,grep,ls,execute \
-  -S python,python3,timeout,cat,grep,ls \
-  --no-interpreter \
-  --trust-project-mcp
+```console
+dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-interpreter --trust-project-mcp
 ```
-:::
-:::{tab-item} Windows
-:sync: Windows
-```powershell
-dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov `
-  --allow-fs-tools read_file,write_file,grep,ls,execute `
-  -S python,timeout,cat,grep,ls `
-  --no-interpreter `
-  --trust-project-mcp
-```
-:::
-::::
 
 Parameter notes:
-- `--allow-fs-tools`: controls exposed local tools. `execute` is needed for runtime checks.
+- `--allow-fs-tools`: controls exposed local tools. `execute` is needed for runtime checks. Grants the agent access to your filesystem and shell — use with care (see [Sandboxing](#sandboxing)).
 - `-S ...`: shell allow-list for `execute` command safety.
 - `--no-interpreter`: disables js_eval middleware.
-- `--trust-project-mcp`: auto-trusts project MCP configuration.
+- `--trust-project-mcp`: auto-trusts project MCP configuration and skips the interactive confirmation prompt — use with care (see [Sandboxing](#sandboxing)).
 
 ![dcode start](./screenshots/dcode_start.jpg)
 
@@ -244,7 +220,7 @@ The project ships with a preconfigured MCP client entry in `.deepagents/.mcp.jso
 
 The MCP server script is missing. Ask the agent to create it using the project skill located at `.deepagents/skills/python-mcp-sdk-skill/SKILL.md`. Invoking a skill with `/skill:<name>` gives the agent a focused, tested recipe instead of relying on generic knowledge:
 
-```bash
+```text
 /skill:python-mcp-sdk-skill implement a Python MCP stdio server at mcp_server/time_mcp_server.py that provides current UTC time using the Python MCP SDK.
 ```
 
@@ -254,7 +230,7 @@ The MCP server script is missing. Ask the agent to create it using the project s
 
 Use `/goal` to switch the agent into goal mode: it will propose acceptance criteria, iterate on the implementation and self-grade the result against those criteria. This is a good fit for incremental changes on top of an existing file.
 
-```bash
+```text
 /goal Extend mcp_server/time_mcp_server.py with date tool.
 ```
 
@@ -272,7 +248,7 @@ And finally grades its own output:
 
 Once the goal is satisfied, clear it so subsequent prompts run in normal mode:
 
-```bash
+```text
 /goal clear
 ```
 
@@ -299,13 +275,13 @@ If tester returns `FAIL`, main agent can proceed with fixes. If tester returns `
 
 The MCP server is now on disk, but the current dcode session was started before it existed, so its tools are not yet registered. Use `/tools` to inspect the currently loaded tool list, then `/reload` to re-scan the MCP configuration without restarting dcode.
 
-```bash
+```text
 /tools
 ```
 
 ![tools before reload](./screenshots/tools_before.jpg)
 
-```bash
+```text
 /reload
 /tools
 ```
@@ -325,25 +301,32 @@ Give me the exact current UTC timestamp down to the current second along with cu
 
 ## Tips
 
+### Sandboxing
+
+Flags like `--allow-fs-tools` (especially with `execute`) and `--trust-project-mcp` widen what the agent can do on the host: they let it read and write files, run shell commands, and call MCP tools without confirmation. A misbehaving model or a malicious MCP server can then touch anything the user running `dcode` can touch.
+
+To reduce this risk, prefer running `dcode` in an isolated environment, for example:
+
+- Inside a Docker container with only the demo directory mounted.
+- Inside a dedicated VM.
+- Under a dedicated OS user with limited permissions and a throwaway working directory.
+
+Also keep `-S` restricted to the minimum set of shell commands the task actually needs, and only enable `--trust-project-mcp` for MCP configurations you fully control and trust.
+
 ### Smaller tool surface
 
 By default, if `--allow-fs-tools` is not set, dcode enables the built-in filesystem tools. For open-weight models, reducing the tool surface can improve reliability and make the agent more predictable.
 
 Non-MCP tasks:
 
-```bash
-dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov \
-  --interpreter-tools safe \
-  --allow-fs-tools read_file,grep,glob,ls \
-  --no-mcp
+```console
+dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov --interpreter-tools safe --allow-fs-tools read_file,grep,glob,ls --no-mcp
 ```
 
 MCP tasks:
 
-```bash
-dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov \
-  --interpreter-tools safe \
-  --allow-fs-tools read_file,grep,glob,ls,execute
+```console
+dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov --interpreter-tools safe --allow-fs-tools read_file,grep,glob,ls,execute
 ```
 
 If a task fails because a required tool is unavailable, restart dcode with a broader tool set.
@@ -359,6 +342,6 @@ DeepAgents Code can be run in two useful operating modes depending on how much a
 
 With `/offload` command the agent can reduce its context by dropping messages that are not relevant anymore.
 
-```bash
+```text
 /offload
 ```
