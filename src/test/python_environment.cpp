@@ -37,9 +37,6 @@ void PythonEnvironment::SetUp() {
 void PythonEnvironment::TearDown() {
     pythonEnvironment = nullptr;
     if (pythonModule != nullptr) {
-        if (pythonModule->ownsPythonInterpreter()) {
-            pythonModule->reacquireGILForThisThread();
-        }
         pythonModule->shutdown();
         pythonModule.reset();
     }

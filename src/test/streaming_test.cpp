@@ -129,9 +129,6 @@ public:
 
     void TearDown() {
         manager.reset();
-        if (pythonModule->ownsPythonInterpreter()) {
-            pythonModule->reacquireGILForThisThread();
-        }
         pythonModule->shutdown();
         pythonModule.reset();
     }

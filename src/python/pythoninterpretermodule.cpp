@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "pythoninterpretermodule.hpp"
 
+#include <exception>
+#include <future>
 #include <string>
 #include <utility>
 #include "python_calculators_plugin_loader.hpp"
@@ -34,7 +36,7 @@ namespace py = pybind11;
 
 namespace ovms {
 
-Status PythonInterpreterModule::start(const ovms::Config&) {
+Status PythonInterpreterModule::initialize() {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", PYTHON_INTERPRETER_MODULE_NAME);
     this->threadId = std::this_thread::get_id();
@@ -95,6 +97,39 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
     return StatusCode::OK;
 }
 
+Status PythonInterpreterModule::start(const ovms::Config&) {
+    std::promise<Status> initializationPromise;
+    std::future<Status> initializationResult = initializationPromise.get_future();
+    lifecycleThread = std::thread([this, promise = std::move(initializationPromise)]() mutable {
+        Status status;
+        try {
+            status = initialize();
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Unexpected exception during {} initialization: {}", PYTHON_INTERPRETER_MODULE_NAME, e.what());
+            status = Status(StatusCode::INTERNAL_ERROR, e.what());
+        } catch (...) {
+            SPDLOG_ERROR("Unknown exception during {} initialization", PYTHON_INTERPRETER_MODULE_NAME);
+            status = StatusCode::INTERNAL_ERROR;
+        }
+        promise.set_value(status);
+        if (!status.ok()) {
+            shutdownOnLifecycleThread();
+            return;
+        }
+
+        std::unique_lock lock(lifecycleMtx);
+        shutdownCondition.wait(lock, [this]() { return shutdownRequested; });
+        lock.unlock();
+        shutdownOnLifecycleThread();
+    });
+
+    Status status = initializationResult.get();
+    if (!status.ok()) {
+        lifecycleThread.join();
+    }
+    return status;
+}
+
 void PythonInterpreterModule::loadPythonCalculatorsPlugin() {
     if (::ovms::loadPythonCalculatorsPlugin()) {
         SPDLOG_INFO("MediaPipe Python calculators plugin loaded successfully");
@@ -105,14 +140,25 @@ void PythonInterpreterModule::loadPythonCalculatorsPlugin() {
 }
 
 void PythonInterpreterModule::shutdown() {
-    if (state == ModuleState::SHUTDOWN)
+    std::lock_guard shutdownLock(shutdownMtx);
+    if (!lifecycleThread.joinable()) {
         return;
-    else if (state == ModuleState::NOT_INITIALIZED)
-        throw std::runtime_error("PythonInterpreterModule has not been initialized. Could not shut down.");
+    }
 
+    {
+        std::lock_guard lifecycleLock(lifecycleMtx);
+        shutdownRequested = true;
+    }
+    shutdownCondition.notify_one();
+    lifecycleThread.join();
+}
+
+void PythonInterpreterModule::shutdownOnLifecycleThread() {
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", PYTHON_INTERPRETER_MODULE_NAME);
-    reacquireGILForThisThread();
+    if (ownsInterpreter && GILScopedRelease != nullptr) {
+        reacquireGILForThisThread();
+    }
     pythonBackend.reset();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", PYTHON_INTERPRETER_MODULE_NAME);
@@ -150,7 +196,13 @@ PythonInterpreterModule::PythonInterpreterModule() {
 }
 
 PythonInterpreterModule::~PythonInterpreterModule() {
-    this->shutdown();
+    try {
+        this->shutdown();
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Exception during {} destruction: {}", PYTHON_INTERPRETER_MODULE_NAME, e.what());
+    } catch (...) {
+        SPDLOG_ERROR("Unknown exception during {} destruction", PYTHON_INTERPRETER_MODULE_NAME);
+    }
 }
 
 }  // namespace ovms
