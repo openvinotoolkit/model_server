@@ -34,35 +34,52 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
     if (static_cast<int64_t>(frameSources.size()) > MAX_VIDEO_FRAMES) {
         return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES));
     }
+    const size_t numFrames = frameSources.size();
 
-    std::vector<ov::Tensor> frames;
-    frames.reserve(frameSources.size());
-    ov::Shape frameShape;
-    for (size_t i = 0; i < frameSources.size(); i++) {
+    // Decode the first frame to determine the shared frame shape. All frames
+    // must have the same [1, H, W, C], so this shape (times numFrames) gives the
+    // exact size of the stacked video tensor up front.
+    auto firstResult = loadImage(frameSources[0], allowedLocalMediaPath, allowedMediaDomains);
+    if (!firstResult.ok()) {
+        return firstResult.status();
+    }
+    ov::Tensor firstFrame = firstResult.value();
+    const ov::Shape frameShape = firstFrame.get_shape();
+    const size_t height = frameShape[1];
+    const size_t width = frameShape[2];
+    const size_t channels = frameShape[3];
+    const size_t frameBytes = height * width * channels * firstFrame.get_element_type().size();
+
+    // Predictive byte-budget check: reject before allocating the stacked tensor
+    // if the total decoded size would exceed the budget. This bounds memory even
+    // when the frame count is within MAX_VIDEO_FRAMES but the resolution is large.
+    const int64_t totalBytes = static_cast<int64_t>(frameBytes) * static_cast<int64_t>(numFrames);
+    if (totalBytes > MAX_VIDEO_DECODED_BYTES) {
+        return absl::InvalidArgumentError("Total decoded video size exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_DECODED_BYTES) + " bytes");
+    }
+
+    // Allocate the stacked tensor once and copy each frame into it incrementally,
+    // releasing the per-frame tensor right after. This keeps the peak memory at
+    // roughly the stacked tensor plus a single frame, instead of holding all
+    // decoded frames plus the stacked copy simultaneously.
+    ov::Tensor video(firstFrame.get_element_type(), ov::Shape{numFrames, height, width, channels});
+    auto* dst = static_cast<uint8_t*>(video.data());
+    std::memcpy(dst, firstFrame.data(), frameBytes);
+    firstFrame = ov::Tensor();  // release the first frame
+
+    for (size_t i = 1; i < numFrames; i++) {
         auto frameResult = loadImage(frameSources[i], allowedLocalMediaPath, allowedMediaDomains);
         if (!frameResult.ok()) {
             return frameResult.status();
         }
         const ov::Tensor& frame = frameResult.value();
-        // loadImage returns [1, H, W, C]; all frames must share the same H, W, C.
-        if (i == 0) {
-            frameShape = frame.get_shape();
-        } else if (frame.get_shape() != frameShape) {
+        // Validate the shape before the copy: memcpy below relies on every frame
+        // being exactly frameBytes; a mismatching frame would otherwise over-read.
+        if (frame.get_shape() != frameShape) {
             return absl::InvalidArgumentError("All video frames must have the same height, width and channel count");
         }
-        frames.push_back(frame);
-    }
-
-    const size_t numFrames = frames.size();
-    const size_t height = frameShape[1];
-    const size_t width = frameShape[2];
-    const size_t channels = frameShape[3];
-    ov::Tensor video(frames[0].get_element_type(), ov::Shape{numFrames, height, width, channels});
-
-    const size_t frameBytes = height * width * channels * video.get_element_type().size();
-    auto* dst = static_cast<uint8_t*>(video.data());
-    for (size_t i = 0; i < numFrames; i++) {
-        std::memcpy(dst + i * frameBytes, frames[i].data(), frameBytes);
+        std::memcpy(dst + i * frameBytes, frame.data(), frameBytes);
+        // frame is released as it goes out of scope on the next iteration.
     }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Loaded video with {} frames of shape [{}, {}, {}]", numFrames, height, width, channels);
     return video;

@@ -36,6 +36,11 @@ static const std::string FRAME_BASE64 =
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1Pe"
     "AAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
 
+// A 2x2 PNG, used to verify frames of mismatching resolution are rejected.
+static const std::string FRAME_BASE64_2X2 =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91Jpz"
+    "AAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==";
+
 // Tests ------------------------------------------------------------------
 
 TEST(VideoFramesProcessorTest, NoVideoInTextOnlyMessage) {
@@ -164,6 +169,25 @@ TEST(VideoFramesProcessorTest, InvalidBase64FrameRejected) {
     msg["role"] = std::string("user");
     msg["content"] = ov::genai::JsonContainer::from_json_string(
         R"([{"type":"video_url","video_url":{"url":["data:image/png;base64,NOT_VALID!!!"]}}])");
+    history.push_back(msg);
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_TRUE(req.inputVideos.empty());
+}
+
+TEST(VideoFramesProcessorTest, MismatchingFrameResolutionRejected) {
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    // First frame is 1x1, second frame is 2x2: frames must share the same H, W, C.
+    msg["content"] = ov::genai::JsonContainer::from_json_string(
+        R"([{"type":"video_url","video_url":{"url":[")" + FRAME_BASE64 + R"(",")" +
+        FRAME_BASE64_2X2 + R"("]}}])");
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);

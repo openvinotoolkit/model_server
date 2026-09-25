@@ -31,6 +31,22 @@ namespace ovms {
 
 constexpr int64_t MAX_VIDEO_FRAMES = 1024;
 
+// Total decoded-byte budget for a single video (1 GiB). Frames are stacked into
+// one {N, H, W, C} tensor in loadVideoFrames() at their original resolution
+// before any downstream sampling happens: the GenAI VLM pipeline performs fps
+// sampling and temporal frame merging only afterwards, so the server must 
+// first hold every frame the client sends. This cap bounds that allocation. 
+// It is derived from the tightest supported deployment (a 32 GB host running 
+// a ~20 GB int4 35B model, leaving ~12 GB). The process-level peak is roughly
+// 2x this buffer: downstream, GenAI's sample_video_if_needed() copies the
+// selected frames into a newly allocated tensor while the original stacked
+// buffer is still alive as the copy source, so both briefly coexist (this is in
+// GenAI, not in loadVideoFrames(), which itself copies incrementally). A 1 GiB
+// budget therefore keeps that peak near 2 GB, while still covering realistic
+// inputs (~692 frames at 540p, ~388 at 720p, ~172 at 1080p). Adjust for the
+// target deployment memory.
+constexpr int64_t MAX_VIDEO_DECODED_BYTES = 1LL * 1024 * 1024 * 1024;
+
 // Loads a sequence of video frames from a list of frame references (base64 data
 // URIs, HTTP/HTTPS URLs, or local file paths) and stacks them into a single
 // video tensor with [N, H, W, C] layout (RGB, u8), as expected by the GenAI VLM
