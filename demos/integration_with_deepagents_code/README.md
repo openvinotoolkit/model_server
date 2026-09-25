@@ -164,9 +164,9 @@ python -m pip install deepagents-code mcp
 :::{tab-item} Windows
 :sync: Windows
 ```powershell
-python -m venv .env
-.\.env\Scripts\Activate.ps1
 cd demos\integration_with_deepagents_code
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install deepagents-code mcp colorama
 ```
