@@ -37,7 +37,7 @@ mkdir -p ${HOME}/models
 :::
 :::{tab-item} Windows
 :sync: Windows
-```powershell
+```bat
 mkdir c:\models
 ```
 :::
@@ -108,15 +108,26 @@ ovms.exe --rest_port 8000 --config_path c:\models\config.json --log_path c:\mode
 
 Readiness checks:
 
-```console
+::::{tab-set}
+:::{tab-item} Linux
+:sync: Linux
+```bash
 curl -f http://localhost:8000/v1/models
-```
 
-```console
 curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"OpenVINO/Qwen3.8-27B-int4-ov","messages":[{"role":"user","content":"ping"}]}'
 ```
+:::
+:::{tab-item} Windows
+:sync: Windows
+```bat
+curl.exe -f http://localhost:8000/v1/models
+
+curl.exe http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"OpenVINO/Qwen3.8-27B-int4-ov\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}]}"
+```
+:::
+::::
 
 ### Step 4: Configure dcode environment
 
@@ -133,10 +144,10 @@ export DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
 :::
 :::{tab-item} Windows
 :sync: Windows
-```powershell
-$env:OPENAI_API_KEY = "not_used"
-$env:OPENAI_BASE_URL = "http://localhost:8000/v1"
-$env:DEEPAGENTS_CODE_PRICES_AUTO_UPDATE = "0"
+```bat
+set OPENAI_API_KEY=not_used
+set OPENAI_BASE_URL=http://localhost:8000/v1
+set DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
 ```
 :::
 ::::
@@ -149,19 +160,19 @@ $env:DEEPAGENTS_CODE_PRICES_AUTO_UPDATE = "0"
 :::{tab-item} Linux
 :sync: Linux
 ```bash
+cd demos/integration_with_deepagents_code
 python -m venv .venv
 source .venv/bin/activate
-cd demos/integration_with_deepagents_code
 python -m pip install --upgrade pip
 python -m pip install deepagents-code mcp
 ```
 :::
 :::{tab-item} Windows
 :sync: Windows
-```powershell
+```bat
 cd demos\integration_with_deepagents_code
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.venv\Scripts\activate.bat
 python -m pip install --upgrade pip
 python -m pip install deepagents-code mcp colorama
 ```
@@ -185,7 +196,7 @@ If you cloned the `model_server` repository, this step can be skipped — the su
 Run deepagents code with limited set of tools:
 
 ```console
-dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-interpreter --trust-project-mcp
+dcode --model openai:OpenVINO/Qwen3.8-27B-int4-ov --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,cat,grep,ls --no-interpreter --trust-project-mcp
 ```
 
 Parameter notes:

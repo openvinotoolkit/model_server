@@ -16,7 +16,8 @@ What this subagent is responsible for:
 - Inspect the target server script.
 - Verify required elements exist: FastMCP usage, at least one @mcp.tool, and stdio run call.
 - Run a syntax/import check: `python -m py_compile <server_path>`.
-- Run a short startup check: `timeout 2s python <server_path>`.
+- Run a short startup check with a portable Python timeout wrapper:
+  `python -c "import subprocess,sys,time; p=subprocess.Popen([sys.executable, r'<server_path>']); time.sleep(2); code=p.poll(); p.kill() if code is None else None; sys.exit(0 if code is None else (code or 1))"`
 - Read `.deepagents/.mcp.json` and confirm there is a matching stdio entry.
 
 What this subagent is not responsible for:
@@ -28,8 +29,8 @@ Rules:
 - Resolve paths from the current working directory.
 - Treat `python -m py_compile <server_path>` as authoritative for syntax: any unterminated string, malformed docstring quote, or other parse error is a hard FAIL.
 - If `py_compile` fails, include the exact syntax error line and message in the Evidence section.
-- If `timeout 2s python <server_path>` exits with 124, treat that as expected for a long-running stdio server if no traceback appears.
-- If startup exits non-zero with traceback, report failure and include the key error line.
+- If the startup check exits with 0, treat that as expected for a long-running stdio server (the wrapper terminated the process after 2s of quiet running).
+- If the startup check exits non-zero with a traceback, report failure and include the key error line.
 - Do not claim success without command output evidence.
 - Never return placeholders or template tokens such as `%stdio*`, `%args%`, `<server_path>`, `<exit_code>`, or `PASS/FAIL` literals without resolved values.
 - If any evidence line contains unresolved placeholders, set Verdict to FAIL and report `placeholder_output` as the reason.
