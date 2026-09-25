@@ -1888,11 +1888,17 @@ TEST(CAPI, MultipleThreadsStarting) {
     std::vector<std::promise<void>> promisesThreadReady(threadsCount);
     std::vector<std::future<void>> futuresThreadReady;
     futuresThreadReady.reserve(threadsCount);
+    std::vector<std::promise<void>> promisesStartFinished(threadsCount);
+    std::vector<std::future<void>> futuresStartFinished;
+    futuresStartFinished.reserve(threadsCount);
+    std::promise<void> cleanupAllowedPromise;
+    std::shared_future<void> cleanupAllowed = cleanupAllowedPromise.get_future().share();
     std::vector<uint32_t> retCodes(threadsCount);
     for (size_t i = 0; i < threadsCount; ++i) {
         futures.emplace_back(promises[i].get_future());
         futuresThreadReady.emplace_back(promisesThreadReady[i].get_future());
-        threads.emplace_back(std::make_unique<std::thread>([i, &promisesThreadReady, &futures, &retCodes]() {
+        futuresStartFinished.emplace_back(promisesStartFinished[i].get_future());
+        threads.emplace_back(std::make_unique<std::thread>([i, &promisesThreadReady, &promisesStartFinished, &futures, &cleanupAllowed, &retCodes]() {
             OVMS_Server* cserver = nullptr;
             OVMS_ServerSettings* serverSettings = nullptr;
             OVMS_ModelsSettings* modelsSettings = nullptr;
@@ -1912,6 +1918,14 @@ TEST(CAPI, MultipleThreadsStarting) {
             OVMS_StatusCode(cstatus, &code);
             OVMS_StatusDelete(cstatus);
             retCodes[i] = code;
+            OVMS_ModelsSettingsDelete(modelsSettings);
+            OVMS_ServerSettingsDelete(serverSettings);
+            promisesStartFinished[i].set_value();
+            cleanupAllowed.wait();
+            // Python runtime shutdown must run on the same thread that initialized it.
+            if (code == static_cast<uint32_t>(ovms::StatusCode::OK)) {
+                OVMS_ServerDelete(cserver);
+            }
         }));
     }
 
@@ -1922,6 +1936,10 @@ TEST(CAPI, MultipleThreadsStarting) {
         promises[i].set_value();
     }
     for (size_t i = 0; i < threadsCount; ++i) {
+        futuresStartFinished[i].get();
+    }
+    cleanupAllowedPromise.set_value();
+    for (size_t i = 0; i < threadsCount; ++i) {
         threads[i]->join();
     }
     std::stringstream ss;
@@ -1931,11 +1949,6 @@ TEST(CAPI, MultipleThreadsStarting) {
     }
     ss << "]";
     SPDLOG_ERROR("Error codes: {}", ss.str());
-    SPDLOG_DEBUG("Will close server now");
-    OVMS_Server* cserver = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
-    OVMS_ServerDelete(cserver);
-    SPDLOG_DEBUG("Closed server now");
     auto started = std::count_if(retCodes.begin(), retCodes.end(),
         [](const uint32_t v) {
             return v == (uint32_t)(ovms::StatusCode::OK);
