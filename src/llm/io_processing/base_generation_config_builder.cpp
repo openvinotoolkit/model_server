@@ -71,7 +71,7 @@ void BaseGenerationConfigBuilder::adjustConfigForDecodingMethod() {
         // silently overflows (wraps to a tiny value) when max_new_tokens is left at its
         // SIZE_MAX default (request has neither max_tokens nor a model-derived max_length).
         // Remove once fixed upstream.
-        if (config.max_new_tokens == std::numeric_limits<size_t>::max() && config.max_length == std::numeric_limits<size_t>::max()) {
+        if (config.max_new_tokens == std::numeric_limits<size_t>::max()) {
             config.max_new_tokens = 1'000'000;
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "WARNING: Overriding unset max_tokens to 1000000 for DFlash decoding to avoid an integer overflow in the draft config computation.");
         }
