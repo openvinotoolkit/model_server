@@ -154,8 +154,8 @@ $env:DEEPAGENTS_CODE_PRICES_AUTO_UPDATE = "0"
 :::{tab-item} Linux
 :sync: Linux
 ```bash
-python -m venv .env
-source .env/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 cd demos/integration_with_deepagents_code
 python -m pip install --upgrade pip
 python -m pip install deepagents-code mcp
