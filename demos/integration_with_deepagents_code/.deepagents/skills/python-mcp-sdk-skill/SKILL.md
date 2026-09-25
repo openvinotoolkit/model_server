@@ -1,7 +1,7 @@
 ---
 name: python-mcp-sdk-skill
 description: "Guidance for implementing Python MCP SDK stdio servers with FastMCP, robust validation, and deterministic tool output."
-license: MIT
+license: Apache-2.0
 compatibility: designed for deepagents-code
 ---
 
