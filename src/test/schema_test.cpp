@@ -402,6 +402,7 @@ TEST(SchemaTest, ModelConfigNireqNegative) {
 }
 
 TEST(SchemaTest, ModelConfigSequenceMaxNumberNegative) {
+    // stateful models were removed, so max_sequence_number is no longer a valid property, even with a valid value
     const char* modelConfigSeqNegative = R"(
     {
     "model_config_list": [
@@ -409,7 +410,7 @@ TEST(SchemaTest, ModelConfigSequenceMaxNumberNegative) {
             "config": {
                 "name": "dummy_model",
                 "base_path": "dummy_path",
-                "max_sequence_number": -1
+                "max_sequence_number": 1
             }
         }
     ]
@@ -422,6 +423,7 @@ TEST(SchemaTest, ModelConfigSequenceMaxNumberNegative) {
 }
 
 TEST(SchemaTest, ModelConfigTimeoutNegative) {
+    // stateful models were removed, so sequence_timeout_seconds is no longer a valid property, even with a valid value
     const char* modelConfigTimeoutNegative = R"(
     {
     "model_config_list": [
@@ -429,7 +431,7 @@ TEST(SchemaTest, ModelConfigTimeoutNegative) {
             "config": {
                 "name": "dummy_model",
                 "base_path": "dummy_path",
-                "sequence_timeout_seconds": -1
+                "sequence_timeout_seconds": 1
             }
         }
     ]
