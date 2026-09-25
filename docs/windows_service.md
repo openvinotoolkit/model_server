@@ -15,6 +15,14 @@ sc start ovms
 ```
 Change the script parameter with model repository path if needed
 
+> **Security note:** The service runs as LocalSystem and reloads `config.json` from the model repository directory
+> automatically.
+> The default `C:\models` directory must therefore be treated as a privileged service location and protected by
+> the administrator with appropriate ACLs. Do not point the service at a directory that non-administrator
+> accounts can write to, and do not relax the permissions afterward — anyone able to modify `config.json`
+> can execute arbitrary code as LocalSystem.
+
+
 During the installation, model repository path will be set in environment variable OVMS_MODEL_REPOSITORY_PATH, which defines default parameters for ovms CLI to interact with the service.
 
 Optionally you can change the default service parameters like below:
