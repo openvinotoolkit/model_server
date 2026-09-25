@@ -17,7 +17,9 @@
 #define SRC_MAIN_WINDOWS_HPP_
 #endif  // SRC_MAIN_WINDOWS_HPP_
 
+#include <atomic>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <Windows.h>
@@ -69,6 +71,13 @@ struct WinServiceEventWrapper {
     ~WinServiceEventWrapper();
 };
 
+enum class ServiceLifecycleState {
+    Starting,
+    Running,
+    StopRequested,
+    Stopped,
+};
+
 class OvmsWindowsServiceManager {
 public:
     OvmsWindowsServiceManager();
@@ -85,8 +94,10 @@ public:
     static OvmsWindowsServiceManager& instance();
     static std::string getCurrentTimeString();
     static void logParameters(DWORD argc, LPTSTR* argv, const std::string& logText);
-    static void serviceReportEvent(LPSTR szFunction);
+    static void serviceReportEvent(LPCSTR szFunction);
     static void serviceReportEvent(const std::string& szFunction);
+    static void serviceReportEvent(LPCSTR szFunction, DWORD errorCode);
+    static void serviceReportEvent(const std::string& szFunction, DWORD errorCode);
     static void serviceReportEventWithExitCode(const std::string& szFunction, const std::string& message, const int& exitCode);
     static void serviceReportEventWithExitCode(LPSTR szFunction, const std::string& message, const int& exitCode);
     static void serviceReportEventSuccess(const std::string& szFunction, const std::string& message);
@@ -104,8 +115,11 @@ public:
 private:
     // Members
     static SERVICE_STATUS serviceStatus;
+    static std::mutex serviceStateMutex;
     static std::unique_ptr<WinServiceStatusWrapper> statusHandle;
     static std::unique_ptr<WinServiceEventWrapper> serviceStopEvent;
+    static std::atomic<ServiceLifecycleState> serviceLifecycleState;
+    static std::atomic<DWORD> serviceWorkerWin32Error;
 
     // Methods
     static void WINAPI serviceCtrlHandler(DWORD);
@@ -115,9 +129,9 @@ private:
     static void setServiceStopStatusPending();
     void setServiceStartStatus();
     void setServiceStopStatusWithSuccess();
-    void setServiceStopStatusWithError();
+    void setServiceStopStatusWithError(DWORD errorCode);
     void setServiceStopStatusWithExitCode(const int& exitCode);
-    static void setServiceRunningStatus();
+    static bool setServiceRunningStatus();
 
     // Registry manipulation
     static std::string getRegValue(const winreg::RegKey& key, const std::wstring& name, const DWORD& type);
