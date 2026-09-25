@@ -427,7 +427,7 @@ new file mode 100644
 index 000000000..18490e5ad
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,2029 @@
+@@ -0,0 +1,2030 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -1565,7 +1565,8 @@ index 000000000..18490e5ad
 +		return;
 +
 +	bar_width = 50;
-+	bar_length = progress * bar_width;
++	/* Clamp: a server reporting more bytes than dltotal must not overflow bar_width. */
++	bar_length = (progress >= 1.0) ? bar_width : (int)(progress * bar_width);
 +
 +	printf("\rProgress: [");
 +	for (i = 0; i < bar_length; ++i) {
