@@ -248,6 +248,17 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "libovms_curl_global_init",
+    hdrs = ["curl_global_initializer.hpp"],
+    srcs = ["curl_global_initializer.cpp"],
+    deps = [
+        "//third_party:curl",
+        "libovmslogging",
+        "libovmsstatus",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "prediction_service_utils",
     hdrs = ["prediction_service_utils.hpp"],
     deps = [
@@ -837,6 +848,7 @@ ovms_cc_library(
             "libmultipart_parser_drogon_impl",
             "cpp_headers",
             "libovms_shutdown_state",
+            "libovms_curl_global_init",
             "ovms_header",
             "capi_backend_impl",
             "config_status_utils",
