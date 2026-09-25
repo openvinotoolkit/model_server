@@ -3165,6 +3165,7 @@ cc_library(
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
         ":test_wav_utils",
+        "//src/llm:image_utils",
         "//src/llm:io_processing_input_processors",
         "//src/llm:runtime_chat_template_loader",
     ],

@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <regex>
 #include <sstream>
@@ -37,6 +38,26 @@
 
 namespace ovms {
 
+size_t ImageDownloadContext::append(const void* downloadedChunk, size_t size, size_t nmemb) noexcept {
+    if (size != 0 && nmemb > std::numeric_limits<size_t>::max() / size) {
+        sizeLimitExceeded = true;
+        return 0;
+    }
+    const size_t realsize = size * nmemb;
+    if (bytesReceived > sizeLimit || realsize > sizeLimit - bytesReceived) {
+        sizeLimitExceeded = true;
+        return 0;
+    }
+    try {
+        image->append(static_cast<const char*>(downloadedChunk), realsize);
+        bytesReceived += realsize;
+    } catch (...) {
+        allocationFailed = true;
+        return 0;
+    }
+    return realsize;
+}
+
 namespace {
 
 bool isPathInsideDirectory(const std::filesystem::path& testedPath, const std::filesystem::path& allowedDirectory) {
@@ -47,11 +68,8 @@ bool isPathInsideDirectory(const std::filesystem::path& testedPath, const std::f
 }
 
 static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nmemb,
-    void* image) {
-    size_t realsize = size * nmemb;
-    auto& mem = *static_cast<std::string*>(image);
-    mem.append(static_cast<char*>(downloadedChunk), realsize);
-    return realsize;
+    void* context) noexcept {
+    return static_cast<ImageDownloadContext*>(context)->append(downloadedChunk, size, nmemb);
 }
 
 #define CURL_SETOPT(setopt)   \
@@ -62,30 +80,42 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
 absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
     if (!curl_handle) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to initialize curl handle");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to initialize curl handle");
         return absl::InternalError("Image downloading failed");
     }
     auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curl_handle, curl_easy_cleanup);
+    if (sizeLimit < 0) {
+        return absl::InvalidArgumentError("Image size limit cannot be negative");
+    }
+    ImageDownloadContext downloadContext{&image, static_cast<size_t>(sizeLimit)};
 
     auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &downloadContext))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
     const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
     if (envAllowRedirects != nullptr && (std::strcmp(envAllowRedirects, "1") == 0)) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "URL redirects allowed");
         CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
     }
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE, sizeLimit))
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(sizeLimit)))
 
     if (status != CURLE_OK) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Setting curl opts failed: {}", curl_easy_strerror(status));
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Setting curl opts failed: {}", curl_easy_strerror(status));
         return absl::InvalidArgumentError("Image downloading failed");
     }
 
     status = curl_easy_perform(curl_handle);
     if (status != CURLE_OK) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Downloading image failed: {}", curl_easy_strerror(status));
+        if (downloadContext.sizeLimitExceeded || status == CURLE_FILESIZE_EXCEEDED) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloaded image exceeds the size limit of {} bytes", sizeLimit);
+            return absl::InvalidArgumentError("Downloaded image exceeds the size limit");
+        }
+        if (downloadContext.allocationFailed) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Memory allocation failed while downloading image");
+            return absl::ResourceExhaustedError("Memory allocation failed while downloading image");
+        }
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image failed: {}", curl_easy_strerror(status));
         return absl::InvalidArgumentError("Image downloading failed");
     } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", image.size());
