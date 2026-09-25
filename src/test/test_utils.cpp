@@ -117,7 +117,7 @@ void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
     // This is effectively multiplying by 1.8 to have 1 config reload in between
     // two test steps
     const float WAIT_MULTIPLIER_FACTOR = 1.8;
-    const uint32_t waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalMillisec();
+    const uint32_t waitTime = WAIT_MULTIPLIER_FACTOR * manager.getMemoryTrimmingIntervalMilliseconds();
     SPDLOG_DEBUG("waitForOVMSResourcesCleanup {} ms", waitTime);
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
 }

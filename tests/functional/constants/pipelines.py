@@ -467,25 +467,13 @@ class Pipeline(ModelInfo):
     def build_pipeline_config(
         self,
         config,
-        custom_nodes,
-        config_custom_nodes,
         models=None,
         use_custom_graphs=False,
         mediapipe_models=None,
         use_subconfig=False,
         custom_graph_paths=None,
     ):
-        config[Config.PIPELINE_CONFIG_LIST].append(self.config)
-        config_custom_nodes = self.build_config_custom_nodes(custom_nodes, config_custom_nodes)
-        return config, config_custom_nodes
-
-    def build_config_custom_nodes(self, custom_nodes, config_custom_nodes):
-        if custom_nodes is None:
-            custom_node_list = self.get_unique_custom_node_list()
-            for custom_node in custom_node_list:
-                if type(custom_node) not in [type(x) for x in config_custom_nodes]:
-                    config_custom_nodes.append(custom_node)
-        return config_custom_nodes
+        return config
 
     def map_model_output_to_pipeline_output(self, model_output):
         result = {}
@@ -577,8 +565,6 @@ class MediaPipe(Pipeline):
     def build_pipeline_config(
         self,
         config,
-        custom_nodes,
-        config_custom_nodes,
         models,
         use_custom_graphs=False,
         mediapipe_models=None,
@@ -588,7 +574,6 @@ class MediaPipe(Pipeline):
         # Mediapipe config.json example:
         # {
         #   "model_config_list": [...],
-        #   "pipeline_config_list": [...],
         #   "custom_loader_config_list": [...],
         #   "mediapipe_config_list": [
         #     {
@@ -598,22 +583,18 @@ class MediaPipe(Pipeline):
         #     }
         #   ]
         # }
-        if self.config:
-            config[Config.PIPELINE_CONFIG_LIST].append(self.config)
-        config_custom_nodes = self.build_config_custom_nodes(custom_nodes, config_custom_nodes)
         if use_custom_graphs:
             config = self.prepare_custom_graphs_mediapipe_config_list(config, use_subconfig, custom_graph_paths)
         else:
             mediapipe_models = [self] if mediapipe_models is None else mediapipe_models
             config = self.add_mediapipe_graphs_to_config(config, use_subconfig, mediapipe_models)
 
-        return config, config_custom_nodes
+        return config
 
     def prepare_custom_graphs_mediapipe_config_list(self, config, use_subconfig=False, custom_graph_paths=None):
         # Mediapipe config.json example:
         # {
         #   "model_config_list": [...],
-        #   "pipeline_config_list": [...],
         #   "custom_loader_config_list": [...],
         #   "mediapipe_config_list": [
         #     {
@@ -642,7 +623,6 @@ class MediaPipe(Pipeline):
         # Mediapipe config.json example:
         # {
         #   "model_config_list": [...],
-        #   "pipeline_config_list": [...],
         #   "custom_loader_config_list": [...],
         #   "mediapipe_config_list": [
         #     {

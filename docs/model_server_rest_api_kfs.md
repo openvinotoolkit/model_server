@@ -211,7 +211,7 @@ See also [code samples](https://github.com/openvinotoolkit/model_server/tree/mai
 ## Inference API
 **Description**
 
-Endpoint for running an inference with loaded models or [DAGs](./dag_scheduler.md).
+Endpoint for running inference with loaded models or [Mediapipes](./mediapipe.md).
 
 **URL**
 ```
@@ -250,7 +250,7 @@ $request_output =
 
 Besides numerical values, it is possible to pass encoded images using Binary Data extension:
 
-As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. Input is treated as encoded image when datatype is `BYTES` and model or pipeline have 4 (or 5 in case of [demultiplexing](demultiplexing.md)) shape dimensions. Every batch the BYTES input needs to be preceded by 4 bytes, little endian, that contains its size.
+As a JPEG / PNG encoded images - in this case binary encoded data is loaded by OVMS using OpenCV which then converts it to OpenVINO-friendly data format for inference. Input is treated as encoded image when datatype is `BYTES` and the model has 4 shape dimensions. Every batch the BYTES input needs to be preceded by 4 bytes, little endian, that contains its size.
 
 ```JSON
 Content-Type: application/octet-stream

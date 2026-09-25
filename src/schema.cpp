@@ -36,149 +36,6 @@
 #include "status.hpp"
 
 namespace ovms {
-const std::string DAG_DEFINITIONS = R"(
-		"source_node_names": {
-			"type": "object",
-			"required": ["node_name", "data_item"],
-			"properties": {
-				"node_name": {
-					"type": "string"
-				},
-				"data_item": {
-					"type": "string"
-				}
-			},
-			"additionalProperties": false
-		},
-		"source_node": {
-			"type": "object",
-			"additionalProperties" : {
-				"$ref": "#/definitions/source_node_names"
-			},
-			"minProperties": 1,
-			"maxProperties": 1
-		},
-		"output_alias": {
-			"type": "object",
-			"required": ["data_item", "alias"],
-			"properties": {
-				"data_item": {
-					"type": "string"
-				},
-				"alias": {
-					"type": "string"
-				}
-			},
-			"additionalProperties": false
-		},
-		"node_config": {
-			"type": "object",
-			"required": ["name", "type", "inputs", "outputs"],
-			"oneOf": [
-    			{
-        			"properties": { "type": { "enum": ["custom"] } },
-        			"required": ["library_name"],
-					"not": { "required": ["model_name"] }
-    			},
-    			{
-        			"properties": { "type": { "enum": ["DL model"] } },
-        			"not": { "required": ["library_name"] },
-					"required": ["model_name"]
-    			}
-  			],
-			"properties": {
-				"name": {
-					"type": "string"
-				},
-				"model_name": {
-					"type": "string"
-				},
-				"library_name": {
-					"type": "string"
-				},
-				"type": {
-					"type": "string",
-					"enum": ["DL model", "custom"]
-				},
-				"version": {
-					"type": "integer",
-					"minimum": 1
-				},
-				"inputs": {
-					"type": "array",
-					"items": {
-						"$ref": "#/definitions/source_node"
-					}
-				},
-				"outputs": {
-					"type": "array",
-					"items": {
-						"$ref": "#/definitions/output_alias"
-					}
-				},
-				"params": {
-					"type": "object",
-					"additionalProperties": { "type": "string" } 
-				},
-				"demultiply_count": {
-			"type": "integer",
-			"minimum": -1,
-			"maximum": 10000
-				},
-				"gather_from_node": {
-					"type": "string"
-				}
-			},
-			"additionalProperties": false
-		},
-		"pipeline_config": {
-			"type": "object",
-			"required": ["name", "nodes", "inputs", "outputs"],
-			"properties": {
-				"name": {
-					"type": "string"
-				},
-				"nodes": {
-					"type": "array",
-					"items": {
-						"$ref": "#/definitions/node_config"
-					}
-				},
-				"inputs": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
-				},
-				"outputs": {
-					"type": "array",
-					"items": {
-						"$ref": "#/definitions/source_node"
-					}
-				},
-        "demultiply_count" : {
-			"type": "integer",
-			"minimum": -1,
-			"maximum": 10000
-        }
-			},
-			"additionalProperties": false
-		},
-		"custom_node_library_config": {
-			"type": "object",
-			"required": ["name", "base_path"],
-			"properties": {
-				"name": {
-					"type": "string"
-				},
-				"base_path": {
-					"type": "string"
-				}
-			},
-			"additionalProperties": false
-		}
-)";
-
 const std::string MODEL_CONFIG_DEFINITION = R"(
 "model_config": {
 	"type": "object",
@@ -248,12 +105,24 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 			},
 			"additionalProperties": false
 		},
-		"additionalProperties": false
-})";
+        "additionalProperties": false
+    })";
+
+#if (MEDIAPIPE_DISABLE == 0)
+const char* MEDIAPIPE_CONFIG_LIST_SCHEMA = R"(,
+        "mediapipe_config_list": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/mediapipe_config"
+            }
+        })";
+#else
+const char* MEDIAPIPE_CONFIG_LIST_SCHEMA = "";
+#endif
 
 const std::string MODELS_CONFIG_SCHEMA = R"({
     "definitions": {)" + MODEL_CONFIG_DEFINITION +
-                                         R"(},)" + DAG_DEFINITIONS + R"(,
+                                         R"(},
 		"custom_loader_config": {
 			"type": "object",
 			"required": ["config"],
@@ -381,33 +250,14 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
 				"$ref": "#/definitions/custom_loader_config"
 			}
 		},
-		"model_config_list": {
-			"type": "array",
-			"items": {
-				"$ref": "#/definitions/model_config"
-			}
-		},
-        "pipeline_config_list": {
-			"type": "array",
-			"items": {
-				"$ref": "#/definitions/pipeline_config"
-			}
-},)" +
-#if (MEDIAPIPE_DISABLE == 0)
-                                         R"("mediapipe_config_list": {
-		"type": "array",
-		"items": {
-			"$ref": "#/definitions/mediapipe_config"
-		}
-},)" +
-#endif
-                                         R"("custom_node_library_config_list": {
-			"type": "array",
-			"items": {
-				"$ref": "#/definitions/custom_node_library_config"
-			}
-		},
-		"monitoring": {
+        "model_config_list": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/model_config"
+            }
+        })" + MEDIAPIPE_CONFIG_LIST_SCHEMA +
+                                         R"(,
+    "monitoring": {
             "maxProperties": 1,
 			"type": "object",
 			"required": ["metrics"],
@@ -433,7 +283,7 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
 			"additionalProperties": false
 		}
 	},
-	"additionalProperties": false
+    "additionalProperties": false
 })";
 
 const char* MODELS_MAPPING_SCHEMA = R"(

@@ -18,6 +18,8 @@
 namespace ovms {
 class ResourcesCleaner;
 
+bool trimProcessMemory();
+
 #ifdef _WIN32
 bool malloc_trim_win();
 #endif

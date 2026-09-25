@@ -34,7 +34,7 @@ def check_header(fd):
 
 def check_function(fd):
     # Add space separated exceptions for given file in the dictionary
-    fix_applied = {"./src/test/ensemble_flow_custom_node_tests.cpp":"size_t strLen = std::strlen(str);size_t prefixLen = std::strlen(prefix);",}
+    fix_applied = {}
 
     detected = False
     try:

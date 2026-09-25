@@ -214,22 +214,6 @@ curl http://localhost:8000/metrics
 ## Performance considerations
 Collecting metrics has negligible performance overhead when used with models of average size and complexity. However when used with very lightweight, fast models which inference time is very short, the metric incrementation can take noticeable proportion of the processing time. Consider it while enabling metrics for such models.
 
-## Metrics implementation for DAG pipelines
-
-For [DAG pipeline](dag_scheduler.md) execution there are relevant 3 metrics listed below.
-They track the execution of the whole pipeline, gathering information from all pipeline nodes. 
-
-DAG metrics
-
-| Type      | Name  | Description |
-| :---    |    :----   |    :----   |
-| counter |    ovms_requests_success  |             Number of successful requests to a model or a DAG. |
-| counter  |   ovms_requests_fail    |              Number of failed requests to a model or a DAG. |
-| histogram |  ovms_request_time_us |               Processing time of requests to a model or a DAG. |
-
-The remaining metrics track the execution for the individual models in the pipeline separately.
-It means that each request to the DAG pipeline will update also the metrics for all individual models used as the execution nodes.
-
 ## Metrics implementation for MediaPipe Graphs
 
 For [MediaPipe Graphs](./mediapipe.md) execution there are 6 generic metrics which apply to all graphs:
