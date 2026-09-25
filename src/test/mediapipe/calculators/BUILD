@@ -67,6 +67,7 @@ cc_library(
 cc_library(
     name = "render_data_passthrough",
     srcs = ["render_data_passthrough_calculator.cc"],
+    copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
@@ -74,7 +75,7 @@ cc_library(
         "@mediapipe//mediapipe/framework/port:status",
         "@mediapipe//mediapipe/util:render_data_cc_proto",
     ],
-    alwayslink = 1
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 
