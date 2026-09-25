@@ -20,7 +20,7 @@
 
 # Source repository git commits / branches (used for source builds)
 OV_SOURCE_BRANCH ?= db5e03ddf37b5f09f0bb34a2e6d9d928b0a5af5f
-OV_TOKENIZERS_BRANCH ?= 16a2df6f755d9e962d918a4435aab20ddb37e860
+OV_TOKENIZERS_BRANCH ?= 824033c3061d73d50784872248cdb55aa04674aa
 OV_GENAI_BRANCH ?= 7c73aff690accf01f68748a83aeda9818355b83d
 
 # Source repository organizations
