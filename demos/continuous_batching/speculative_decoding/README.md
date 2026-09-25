@@ -131,8 +131,8 @@ This example uses Gemma 4 because it is a published reference pair, but the same
 Install the export tooling and create a model directory:
 
 ```text
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/common/export_models/requirements.txt
 
 mkdir -p ${HOME}/models
 ```
@@ -194,7 +194,7 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
 
 response = client.chat.completions.create(
     model="OpenVINO/gemma-4-31B-it-int4-ov",
-    messages=[{"role": "user", "content": "Describe the scene in this image."}],
+    messages=[{"role": "user", "content": "Explain briefly the transformer attention mechanism."}],
     temperature=0,
     max_tokens=200,
     extra_body={"num_assistant_tokens": 5},
