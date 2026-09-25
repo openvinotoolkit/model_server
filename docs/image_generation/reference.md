@@ -223,7 +223,7 @@ Each individual adapter can optionally specify a default alpha weight by appendi
 
 The alpha value controls how strongly the adapter influences generation (default: `1.0`). Examples:
 
-```bash
+```
 # Linux - adapter with alpha 0.6
 --source_loras="pokemon=/models/loras/pokemon.safetensors:0.6"
 
@@ -240,11 +240,18 @@ The alpha value controls how strongly the adapter influences generation (default
 
 **Example:**
 ```bash
-ovms --rest_port 8000 \
-  --model_repository_path /models/ \
-  --task image_generation \
-  --source_model stabilityai/stable-diffusion-xl-base-1.0 \
-  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors"
+mkdir -p ${HOME}/models
+
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
+  --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest-gpu \
+    --rest_port 8000 \
+    --model_repository_path /models/ \
+    --task image_generation \
+    --source_model stabilityai/stable-diffusion-xl-base-1.0 \
+    --target_device GPU \
+    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors"
 ```
 
 > **Important:** LoRA adapters must be compatible with the base model architecture. For example, SDXL adapters can only be used with an SDXL base model.
@@ -309,7 +316,7 @@ The `lora_alphas` field in the request body allows overriding the default alpha 
 To blend multiple adapters simultaneously, define a **composite adapter** at startup:
 
 ```
---source_loras="xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
+--source_loras="xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
 ```
 
 Then use the composite alias in requests:
