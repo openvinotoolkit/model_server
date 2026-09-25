@@ -144,8 +144,11 @@ LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY = [
                     "-Wno-sign-compare",
                     "-Werror",
                     # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
+                    # Some upstream dependencies (e.g. Abseil / Google Cloud C++) still use deprecated APIs
+                    # that are not actionable for OVMS and must not fail the build under -Werror.
                     "-Wno-deprecated-declarations",
                     "-Werror",
+                    "-Wno-error=deprecated-declarations",
                     "-Wimplicit-fallthrough",
                     "-fcf-protection=full",
                     "-Wformat",
@@ -194,6 +197,7 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/wd6385",
                         "/wd6386",
                         "/wd6294",
+                        "/wd6001",
                         "/guard:cf",
                         "/utf-8",
 ]
@@ -208,6 +212,8 @@ COMMON_STATIC_TEST_COPTS = select({
                     "-Wall",
                     "-Wno-unknown-pragmas",
                     "-Werror",
+                    "-Wno-deprecated-declarations",
+                    "-Wno-error=deprecated-declarations",
                     "-Isrc",
                     "-fconcepts", # for gmock related utils
                     "-fvisibility=hidden",# Needed for pybind targets

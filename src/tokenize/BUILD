@@ -22,7 +22,7 @@ ovms_cc_library(
     hdrs = ["tokenize_parser.hpp"],
     srcs = ["tokenize_parser.cpp"],
     deps = ["//src:libovmslogging",
-            "@mediapipe//mediapipe/framework:calculator_framework",
+            "@mediapipe//mediapipe/framework/port:status",
             "//third_party:openvino",
             "@com_github_tencent_rapidjson//:rapidjson",
             "//src/port:rapidjson_stringbuffer",

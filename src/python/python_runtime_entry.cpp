@@ -21,6 +21,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -53,6 +54,9 @@ struct PreparedChatTemplateRuntime {
 };
 
 thread_local std::string lastRuntimeOutput;
+std::mutex pythonInterpreterInitializationMutex;
+
+bool validateEnvPaths(std::string& details);
 
 // Ownership/lifetime contract for output:
 // - This function owns storage in thread-local lastRuntimeOutput.
@@ -66,15 +70,27 @@ void setRuntimeOutput(const std::string& outputText, const char** output) {
     }
 }
 
-bool isInterpreterInitialized() {
-    return Py_IsInitialized();
-}
+bool ensureInterpreterInitialized(std::string& details) {
+    std::lock_guard<std::mutex> lock(pythonInterpreterInitializationMutex);
+    if (!validateEnvPaths(details)) {
+        return false;
+    }
+    if (Py_IsInitialized()) {
+        return true;
+    }
 
-// Forwards the same ownership/lifetime contract as setRuntimeOutput().
-void setInterpreterNotInitializedError(const char** output, const char* context) {
-    setRuntimeOutput(std::string(PY_RUNTIME_INIT_ERROR_PREFIX) +
-                         "Python interpreter is not initialized for " + context,
-        output);
+    try {
+        py::initialize_interpreter();
+        PyEval_SaveThread();
+        return true;
+    } catch (const py::error_already_set& e) {
+        details = e.what();
+    } catch (const std::exception& e) {
+        details = e.what();
+    } catch (...) {
+        details = "Unknown Python interpreter initialization error";
+    }
+    return false;
 }
 
 [[maybe_unused]] bool hasOperationalPythonExecutable(std::string& details) {
@@ -218,6 +234,22 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
     return false;
 }
 
+extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_ensurePythonInterpreterInitialized(const char** errorMessage) {
+    if (errorMessage != nullptr) {
+        *errorMessage = nullptr;
+    }
+
+    std::string details;
+    if (ensureInterpreterInitialized(details)) {
+        return true;
+    }
+
+    if (errorMessage != nullptr) {
+        setRuntimeOutput(std::string(PY_RUNTIME_INIT_ERROR_PREFIX) + details, errorMessage);
+    }
+    return false;
+}
+
 extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyChatTemplateRuntime(
     const char* modelsPath,
     const char* requestBody,
@@ -239,8 +271,9 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyChatTemplateRuntime(
         return false;
     }
 
-    if (!isInterpreterInitialized()) {
-        setInterpreterNotInitializedError(output, "chat template application");
+    const char* initializationError = nullptr;
+    if (!OVMS_ensurePythonInterpreterInitialized(&initializationError)) {
+        setRuntimeOutput(initializationError != nullptr ? initializationError : "Python interpreter initialization failed for chat template application", output);
         return false;
     }
 
@@ -413,8 +446,9 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
         return false;
     }
 
-    if (!isInterpreterInitialized()) {
-        setInterpreterNotInitializedError(output, "chat template preparation");
+    const char* initializationError = nullptr;
+    if (!OVMS_ensurePythonInterpreterInitialized(&initializationError)) {
+        setRuntimeOutput(initializationError != nullptr ? initializationError : "Python interpreter initialization failed for chat template preparation", output);
         return false;
     }
 
@@ -569,8 +603,9 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyPreparedChatTemplateRuntime(
         return false;
     }
 
-    if (!isInterpreterInitialized()) {
-        setInterpreterNotInitializedError(output, "prepared chat template application");
+    const char* initializationError = nullptr;
+    if (!OVMS_ensurePythonInterpreterInitialized(&initializationError)) {
+        setRuntimeOutput(initializationError != nullptr ? initializationError : "Python interpreter initialization failed for prepared chat template application", output);
         return false;
     }
 

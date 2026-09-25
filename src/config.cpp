@@ -66,7 +66,7 @@ uint64_t getDefaultRestWorkers() {
 }
 #endif
 
-Config& Config::parse(int argc, char** argv) {
+Config& Config::parse(int argc, const char* const* argv) {
     ovms::CLIParser parser;
     ovms::ServerSettingsImpl serverSettings;
     ovms::ModelsSettingsImpl modelsSettings;

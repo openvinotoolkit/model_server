@@ -20,16 +20,16 @@
 #include "platform_utils.hpp"
 #include "src/shape.hpp"
 
-const std::string dummy_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy", false);
-const std::string dummy_fp64_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_fp64", false);
-const std::string sum_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model", false);
-const std::string increment_1x3x4x5_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5", false);
-const std::string passthrough_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough", false);
-const std::string passthrough_string_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough_string", false);
-const std::string dummy_saved_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model", false);
-const std::string dummy_tflite_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_tflite", false);
-const std::string scalar_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/scalar", false);
-const std::string no_name_output_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/no_name_output", false);
+const std::string dummy_model_location = getGenericFullPathForSrcTest((std::filesystem::path(std::filesystem::current_path()) / "src/test/dummy").string(), false);
+const std::string dummy_fp64_model_location = getGenericFullPathForSrcTest((std::filesystem::path(std::filesystem::current_path()) / "src/test/dummy_fp64").string(), false);
+const std::string sum_model_location = getGenericFullPathForSrcTest((std::filesystem::path(std::filesystem::current_path()) / "src/test/add_two_inputs_model").string(), false);
+const std::string increment_1x3x4x5_model_location = getGenericFullPathForSrcTest((std::filesystem::path(std::filesystem::current_path()) / "src/test/increment_1x3x4x5").string(), false);
+const std::string passthrough_model_location = getGenericFullPathForSrcTest((std::filesystem::path(std::filesystem::current_path()) / "src/test/passthrough").string(), false);
+const std::string passthrough_string_model_location = getGenericFullPathForSrcTest((std::filesystem::path(std::filesystem::current_path()) / "src/test/passthrough_string").string(), false);
+const std::string dummy_saved_model_location = getGenericFullPathForSrcTest((std::filesystem::path(std::filesystem::current_path()) / "src/test/dummy_saved_model").string(), false);
+const std::string dummy_tflite_location = getGenericFullPathForSrcTest((std::filesystem::path(std::filesystem::current_path()) / "src/test/dummy_tflite").string(), false);
+const std::string scalar_model_location = getGenericFullPathForSrcTest((std::filesystem::path(std::filesystem::current_path()) / "src/test/scalar").string(), false);
+const std::string no_name_output_model_location = getGenericFullPathForSrcTest((std::filesystem::path(std::filesystem::current_path()) / "src/test/no_name_output").string(), false);
 
 constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
 constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";

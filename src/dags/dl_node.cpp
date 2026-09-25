@@ -132,6 +132,7 @@ Status DLNode::fetchResults(TensorWithSourceMap& outputs, ov::InferRequest& infe
                 if (!status.ok()) {
                     SPDLOG_LOGGER_DEBUG(dag_executor_logger, "Could not clone result tensor; node: {}; session: {}; model name: {}; output: {}",
                         getName(),
+                        sessionKey,
                         this->modelName,
                         realModelOutputName);
                     return status;

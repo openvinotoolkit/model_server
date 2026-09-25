@@ -33,6 +33,9 @@
 #ifndef _WIN32
 #include <curl/curl.h>
 #endif
+
+#include "absl/status/status.h"
+
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 
@@ -232,7 +235,7 @@ Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComp
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
-    google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    absl::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
     if (!status.ok()) {
         return StatusCode::INTERNAL_ERROR;
     }
@@ -849,7 +852,7 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
 
 void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
     for (SizeType i = 0; i < scope.Size(); i++) {
-        Value data = scope[i].GetObject()["shape"].GetArray();
+        const auto data = scope[i].GetObject()["shape"].GetArray();
         Value shape(rapidjson::kArrayType);
         for (SizeType j = 0; j < data.Size(); j++) {
             shape.PushBack(atoi(data[j].GetString()), doc.GetAllocator());
@@ -898,9 +901,9 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
-    // This parameter forces JSON writer to not omit empty shape in case of scalar tensor
-    opts.always_print_primitive_fields = true;
-    google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    // Renamed from always_print_primitive_fields in protobuf 6.30.
+    opts.always_print_fields_with_no_presence = true;
+    absl::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
     if (!status.ok()) {
         return StatusCode::JSON_SERIALIZATION_ERROR;
     }
