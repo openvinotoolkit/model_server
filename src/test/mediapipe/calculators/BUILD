@@ -64,6 +64,7 @@ cc_library(
 )
 
 
+
 cc_library(
     name = "mediapipe_test_calculators",
     linkstatic = 1,
