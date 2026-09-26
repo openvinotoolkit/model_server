@@ -4162,7 +4162,6 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "DetectionClassificationResultCalculator",
         "DetectionClassificationSerializationCalculator",
         "DetectionColorByIdCalculator",
-        "PassThroughRenderDataCalculator",
         "OVYoloXTensorsToDetectionsCalculator",
         "DetectionExtractionCalculator",
         "DetectionLabelIdToTextCalculator",
