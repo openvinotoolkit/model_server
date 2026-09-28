@@ -2045,6 +2045,7 @@ cc_test(
     linkstatic = 1,
     env = {
         "OVMS_TEST_PYTHON_CALCULATORS_INPROCESS": "1",
+        "OVMS_TEST_PYTHON_RUNTIME_INPROCESS": "1",
         "OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS": "1",
     },
     srcs = [
@@ -2264,11 +2265,13 @@ cc_test(
         "//:disable_mediapipe": [],
     }) + select({
         "//:is_windows_and_python_is_enabled": [
+            "//src/python/binding:pyovms.pyd",
             "//src/python:libovmspython.dll",
             "//src/python:libpython_calculators",
         ],
         "//:disable_python": [],
         "//conditions:default": [
+            "//src/python/binding:pyovms.so",
             "//src/python:libovmspython.so",
             "//src/python:libpython_calculators.so",
         ],
