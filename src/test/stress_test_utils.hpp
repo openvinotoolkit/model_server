@@ -35,9 +35,6 @@
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../capi_frontend/servablemetadata.hpp"
 #include "../config.hpp"
-#include "../dags/pipeline.hpp"
-#include "../dags/pipeline_factory.hpp"
-#include "../dags/pipelinedefinition.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/filesystem/localfilesystem.hpp"
@@ -72,7 +69,7 @@ enum class SERVABLE_TYPE {
     MEDIAPIPE
 };
 
-static std::string createStressTestPipelineOneDummyConfig() {
+static std::string createStressTestOneDummyConfigWithMetrics() {
     return R"(
 {
     "monitoring": {
@@ -97,32 +94,6 @@ static std::string createStressTestPipelineOneDummyConfig() {
                 "shape": {"b": "(1,10) "}
             }
         }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "request",
-                               "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "new_dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                         "data_item": "new_dummy_output"}
-                }
-            ]
-        }
     ]
 })";
 }
@@ -133,37 +104,6 @@ static const std::string initialClearConfig = R"(
     ]
 })";
 
-static const char* stressTestPipelineOneDummyRemovedConfig = R"(
-{
-    "model_config_list": [
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "request",
-                               "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "new_dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                         "data_item": "new_dummy_output"}
-                }
-            ]
-        }
-    ]
-})";
 static const char* stressTestPipelineOneDummyConfigChangedToAutoOneModel = R"(
 {
     "model_config_list": [
@@ -176,662 +116,6 @@ static const char* stressTestPipelineOneDummyConfigChangedToAutoOneModel = R"(
                 "nireq": 100,
                 "shape": {"b": "auto"}
             }
-        }
-    ]
-})";
-static const char* stressTestPipelineOneDummyConfigChangedToAuto = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "auto"}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "request",
-                               "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "new_dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                         "data_item": "new_dummy_output"}
-                }
-            ]
-        }
-    ]
-})";
-static const char* stressTestPipelineOneDummyConfigPipelineRemoved = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-    ]
-})";
-static const char* stressTestPipelineOneDummyConfigChangeConnectionName = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "request",
-                               "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "new_dummy_output_changed_name"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                         "data_item": "new_dummy_output_changed_name"}
-                }
-            ]
-        }
-    ]
-})";
-static const char* stressTestPipelineOneDummyConfigAddNewPipeline = R"(
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"latest": {"num_versions":1}},
-                "nireq": 100,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy2ndPipeline",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "request",
-                               "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "new_dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                         "data_item": "new_dummy_output"}
-                }
-            ]
-        }
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "request",
-                               "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "new_dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                         "data_item": "new_dummy_output"}
-                }
-            ]
-    ]
-})";
-static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumRemovedLibraryConfig = R"(
-{
-    "custom_node_library_config_list": [
-        {
-            "name": "lib_perform_different_operations",
-            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
-        }
-    ],
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"all": {}},
-                "nireq": 100
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input", "pipeline_factors"],
-            "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "lib_perform_different_operations",
-                    "type": "custom",
-                    "demultiply_count": 4,
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "custom_dummy_input"}},
-                        {"op_factors": {"node_name": "request",
-                                           "data_item": "pipeline_factors"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "different_ops_results",
-                         "alias": "custom_node_output"}
-                    ]
-                },
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "custom_node",
-                               "data_item": "custom_node_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "dummy_output"}
-                    ]
-                },
-                {
-                    "name": "choose_max",
-                    "library_name": "lib_choose_maximum",
-                    "type": "custom",
-                    "gather_from_node": "custom_node",
-                    "params": {
-                        "selection_criteria": "MAXIMUM_MINIMUM"
-                    },
-                    "inputs": [
-                        {"input_tensors": {"node_name": "dummyNode",
-                                           "data_item": "dummy_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "maximum_tensor",
-                         "alias": "maximum_tensor_alias"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "choose_max",
-                                         "data_item": "maximum_tensor_alias"}
-                }
-            ]
-        }
-    ]
-})";
-
-static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumChangedParamConfig = R"(
-{
-    "custom_node_library_config_list": [
-        {
-            "name": "lib_perform_different_operations",
-            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
-        },
-        {
-            "name": "lib_choose_maximum",
-            "base_path": "/ovms/bazel-bin/src/lib_node_choose_maximum.so"
-        }
-    ],
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"all": {}},
-                "nireq": 100
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input", "pipeline_factors"],
-            "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "lib_perform_different_operations",
-                    "type": "custom",
-                    "demultiply_count": 4,
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "custom_dummy_input"}},
-                        {"op_factors": {"node_name": "request",
-                                           "data_item": "pipeline_factors"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "different_ops_results",
-                         "alias": "custom_node_output"}
-                    ]
-                },
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "custom_node",
-                               "data_item": "custom_node_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "dummy_output"}
-                    ]
-                },
-                {
-                    "name": "choose_max",
-                    "library_name": "lib_choose_maximum",
-                    "type": "custom",
-                    "gather_from_node": "custom_node",
-                    "params": {
-                        "selection_criteria": "MAXIMUM_AVERAGE"
-                    },
-                    "inputs": [
-                        {"input_tensors": {"node_name": "dummyNode",
-                                           "data_item": "dummy_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "maximum_tensor",
-                         "alias": "maximum_tensor_alias"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "choose_max",
-                                     "data_item": "maximum_tensor_alias"}
-                }
-            ]
-        }
-    ]
-})";
-
-static const char* stressPipelineCustomNodeAddOneThenDummyRemovedLibraryConfig = R"(
-{
-    "custom_node_library_config_list": [],
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"all": {}},
-                "nireq": 20,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "lib_add_one",
-                    "type": "custom",
-                    "params": {
-                        "output_queue_size": "20",
-                        "info_queue_size": "20",
-                        "add_number": "1",
-                        "sub_number": "0"
-                    },
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "output_numbers",
-                         "alias": "custom_node_output"}
-                    ]
-                },
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "custom_node",
-                               "data_item": "custom_node_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                     "data_item": "dummy_output"}
-                }
-            ]
-        }
-    ]
-})";
-
-static const char* stressPipelineCustomNodeAddOneThenDummyChangedLibraryName = R"(
-{
-    "custom_node_library_config_list": [
-        {
-            "name": "lib_add_one_changed_name",
-            "base_path": "/ovms/bazel-bin/src/libcustom_node_add_one.so"
-        }
-    ],
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"all": {}},
-                "nireq": 20,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "lib_add_one_changed_name",
-                    "type": "custom",
-                    "params": {
-                        "output_queue_size": "20",
-                        "info_queue_size": "20",
-                        "add_number": "1",
-                        "sub_number": "0"
-                    },
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "output_numbers",
-                         "alias": "custom_node_output"}
-                    ]
-                },
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "custom_node",
-                               "data_item": "custom_node_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                     "data_item": "dummy_output"}
-                }
-            ]
-        }
-    ]
-})";
-
-static const char* stressPipelineCustomNodeAddOneThenDummyChangedParam = R"(
-{
-    "custom_node_library_config_list": [
-        {
-            "name": "lib_add_one",
-            "base_path": "/ovms/bazel-bin/src/libcustom_node_add_one.so"
-        }
-    ],
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"all": {}},
-                "nireq": 20,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "lib_add_one",
-                    "type": "custom",
-                    "params": {
-                        "output_queue_size": "20",
-                        "info_queue_size": "20",
-                        "add_number": "2",
-                        "sub_number": "1"
-                    },
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "output_numbers",
-                         "alias": "custom_node_output"}
-                    ]
-                },
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "custom_node",
-                               "data_item": "custom_node_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                     "data_item": "dummy_output"}
-                }
-            ]
-        }
-    ]
-})";
-
-static const char* stressPipelineCustomNodeAddOneThenDummyReducedQueueSize = R"(
-{
-    "custom_node_library_config_list": [
-        {
-            "name": "lib_add_one",
-            "base_path": "/ovms/bazel-bin/src/libcustom_node_add_one.so"
-        }
-    ],
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"all": {}},
-                "nireq": 20,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "lib_add_one",
-                    "type": "custom",
-                    "params": {
-                        "output_queue_size": "10",
-                        "info_queue_size": "10",
-                        "add_number": "1",
-                        "sub_number": "0"
-                    },
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "output_numbers",
-                         "alias": "custom_node_output"}
-                    ]
-                },
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "custom_node",
-                               "data_item": "custom_node_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                     "data_item": "dummy_output"}
-                }
-            ]
-        }
-    ]
-})";
-
-static const char* stressPipelineCustomNodeAddOneThenDummyIncreasedQueueSize = R"(
-{
-    "custom_node_library_config_list": [
-        {
-            "name": "lib_add_one",
-            "base_path": "/ovms/bazel-bin/src/libcustom_node_add_one.so"
-        }
-    ],
-    "model_config_list": [
-        {
-            "config": {
-                "name": "dummy",
-                "base_path": "/ovms/src/test/dummy",
-                "target_device": "CPU",
-                "model_version_policy": {"all": {}},
-                "nireq": 20,
-                "shape": {"b": "(1,10) "}
-            }
-        }
-    ],
-    "pipeline_config_list": [
-        {
-            "name": "pipeline1Dummy",
-            "inputs": ["custom_dummy_input"],
-            "nodes": [
-                {
-                    "name": "custom_node",
-                    "library_name": "lib_add_one",
-                    "type": "custom",
-                    "params": {
-                        "output_queue_size": "30",
-                        "info_queue_size": "30",
-                        "add_number": "1",
-                        "sub_number": "0"
-                    },
-                    "inputs": [
-                        {"input_numbers": {"node_name": "request",
-                                           "data_item": "custom_dummy_input"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "output_numbers",
-                         "alias": "custom_node_output"}
-                    ]
-                },
-                {
-                    "name": "dummyNode",
-                    "model_name": "dummy",
-                    "type": "DL model",
-                    "inputs": [
-                        {"b": {"node_name": "custom_node",
-                               "data_item": "custom_node_output"}}
-                    ],
-                    "outputs": [
-                        {"data_item": "a",
-                         "alias": "dummy_output"}
-                    ]
-                }
-            ],
-            "outputs": [
-                {"custom_dummy_output": {"node_name": "dummyNode",
-                                     "data_item": "dummy_output"}
-                }
-            ]
         }
     ]
 })";
@@ -1164,7 +448,7 @@ public:
         manager = &(dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager());
     }
     void SetUp() override {
-        SetUpCAPIServerInstance(createStressTestPipelineOneDummyConfig());
+        SetUpCAPIServerInstance(createStressTestOneDummyConfigWithMetrics());
     }
     void TearDown() override {
         OVMS_Server* cserver;
@@ -1178,7 +462,7 @@ public:
     }
     void defaultVersionRemove() {
         SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressTestPipelineOneDummyRemovedConfig);
+        SetUpConfig(initialClearConfig);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -1190,12 +474,6 @@ public:
     void addFirstModel() {
         SPDLOG_INFO("{} start", __FUNCTION__);
         SetUpConfig(stressTestOneDummyConfig);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void changeToAutoShape() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressTestPipelineOneDummyConfigChangedToAuto);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -1214,71 +492,6 @@ public:
     void changeToEmptyConfig() {
         SPDLOG_INFO("{} start", __FUNCTION__);
         SetUpConfig(initialClearConfig);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void removePipelineDefinition() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressTestPipelineOneDummyConfigPipelineRemoved);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void changeConnectionName() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressTestPipelineOneDummyConfigChangeConnectionName);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void addNewPipeline() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressTestPipelineOneDummyConfigAddNewPipeline);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void retireSpecificVersionUsed() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/dummy/1"), modelPath + "/2", std::filesystem::copy_options::recursive);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void removeCustomLibraryUsed() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumRemovedLibraryConfig);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void changeCustomLibraryParam() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumChangedParamConfig);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void removePreallocatedCustomLibraryUsed() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeAddOneThenDummyRemovedLibraryConfig);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void renamePreallocatedCustomLibraryUsed() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeAddOneThenDummyChangedLibraryName);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void changeParamPreallocatedCustomLibraryUsed() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeAddOneThenDummyChangedParam);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void reduceQueueSizePreallocatedCustomLibraryUsed() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeAddOneThenDummyReducedQueueSize);
-        createConfigFileWithContent(ovmsConfig, configFilePath);
-        SPDLOG_INFO("{} end", __FUNCTION__);
-    }
-    void increaseQueueSizePreallocatedCustomLibraryUsed() {
-        SPDLOG_INFO("{} start", __FUNCTION__);
-        SetUpConfig(stressPipelineCustomNodeAddOneThenDummyIncreasedQueueSize);
         createConfigFileWithContent(ovmsConfig, configFilePath);
         SPDLOG_INFO("{} end", __FUNCTION__);
     }
@@ -1549,7 +762,7 @@ public:
         checkDummyResponse(pipelineOutputName, requestData, request, response, 1, 1, pipelineName);
     }
 
-    template <typename RequestType, typename ResponseType, typename ServableType = ovms::Pipeline>
+    template <typename RequestType, typename ResponseType, typename ServableType>
     void triggerPredictInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
@@ -1572,7 +785,6 @@ public:
                 SPDLOG_INFO("Got stop signal. Triggering last request");
                 breakLoop = true;
             }
-            std::unique_ptr<Pipeline> pipelinePtr;
 #if (MEDIAPIPE_DISABLE == 0)
             std::unique_ptr<MediapipeGraphExecutor> executorPtr;
 #endif
@@ -1583,13 +795,9 @@ public:
             RequestType request = preparePipelinePredictRequest(request2);
             ovms::Status createPipelineStatus = StatusCode::UNKNOWN_ERROR;
             timer.start(CREATE);
-            if (typeid(ServableType) == typeid(ovms::Pipeline)) {
-                createPipelineStatus = this->manager->getPipelineFactory().create(pipelinePtr, pipelineName, &request, &response, *(this->manager));
 #if (MEDIAPIPE_DISABLE == 0)
-            } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
-                mediacreate(executorPtr, *(this->manager), request, response, createPipelineStatus);
+            mediacreate(executorPtr, *(this->manager), request, response, createPipelineStatus);
 #endif
-            }
             timer.stop(CREATE);
             SPDLOG_TRACE("Executor creation time: {} us", timer.elapsed<std::chrono::microseconds>(CREATE));
             // we need to make sure that expected status happened and still accept
@@ -1604,15 +812,9 @@ public:
 
             ovms::Status executePipelineStatus = StatusCode::UNKNOWN_ERROR;
             timer.start(EXECUTE);
-            if (typeid(ServableType) == typeid(ovms::Pipeline)) {
-                executePipelineStatus = pipelinePtr->execute(ovms::ExecutionContext(
-                    ovms::ExecutionContext::Interface::GRPC,
-                    ovms::ExecutionContext::Method::ModelInfer));
 #if (MEDIAPIPE_DISABLE == 0)
-            } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
-                mediaexec(executorPtr, *(this->manager), request, response, executePipelineStatus);
+            mediaexec(executorPtr, *(this->manager), request, response, executePipelineStatus);
 #endif
-            }
             timer.stop(EXECUTE);
             createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;
             EXPECT_TRUE((requiredLoadResults.find(executePipelineStatus.getCode()) != requiredLoadResults.end()) ||
@@ -1713,7 +915,7 @@ public:
                 break;
             }
             OVMS_ServableState state;
-            OVMS_Status* status = OVMS_GetServableState(this->cserver, "pipeline1Dummy", 0, &state);
+            OVMS_Status* status = OVMS_GetServableState(this->cserver, "dummy", 0, &state);
 
             GET_CAPI_STATUS_CODE(status)
             createPipelineRetCodesCounters[sc]++;
@@ -1757,65 +959,6 @@ public:
         std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         for (size_t i = 0; i < data.size(); ++i) {
             EXPECT_EQ(data[i] + 1, outputData[i]) << "Different at:" << i << " place.";
-        }
-    }
-
-    void triggerCApiInferenceInALoop(
-        std::future<void>& startSignal,
-        std::future<void>& stopSignal,
-        const std::set<StatusCode>& requiredLoadResults,
-        const std::set<StatusCode>& allowedLoadResults,
-        std::unordered_map<StatusCode, std::atomic<uint64_t>>& createPipelineRetCodesCounters) {
-        startSignal.get();
-        // stressIterationsCounter is additional safety measure
-        auto stressIterationsCounter = stressIterationsLimit;
-        bool breakLoop = false;
-        while (stressIterationsCounter-- > 0) {
-            auto futureWaitResult = stopSignal.wait_for(std::chrono::milliseconds(0));
-            if (true == breakLoop) {
-                SPDLOG_INFO("Ending Load");
-                break;
-            }
-            if (futureWaitResult == std::future_status::ready) {
-                SPDLOG_INFO("Got stop signal. Triggering last request");
-                breakLoop = true;
-            }
-            OVMS_InferenceRequest* request{nullptr};
-            OVMS_InferenceRequestNew(&request, this->cserver, "pipeline1Dummy", 1);
-            ASSERT_NE(nullptr, request);
-
-            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, "custom_dummy_input", OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
-            std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-            ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, "custom_dummy_input", reinterpret_cast<void*>(data.data()), sizeof(float) * data.size(), OVMS_BUFFERTYPE_CPU, 0));
-
-            OVMS_InferenceResponse* response = nullptr;
-            OVMS_Status* status = OVMS_Inference(this->cserver, request, &response);
-            OVMS_InferenceRequestDelete(request);
-
-            GET_CAPI_STATUS_CODE(status)
-            createPipelineRetCodesCounters[sc]++;
-            EXPECT_TRUE((requiredLoadResults.find(sc) != requiredLoadResults.end()) ||
-                        (allowedLoadResults.find(sc) != allowedLoadResults.end()));
-            if (sc == StatusCode::OK) {
-                std::string expectedOutputName = "custom_dummy_output";
-                checkInferResponse(response, expectedOutputName);
-            }
-            OVMS_InferenceResponseDelete(response);
-
-            if (::testing::Test::HasFailure()) {
-                SPDLOG_INFO("Earlier fail detected. Stopping execution");
-                break;
-            }
-            for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
-                if (counter > 0) {
-                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), counter.load());
-                }
-            }
-
-            EXPECT_GT(stressIterationsCounter, 0) << "Reaching 0 means that we might not test enough \"after config change\" operation was applied";
-            std::stringstream ss;
-            ss << "Executed: " << stressIterationsLimit - stressIterationsCounter << " inferences by thread id: " << std::this_thread::get_id() << std::endl;
-            SPDLOG_INFO(ss.str());
         }
     }
 
@@ -1907,7 +1050,7 @@ public:
         }
     }
 
-    void triggerCApiInferenceInALoopSingleModel(
+    void triggerCApiInferenceInALoop(
         std::future<void>& startSignal,
         std::future<void>& stopSignal,
         const std::set<StatusCode>& requiredLoadResults,

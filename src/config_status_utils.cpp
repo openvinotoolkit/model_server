@@ -19,7 +19,7 @@
 #include <utility>
 #include <vector>
 
-#include "dags/pipelinedefinitionstatus.hpp"
+#include "mediapipe_internal/pipelinedefinitionstatus.hpp"
 #include "execution_context.hpp"
 #include "metrics/metric.hpp"
 #include "model.hpp"

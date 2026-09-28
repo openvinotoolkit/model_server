@@ -21,10 +21,6 @@ There are multiple ways of enabling dynamic inputs depending on the kind of serv
 
 - [dynamic input shape with binary input format](./dynamic_shape_binary_inputs.md) - send data in binary format (JPEG or PNG encoded), so the Model Server will adjust the input during data decoding. Consider this option in case of slower networks to minimize amount of data transferred over the network and fit image size to the size accepted by endpoint.
 
-**DAG Pipelines**:
-
-- [dynamic input shape with a custom node](./dynamic_shape_custom_node.md) - create a simple pipeline by pairing your model with a custom node that performs data preprocessing and provides the model with data in an acceptable shape. Consider this option if you want to fit the image into model shape by performing image resize operation before inference. This may affect accuracy.
-
 **MediaPipe Graphs**:
 
 OpenVINO Model Server accepts several data types that can be handled on [MediaPipe graph](mediapipe.md) input. Whether the input is dynamic or not depends on what happens next in the graph. There are 4 situations when input to the graph can be dynamic:
