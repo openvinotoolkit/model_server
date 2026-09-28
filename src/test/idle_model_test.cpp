@@ -77,7 +77,7 @@ TEST_F(IdleModelManagementTest, NonPermanentModelStartsAsSleepingButAppearsAvail
     ASSERT_NE(instance, nullptr);
     EXPECT_EQ(instance->getStatus().getState(), ModelVersionState::SLEEPING);
 
-    auto availableNames = manager.getNamesOfAvailableModels();
+    auto availableNames = manager.getNamesOfAvailableServables();
     EXPECT_NE(std::find(availableNames.begin(), availableNames.end(), "dummy"),
         availableNames.end());
 }

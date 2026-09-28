@@ -1771,11 +1771,23 @@ const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() cons
     return *customNodeLibraryManager;
 }
 
-const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
-    // In idle management mode, report all configured models as available
+const std::vector<std::string> ModelManager::getNamesOfAvailableServables() const {
+    // In idle management mode, report all configured servables as available
+    // TODO in separate PR - improve LoRA handling
     if (servableGroupManager && servableGroupManager->isEnabled()) {
         return servableGroupManager->getAllConfiguredServableNames();
     }
+    std::vector<std::string> names = getNamesOfAvailableModels();
+    const auto dagNames = getPipelineFactory().getNamesOfAvailablePipelines();
+    names.insert(names.end(), dagNames.begin(), dagNames.end());
+#if (MEDIAPIPE_DISABLE == 0)
+    const auto mediapipeNames = getNamesOfAvailableMediapipePipelines();
+    names.insert(names.end(), mediapipeNames.begin(), mediapipeNames.end());
+#endif
+    return names;
+}
+
+const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
     std::vector<std::string> names;
     std::shared_lock lock(modelsMtx);
     for (auto& [name, model] : models) {
