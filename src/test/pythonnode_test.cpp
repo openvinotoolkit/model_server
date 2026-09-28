@@ -29,7 +29,6 @@
 #pragma warning(pop)
 
 #include "../config.hpp"
-#include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"

@@ -38,9 +38,7 @@ COPY --from=ovms_image /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu
 COPY --from=ovms_image /usr/local/ /usr/local/
 
 ARG CPU_EXTENSIONS_PATH=/cpu_extensions
-ARG CUSTOM_NODES_PATH=/custom_nodes
 
 COPY --from=ovms_test_image ${CPU_EXTENSIONS_PATH} ${CPU_EXTENSIONS_PATH}
-COPY --from=ovms_test_image ${CUSTOM_NODES_PATH} ${CUSTOM_NODES_PATH}
 
 ENTRYPOINT ["/ovms/bin/ovms"]

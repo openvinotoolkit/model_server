@@ -17,12 +17,9 @@
 
 namespace ovms {
 /**
- * @brief Interface for periodic cleanup of resources that are no longer in use.
+ * @brief Interface for periodic process maintenance.
  *
- * Implemented by ModelManager to release shared resources (e.g. custom node library wrappers)
- * that have been retired but may still be referenced by in-flight requests. A background cleaner
- * thread calls cleanupResources() at regular intervals to collect resources whose reference
- * counts have dropped to the sole owner.
+ * A background cleaner thread calls cleanupResources() at regular intervals.
  */
 class ResourcesCleaner {
 public:
