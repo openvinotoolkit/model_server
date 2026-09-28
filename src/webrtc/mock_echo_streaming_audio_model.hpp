@@ -24,14 +24,11 @@ namespace ovms {
 
 class MockEchoStreamingAudioModel final : public StreamingAudioModel {
 public:
-    MockEchoStreamingAudioModel(uint32_t sampleRate, float directGain, float echoGain);
+    explicit MockEchoStreamingAudioModel(uint32_t sampleRate);
     AudioChunk process(const AudioChunk& input) override;
 
 private:
     uint32_t sampleRate_;
-    float directGain_;
-    float echoGain_;
-    std::vector<float> previousChunk_;
 };
 
 }  // namespace ovms

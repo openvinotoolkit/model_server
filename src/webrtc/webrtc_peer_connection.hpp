@@ -16,6 +16,7 @@
 #pragma once
 
 #include <functional>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -63,6 +64,7 @@ public:
     void addRemoteCandidate(const std::string& candidate, const std::string& mid);
 
     rtc::PeerConnection::State state() const;
+    bool getSelectedCandidatePair(rtc::Candidate& local, rtc::Candidate& remote);
 
 private:
     void configureAudioTrackCallbacks();
@@ -77,6 +79,14 @@ private:
     AudioTrackCallback audioTrackCallback_;
     AudioTrackOpenCallback audioTrackOpenCallback_;
     AudioTrackOpenCallback localAudioTrackOpenCallback_;
+    uint64_t outboundAudioPacketNumber_ = 0;
+    std::shared_ptr<rtc::RtpPacketizationConfig> outboundPacketizationConfig_;
+    std::string outboundCodecName_;
+    uint8_t outboundPayloadType_ = 0;
+    uint32_t outboundClockRate_ = 0;
+    uint8_t outboundChannels_ = 0;
+    bool outboundRtpTimestampInitialized_ = false;
+    uint32_t outboundRtpTimestamp_ = 0;
 };
 
 }  // namespace ovms

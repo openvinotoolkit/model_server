@@ -15,28 +15,30 @@
 //*****************************************************************************/
 #include "mock_echo_streaming_audio_model.hpp"
 
-#include <algorithm>
+#include "src/logging.hpp"
+
+#include <cmath>
 
 namespace ovms {
 
-MockEchoStreamingAudioModel::MockEchoStreamingAudioModel(uint32_t sampleRate, float directGain, float echoGain) :
-    sampleRate_(sampleRate),
-    directGain_(directGain),
-    echoGain_(echoGain) {}
+MockEchoStreamingAudioModel::MockEchoStreamingAudioModel(uint32_t sampleRate) :
+    sampleRate_(sampleRate) {}
 
 AudioChunk MockEchoStreamingAudioModel::process(const AudioChunk& input) {
     if (input.sampleRate != sampleRate_) {
         throw std::invalid_argument("Unexpected audio sample rate");
     }
 
-    AudioChunk output{input.samples, input.sampleRate, input.timestampUs};
-    for (size_t index = 0; index < input.samples.size(); ++index) {
-        const float delayedSample = index < previousChunk_.size() ? previousChunk_[index] : 0.0f;
-        const float value = directGain_ * input.samples[index] + echoGain_ * delayedSample;
-        output.samples[index] = std::clamp(value, -1.0f, 1.0f);
+    if (webrtc_logger->should_log(spdlog::level::trace)) {
+        float squaredSampleSum = 0.0f;
+        for (const float sample : input.samples) {
+            squaredSampleSum += sample * sample;
+        }
+        const float rmsVolume = input.samples.empty() ? 0.0f : std::sqrt(squaredSampleSum / input.samples.size());
+        SPDLOG_LOGGER_TRACE(webrtc_logger, "Mock audio model input RMS volume: {}, timestamp: {}", rmsVolume, input.timestampUs);
     }
-    previousChunk_ = input.samples;
-    return output;
+
+    return input;
 }
 
 }  // namespace ovms

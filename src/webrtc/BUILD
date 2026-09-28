@@ -33,7 +33,10 @@ ovms_cc_library(
     name = "mock_echo_streaming_audio_model",
     srcs = ["mock_echo_streaming_audio_model.cpp"],
     hdrs = ["mock_echo_streaming_audio_model.hpp"],
-    deps = [":streaming_audio_model"],
+    deps = [
+        "//src:libovmslogging",
+        ":streaming_audio_model",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -59,7 +62,10 @@ ovms_cc_library(
 ovms_cc_library(
     name = "webrtc_peer_connection",
     srcs = ["webrtc_peer_connection.cpp"],
-    hdrs = ["webrtc_peer_connection.hpp"],
+    hdrs = [
+        "rtp_packetization_config_utils.hpp",
+        "webrtc_peer_connection.hpp",
+    ],
     deps = [
         "//src:libovmslogging",
         ":streaming_audio_processor",

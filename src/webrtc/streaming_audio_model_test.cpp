@@ -22,23 +22,19 @@
 using ovms::AudioChunk;
 using ovms::MockEchoStreamingAudioModel;
 
-TEST(MockEchoStreamingAudioModelTest, PreservesChunkShapeAndAppliesEcho) {
-    MockEchoStreamingAudioModel model(2, 0.5f, 0.5f);
-    AudioChunk first{{1.0f, 0.0f}, 2, 0};
-    AudioChunk second{{0.0f, 1.0f}, 2, 1000000};
+TEST(MockEchoStreamingAudioModelTest, ReturnsAudioSamplesUnchanged) {
+    MockEchoStreamingAudioModel model(1760);
+    const AudioChunk input{{0.25f, -0.5f, 0.75f}, 1760, 123456, 1};
 
-    const auto firstOutput = model.process(first);
-    const auto secondOutput = model.process(second);
+    const auto output = model.process(input);
 
-    EXPECT_EQ(firstOutput.samples.size(), first.samples.size());
-    EXPECT_FLOAT_EQ(firstOutput.samples[0], 0.5f);
-    EXPECT_FLOAT_EQ(firstOutput.samples[1], 0.0f);
-    EXPECT_FLOAT_EQ(secondOutput.samples[0], 0.5f);
-    EXPECT_FLOAT_EQ(secondOutput.samples[1], 0.5f);
-    EXPECT_EQ(secondOutput.timestampUs, second.timestampUs);
+    EXPECT_EQ(output.samples, input.samples);
+    EXPECT_EQ(output.sampleRate, input.sampleRate);
+    EXPECT_EQ(output.timestampUs, input.timestampUs);
+    EXPECT_EQ(output.channels, input.channels);
 }
 
 TEST(MockEchoStreamingAudioModelTest, RejectsUnexpectedSampleRate) {
-    MockEchoStreamingAudioModel model(2, 0.5f, 0.5f);
+    MockEchoStreamingAudioModel model(2);
     EXPECT_THROW(model.process(AudioChunk{{1.0f}, 48000, 0}), std::invalid_argument);
 }

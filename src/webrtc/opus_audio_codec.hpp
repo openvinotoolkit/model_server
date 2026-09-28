@@ -38,8 +38,11 @@ public:
 
     std::vector<uint8_t> encode(const std::vector<float>& pcm) const;
     std::vector<float> decode(const std::vector<uint8_t>& encoded) const;
+    size_t channels() const;
+    size_t encodedFrameSamples(const std::vector<uint8_t>& encoded) const;
 
 private:
+    size_t channels_;
     std::unique_ptr<OpusEncoder, void (*)(OpusEncoder*)> encoder_;
     std::unique_ptr<OpusDecoder, void (*)(OpusDecoder*)> decoder_;
 };

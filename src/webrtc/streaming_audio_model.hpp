@@ -24,6 +24,7 @@ struct AudioChunk {
     std::vector<float> samples;
     uint32_t sampleRate;
     uint64_t timestampUs;
+    uint32_t channels = 1;
 };
 
 class StreamingAudioModel {

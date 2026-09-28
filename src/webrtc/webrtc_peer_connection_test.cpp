@@ -22,8 +22,12 @@
 
 #include <gtest/gtest.h>
 
+#include <rtc/rtp.hpp>
+#include <rtc/rtppacketizer.hpp>
+
 #include "mock_echo_streaming_audio_model.hpp"
 #include "opus_audio_codec.hpp"
+#include "rtp_packetization_config_utils.hpp"
 #include "streaming_audio_processor.hpp"
 #include "webrtc_peer_connection.hpp"
 
@@ -53,6 +57,38 @@ void connectPeers(WebRtcPeerConnection& offerer, WebRtcPeerConnection& answerer,
 }
 
 }  // namespace
+
+TEST(WebRtcPeerConnectionTest, OutboundRtpPacketContainsNegotiatedMidExtension) {
+    constexpr uint32_t ssrc = 1;
+    constexpr uint8_t payloadType = 111;
+    constexpr uint8_t midExtensionId = 4;
+    const std::string mid = "0";
+    const std::string midExtensionUri = "urn:ietf:params:rtp-hdrext:sdes:mid";
+    rtc::Description::Media description("m=audio 9 UDP/TLS/RTP/SAVPF 111", mid,
+        rtc::Description::Direction::SendRecv);
+    description.addExtMap(rtc::Description::Entry::ExtMap(
+        midExtensionId, midExtensionUri, rtc::Description::Direction::SendRecv));
+
+    auto config = ovms::createAudioRtpPacketizationConfig(description, mid, ssrc, payloadType, 48000);
+    ASSERT_EQ(config->mid, mid);
+    ASSERT_EQ(config->midId, midExtensionId);
+
+    rtc::OpusRtpPacketizer packetizer(config);
+    rtc::message_vector messages;
+    messages.push_back(rtc::make_message(rtc::binary{std::byte{0xF8}, std::byte{0xFF}, std::byte{0xFE}}));
+    packetizer.outgoing(messages, {});
+
+    ASSERT_EQ(messages.size(), 1);
+    const auto* rtpHeader = reinterpret_cast<const rtc::RtpHeader*>(messages.front()->data());
+    ASSERT_TRUE(rtpHeader->extension());
+    ASSERT_NE(rtpHeader->getExtensionHeader(), nullptr);
+    const auto* extensionHeader = rtpHeader->getExtensionHeader();
+    EXPECT_EQ(extensionHeader->profileSpecificId(), 0xBEDE);
+    ASSERT_GE(extensionHeader->headerLength(), 1);
+    const auto* extensionBody = reinterpret_cast<const uint8_t*>(extensionHeader->getBody());
+    EXPECT_EQ(extensionBody[0], static_cast<uint8_t>((midExtensionId << 4) | 0));
+    EXPECT_EQ(extensionBody[1], static_cast<uint8_t>('0'));
+}
 
 TEST(WebRtcPeerConnectionTest, OfferContainsOpusAudioTrack) {
     WebRtcPeerConnection pc(rtc::Configuration{});
@@ -420,7 +456,7 @@ TEST(WebRtcPeerConnectionTest, ProcessesIncomingOpusThroughStreamingModel) {
     WebRtcPeerConnection offerer(rtc::Configuration{});
     WebRtcPeerConnection answerer(rtc::Configuration{});
     OpusAudioCodec codec(48000, 1);
-    MockEchoStreamingAudioModel model(48000, 0.5f, 0.5f);
+    MockEchoStreamingAudioModel model(48000);
     StreamingAudioProcessor processor(codec, model);
     std::mutex mutex;
     std::condition_variable condition;
@@ -485,5 +521,4 @@ TEST(WebRtcPeerConnectionTest, ProcessesIncomingOpusThroughStreamingModel) {
     const auto decodedOutput = codec.decode(encodedOutput);
     EXPECT_EQ(decodedOutput.size(), OpusAudioCodec::FrameSamples);
     EXPECT_EQ(processedInfo.timestamp, inputInfo.timestamp);
-    EXPECT_NE(decodedOutput, input);
 }

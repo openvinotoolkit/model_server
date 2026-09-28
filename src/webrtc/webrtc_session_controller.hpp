@@ -23,10 +23,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "webrtc_peer_connection.hpp"
 #include "mock_echo_streaming_audio_model.hpp"
 #include "opus_audio_codec.hpp"
 #include "streaming_audio_processor.hpp"
-#include "webrtc_peer_connection.hpp"
 
 namespace ovms {
 

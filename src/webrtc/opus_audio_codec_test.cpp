@@ -30,7 +30,7 @@ using ovms::StreamingAudioProcessor;
 
 TEST(OpusAudioCodecTest, RejectsUnsupportedConfiguration) {
     EXPECT_THROW(OpusAudioCodec(16000, 1), std::invalid_argument);
-    EXPECT_THROW(OpusAudioCodec(48000, 2), std::invalid_argument);
+    EXPECT_THROW(OpusAudioCodec(48000, 3), std::invalid_argument);
 }
 
 TEST(OpusAudioCodecTest, EncodesAndDecodesTwentyMillisecondMonoFrame) {
@@ -52,9 +52,20 @@ TEST(OpusAudioCodecTest, EncodesAndDecodesTwentyMillisecondMonoFrame) {
     EXPECT_LT(maximumError, 0.5f);
 }
 
+TEST(OpusAudioCodecTest, EncodesAndDecodesTwentyMillisecondStereoFrame) {
+    OpusAudioCodec codec(48000, 2);
+    const std::vector<float> input(2 * OpusAudioCodec::FrameSamples, 0.2f);
+
+    const auto encoded = codec.encode(input);
+    const auto decoded = codec.decode(encoded);
+
+    ASSERT_FALSE(encoded.empty());
+    EXPECT_EQ(decoded.size(), input.size());
+}
+
 TEST(StreamingAudioProcessorTest, DecodesProcessesAndReencodesWithTimestamp) {
     OpusAudioCodec codec(48000, 1);
-    MockEchoStreamingAudioModel model(48000, 0.5f, 0.5f);
+    MockEchoStreamingAudioModel model(48000);
     StreamingAudioProcessor processor(codec, model);
     std::vector<float> input(960, 0.25f);
     const auto encodedInput = codec.encode(input);
@@ -63,6 +74,5 @@ TEST(StreamingAudioProcessorTest, DecodesProcessesAndReencodesWithTimestamp) {
     const auto decodedOutput = codec.decode(encodedOutput);
 
     ASSERT_EQ(decodedOutput.size(), input.size());
-    EXPECT_NE(decodedOutput, input);
     EXPECT_EQ(processor.lastTimestampUs(), 123456);
 }

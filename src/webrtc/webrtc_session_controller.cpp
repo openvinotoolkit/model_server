@@ -17,16 +17,88 @@
 
 #include <chrono>
 #include <exception>
+#include <sstream>
 #include <utility>
+#include <vector>
 
 #include "src/logging.hpp"
 
 namespace ovms {
 
+namespace {
+
+std::string preferOpusAudioCodec(const std::string& offerSdp) {
+    std::istringstream input(offerSdp);
+    std::vector<std::string> lines;
+    std::string line;
+    std::string opusPayloadType;
+    size_t audioSectionStart = 0;
+    bool inAudioSection = false;
+    while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        if (line.rfind("m=audio ", 0) == 0) {
+            audioSectionStart = lines.size();
+            inAudioSection = true;
+        } else if (line.rfind("m=", 0) == 0) {
+            inAudioSection = false;
+        } else if (inAudioSection && line.rfind("a=rtpmap:", 0) == 0 && line.find(" opus/") != std::string::npos) {
+            const size_t payloadStart = std::string("a=rtpmap:").size();
+            const size_t payloadEnd = line.find(' ', payloadStart);
+            if (payloadEnd != std::string::npos) {
+                opusPayloadType = line.substr(payloadStart, payloadEnd - payloadStart);
+            }
+        }
+        lines.push_back(line);
+    }
+
+    if (opusPayloadType.empty() || audioSectionStart >= lines.size()) {
+        return offerSdp;
+    }
+    std::istringstream audioLine(lines[audioSectionStart]);
+    std::vector<std::string> fields;
+    std::string field;
+    while (audioLine >> field) {
+        fields.push_back(field);
+    }
+    if (fields.size() < 4) {
+        return offerSdp;
+    }
+    std::ostringstream rewrittenAudioLine;
+    rewrittenAudioLine << fields[0] << ' ' << fields[1] << ' ' << fields[2];
+    rewrittenAudioLine << ' ' << opusPayloadType;
+    lines[audioSectionStart] = rewrittenAudioLine.str();
+
+    std::ostringstream output;
+    bool outputInAudioSection = false;
+    for (const auto& rewrittenLine : lines) {
+        if (rewrittenLine.rfind("m=audio ", 0) == 0) {
+            outputInAudioSection = true;
+        } else if (rewrittenLine.rfind("m=", 0) == 0) {
+            outputInAudioSection = false;
+        }
+        if (outputInAudioSection &&
+            (rewrittenLine.rfind("a=rtpmap:", 0) == 0 ||
+                rewrittenLine.rfind("a=fmtp:", 0) == 0 ||
+                rewrittenLine.rfind("a=rtcp-fb:", 0) == 0)) {
+            const size_t payloadStart = rewrittenLine.find(':') + 1;
+            const size_t payloadEnd = rewrittenLine.find(' ', payloadStart);
+            if (payloadEnd != std::string::npos && rewrittenLine.substr(payloadStart, payloadEnd - payloadStart) != opusPayloadType) {
+                continue;
+            }
+        }
+        output << rewrittenLine << "\r\n";
+    }
+    return output.str();
+}
+
+}  // namespace
+
 WebRtcSessionController::Session::Session(rtc::Configuration configuration) :
     peer(std::move(configuration)),
-    codec(OpusAudioCodec::SampleRate, OpusAudioCodec::Channels),
-    model(OpusAudioCodec::SampleRate, 0.5f, 0.5f),
+    codec(OpusAudioCodec::SampleRate, 2),
+    model(OpusAudioCodec::SampleRate),
     processor(codec, model) {
 }
 
@@ -54,6 +126,23 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
     configuration.portRangeBegin = 52000;
     configuration.portRangeEnd = 52000;
     auto session = std::make_shared<Session>(std::move(configuration));
+    session->peer.onStateChange([session](rtc::PeerConnection::State state) {
+        if (state != rtc::PeerConnection::State::Connected) {
+            return;
+        }
+        rtc::Candidate localCandidate;
+        rtc::Candidate remoteCandidate;
+        if (session->peer.getSelectedCandidatePair(localCandidate, remoteCandidate)) {
+            const std::string remoteAddress = remoteCandidate.address().value_or("unknown");
+            const uint16_t remotePort = remoteCandidate.port().value_or(0);
+            SPDLOG_LOGGER_INFO(webrtc_logger,
+                "Selected ICE pair for WebRTC session: local_candidate={}, remote_candidate={}, outbound_destination={}:{}",
+                localCandidate.candidate(), remoteCandidate.candidate(), remoteAddress, remotePort);
+        } else {
+            SPDLOG_LOGGER_WARN(webrtc_logger,
+                "WebRTC session connected but selected ICE candidate pair is unavailable");
+        }
+    });
     session->peer.onLocalDescription([session](const std::string& sdp, const std::string& type) {
         {
             std::lock_guard<std::mutex> lock(session->mutex);
@@ -73,7 +162,8 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
         // Reuse the browser's single sendrecv m-line (via onTrack) instead of
         // calling addAudioTrack(), which would add a second, unmatched m-line
         // and make libdatachannel emit a renegotiation offer instead of an answer.
-        session->peer.setRemoteDescription(offerSdp, offerType);
+        const auto opusPreferredOffer = preferOpusAudioCodec(offerSdp);
+        session->peer.setRemoteDescription(opusPreferredOffer, offerType);
         session->peer.createAnswer();
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to negotiate WebRTC session: {}", e.what());
@@ -121,6 +211,8 @@ bool WebRtcSessionController::addCandidate(const std::string& sessionId, const s
     }
     SPDLOG_LOGGER_DEBUG(webrtc_logger, "Adding remote ICE candidate for session: {}", sessionId);
     session->peer.addRemoteCandidate(candidate, mid);
+    SPDLOG_LOGGER_DEBUG(webrtc_logger,
+        "Accepted remote ICE candidate for session {}: mid={}, candidate={}", sessionId, mid, candidate);
     return true;
 }
 

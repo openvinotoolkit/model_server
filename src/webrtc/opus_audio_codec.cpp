@@ -34,10 +34,11 @@ void destroyDecoder(OpusDecoder* decoder) {
 }  // namespace
 
 OpusAudioCodec::OpusAudioCodec(uint32_t sampleRate, size_t channels) :
+    channels_(channels),
     encoder_(nullptr, destroyEncoder),
     decoder_(nullptr, destroyDecoder) {
-    if (sampleRate != SampleRate || channels != Channels) {
-        throw std::invalid_argument("Only mono 48 kHz Opus is supported");
+    if (sampleRate != SampleRate || channels == 0 || channels > 2) {
+        throw std::invalid_argument("Only mono or stereo 48 kHz Opus is supported");
     }
 
     int error = OPUS_OK;
@@ -55,7 +56,7 @@ OpusAudioCodec::OpusAudioCodec(uint32_t sampleRate, size_t channels) :
 OpusAudioCodec::~OpusAudioCodec() = default;
 
 std::vector<uint8_t> OpusAudioCodec::encode(const std::vector<float>& pcm) const {
-    if (pcm.size() != FrameSamples) {
+    if (pcm.size() != FrameSamples * channels_) {
         throw std::invalid_argument("Opus input must contain one 20 ms frame");
     }
 
@@ -65,6 +66,9 @@ std::vector<uint8_t> OpusAudioCodec::encode(const std::vector<float>& pcm) const
         throw std::runtime_error("Opus encoding failed");
     }
     encoded.resize(static_cast<size_t>(encodedSize));
+    if (encodedFrameSamples(encoded) != FrameSamples) {
+        throw std::runtime_error("Opus encoder did not produce a 20 ms frame");
+    }
     return encoded;
 }
 
@@ -73,13 +77,28 @@ std::vector<float> OpusAudioCodec::decode(const std::vector<uint8_t>& encoded) c
         throw std::invalid_argument("Opus input packet is empty");
     }
 
-    std::vector<float> decoded(FrameSamples);
+    std::vector<float> decoded(FrameSamples * channels_);
     const int decodedSamples = opus_decode_float(decoder_.get(), encoded.data(), encoded.size(), decoded.data(), static_cast<int>(FrameSamples), 0);
     if (decodedSamples < 0) {
         throw std::runtime_error("Opus decoding failed");
     }
-    decoded.resize(static_cast<size_t>(decodedSamples));
+    decoded.resize(static_cast<size_t>(decodedSamples) * channels_);
     return decoded;
+}
+
+size_t OpusAudioCodec::channels() const {
+    return channels_;
+}
+
+size_t OpusAudioCodec::encodedFrameSamples(const std::vector<uint8_t>& encoded) const {
+    if (encoded.empty()) {
+        throw std::invalid_argument("Opus input packet is empty");
+    }
+    const int samples = opus_packet_get_nb_samples(encoded.data(), static_cast<opus_int32>(encoded.size()), SampleRate);
+    if (samples < 0) {
+        throw std::runtime_error("Invalid Opus packet");
+    }
+    return static_cast<size_t>(samples);
 }
 
 }  // namespace ovms

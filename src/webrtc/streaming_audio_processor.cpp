@@ -15,6 +15,8 @@
 //*****************************************************************************/
 #include "streaming_audio_processor.hpp"
 
+#include <stdexcept>
+
 namespace ovms {
 
 StreamingAudioProcessor::StreamingAudioProcessor(OpusAudioCodec& codec, StreamingAudioModel& model) :
@@ -23,7 +25,10 @@ StreamingAudioProcessor::StreamingAudioProcessor(OpusAudioCodec& codec, Streamin
 
 std::vector<uint8_t> StreamingAudioProcessor::process(const std::vector<uint8_t>& encodedInput, uint64_t timestampUs) {
     const auto decoded = codec_.decode(encodedInput);
-    const auto output = model_.process(AudioChunk{decoded, OpusAudioCodec::SampleRate, timestampUs});
+    if (decoded.size() != OpusAudioCodec::FrameSamples * codec_.channels()) {
+        throw std::runtime_error("Decoded Opus frame has an unexpected duration");
+    }
+    const auto output = model_.process(AudioChunk{decoded, OpusAudioCodec::SampleRate, timestampUs, static_cast<uint32_t>(codec_.channels())});
     lastTimestampUs_ = output.timestampUs;
     return codec_.encode(output.samples);
 }
