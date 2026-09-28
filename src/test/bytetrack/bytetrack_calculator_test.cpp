@@ -38,21 +38,21 @@ namespace {
 class ByteTrackCalculatorTest : public ::testing::Test {
 protected:
     std::unique_ptr<CalculatorRunner> MakeRunner(float track_high_threshold, float track_low_threshold, float new_track_threshold, float matching_threshold, int track_buffer, bool fuse_score) {
-        std::string pbtxt = absl::StrFormat(R"pb(node {
-                                                   calculator: "ByteTrackCalculator"
-                                                   input_stream: "DETECTIONS:output_detections"
-                                                   output_stream: "DETECTIONS:tracked_detections"
-                                                   options: {
-                                                           [mediapipe.ByteTrackCalculatorOptions.ext] {
-                                                             track_high_threshold: % f
-                                                             track_low_threshold: % f
-                                                             new_track_threshold: % f
-                                                             matching_threshold: % f
-                                                             track_buffer: % d
-                                                             fuse_score: % v
-                                                           }}
-                                                 })pb",
-            track_high_threshold, track_low_threshold, new_track_threshold, matching_threshold, track_buffer, fuse_score);
+        std::string pbtxt = absl::StrCat(R"pb(
+                                              calculator: "ByteTrackCalculator"
+                                              input_stream: "DETECTIONS:output_detections"
+                                              output_stream: "DETECTIONS:tracked_detections"
+                                              options: {
+                                                      [mediapipe.ByteTrackCalculatorOptions.ext] {
+                                                        track_high_threshold:)pb", track_high_threshold, R"pb(
+                                                                                                               track_low_threshold:)pb", track_low_threshold, R"pb(
+                                                                                                                                                                    new_track_threshold:)pb", new_track_threshold, R"pb(
+                                                                                                                                                                                                                         matching_threshold:)pb", matching_threshold, R"pb(
+                                                                                                                                                                                                                                                                            track_buffer:)pb", track_buffer, R"pb(
+                                                                                                                                                                                                                                                                                                                   fuse_score:)pb", fuse_score ? "true" : "false", R"pb(
+                                                                                                                                                                                                                                                                                                                                                                         }
+                                                                                                                                                                                                                                                                                                                                                                         }
+)pb");
         return std::make_unique<CalculatorRunner>(pbtxt);
     }
 };
@@ -235,7 +235,8 @@ TEST_F(ByteTrackCalculatorTest, FuseScoreTrueIsValid) {
         0.8f,
         30,
         true);
-    MP_ASSERT_OK(runner->Run());
+    auto status = runner->Run();
+    ASSERT_TRUE(status.ok()) << status;
 }
 }  // namespace
 }  // namespace mediapipe

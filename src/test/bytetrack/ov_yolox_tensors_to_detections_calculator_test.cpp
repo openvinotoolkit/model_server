@@ -40,22 +40,34 @@ class OVYoloXTensorsToDetectionsCalculatorTest : public ::testing::Test {
 protected:
     std::unique_ptr<CalculatorRunner> MakeRunner(float conf_thresh, float input_size) {
         std::string pbtxt = absl::StrFormat(R"pb(
-                                                 node {
-                                                   calculator: "OVYoloXTensorsToDetectionsCalculator"
-                                                   input_stream: "TENSORS:detection_tensors"
-                                                   output_stream: "DETECTIONS:detections"
+                                                 calculator: "OVYoloXTensorsToDetectionsCalculator"
+                                                 input_stream: "TENSORS:detection_tensors"
+                                                 output_stream: "DETECTIONS:detections"
 
-                                                   node_options: {
-                                                           [type.googleapis.com / mediapipe.OVYoloXTensorsToDetectionsCalculatorOptions] {
-                                                             conf_thresh: % f
-                                                             input_size: % f
-                                                           }}
-                                                 })pb",
+                                                 node_options: {
+                                                         [type.googleapis.com / mediapipe.OVYoloXTensorsToDetectionsCalculatorOptions] {
+                                                           conf_thresh: % f
+                                                           input_size: % f
+                                                         }}
+            )pb",
             conf_thresh, input_size);
         return std::make_unique<CalculatorRunner>(pbtxt);
     }
-    absl::Status RunOpenOnly(CalculatorRunner& runner) {
+    absl::Status RunWithSingleBox(CalculatorRunner& runner, float confidence = 0.9f) {
+        ov::Tensor boxes(ov::element::f32, ov::Shape{1, 1, 5});
+        ov::Tensor labels(ov::element::i64, ov::Shape{1, 1});
+
+        float* b = boxes.data<float>();
+        b[0] = 10.0f;   // x1
+        b[1] = 20.0f;   // y1
+        b[2] = 110.0f;  // x2
+        b[3] = 120.0f;  // y2
+        b[4] = confidence;
+        labels.data<int64_t>()[0] = 3;
+
         auto tensors = std::make_unique<std::vector<ov::Tensor>>();
+        tensors->push_back(boxes);
+        tensors->push_back(labels);
         runner.MutableInputs()->Tag("TENSORS").packets.push_back(
             Adopt(tensors.release()).At(Timestamp(0)));
         return runner.Run();
@@ -66,43 +78,40 @@ protected:
 
 TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, ConfThreshBelowZeroFailsOpen) {
     auto runner = MakeRunner(-0.1f, 416.0f);
-    EXPECT_FALSE(RunOpenOnly(*runner).ok());
+    EXPECT_FALSE(RunWithSingleBox(*runner).ok());
 }
 
 TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, ConfThreshAboveOneFailsOpen) {
     auto runner = MakeRunner(1.1f, 416.0f);
-    EXPECT_FALSE(RunOpenOnly(*runner).ok());
+    EXPECT_FALSE(RunWithSingleBox(*runner).ok());
 }
-
-// confidence threshold within bounds
 
 TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, ConfThreshAtZeroValid) {
     auto runner = MakeRunner(0.0f, 416.0f);
-    EXPECT_TRUE(RunOpenOnly(*runner).ok());
+    auto status = RunWithSingleBox(*runner);
+    EXPECT_TRUE(status.ok()) << status.message();
 }
 
 TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, ConfThreshAtOneValid) {
     auto runner = MakeRunner(1.0f, 416.0f);
-    EXPECT_TRUE(RunOpenOnly(*runner).ok());
+    auto status = RunWithSingleBox(*runner);
+    EXPECT_TRUE(status.ok()) << status.message();
 }
-
-// input size out of bounds
 
 TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, InputSizeAtZeroFailsOpen) {
     auto runner = MakeRunner(0.5f, 0.0f);
-    EXPECT_FALSE(RunOpenOnly(*runner).ok());
+    EXPECT_FALSE(RunWithSingleBox(*runner).ok());
 }
 
-TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, InputSizeNegative_FailsOpen) {
+TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, InputSizeNegativeFailsOpen) {
     auto runner = MakeRunner(0.5f, -416.0f);
-    EXPECT_FALSE(RunOpenOnly(*runner).ok());
+    EXPECT_FALSE(RunWithSingleBox(*runner).ok());
 }
 
-// this check passes because input size is in valid range (0,inf)
-
-TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, InputSizeValidPositive_Valid) {
+TEST_F(OVYoloXTensorsToDetectionsCalculatorTest, InputSizeValidPositive) {
     auto runner = MakeRunner(0.5f, 416.0f);
-    EXPECT_TRUE(RunOpenOnly(*runner).ok());
+    auto status = RunWithSingleBox(*runner);
+    EXPECT_TRUE(status.ok()) << status.message();
 }
 
 }  // namespace

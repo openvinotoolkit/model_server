@@ -22,7 +22,7 @@ cd demos/mediapipe/bytetrack
 Install all the Python dependencies needed by the client and the model download script. Run this from inside the `demos/mediapipe/bytetrack` directory:
 
 ```bash
-virtualenv .venv
+python3 -m venv .venv
 . .venv/bin/activate
 pip3 install -r requirements.txt
 ```
