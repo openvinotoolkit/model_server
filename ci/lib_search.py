@@ -34,7 +34,7 @@ def check_header(fd):
 
 def check_function(fd):
     # Add space separated exceptions for given file in the dictionary
-    fix_applied = {"./src/test/ensemble_flow_custom_node_tests.cpp":"size_t strLen = std::strlen(str);size_t prefixLen = std::strlen(prefix);",}
+    fix_applied = {}
 
     detected = False
     try:
@@ -156,6 +156,7 @@ def check_dir(start_dir):
         "kserve-openvino.yaml",
         "ServingRuntime.yaml",
         "dummy_facebook_template.jinja",
+        "mediapipe_model_api_openvino_windows.patch",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates']

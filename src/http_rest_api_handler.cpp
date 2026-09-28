@@ -37,9 +37,6 @@
 #include "src/port/rapidjson_writer.hpp"
 
 #include "config.hpp"
-#include "dags/pipeline.hpp"
-#include "dags/pipeline_factory.hpp"
-#include "dags/pipelinedefinition.hpp"
 #include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
 #include "filesystem/filesystem.hpp"
@@ -47,6 +44,7 @@
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
+#include "mediapipe_internal/mediapipe_graph_executor_interface.hpp"
 #include "metrics/metric_config.hpp"
 #include "metrics/metric_module.hpp"
 #include "metrics/metric_registry.hpp"
@@ -68,9 +66,6 @@
 #include "copyable_object_wrapper.hpp"
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
-#include "http_frontend/http_graph_executor_impl.hpp"
-#include "mediapipe_internal/mediapipefactory.hpp"
-#include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
 #include "src/servable_management/servable_group_manager.hpp"
@@ -591,7 +586,7 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     // MediaPipe first, it is most likely that anyone will check llms
 #if (MEDIAPIPE_DISABLE == 0)
     if (!available) {
-        auto names = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
+        auto names = modelManager.getNamesOfAvailableMediapipePipelines();
         if (std::find(names.begin(), names.end(), name) != names.end()) {
             available = true;
         }
@@ -605,14 +600,6 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
             available = true;
         }
     }
-    // DAG (deprecated)
-    if (!available) {
-        auto availableDagNames = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
-        if (std::find(availableDagNames.begin(), availableDagNames.end(), name) != availableDagNames.end()) {
-            available = true;
-        }
-    }
-
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     if (!available) {
@@ -645,15 +632,9 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
         parseModel(writer, name, timestamp);
     }
 
-    // DAG
-    auto availableModels = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
-    for (auto const& name : availableModels) {
-        parseModel(writer, name, timestamp);
-    }
-
     // MediaPipe
 #if (MEDIAPIPE_DISABLE == 0)
-    auto availableMediapipes = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
+    auto availableMediapipes = modelManager.getNamesOfAvailableMediapipePipelines();
     for (auto const& graphName : availableMediapipes) {
         parseModel(writer, graphName, timestamp);
     }
@@ -686,7 +667,6 @@ bool HttpRestApiHandler::isAuthorized(const std::unordered_map<std::string, std:
 
 #if (MEDIAPIPE_DISABLE == 0)
 struct V3StreamCallbackResourceGuard {
-    CopyableObjectWrapper<MediapipeGraphExecutor>& executorWrapper;
     CopyableObjectWrapper<HttpPayload>& requestWrapper;
     std::shared_ptr<HttpAsyncWriter>& serverReaderWriter;
 
@@ -697,16 +677,12 @@ struct V3StreamCallbackResourceGuard {
     V3StreamCallbackResourceGuard(V3StreamCallbackResourceGuard&&) = delete;
 
     V3StreamCallbackResourceGuard(
-        CopyableObjectWrapper<MediapipeGraphExecutor>& executorWrapper,
         CopyableObjectWrapper<HttpPayload>& requestWrapper,
         std::shared_ptr<HttpAsyncWriter>& serverReaderWriter) :
-        executorWrapper(executorWrapper),
         requestWrapper(requestWrapper),
         serverReaderWriter(serverReaderWriter) {}
 
     ~V3StreamCallbackResourceGuard() {
-        auto& executor = executorWrapper.getObjectHolder()->get();
-        executor.reset();
         if (serverReaderWriter) {
             // This part must execute before request cleanup as request holds the client connection
             serverReaderWriter->PartialReplyEnd();
@@ -740,19 +716,13 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
         return status;
     }
 
-    CopyableObjectWrapper<MediapipeGraphExecutor> executorWrapper;
-    auto& executor = executorWrapper.getObjectHolder()->get();
-    status = this->modelManager.createPipeline(executor, modelName);
-    if (!status.ok()) {
-        return status;
-    }
-
-    if (!executorWrapper.getObjectHolder()->valid()) {
-        SPDLOG_ERROR("Failed to acquire MediaPipe graph executor for model: {}", modelName);
-        return StatusCode::INTERNAL_ERROR;
-    }
-
     if (streamFieldVal == false) {
+        std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+        status = this->modelManager.createPipelineHandle(executor, modelName);
+        if (!status.ok()) {
+            SPDLOG_ERROR("MediaPipe executor creation failed for model: {} with error: {}", modelName, status.string());
+            return status;
+        }
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Unary};
         return executor->infer(request.get(), &response, executionContext);
     } else {
@@ -760,11 +730,11 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
 
-        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), requestWrapper = requestWrapper]() mutable {
+        serverReaderWriter->PartialReplyBegin([this, modelName, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), requestWrapper = requestWrapper]() mutable {
             // Lock the weak_ptr to get shared_ptr - this keeps the object alive during execution
             auto serverReaderWriter = weakWriter.lock();
             // Create guard to clean up resources after streaming is done
-            auto resourceGuard = V3StreamCallbackResourceGuard(executorWrapper, requestWrapper, serverReaderWriter);
+            auto resourceGuard = V3StreamCallbackResourceGuard(requestWrapper, serverReaderWriter);
 
             if (!serverReaderWriter) {
                 SPDLOG_DEBUG("Connection was closed before streaming could begin");
@@ -772,14 +742,27 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
             }
 
             auto& request = requestWrapper.getObjectHolder()->get();
-            auto& executor = executorWrapper.getObjectHolder()->get();
 
-            if (request == nullptr || executor == nullptr) {  // should not happen
+            if (request == nullptr) {  // should not happen
                 throw std::runtime_error("Not all resources for streaming inference have been properly initialized");
             }
 
+            std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+            auto status = this->modelManager.createPipelineHandle(executor, modelName);
+            if (!status.ok()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                writer.StartObject();
+                writer.String("error");
+                writer.String(status.string().c_str());
+                writer.EndObject();
+                const auto httpStatus = status.getCode() == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE ? HTTPStatusCode::NOT_FOUND : HTTPStatusCode::BAD_REQUEST;
+                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), httpStatus);
+                return;
+            }
+
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
-            auto status = executor->inferStream(*request, *serverReaderWriter, executionContext);
+            status = executor->inferStream(*request, *serverReaderWriter, executionContext);
 
             if (!status.ok()) {
                 rapidjson::StringBuffer buffer;
@@ -788,7 +771,8 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
                 writer.String("error");
                 writer.String(status.string().c_str());
                 writer.EndObject();
-                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
+                const auto httpStatus = status.getCode() == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE ? HTTPStatusCode::NOT_FOUND : HTTPStatusCode::BAD_REQUEST;
+                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), httpStatus);
             }
         });
         return StatusCode::PARTIAL_END;
@@ -1205,32 +1189,12 @@ Status HttpRestApiHandler::getReporter(const HttpRequestComponents& components, 
         modelInstance,
         modelInstanceUnloadGuard);
     if (status == StatusCode::MODEL_NAME_MISSING) {
-        auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(components.model_name);
-        if (!pipelineDefinition) {
-            return StatusCode::MODEL_MISSING;
-        }
-        reporter = &pipelineDefinition->getMetricReporter();
-        return StatusCode::OK;
+        return StatusCode::MODEL_MISSING;
     }
     if (!status.ok()) {
         return StatusCode::MODEL_MISSING;
     }
     reporter = &modelInstance->getMetricReporter();
-    return StatusCode::OK;
-}
-
-Status HttpRestApiHandler::getPipelineInputsAndReporter(const std::string& modelName, ovms::tensor_map_t& inputs, ovms::ServableMetricReporter*& reporter) {
-    auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(modelName);
-    if (!pipelineDefinition) {
-        return StatusCode::MODEL_MISSING;
-    }
-    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
-    Status status = pipelineDefinition->waitForLoaded(unloadGuard);
-    if (!status.ok()) {
-        return status;
-    }
-    reporter = &pipelineDefinition->getMetricReporter();
-    inputs = pipelineDefinition->getInputsInfo();
     return StatusCode::OK;
 }
 

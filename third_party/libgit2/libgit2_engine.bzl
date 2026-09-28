@@ -14,17 +14,20 @@
 # limitations under the License.
 #
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+_LIBGIT2_COMMIT = "1f34e2a57a3d03f174771203b64aed2b17e8522c" # Tue Mar 31 20:34:06 2026 main
 
 def _is_windows(ctx):
     return ctx.os.name.lower().find("windows") != -1
 
 def libgit2_engine():
     libgit2_repository(name="_libgit2_engine")
-    new_git_repository(
+    http_archive(
         name = "libgit2_engine",
-        remote = "https://github.com/libgit2/libgit2.git",
-        commit = "1f34e2a57a3d03f174771203b64aed2b17e8522c", # Tue Mar 31 20:34:06 2026 main
+        url = "https://github.com/libgit2/libgit2/archive/" + _LIBGIT2_COMMIT + ".tar.gz",
+        sha256 = "3a6ad71d33d8c1dd8af9fc2a79a872cbf590c6a83ce5051c8c60c184d5bcdcc8",
+        strip_prefix = "libgit2-" + _LIBGIT2_COMMIT,
         build_file = "@_libgit2_engine//:BUILD",
         patch_args = ["-p1"],
         # Patch implements git-lfs filter, required for HF models download

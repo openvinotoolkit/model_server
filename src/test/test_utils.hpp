@@ -36,8 +36,7 @@
 #include "../capi_frontend/inferencerequest.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../config.hpp"
-#include "../dags/node_library.hpp"
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
@@ -48,7 +47,7 @@
 #include "../modelinstance.hpp"
 #include "src/servable_management/modelmanager.hpp"
 #include "../shape.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../tensorinfo.hpp"
 
 #include "../kfs_frontend/validation.hpp"
@@ -499,17 +498,6 @@ void SetReadonlyFileAttributeFromDir(std::string& directoryPath);
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
 void waitForOVMSResourcesCleanup(ovms::ModelManager& manager);
 
-template <typename T>
-static ovms::NodeLibrary createLibraryMock() {
-    return ovms::NodeLibrary{
-        T::initialize,
-        T::deinitialize,
-        T::execute,
-        T::getInputsInfo,
-        T::getOutputsInfo,
-        T::release};
-}
-
 bool isShapeTheSame(const KFSShapeType&, const std::vector<int64_t>&&);
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
@@ -758,7 +746,7 @@ void SetUpServerForDownloadAndStartWithLoras(std::unique_ptr<std::thread>& t, ov
 /*
  *  starts loading OVMS on separate thread but waits until it is ready
  */
-void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "");
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "", bool withPython = true);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds, const char* task);
 

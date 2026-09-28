@@ -23,7 +23,7 @@
 #include "../precision.hpp"
 #include "inferencerequest.hpp"
 #include "../shape.hpp"
-#include "../status.hpp"  // TODO move impl @atobisze
+#include "src/status.hpp"  // TODO move impl @atobisze
 #include "../extractchoice.hpp"
 #include "../requesttensorextractor.hpp"
 namespace ovms {

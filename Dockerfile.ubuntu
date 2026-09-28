@@ -53,7 +53,10 @@ WORKDIR /
 ####### Azure SDK (modern azure-sdk-for-cpp: azure-core, azure-storage-blobs, azure-storage-files-shares)
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 WORKDIR /azure-sdk-for-cpp
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git clone --depth 1 --branch azure-storage-blobs_12.18.0 https://github.com/Azure/azure-sdk-for-cpp.git . && \
+RUN curl -fsSL https://github.com/Azure/azure-sdk-for-cpp/archive/refs/tags/azure-storage-blobs_12.18.0.tar.gz -o /tmp/azure-sdk-for-cpp.tar.gz && \
+    echo "0f266f91cf00b79bb6c7c6f99e44942b43a7141db565556a4298f6ebe3a86fcc  /tmp/azure-sdk-for-cpp.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/azure-sdk-for-cpp.tar.gz --strip-components=1 && \
+    rm /tmp/azure-sdk-for-cpp.tar.gz && \
     echo "# no-op: use system libcurl and openssl" > /azure-sdk-toolchain.cmake && \
     cmake -S sdk/core/azure-core -B build/azure-core \
         -DCMAKE_TOOLCHAIN_FILE=/azure-sdk-toolchain.cmake \
@@ -286,18 +289,26 @@ COPY *\.bzl /ovms/
 COPY yarn.lock /ovms/
 COPY package.json /ovms/
 
-# change system python to 3.10 for first bazel call and or_tensorflow build
-# hadolint ignore=DL3059
-RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1; fi
+# Keep default system Python (3.12 on ubuntu24) for Bazel repository/toolchain
+# setup so pybind11 extensions are built against the same ABI as tests.
 
 # prebuild dependencies before copying sources & test dependencies for caching
 # hadolint ignore=DL3059
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false \
+    bazel build --repo_env=GIT_CONFIG_GLOBAL=/root/.gitconfig \
+        --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
 COPY src/ /ovms/src/
 
 # hadolint ignore=DL3059
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$BASE_OS" == "ubuntu24" ] ; then \
+        bazel build --jobs=$JOBS ${debug_bazel_flags} \
+            --action_env=PYTHON_BIN_PATH=/usr/bin/python3.10 \
+            --define=PYTHON_BIN_PATH=/usr/bin/python3.10 \
+            @org_tensorflow//tensorflow/core:framework; \
+    else \
+        bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework; \
+    fi
 
 # hadolint ignore=DL3059
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 2; fi
@@ -339,7 +350,10 @@ ARG OPTIMIZE_BUILDING_TESTS=0
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n //src:ovms_test; fi); fi;
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms \
+    $(if [[ "${debug_bazel_flags}" != *"mp_off"* ]]; then echo -n "//src:ovms_mediapipe_runtime_shared"; fi) \
+    $(if [[ "${debug_bazel_flags}" != *"py_off"* ]]; then echo -n "//src/python:libovmspython //src/python:libpython_calculators"; fi) \
+    $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n "//src:ovms_test //src:python_runtime_library_test"; fi); fi;
 
 # espeak-ng is built as a separate step, independent of the OVMS binary.
 # Set ESPEAK=0 to skip the espeak build.
@@ -459,10 +473,12 @@ RUN apt-get update ; \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=pkg /ovms_release /ovms
-COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
-COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2
-COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
-COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe
+COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy /ovms/python_deps/numpy/
+COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy-*.dist-info /ovms/python_deps/
+COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info/
+COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2/
+COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info/
+COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe/
 
 # For image with Python enabled install Python library
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \

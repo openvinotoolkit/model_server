@@ -125,5 +125,3 @@ cat score/openvino-qwen3-8b-int4-FC/BFCL_v4_simple_python_score.json | head -1
 {"accuracy": 0.95, "correct_count": 380, "total_count": 400}
 ```
 Those results can be compared with the reference from the [berkeley leaderbaord](https://gorilla.cs.berkeley.edu/leaderboard.html#leaderboard).
-
----
