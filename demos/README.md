@@ -89,3 +89,4 @@ Integrations <ovms_demos_integrations>
 |[Integration with Open WebUI](integration_with_OpenWebUI/README.md)|Using Open WebUI with OVMS as inference provider. Shows text and image generation as well as usage with RAG and tools.|
 |[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension in Visual Studio Code with local OVMS serving.|
 |[Cline coding agent integration](./cline_integration/README.md)|Use the Cline coding agent in Visual Studio Code with local OVMS serving, including MCP, image input and reasoning_effort usage.|
+|[GitHub Copilot integration](./copilot_integration/README.md)|Use GitHub Copilot in Visual Studio Code with local OVMS serving via a custom endpoint model.|
