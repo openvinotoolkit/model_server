@@ -86,7 +86,6 @@ def context(request, sigterm_cleaner, target_device, ovms_type, base_os):
     requirements_with_external_libraries = [
         Requirements.custom_loader,
         Requirements.cpu_extension,
-        Requirements.custom_nodes,
         Requirements.valgrind,
     ]
     classes_with_external_libraries_used = ["TestByXCli2"]
