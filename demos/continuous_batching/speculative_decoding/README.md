@@ -128,33 +128,38 @@ This example uses Gemma 4 because it is a published reference pair, but the same
 
 ## Model preparation
 
-Install the export tooling and create a model directory:
+Install the export dependencies:
 
-```text
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/common/export_models/export_model.py -o export_model.py
+```console
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/common/export_models/requirements.txt
-
-mkdir -p ${HOME}/models
 ```
 
 Export only the DFlash draft model. The main model is downloaded directly by OVMS from Hugging Face on startup:
 
-```text
+:::{dropdown} **Linux (Docker host)**
+```bash
 optimum-cli export openvino \
   --model z-lab/gemma-4-31B-it-DFlash \
   --task text-generation-with-past \
   --trust-remote-code \
   --weight-format int4 \
   --all-layers \
-  ${HOME}/models/gemma-4-31b-it-dflash-int4-ov
+    "${HOME}/models/gemma-4-31b-it-dflash-int4-ov"
 ```
+:::
+
+:::{dropdown} **Windows (Command Prompt)**
+```bat
+optimum-cli export openvino --model z-lab/gemma-4-31B-it-DFlash --task text-generation-with-past --trust-remote-code --weight-format int4 --all-layers c:\models\gemma-4-31b-it-dflash-int4-ov
+```
+:::
 
 The main model can then be served with OVMS using `--source_model OpenVINO/gemma-4-31B-it-int4-ov`, so there is no extra local main-model export step for this example.
 
-Your model directory should contain the exported DFlash draft model alongside any downloaded main model files created at runtime by OVMS:
+The exported draft model should be in `${HOME}/models` on Linux or `c:\models` on Windows, matching the deployment commands below:
 
 ```text
-${HOME}/models
+models
 └── gemma-4-31b-it-dflash-int4-ov
     ├── openvino_model.bin
     ├── openvino_model.xml
@@ -166,7 +171,7 @@ ${HOME}/models
 ## Server Deployment
 
 :::{dropdown} **Deploying with Docker**
-```text
+```bash
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:2026.4.0-gpu \
   --model_repository_path /models \
@@ -178,7 +183,7 @@ docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
-```text
+```bat
 ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/gemma-4-31B-it-int4-ov --draft_model_path c:\models\gemma-4-31b-it-dflash-int4-ov --enable_prefix_caching false
 ```
 :::
@@ -228,8 +233,6 @@ Python environment setup:
 # Install regular requirements for OVMS export script
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/common/export_models/requirements.txt
-
-mkdir models
 ```
 
 Run `export_model.py` script to download and quantize the model:
