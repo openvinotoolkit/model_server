@@ -133,6 +133,15 @@ Example:
 make release_image GPU=1
 ```
 
+### `TOKEN`
+
+GitHub Personal Access Token (PAT) used to run builds with an authenticated GitHub user when cloning source repositories. This serves as a workaround for GitHub connection stability issues and API rate limits during the build.
+
+Example:
+```bash
+make release_image TOKEN=<your_github_token>
+```
+
 ## Building minimal image
 
 Building minimalistic OVMS docker image requires disabling all optional features:
