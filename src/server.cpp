@@ -505,8 +505,6 @@ void Server::ensureModuleShutdown(const std::string& name) {
     auto it = modules.find(name);
     if (it == modules.end())
         return;
-    // A throwing shutdown() (e.g. Python module deleted from a thread other than the one
-    // that started it) must not skip modules.clear() below, or Server stays "live" forever.
     try {
         it->second->shutdown();
     } catch (const std::exception& e) {
