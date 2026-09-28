@@ -28,8 +28,15 @@ IF "%~1"=="" (
 echo Building model server with Python
 set "bazelBuildArgs=--config=win_mp_on"
 set "pythonRuntimeTargets=//src/python:libpython_calculators //src/python:libovmspython"
+set "buildTests=false"
+set "buildIntegrity=false"
 
-IF "%~3"=="--with_tests" (
+for %%A in ("%~2" "%~3") do (
+    if /I "%%~A"=="--with_tests" set "buildTests=true"
+    if /I "%%~A"=="--integrity" set "buildIntegrity=true"
+)
+
+IF "!buildTests!"=="true" (
     echo Building model server with tests
     set "buildTargets=//src:ovms //src:ovms_test //src:ovms_mediapipe_runtime_shared //third_party:espeak_ng //third_party:espeak_ng_data !pythonRuntimeTargets!"
 ) ELSE (
@@ -37,7 +44,7 @@ IF "%~3"=="--with_tests" (
     set "buildTargets=//src:ovms //src:ovms_mediapipe_runtime_shared //third_party:espeak_ng //third_party:espeak_ng_data !pythonRuntimeTargets!"
 )
 
-IF "%~4"=="--integrity" (
+IF "!buildIntegrity!"=="true" (
     echo Building model server with integrity checks
     set "buildWithIntegrity=--config=win_integritycheck"
 ) ELSE (

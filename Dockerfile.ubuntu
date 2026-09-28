@@ -178,11 +178,7 @@ ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -fPIE -pie -fstack-protector-str
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then \
-    if false; then \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. ; \
-    else \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. ; \
-    fi && \
+    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. && \
     make --jobs=$JOBS && \
     make install ; \
     fi
@@ -234,9 +230,7 @@ RUN mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
     cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} " -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
-    if true; then \
-    cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
-    fi
+    cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/
 ARG ov_genai_branch=master
 ARG ov_genai_org=openvinotoolkit
 WORKDIR /openvino_genai/
@@ -247,9 +241,7 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [
     cmake --build ./build/ --parallel $JOBS && cp /openvino_genai/build/openvino_genai/lib*.so* /opt/intel/openvino/runtime/lib/intel64/ && \
     cp -r /openvino_genai/src/cpp/include/* /opt/intel/openvino/runtime/include/ && \
     cp /openvino_genai/build/src/cpp/openvino/genai/version.hpp /opt/intel/openvino/runtime/include/openvino/genai/ && \
-    if true; then \
-        cp -r /openvino_genai/build/openvino_genai/*py* /opt/intel/openvino/python/ ; \
-    fi ; \
+    cp -r /openvino_genai/build/openvino_genai/*py* /opt/intel/openvino/python/ ; \
 fi
 
 # Add Nvidia dev tool if needed

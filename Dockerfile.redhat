@@ -215,11 +215,7 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; pip3.12 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
-    if true; then \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DCMAKE_CXX_FLAGS="  ${SDL_OPS} -Wno-error=parentheses  ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. ; \
-    else \
-        cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DCMAKE_CXX_FLAGS="  ${SDL_OPS} -Wno-error=parentheses ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. ; \
-    fi && \
+    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DCMAKE_CXX_FLAGS="  ${SDL_OPS} -Wno-error=parentheses  ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. && \
     make --jobs=$JOBS && \
     make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
@@ -263,10 +259,8 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git 
     sed -i '/openvino~=/d' /openvino_tokenizers/pyproject.toml && \
     sed -i '/requires-python/d' /openvino_tokenizers/pyproject.toml && \
     cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -S ./ -B ./build/  && cmake --build ./build/ --parallel $JOBS && cp -vP /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
-    if true; then \
     python3.12 -m pip wheel -v --no-deps --wheel-dir wheel /openvino_tokenizers && \
-    python3.12 -m pip install --no-cache-dir "$(find wheel -name 'openvino_tokenizers*.whl')" --target /opt/intel/openvino/python ; \
-    fi
+    python3.12 -m pip install --no-cache-dir "$(find wheel -name 'openvino_tokenizers*.whl')" --target /opt/intel/openvino/python
 
 WORKDIR /openvino_genai/
 ARG ov_genai_branch=master
@@ -278,9 +272,7 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [
     cmake --build ./build/ --parallel $JOBS && cp -vP /openvino_genai/build/openvino_genai/lib*.so* /opt/intel/openvino/runtime/lib/intel64/ && \
     cp -r /openvino_genai/src/cpp/include/* /opt/intel/openvino/runtime/include/ && \
     cp /openvino_genai/build/src/cpp/openvino/genai/version.hpp /opt/intel/openvino/runtime/include/openvino/genai/ && \
-    if true; then \
-        cp -r /openvino_genai/build/openvino_genai/*py* /opt/intel/openvino/python/ ; \
-    fi
+    cp -r /openvino_genai/build/openvino_genai/*py* /opt/intel/openvino/python/
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
@@ -439,9 +431,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
         source /install_gpu_drivers.sh && rm -rf /install_gpu_drivers.sh; \
     fi ; \
     # For image with Python enabled install Python library
-    if true; then \
-        $DNF_TOOL install -y python3.12-libs --setopt=install_weak_deps=0 --nodocs; \
-    fi ; \
+    $DNF_TOOL install -y python3.12-libs --setopt=install_weak_deps=0 --nodocs; \
     $DNF_TOOL install -y shadow-utils; \
     $DNF_TOOL clean all ; \
     cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \

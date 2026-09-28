@@ -1436,6 +1436,7 @@ node {
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
+// --- End Python cases
 
 // Sending inputs separately for synchronized graph
 TEST_F(StreamingTest, MultipleStreamsDeliveredViaMultipleRequests) {
