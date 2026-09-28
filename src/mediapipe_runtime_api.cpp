@@ -16,18 +16,14 @@
 
 #include "mediapipe_runtime_api.hpp"
 
-#include <array>
-#include <memory>
-#include <climits>
 #include <cstdlib>
-#include <filesystem>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #ifdef __linux__
 #include <dlfcn.h>
-#include <unistd.h>
 #elif _WIN32
 #include <windows.h>
 #endif
@@ -351,56 +347,9 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             return flags;
         }();
 
-        std::vector<std::string> candidates{
-            "libovms_mediapipe_runtime_shared.so",
-            "/ovms/lib/libovms_mediapipe_runtime_shared.so",
-            "./libovms_mediapipe_runtime_shared.so",
-            "src/libovms_mediapipe_runtime_shared.so",
-            "./src/libovms_mediapipe_runtime_shared.so",
-            "bazel-bin/src/libovms_mediapipe_runtime_shared.so",
-            "./bazel-bin/src/libovms_mediapipe_runtime_shared.so"};
-
-        if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr) {
-            std::vector<std::string> runfilesCandidates{
-                std::string(testSrcDir) + "/_main/src/libovms_mediapipe_runtime_shared.so",
-                std::string(testSrcDir) + "/ovms/src/libovms_mediapipe_runtime_shared.so"};
-            candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
-        }
-
-        std::array<char, PATH_MAX> exePath{};
-        ssize_t exePathLength = readlink("/proc/self/exe", exePath.data(), exePath.size() - 1);
-        if (exePathLength > 0) {
-            exePath[exePathLength] = '\0';
-            std::filesystem::path exeDir = std::filesystem::path(exePath.data()).parent_path();
-            std::vector<std::string> exeRelativeCandidates{
-                (exeDir / "libovms_mediapipe_runtime_shared.so").string(),
-                (exeDir / "src/libovms_mediapipe_runtime_shared.so").string()};
-            candidates.insert(candidates.end(), exeRelativeCandidates.begin(), exeRelativeCandidates.end());
-        }
-
-        for (const auto& candidate : candidates) {
-            api->handle = dlopen(candidate.c_str(), runtimeDlopenFlags);
-            if (api->handle != nullptr) {
-                SPDLOG_TRACE("MediaPipe runtime API loaded from: {}", candidate);
-                break;
-            }
-        }
+        api->handle = dlopen("libovms_mediapipe_runtime_shared.so", runtimeDlopenFlags);
 #elif _WIN32
-        std::vector<std::string> candidates{
-            "ovms_mediapipe_runtime_shared.dll",
-            ".\\ovms_mediapipe_runtime_shared.dll",
-            "src\\ovms_mediapipe_runtime_shared.dll",
-            ".\\src\\ovms_mediapipe_runtime_shared.dll",
-            "bazel-bin\\src\\ovms_mediapipe_runtime_shared.dll",
-            ".\\bazel-bin\\src\\ovms_mediapipe_runtime_shared.dll"};
-
-        for (const auto& candidate : candidates) {
-            api->handle = LoadLibraryA(candidate.c_str());
-            if (api->handle != nullptr) {
-                SPDLOG_TRACE("MediaPipe runtime API loaded from: {}", candidate);
-                break;
-            }
-        }
+        api->handle = LoadLibraryA("ovms_mediapipe_runtime_shared.dll");
 #endif
     }
 

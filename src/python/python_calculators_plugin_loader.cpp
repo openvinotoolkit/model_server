@@ -19,7 +19,6 @@
 
 #include <cstdlib>
 #include <cstdio>
-#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -98,15 +97,6 @@ bool probePluginLoadInChildProcess(const std::string& pluginPath) {
     }
 
     if (probePid == 0) {
-        // Ensure child process can find shared libraries like libmediapipe_framework.so
-        // Add /ovms/lib to LD_LIBRARY_PATH for plugin loading
-        const char* existingLd = std::getenv("LD_LIBRARY_PATH");
-        std::string ldLibPath = "/ovms/lib";
-        if (existingLd != nullptr && existingLd[0] != '\0') {
-            ldLibPath = ldLibPath + ":" + existingLd;
-        }
-        setenv("LD_LIBRARY_PATH", ldLibPath.c_str(), 1);
-
         // Keep process symbols globally visible in the probe process as well.
         // This mirrors the parent behavior and helps resolve plugin dependencies
         // that expect OVMS symbols to be available from the main executable.
@@ -191,15 +181,6 @@ std::string formatWindowsErrorMessage(DWORD errorCode) {
         message.pop_back();
     }
     return message;
-}
-
-std::string toAbsolutePath(const std::string& candidate) {
-    char absPath[MAX_PATH] = {0};
-    DWORD pathLen = GetFullPathNameA(candidate.c_str(), MAX_PATH, absPath, nullptr);
-    if (pathLen == 0 || pathLen >= MAX_PATH) {
-        return candidate;
-    }
-    return std::string(absPath, pathLen);
 }
 
 void logLikelyMissingWindowsDependencies() {
@@ -324,37 +305,7 @@ bool loadPythonCalculatorsPlugin() {
     // registrations (for example OpenVINOInferenceCalculator) before plugin
     // fallback logic has a chance to run.
 
-    std::vector<std::string> candidates{
-        "libpython_calculators.so",
-        "./libpython_calculators.so",
-        "/ovms/lib/libpython_calculators.so",
-        "src/python/libpython_calculators.so",
-        "./src/python/libpython_calculators.so",
-        "bazel-bin/src/python/libpython_calculators.so",
-        "./bazel-bin/src/python/libpython_calculators.so"};
-
-    if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr && testSrcDir[0] != '\0') {
-        const std::string srcDir(testSrcDir);
-        const char* testWorkspace = std::getenv("TEST_WORKSPACE");
-        if (testWorkspace != nullptr && testWorkspace[0] != '\0') {
-            candidates.emplace_back(srcDir + "/" + testWorkspace + "/src/python/libpython_calculators.so");
-            candidates.emplace_back(srcDir + "/" + testWorkspace + "/bazel-bin/src/python/libpython_calculators.so");
-        }
-        candidates.emplace_back(srcDir + "/_main/src/python/libpython_calculators.so");
-        candidates.emplace_back(srcDir + "/_main/bazel-bin/src/python/libpython_calculators.so");
-        candidates.emplace_back(srcDir + "/model_server/src/python/libpython_calculators.so");
-        candidates.emplace_back(srcDir + "/model_server/bazel-bin/src/python/libpython_calculators.so");
-    }
-
-    try {
-        const auto testBinaryPath = std::filesystem::canonical("/proc/self/exe");
-        const auto runfilesDir = testBinaryPath.string() + ".runfiles";
-        candidates.emplace_back(std::filesystem::path(runfilesDir) / "src/python/libpython_calculators.so");
-        candidates.emplace_back(std::filesystem::path(runfilesDir) / "ovms/src/python/libpython_calculators.so");
-        candidates.emplace_back(std::filesystem::path(runfilesDir) / "_main/src/python/libpython_calculators.so");
-        candidates.emplace_back(std::filesystem::path(runfilesDir) / "model_server/src/python/libpython_calculators.so");
-    } catch (...) {
-    }
+    constexpr const char* pluginName = "libpython_calculators.so";
 
     // CRITICAL: Expose main process symbols to plugin before loading it.
     // The plugin will link to a shared MediaPipe library that contains undefined
@@ -373,26 +324,20 @@ bool loadPythonCalculatorsPlugin() {
             errorDetails);
     }
 
-    for (const auto& candidate : candidates) {
-        // Try loading candidate in a child process first. If probe indicates a
-        // crash/non-zero exit, skip direct dlopen in the main process to avoid
-        // bringing down OVMS during optional plugin initialization.
-        if (!probePluginLoadInChildProcess(candidate)) {
-            continue;
-        }
-
+    // Try loading the plugin in a child process first. If the probe crashes or
+    // fails, avoid bringing down OVMS during optional plugin initialization.
+    if (probePluginLoadInChildProcess(pluginName)) {
         // Use RTLD_GLOBAL to share plugin symbols with the main binary.
         // This allows the main binary to call plugin functions like registerPythonCalculators.
-        SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", candidate);
+        SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", pluginName);
 
-        pythonCalculatorsHandle = dlopen(candidate.c_str(), pythonPluginDlopenFlags());
+        pythonCalculatorsHandle = dlopen(pluginName, pythonPluginDlopenFlags());
 
         if (pythonCalculatorsHandle != nullptr) {
-            SPDLOG_TRACE("Successfully loaded Python calculators plugin from: {}", candidate);
-            break;
+            SPDLOG_TRACE("Successfully loaded Python calculators plugin: {}", pluginName);
         } else {
             const std::string errorDetails = safeDlerror();
-            SPDLOG_DEBUG("Failed to load Python calculators plugin candidate {}: {}", candidate, errorDetails);
+            SPDLOG_DEBUG("Failed to load Python calculators plugin {}: {}", pluginName, errorDetails);
         }
     }
 
@@ -441,80 +386,12 @@ bool loadPythonCalculatorsPlugin() {
         hasInProcessKfsBridge = true;
     }
 
-    std::vector<std::string> candidates{
-        "libpython_calculators.dll",
-        ".\\libpython_calculators.dll",
-        "src\\python\\libpython_calculators.dll",
-        ".\\src\\python\\libpython_calculators.dll",
-        "bazel-bin\\src\\python\\libpython_calculators.dll",
-        ".\\bazel-bin\\src\\python\\libpython_calculators.dll"};
-
-    char executablePath[MAX_PATH] = {0};
-    DWORD executablePathLength = GetModuleFileNameA(nullptr, executablePath, MAX_PATH);
-    if (executablePathLength > 0 && executablePathLength < MAX_PATH) {
-        std::string exePath(executablePath, executablePathLength);
-        std::string exeDir = ".";
-        size_t separatorPos = exePath.find_last_of("\\/");
-        if (separatorPos != std::string::npos) {
-            exeDir = exePath.substr(0, separatorPos);
-        }
-
-        std::vector<std::string> executableRelativeCandidates{
-            exeDir + "\\libpython_calculators.dll",
-            exeDir + "\\src\\python\\libpython_calculators.dll",
-            exeDir + "\\..\\src\\python\\libpython_calculators.dll",
-        };
-
-        std::string runfilesRoot = exePath + ".runfiles";
-        std::vector<std::string> runfilesCandidates{
-            runfilesRoot + "\\src\\python\\libpython_calculators.dll",
-            runfilesRoot + "\\_main\\src\\python\\libpython_calculators.dll",
-            runfilesRoot + "\\model_server\\src\\python\\libpython_calculators.dll",
-        };
-
-        candidates.insert(candidates.end(), executableRelativeCandidates.begin(), executableRelativeCandidates.end());
-        candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
-    }
-
-    DWORD lastLoadError = ERROR_SUCCESS;
-    for (const auto& candidate : candidates) {
-        SetLastError(ERROR_SUCCESS);
-
-        // On Windows, unlike dlopen(NULL, RTLD_GLOBAL) on Linux, the operating system
-        // automatically makes all symbols from the current process available to any DLL
-        // that LoadLibraryA loads. The DLL's import table is resolved against:
-        // 1. The DLL itself
-        // 2. DLLs it explicitly links to
-        // 3. The main executable's exported symbols
-        // 4. System libraries
-        // This automatic symbol resolution means the plugin will find undefined OVMS
-        // symbols from the shared MediaPipe library without requiring an explicit call.
-        // No dlopen(NULL, RTLD_GLOBAL) equivalent is needed on Windows.
-
-        SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", toAbsolutePath(candidate));
-        pythonCalculatorsHandle = LoadLibraryA(candidate.c_str());
-        if (pythonCalculatorsHandle != nullptr) {
-            SPDLOG_TRACE("Python calculators plugin loaded from candidate: {}", toAbsolutePath(candidate));
-            break;
-        }
-
-        lastLoadError = GetLastError();
-        const bool candidateExists = std::filesystem::exists(candidate);
-        SPDLOG_DEBUG(
-            "Failed to load python calculators candidate: {} (absolute: {}, exists: {}), error: {} ({})",
-            candidate,
-            toAbsolutePath(candidate),
-            candidateExists,
-            lastLoadError,
-            formatWindowsErrorMessage(lastLoadError));
-    }
+    constexpr const char* pluginName = "libpython_calculators.dll";
+    SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", pluginName);
+    pythonCalculatorsHandle = LoadLibraryA(pluginName);
 
     if (pythonCalculatorsHandle == nullptr) {
-        DWORD error = lastLoadError != ERROR_SUCCESS ? lastLoadError : GetLastError();
-        SPDLOG_TRACE("Python calculators plugin candidates attempted: {}", candidates.size());
-        for (const auto& candidate : candidates) {
-            SPDLOG_TRACE("Python calculators plugin candidate: {}", toAbsolutePath(candidate));
-        }
+        DWORD error = GetLastError();
         logLikelyMissingWindowsDependencies();
         SPDLOG_WARN("Python calculators plugin libpython_calculators.dll failed to load: {} ({}). "
                     "Possible causes: missing dependency (ovms_mediapipe_runtime_shared.dll, libovmspython.dll), "
