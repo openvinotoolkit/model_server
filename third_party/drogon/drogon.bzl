@@ -217,7 +217,7 @@ cmake(
 drogon_cpp_repository = repository_rule(
     implementation = _impl,
     attrs = {
-        "patches": attr.label_list(),
+        "patches": attr.label_list(allow_files = True),
     },
     local=False,
 )
