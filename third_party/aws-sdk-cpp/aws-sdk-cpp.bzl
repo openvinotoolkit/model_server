@@ -49,7 +49,9 @@ def _impl(repository_ctx):
         )
 
     # https://github.com/bazelbuild/bazel/issues/374
-    repository_ctx.execute(["find", ".", "-name", "*xample.txt", "-delete"])
+    find_result = repository_ctx.execute(["find", ".", "-name", "*xample.txt", "-delete"])
+    if find_result.return_code != 0:
+        fail("Failed to delete example text files with find: {}".format(find_result.stderr))
 
     result = repository_ctx.execute(["cat","/etc/os-release"],quiet=False)
     ubuntu20_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
