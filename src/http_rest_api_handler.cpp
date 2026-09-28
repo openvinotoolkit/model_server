@@ -37,9 +37,6 @@
 #include "src/port/rapidjson_writer.hpp"
 
 #include "config.hpp"
-#include "dags/pipeline.hpp"
-#include "dags/pipeline_factory.hpp"
-#include "dags/pipelinedefinition.hpp"
 #include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
 #include "filesystem/filesystem.hpp"
@@ -1165,32 +1162,12 @@ Status HttpRestApiHandler::getReporter(const HttpRequestComponents& components, 
         modelInstance,
         modelInstanceUnloadGuard);
     if (status == StatusCode::MODEL_NAME_MISSING) {
-        auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(components.model_name);
-        if (!pipelineDefinition) {
-            return StatusCode::MODEL_MISSING;
-        }
-        reporter = &pipelineDefinition->getMetricReporter();
-        return StatusCode::OK;
+        return StatusCode::MODEL_MISSING;
     }
     if (!status.ok()) {
         return StatusCode::MODEL_MISSING;
     }
     reporter = &modelInstance->getMetricReporter();
-    return StatusCode::OK;
-}
-
-Status HttpRestApiHandler::getPipelineInputsAndReporter(const std::string& modelName, ovms::tensor_map_t& inputs, ovms::ServableMetricReporter*& reporter) {
-    auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(modelName);
-    if (!pipelineDefinition) {
-        return StatusCode::MODEL_MISSING;
-    }
-    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
-    Status status = pipelineDefinition->waitForLoaded(unloadGuard);
-    if (!status.ok()) {
-        return status;
-    }
-    reporter = &pipelineDefinition->getMetricReporter();
-    inputs = pipelineDefinition->getInputsInfo();
     return StatusCode::OK;
 }
 

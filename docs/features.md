@@ -38,12 +38,6 @@ Create [MediaPipe](https://developers.google.com/mediapipe/framework/framework_c
 
 [Learn more](mediapipe.md)
 
-## Serving Pipelines of Models
-Connect multiple models in a pipeline and reduce data transfer overhead with Directed Acyclic Graph (DAG) Scheduler.
-Implement model inference and data transformations using a custom node C/C++ dynamic library.
-
-[Learn more](dag_scheduler.md)
-
 ## Processing Raw Data
 Send data in JPEG or PNG formats to reduce traffic and offload data pre-processing to the server.
 

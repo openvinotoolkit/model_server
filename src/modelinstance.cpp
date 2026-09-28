@@ -1572,11 +1572,7 @@ void ModelInstance::unloadModelComponents() {
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
-#ifdef __linux__
-    malloc_trim(0);
-#elif _WIN32
-    malloc_trim_win();
-#endif
+    trimProcessMemory();
 }
 
 const std::set<std::string>& ModelInstance::getOptionalInputNames() {
