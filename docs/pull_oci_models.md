@@ -32,15 +32,13 @@ Registry credentials are `llmman`'s concern, not OVMS's. Log in once with `llmma
 
 | ModelPack payload | What OVMS does | Extra requirements |
 |---|---|---|
-| OpenVINO IR (`openvino_model.xml` + `.bin`) | Serves it directly out of the `llmman` store; only `graph.pbtxt` is written to the model repository. | none |
+| OpenVINO IR (`openvino_model.xml` + `.bin`) | Serves it directly out of the `llmman` store; only `graph.pbtxt` is written to the model repository. Requires an `llmman` that resolves IR layers, which `llmman resolve` does not do yet. | none |
 | GGUF | Serves the `.gguf` file directly out of the `llmman` store. | `--task text_generation` only |
 | Hugging Face safetensors | Converts to OpenVINO IR with `optimum-cli` into the model repository, honoring `--weight-format` and `--extra_quantization_params`. | Python dependencies, see [pulling with conversion](./pull_optimum_cli.md) |
 
-Packaging models as OpenVINO IR is recommended: it needs no conversion step and no Python in the serving image.
-
 ## Examples
 
-Pull an OpenVINO IR ModelPack image without starting the server:
+Pull an OpenVINO IR ModelPack image without starting the server (once `llmman` resolves IR layers):
 
 ```text
 ovms --pull --source_model oci://ghcr.io/my-org/phi-3-mini-int8-ov:1.0 --model_repository_path /models --task text_generation
