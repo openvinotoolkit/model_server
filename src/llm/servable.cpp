@@ -53,10 +53,20 @@ void GenAiServable::determineDecodingMethod() {
     getProperties()->decodingMethod = DecodingMethod::STANDARD;
     auto& pluginConfig = getProperties()->pluginConfig;
     if (pluginConfig.find("draft_model") != pluginConfig.end()) {
-        if (getProperties()->eagle3Mode) {
+        using DS = GenAiServableProperties::DraftModelStrategy;
+        switch (getProperties()->draftModelStrategy) {
+        case DS::EAGLE3:
             getProperties()->decodingMethod = DecodingMethod::EAGLE3;
-        } else {
+            break;
+        case DS::DFLASH:
+            getProperties()->decodingMethod = DecodingMethod::DFLASH;
+            break;
+        case DS::MTP:
+            getProperties()->decodingMethod = DecodingMethod::MTP;
+            break;
+        default:
             getProperties()->decodingMethod = DecodingMethod::FAST_DRAFT;
+            break;
         }
     }
     auto it = pluginConfig.find("prompt_lookup");

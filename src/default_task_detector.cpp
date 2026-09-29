@@ -170,6 +170,7 @@ bool Text2SpeechDetector::scan(const ModelCatalogContext& ctx) const {
         const std::string arch = a.GetString();
         if (arch == "ParlerTTSForConditionalGeneration" ||
             arch == "SpeechT5ForTextToSpeech" ||
+            arch == "KModel" ||  // Kokoro TTS
             endsWith(arch, "ForTextToSpeech"))
             return true;
     }

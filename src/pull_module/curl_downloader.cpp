@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "curl_downloader.hpp"
 
+#include <array>
+#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <iostream>
@@ -30,7 +32,7 @@
 
 namespace ovms {
 
-static const char* sizeUnits[] = {"B", "KB", "MB", "GB", "TB", NULL};
+static constexpr std::array<const char*, 5> sizeUnits = {"B", "KB", "MB", "GB", "TB"};
 
 static void print_download_speed_info(size_t received_size, size_t elapsed_time) {
     double recv_len = (double)received_size;
@@ -39,20 +41,47 @@ static void print_download_speed_info(size_t received_size, size_t elapsed_time)
     rate = elapsed ? recv_len / elapsed : received_size;
 
     size_t rate_unit_idx = 0;
-    while (rate > 1000 && sizeUnits[rate_unit_idx + 1]) {
+    while (rate > 1000 && rate_unit_idx + 1 < sizeUnits.size()) {
         rate /= 1000.0;
         rate_unit_idx++;
     }
-    printf(" [%.2f %s/s] ", rate, sizeUnits[rate_unit_idx]);
+    printf(" [%.2f %s/s] ", rate, sizeUnits.at(rate_unit_idx));
+}
+
+int computeProgressBarCells(size_t count, size_t max, int barWidth) {
+    if (max == 0 || barWidth <= 0) {
+        return 0;
+    }
+    const double ratio = static_cast<double>(count) / static_cast<double>(max);
+    if (ratio <= 0.0) {
+        return 0;
+    } else if (ratio >= 1.0) {
+        return barWidth;
+    }
+    return static_cast<int>(ratio * barWidth);
 }
 
 static void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time) {
+    // A response with no Content-Length reports dltotal == 0, so there is no ratio to show
+    if (max == 0) {
+        double received = (double)count;
+        size_t receivedUnitId = 0;
+        while (received > 1000 && receivedUnitId + 1 < sizeUnits.size()) {
+            received /= 1000.0;
+            receivedUnitId++;
+        }
+        printf("\rProgress: %.2f %s downloaded, total size unknown", received, sizeUnits.at(receivedUnitId));
+        print_download_speed_info(count, elapsed_time);
+        fflush(stdout);
+        return;
+    }
+
     float progress = (float)count / max;
     if (!first_run && progress < 0.01 && count > 0)
         return;
 
     const int bar_width = 50;
-    int bar_length = progress * bar_width;
+    const int bar_length = computeProgressBarCells(count, max, bar_width);
 
     printf("\rProgress: [");
     int i;
@@ -64,11 +93,11 @@ static void print_progress(size_t count, size_t max, bool first_run, size_t elap
     }
     size_t totalSizeUnitId = 0;
     double totalSize = max;
-    while (totalSize > 1000 && sizeUnits[totalSizeUnitId + 1]) {
+    while (totalSize > 1000 && totalSizeUnitId + 1 < sizeUnits.size()) {
         totalSize /= 1000.0;
         totalSizeUnitId++;
     }
-    printf("] %.2f%% of %.2f %s", progress * 100, totalSize, sizeUnits[totalSizeUnitId]);
+    printf("] %.2f%% of %.2f %s", progress * 100, totalSize, sizeUnits.at(totalSizeUnitId));
     print_download_speed_info(count, elapsed_time);
     if (progress == 1.0)
         printf("\n");
@@ -159,9 +188,6 @@ Status downloadFileWithCurl(const std::string& url, const std::string& filePath,
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
 
     CURL* curl = nullptr;
-    CHECK_CURL_CALL(curl_global_init(CURL_GLOBAL_DEFAULT));
-    auto globalCurlGuard = std::unique_ptr<void, void (*)(void*)>(
-        nullptr, [](void*) { curl_global_cleanup(); });
     curl = curl_easy_init();
     if (!curl) {
         SPDLOG_ERROR("Failed to initialize cURL.");
@@ -211,9 +237,6 @@ Status fetchUrlToString(const std::string& url, const std::string& authToken, st
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
 
     CURL* curl = nullptr;
-    CHECK_CURL_CALL(curl_global_init(CURL_GLOBAL_DEFAULT));
-    auto globalCurlGuard = std::unique_ptr<void, void (*)(void*)>(
-        nullptr, [](void*) { curl_global_cleanup(); });
     curl = curl_easy_init();
     if (!curl) {
         SPDLOG_ERROR("Failed to initialize cURL.");

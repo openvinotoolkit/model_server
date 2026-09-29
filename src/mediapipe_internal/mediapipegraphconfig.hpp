@@ -17,6 +17,7 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 
 #pragma warning(push)
 #pragma warning(disable : 6313)
@@ -64,6 +65,30 @@ private:
      * - int > 0      => queue enabled with this size (resolved from AUTO or explicit value)
      */
     std::optional<int> graphQueueSize;
+
+    /**
+     * @brief Optional pbtxt content used in IN_MEMORY_GRAPH_MODE.
+     *
+     * Populated by ModelManager::startFromConfig from the pbtxt that
+     * Server::startModules produced via MediapipeRuntimeApi. When set,
+     * MediapipeGraphDefinition::validateForConfigFileExistence uses this
+     * instead of reading graph.pbtxt from disk. Not thread-safe by design:
+     * set during startup, read afterwards.
+     */
+    std::optional<std::string> inMemoryGraphPbTxt;
+
+    /**
+     * @brief Idle unload timeout in seconds.
+     * 0 (default) = feature disabled.
+     * When > 0, the graph's heavy resources are freed after this many seconds
+     * of zero in-flight requests, and lazily reloaded on the next inference.
+     */
+    int idleUnloadTimeoutSeconds = 0;
+
+    /**
+     * @brief Group name for idle model management. Defaults to graph name.
+     */
+    std::string groupName;
 
 public:
     MediapipeGraphConfig(const std::string& graphName = "",
@@ -143,6 +168,22 @@ public:
     }
 
     /**
+     * @brief Populate the in-memory pbtxt buffer used in IN_MEMORY_GRAPH_MODE.
+      *        Called by ModelManager::startFromConfig. The value is stored in
+      *        this configuration; passing an rvalue allows its contents to be moved.
+     */
+    void setInMemoryGraphPbTxt(std::string pbtxt) {
+        this->inMemoryGraphPbTxt = std::move(pbtxt);
+    }
+
+    /**
+     * @brief Access the in-memory pbtxt content, if any.
+     */
+    const std::optional<std::string>& getInMemoryGraphPbTxt() const {
+        return this->inMemoryGraphPbTxt;
+    }
+
+    /**
      * @brief Get the graph queue size setting.
      *
      * @return const std::optional<int>& - nullopt if disabled, positive int if enabled
@@ -168,6 +209,22 @@ public:
      */
     int getInitialQueueSize() const {
         return this->graphQueueSize.value_or(0);
+    }
+
+    int getIdleUnloadTimeoutSeconds() const {
+        return this->idleUnloadTimeoutSeconds;
+    }
+
+    void setIdleUnloadTimeoutSeconds(int seconds) {
+        this->idleUnloadTimeoutSeconds = seconds;
+    }
+
+    const std::string& getGroupName() const {
+        return this->groupName;
+    }
+
+    void setGroupName(const std::string& groupName) {
+        this->groupName = groupName;
     }
 
     bool isReloadRequired(const MediapipeGraphConfig& rhs) const;

@@ -102,6 +102,7 @@ const grpc::Status grpc(const Status& status) {
         {StatusCode::MODEL_VERSION_NOT_LOADED_YET, grpc::StatusCode::UNAVAILABLE},
         {StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::UNAVAILABLE},
         {StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET, grpc::StatusCode::UNAVAILABLE},
+        {StatusCode::SERVER_SHUTTING_DOWN, grpc::StatusCode::UNAVAILABLE},
         // UNKNOWN
     };
     auto it = grpcStatusMap.find(status.getCode());

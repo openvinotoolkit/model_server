@@ -41,6 +41,7 @@
 #include "io_processing/base_generation_config_builder.hpp"
 #include "io_processing/input_processor_context.hpp"
 #include "io_processing/input_request.hpp"
+#include "runtime_chat_template.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
 #endif
@@ -212,14 +213,36 @@ struct GenAiServableProperties {
     // Text processing utilities
     ov::genai::Tokenizer tokenizer;
     // Specific pipeline properties
-    bool eagle3Mode = false;
+    // DFlash has priority over EAGLE3 when both markers are present (matches GenAI's strategy selection order)
+    enum class DraftModelStrategy { FAST_DRAFT,
+        EAGLE3,
+        DFLASH,
+        MTP };
+    DraftModelStrategy draftModelStrategy = DraftModelStrategy::FAST_DRAFT;
     // Controls which steps InputProcessor builds for this servable type.
     // Aggregated per-deployment context for InputProcessor.
     InputProcessorContext inputProcessorContext;
+    PreparedRuntimeChatTemplate preparedRuntimeChatTemplate;
 
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
 #endif
+
+    bool hasPreparedPyTemplateProcessor() const {
+#if (PYTHON_DISABLE == 0)
+        return templateProcessor.chatTemplate != nullptr;
+#else
+        return false;
+#endif
+    }
+
+    PyJinjaTemplateProcessor* getPreparedPyTemplateProcessorOrNull() {
+#if (PYTHON_DISABLE == 0)
+        return hasPreparedPyTemplateProcessor() ? &templateProcessor : nullptr;
+#else
+        return nullptr;
+#endif
+    }
 };
 
 class GenAiServable {

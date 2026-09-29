@@ -747,6 +747,52 @@ TEST_F(OnyxOutputParserTest, UnaryTwoSequentialToolCalls) {
 }
 
 // =============================================================================
+// Recovery when generation stops before the tool call's closing tags ever arrive
+// (max_tokens truncation, or the model just omits them). Regression tests for
+// OnyxToolParserImpl::finalizeOnGenerationEnd().
+// =============================================================================
+TEST_F(OnyxOutputParserTest, ToolCallRecoveredWhenStoppedMidParameterValue) {
+    ParsedOutput parsedOutput = generateParsedOutput(
+        " to=get_weather<|message|><atem:function_calls>\n<atem:invoke name=\"get_weather\">\n<atem:parameter name=\"location\">Par");
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"location":"Par"})");
+}
+
+TEST_F(OnyxOutputParserTest, ToolCallRecoveredWhenStoppedAfterInnerCloseTag) {
+    // "</atem:invoke>" seen but not the outer "</atem:function_calls>".
+    ParsedOutput parsedOutput = generateParsedOutput(
+        " to=get_weather<|message|><atem:function_calls>\n<atem:invoke name=\"get_weather\">\n"
+        "<atem:parameter name=\"location\">Paris</atem:parameter>\n</atem:invoke>\n");
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"location":"Paris"})");
+}
+
+TEST_F(OnyxOutputParserTest, ToolCallRecoveredWithoutDanglingParameterName) {
+    // Stops mid parameter NAME ("loc" instead of "location") -- that one incomplete
+    // parameter can't be recovered, but the function name was already known, so the
+    // call itself is still recovered, just without that parameter.
+    ParsedOutput parsedOutput = generateParsedOutput(
+        " to=get_weather<|message|><atem:function_calls>\n<atem:invoke name=\"get_weather\">\n<atem:parameter name=\"loc");
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{}");
+}
+
+TEST_F(OnyxOutputParserTest, ToolCallDroppedWhenStoppedBeforeFunctionName) {
+    // Stops before the invoke name even closes -- no usable data was ever captured,
+    // so there is genuinely nothing to recover.
+    ParsedOutput parsedOutput = generateParsedOutput(
+        " to=get_weather<|message|><atem:function_calls>\n<atem:invoke name=\"get_we");
+
+    EXPECT_TRUE(parsedOutput.toolCalls.empty());
+}
+
+// =============================================================================
 // Direct OnyxToolParserImpl unit tests -- exercise the state machine directly, below
 // OutputParser/OnyxToolParser (mirrors Qwen3CoderOutputParserTest's TestJustParserImpl*
 // layer). These use plain-string parameter values whose correct JSON serialization does

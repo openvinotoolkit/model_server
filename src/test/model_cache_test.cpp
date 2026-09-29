@@ -23,7 +23,7 @@
 
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-#include "../modelmanager.hpp"
+#include "src/servable_management/modelmanager.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "test_models_configs.hpp"
 #include "test_with_temp_dir.hpp"

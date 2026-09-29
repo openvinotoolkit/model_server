@@ -140,7 +140,9 @@ struct TextGenGraphSettingsImpl {
     std::string dynamicSplitFuse = "true";
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
-    bool draftEagle3Mode = false;
+    bool draftEagle3Mode = false;  // deprecated: strategy is now auto-detected from model rt_info
+    std::optional<std::string> draftDevice;
+    std::optional<std::string> draftModelPath;
     std::optional<std::string> pipelineType;
     std::optional<std::string> reasoningParser;
     std::optional<std::string> toolParser;
@@ -152,6 +154,7 @@ struct EmbeddingsGraphSettingsImpl {
     std::string normalize = "true";
     std::string truncate = "false";
     std::optional<std::string> pooling;
+    std::optional<uint32_t> maxLength;
 };
 
 struct TextToSpeechGraphSettingsImpl {
@@ -249,6 +252,7 @@ struct ServerSettingsImpl {
     std::string logLevel = "INFO";
     std::string logPath;
     bool verboseResponse = false;
+    bool disableInputCountValidation = false;
     bool allowCredentials = false;
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};
@@ -260,13 +264,19 @@ struct ServerSettingsImpl {
     std::optional<size_t> grpcMemoryQuota;
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
-    uint32_t resourcesCleanerPollWaitSeconds = 300;
+    uint32_t memoryTrimmingIntervalSeconds = 300;
+    uint32_t idleUnloadTimeoutSeconds = 0;
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;
     ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;
     OvmsServerMode serverMode = SERVING_MODELS_MODE;
+    // Populated once by Server::startModules when serverMode == IN_MEMORY_GRAPH_MODE
+    // (task inferred, --model_path given, no HF download). Consumers (ModelManager,
+    // MediapipeGraphDefinition, MediapipeGraphConfig) read this instead of taking a
+    // dependency on //src/graph_export. Not mutated after startup, so no locking needed.
+    std::optional<std::string> inMemoryGraphPbtxt;
 };
 
 struct ModelsSettingsImpl {
@@ -283,6 +293,7 @@ struct ModelsSettingsImpl {
     uint32_t nireq = 0;
     std::string targetDevice;
     std::string pluginConfig;
+    std::optional<std::string> groupName;
     std::vector<std::string> userSetSingleModelArguments;
 
     std::string configPath;

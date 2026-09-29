@@ -129,7 +129,7 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 - TensorFlow, ONNX, PaddlePaddle, OpenVINO IR model formats
 - [MediaPipe graphs](https://docs.openvino.ai/2026/model-server/ovms_docs_mediapipe.html)
 - [Python execution nodes](https://docs.openvino.ai/2026/model-server/ovms_docs_python_support_reference.html)
-- [Dynamic input shapes](https://docs.openvino.ai/2026/model-server/ovms_docs_shape_batch_size_and_layout.html)
+- [Dynamic input shapes](https://docs.openvino.ai/2026/model-server/ovms_docs_dynamic_input.html)
 
 ### Deployment & Integration
 - [Docker](docs/deploying_server_docker.md), [bare metal (Linux & Windows)](docs/deploying_server_baremetal.md), [Kubernetes / OpenShift](docs/deploying_server_kubernetes.md)
@@ -141,7 +141,7 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 
 ### Hardware Acceleration
 - CPU (x86, including Xeon), Intel integrated and discrete GPU, NPU
-- See [supported accelerators](https://docs.openvino.ai/2026/model-server/ovms_docs_accelerators.html)
+- See [supported accelerators](https://docs.openvino.ai/2026/model-server/ovms_docs_target_devices.html)
 
 [→ Full feature list](https://docs.openvino.ai/2026/model-server/ovms_docs_features.html)
 

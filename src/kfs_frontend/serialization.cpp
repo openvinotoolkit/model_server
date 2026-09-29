@@ -18,7 +18,7 @@
 #include "kfs_utils.hpp"
 #include "../logging.hpp"
 #include "../precision.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../tensor_conversion.hpp"
 
 namespace ovms {

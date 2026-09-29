@@ -40,6 +40,8 @@ bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
 
 bool probeChatTemplateReasoning(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
 
+bool probeChatTemplateToolResponse(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
+
 #if (PYTHON_DISABLE == 0)
 class PyJinjaTemplateProcessor;
 

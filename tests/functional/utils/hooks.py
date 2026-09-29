@@ -351,7 +351,6 @@ def get_ovms_binary_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binar
     ovms_test_image = calculate_ovms_test_image_name(ovms_image) if build_test_image else base_image
     cpu_extensions_path = Paths.ROOT_PATH_CPU_EXTENSIONS if build_test_image else DOCKER_CONTAINER_TMP_PATH
     custom_loader_path = Paths.CUSTOM_LOADER_LIBRARIES_PATH_INTERNAL if build_test_image else DOCKER_CONTAINER_TMP_PATH
-    custom_nodes_path = Paths.CUSTOM_NODE_LIBRARIES_PATH_INTERNAL if build_test_image else DOCKER_CONTAINER_TMP_PATH
     cmd = (
         f"docker build -f {dockerfile} -t {ovms_binary_image_name} . "
         f"--build-arg BASE_IMAGE={base_image} "
@@ -360,7 +359,6 @@ def get_ovms_binary_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binar
         f"--build-arg OVMS_DEPENDENCIES='{OVMS_BINARY_DEPENDENCIES[base_os]}' "
         f"--build-arg CPU_EXTENSIONS_PATH={cpu_extensions_path} "
         f"--build-arg CUSTOM_LOADER_PATH={custom_loader_path} "
-        f"--build-arg CUSTOM_NODES_PATH={custom_nodes_path} "
         f"--build-arg http_proxy={http_proxy} "
         f"--build-arg https_proxy={https_proxy} "
         f"--build-arg no_proxy={no_proxy} "
@@ -516,43 +514,50 @@ def get_ids_with_target_device(parameter, func):
     return func(parameter)
 
 
+def get_models_for_device(args, device_type):
+    if isinstance(args[0], dict):
+        return args[0][get_base_device(device_type)]
+    return args[0]
+
+
 def parametrize_model_type(metafunc):
     args = get_marker_args(metafunc, MarkTestParameters.MODEL_TYPE)
     if args is None:
         parametrize_target_device(metafunc)
         return
-    if isinstance(args[0], dict):
+    aux_args = None
+    if MarkTestParameters.MODEL_AUX_TYPE in metafunc.fixturenames:
+        aux_args = get_marker_args(metafunc, MarkTestParameters.MODEL_AUX_TYPE)
+
+    if aux_args is None:
         params_list = [
-            (device_type, result) for device_type in config.target_devices
-            for result in args[0][get_base_device(device_type)]
+            (device_type, model_type) for device_type in config.target_devices
+            for model_type in get_models_for_device(args, device_type)
         ]
-    else:
-        params_list = [(device_type, result) for device_type in config.target_devices for result in args[0]]
-    ids_list = [
-        f"{CURRENT_TARGET_DEVICE_DICT.get(device_type, device_type)}-{model_type.__name__}"
-        for device_type, model_type in params_list
-    ]
-    metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.MODEL_TYPE}", params_list, ids=ids_list)
-
-
-def parametrize_model_aux_type(metafunc):
-    """Parametrize auxiliary (second) model for tests that need two models simultaneously.
-
-    Requires model_type to also be present in the test — model_type handles target_device parametrization,
-    so model_aux_type only parametrizes the model class itself (no device cross-product).
-    """
-    assert MarkTestParameters.MODEL_TYPE in metafunc.fixturenames, (
-        f"model_aux_type requires model_type to also be a fixture in test {metafunc.function.__name__}"
-    )
-    args = get_marker_args(metafunc, MarkTestParameters.MODEL_AUX_TYPE)
-    if args is None:
+        ids_list = [
+            f"{CURRENT_TARGET_DEVICE_DICT.get(device_type, device_type)}-{model_type.__name__}"
+            for device_type, model_type in params_list
+        ]
+        metafunc.parametrize(
+            f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.MODEL_TYPE}", params_list, ids=ids_list,
+        )
         return
-    if isinstance(args[0], dict):
-        params_list = [model for device_type in config.target_devices for model in args[0][get_base_device(device_type)]]
-    else:
-        params_list = list(args[0])
-    ids_list = [model.__name__ for model in params_list]
-    metafunc.parametrize(MarkTestParameters.MODEL_AUX_TYPE, params_list, ids=ids_list)
+
+    # Auxiliary model must come from the same device as the primary one, so all three are parametrized together.
+    params_list = [
+        (device_type, model_type, model_aux_type) for device_type in config.target_devices
+        for model_type in get_models_for_device(args, device_type)
+        for model_aux_type in get_models_for_device(aux_args, device_type)
+    ]
+    ids_list = [
+        f"{CURRENT_TARGET_DEVICE_DICT.get(device_type, device_type)}"
+        f"-{model_type.__name__}-{model_aux_type.__name__}"
+        for device_type, model_type, model_aux_type in params_list
+    ]
+    metafunc.parametrize(
+        f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.MODEL_TYPE}, {MarkTestParameters.MODEL_AUX_TYPE}",
+        params_list, ids=ids_list,
+    )
 
 
 def parametrize_all_models(metafunc):
@@ -1136,6 +1141,11 @@ def parametrize_tests(metafunc):
     if BASE_OS_PARAM_NAME in metafunc.fixturenames:
         parametrize_base_os(metafunc)
 
+    if MarkTestParameters.MODEL_AUX_TYPE in metafunc.fixturenames:
+        assert MarkTestParameters.MODEL_TYPE in metafunc.fixturenames, (
+            f"model_aux_type requires model_type to also be a fixture in test {metafunc.function.__name__}"
+        )
+
     if MarkTestParameters.MODEL_TYPE in metafunc.fixturenames:
         parametrize_model_type(metafunc)
     elif MarkTestParameters.ALL_MODELS in metafunc.fixturenames:
@@ -1150,6 +1160,3 @@ def parametrize_tests(metafunc):
         parametrize_plugin_config(metafunc)
     elif TARGET_DEVICE_PARAM_NAME in metafunc.fixturenames:
         parametrize_target_device(metafunc)
-
-    if MarkTestParameters.MODEL_AUX_TYPE in metafunc.fixturenames:
-        parametrize_model_aux_type(metafunc)

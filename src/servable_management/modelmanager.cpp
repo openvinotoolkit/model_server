@@ -1,0 +1,1731 @@
+//*****************************************************************************
+// Copyright 2020-2021 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#include "modelmanager.hpp"
+
+#include <algorithm>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#ifdef __linux__
+#include <dlfcn.h>
+#include <unistd.h>
+#include <sysexits.h>
+#elif _WIN32
+#include <io.h>
+#endif
+
+#include <errno.h>
+#include <openvino/openvino.hpp>
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/prettywriter.h>
+#pragma warning(pop)
+#include <sys/stat.h>
+
+#include "src/cleaner_utils.hpp"
+#include "src/config.hpp"
+#include "src/customloaderconfig.hpp"
+#include "src/customloaderinterface.hpp"
+#include "src/customloaders.hpp"
+#include "src/filesystem/filesystem.hpp"
+#include "src/filesystem/filesystemfactory.hpp"
+#include "src/logging.hpp"
+#include "servable_group_manager.hpp"
+#include "servable_loading_queue.hpp"
+#if (MEDIAPIPE_DISABLE == 0)
+#include "src/mediapipe_internal/mediapipegraphconfig.hpp"
+#include "src/mediapipe_runtime_api.hpp"
+#endif
+#include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric_registry.hpp"
+#include "src/model.hpp"
+#include "src/modelinstance.hpp"  // for logging
+#include "src/modelinstanceunloadguard.hpp"
+#include "src/ov_utils.hpp"
+#include "src/schema.hpp"
+#include "src/servable_definition.hpp"
+#include "src/stringutils.hpp"
+#include "src/systeminfo.hpp"
+
+namespace ovms {
+
+static constexpr uint16_t MAX_CONFIG_JSON_READ_RETRY_COUNT = 3;
+#ifdef _WIN32
+const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "c:\\Intel\\openvino_cache";
+#elif __linux__
+const std::string DEFAULT_MODEL_CACHE_DIRECTORY = "/opt/cache";
+#endif
+ModelManager::ModelManager(const std::string& modelCacheDirectory, MetricRegistry* registry, PythonBackend* pythonBackend) :
+    loadingQueue(std::make_unique<ServableLoadingQueue>()),
+#if (MEDIAPIPE_DISABLE == 0)
+    mediapipeFactory(std::make_unique<MediapipeRuntimeApi>(pythonBackend)),
+#endif
+    waitForModelLoadedTimeoutMs(DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS),
+    metricConfig(std::make_unique<MetricConfig>()),
+    modelCacheDirectory(modelCacheDirectory),
+    metricRegistry(registry),
+    pythonBackend(pythonBackend) {
+    this->ieCore = std::make_unique<ov::Core>();
+    loadingQueue->start([this](ServableLoadingTask& task) -> Status {
+        switch (task.type) {
+        case ServableLoadingTaskType::LoadModel: {
+            if (!task.modelConfig.has_value()) {
+                return StatusCode::INTERNAL_ERROR;
+            }
+            return reloadModelWithVersions(task.modelConfig.value());
+        }
+        case ServableLoadingTaskType::WakeUpModel: {
+            auto model = findModelByName(task.name);
+            if (model) {
+                return model->wakeUpIfSleeping();
+            }
+            // Model was never instantiated (e.g. added to config while its group was idle).
+            auto it = servedModelConfigs.find(task.name);
+            if (it == servedModelConfigs.end())
+                return StatusCode::MODEL_NAME_MISSING;
+            return reloadModelWithVersions(it->second);
+        }
+        case ServableLoadingTaskType::PutToSleepModel: {
+            auto model = findModelByName(task.name);
+            if (!model) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            model->putToSleepAllVersions();
+            return StatusCode::OK;
+        }
+        case ServableLoadingTaskType::RetireModel: {
+            auto model = findModelByName(task.name);
+            if (!model) {
+                return StatusCode::MODEL_NAME_MISSING;
+            }
+            model->retireAllVersions();
+            return StatusCode::OK;
+        }
+#if (MEDIAPIPE_DISABLE == 0)
+        case ServableLoadingTaskType::LoadMediapipe: {
+            if (!task.graphConfig.has_value()) {
+                return StatusCode::INTERNAL_ERROR;
+            }
+            const auto& config = task.graphConfig.value();
+            bool lazyLoad = false;
+            if (!mediapipeFactory->definitionExists(task.name) &&
+                servableGroupManager && servableGroupManager->isEnabled() &&
+                !config.getGroupName().empty() && config.getGroupName() != "permanent") {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger,
+                    "Mediapipe graph:{} belongs to non-permanent group '{}'; creating as SLEEPING",
+                    task.name, config.getGroupName());
+                lazyLoad = true;
+            }
+            return mediapipeFactory->processConfig(config, *this, *this, lazyLoad);
+        }
+        case ServableLoadingTaskType::WakeUpMediapipe: {
+            // TODO consider moving whole part as an interface to ServableContainer so that we
+            // could just call servableContainer->wakeUp(A). However we would need to to expose scheduler then
+            return mediapipeFactory->wakeUpDefinition(task.name, *this);
+        }
+        case ServableLoadingTaskType::PutToSleepMediapipe: {
+            return mediapipeFactory->putToSleepDefinition(task.name);
+        }
+        case ServableLoadingTaskType::RetireMediapipe: {
+            return mediapipeFactory->retireDefinition(task.name);
+        }
+#else
+        case ServableLoadingTaskType::LoadMediapipe:
+        case ServableLoadingTaskType::RetireMediapipe:
+        case ServableLoadingTaskType::WakeUpMediapipe:
+        case ServableLoadingTaskType::PutToSleepMediapipe:
+            return StatusCode::INTERNAL_ERROR;
+#endif
+        }
+        return StatusCode::INTERNAL_ERROR;
+    });
+
+    OV_LOGGER("ov::Core(): {}", reinterpret_cast<void*>(this->ieCore.get()));
+    // Take --cache_dir from CLI
+    if (this->modelCacheDirectory.empty()) {
+        this->modelCacheDirectory = ovms::Config::instance().cacheDir();
+    }
+    // If not enabled via CLI, check for /opt/cache existence.
+    if (this->modelCacheDirectory.empty()) {
+        if (std::filesystem::exists(DEFAULT_MODEL_CACHE_DIRECTORY)) {
+            this->modelCacheDirectory = DEFAULT_MODEL_CACHE_DIRECTORY;
+        }
+    }
+    // If cache dir enabled, check for write access.
+    if (!this->modelCacheDirectory.empty()) {
+        // Create directory if does not exist
+        if (!std::filesystem::exists(this->modelCacheDirectory)) {
+            std::filesystem::create_directories(this->modelCacheDirectory);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} did not exist, created", this->modelCacheDirectory);
+        }
+        // TODO: check on windows
+#ifdef __linux__
+        int result = access(this->modelCacheDirectory.c_str(), W_OK);
+#elif _WIN32
+        int result = _access(this->modelCacheDirectory.c_str(), 6);
+#endif
+        if (result != 0) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Cache directory {} is not writable; access() result: {}", this->modelCacheDirectory, result);
+        } else {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Model cache is enabled: {}", this->modelCacheDirectory);
+        }
+    }
+    if (ovms::Config::instance().cpuExtensionLibraryPath() != "") {
+        SPDLOG_INFO("Loading custom CPU extension from {}", ovms::Config::instance().cpuExtensionLibraryPath());
+        try {
+            OV_LOGGER("ov::Core: {}, ieCore->add_extension({})", reinterpret_cast<const void*>(this->ieCore.get()), ovms::Config::instance().cpuExtensionLibraryPath());
+            ieCore->add_extension(ovms::Config::instance().cpuExtensionLibraryPath());
+            SPDLOG_INFO("Extension added.");
+        } catch (std::exception& ex) {
+            SPDLOG_CRITICAL("Custom CPU extension loading has failed! Reason: {}", ex.what());
+            throw;
+        } catch (...) {
+            SPDLOG_CRITICAL("Custom CPU extension loading has failed with an unknown error!");
+            throw;
+        }
+    }
+    const std::string DEFAULT_TOKENIZERS_PATH =
+#ifdef __linux__
+        "libopenvino_tokenizers.so";
+#elif _WIN32
+        "openvino_tokenizers.dll";
+#endif
+    try {
+        ieCore->add_extension(DEFAULT_TOKENIZERS_PATH);
+        OV_LOGGER("ov::Core: {}, registered default extension from {}", reinterpret_cast<const void*>(this->ieCore.get()), DEFAULT_TOKENIZERS_PATH);
+    } catch (std::exception& ex) {
+        SPDLOG_WARN("{} extension was not enabled. Probably missing in the default location.", DEFAULT_TOKENIZERS_PATH);
+        SPDLOG_DEBUG("Fail reason: {}", ex.what());
+    } catch (...) {
+        SPDLOG_CRITICAL("Loading of libopenvino_tokenizers has failed with an unknown error!");
+        throw;
+    }
+    this->logPluginConfiguration();
+#ifdef __linux__
+    if (isRunningInDocker()) {
+        SPDLOG_INFO("Running inside Docker container");
+        SPDLOG_INFO("cpu quota: {}, cpu affinity: {}, max_open_files: {}", getDockerCpuQuota(), getCpuAffinityCount(), getMaxOpenFilesLimit());
+    }
+#endif
+}
+
+void ModelManager::logPluginConfiguration() {
+    OV_LOGGER("ov::Core: {}, ieCore->get_available_devices()", reinterpret_cast<const void*>(this->ieCore.get()));
+    auto availableDevices = ieCore->get_available_devices();
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
+    auto availablePlugins = availableDevices;
+    for (const auto& plugin : availablePlugins) {
+        logOVPluginConfig([this, &plugin](const std::string& key) {
+                OV_LOGGER("ov ::Core:{} get_property({}, {})", reinterpret_cast<void*>(this->ieCore.get()), plugin, key);
+                return this->ieCore->get_property(plugin, key); },
+            std::string("OpenVINO Core plugin: ") + plugin,
+            "");
+    }
+}
+
+ModelManager::~ModelManager() {
+    join();
+    models.clear();
+}
+
+Status ModelManager::start(const Config& config) {
+    this->watcherIntervalMillisec = config.filesystemPollWaitMilliseconds();
+    this->memoryTrimmingIntervalMilliseconds = config.memoryTrimmingIntervalSeconds() * 1000;
+    Status status;
+    this->startedWithConfigFile = (config.configPath() != "");
+
+    // Initialize model group manager if idle unload is enabled and using config file
+    if (this->startedWithConfigFile && config.idleUnloadTimeoutSeconds() > 0) {
+        servableGroupManager = std::make_unique<ServableGroupManager>(static_cast<uint64_t>(config.idleUnloadTimeoutSeconds()) * 1'000'000ULL);
+        SPDLOG_INFO("Model group idle management enabled with {}s timeout", config.idleUnloadTimeoutSeconds());
+    }
+
+    if (isStartedWithConfigFile()) {
+        status = startFromFile(config.configPath());
+    } else {
+        status = startFromConfig();
+    }
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
+        return status;
+    }
+    startWatcher(isStartedWithConfigFile());
+    if (this->memoryTrimmingIntervalMilliseconds > 0)
+        startCleaner();
+    return status;
+}
+
+void ModelManager::startWatcher(bool watchConfigFile) {
+    if ((!watcherStarted) && (this->watcherIntervalMillisec > 0)) {
+        std::future<void> exitSignal = exitTrigger.get_future();
+        std::thread t(std::thread(&ModelManager::watcher, this, std::move(exitSignal), watchConfigFile));
+        watcherStarted = true;
+        monitor = std::move(t);
+    }
+}
+
+void ModelManager::startCleaner() {
+    if (!cleanerStarted) {
+        std::future<void> exitSignal = cleanerExitTrigger.get_future();
+        cleanerThread = std::thread(&ModelManager::cleanerRoutine, this, memoryTrimmingIntervalMilliseconds, std::move(exitSignal));
+        cleanerStarted = true;
+    }
+}
+
+Status ModelManager::startFromConfig() {
+    auto& config = ovms::Config::instance();
+
+    this->setRootDirectoryPath("");
+    Status status = StatusCode::OK;
+
+#if (MEDIAPIPE_DISABLE == 0)
+    MediapipeGraphConfig mpConfig;
+    mpConfig.setGraphName(config.modelName());
+    mpConfig.setRootDirectoryPath(this->rootDirectoryPath);
+    // Forward the in-memory pbtxt buffer (populated by Server::startModules in
+    // IN_MEMORY_GRAPH_MODE) onto mpConfig so downstream consumers
+    // (MediapipeGraphDefinition, MediapipeGraphConfig::logGraphConfigContent)
+    // can read it without depending on the global Config.
+    const auto& inMemoryPbtxt = config.getServerSettings().inMemoryGraphPbtxt;
+    if (inMemoryPbtxt.has_value()) {
+        mpConfig.setInMemoryGraphPbTxt(*inMemoryPbtxt);
+    }
+    if (!CheckStartFromGraph(config.modelPath(), mpConfig, false)) {
+        CheckStartFromGraph(config.modelPath(), mpConfig, true);
+    }
+
+    std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
+    std::ifstream ifs(mpConfig.getGraphPath());
+    bool graphAvailable = ifs.is_open() || mpConfig.getInMemoryGraphPbTxt().has_value();
+    if (graphAvailable) {
+        // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
+        status = ModelManager::validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
+        if (!status.ok())
+            return status;
+
+        status = loadMetricsFromCLI(config);
+        if (!status.ok())
+            return status;
+
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+        mediapipesInConfigFile.push_back(mpConfig);
+        std::vector<ModelConfig> gatedModelConfigs;
+        std::set<std::string> modelsInConfigFile;
+        std::set<std::string> modelsWithInvalidConfig;
+        std::unordered_map<std::string, ModelConfig> newModelConfigs;
+        loadMediapipeSubConfigModels(gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, mediapipesInConfigFile);
+
+        this->servedModelConfigs = std::move(newModelConfigs);
+        // Do not load additional single models just return here
+        return loadMediapipeGraphsConfig(mediapipesInConfigFile);
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph.pbtxt not found for config {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+    }
+
+#endif
+
+    auto [it, success] = servedModelConfigs.emplace(
+        config.modelName(),
+        ModelConfig{
+            config.modelName(),
+            config.modelPath(),
+            config.targetDevice(),
+            config.batchSize(),
+            config.nireq(),
+            this->modelCacheDirectory});
+
+    if (!success) {
+        return StatusCode::UNKNOWN_ERROR;
+    }
+
+    status = loadMetricsFromCLI(config);
+    if (!status.ok())
+        return status;
+
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't load metrics settings");
+        return status;
+    }
+
+    ModelConfig& modelConfig = it->second;
+
+    status = modelConfig.parsePluginConfig(config.pluginConfig(), modelConfig.getPluginConfig());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse plugin config");
+        return status;
+    }
+
+    status = validatePluginConfiguration(modelConfig.getPluginConfig(),
+        modelConfig.getTargetDevice().empty() ? recommendTargetDevice() : modelConfig.getTargetDevice(),
+        *ieCore.get());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
+        return status;
+    }
+
+    status = modelConfig.parseModelVersionPolicy(config.modelVersionPolicy());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse model version policy. {}", status.string());
+        return status;
+    }
+
+    status = modelConfig.parseShapeParameter(config.shape());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse shape parameter");
+        return status;
+    }
+
+    status = modelConfig.parseLayoutParameter(config.layout());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse layout parameter");
+        return status;
+    }
+
+    status = modelConfig.parseMean(config.means());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse mean parameter");
+        return status;
+    }
+
+    status = modelConfig.parseScale(config.scales());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse scale parameter");
+        return status;
+    }
+
+    status = modelConfig.parseColorFormat(config.colorFormat());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse color format parameter");
+        return status;
+    }
+
+    status = modelConfig.parsePrecision(config.precision());
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't parse precision parameter");
+        return status;
+    }
+
+    bool batchSizeSet = (modelConfig.getBatchingMode() != FIXED || modelConfig.getBatchSize() != 0);
+    bool shapeSet = (modelConfig.getShapes().size() > 0);
+
+    SPDLOG_DEBUG("Batch size set: {}, shape set: {}", batchSizeSet, shapeSet);
+    if (batchSizeSet && shapeSet) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Both shape and batch size have been defined. Batch size parameter will be ignored.");
+        modelConfig.setBatchingMode(FIXED);
+        modelConfig.setBatchSize(std::nullopt);
+    }
+
+    modelConfig.setRootDirectoryPath(this->rootDirectoryPath);
+
+    try {
+        modelConfig.setBasePath(modelConfig.getBasePath());
+    } catch (std::logic_error& e) {
+        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
+        return StatusCode::INTERNAL_ERROR;
+    }
+
+    return reloadModelWithVersions(modelConfig);
+}
+
+Status ModelManager::startFromFile(const std::string& jsonFilename) {
+    this->configFilename = jsonFilename;
+    Status status = loadConfig();
+    if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID || status == StatusCode::METRICS_REST_PORT_MISSING || status == StatusCode::INVALID_METRICS_ENDPOINT || status == StatusCode::INVALID_METRICS_FAMILY_NAME) {
+        return status;
+    }
+
+    return StatusCode::OK;
+}
+
+#define IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status) \
+    if (firstErrorStatus.ok()) {                                   \
+        firstErrorStatus = status;                                 \
+    }
+
+#if (MEDIAPIPE_DISABLE == 0)
+bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath) {
+    // Check if config is present for mediapipe graph
+    std::string inputGraphDirectory = inputPath;
+    if (inputPath.back() != FileSystem::getOsSeparator().back()) {
+        inputGraphDirectory += FileSystem::getOsSeparator();
+    }
+
+    if (checkModelMeshPath) {
+        inputGraphDirectory += "1" + FileSystem::getOsSeparator();
+    }
+
+    // Check already set members in case of loading based on config.json
+    if (mpConfig.getBasePath() == "" || checkModelMeshPath) {
+        mpConfig.setBasePath(inputGraphDirectory);
+    }
+    if (mpConfig.getGraphPath() == "" || checkModelMeshPath) {
+        mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
+    }
+    if (mpConfig.getSubconfigPath() == "" || checkModelMeshPath) {
+        mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
+    }
+    if (mpConfig.getModelMeshSubconfigPath() == "" || checkModelMeshPath) {
+        mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
+    }
+
+    std::ifstream ifs(mpConfig.getGraphPath());
+    if (ifs.is_open()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} exists", mpConfig.getGraphName(), mpConfig.getGraphPath());
+        return true;
+    }
+    if (mpConfig.getInMemoryGraphPbTxt().has_value()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} using in-memory graph content", mpConfig.getGraphName());
+        return true;
+    }
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} does not exist", mpConfig.getGraphName(), mpConfig.getGraphPath());
+    return false;
+}
+
+Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings) {
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path", "plugin_config"};
+    std::vector<std::string> usedButDisallowedUserSettings;
+    for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
+        bool isAllowed = false;
+        for (const std::string& allowedSetting : allowedUserSettings) {
+            if (userSetting == allowedSetting)
+                isAllowed = true;
+        }
+
+        if (!isAllowed)
+            usedButDisallowedUserSettings.push_back(userSetting);
+    }
+
+    if (!usedButDisallowedUserSettings.empty()) {
+        std::string arguments = "";
+        for (const std::string& userSetting : usedButDisallowedUserSettings) {
+            arguments += userSetting + ", ";
+        }
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Starting mediapipe graph with unsupported model settings: {}The settings should be set in subconfig.json file.", arguments);
+
+        return StatusCode::OPTIONS_USAGE_ERROR;
+    }
+
+    return StatusCode::OK;
+}
+
+#endif
+
+#if (MEDIAPIPE_DISABLE == 0)
+static Status parseMediapipeConfig(rapidjson::Document& configJson, std::string& rootDirectoryPath, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
+    const auto itrp = configJson.FindMember("mediapipe_config_list");
+    // Legacy mediapipe_config_list parsing
+    if (itrp != configJson.MemberEnd() && itrp->value.IsArray()) {
+        try {
+            for (const auto& mediapipeGraphConfig : itrp->value.GetArray()) {
+                MediapipeGraphConfig config;
+                config.setRootDirectoryPath(rootDirectoryPath);
+                auto status = config.parseNode(mediapipeGraphConfig);
+                if (status != StatusCode::OK) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing graph config failed");
+                    return status;
+                }
+                mediapipesInConfigFile.push_back(config);
+            }
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to process mediapipe graph config:{}", e.what());
+        } catch (...) {
+            SPDLOG_ERROR("Failed to process mediapipe graph config.");
+        }
+    }
+
+    return StatusCode::OK;
+}
+#endif
+
+struct ModelManager::ConfigLoader {
+    static Status loadCustomLoadersConfig(ModelManager& modelManager, rapidjson::Document& configJson);
+    static Status loadMetricsConfig(ModelManager& modelManager, rapidjson::Document& configJson);
+#if (MEDIAPIPE_DISABLE == 1)
+    static Status loadModelsConfig(ModelManager& modelManager, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
+    static Status loadModels(ModelManager& modelManager, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath);
+#else
+    static Status loadModelsConfig(ModelManager& modelManager, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
+    static Status loadModels(ModelManager& modelManager, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
+#endif
+};
+
+#if (MEDIAPIPE_DISABLE == 0)
+[[nodiscard]] Status ModelManager::retireMediapipesOtherThan(const std::set<std::string>& graphsInConfigFile) {
+    std::vector<std::pair<std::string, std::future<Status>>> futures;
+    for (const auto& graphName : mediapipeFactory->getMediapipePipelinesNames()) {
+        if (graphsInConfigFile.find(graphName) != graphsInConfigFile.end()) {
+            continue;
+        }
+        if (mediapipeFactory->isDefinitionRetired(graphName)) {
+            continue;
+        }
+        ServableLoadingTask task{ServableLoadingTaskType::RetireMediapipe, graphName, /*urgent=*/false};
+        futures.emplace_back(graphName, loadingQueue->scheduleTask(std::move(task)));
+    }
+    Status firstErrorStatus = StatusCode::OK;
+    // Config reload must not return before removed graphs stopped serving.
+    for (auto& [graphName, future] : futures) {
+        auto status = future.get();
+        if (status != StatusCode::OK) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to retire mediapipe graph:{} - {}", graphName, status.string());
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+        }
+    }
+    return firstErrorStatus;
+}
+
+Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
+    if (mediapipesInConfigFile.size() == 0) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
+        return retireMediapipesOtherThan({});
+    }
+    std::set<std::string> mediapipesInConfigFileNames;
+    Status firstErrorStatus = StatusCode::OK;
+    try {
+        for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
+            mediapipesInConfigFileNames.insert(mediapipeGraphConfig.getGraphName());
+        }
+        auto retireStatus = retireMediapipesOtherThan(mediapipesInConfigFileNames);
+        if (retireStatus != StatusCode::OK) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(retireStatus);
+        }
+        std::set<std::string> alreadyScheduled;
+        for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
+            if (!alreadyScheduled.insert(mediapipeGraphConfig.getGraphName()).second) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", mediapipeGraphConfig.getGraphName());
+                continue;
+            }
+            if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
+                mediapipeGraphConfig.logGraphConfigContent();
+            }
+            ServableLoadingTask task{ServableLoadingTaskType::LoadMediapipe, mediapipeGraphConfig.getGraphName(), mediapipeGraphConfig};
+            auto future = loadingQueue->scheduleTask(std::move(task));
+            auto status = future.get();
+            if (status != StatusCode::OK) {
+                IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+            }
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to process mediapipe graph config:{}", e.what());
+    } catch (...) {
+        SPDLOG_ERROR("Failed to process mediapipe graph config.");
+    }
+    return firstErrorStatus;
+}
+#endif
+
+Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
+    auto& customloaders = ovms::CustomLoaders::instance();
+    std::string loaderName = loaderConfig.getLoaderName();
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Check if loader is already loaded");
+    if (customloaders.find(loaderName) == nullptr) {
+        // this is where library or custom loader is loaded
+        if (FileSystem::isPathEscaped(loaderConfig.getLibraryPath())) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", loaderConfig.getLibraryPath());
+            return StatusCode::PATH_INVALID;
+        }
+#ifdef __linux__
+        void* handleCL = dlopen(loaderConfig.getLibraryPath().c_str(), RTLD_LAZY | RTLD_LOCAL);
+        if (!handleCL) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), dlerror());
+            return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
+        }
+        // load the symbols
+        createCustomLoader_t* customObj = (createCustomLoader_t*)dlsym(handleCL, "createCustomLoader");
+        const char* dlsym_error = dlerror();
+        if (dlsym_error || (customObj == nullptr)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot load symbol create:  {} ", dlsym_error);
+            return StatusCode::CUSTOM_LOADER_LIBRARY_LOAD_FAILED;
+        }
+
+        std::shared_ptr<CustomLoaderInterface> customLoaderIfPtr{customObj()};
+        try {
+            customLoaderIfPtr->loaderInit(loaderConfig.getLoaderConfigFile());
+        } catch (std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot create or initialize the custom loader. Failed with error {}", e.what());
+            return StatusCode::CUSTOM_LOADER_INIT_FAILED;
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot create or initialize the custom loader");
+            return StatusCode::CUSTOM_LOADER_INIT_FAILED;
+        }
+        customloaders.add(loaderName, customLoaderIfPtr, handleCL);
+#elif _WIN32
+        void* handleCL = nullptr;
+        if (!handleCL) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), "e");
+            return StatusCode::CUSTOM_LOADER_LIBRARY_INVALID;
+        }
+#endif
+    } else {
+        // Loader is already in the existing loaders. Move it to new loaders.
+        // Reload of customloader is not supported yet
+        customloaders.move(loaderName);
+    }
+    return StatusCode::OK;
+}
+
+Status ModelManager::ConfigLoader::loadCustomLoadersConfig(ModelManager& modelManager, rapidjson::Document& configJson) {
+    const auto itrp = configJson.FindMember("custom_loader_config_list");
+    if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
+        return StatusCode::OK;
+    }
+
+    Status firstErrorStatus = StatusCode::OK;
+    // Load Customer Loaders as per the configuration
+    SPDLOG_DEBUG("Using Customloader");
+    for (const auto& configs : itrp->value.GetArray()) {
+        const std::string loaderName = configs["config"]["loader_name"].GetString();
+        SPDLOG_INFO("Reading Custom Loader: {} configuration", loaderName);
+
+        CustomLoaderConfig loaderConfig;
+        loaderConfig.setRootDirectoryPath(modelManager.rootDirectoryPath);
+        auto status = loaderConfig.parseNode(configs["config"]);
+        if (status != StatusCode::OK) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+            SPDLOG_ERROR("Parsing loader: {} config failed", loaderName);
+        }
+
+        auto retVal = modelManager.createCustomLoader(loaderConfig);
+        if (retVal != StatusCode::OK) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(retVal);
+            SPDLOG_ERROR("Creation of loader: {} failed", loaderName);
+        }
+    }
+    // All loaders are the done. Finalize the list by deleting removed loaders in config
+    auto& customloaders = ovms::CustomLoaders::instance();
+    customloaders.finalize();
+    return firstErrorStatus;
+}
+
+Status ModelManager::loadMetricsFromCLI(const Config& config) {
+    // Reading metric config only once per server start
+    if (!this->metricConfigLoadedOnce) {
+        this->metricConfigLoadedOnce = true;
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
+        auto status = this->metricConfig->loadFromCLIString(config.metricsEnabled(), config.metricsList());
+        return status;
+    } else {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metric cli settings already loaded error.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    return StatusCode::OK;
+}
+
+Status ModelManager::ConfigLoader::loadMetricsConfig(ModelManager& modelManager, rapidjson::Document& configJson) {
+    const auto itr2 = configJson.FindMember("monitoring");
+    auto& config = ovms::Config::instance();
+    if (itr2 == configJson.MemberEnd() || !itr2->value.IsObject()) {
+        if (config.metricsEnabled()) {
+            return modelManager.metricConfig->loadFromCLIString(true, config.metricsList());
+        }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have monitoring property.");
+        return StatusCode::OK;
+    } else {
+        if (config.metricsEnabled()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metrics configuration duplicated in configuration file and CLI parameters");
+            return StatusCode::CONFIG_FILE_INVALID;
+        }
+        const auto& metrics = itr2->value.GetObject();
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing monitoring metrics config settings.");
+        bool forceFailureIfMetricsAreEnabled = ovms::Config::instance().restPort() == 0;
+        return modelManager.metricConfig->parseMetricsConfig(metrics, forceFailureIfMetricsAreEnabled);
+    }
+}
+
+#if (MEDIAPIPE_DISABLE == 1)
+Status ModelManager::ConfigLoader::loadModels(ModelManager& modelManager, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
+    std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath) {
+#else
+Status ModelManager::ConfigLoader::loadModels(ModelManager& modelManager, const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
+    std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath,
+    std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
+#endif
+    Status firstErrorStatus = StatusCode::OK;
+
+    for (const auto& configs : modelsConfigList->value.GetArray()) {
+#if (MEDIAPIPE_DISABLE == 0)
+        // Check if config is present for mediapipe graph
+        MediapipeGraphConfig mpConfig;
+        mpConfig.setRootDirectoryPath(rootDirectoryPath);
+        auto mpStatus = mpConfig.parseNode(configs["config"]);
+        if (!mpStatus.ok()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing : {} config as mediapipe graph failed due to error: {}", mpConfig.getGraphName(), mpStatus.string());
+        } else {
+            if (!modelManager.CheckStartFromGraph(mpConfig.getBasePath(), mpConfig, false)) {
+                modelManager.CheckStartFromGraph(mpConfig.getBasePath(), mpConfig, true);
+            }
+            std::ifstream ifs(mpConfig.getGraphPath());
+            if (ifs.is_open()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+                mediapipesInConfigFile.push_back(mpConfig);
+                continue;
+            } else {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph.pbtxt not found for config {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+            }
+        }
+#endif
+        ModelConfig modelConfig;
+        modelConfig.setRootDirectoryPath(rootDirectoryPath);
+        auto status = modelConfig.parseNode(configs["config"]);
+
+        if (!status.ok()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed due to error: {}", modelConfig.getName(), status.string());
+            modelsWithInvalidConfig.emplace(modelConfig.getName());
+            continue;
+        }
+
+        status = validatePluginConfiguration(modelConfig.getPluginConfig(),
+            modelConfig.getTargetDevice().empty() ? recommendTargetDevice() : modelConfig.getTargetDevice(),
+            *modelManager.ieCore.get());
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Plugin config contains unsupported keys");
+            return status;
+        }
+        modelConfig.setCacheDir(modelManager.modelCacheDirectory);
+
+        const auto& modelName = modelConfig.getName();
+        if (modelManager.servableExists(modelName, ServableQueryType::Mediapipe)) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model name: {} is already occupied by a mediapipe graph definition.", modelName);
+            continue;
+        }
+        if (modelsInConfigFile.find(modelName) != modelsInConfigFile.end()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_NAME_OCCUPIED);
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated model names: {} defined in config file. Only first definition will be loaded.", modelName);
+            continue;
+        }
+
+        ServableLoadingTask task{ServableLoadingTaskType::LoadModel, modelName, modelConfig};
+        auto future = modelManager.loadingQueue->scheduleTask(std::move(task));
+        status = future.get();
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+
+        modelsInConfigFile.emplace(modelName);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cannot reload model: {} with versions due to error: {}", modelName, status.string());
+        }
+        if (status == StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Will retry to reload model({}) after model dependencies are revalidated", modelName);
+            auto it = modelManager.servedModelConfigs.find(modelName);
+            if (it == modelManager.servedModelConfigs.end()) {
+                continue;
+            }
+            gatedModelConfigs.emplace_back(std::move(modelConfig));
+            newModelConfigs.emplace(modelName, std::move(it->second));
+            modelManager.servedModelConfigs.erase(modelName);
+        } else {
+            newModelConfigs.emplace(modelName, std::move(modelConfig));
+        }
+    }
+    return firstErrorStatus;
+}
+
+#if (MEDIAPIPE_DISABLE == 0)
+Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
+    std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
+    Status status = StatusCode::OK;
+    Status firstErrorStatus = StatusCode::OK;
+    std::vector<MediapipeGraphConfig> subdirectoryMediapipesInConfigFile;
+    for (auto& mediapipeConfig : mediapipesInConfigFile) {
+        std::string subconfigPath = mediapipeConfig.getSubconfigPath();
+        std::ifstream ifs(subconfigPath);
+        if (!ifs.is_open()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
+                subconfigPath, mediapipeConfig.getGraphName());
+            std::string subconfigModelMeshPath = mediapipeConfig.getModelMeshSubconfigPath();
+            ifs.open(subconfigModelMeshPath);
+            if (!ifs.is_open()) {
+                continue;
+            } else {
+                // Switch to model mesh path for subconfig
+                subconfigPath = subconfigModelMeshPath;
+                mediapipeConfig.setSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
+            }
+
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading subconfig models from subconfig path: {} provided for graph: {}",
+                subconfigPath, mediapipeConfig.getGraphName());
+        }
+        rapidjson::Document subconfigJson;
+        rapidjson::IStreamWrapper isw(ifs);
+        rapidjson::ParseResult parseResult = subconfigJson.ParseStream(isw);
+        if (parseResult.Code()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe: {} graph subconfig: {} file is not a valid JSON file. Error: {}",
+                mediapipeConfig.getGraphName(), subconfigPath, rapidjson::GetParseError_En(parseResult.Code()));
+            return StatusCode::JSON_INVALID;
+        }
+        if (validateJsonAgainstSchema(subconfigJson, MEDIAPIPE_SUBCONFIG_SCHEMA.c_str()) != StatusCode::OK) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph subconfig file is not in valid configuration format");
+            return StatusCode::JSON_INVALID;
+        }
+        const auto mediapipeItr = subconfigJson.FindMember("model_config_list");
+
+        if (mediapipeItr == subconfigJson.MemberEnd() || !mediapipeItr->value.IsArray()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfiguration file doesn't have models property.");
+            return StatusCode::JSON_INVALID;
+        }
+        std::string subconfigRootDirectoryPath;
+        FileSystem::setRootDirectoryPath(subconfigRootDirectoryPath, subconfigPath);
+        status = ConfigLoader::loadModels(*this, mediapipeItr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, subconfigRootDirectoryPath, subdirectoryMediapipesInConfigFile);
+        if (!status.ok()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Loading Mediapipe {} models from subconfig {} failed.", mediapipeConfig.getGraphName(), subconfigPath);
+        }
+    }
+
+    return firstErrorStatus;
+}
+
+Status ModelManager::ConfigLoader::loadModelsConfig(ModelManager& modelManager, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile)
+#else
+Status ModelManager::ConfigLoader::loadModelsConfig(ModelManager& modelManager, rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs)
+#endif
+{
+    Status firstErrorStatus = StatusCode::OK;
+    const auto itr = configJson.FindMember("model_config_list");
+
+    if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have models property.");
+        return StatusCode::JSON_INVALID;
+    }
+    std::set<std::string> modelsInConfigFile;
+    std::set<std::string> modelsWithInvalidConfig;
+    std::unordered_map<std::string, ModelConfig> newModelConfigs;
+#if (MEDIAPIPE_DISABLE == 0)
+    auto status = loadModels(modelManager, itr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, modelManager.rootDirectoryPath, mediapipesInConfigFile);
+#else
+    auto status = loadModels(modelManager, itr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, modelManager.rootDirectoryPath);
+#endif
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Loading main OVMS config models failed.");
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+    }
+
+#if (MEDIAPIPE_DISABLE == 0)
+    modelManager.loadMediapipeSubConfigModels(gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, mediapipesInConfigFile);
+#endif
+    modelManager.servedModelConfigs = std::move(newModelConfigs);
+    modelManager.retireModelsRemovedFromConfigFile(modelsInConfigFile, modelsWithInvalidConfig);
+    return firstErrorStatus;
+}
+
+Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs) {
+    Status firstErrorStatus = StatusCode::OK;
+    for (auto& modelConfig : gatedModelConfigs) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Trying to reload model({}) configuration", modelConfig.getName());
+        ServableLoadingTask task{ServableLoadingTaskType::LoadModel, modelConfig.getName(), modelConfig};
+        auto future = loadingQueue->scheduleTask(std::move(task));
+        auto status = future.get();
+        if (!status.ok()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+            continue;
+        }
+        auto it = this->servedModelConfigs.find(modelConfig.getName());
+        if (it == this->servedModelConfigs.end()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+            continue;
+        }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Successfully retried to load new model({}) configuration after unsubscribed from pipeline", modelConfig.getName());
+        this->servedModelConfigs.at(modelConfig.getName()) = std::move(modelConfig);
+    }
+    return firstErrorStatus;
+}
+
+Status ModelManager::loadConfig() {
+    rapidjson::Document configJson;
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);  // TODO(idle-unload): @atobiszei narrow scope to parsing-only after queue refactoring
+    Status status = parseConfig(this->configFilename, configJson, this->lastConfigFileMD5, WRONG_CONFIG_FILE_RETRY_DELAY_MS, MAX_CONFIG_JSON_READ_RETRY_COUNT);
+    if (!status.ok()) {
+        this->lastLoadConfigStatus = status;
+        return this->lastLoadConfigStatus;
+    }
+    if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA.c_str()) != StatusCode::OK) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not in valid configuration format");
+        this->lastLoadConfigStatus = StatusCode::JSON_INVALID;
+        return this->lastLoadConfigStatus;
+    }
+
+    // Reading metric config only once per server start
+    if (!this->metricConfigLoadedOnce) {
+        status = ConfigLoader::loadMetricsConfig(*this, configJson);
+        if (!status.ok()) {
+            return status;
+        }
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric config only once per server start.");
+        this->metricConfigLoadedOnce = true;
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reading metric from config json file skipped. Settings already loaded.");
+    }
+
+    Status firstErrorStatus = StatusCode::OK;
+
+    this->setRootDirectoryPath(this->configFilename);
+
+    // load the custom loader config, if available
+    status = ConfigLoader::loadCustomLoadersConfig(*this, configJson);
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+    }
+    // handling mediapipe graph config is divided into two steps parsing and loading because
+    // before loading mediapipe graph we need first to load models from it's subconfig together with
+    // models from ovms config
+#if (MEDIAPIPE_DISABLE == 0)
+    std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
+    status = parseMediapipeConfig(configJson, this->rootDirectoryPath, mediapipesInConfigFile);
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+    }
+    std::vector<ModelConfig> gatedModelConfigs;
+    status = ConfigLoader::loadModelsConfig(*this, configJson, gatedModelConfigs, mediapipesInConfigFile);
+#else
+    std::vector<ModelConfig> gatedModelConfigs;
+    status = ConfigLoader::loadModelsConfig(*this, configJson, gatedModelConfigs);
+#endif
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    status = loadMediapipeGraphsConfig(mediapipesInConfigFile);
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+    }
+#endif
+    status = tryReloadGatedModelConfigs(gatedModelConfigs);
+    if (!status.ok()) {
+        IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+    }
+
+    // Build model groups (non-permanent servables start SLEEPING via lazyLoad)
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        servableGroupManager->buildGroups(this->servedModelConfigs, *this);
+    }
+
+    this->lastLoadConfigStatus = firstErrorStatus;
+    return firstErrorStatus;
+}
+
+void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile, const std::set<std::string>& modelsWithInvalidConfig) {
+    std::set<std::string> modelsCurrentlyLoaded;
+    for (auto& nameModelPair : getModels()) {
+        modelsCurrentlyLoaded.insert(nameModelPair.first);
+    }
+    std::vector<std::string> modelsToUnloadAllVersions(getModels().size());
+    auto it = std::set_difference(
+        modelsCurrentlyLoaded.begin(), modelsCurrentlyLoaded.end(),
+        modelsExistingInConfigFile.begin(), modelsExistingInConfigFile.end(),
+        modelsToUnloadAllVersions.begin());
+    modelsToUnloadAllVersions.resize(it - modelsToUnloadAllVersions.begin());
+    for (auto& modelName : modelsToUnloadAllVersions) {
+        if (modelsWithInvalidConfig.find(modelName) == modelsWithInvalidConfig.end()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
+            try {
+                models.at(modelName)->retireAllVersions();
+            } catch (const std::out_of_range&) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
+            }
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleaning up all versions of model: {}", modelName);
+            try {
+                models.at(modelName)->cleanupAllVersions();
+            } catch (const std::out_of_range&) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to clean up all versions of model: {}", modelName);
+            }
+        }
+    }
+}
+
+Status ModelManager::updateConfigurationWithoutConfigFile() {
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);  // TODO(idle-unload): @atobiszei narrow scope to parsing-only after queue refactoring
+    SPDLOG_LOGGER_TRACE(modelmanager_logger, "Checking if something changed with model versions");
+    bool reloadNeeded = false;
+    Status firstErrorStatus = StatusCode::OK;
+    Status status;
+    for (auto& [name, config] : servedModelConfigs) {
+        ServableLoadingTask task{ServableLoadingTaskType::LoadModel, name, config};
+        auto future = loadingQueue->scheduleTask(std::move(task));
+        status = future.get();
+        if (!status.ok()) {
+            IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+        } else if (status == StatusCode::OK_RELOADED) {
+            reloadNeeded = true;
+        }
+    }
+    if (!firstErrorStatus.ok()) {
+        return firstErrorStatus;
+    }
+
+    if (reloadNeeded) {
+        return StatusCode::OK_RELOADED;
+    } else {
+        return StatusCode::OK_NOT_RELOADED;
+    }
+}
+
+Status ModelManager::configFileReloadNeeded(bool& isNeeded) {
+    std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+
+    if (!std::ifstream(configFilename)) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Config file not found or cannot open.");
+        isNeeded = false;
+        return StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED;
+    }
+
+    std::string newmd5 = FileSystem::getFileMD5(configFilename);
+    bool configFileModified = false;
+    if (lastConfigFileMD5 != newmd5) {
+        configFileModified = true;
+    }
+    if (configFilename == "" || !configFileModified) {
+        isNeeded = false;
+        return this->lastLoadConfigStatus;
+    } else {
+        isNeeded = true;
+    }
+
+    return StatusCode::OK;
+}
+
+void ModelManager::unloadIdleGraphs() {
+#if (MEDIAPIPE_DISABLE == 0)
+    std::vector<std::string> toUnload;
+    {
+        const auto& names = mediapipeFactory->getMediapipePipelinesNames();
+        for (const auto& name : names) {
+            if (mediapipeFactory->shouldUnloadDefinitionDueToIdle(name)) {
+                toUnload.push_back(name);
+            }
+        }
+    }
+    for (const auto& name : toUnload) {
+        bool urgentUnload = false;
+        auto future = requestServablePutToSleep(name, urgentUnload);
+        auto status = future.get();
+        if (!status.ok()) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger,
+                "Failed to idle-unload mediapipe graph {}: {}", name, status.string());
+        }
+    }
+#endif
+}
+
+void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started model manager thread");
+    while (exitSignal.wait_for(std::chrono::milliseconds(this->watcherIntervalMillisec)) == std::future_status::timeout) {
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle begin");
+        std::unique_lock<std::recursive_mutex> loadingLock(configMtx);  // TODO(idle-unload): @atobiszei  narrow scope to parsing-only after queue refactoring
+        if (watchConfigFile) {
+            bool isNeeded;
+            configFileReloadNeeded(isNeeded);
+            if (isNeeded) {
+                loadConfig();
+            }
+        }
+        updateConfigurationWithoutConfigFile();
+        loadingLock.unlock();
+        // Idle-unload sweep: free resources of graphs idle past their timeout.
+        // Done AFTER releasing configMtx — unload() only needs the factory's
+        // definitions lock and the per-definition lifecycleMtx, and is
+        // non-blocking (it skips graphs with in-flight requests rather than
+        // draining). This keeps configMtx hold time minimal.
+        unloadIdleGraphs();
+        // Model group idle unload: unload the active non-permanent group if idle
+        if (servableGroupManager && servableGroupManager->isEnabled()) {
+            servableGroupManager->unloadActiveGroupIfIdle(*this);
+        }
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Models configuration and filesystem check cycle end");
+    }
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Stopped model manager thread");
+}
+
+void ModelManager::cleanerRoutine(uint32_t memoryTrimmingIntervalMilliseconds, std::future<void> cleanerExitSignal) {
+    SPDLOG_LOGGER_INFO(modelmanager_logger, "Started cleaner thread");
+    FunctorResourcesCleaner cleaner(*this);
+    while (cleanerExitSignal.wait_for(std::chrono::milliseconds(memoryTrimmingIntervalMilliseconds)) == std::future_status::timeout) {
+        cleaner.cleanup();
+    }
+}
+
+void ModelManager::cleanupResources() {
+    trimProcessMemory();
+}
+void ModelManager::join() {
+    if (watcherStarted) {
+        exitTrigger.set_value();
+    }
+    if (cleanerStarted) {
+        cleanerExitTrigger.set_value();
+    }
+    loadingQueue->requestStop();
+
+    if (watcherStarted) {
+        if (monitor.joinable()) {
+            monitor.join();
+            watcherStarted = false;
+            SPDLOG_INFO("Shutdown model manager");
+        }
+    }
+    if (cleanerStarted && cleanerThread.joinable()) {
+        cleanerThread.join();
+        cleanerStarted = false;
+    }
+
+    loadingQueue->stop();
+}
+
+void ModelManager::getVersionsToChange(
+    const ModelConfig& newModelConfig,
+    const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
+    model_versions_t requestedVersions,
+    std::shared_ptr<model_versions_t>& versionsToStartIn,
+    std::shared_ptr<model_versions_t>& versionsToReloadIn,
+    std::shared_ptr<model_versions_t>& versionsToRetireIn) {
+    std::sort(requestedVersions.begin(), requestedVersions.end());
+    model_versions_t registeredModelVersions;
+    SPDLOG_LOGGER_TRACE(modelmanager_logger, "Currently registered model: {} versions count: {}", newModelConfig.getName(), modelVersionsInstances.size());
+    for (const auto& [version, versionInstance] : modelVersionsInstances) {
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "model: {} version: {} state: {}", newModelConfig.getName(), version, ovms::ModelVersionStateToString(versionInstance->getStatus().getState()));
+        registeredModelVersions.push_back(version);
+    }
+
+    if (newModelConfig.isCustomLoaderRequiredToLoadModel()) {
+        custom_loader_options_config_t customLoaderOptionsConfig = newModelConfig.getCustomLoaderOptionsConfigMap();
+        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
+
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto loaderPtr = customloaders.find(loaderName);
+        if (loaderPtr != nullptr) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom Loader to be used : {}", loaderName);
+
+            // check existing version for blacklist
+            for (const auto& [version, versionInstance] : modelVersionsInstances) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "The model {} checking for blacklist", versionInstance->getName());
+                CustomLoaderStatus bres = loaderPtr->getModelBlacklistStatus(versionInstance->getName(), version);
+                if (bres != CustomLoaderStatus::OK) {
+                    SPDLOG_LOGGER_INFO(modelmanager_logger, "The model {} is blacklisted", versionInstance->getName());
+                    requestedVersions.erase(std::remove(requestedVersions.begin(), requestedVersions.end(), version), requestedVersions.end());
+                }
+            }
+        }
+    }
+
+    model_versions_t alreadyRegisteredVersionsWhichAreRequested(requestedVersions.size());
+    model_versions_t::iterator it = std::set_intersection(
+        requestedVersions.begin(), requestedVersions.end(),
+        registeredModelVersions.begin(), registeredModelVersions.end(),
+        alreadyRegisteredVersionsWhichAreRequested.begin());
+    alreadyRegisteredVersionsWhichAreRequested.resize(it - alreadyRegisteredVersionsWhichAreRequested.begin());
+
+    std::shared_ptr<model_versions_t> versionsToReload = std::make_shared<model_versions_t>();
+    for (const auto& version : alreadyRegisteredVersionsWhichAreRequested) {
+        try {
+            if (modelVersionsInstances.at(version)->getStatus().willEndUnloaded() ||
+                modelVersionsInstances.at(version)->getStatus().isFailedLoading() ||
+                modelVersionsInstances.at(version)->getModelConfig().isReloadRequired(newModelConfig)) {
+                if (modelVersionsInstances.at(version)->getModelConfig().isCustomLoaderConfigChanged(newModelConfig)) {
+                    modelVersionsInstances.at(version)->setCustomLoaderConfigChangeFlag();
+                }
+                versionsToReload->push_back(version);
+            }
+        } catch (std::out_of_range& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occurred during versions update. Could not found version. Details: {}", e.what());
+        }
+    }
+
+    std::shared_ptr<model_versions_t> versionsToRetire = std::make_shared<model_versions_t>(registeredModelVersions.size());
+    it = std::set_difference(
+        registeredModelVersions.begin(), registeredModelVersions.end(),
+        requestedVersions.begin(), requestedVersions.end(),
+        versionsToRetire->begin());
+    versionsToRetire->resize(it - versionsToRetire->begin());
+    try {
+        it = std::remove_if(versionsToRetire->begin(),
+            versionsToRetire->end(),
+            [&modelVersionsInstances](model_version_t version) {
+                return modelVersionsInstances.at(version)->getStatus().willEndUnloaded();
+            });
+    } catch (std::out_of_range& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Data race occurred during versions update. Could not found version. Details: {}", e.what());
+    }
+    versionsToRetire->resize(it - versionsToRetire->begin());
+
+    std::shared_ptr<model_versions_t> versionsToStart = std::make_shared<model_versions_t>(requestedVersions.size());
+    it = std::set_difference(
+        requestedVersions.begin(), requestedVersions.end(),
+        registeredModelVersions.begin(), registeredModelVersions.end(),
+        versionsToStart->begin());
+    versionsToStart->resize(it - versionsToStart->begin());
+
+    versionsToStartIn = std::move(versionsToStart);
+    versionsToReloadIn = std::move(versionsToReload);
+    versionsToRetireIn = std::move(versionsToRetire);
+}
+
+std::shared_ptr<Model> ModelManager::modelFactory(const std::string& name) {
+    return std::make_shared<Model>(name);
+}
+
+std::shared_ptr<ovms::Model> ModelManager::getModelIfExistCreateElse(const std::string& modelName) {
+    std::unique_lock modelsLock(modelsMtx);
+    auto modelIt = models.find(modelName);
+    if (models.end() == modelIt) {
+        models.insert({modelName, modelFactory(modelName)});
+    }
+    return models[modelName];
+}
+
+std::shared_ptr<FileSystem> ModelManager::getFilesystem(const std::string& basePath) {
+    return ovms::getFilesystem(basePath);
+}
+
+const std::string ModelManager::getFullPath(const std::string& pathToCheck) const {
+    if (!FileSystem::isLocalFilesystem(pathToCheck)) {
+        // Cloud filesystem
+        return pathToCheck;
+    } else if (pathToCheck.size() > 0 && FileSystem::isFullPath(pathToCheck)) {
+        // Full path case
+        return pathToCheck;
+    } else {
+        // Relative path case
+        if (this->rootDirectoryPath.empty())
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Using relative path without setting configuration directory path.");
+        return this->rootDirectoryPath + pathToCheck;
+    }
+}
+
+Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, const std::string& base, model_versions_t& versions) {
+    files_list_t dirs;
+    static const std::set<std::string> supportedSingleFileModelExtensions = {
+        ".xml",
+        ".onnx",
+        ".pdmodel",
+        ".pdiparams",
+        ".pb",
+        ".tflite"};
+
+    bool is_directory = false;
+    if (FileSystem::isPathEscaped(base)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", base);
+        return StatusCode::PATH_INVALID;
+    }
+
+    auto status = fs->isDirectory(base, &is_directory);
+    if (status != StatusCode::OK) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't check directory: {}", base);
+        return status;
+    }
+    if (!is_directory) {
+        if (FileSystem::isLocalFilesystem(base)) {
+            std::error_code ec;
+            if (std::filesystem::is_regular_file(base, ec)) {
+                const auto extension = std::filesystem::path(base).extension().string();
+                if (supportedSingleFileModelExtensions.count(extension) == 0) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error loading model. Invalid model file.");
+                    return StatusCode::FILE_INVALID;
+                }
+                versions.push_back(1);
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Detected single model file path: {}. Serving synthetic version: 1", base);
+                return StatusCode::OK;
+            }
+        }
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Directory does not exist: {}", base);
+        return StatusCode::PATH_INVALID;
+    }
+
+    status = fs->getDirectorySubdirs(base, &dirs);
+
+    if (status != StatusCode::OK) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't list directories in path: {}", base);
+        return status;
+    }
+
+    for (const auto& entry : dirs) {
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Detected version folder: {}", entry);
+        try {
+            ovms::model_version_t version = std::stoll(entry);
+            if (version <= 0) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "Expected version directory name to be a number greater than 0. Got: {}", version);
+                continue;
+            }
+            versions.push_back(version);
+        } catch (const std::invalid_argument&) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Expected version directory name to be in number format. Got: {}", entry);
+        } catch (const std::out_of_range&) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Directory name is out of range for supported version format. Got: {}", entry);
+        }
+    }
+
+    if (0 == versions.size()) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "No version found for model in path: {}", base);
+    }
+
+    return StatusCode::OK;
+}
+
+Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed) {
+    bool lazyLoad = servableGroupManager && servableGroupManager->isEnabled() &&
+                    config.getGroupName() != "permanent";
+    Status status = StatusCode::OK;
+    try {
+        status = model->addVersions(versionsToStart, config, fs, *ieCore, versionsFailed, this->metricRegistry, this->metricConfig.get(), lazyLoad);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while loading model: {} versions; error: {}",
+                config.getName(),
+                status.string());
+            return status;
+        }
+    } catch (std::exception& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while loading model: {};", e.what());
+    }
+    return status;
+}
+
+Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t>& versionsFailed) {
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
+    try {
+        auto status = model->reloadVersions(versionsToReload, config, fs, *ieCore, versionsFailed);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while reloading model: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+
+            return status;
+        }
+    } catch (std::exception& e) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while reloading model: {};", e.what());
+    }
+
+    return StatusCode::OK;
+}
+
+Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
+    SPDLOG_LOGGER_TRACE(modelmanager_logger, "Started applying config changes to model: {}", config.getName());
+
+    auto model = getModelIfExistCreateElse(config.getName());
+    if (model->isAnyVersionSubscribed()) {
+        if (config.isDynamicParameterEnabled()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Requested setting dynamic parameters for model {} but it is used in pipeline. Cannot reload model configuration.", config.getName());
+            return StatusCode::REQUESTED_DYNAMIC_PARAMETERS_ON_SUBSCRIBED_MODEL;
+        }
+    }
+
+    auto fs = ModelManager::getFilesystem(config.getBasePath());
+    std::vector<model_version_t> availableVersions;
+    Status blocking_status = readAvailableVersions(fs, config.getBasePath(), availableVersions);
+    if (!blocking_status.ok()) {
+        return blocking_status;
+    }
+    auto requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
+    std::shared_ptr<model_versions_t> versionsToStart;
+    std::shared_ptr<model_versions_t> versionsToReload;
+    std::shared_ptr<model_versions_t> versionsToRetire;
+    std::shared_ptr<model_versions_t> versionsFailed = std::make_shared<model_versions_t>();
+    // first reset custom loader name to empty string so that any changes to name can be captured
+    model->resetCustomLoaderName();
+
+    if (config.isCustomLoaderRequiredToLoadModel()) {
+        custom_loader_options_config_t customLoaderOptionsConfig = config.getCustomLoaderOptionsConfigMap();
+        const std::string loaderName = customLoaderOptionsConfig["loader_name"];
+
+        auto& customloaders = ovms::CustomLoaders::instance();
+        auto loaderPtr = customloaders.find(loaderName);
+        if (loaderPtr != nullptr) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Custom Loader to be used : {}", loaderName);
+            model->setCustomLoaderName(loaderName);
+        } else {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Specified custom loader {} not found. In case any models are loaded, will be unloading them", loaderName);
+            model->retireAllVersions();
+            return StatusCode::OK;
+        }
+    }
+    getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    bool reloadNeeded = false;
+    if (versionsToStart->size() > 0 || versionsToReload->size() > 0 || versionsToRetire->size() > 0) {
+        reloadNeeded = true;
+    }
+    std::set<ovms::model_version_t> allFailedVersions;
+    while (versionsToStart->size() > 0) {
+        blocking_status = addModelVersions(model, fs, config, versionsToStart, versionsFailed);
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Adding new versions. Status: {};", blocking_status.string());
+        if (!blocking_status.ok()) {
+            for (const auto version : *versionsFailed) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Removing available version {} due to load failure; ", version);
+                if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
+                    availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
+                }
+                allFailedVersions.insert(version);
+            }
+            requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
+            getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+        } else {
+            break;
+        }
+    }
+
+    if (versionsToReload->size() > 0) {
+        auto reloadStatus = reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
+        if (!reloadStatus.ok()) {
+            blocking_status = std::move(reloadStatus);
+        }
+    }
+
+    for (const auto version : *versionsFailed) {
+        SPDLOG_LOGGER_TRACE(modelmanager_logger, "Removing available version {} due to load failure.", version);
+        if (std::binary_search(availableVersions.begin(), availableVersions.end(), version)) {
+            availableVersions.erase(std::remove(availableVersions.begin(), availableVersions.end(), version), availableVersions.end());
+        }
+        allFailedVersions.insert(version);
+    }
+    // refresh versions to retire based on failed reloads
+    requestedVersions = config.getModelVersionPolicy()->filter(availableVersions);
+    getVersionsToChange(config, model->getModelVersions(), requestedVersions, versionsToStart, versionsToReload, versionsToRetire);
+    std::shared_ptr<model_versions_t> versionsToCleanup = std::make_shared<model_versions_t>();
+    std::copy_if(versionsToRetire->begin(), versionsToRetire->end(), std::back_inserter(*versionsToCleanup), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); });
+    versionsToRetire->erase(std::remove_if(versionsToRetire->begin(), versionsToRetire->end(), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); }), versionsToRetire->end());
+    Status status;
+    if (versionsToRetire->size() > 0) {
+        status = model->retireVersions(versionsToRetire);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+            return status;
+        }
+    }
+    if (versionsToCleanup->size() > 0) {
+        status = model->cleanupFailedLoad(versionsToCleanup);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while cleaning up model that failed to load: {}; versions; error: {}",
+                config.getName(),
+                status.string());
+            return status;
+        }
+    }
+
+    if (blocking_status.ok() && reloadNeeded) {
+        return StatusCode::OK_RELOADED;
+    }
+
+    return blocking_status;
+}
+
+std::future<Status> ModelManager::requestServableWakeUp(const std::string& name, bool urgent) {
+#if (MEDIAPIPE_DISABLE == 0)
+    if (mediapipeFactory->findDefinitionByName(name)) {
+        ServableLoadingTask task{ServableLoadingTaskType::WakeUpMediapipe, name, urgent};
+        return loadingQueue->scheduleTask(std::move(task));
+    }
+#endif
+    ServableLoadingTask task{ServableLoadingTaskType::WakeUpModel, name, urgent};
+    return loadingQueue->scheduleTask(std::move(task));
+}
+
+std::future<Status> ModelManager::requestServablePutToSleep(const std::string& name, bool urgent) {
+#if (MEDIAPIPE_DISABLE == 0)
+    if (mediapipeFactory->findDefinitionByName(name)) {
+        ServableLoadingTask task{ServableLoadingTaskType::PutToSleepMediapipe, name, urgent};
+        return loadingQueue->scheduleTask(std::move(task));
+    }
+#endif
+    ServableLoadingTask task{ServableLoadingTaskType::PutToSleepModel, name, urgent};
+    return loadingQueue->scheduleTask(std::move(task));
+}
+
+const std::shared_ptr<ModelInstance> ModelManager::findModelInstance(const std::string& name, model_version_t version) const {
+    auto model = findModelByName(name);
+    if (!model) {
+        return nullptr;
+    }
+    if (version == 0) {
+        return model->getDefaultModelInstance();
+    } else {
+        return model->getModelInstanceByVersion(version);
+    }
+}
+
+const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& name) const {
+    std::shared_lock lock(modelsMtx);
+    auto it = models.find(name);
+    return it != models.end() ? it->second : nullptr;
+}
+
+bool ModelManager::isServableAvailable(const std::string& name) const {
+    // TODO  @atobiszei idle add version option
+    auto model = findModelByName(name);
+    if (model) {
+        // Version policy is not considered here - any servable version is enough to answer a request.
+        for (const auto& [version, instance] : model->getModelVersions()) {
+            if (instance->getStatus().getState() == ModelVersionState::AVAILABLE) {
+                return true;
+            }
+        }
+        return false;
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    if (mediapipeFactory->definitionExists(name)) {
+        return mediapipeFactory->isDefinitionAvailable(name);
+    }
+#endif
+    return false;
+}
+
+Status ModelManager::getModelInstance(const std::string& modelName,
+    ovms::model_version_t modelVersionId,
+    std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const {
+    SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
+
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        auto status = servableGroupManager->ensureServableLoaded(modelName, const_cast<ModelManager&>(*this));
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to load servable '{}': {}", modelName, status.string());
+            return status;
+        }
+    }
+
+    auto model = findModelByName(modelName);
+    if (model == nullptr) {
+        return StatusCode::MODEL_NAME_MISSING;
+    }
+    if (modelVersionId != 0) {
+        modelInstance = model->getModelInstanceByVersion(modelVersionId);
+        if (modelInstance == nullptr) {
+            return StatusCode::MODEL_VERSION_MISSING;
+        }
+    } else {
+        modelInstance = model->getDefaultModelInstance();
+        if (modelInstance == nullptr) {
+            return StatusCode::MODEL_VERSION_MISSING;
+        }
+    }
+
+    return modelInstance->waitForLoaded(waitForModelLoadedTimeoutMs, modelInstanceUnloadGuardPtr);
+}
+
+const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
+    // In idle management mode, report all configured models as available
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        return servableGroupManager->getAllConfiguredServableNames();
+    }
+    std::vector<std::string> names;
+    std::shared_lock lock(modelsMtx);
+    for (auto& [name, model] : models) {
+        auto instance = model->getDefaultModelInstance();
+        if (instance && instance->getStatus().appearsAvailable()) {
+            names.push_back(model->getName());
+        }
+    }
+    return names;
+}
+
+#if (MEDIAPIPE_DISABLE == 0)
+const std::vector<std::string> ModelManager::getNamesOfAvailableMediapipePipelines() const {
+    return mediapipeFactory->getNamesOfAvailableMediapipePipelines();
+}
+#endif
+
+#if (MEDIAPIPE_DISABLE == 0)
+Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
+    const std::string& name) {
+    if (servableGroupManager && servableGroupManager->isEnabled()) {
+        // TODO current preview limitation -> we wait for whole group to load
+        auto status = servableGroupManager->ensureServableLoaded(name, *this);
+        if (!status.ok()) {
+            SPDLOG_ERROR("Failed to load servable '{}': {}", name, status.string());
+            return status;
+        }
+    }
+    return this->mediapipeFactory->create(graph, name);
+}
+
+Status ModelManager::createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
+    const std::string& name) {
+    return this->mediapipeFactory->createHandle(graph, name);
+}
+#endif
+
+void ModelManager::setRootDirectoryPath(const std::string& configFileFullPath) {
+    FileSystem::setRootDirectoryPath(this->rootDirectoryPath, configFileFullPath);
+}
+
+bool ModelManager::servableExists(const std::string& name, ServableQueryType check) const {
+    if (hasFlag(check, ServableQueryType::Model) && findModelByName(name) != nullptr) {
+        return true;
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    if (hasFlag(check, ServableQueryType::Mediapipe) && mediapipeFactory->definitionExists(name)) {
+        return true;
+    }
+#endif
+    return false;
+}
+
+bool ModelManager::aliasesConflict(const std::vector<std::string>& aliases, const std::string& ownGraphName) const {
+    for (const auto& alias : aliases) {
+        if (servableExists(alias, ServableQueryType::Model)) {
+            return true;
+        }
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    if (mediapipeFactory->aliasesConflictExcluding(aliases, ownGraphName)) {
+        return true;
+    }
+#endif
+    return false;
+}
+
+// Definitions are never removed from their maps during server lifetime.
+ServableDefinition* ModelManager::findServableDefinition(const std::string& name) const {
+    auto model = findModelByName(name);
+    if (model) {
+        return model.get();
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    auto* mediapipeDefinition = mediapipeFactory->findServableDefinitionByName(name);
+    if (mediapipeDefinition) {
+        return mediapipeDefinition;
+    }
+#endif
+    return nullptr;
+}
+
+std::vector<std::string> ModelManager::getServableDefinitionNames() const {
+    std::vector<std::string> names;
+    {
+        std::shared_lock lock(modelsMtx);
+        names.reserve(models.size());
+        for (const auto& [name, model] : models) {
+            names.push_back(name);
+        }
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    auto mediapipeNames = mediapipeFactory->getMediapipePipelinesNames();
+    names.insert(names.end(), mediapipeNames.begin(), mediapipeNames.end());
+#endif
+    return names;
+}
+
+}  // namespace ovms

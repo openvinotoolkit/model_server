@@ -123,6 +123,48 @@ TEST_F(KFSPredictValidation, RequestTooManyInputs) {
     EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_INPUTS) << status.string();
 }
 
+class KFSPredictValidationInputCountConfig : public KFSPredictValidation {
+protected:
+    ovms::ServerSettingsImpl originalServerSettings;
+    ovms::ModelsSettingsImpl originalModelsSettings;
+
+    void SetUp() override {
+        KFSPredictValidation::SetUp();
+        originalServerSettings = ovms::Config::instance().getServerSettings();
+        originalModelsSettings = ovms::Config::instance().getModelSettings();
+    }
+
+    void setDisableInputCountValidation(bool value) {
+        ovms::ServerSettingsImpl testServerSettings = originalServerSettings;
+        testServerSettings.disableInputCountValidation = value;
+        ovms::Config::instance().parse(&testServerSettings, &originalModelsSettings);
+    }
+
+    void TearDown() override {
+        ovms::Config::instance().parse(&originalServerSettings, &originalModelsSettings);
+        KFSPredictValidation::TearDown();
+    }
+};
+
+TEST_F(KFSPredictValidationInputCountConfig, RequestTooManyInputsWithDisabledInputCountValidation) {
+    setDisableInputCountValidation(true);
+
+    auto inputWrongName = request.add_inputs();
+    inputWrongName->set_name("Some_Input");
+    request.add_raw_input_contents();  // keep raw_input_contents count in sync with inputs count
+    auto status = instance->mockValidate(&request);
+    EXPECT_TRUE(status.ok()) << status.string();
+}
+
+TEST_F(KFSPredictValidationInputCountConfig, RequestTooManyInputsWithEnabledInputCountValidation) {
+    setDisableInputCountValidation(false);
+
+    auto inputWrongName = request.add_inputs();
+    inputWrongName->set_name("Some_Input");
+    auto status = instance->mockValidate(&request);
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_NO_OF_INPUTS) << status.string();
+}
+
 TEST_F(KFSPredictValidation, RequestWrongInputName) {
     request.mutable_inputs()->RemoveLast();  // remove redundant input
     auto inputWrongName = request.add_inputs();

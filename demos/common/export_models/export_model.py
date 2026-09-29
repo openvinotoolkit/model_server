@@ -30,7 +30,7 @@ def add_common_arguments(parser):
     parser.add_argument('--weight-format', default='int8', help='precision of the exported model', dest='precision')
     parser.add_argument('--config_file_path', default='config.json', help='path to the config file', dest='config_file_path')
     parser.add_argument('--overwrite_models', default=False, action='store_true', help='Overwrite the model if it already exists in the models repository', dest='overwrite_models')
-    parser.add_argument('--target_device', default="CPU", help='CPU, GPU, NPU or HETERO, default is CPU', dest='target_device')
+    parser.add_argument('--target_device', default=None, help='CPU, GPU, NPU or HETERO. When not specified the server will auto-detect the best available device at startup.', dest='target_device')
     parser.add_argument('--ov_cache_dir', default=None, help='Folder path for compilation cache to speedup initialization time', dest='ov_cache_dir')
     parser.add_argument('--extra_quantization_params', required=False, help='Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"', dest='extra_quantization_params')
 
@@ -64,6 +64,7 @@ parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='stor
 parser_embeddings_ov.add_argument('--pooling', default="CLS", choices=["CLS", "LAST", "MEAN"], help='Embeddings pooling mode', dest='pooling')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_embeddings_ov.add_argument('--max_length', default=None, type=int, help='Maximum length of the embeddings input', dest='max_length')
 
 parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_rerank_ov)
@@ -187,6 +188,8 @@ node {
       {%- if truncate %}
       truncate: true,{% endif %}
       target_device: "{{target_device|default("CPU", true)}}"
+      {%- if max_length is not none %}
+      max_length: {{max_length}},{% endif %}
     }
   }
 }
@@ -240,13 +243,14 @@ node: {
           max_num_batched_tokens: {{max_num_batched_tokens}},{% endif %}
           {%- if not dynamic_split_fuse %}
           dynamic_split_fuse: false, {% endif %}
-          max_num_seqs: {% if draft_eagle3_mode %}1{% else %}{{max_num_seqs|default("256", true)}}{% endif %},
-          device: "{{target_device|default("CPU", true)}}",
+          max_num_seqs: {{max_num_seqs|default("256", true)}},
+          {%- if target_device %}
+          device: "{{target_device}}",{% endif %}
           {%- if draft_model_dir_name %}
           # Speculative decoding configuration
           draft_models_path: "./{{draft_model_dir_name}}",
-          draft_device: "{{target_device|default("CPU", true)}}",
-          draft_eagle3_mode: {{draft_eagle3_mode|default(false)}},{% endif %}
+          {%- if target_device %}
+          draft_device: "{{target_device}}",{% endif %}{% endif %}
           {%- if reasoning_parser %}
           reasoning_parser: "{{reasoning_parser}}",{% endif %}
           {%- if tool_parser %}
@@ -458,7 +462,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         plugin_config['prompt_lookup'] = True
     
     # Additional plugin properties for HETERO
-    if "HETERO" in task_parameters['target_device']:
+    if task_parameters['target_device'] and "HETERO" in task_parameters['target_device']:
         plugin_config['MODEL_DISTRIBUTION_POLICY'] = 'PIPELINE_PARALLEL'
 
     if task_parameters['target_device'] == 'NPU':
@@ -538,7 +542,7 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting speech2text model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export speech2text model", source_model)
