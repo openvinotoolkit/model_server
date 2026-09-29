@@ -7,6 +7,7 @@ docker run -it \
   -p 9112:9112 \
   -p 52000:52000/udp \
   --name ovms-build-krz \
+  -v /home/krz/models:/ovms/models\
   -v /home/krz/model_server:/ovms \
   -v /home/krz/.cache/ovms-bazel:/root/.cache/bazel \
   -v /home/krz/.gitconfig:/root/.gitconfig:ro \
