@@ -1444,7 +1444,7 @@ TEST(OvmsExportHfSettingsTest, pullAndStartOciModelPackNaming) {
     // The served name keeps the registry reference the user typed; the
     // directory drops the scheme and the ':' that Windows would reject.
     ASSERT_EQ(config.modelName(), "ghcr.io/org/model:tag");
-    ASSERT_EQ(config.modelPath(), ovms::FileSystem::joinPath({downloadPath, "ghcr.io/org/model_tag"}));
+    ASSERT_EQ(config.modelPath(), ovms::FileSystem::joinPath({downloadPath, "ghcr.io/org/model+tag"}));
 }
 
 TEST(OvmsExportHfSettingsTest, allChanged) {

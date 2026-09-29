@@ -74,10 +74,10 @@ The `oci://` scheme is dropped from the served model name, so the reference you 
 
 Pass `--model_name` to override it.
 
-Inside `--model_repository_path` the reference additionally has its tag separator replaced, because `:` is not a legal filename character on Windows:
+Inside `--model_repository_path` the reference additionally has `:` replaced with `+`, because `:` is not a legal filename character on Windows:
 
 ```text
-<model_repository_path>/ghcr.io/my-org/model_1.0/graph.pbtxt
+<model_repository_path>/ghcr.io/my-org/model+1.0/graph.pbtxt
 ```
 
 For OpenVINO IR and GGUF payloads that directory holds only `graph.pbtxt` — the weights stay in `llmman`'s content-addressed store and are referenced by absolute path, so pulling the same image for several servables does not duplicate them on disk. Removing a model therefore takes two steps: delete the directory from the model repository, and reclaim the blobs with `llmman rm <reference>`.
