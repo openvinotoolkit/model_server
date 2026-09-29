@@ -961,7 +961,7 @@ TEST_F(OvmsConfigDeathTest, ociPullWithGgufFilename) {
         "--model_repository_path",
         "/models",
     };
-    int arg_count = 11;
+    int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
 }
 
