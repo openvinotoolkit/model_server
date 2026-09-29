@@ -79,9 +79,17 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
         return std::nullopt;
     }
 
+    // OCI references never infer the task, not even from a local copy, so
+    // --task is always required. Reading the config out of the image would
+    // mean pulling it before the CLI has even finished parsing.
+    if (isOciDownload(*sourceModel)) {
+        SPDLOG_DEBUG("Task cannot be inferred for OCI reference {} - --task has to be provided explicitly", *sourceModel);
+        return std::nullopt;
+    }
+
     // Try local model repository path before downloading from HuggingFace
     if (modelRepositoryPath.has_value() && !modelRepositoryPath->empty()) {
-        const auto localModelDir = std::filesystem::path(*modelRepositoryPath) / localModelDirectoryName(*sourceModel);
+        const auto localModelDir = std::filesystem::path(*modelRepositoryPath) / *sourceModel;
         if (std::filesystem::exists(localModelDir)) {
             ModelCatalogContext ctx(localModelDir, *sourceModel);
             const std::string task = detector.detect(ctx);
@@ -90,15 +98,6 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
             }
             return task;
         }
-    }
-
-    // An OCI reference is not addressable on HuggingFace, and reading the
-    // config out of the image would mean pulling it before the CLI has even
-    // finished parsing. Report "unknown" so the caller asks for an explicit
-    // --task instead.
-    if (isOciDownload(*sourceModel)) {
-        SPDLOG_DEBUG("Task cannot be inferred for OCI reference {} - --task has to be provided explicitly", *sourceModel);
-        return std::nullopt;
     }
 
     // Download config files from HuggingFace.
