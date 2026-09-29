@@ -34,8 +34,8 @@ void setRuntimeConfig(const char* allowedLocalMediaPath,
     uint32_t restWorkers,
     bool verboseResponse) {
     gRuntimeConfig.allowedLocalMediaPath = (allowedLocalMediaPath != nullptr && allowedLocalMediaPath[0] != '\0')
-        ? std::make_optional<std::string>(allowedLocalMediaPath)
-        : std::nullopt;
+                                               ? std::make_optional<std::string>(allowedLocalMediaPath)
+                                               : std::nullopt;
     gRuntimeConfig.allowedMediaDomains.clear();
     if (allowedMediaDomains != nullptr) {
         std::stringstream domains(allowedMediaDomains);
