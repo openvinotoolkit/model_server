@@ -35,6 +35,7 @@
 #include "../ov_utils.hpp"
 #include "../servable_definition_unload_guard.hpp"
 #include "../servable_name_checker.hpp"
+#include "runtime_config.hpp"
 #include "src/status.hpp"
 #include "../stringutils.hpp"
 #include "src/systeminfo.hpp"
@@ -94,7 +95,7 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
 }
 
 int MediapipeGraphDefinition::resolveAutoQueueSize() {
-    uint32_t restWorkersCount = Config::instance().restWorkers();
+    uint32_t restWorkersCount = getRuntimeConfig().restWorkers;
     uint32_t cores = static_cast<uint32_t>(getCoreCount());
     uint32_t resolved = std::min(restWorkersCount, cores);
     resolved = std::max(resolved, static_cast<uint32_t>(1));

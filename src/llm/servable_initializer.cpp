@@ -286,6 +286,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 #endif
 
     // Populate the InputProcessorContext from the now-fully-initialized properties.
+    properties->inputProcessorContext.runtimeConfig = getRuntimeConfig();
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
     const bool runtimeTemplatePrepared = properties->preparedRuntimeChatTemplate.isPrepared();
     properties->inputProcessorContext.config.useMinja =
@@ -301,7 +302,7 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
     // initializers construct the pipeline directly, so the server-level cache_dir is
     // otherwise never applied and compiled-model cache artifacts are never persisted.
     // An explicit CACHE_DIR in the node's plugin_config remains authoritative.
-    const std::string& globalCacheDir = Config::instance().cacheDir();
+    const std::string& globalCacheDir = getRuntimeConfig().cacheDir;
     if (globalCacheDir.empty()) {
         return;
     }

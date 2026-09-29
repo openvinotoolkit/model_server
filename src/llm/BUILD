@@ -148,6 +148,7 @@ ovms_cc_library(
     deps = [
         ":io_processing_input_request",
         ":runtime_chat_template_loader",
+        "//src/mediapipe_internal:runtime_config",
         "//third_party:genai",
     ] + select({
         "//:disable_python": [],
@@ -201,7 +202,6 @@ ovms_cc_library(
         ":io_processing_input_request",
         ":io_processing_input_processors",
         ":io_processing_input_processor_context",
-        "//src:libovms_config",
         "//third_party:genai",
     ],
     visibility = ["//visibility:public"],
@@ -628,6 +628,7 @@ ovms_cc_library(
         ":chat_template_analyzer",
         ":chat_template_probe",
         ":io_processing_input_processor_context",
+        "//src/mediapipe_internal:runtime_config",
         "//src:httppayload",
         "//src:libhttpclientconnection",
         "//src:sse_utils",

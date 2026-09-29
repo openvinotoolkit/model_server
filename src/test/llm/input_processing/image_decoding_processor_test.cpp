@@ -22,7 +22,10 @@
 
 #include "../../../llm/io_processing/input_processors/image_decoding_processor.hpp"
 #include "../../../llm/io_processing/image_utils.hpp"
+#include "../../../llm/io_processing/input_processor.hpp"
+#include "../../../llm/io_processing/input_processor_context.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
+#include "../../../mediapipe_internal/runtime_config.hpp"
 
 using namespace ovms;
 
@@ -173,6 +176,41 @@ TEST(ImageDecodingProcessorTest, HttpUrlWithNoAllowedDomainsConfiguredRejected) 
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(status.message(), "Given url does not match any allowed domain from allowed_media_domains");
+}
+
+TEST(ImageDecodingProcessorTest, RuntimeConfigSnapshotCarriesMediaSettings) {
+    setRuntimeConfig("/models/media", "raw.githubusercontent.com,githubusercontent.com", "/models/cache", 8, true);
+
+    const auto& runtimeConfig = getRuntimeConfig();
+    ASSERT_TRUE(runtimeConfig.allowedLocalMediaPath.has_value());
+    EXPECT_EQ(runtimeConfig.allowedLocalMediaPath.value(), "/models/media");
+    ASSERT_EQ(runtimeConfig.allowedMediaDomains.size(), 2u);
+    EXPECT_EQ(runtimeConfig.allowedMediaDomains[0], "raw.githubusercontent.com");
+    EXPECT_EQ(runtimeConfig.allowedMediaDomains[1], "githubusercontent.com");
+    EXPECT_EQ(runtimeConfig.cacheDir, "/models/cache");
+    EXPECT_EQ(runtimeConfig.restWorkers, 8u);
+    EXPECT_TRUE(runtimeConfig.verboseResponse);
+
+    setRuntimeConfig(nullptr, nullptr, nullptr, 1, false);
+    const auto& resetConfig = getRuntimeConfig();
+    EXPECT_FALSE(resetConfig.allowedLocalMediaPath.has_value());
+    EXPECT_TRUE(resetConfig.allowedMediaDomains.empty());
+    EXPECT_TRUE(resetConfig.cacheDir.empty());
+    EXPECT_EQ(resetConfig.restWorkers, 1u);
+    EXPECT_FALSE(resetConfig.verboseResponse);
+}
+
+TEST(ImageDecodingProcessorTest, InputProcessorUsesRuntimeConfigForMediaDomains) {
+    InputProcessorContext context;
+    context.config.isVLM = true;
+    context.runtimeConfig.allowedMediaDomains = {"safe.example"};
+
+    InputRequest req = makeImageUrlRequest("http://safe.example:bad/image.jpg");
+    InputProcessor processor(context, req);
+    const auto status = processor.process(req);
+
+    ASSERT_FALSE(status.ok());
+    EXPECT_NE(status.message(), "Given url does not match any allowed domain from allowed_media_domains");
 }
 
 TEST(ImageDecodingProcessorTest, ChunkedImageLargerThanLimitRejected) {

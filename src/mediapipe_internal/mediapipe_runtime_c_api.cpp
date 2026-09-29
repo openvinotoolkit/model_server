@@ -17,6 +17,7 @@
 #include "mediapipefactory.hpp"
 
 #include <atomic>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -35,6 +36,7 @@
 #include "mediapipegraphconfig.hpp"
 #include "mediapipegraphdefinition.hpp"
 #include "../logging.hpp"
+#include "runtime_config.hpp"
 
 #if defined(_WIN32)
 #define MEDIAPIPE_RUNTIME_EXPORT __declspec(dllexport)
@@ -74,6 +76,15 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT void* OVMS_MPFactoryCreate(void* pythonBacke
 // instances (isolated from the main process by RTLD_DEEPBIND/header-only spdlog).
 extern "C" MEDIAPIPE_RUNTIME_EXPORT void OVMS_MPFactoryConfigureLogging(const char* logLevel, const char* logPath) {
     ovms::configure_logger(logLevel != nullptr ? logLevel : "", logPath != nullptr ? logPath : "");
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT void OVMS_MPFactoryConfigureRuntime(
+    const char* allowedLocalMediaPath,
+    const char* allowedMediaDomains,
+    const char* cacheDir,
+    uint32_t restWorkers,
+    bool verboseResponse) {
+    ovms::setRuntimeConfig(allowedLocalMediaPath, allowedMediaDomains, cacheDir, restWorkers, verboseResponse);
 }
 
 extern "C" MEDIAPIPE_RUNTIME_EXPORT void OVMS_MPFactoryDestroy(void* factoryHandle) {

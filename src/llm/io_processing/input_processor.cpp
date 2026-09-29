@@ -48,10 +48,9 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         processors.emplace_back(std::make_unique<EmptyToolCallsArrayRemovingProcessor>());
 
         if (context.config.isVLM) {  // isVLM is true both in VLMPipeline and OmniPipeline
-            const auto& settings = Config::instance().getServerSettings();
             processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
-                settings.allowedLocalMediaPath,
-                settings.allowedMediaDomains));
+                context.runtimeConfig.allowedLocalMediaPath,
+                context.runtimeConfig.allowedMediaDomains));
         }
 
         if (context.config.isOmni) {
