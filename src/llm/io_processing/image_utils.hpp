@@ -45,8 +45,12 @@ struct ImageDownloadContext {
 
 // Fetches an image from a base64 data URI, HTTP/HTTPS URL, or local file path and decodes it.
 // Returns the decoded image as an ov::Tensor (RGB, u8).
+// Enforces the per-request decoded pixel budget: the header estimate is checked against the
+// budget remaining after previously decoded images, and the actual decoded pixel count is
+// accumulated into totalAllocatedPixels (which callers must share across all images in a request).
 absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,
-    const std::optional<std::vector<std::string>>& allowedMediaDomains);
+    const std::optional<std::vector<std::string>>& allowedMediaDomains,
+    size_t& totalAllocatedPixels, size_t maxAllowedImagePixels);
 
 }  // namespace ovms

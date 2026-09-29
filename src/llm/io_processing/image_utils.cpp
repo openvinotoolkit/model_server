@@ -192,7 +192,8 @@ bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char*
 
 absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,
-    const std::optional<std::vector<std::string>>& allowedMediaDomains) {
+    const std::optional<std::vector<std::string>>& allowedMediaDomains,
+    size_t& totalAllocatedPixels, size_t maxAllowedImagePixels) {
     std::size_t pos = imageSource.find(BASE64_PREFIX);
     std::string decoded;
     // Part 1: fetch the encoded image bytes into `decoded` (base64, URL, or local file).
@@ -247,18 +248,35 @@ absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image decoded size could not be estimated and unestimatable formats are not allowed");
         return absl::InvalidArgumentError("Image format decoded size cannot be verified");
     }
+    size_t remainingBudget = totalAllocatedPixels >= maxAllowedImagePixels ? 0 : maxAllowedImagePixels - totalAllocatedPixels;
     if (estimate == image_utils::DecodedSizeEstimate::Estimated &&
-        estimatedDecodedPixels > request_validation_utils::getMaxImageDecodePixels()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Estimated decoded image pixels {} exceeds budget {}",
-            estimatedDecodedPixels, request_validation_utils::getMaxImageDecodePixels());
+        estimatedDecodedPixels > remainingBudget) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Estimated decoded image pixels {} exceeds remaining budget {}",
+            estimatedDecodedPixels, remainingBudget);
         return absl::InvalidArgumentError("Image exceeds maximum decoded size");
     }
+    ov::Tensor imageTensor;
     try {
-        return loadImageStbiFromMemory(decoded);
+        imageTensor = loadImageStbiFromMemory(decoded);
     } catch (std::runtime_error& e) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
         return absl::InvalidArgumentError("Image parsing failed");
     }
+
+    // Part 3: bound the actual decoded pixel count against the remaining per-request budget and
+    // advance the running total so subsequent images in the same request see the reduced budget.
+    const auto& shape = imageTensor.get_shape();
+    if (shape.size() < 3) {
+        return absl::InternalError("Decoded image tensor has unexpected shape");
+    }
+    size_t imagePixels = shape[shape.size() - 3] * shape[shape.size() - 2];
+    if (imagePixels > remainingBudget) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded image pixels {} exceeds remaining budget {}",
+            imagePixels, remainingBudget);
+        return absl::InvalidArgumentError("Image exceeds maximum decoded size");
+    }
+    totalAllocatedPixels += imagePixels;
+    return imageTensor;
 }
 
 }  // namespace ovms
