@@ -151,12 +151,7 @@ bool loadPythonCalculatorsPlugin() {
         return true;
     }
 
-    // In runtime-separation mode, calculator registrations are expected to be
-    // owned by libovms_mediapipe_runtime_shared.so. Eagerly dlopen-ing
-    // libpython_calculators.so here can register MediaPipe framework handlers
-    // twice (plugin first, runtime-shared second).
-    SPDLOG_INFO("Skipping explicit libpython_calculators.so dlopen. "
-                "Python calculators are expected from runtime-shared ownership.");
+    SPDLOG_DEBUG("Skipping libpython_calculators.so dlopen; using runtime-shared registrations.");
     return true;
 
 #elif _WIN32
