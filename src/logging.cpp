@@ -30,7 +30,6 @@ std::shared_ptr<spdlog::logger> s3_logger = std::make_shared<spdlog::logger>("s3
 std::shared_ptr<spdlog::logger> modelmanager_logger = std::make_shared<spdlog::logger>("modelmanager");
 std::shared_ptr<spdlog::logger> dag_executor_logger = std::make_shared<spdlog::logger>("dag_executor");
 std::shared_ptr<spdlog::logger> capi_logger = std::make_shared<spdlog::logger>("C-API");
-std::shared_ptr<spdlog::logger> webrtc_logger = std::make_shared<spdlog::logger>("webrtc");
 #if (MEDIAPIPE_DISABLE == 0)
 std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logger>("mediapipe");
 std::shared_ptr<spdlog::logger> llm_executor_logger = std::make_shared<spdlog::logger>("llm_executor");
@@ -73,7 +72,6 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     modelmanager_logger->set_pattern(default_pattern);
     dag_executor_logger->set_pattern(default_pattern);
     capi_logger->set_pattern(default_pattern);
-    webrtc_logger->set_pattern(default_pattern);
 #if (MEDIAPIPE_DISABLE == 0)
     mediapipe_logger->set_pattern(default_pattern);
     llm_executor_logger->set_pattern(default_pattern);
@@ -93,7 +91,6 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
         modelmanager_logger->sinks().push_back(sink);
         dag_executor_logger->sinks().push_back(sink);
         capi_logger->sinks().push_back(sink);
-        webrtc_logger->sinks().push_back(sink);
 #if (MEDIAPIPE_DISABLE == 0)
         mediapipe_logger->sinks().push_back(sink);
         llm_executor_logger->sinks().push_back(sink);
@@ -114,7 +111,6 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     set_log_level(log_level, modelmanager_logger);
     set_log_level(log_level, dag_executor_logger);
     set_log_level(log_level, capi_logger);
-    set_log_level(log_level, webrtc_logger);
 #if (MEDIAPIPE_DISABLE == 0)
     set_log_level(log_level, mediapipe_logger);
     set_log_level(log_level, llm_executor_logger);
@@ -157,7 +153,6 @@ void initialize_named_loggers_from_default() {
         adopt_default_logger_settings(modelmanager_logger, defaultLogger);
         adopt_default_logger_settings(dag_executor_logger, defaultLogger);
         adopt_default_logger_settings(capi_logger, defaultLogger);
-        adopt_default_logger_settings(webrtc_logger, defaultLogger);
 #if (MEDIAPIPE_DISABLE == 0)
         adopt_default_logger_settings(mediapipe_logger, defaultLogger);
         adopt_default_logger_settings(llm_executor_logger, defaultLogger);
