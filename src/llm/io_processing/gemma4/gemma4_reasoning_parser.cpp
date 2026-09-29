@@ -15,6 +15,7 @@
 //*****************************************************************************
 
 #include <openvino/genai/tokenizer.hpp>
+#include <cctype>
 #include <string>
 #include <vector>
 
@@ -46,11 +47,17 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
 
     if (phase == Phase::AwaitingChannelHeader) {
         pendingChannelHeaderText += text;
+        const bool noKeywordAtAll = !pendingChannelHeaderText.empty() &&
+                                    std::isspace(static_cast<unsigned char>(pendingChannelHeaderText.front())) != 0;
         const size_t newlinePos = pendingChannelHeaderText.find('\n');
-        const bool endTagSeen = pendingChannelHeaderText.find(parsingConfig.endTag) != std::string::npos;
-        if (newlinePos != std::string::npos) {
+        const size_t endTagPos = pendingChannelHeaderText.find(parsingConfig.endTag);
+        if (noKeywordAtAll) {
+            // Opener directly followed by whitespace (e.g. "<|channel> way of...") - there is
+            // no keyword to skip, this is already reasoning body.
+            text = pendingChannelHeaderText;
+        } else if (newlinePos != std::string::npos && (endTagPos == std::string::npos || newlinePos < endTagPos)) {
             text = pendingChannelHeaderText.substr(newlinePos + 1);
-        } else if (endTagSeen || finishReason != ov::genai::GenerationFinishReason::NONE) {
+        } else if (endTagPos != std::string::npos || finishReason != ov::genai::GenerationFinishReason::NONE) {
             // No header line ever materialized (e.g. keyword missing entirely) - the whole
             // span is reasoning body.
             text = pendingChannelHeaderText;

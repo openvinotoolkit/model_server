@@ -195,6 +195,31 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithDegenerateKeyword) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
+TEST_F(Gemma4OutputParserTest, ParseReasoningDoesNotTreatContentNewlineAsHeaderBoundary) {
+    // A newline arriving in CONTENT, after the closing tag, must not be mistaken for the
+    // channel-header newline (which would wrongly discard the real reasoning text).
+    std::string input = "<|channel>reasoning<channel|>first content line\nsecond line";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.reasoning, "reasoning");
+    EXPECT_EQ(parsedOutput.content, "first content line\nsecond line");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedByNoKeyword) {
+    // Opener directly followed by a space - no keyword to skip, the sentence itself is body.
+    std::string input = "<|channel> way of thinking about this is very mature and thorough.<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.reasoning, " way of thinking about this is very mature and thorough.");
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
 TEST_F(Gemma4OutputParserTest, ParseReasoningWithMissingOpenerTag) {
     std::string input = "thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
 

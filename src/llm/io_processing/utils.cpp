@@ -104,7 +104,7 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
                     --k;
                 }
                 const bool precededByBoundary = (k == 0) || str[k - 1] == ':' || str[k - 1] == ',' ||
-                                                 str[k - 1] == '[' || str[k - 1] == '{';
+                                                str[k - 1] == '[' || str[k - 1] == '{' || str[k - 1] == '=';
                 if (precededByBoundary) {
                     singleQuoteDepth = 1;
                 }

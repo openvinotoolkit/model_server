@@ -144,6 +144,12 @@ TEST(FindInStringTest, LeadingLetterApostropheValueDoesNotOpenOnClosingQuote) {
     EXPECT_EQ(findInStringRespectingSpecialChars("ignitionMode:s'START'}", "}", 0), 21u);
 }
 
+TEST(FindInStringTest, EqualsSignOpensSingleQuote) {
+    // LFM2's key=value syntax: '=' must open a quote span too, so a comma inside the
+    // value isn't mistaken for the argument separator.
+    EXPECT_EQ(findInStringRespectingSpecialChars("location='Paris, France',unit='celsius'", ",", 0), 24u);
+}
+
 // ── trimSurroundingQuotes: tag-attribute quote normalization (issue #4487) ───
 
 TEST(TrimSurroundingQuotesTest, RemovesWrappingDoubleQuotes) {
