@@ -17,6 +17,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -53,18 +54,11 @@ OciDownloader::OciDownloader(const ExportSettings& inExportSettings, const Graph
     llmmanBinary(inLlmmanBinary.empty() ? resolveLlmmanBinary() : inLlmmanBinary) {}
 
 std::string OciDownloader::getVersionCmd() const {
-    std::ostringstream oss;
-    oss << this->llmmanBinary << " --version";
-    return oss.str();
+    return quote_cmd_arg(this->llmmanBinary) + " --version";
 }
 
 std::string OciDownloader::getResolveCmd() const {
-    std::ostringstream oss;
-    // Quoting keeps a reference containing shell-significant characters in a
-    // single argv entry. exec_cmd() never spawns a shell, so this is only
-    // about argument splitting, not injection.
-    oss << this->llmmanBinary << " resolve \"" << stripOciScheme(this->sourceModel) << "\"";
-    return oss.str();
+    return quote_cmd_arg(this->llmmanBinary) + " resolve " + quote_cmd_arg(stripOciScheme(this->sourceModel));
 }
 
 Status OciDownloader::checkLlmmanIsPresent() {
@@ -137,14 +131,17 @@ bool OciDownloader::containsOpenVinoIr(const std::string& directory) {
     return false;
 }
 
+std::unique_ptr<IModelDownloader> OciDownloader::createConverter(const std::string& resolvedPath) const {
+    // optimum-cli accepts a local directory for --model, so the checkout that
+    // llmman produced is passed straight through as the export source.
+    return std::make_unique<OptimumDownloader>(this->exportSettings, this->task, resolvedPath, this->downloadPath, this->overwriteModels);
+}
+
 Status OciDownloader::convertToOpenVinoIr(const std::string& resolvedPath) {
     SPDLOG_INFO("OCI model {} contains a HuggingFace-format checkout. Converting it to OpenVINO IR with optimum-cli.", this->sourceModel);
-    // optimum-cli accepts a local directory for --model, so the checkout that
-    // llmman produced is passed straight through as the export source. The
-    // conversion output lands in the graph directory, which keeps models_path
-    // at its default of "./".
-    OptimumDownloader optimumDownloader(this->exportSettings, this->task, resolvedPath, this->downloadPath, this->overwriteModels);
-    auto status = optimumDownloader.downloadModel();
+    // The conversion output lands in the graph directory, which keeps
+    // models_path at its default of "./".
+    auto status = this->createConverter(resolvedPath)->downloadModel();
     if (!status.ok()) {
         return status;
     }
