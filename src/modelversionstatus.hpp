@@ -32,6 +32,7 @@ enum class ModelVersionState : int {
     START = 10,
     LOADING = 20,
     AVAILABLE = 30,
+    SLEEPING = 35,
     UNLOADING = 40,
     END = 50
 };
@@ -89,9 +90,13 @@ public:
     bool willEndUnloaded() const;
 
     bool isFailedLoading() const;
+    bool isSleeping() const;
+    bool appearsAvailable() const;
     void setLoading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
 
     void setAvailable(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
+
+    void setSleeping(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
 
     void setUnloading(ModelVersionStatusErrorCode error_code = ModelVersionStatusErrorCode::OK);
 

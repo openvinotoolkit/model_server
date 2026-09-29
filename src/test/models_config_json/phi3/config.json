@@ -1,0 +1,5 @@
+{
+  "architectures": ["Phi3ForCausalLM"],
+  "model_type": "phi3",
+  "hidden_size": 3072
+}

@@ -21,18 +21,18 @@
 #include "../../audio/audio_utils.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../server.hpp"
-#include "rapidjson/document.h"
 #include "../test_http_utils.hpp"
 #include "../test_utils.hpp"
 #include "../platform_utils.hpp"
 #include "../constructor_enabled_model_manager.hpp"
 
 using namespace ovms;
+using namespace ovms::audio_utils;
 
 class Text2SpeechHttpTest : public V3HttpTest {
 protected:
     std::string modelName = "text2speech";
-    std::string endpoint = "/v3/audio/speech";
+    std::string endpoint = "/v1/audio/speech";
     static std::unique_ptr<std::thread> t;
 
 public:
@@ -58,7 +58,8 @@ TEST_F(Text2SpeechHttpTest, simplePositive) {
         {
             "model": ")" + modelName +
                               R"(",
-            "input": "The quick brown fox jumped over the lazy dog."
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy"
         }
     )";
     ASSERT_EQ(
@@ -74,7 +75,8 @@ TEST_F(Text2SpeechHttpTest, emptyInput) {
         {
             "model": ")" + modelName +
                               R"(",
-            "input": ""
+            "input": "",
+            "voice": "af_alloy"
         }
     )";
     ASSERT_EQ(
@@ -103,7 +105,7 @@ TEST_F(Text2SpeechHttpTest, positiveWithVoice) {
             "model": ")" + modelName +
                               R"(",
             "input": "The quick brown fox jumped over the lazy dog.",
-            "voice": "speaker1"
+            "voice": "af_alloy"
         }
     )";
     ASSERT_EQ(
@@ -128,7 +130,131 @@ TEST_F(Text2SpeechHttpTest, nonExistingVoiceRequested) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_F(Text2SpeechHttpTest, speedBelowDefaultMinRejected) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "hello world",
+            "voice": "af_alloy",
+            "speed": 0.1
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(Text2SpeechHttpTest, speedAboveDefaultMaxRejected) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "hello world",
+            "voice": "af_alloy",
+            "speed": 5.0
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(Text2SpeechHttpTest, speedAtDefaultLowerBoundAccepted) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "hello world",
+            "voice": "af_alloy",
+            "speed": 0.25
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_F(Text2SpeechHttpTest, speedAtDefaultUpperBoundAccepted) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "hello world",
+            "voice": "af_alloy",
+            "speed": 4.0
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+class Text2SpeechHttpCustomBoundsTest : public V3HttpTest {
+protected:
+    std::string modelName = "text2speech";
+    std::string endpoint = "/v1/audio/speech";
+    static std::unique_ptr<std::thread> t;
+
+public:
+    static void SetUpTestSuite() {
+        std::string port = "9174";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/audio/config_tts_custom_speed_bounds.json");
+        SetUpSuite(port, configPath, t);
+    }
+
+    void SetUp() {
+        V3HttpTest::SetUp();
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
+    }
+};
+std::unique_ptr<std::thread> Text2SpeechHttpCustomBoundsTest::t;
+
+TEST_F(Text2SpeechHttpCustomBoundsTest, speedBelowCustomMinRejected) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "hello world",
+            "voice": "af_alloy",
+            "speed": 0.25
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(Text2SpeechHttpCustomBoundsTest, speedAtCustomLowerBoundAccepted) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "hello world",
+            "voice": "af_alloy",
+            "speed": 0.5
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
 class Text2SpeechConfigTest : public ::testing::Test {};
+
+namespace {
+ovms::Status validateText2SpeechGraphConfig(ConstructorEnabledModelManager& manager, std::string testPbtxt) {
+    adjustConfigForTargetPlatform(testPbtxt);
+    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
+    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
+    mediapipeDummy.inputConfig = testPbtxt;
+    return mediapipeDummy.validate(manager);
+}
+}  // namespace
 
 TEST_F(Text2SpeechConfigTest, NodeNameMissing) {
     ConstructorEnabledModelManager manager;
@@ -143,17 +269,14 @@ TEST_F(Text2SpeechConfigTest, NodeNameMissing) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             target_device: "CPU"
         }
         }
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_MISSING_NAME);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::LLM_NODE_MISSING_NAME);
 }
 
 TEST_F(Text2SpeechConfigTest, SidePacketMissing) {
@@ -169,17 +292,14 @@ TEST_F(Text2SpeechConfigTest, SidePacketMissing) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             target_device: "CPU"
         }
         }
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
 TEST_F(Text2SpeechConfigTest, MissingModelsPath) {
@@ -202,10 +322,7 @@ TEST_F(Text2SpeechConfigTest, MissingModelsPath) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 TEST_F(Text2SpeechConfigTest, InvalidPluginConfig) {
@@ -222,7 +339,7 @@ TEST_F(Text2SpeechConfigTest, InvalidPluginConfig) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             plugin_config: 'INVALID',
             target_device: "CPU"
         }
@@ -230,10 +347,32 @@ TEST_F(Text2SpeechConfigTest, InvalidPluginConfig) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST_F(Text2SpeechConfigTest, MissingVoicesInGraphUsesModelVoicesDir) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+    node {
+    name: "ttsNode1"
+    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+    calculator: "T2sCalculator"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node_options: {
+        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            plugin_config: '{"NUM_STREAMS": "1" }',
+            target_device: "CPU"
+        }
+        }
+    }
+    )";
+
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::OK);
 }
 
 TEST_F(Text2SpeechConfigTest, NonExistingVoicePath) {
@@ -250,7 +389,7 @@ TEST_F(Text2SpeechConfigTest, NonExistingVoicePath) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [
@@ -264,10 +403,7 @@ TEST_F(Text2SpeechConfigTest, NonExistingVoicePath) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 TEST_F(Text2SpeechConfigTest, VoiceMissingPath) {
@@ -284,7 +420,7 @@ TEST_F(Text2SpeechConfigTest, VoiceMissingPath) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [
@@ -297,10 +433,89 @@ TEST_F(Text2SpeechConfigTest, VoiceMissingPath) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST_F(Text2SpeechConfigTest, CustomSpeedBoundsConfigured) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+    node {
+    name: "ttsNode1"
+    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+    calculator: "T2sCalculator"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node_options: {
+        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            plugin_config: '{"NUM_STREAMS": "1" }',
+            target_device: "CPU"
+            speed_min: 0.5
+            speed_max: 2.0
+        }
+        }
+    }
+    )";
+
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::OK);
+}
+
+TEST_F(Text2SpeechConfigTest, InvertedSpeedBoundsRejected) {
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+    node {
+    name: "ttsNode1"
+    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+    calculator: "T2sCalculator"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node_options: {
+        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            plugin_config: '{"NUM_STREAMS": "1" }',
+            target_device: "CPU"
+            speed_min: 2.0
+            speed_max: 0.5
+        }
+        }
+    }
+    )";
+
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
+TEST_F(Text2SpeechConfigTest, EqualSpeedBoundsAccepted) {
+    // speed_min == speed_max is a valid (single-value) range.
+    ConstructorEnabledModelManager manager;
+    std::string testPbtxt = R"(
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+    node {
+    name: "ttsNode1"
+    input_side_packet: "TTS_NODE_RESOURCES:t2s_servable"
+    calculator: "T2sCalculator"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        node_options: {
+        [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            plugin_config: '{"NUM_STREAMS": "1" }',
+            target_device: "CPU"
+            speed_min: 1.0
+            speed_max: 1.0
+        }
+        }
+    }
+    )";
+
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::OK);
 }
 
 TEST_F(Text2SpeechConfigTest, VoiceInvalidFile) {
@@ -317,7 +532,7 @@ TEST_F(Text2SpeechConfigTest, VoiceInvalidFile) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/microsoft/speecht5_tts"
+            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [
@@ -331,8 +546,5 @@ TEST_F(Text2SpeechConfigTest, VoiceInvalidFile) {
     }
     )";
 
-    ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
-    DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
-    mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+    ASSERT_EQ(validateText2SpeechGraphConfig(manager, testPbtxt), StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }

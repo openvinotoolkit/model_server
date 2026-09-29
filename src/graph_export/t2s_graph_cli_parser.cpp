@@ -25,7 +25,7 @@
 
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 
@@ -35,7 +35,7 @@ TextToSpeechGraphSettingsImpl& TextToSpeechGraphCLIParser::defaultGraphSettings(
 }
 
 void TextToSpeechGraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task text2speech graph options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull --task text2speech [OPTIONS...]\n  ovms --configure --model_path <MODEL_PATH> --task text2speech [OPTIONS...]", "--task text2speech options");
     options->allow_unrecognised_options();
 
     // clang-format off
@@ -43,7 +43,16 @@ void TextToSpeechGraphCLIParser::createOptions() {
         ("num_streams",
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
-            "NUM_STREAMS");
+            "NUM_STREAMS")
+        ("model_type",
+            "Type of the source TTS model: speecht5 (default) or kokoro.",
+            cxxopts::value<std::string>()->default_value("speecht5"),
+            "MODEL_TYPE")
+        ("vocoder",
+            "The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan, used only with export via optimum-cli.",
+            cxxopts::value<std::string>(),
+            "VOCODER");
+    // clang-format on
 }
 
 void TextToSpeechGraphCLIParser::printHelp() {
@@ -64,7 +73,7 @@ std::vector<std::string> TextToSpeechGraphCLIParser::parse(const std::vector<std
     const char* const* args = cStrArray.data();
     result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-    return  result->unmatched();
+    return result->unmatched();
 }
 
 void TextToSpeechGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
@@ -77,11 +86,18 @@ void TextToSpeechGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsIm
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE) {
+        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE && serverMode != CONFIGURE_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
         hfSettings.exportSettings.pluginConfig.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        const std::string modelType = result->operator[]("model_type").as<std::string>();
+        if (modelType != "speecht5" && modelType != "kokoro") {
+            throw std::invalid_argument("--model_type must be one of: speecht5, kokoro");
+        }
+        hfSettings.exportSettings.modelType = modelType;
+        if (result->count("vocoder"))
+            hfSettings.exportSettings.vocoder = result->operator[]("vocoder").as<std::string>();
     }
     hfSettings.graphSettings = std::move(textToSpeechGraphSettings);
 }

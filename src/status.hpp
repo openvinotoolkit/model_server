@@ -259,6 +259,9 @@ enum class StatusCode {
     MEDIAPIPE_INCORRECT_SERVABLE_NAME,
     MEDIAPIPE_INCORRECT_SERVABLE_VERSION,
     MEDIAPIPE_PRECONDITION_FAILED,
+    MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE,
+    MEDIAPIPE_PUT_TO_SLEEP_REQUESTS_IN_FLIGHT,
+    MEDIAPIPE_PUT_TO_SLEEP_ACTIVE_INFERENCES,
 
     // Python Nodes
     PYTHON_NODE_NAME_ALREADY_EXISTS,
@@ -266,6 +269,10 @@ enum class StatusCode {
     PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED,
     PYTHON_NODE_MISSING_OPTIONS,
     PYTHON_NODE_MISSING_NAME,
+
+    // Python Runtime Initialization
+    PYTHON_INTERPRETER_INITIALIZATION_FAILED, /*!< Python interpreter failed to initialize (libpython.so missing) */
+    PYTHON_BACKEND_CREATION_FAILED,           /*!< Python backend creation failed (pyovms module missing/broken) */
 
     // LLM Nodes
     LLM_NODE_NAME_ALREADY_EXISTS,
@@ -330,6 +337,7 @@ enum class StatusCode {
     NONEXISTENT_LOG_LEVEL,
     NONEXISTENT_PTR,
     SERVER_NOT_READY,
+    SERVER_SHUTTING_DOWN,
 
     // Server Start errors
     OPTIONS_USAGE_ERROR,
@@ -358,6 +366,10 @@ enum class StatusCode {
     DEVICE_WRONG_FORMAT,
     SHAPE_DYNAMIC_BUT_NPU_USED,
     STATIC_RESOLUTION_MISUSE,
+
+    // Model Group Management
+    GROUP_LOAD_FAILED,
+    GROUP_UNLOAD_BLOCKED,
 
     STATUS_CODE_END
 };

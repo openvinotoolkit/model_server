@@ -48,8 +48,8 @@ public:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpointChatCompletions = "/v3/chat/completions";
-    const std::string endpointResponses = "/v3/responses";
+    const std::string endpointChatCompletions = "/v1/chat/completions";
+    const std::string endpointResponses = "/v1/responses";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;

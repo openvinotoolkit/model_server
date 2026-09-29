@@ -250,17 +250,19 @@ python export_model.py embeddings_ov --source_model sentence-transformers/all-mp
 :::{tab-item} Qwen/Qwen3-Embedding-0.6B
 :sync: Qwen3-Embedding-0.6B-int8
 ```bash
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings --target_device NPU --max_length 1000
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
 :::
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: BAAI/bge-large-en-v1.5-fp16
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models --max_length 1000
 ```
 :::
 ::::
-
+> **Note** For NPU Set `--max_length` as low as possible to speed up model loading and inference.
 > **Note** For NPU Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision. For int4 precisions, add required extra parameter `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
 > **Note** For NPU the pooling mode --pooling LAST has the best accuracy.
 > **Note** For NPU and the weight-format int4, use `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
@@ -302,8 +304,8 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 
 |Model name|Pooling|Devices|
 |---|---|---|
-|OpenVINO/Qwen3-Embedding-0.6B-int8-ov|LAST|CPU,GPU|
-|OpenVINO/bge-base-en-v1.5-int8-ov|CLS|CPU,GPU|
+|OpenVINO/Qwen3-Embedding-0.6B-int8-ov|LAST|CPU,GPU,NPU|
+|OpenVINO/bge-base-en-v1.5-int8-ov|CLS|CPU,GPU,NPU|
 |Qwen/Qwen3-Embedding-0.6B|LAST|CPU,GPU,NPU|
 |BAAI/bge-large-en-v1.5|CLS|CPU,GPU,NPU|
 |BAAI/bge-large-zh-v1.5|CLS|CPU,GPU,NPU|
@@ -609,7 +611,7 @@ The `tokenize` endpoint provides a simple API for tokenizing input text using th
 
 Example usage:
 ```console
-curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-large-en-v1.5\", \"text\": \"hello world\" }"
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\" }"
 ```
 Response:
 ```json
@@ -626,7 +628,7 @@ It's possible to use additional parameters:
 
  Example usage:
 ```console
-curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
+curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
 ```
 
 Response:

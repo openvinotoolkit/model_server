@@ -18,6 +18,7 @@
 #include <thread>
 
 #include "../module.hpp"
+#include "python_runtime_module_api.hpp"
 
 namespace pybind11 {
 class gil_scoped_release;
@@ -28,7 +29,7 @@ namespace ovms {
 class Config;
 class PythonBackend;
 
-class PythonInterpreterModule : public Module {
+class PythonInterpreterModule : public Module, public PythonRuntimeModuleApi {
     std::unique_ptr<PythonBackend> pythonBackend;
     mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
     std::thread::id threadId;
@@ -39,9 +40,13 @@ public:
     ~PythonInterpreterModule();
     Status start(const ovms::Config& config) override;
     void shutdown() override;
-    PythonBackend* getPythonBackend() const;
-    void releaseGILFromThisThread() const;
+    PythonBackend* getPythonBackend() const override;
+    void releaseGILFromThisThread() const override;
     void reacquireGILForThisThread() const;
-    bool ownsPythonInterpreter() const;
+    bool ownsPythonInterpreter() const override;
+
+private:
+    // Load MediaPipe Python calculators plugin after interpreter is operational
+    void loadPythonCalculatorsPlugin();
 };
 }  // namespace ovms

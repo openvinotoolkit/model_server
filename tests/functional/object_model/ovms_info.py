@@ -28,6 +28,7 @@ from tests.functional.config import airplane_mode, base_os, ovms_image_local
 from tests.functional.config import tmp_dir
 from tests.functional.constants.ovms_binaries import get_binaries, get_ovms_binary_cmd_setup
 from tests.functional.constants.ovms_type import OvmsType, OVMS_BINARY_PACKAGE_EXTENSIONS
+from tests.functional.utils.docker import DockerClient
 
 logger = get_logger(__name__)
 
@@ -39,7 +40,8 @@ class OvmsInfo(BaseInfo):
     _ovms_version = None
     _ov_version = None
     _ov_genai_version = None
-    _info_read = False
+    _info_read_binary = False
+    _info_read_docker = False
     _docker_ovms_types = [OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE]
 
     IMAGES = {}
@@ -107,7 +109,7 @@ class OvmsInfo(BaseInfo):
         """Run container and get all desired information."""
         from tests.functional.utils.docker import DockerClient  # pylint: disable=import-outside-toplevel
 
-        if self._info_read:
+        if self._info_read_docker:
             return
 
         if airplane_mode or ovms_image_local or image is not None:
@@ -154,7 +156,7 @@ class OvmsInfo(BaseInfo):
                     break
             self._os_distname = os_distname
 
-            self._info_read = True
+            self._info_read_docker = True
         except Exception as exc:
             err_msg = str(getattr(exc, "args", [""]))
             logger.error(
@@ -165,6 +167,9 @@ class OvmsInfo(BaseInfo):
             ovms_container.remove(force=True)
 
     def _get_info_from_binary(self):
+        if self._info_read_binary:
+            return
+
         self._os_distname = get_host_os_details()
         path_to_binary_ovms, _ = get_binaries(base_os[0], "OvmsInfo_ovms_version", tmp_dir)
         proc = Process()
@@ -193,6 +198,8 @@ class OvmsInfo(BaseInfo):
         else:
             self._ovms_build_flags = "Not specified"
 
+        self._info_read_binary = True
+
     @classmethod
     def get_local_image(cls, local_image):
         image = docker.from_env().images.get(local_image)
@@ -212,8 +219,6 @@ class OvmsInfo(BaseInfo):
     @classmethod
     def pull_latest_image(cls, image_to_pull, force_pull=False):
         cls.docker_pull_image_cli(image_to_pull)  # ensure image is available on host.
-
-        from tests.functional.utils.docker import DockerClient  # pylint: disable=import-outside-toplevel
 
         if image_to_pull not in cls.IMAGES or force_pull:
             repository, tag = image_to_pull.split(":")

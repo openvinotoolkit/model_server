@@ -28,9 +28,13 @@
 
 namespace ovms {
 namespace request_validation_utils {
-const size_t MAX_2D_STRING_ARRAY_SIZE = 1024 * 1024 * 1024 * 1;                                             // 1GB
+const size_t MAX_2D_STRING_ARRAY_SIZE = 1024 * 1024 * 1024 * 1;  // 1GB
+// Each ov::Tensor(string, {N}) allocates N std::string objects (~32 B each).
+// Cap element count so string-object heap growth stays within 1 GB.
+const size_t MAX_NATIVE_STRING_ELEMENTS = (1ULL << 30) / sizeof(std::string);                               // ~33.5M on 64-bit
 Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width);  // this comes from KFS - may need to move there
 Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth);
+Status validateAgainstMaxNativeStringElementCount(int32_t elementCount);
 Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name);
 }  // namespace request_validation_utils
 }  // namespace ovms

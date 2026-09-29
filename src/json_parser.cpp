@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "json_parser.hpp"
 
+#include <filesystem>
 #include <map>
 #include <string>
 
@@ -57,6 +58,10 @@ std::string numericValueToString(const rapidjson::Value& v) {
     return "";
 }
 
+std::string toGenericPath(const std::string& path) {
+    return std::filesystem::path(path).generic_string();
+}
+
 /**
 * @brief Parses json node for plugin config keys and values
 * 
@@ -88,7 +93,11 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                             continue;
                         }
                         if (propertyIt->value.IsString()) {
-                            properties[propertyIt->name.GetString()] = propertyIt->value.GetString();
+                            if (propertyKey == "CACHE_DIR") {
+                                properties[propertyKey] = toGenericPath(propertyIt->value.GetString());
+                            } else {
+                                properties[propertyKey] = propertyIt->value.GetString();
+                            }
                         }
                         if (propertyIt->value.IsInt64()) {
                             properties[propertyIt->name.GetString()] = propertyIt->value.GetInt64();
@@ -128,7 +137,11 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
                     pluginConfig["INFERENCE_NUM_THREADS"] = it->value.GetString();
                     SPDLOG_WARN("{} plugin config key is deprecated. Use INFERENCE_NUM_THREADS instead", it->name.GetString());
                 } else {
-                    pluginConfig[it->name.GetString()] = it->value.GetString();
+                    if (topKey == "CACHE_DIR") {
+                        pluginConfig[topKey] = toGenericPath(it->value.GetString());
+                    } else {
+                        pluginConfig[topKey] = it->value.GetString();
+                    }
                 }
             }
         }

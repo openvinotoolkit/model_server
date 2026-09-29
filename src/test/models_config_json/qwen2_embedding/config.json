@@ -1,0 +1,5 @@
+{
+  "architectures": ["Qwen2Model"],
+  "model_type": "qwen2",
+  "hidden_size": 1024
+}

@@ -58,8 +58,6 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
     static const std::string EMBEDDINGS_MODEL_ATTENTION_MASK_NAME;
     static const std::string EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME;
 
-    mediapipe::Timestamp timestamp{0};
-
     absl::Status tokenizeStrings(ov::genai::Tokenizer& tokenizer, const std::vector<std::string>& inputStrings, const ov::AnyMap& parameters, ov::genai::TokenizedInputs& tokens) {
         tokens = tokenizer.encode(inputStrings, parameters);
         RET_CHECK(tokens.input_ids.get_shape().size() == 2);
@@ -151,7 +149,7 @@ public:
             if (!responseStatus.ok()) {
                 return responseStatus;
             }
-            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(responseBuffer.GetString()), timestamp);
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(responseBuffer.GetString()), cc->InputTimestamp());
             return absl::OkStatus();
         }
         ovms::EmbeddingsHandler handler(*payload.parsedJson);
@@ -399,7 +397,7 @@ public:
         }
         time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - parseResponseStartTime).count();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings response deserialization time: {} ms", time / 1000);
-        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
+        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), cc->InputTimestamp());
         return absl::OkStatus();
     }
 };

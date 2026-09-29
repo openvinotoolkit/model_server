@@ -36,7 +36,6 @@
 #include "modelconfig.hpp"
 #include "stringutils.hpp"
 #include "systeminfo.hpp"
-#include "utils/env_guard.hpp"
 
 namespace ovms {
 
@@ -91,15 +90,6 @@ Config& Config::parse(int argc, char** argv) {
 bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     this->serverSettings = *serverSettings;
     this->modelsSettings = *modelsSettings;
-    static EnvGuard envGuard;
-#if defined(__linux__) || defined(_WIN32)
-    if (this->serverSettings.logLevel == "DEBUG" || this->serverSettings.logLevel == "TRACE") {
-        envGuard.set("OPENVINO_LOG_LEVEL", "4");
-    }
-#endif
-    if (GetEnvVar("OVMS_GRAPH_QUEUE_OFF").empty()) {
-        envGuard.set("OVMS_GRAPH_QUEUE_OFF", "1");
-    }
     return validate();
 }
 
@@ -147,8 +137,13 @@ bool Config::check_hostname_or_ip(const std::string& input) {
     }
 }
 
-bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings) {
-    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path", "config_path"};
+bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings, ConfigExportType exportType) {
+    static const std::vector<std::string> allowedForRemove = {"model_name", "config_path"};
+    static const std::vector<std::string> allowedForAdd = {"model_name", "model_path", "config_path",
+        "batch_size", "shape", "layout", "mean", "scale", "color_format", "precision",
+        "model_version_policy", "nireq", "target_device", "plugin_config", "group_name"};
+
+    const auto& allowedUserSettings = (exportType == ENABLE_MODEL) ? allowedForAdd : allowedForRemove;
     std::vector<std::string> usedButDisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;
@@ -166,7 +161,11 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
         for (const std::string& userSetting : usedButDisallowedUserSettings) {
             arguments += userSetting + ", ";
         }
-        std::cerr << "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed: " << arguments << std::endl;
+        if (exportType == ENABLE_MODEL) {
+            std::cerr << "Adding models to the configuration file does not support parameters: " << arguments << std::endl;
+        } else {
+            std::cerr << "Removing models from the configuration file allows passing only model_name parameter. Invalid parameters passed: " << arguments << std::endl;
+        }
 
         return false;
     }
@@ -179,9 +178,9 @@ bool Config::validate() {
         std::cerr << "--source_model should be used combined with --task" << std::endl;
         return false;
     }
-    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE || this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE) {
+    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE || this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE || this->serverSettings.serverMode == CONFIGURE_MODE) {
         // When --task is used with --model_path (no HF pulling), sourceModel and downloadPath are not required
-        bool taskWithModelPath = this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE && !this->modelsSettings.modelPath.empty();
+        bool taskWithModelPath = (this->serverSettings.serverMode == IN_MEMORY_GRAPH_MODE || this->serverSettings.serverMode == CONFIGURE_MODE) && !this->modelsSettings.modelPath.empty();
         if (!taskWithModelPath) {
             if (!serverSettings.hfSettings.sourceModel.size()) {
                 std::cerr << "source_model parameter is required for pull mode";
@@ -199,15 +198,18 @@ bool Config::validate() {
             }
             const auto& exportSettings = this->serverSettings.hfSettings.exportSettings;
             auto textGenSettings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
-            std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "AUTO"};
+            std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "OMNI", "AUTO"};
             if (textGenSettings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), textGenSettings.pipelineType) == allowedPipelineTypes.end()) {
-                std::cerr << "pipeline_type: " << textGenSettings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
+                std::cerr << "pipeline_type: " << textGenSettings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, OMNI, AUTO" << std::endl;
                 return false;
             }
 
             std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
             bool validDeviceSelected = false;
-            if (exportSettings.targetDevice.rfind("GPU.", 0) == 0) {
+            if (exportSettings.targetDevice.empty()) {
+                // Empty means auto-detect via recommendTargetDevice
+                validDeviceSelected = true;
+            } else if (exportSettings.targetDevice.rfind("GPU.", 0) == 0) {
                 // Accept GPU.x where x is a number to select specific GPU card
                 std::string indexPart = exportSettings.targetDevice.substr(4);
                 validDeviceSelected = !indexPart.empty() && std::all_of(indexPart.begin(), indexPart.end(), ::isdigit);
@@ -255,7 +257,7 @@ bool Config::validate() {
             }
         }
         // No more validation needed
-        if (this->serverSettings.serverMode == HF_PULL_MODE) {
+        if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == CONFIGURE_MODE) {
             return true;
         }
     }
@@ -323,7 +325,7 @@ bool Config::validate() {
             return false;
         }
 
-        if (!Config::validateUserSettingsInConfigAddRemoveModel(this->modelsSettings))
+        if (!Config::validateUserSettingsInConfigAddRemoveModel(this->modelsSettings, this->serverSettings.exportConfigType))
             return false;
     }
 
@@ -417,8 +419,7 @@ const std::string Config::precision() const { return this->modelsSettings.precis
 const std::string& Config::modelVersionPolicy() const { return this->modelsSettings.modelVersionPolicy; }
 uint32_t Config::nireq() const { return this->modelsSettings.nireq; }
 const std::string& Config::targetDevice() const {
-    static const std::string defaultTargetDevice = "CPU";
-    return this->modelsSettings.targetDevice.empty() ? defaultTargetDevice : this->modelsSettings.targetDevice;
+    return this->modelsSettings.targetDevice;
 }
 const std::string& Config::Config::pluginConfig() const { return this->modelsSettings.pluginConfig; }
 bool Config::metricsEnabled() const { return this->serverSettings.metricsEnabled; }
@@ -430,7 +431,9 @@ const std::string& Config::tracePath() const { return this->serverSettings.trace
 #endif
 const std::string& Config::grpcChannelArguments() const { return this->serverSettings.grpcChannelArguments; }
 uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
-uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
+uint32_t Config::memoryTrimmingIntervalSeconds() const { return this->serverSettings.memoryTrimmingIntervalSeconds; }
+uint32_t Config::idleUnloadTimeoutSeconds() const { return this->serverSettings.idleUnloadTimeoutSeconds; }
+bool Config::disableInputCountValidation() const { return this->serverSettings.disableInputCountValidation; }
 bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
 const std::string& Config::allowedOrigins() const { return this->serverSettings.allowedOrigins; }
 const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }

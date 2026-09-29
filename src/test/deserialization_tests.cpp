@@ -25,26 +25,14 @@
 
 #include <openvino/runtime/core.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-
 #include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/capi_utils.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
 #include "../capi_frontend/deserialization.hpp"
-#include "../tfs_frontend/deserialization.hpp"
 #include "../kfs_frontend/deserialization.hpp"
 #include "../deserialization_main.hpp"
 #include "../regularovtensorfactory.hpp"
 #include "test_utils.hpp"
-
-using TFTensorProto = tensorflow::TensorProto;
-
-using TFPredictRequest = tensorflow::serving::PredictRequest;
-using TFPredictResponse = tensorflow::serving::PredictResponse;
 
 using namespace ovms;
 
@@ -65,34 +53,6 @@ std::vector<std::pair<ovms::Precision, bool>> cartesianProduct(const std::vector
     }
     return result;
 }
-
-class TensorflowGRPCPredict : public ::testing::TestWithParam<ovms::Precision> {
-protected:
-    void SetUp() override {
-        auto precision = ovms::Precision::FP32;
-        tensorMap[tensorName] = std::make_shared<ovms::TensorInfo>(
-            tensorName,
-            precision,
-            shape_t{1, DUMMY_MODEL_INPUT_SIZE},
-            Layout{"NC"});
-        SetUpTensorProto(getPrecisionAsDataType(precision));
-    }
-    void SetUpTensorProto(tensorflow::DataType dataType) {
-        tensorProto.set_dtype(dataType);
-        auto tensorShape = tensorProto.mutable_tensor_shape();
-        tensorShape->Clear();
-        tensorShape->add_dim()->set_size(1);
-        tensorShape->add_dim()->set_size(DUMMY_MODEL_INPUT_SIZE);
-        *(tensorProto.mutable_tensor_content()) = std::string(1 * sizeof(float) * DUMMY_MODEL_INPUT_SIZE, '1');
-    }
-    TFTensorProto tensorProto;
-    const char* tensorName = DUMMY_MODEL_INPUT_NAME;
-    ovms::tensor_map_t tensorMap;
-    bool isPipeline = false;
-};
-
-class DeserializeTFTensorProto : public TensorflowGRPCPredict {};
-class DeserializeTFTensorProtoNegative : public TensorflowGRPCPredict {};
 
 class CAPIPredict : public ::testing::TestWithParam<ovms::Precision> {
 protected:
@@ -173,72 +133,6 @@ TEST_F(CAPIPredictRequest, ShouldSuccessForSupportedPrecision) {
 class DeserializeCAPITensor : public CAPIPredict {};
 class DeserializeCAPITensorProtoNegative : public CAPIPredict {};
 
-GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(GRPCPredictRequest);
-
-class GRPCPredictRequest : public TensorflowGRPCPredict {
-public:
-    void SetUp() {
-        TensorflowGRPCPredict::SetUp();
-        (*request.mutable_inputs())[tensorName] = tensorProto;
-    }
-    void TearDown() {
-        request.mutable_inputs()->clear();
-    }
-
-public:
-    TFPredictRequest request;
-};
-
-class GRPCPredictRequestNegative : public GRPCPredictRequest {};
-
-TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForPrecision) {
-    ovms::Precision testedPrecision = GetParam();
-    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
-    ov::InferRequest inferRequest;
-    InputSink<ov::InferRequest&> inputSink(inferRequest);
-    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
-    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
-    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, {}, inputSink, isPipeline, factories);
-    EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION)
-        << "Unsupported OVMS precision:"
-        << toString(testedPrecision)
-        << " should return error";
-}
-
-TEST_P(GRPCPredictRequestNegative, ShouldReturnDeserializationErrorForSetTensorException) {
-    ovms::Precision testedPrecision = GetParam();
-    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
-    ov::InferRequest inferRequest;
-    InputSink<ov::InferRequest&> inputSink(inferRequest);
-    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
-    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
-    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, {}, inputSink, isPipeline, factories);
-    EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION) << status.string();
-}
-
-TEST_F(GRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
-    ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
-    ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
-    ov::InferRequest inferRequest = compiledModel.create_infer_request();
-    InputSink<ov::InferRequest&> inputSink(inferRequest);
-    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
-    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
-    auto status = deserializePredictRequest<ConcreteTensorProtoDeserializator>(request, tensorMap, {}, inputSink, isPipeline, factories);
-    EXPECT_TRUE(status.ok());
-}
-
-TEST_P(DeserializeTFTensorProtoNegative, ShouldReturnNullptrForPrecision) {
-    ovms::Precision testedPrecision = GetParam();
-    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
-    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
-    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
-    ov::Tensor tensor = ConcreteTensorProtoDeserializator<tensorflow::TensorProto>::deserializeTensor(tensorProto, tensorMap[tensorName], factories, nullptr);
-    EXPECT_FALSE((bool)tensor) << "Unsupported OVMS precision:"
-                               << toString(testedPrecision)
-                               << " should return nullptr";
-}
-
 TEST_P(DeserializeCAPITensorProtoNegative, ShouldReturnNullptrForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
@@ -250,18 +144,6 @@ TEST_P(DeserializeCAPITensorProtoNegative, ShouldReturnNullptrForPrecision) {
                                << " should return nullptr";
 }
 
-TEST_P(DeserializeTFTensorProto, ShouldReturnValidTensor) {
-    ovms::Precision testedPrecision = GetParam();
-    SetUpTensorProto(getPrecisionAsDataType(testedPrecision));
-    tensorMap[tensorName] = createTensorInfoCopyWithPrecision(tensorMap[tensorName], testedPrecision);
-    std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> factories;
-    factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<RegularOVTensorFactory>());
-    ov::Tensor tensor = ConcreteTensorProtoDeserializator<tensorflow::TensorProto>::deserializeTensor(tensorProto, tensorMap[tensorName], factories, nullptr);
-    EXPECT_TRUE((bool)tensor) << "Supported OVMS precision:"
-                              << toString(testedPrecision)
-                              << " should return valid tensor ptr";
-    EXPECT_EQ(ovElementTypeToOvmsPrecision(tensor.get_element_type()), testedPrecision);
-}
 TEST_P(DeserializeCAPITensor, ShouldReturnValidTensor) {
     ovms::Precision testedPrecision = GetParam();
     SetUpTensorProto(getPrecisionAsOVMSDataType(testedPrecision));
@@ -517,29 +399,6 @@ INSTANTIATE_TEST_SUITE_P(
         return toString(info.param);
     });
 INSTANTIATE_TEST_SUITE_P(
-    TestDeserialize,
-    GRPCPredictRequestNegative,
-    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<GRPCPredictRequestNegative::ParamType>& info) {
-        return toString(info.param);
-    });
-INSTANTIATE_TEST_SUITE_P(
-    TestDeserialize,
-    GRPCPredictRequest,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<GRPCPredictRequest::ParamType>& info) {
-        return toString(info.param);
-    });
-
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    DeserializeTFTensorProtoNegative,
-    ::testing::ValuesIn(UNSUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<DeserializeTFTensorProtoNegative::ParamType>& info) {
-        return toString(info.param);
-    });
-
-INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeCAPITensorProtoNegative,
     ::testing::ValuesIn(UNSUPPORTED_CAPI_INPUT_PRECISIONS),
@@ -547,13 +406,6 @@ INSTANTIATE_TEST_SUITE_P(
         return toString(info.param);
     });
 
-INSTANTIATE_TEST_SUITE_P(
-    Test,
-    DeserializeTFTensorProto,
-    ::testing::ValuesIn(SUPPORTED_INPUT_PRECISIONS),
-    [](const ::testing::TestParamInfo<DeserializeTFTensorProto::ParamType>& info) {
-        return toString(info.param);
-    });
 INSTANTIATE_TEST_SUITE_P(
     Test,
     DeserializeCAPITensor,

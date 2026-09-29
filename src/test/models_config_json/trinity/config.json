@@ -1,0 +1,4 @@
+{
+  "architectures": ["AfmoeForCausalLM"],
+  "model_type": "afmoe"
+}

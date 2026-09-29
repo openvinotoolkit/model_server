@@ -29,7 +29,7 @@
 #include "../predict_request_validation_utils.hpp"
 #include "../profiler.hpp"
 #include "../logging.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 namespace request_validation_utils {

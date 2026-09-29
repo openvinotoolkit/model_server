@@ -1,0 +1,5 @@
+{
+  "architectures": ["SpeechT5ForTextToSpeech"],
+  "model_type": "speecht5",
+  "hidden_size": 256
+}

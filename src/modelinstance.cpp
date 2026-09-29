@@ -1023,6 +1023,14 @@ plugin_config_t ModelInstance::prepareDefaultPluginConfig(const ModelConfig& con
 
 Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(config);
+    if (this->targetDevice == "CPU") {
+        Status status = applyDefaultCpuProperties(pluginConfig);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to apply default CPU properties for model: {}; version: {}; error: {}",
+                getName(), getVersion(), status.string());
+            return status;
+        }
+    }
     try {
         loadCompiledModelPtr(pluginConfig);
     } catch (ov::Exception& e) {
@@ -1032,7 +1040,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             e.what(),
             getName(),
             getVersion(),
-            config.getTargetDevice());
+            this->targetDevice);
         return status;
     } catch (std::exception& e) {
         Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
@@ -1041,7 +1049,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             e.what(),
             getName(),
             getVersion(),
-            config.getTargetDevice());
+            this->targetDevice);
         return status;
     } catch (...) {
         Status status = StatusCode::CANNOT_COMPILE_MODEL_INTO_TARGET_DEVICE;
@@ -1050,7 +1058,7 @@ Status ModelInstance::loadOVCompiledModel(const ModelConfig& config) {
             "Unknown error",
             getName(),
             getVersion(),
-            config.getTargetDevice());
+            this->targetDevice);
         return status;
     }
 
@@ -1229,8 +1237,13 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
 
     subscriptionManager.notifySubscribers();
     this->path = config.getPath();
-    this->targetDevice = config.getTargetDevice();
     this->config = config;
+    this->targetDevice = this->config.getTargetDevice();
+    if (this->targetDevice.empty()) {
+        this->targetDevice = recommendTargetDevice();
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "No target device specified for model: {}; version: {}; using recommended device: {}",
+            config.getName(), config.getVersion(), this->targetDevice);
+    }
     auto status = fetchModelFilepaths();
 
     if (!status.ok()) {
@@ -1288,7 +1301,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
         bool isModelLoadedFromCache = compiledModel->get_property(ov::loaded_from_cache);
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Is model loaded from cache: {}", isModelLoadedFromCache);
     } catch (...) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get information if model was loaded from cache; model: {}; version: {}; device: {}", getName(), getVersion(), config.getTargetDevice());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Unable to get information if model was loaded from cache; model: {}; version: {}; device: {}", getName(), getVersion(), this->targetDevice);
     }
     this->status.setAvailable();
     modelLoadedNotify.notify_all();
@@ -1314,7 +1327,7 @@ Status ModelInstance::setCacheOptions(const ModelConfig& config) {
     return StatusCode::OK;
 }
 
-Status ModelInstance::loadModel(const ModelConfig& config) {
+Status ModelInstance::loadModel(const ModelConfig& config, bool lazyLoad) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
     SPDLOG_INFO("Loading model: {}, version: {}, from path: {}, with target device: {} ...",
         config.getName(), config.getVersion(), config.getPath(), config.getTargetDevice());
@@ -1324,8 +1337,37 @@ Status ModelInstance::loadModel(const ModelConfig& config) {
         SPDLOG_INFO("Some inputs shapes for model {} are set to auto", config.getName());
     }
     this->status = ModelVersionStatus(config.getName(), config.getVersion());
+    if (lazyLoad) {
+        this->config = config;
+        this->path = config.getPath();
+        this->status.setSleeping();
+        return StatusCode::OK;
+    }
     this->status.setLoading();
     return loadModelImpl(config);
+}
+
+Status ModelInstance::wakeUpIfSleeping() {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    auto state = status.getState();
+    if (state == ModelVersionState::AVAILABLE || state == ModelVersionState::LOADING)
+        return StatusCode::OK;
+    if (state != ModelVersionState::SLEEPING)
+        return StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE;
+    SPDLOG_INFO("Waking up model: {}, version: {} ...", getName(), getVersion());
+    auto loadStatus = loadModelImpl(this->config);
+    if (!loadStatus.ok()) {
+        // Keep failed wake-ups retryable from inference path, same as mediapipe.
+        this->status.setSleeping();
+    }
+    return loadStatus;
+}
+
+void ModelInstance::putToSleep() {
+    std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);
+    SPDLOG_INFO("Putting model to sleep: {}, version: {} ...", getName(), getVersion());
+    unloadModelComponents();
+    this->status.setSleeping();
 }
 
 Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelParameter& parameter) {
@@ -1530,11 +1572,7 @@ void ModelInstance::unloadModelComponents() {
             customLoaderInterfacePtr->unloadModel(getName(), getVersion());
         }
     }
-#ifdef __linux__
-    malloc_trim(0);
-#elif _WIN32
-    malloc_trim_win();
-#endif
+    trimProcessMemory();
 }
 
 const std::set<std::string>& ModelInstance::getOptionalInputNames() {

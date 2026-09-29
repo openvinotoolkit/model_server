@@ -13,11 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <memory>
 #include <openssl/sha.h>
 #include <mutex>
@@ -47,6 +49,7 @@
 #include "src/test/test_file_utils.hpp"
 #include "src/test/test_with_temp_dir.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "src/pull_module/curl_downloader.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
 #include "src/pull_module/optimum_export.hpp"
@@ -56,7 +59,7 @@
 
 #include "../module.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "src/stringutils.hpp"
 #include "../timer.hpp"
 
@@ -378,6 +381,76 @@ void closeWindowsWorkerHandles(PROCESS_INFORMATION& pi) {
 
 }  // namespace
 
+TEST(CurlDownloaderProgressTest, UnknownTotalYieldsNoFilledCells) {
+    EXPECT_EQ(ovms::computeProgressBarCells(0, 0, 50), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(1024, 0, 50), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(std::numeric_limits<size_t>::max(), 0, 50), 0);
+}
+
+TEST(CurlDownloaderProgressTest, FilledCellsTrackRatio) {
+    EXPECT_EQ(ovms::computeProgressBarCells(0, 100, 50), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(50, 100, 50), 25);
+    EXPECT_EQ(ovms::computeProgressBarCells(100, 100, 50), 50);
+}
+
+TEST(CurlDownloaderProgressTest, FilledCellsClampToBarWidth) {
+    EXPECT_EQ(ovms::computeProgressBarCells(200, 100, 50), 50);
+    EXPECT_EQ(ovms::computeProgressBarCells(100, 100, 0), 0);
+    EXPECT_EQ(ovms::computeProgressBarCells(100, 100, -1), 0);
+}
+
+TEST_F(TestWithTempDir, ChunkedTransferWithoutContentLengthDownloadsFile) {
+    const std::string body(64 * 1024, 'x');
+    httplib::Server server;
+    server.Get("/chunked", [&body](const httplib::Request&, httplib::Response& res) {
+        res.set_chunked_content_provider("application/octet-stream",
+            [&body](size_t offset, httplib::DataSink& sink) {
+                if (offset >= body.size()) {
+                    sink.done();
+                    return true;
+                }
+                const size_t chunkSize = std::min<size_t>(4096, body.size() - offset);
+                // Keep the transfer active past the one-second progress throttle so the
+                // unknown-total path reaches print_progress() before the download completes.
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                sink.write(body.data() + offset, chunkSize);
+                return true;
+            });
+    });
+    const int port = server.bind_to_any_port("127.0.0.1");
+    ASSERT_GT(port, 0);
+    std::thread serverThread([&server]() {
+        server.listen_after_bind();
+    });
+    server.wait_until_ready();
+
+    const std::string url = "http://127.0.0.1:" + std::to_string(port) + "/chunked";
+    const std::string outputPath = directoryPath + "/downloaded.bin";
+
+    EnvGuard envGuard;
+    envGuard.unset("http_proxy");
+    envGuard.unset("https_proxy");
+    envGuard.unset("HTTP_PROXY");
+    envGuard.unset("HTTPS_PROXY");
+    envGuard.unset("no_proxy");
+    envGuard.unset("NO_PROXY");
+
+    testing::internal::CaptureStdout();
+    const ovms::Status downloadStatus = ovms::downloadFileWithCurl(url, outputPath);
+    const std::string output = testing::internal::GetCapturedStdout();
+
+    server.stop();
+    serverThread.join();
+
+    ASSERT_EQ(downloadStatus, ovms::StatusCode::OK);
+    EXPECT_THAT(output, ::testing::HasSubstr("total size unknown"));
+
+    std::ifstream downloadedFile(outputPath, std::ios::binary);
+    std::ostringstream downloadedContent;
+    downloadedContent << downloadedFile.rdbuf();
+    EXPECT_EQ(downloadedContent.str(), body);
+}
+
 // RAII helper class for managing log file lifecycle.
 // Creates a log file path and automatically removes it on destruction.
 class LogFileGuard {
@@ -443,6 +516,9 @@ protected:
     static constexpr int HF_PULL_POLL_INTERVAL_MS = 100;
     // Max consecutive non-benign filesystem probe errors before failing diagnostics.
     static constexpr int HF_PULL_MAX_CONSECUTIVE_FS_PROBE_ERRORS = 15;
+    // Retry pull on recoverable network/LFS interruption signatures.
+    static constexpr int HF_PULL_MAX_ATTEMPTS = 3;
+    static constexpr int HF_PULL_RETRY_DELAY_MS = 10000;
 
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
@@ -458,6 +534,105 @@ protected:
     std::string tokenizerJsonPath;
     std::string graphPath;
     std::string gitDirPath;
+
+    std::string getModelBasePathForSource(const std::string& sourceModel, const std::string& repositoryRoot) const {
+        return ovms::IModelDownloader::getGraphDirectory(repositoryRoot, sourceModel);
+    }
+
+    bool looksLikeRecoverableNetworkFailure(const std::string& sourceModel, const std::string& repositoryRoot) const {
+        const std::string modelBase = getModelBasePathForSource(sourceModel, repositoryRoot);
+        std::error_code ec;
+        const bool modelBaseExists = std::filesystem::exists(modelBase, ec);
+        if (ec || !modelBaseExists)
+            return false;
+
+        // Interrupted network/LFS transfers usually leave partial files or marker traces.
+        const bool hasRepoMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(repositoryRoot), ec);
+        if (ec)
+            return false;
+        const bool hasModelMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(modelBase), ec);
+        if (ec)
+            return false;
+        if (hasRepoMarker || hasModelMarker)
+            return true;
+
+        const std::string lfsErrorPath = ovms::FileSystem::appendSlash(modelBase) + "lfs_error.txt";
+        const bool hasLfsErrorMarker = std::filesystem::exists(lfsErrorPath, ec);
+        if (ec)
+            return false;
+        if (hasLfsErrorMarker)
+            return true;
+
+        const std::string modelPartPath = ovms::FileSystem::appendSlash(modelBase) + "openvino_model.binlfs_part";
+        const bool hasPartFile = std::filesystem::exists(modelPartPath, ec);
+        if (ec)
+            return false;
+        if (hasPartFile)
+            return true;
+
+        const std::string modelBin = ovms::FileSystem::appendSlash(modelBase) + "openvino_model.bin";
+        const bool modelExists = std::filesystem::exists(modelBin, ec);
+        if (ec)
+            return false;
+        if (!modelExists)
+            return true;
+
+        const std::uintmax_t modelSize = std::filesystem::file_size(modelBin, ec);
+        if (ec)
+            return false;
+        if (modelSize == 0)
+            return true;
+
+        if (sourceModel == this->modelName) {
+            return modelSize < OPENVINO_MODEL_BIN_FULL_SIZE_BYTES;
+        }
+        return false;
+    }
+
+    int RunPullHfModelAndGetCode(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask, const std::string* logPath) {
+        server.setShutdownRequest(0);
+        std::vector<std::string> args = {
+            "ovms",
+            "--pull",
+            "--source_model",
+            sourceModel,
+            "--model_repository_path",
+            modelRepositoryPath,
+            "--task",
+            pullTask,
+        };
+        if (logPath != nullptr) {
+            args.push_back("--log_path");
+            args.push_back(*logPath);
+        }
+        std::vector<char*> argv;
+        argv.reserve(args.size());
+        for (auto& a : args) {
+            argv.push_back(a.data());
+        }
+        const int exitCode = server.start(static_cast<int>(argv.size()), argv.data());
+        server.setShutdownRequest(1);
+        server.setShutdownRequest(0);
+        return exitCode;
+    }
+
+    int runPullWithRetries(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask, const std::string* logPath, int expected_code) {
+        int lastExitCode = EXIT_FAILURE;
+        for (int attempt = 1; attempt <= HF_PULL_MAX_ATTEMPTS; ++attempt) {
+            lastExitCode = RunPullHfModelAndGetCode(sourceModel, modelRepositoryPath, pullTask, logPath);
+            if (lastExitCode == expected_code) {
+                return lastExitCode;
+            }
+
+            const bool recoverable = looksLikeRecoverableNetworkFailure(sourceModel, modelRepositoryPath);
+            if (!recoverable || (attempt == HF_PULL_MAX_ATTEMPTS)) {
+                return lastExitCode;
+            }
+            SPDLOG_WARN("HF pull attempt {} failed with exit code {} and recoverable network/LFS signatures detected. Retrying.", attempt, lastExitCode);
+            std::this_thread::sleep_for(std::chrono::milliseconds(HF_PULL_RETRY_DELAY_MS));
+        }
+        return lastExitCode;
+    }
 
     void SetUp() override {
         TestWithTempDir::SetUp();
@@ -476,21 +651,47 @@ protected:
     }
 
     void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, nullptr, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
     // Variant that captures output to a log file for assertions
     void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, LogFileGuard& logFile, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
+            const std::string& logPath = logFile.getPath();
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, &logPath, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
         ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, logFile.getPath(), expected_code, timeoutSeconds);
     }
 
     void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            (void)draftModel;
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, nullptr, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
         ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
     // Variant with draft model that captures output to a log file for assertions
     void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, LogFileGuard& logFile, int expected_code = 0, int timeoutSeconds = 60) {
+        if (expected_code == 0) {
+            (void)draftModel;
+            ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
+            const std::string& logPath = logFile.getPath();
+            const int exitCode = runPullWithRetries(sourceModel, downloadPath, task, &logPath, expected_code);
+            ASSERT_EQ(expected_code, exitCode);
+            return;
+        }
         ASSERT_TRUE(logFile.create()) << "Failed to create log file at: " << logFile.getPath();
         ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, logFile.getPath(), expected_code, timeoutSeconds);
     }
@@ -499,11 +700,17 @@ protected:
         ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
     }
 
-    void TearDown() {
+    int RunPullHfModelAndGetCode(const std::string& sourceModel, const std::string& modelRepositoryPath, const std::string& pullTask) {
+        return RunPullHfModelAndGetCode(sourceModel, modelRepositoryPath, pullTask, nullptr);
+    }
+
+    void TearDown() override {
         server.setShutdownRequest(1);
-        if (t)
+        if (t && t->joinable()) {
             t->join();
+        }
         server.setShutdownRequest(0);
+        t.reset();
         // Clone sets readonly - need to remove it before we can delete on windows
         RemoveReadonlyFileAttributeFromDir(this->directoryPath);
         TestWithTempDir::TearDown();
@@ -512,6 +719,9 @@ protected:
 
 class HfPullCache : public HfPull {
 protected:
+    static constexpr int CACHE_PULL_MAX_ATTEMPTS = 3;
+    static constexpr int CACHE_PULL_RETRY_DELAY_MS = 10000;
+
     static std::once_flag cacheInitFlag;
     static std::unique_ptr<TempDir> cacheDir;
     static std::string cachedRepositoryPath;
@@ -531,18 +741,80 @@ protected:
             std::string cacheDownloadPath = ovms::FileSystem::joinPath({cacheDir->dir.string(), "repository"});
             std::string pullTask = this->task;
 
-            this->ServerPullHfModel(sourceModelName, cacheDownloadPath, pullTask);
-            server.setShutdownRequest(1);
-            if (t)
-                t->join();
-            server.setShutdownRequest(0);
+            auto buildModelBasePath = [&](const std::string& repositoryRoot) {
+                return ovms::FileSystem::joinPath({repositoryRoot, MODEL_NAMESPACE, MODEL_ID});
+            };
+            auto hasCompleteCache = [&](const std::string& repositoryRoot) {
+                const std::string modelBase = buildModelBasePath(repositoryRoot);
+                std::error_code ec;
+                const bool hasModel = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "openvino_model.bin", ec);
+                if (ec)
+                    return false;
+                const bool hasDetok = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "openvino_detokenizer.bin", ec);
+                if (ec)
+                    return false;
+                const bool hasTok = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "openvino_tokenizer.bin", ec);
+                if (ec)
+                    return false;
+                const bool hasTokModel = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "tokenizer.model", ec);
+                if (ec)
+                    return false;
+                const bool hasGraph = std::filesystem::exists(ovms::FileSystem::appendSlash(modelBase) + "graph.pbtxt", ec);
+                if (ec)
+                    return false;
 
-            cachedRepositoryPath = cacheDownloadPath;
-            ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath));
+                // Validate expected known sizes for deterministic cache integrity checks.
+                const bool modelSizeOk = hasModel && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "openvino_model.bin", ec) == OPENVINO_MODEL_BIN_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+                const bool detokSizeOk = hasDetok && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "openvino_detokenizer.bin", ec) == OPENVINO_DETOKENIZER_BIN_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+                const bool tokSizeOk = hasTok && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "openvino_tokenizer.bin", ec) == OPENVINO_TOKENIZER_BIN_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+                const bool tokModelSizeOk = hasTokModel && (std::filesystem::file_size(ovms::FileSystem::appendSlash(modelBase) + "tokenizer.model", ec) == TOKENIZER_MODEL_FULL_SIZE_BYTES);
+                if (ec)
+                    return false;
+
+                const bool hasRepoMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(repositoryRoot), ec);
+                if (ec)
+                    return false;
+                const bool hasModelMarker = std::filesystem::exists(ovms::libgit2::getLfsWipMarkerPath(modelBase), ec);
+                if (ec)
+                    return false;
+
+                return hasGraph && modelSizeOk && detokSizeOk && tokSizeOk && tokModelSizeOk && !hasRepoMarker && !hasModelMarker;
+            };
+            int lastExitCode = EXIT_FAILURE;
+            for (int attempt = 1; attempt <= CACHE_PULL_MAX_ATTEMPTS; ++attempt) {
+                lastExitCode = this->RunPullHfModelAndGetCode(sourceModelName, cacheDownloadPath, pullTask);
+                const bool cacheComplete = hasCompleteCache(cacheDownloadPath);
+                if ((lastExitCode == EXIT_SUCCESS) && cacheComplete) {
+                    cachedRepositoryPath = cacheDownloadPath;
+                    ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath));
+                    return;
+                }
+
+                const bool recoverable = this->looksLikeRecoverableNetworkFailure(sourceModelName, cacheDownloadPath) || !cacheComplete;
+                if (!recoverable || (attempt == CACHE_PULL_MAX_ATTEMPTS)) {
+                    FAIL() << "Failed to initialize shared HF cache after " << attempt
+                           << " attempt(s). Last exit code: " << lastExitCode
+                           << ". Cache path: " << cacheDownloadPath;
+                }
+                SPDLOG_WARN("Shared HF cache initialization attempt {} failed with exit code {}. Retrying pull.", attempt, lastExitCode);
+                std::this_thread::sleep_for(std::chrono::milliseconds(CACHE_PULL_RETRY_DELAY_MS));
+            }
         });
     }
 
     void seedCurrentTestRepository() {
+        ASSERT_FALSE(cachedRepositoryPath.empty())
+            << "Shared HF cache was never successfully initialized (call_once completed with a failure). "
+               "All HfPullCache tests in this process will be unable to seed their working directory.";
+        ASSERT_TRUE(std::filesystem::exists(cachedRepositoryPath))
+            << "Shared HF cache path does not exist on disk: " << cachedRepositoryPath
+            << ". Cache initialization completed but left no usable directory.";
         std::error_code ec;
         std::filesystem::copy(cachedRepositoryPath,
             testRepositoryPath,
@@ -569,6 +841,7 @@ const std::string expectedGraphContents = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -578,7 +851,6 @@ const std::string expectedGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
             cache_size: 0,
@@ -606,6 +878,7 @@ const std::string expectedGraphContentsDraft = R"(
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     output_stream: "LOOPBACK:loopback"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     input_stream_info: {
@@ -615,7 +888,6 @@ const std::string expectedGraphContentsDraft = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: "CPU",
             models_path: "./",
             enable_prefix_caching: true,
             cache_size: 0,
@@ -740,10 +1012,9 @@ std::string sha256File(std::string_view path, std::error_code& ec) {
 
 class TestHfDownloader : public ovms::HfDownloader {
 public:
-    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool overwrite) :
-        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy, overwrite) {}
+    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& /*hfToken*/, const std::string& httpProxy, bool overwrite) :
+        HfDownloader(sourceModel, downloadPath, hfEndpoint, httpProxy, overwrite) {}
     std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
-    std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
     bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
     const std::string& getEndpoint() { return this->hfEndpoint; }
     const std::string& getProxy() { return this->httpProxy; }
@@ -1633,7 +1904,6 @@ TEST(HfDownloaderClassTest, Methods) {
     EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
     ASSERT_EQ(hfDownloader->GetRepoUrl(), "www.new_hf.com/model/name");
-    ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
 
     std::string expectedPath = downloadPath + "/" + modelName;
 #ifdef _WIN32
@@ -1799,6 +2069,20 @@ TEST_F(TestOptimumDownloaderSetup, TextToSpeechExportCmd) {
     ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
 }
 
+TEST_F(TestOptimumDownloaderSetup, TextToSpeechKokoroExportCmd) {
+    inHfSettings.task = ovms::TEXT_TO_SPEECH_GRAPH;
+    inHfSettings.exportSettings.modelType = "kokoro";
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --task text-to-audio --model model/name --trust-remote-code  --weight-format fp64 --someOptimumParam --anotherOptParam value \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+    std::replace(expectedCmd2.begin(), expectedCmd2.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
+}
+
 TEST_F(TestOptimumDownloaderSetup, SpeechToTextExportCmd) {
     inHfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
@@ -1904,29 +2188,29 @@ TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExportCommandPassed) {
     ASSERT_EQ(optimumDownloader->downloadModel(), ovms::StatusCode::OK);
 }
 
-TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
+TEST(HfDownloaderClassTest, ProtocolsWithoutPassword) {
     std::string modelName = "model/name";
     std::string downloadPath = "/path/to/Download";
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "www.new_hf.com/model/name");
     hfEndpoint = "https://www.new_hf.com/";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "https://www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "https://www.new_hf.com/model/name");
     hfEndpoint = "www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "www.new_hf.com/model/name");
     hfEndpoint = "http://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "http://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "http://www.new_hf.com/model/name");
     hfEndpoint = "git://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "git://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "git://www.new_hf.com/model/name");
     hfEndpoint = "ssh://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "ssh://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "ssh://www.new_hf.com/model/name");
     hfEndpoint = "what_ever_is_here://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepoUrl(), "what_ever_is_here://www.new_hf.com/model/name");
 }
 
 TEST_F(HfPull, MethodsNegative) {
@@ -2108,9 +2392,9 @@ TEST(Libgit2Framework, TimeoutTestProxy) {
     int e = git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, 1000);
     EXPECT_EQ(e, 0);
 
-    std::string passRepoUrl = "https://huggingface.co/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string repoUrl = "https://huggingface.co/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     const char* path = "/tmp/model";
-    int error = git_clone(&cloned_repo, passRepoUrl.c_str(), path, &clone_opts);
+    int error = git_clone(&cloned_repo, repoUrl.c_str(), path, &clone_opts);
     if (error != 0) {
         const git_error* err = git_error_last();
         if (err) {
@@ -2240,7 +2524,7 @@ TEST_F(HfPullModelModuleLoraTest, ResolveHfLoraFilenames) {
     ovms::ImageGenerationGraphSettingsImpl graphSettings;
     ovms::LoraAdapterSettings adapter;
     adapter.alias = "pokemon";
-    adapter.sourceLora = "juliensimon/sd-pokemon-lora";
+    adapter.sourceLora = "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning";
     adapter.sourceType = ovms::LoraSourceType::HF_REPO;
     graphSettings.loraAdapters.push_back(adapter);
     settings.graphSettings = graphSettings;
@@ -2267,7 +2551,7 @@ TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
     ovms::ImageGenerationGraphSettingsImpl graphSettings;
     ovms::LoraAdapterSettings adapter;
     adapter.alias = "pokemon";
-    adapter.sourceLora = "juliensimon/sd-pokemon-lora";
+    adapter.sourceLora = "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning";
     adapter.safetensorsFile = "pytorch_lora_weights.safetensors";  // explicit filename — skips HF API resolve
     adapter.sourceType = ovms::LoraSourceType::HF_REPO;
     graphSettings.loraAdapters.push_back(adapter);
@@ -2276,7 +2560,7 @@ TEST_F(HfPullModelModuleLoraTest, PullLoraAdaptersFromHfRepo) {
     auto status = module.testPullLoraAdapters(this->directoryPath);
     ASSERT_TRUE(status.ok()) << status.string();
 
-    auto loraFilePath = ovms::FileSystem::joinPath({this->directoryPath, "loras", "juliensimon/sd-pokemon-lora", "pytorch_lora_weights.safetensors"});
+    auto loraFilePath = ovms::FileSystem::joinPath({this->directoryPath, "loras", "MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning", "pytorch_lora_weights.safetensors"});
     ASSERT_TRUE(std::filesystem::exists(loraFilePath)) << loraFilePath;
     EXPECT_GT(std::filesystem::file_size(loraFilePath), 0);
 }
@@ -2326,7 +2610,7 @@ TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
     std::string modelName = "OpenVINO/stable-diffusion-v1-5-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "image_generation";
-    std::string sourceLoras = "pokemon=juliensimon/sd-pokemon-lora@pytorch_lora_weights.safetensors";
+    std::string sourceLoras = "pokemon=MohamedAhmedAE/stable-diffusion-v1-5_lora_finetuning@pytorch_lora_weights.safetensors";
     ::SetUpServerForDownloadWithLoras(this->t, this->server, modelName, downloadPath, task, sourceLoras);
 
     std::string basePath = ovms::FileSystem::joinPath({downloadPath, "OpenVINO", "stable-diffusion-v1-5-int8-ov"});
@@ -2337,7 +2621,7 @@ TEST_F(HfDownloaderPullHfModel, DownloadImageGenModelWithLoRA) {
     ASSERT_TRUE(std::filesystem::exists(graphPath)) << graphPath;
 
     // Verify LoRA adapter was downloaded
-    std::string loraDir = ovms::FileSystem::joinPath({basePath, "loras", "juliensimon", "sd-pokemon-lora"});
+    std::string loraDir = ovms::FileSystem::joinPath({basePath, "loras", "MohamedAhmedAE", "stable-diffusion-v1-5_lora_finetuning"});
     auto loraFiles = searchFilesRecursively(loraDir, {"pytorch_lora_weights.safetensors"});
     ASSERT_FALSE(loraFiles.empty()) << "LoRA .safetensors not found in: " << loraDir;
 

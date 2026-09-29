@@ -16,7 +16,9 @@
 #include "cli_parser.hpp"
 
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -24,6 +26,8 @@
 #include <variant>
 
 #include "capi_frontend/server_settings.hpp"
+#include "default_task.hpp"
+#include "logging.hpp"
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
@@ -33,13 +37,14 @@
 #include "ovms_exit_codes.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/localfilesystem.hpp"
-#include "stringutils.hpp"
 #include "version.hpp"
 
 namespace ovms {
 
 constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
 constexpr const char* API_KEY_ENV_VAR{"API_KEY"};
+constexpr const char* MODEL_CONFIG_FILENAME{"config.json"};
+constexpr const char* MODEL_INDEX_FILENAME{"model_index.json"};
 
 std::string getConfigPath(const std::string& configPath) {
     bool isDir = false;
@@ -53,11 +58,21 @@ std::string getConfigPath(const std::string& configPath) {
     return configPath;
 }
 
+std::string CLIParser::getEffectiveTaskParameter() const {
+    if (result->count("task")) {
+        return result->operator[]("task").as<std::string>();
+    }
+    if (inferredTaskParameter.has_value()) {
+        return inferredTaskParameter.value();
+    }
+    throw std::logic_error("Could not infer model task - specify --task value explicitly");
+}
+
 std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char** argv) {
     std::stringstream ss;
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
-        auto configOptions = std::make_unique<cxxopts::Options>("ovms --model_name <MODEL_NAME> --add_to_config --config_path <CONFIG_PATH> --model_repository_path <MODEL_REPO_PATH> \n  ovms --model_path <MODEL_PATH> --model_name <MODEL_NAME> --add_to_config --config_path <CONFIG_PATH> \n  ovms --remove_from_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
+        auto configOptions = std::make_unique<cxxopts::Options>("ovms --add_to_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME> --model_repository_path <MODEL_REPO_PATH> \n  ovms --add_to_config --config_path <CONFIG_PATH> --model_path <MODEL_PATH> --model_name <MODEL_NAME> --group_name <GROUP> \n  ovms --remove_from_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
         // Adding this option to parse unrecognised options in another parser
         options->allow_unrecognised_options();
 
@@ -110,6 +125,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "\"__verbose\" object with additional debug information.",
                 cxxopts::value<bool>()->default_value("false"),
                 "VERBOSE_RESPONSE")
+            ("disable_input_count_validation",
+                "When enabled, OVMS allows inference requests to include additional, unrecognized inputs beyond the model/pipeline signature (extra inputs are ignored). Required inputs must still be present, and shape/precision validation is still performed for recognized inputs. Default: false (extra inputs cause the request to be rejected).",
+                cxxopts::value<bool>()->default_value("false"),
+                "DISABLE_INPUT_COUNT_VALIDATION")
 #ifdef MTR_ENABLED
             ("trace_path",
                 "Path to the trace file",
@@ -122,10 +141,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
-            ("custom_node_resources_cleaner_interval_seconds",
-                "Time interval between two consecutive resources cleanup scans. Default is 300. Zero value disables resources cleaner.",
+            ("memory_trimming_interval_seconds",
+                "Time interval between memory trimming cycles. Default is 300.",
                 cxxopts::value<uint32_t>()->default_value("300"),
-                "CUSTOM_NODE_RESOURCES_CLEANER_INTERVAL_SECONDS")
+                "MEMORY_TRIMMING_INTERVAL_SECONDS")
+            ("idle_unload_timeout_seconds",
+                "Idle timeout in seconds for model group unloading. When > 0, models not in the 'permanent' group are loaded on demand and unloaded after this idle period. Only effective with config.json multi-model setup. Default is 0 (disabled).",
+                cxxopts::value<uint32_t>()->default_value("0"),
+                "IDLE_UNLOAD_TIMEOUT_SECONDS")
             ("cache_dir",
                 "Overrides model cache directory. By default cache files are saved into"
 #ifdef __linux__
@@ -177,6 +200,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<std::string>()->default_value(""),
                 "API_KEY");
 
+#if (PYTHON_DISABLE == 0)
+        options->add_options()
+            ("with_python",
+                "Enable Python runtime support",
+                cxxopts::value<bool>()->default_value("true"),
+                "WITH_PYTHON");
+#endif
+
         options->add_options("multi model")
             ("config_path",
                 "Absolute path to json configuration file",
@@ -194,7 +225,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("remove_from_config",
                 "Directive to remove a model from configuration file. This parameter should be executed with --config_path and --model_name to specify which model to remove.",
                 cxxopts::value<bool>()->default_value("false"),
-                "REMOVE_FROM_CONFIG");
+                "REMOVE_FROM_CONFIG")
+            ("group_name",
+                "Optional group name for idle model group management. Used with --add_to_config.",
+                cxxopts::value<std::string>(),
+                "GROUP_NAME");
 
         // Set default value for model_repository_path from environment variable if it exists and is not empty
         std::string defaultModelRepoPath = "";
@@ -237,11 +272,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("extra_quantization_params",
                 "Model quantization parameters used in optimum-cli export with conversion for text generation models",
                 cxxopts::value<std::string>(),
-                "EXTRA_QUANTIZATION_PARAMS")
-            ("vocoder",
-                "The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan",
-                cxxopts::value<std::string>(),
-                "VOCODER");
+                "EXTRA_QUANTIZATION_PARAMS");
 
         options->add_options("single model")
             ("model_name",
@@ -289,19 +320,23 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<uint32_t>(),
                 "NIREQ")
             ("target_device",
-                "Target device to run the inference",
-                cxxopts::value<std::string>()->default_value("CPU"),
+                "Target device to run the inference. Default: auto-detected based on available devices.",
+                cxxopts::value<std::string>()->default_value(""),
                 "TARGET_DEVICE")
             ("plugin_config",
                 "A dictionary of plugin configuration keys and their values, eg \"{\\\"NUM_STREAMS\\\": \\\"1\\\"}\". Default number of streams is optimized to optimal latency with low concurrency.",
                 cxxopts::value<std::string>(),
                 "PLUGIN_CONFIG");
 
-        options->add_options("generative task (applies to: pull hf model, single model)")
+        options->add_options("generative task (applies to: pull hf model, configure, single model)")
             ("task",
-                "Specifies the generative task for the local model. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on the provided task-specific options.",
+                "Specifies the generative task for the local model. It should be followed by task specific parameters. Supported tasks: text_generation, embeddings, rerank, image_generation, text2speech, speech2text. It creates the pipeline graph in memory based on the provided task-specific options. If not provided, default task value is inferred from model config.",
                 cxxopts::value<std::string>(),
-                "TASK");
+                "TASK")
+            ("configure",
+                "Create or update graph.pbtxt for the model specified by --model_path and --task. Does not start the server.",
+                cxxopts::value<bool>()->default_value("false"),
+                "CONFIGURE");
         configOptions->custom_help("");
         configOptions->add_options(CONFIG_MANAGEMENT_HELP_GROUP)
             ("list_models",
@@ -328,6 +363,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Name of the model",
                 cxxopts::value<std::string>(),
                 "MODEL_NAME")
+            ("group_name",
+                "Optional group name for idle model group management",
+                cxxopts::value<std::string>(),
+                "GROUP_NAME")
             ("config_path",
                 "Path to json configuration file",
                 cxxopts::value<std::string>()->default_value(defaultConfigPath),
@@ -335,12 +374,45 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
-        // HF pull mode or pull and start mode or starting from local folder with graph created in memory
-        if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
+        // HF pull mode, in-memory graph from local model path, pull-and-start, or configure mode
+        if (isHFFlow(this->result) || isInMemoryGraphMode(this->result) || isConfigureMode(this->result)) {
             std::vector<std::string> unmatchedOptions;
             GraphExportType task;
-            if (result->count("task")) {
-                task = stringToEnum(result->operator[]("task").as<std::string>());
+            std::string taskValue;
+            if (!result->count("task") && !result->count("help") && !result->count("version")) {
+                const std::optional<std::string> modelPath = result->count("model_path") ? std::make_optional(result->operator[]("model_path").as<std::string>()) : std::nullopt;
+                const std::optional<std::string> sourceModel = result->count("source_model") ? std::make_optional(result->operator[]("source_model").as<std::string>()) : std::nullopt;
+                const std::optional<std::string> modelRepositoryPath = result->count("model_repository_path") ? std::make_optional(result->operator[]("model_repository_path").as<std::string>()) : std::nullopt;
+
+                // For source_model (HF pull mode), always infer the task
+                // For model_path in in-memory graph mode, check if task should be inferred based on parameters and graph.pbtxt
+                bool shouldInferTask = false;
+                if (sourceModel.has_value() && !sourceModel->empty()) {
+                    // Always infer task when pulling from HuggingFace
+                    shouldInferTask = true;
+                } else if (isConfigureMode(this->result) && modelPath.has_value() && !modelPath->empty()) {
+                    // Configure mode always infers task from model when --task not provided
+                    shouldInferTask = true;
+                } else if (modelPath.has_value() && !modelPath->empty()) {
+                    // For local model_path, infer task if:
+                    // 1. Unmatched options (task-specific parameters) are present, OR
+                    // 2. graph.pbtxt doesn't exist (need to create in-memory graph)
+                    bool hasUnmatchedOptions = ::ovms::hasTaskSpecificParameters(result->unmatched());
+                    bool graphExists = ::ovms::graphPbtxtExists(*modelPath);
+                    shouldInferTask = hasUnmatchedOptions || !graphExists;
+                }
+
+                if (shouldInferTask) {
+                    inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath);
+                    if (!result->count("task") && !inferredTaskParameter.has_value()) {
+                        ss << "error parsing options - Could not infer model task - specify --task value explicitly" << std::endl;
+                        return std::make_pair(OVMS_EX_USAGE, ss.str());
+                    }
+                }
+            }
+            if (result->count("task") || inferredTaskParameter.has_value()) {
+                taskValue = getEffectiveTaskParameter();
+                task = stringToEnum(taskValue);
                 switch (task) {
                     case TEXT_GENERATION_GRAPH: {
                         GraphCLIParser cliParser;
@@ -378,23 +450,20 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                         this->graphOptionsParser = std::move(cliParser);
                         break;
                     }
-                    case UNKNOWN_GRAPH: {
-                        ss << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
+                    default: {
+                        ss << "error parsing options - --task parameter unsupported value: " + taskValue;
                         return std::make_pair(OVMS_EX_USAGE, ss.str());
                     }
                 }
-            } else {
-                ss << "error parsing options - --task parameter wasn't passed";
-                return std::make_pair(OVMS_EX_USAGE, ss.str());
-            }
 
-            if (unmatchedOptions.size()) {
-                ss << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
-                for (auto& argument : unmatchedOptions) {
-                    ss << argument << ", ";
+                if (unmatchedOptions.size()) {
+                    ss << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
+                    for (auto& argument : unmatchedOptions) {
+                        ss << argument << ", ";
+                    }
+                    ss << std::endl;
+                    return std::make_pair(OVMS_EX_USAGE, ss.str());
                 }
-                ss << std::endl;
-                return std::make_pair(OVMS_EX_USAGE, ss.str());
             }
         } else if (result->unmatched().size()){
             ss << "error parsing options - unmatched arguments: ";
@@ -404,16 +473,32 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ss << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
-        if (isHFPullOrPullAndStart(this->result) && result->count("list_models")) {
+        if ((isHFFlow(this->result) || result->count("task")) && result->count("list_models")) {
             ss << "error parsing options - --list_models cannot be used with --pull or --task" << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
-        if (isHFPullOrPullAndStart(this->result) && result->count("remove_from_config")) {
+        if ((isHFFlow(this->result) || result->count("task")) && result->count("remove_from_config")) {
             ss << "error parsing options - --remove_from_config cannot be used with --pull or --task" << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
-        if (isHFPullOrPullAndStart(this->result) && result->count("add_to_config")) {
+        if ((isHFFlow(this->result) || result->count("task")) && result->count("add_to_config")) {
             ss << "error parsing options - --add_to_config cannot be used with --pull or --task" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
+        }
+        if (result->count("configure") && !result->count("model_path")) {
+            ss << "error parsing options - --configure requires --model_path" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
+        }
+        if (result->count("configure") && !result->count("task") && !inferredTaskParameter.has_value()) {
+            ss << "error parsing options - --configure requires --task" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
+        }
+        if (result->count("configure") && result->count("pull")) {
+            ss << "error parsing options - --configure cannot be used with --pull" << std::endl;
+            return std::make_pair(OVMS_EX_USAGE, ss.str());
+        }
+        if (result->count("configure") && result->count("model_name")) {
+            ss << "error parsing options - --model_name cannot be used with --configure" << std::endl;
             return std::make_pair(OVMS_EX_USAGE, ss.str());
         }
         if (result->count("add_to_config") && result->count("list_models")) {
@@ -445,8 +530,13 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
         }
 
         if (result->count("help") || result->arguments().size() == 0) {
-            ss << options->help({"", "multi model", "single model", "pull hf model"}) << std::endl;
+            ss << options->help({"", "multi model", "single model", "pull hf model", "generative task (applies to: pull hf model, configure, single model)"}) << std::endl;
+            ss << "configure mode (create or update graph.pbtxt for a local model):" << std::endl;
+            ss << "  ovms --configure --model_path <MODEL_PATH> --task <TASK> [TASK OPTIONS ...]" << std::endl;
+            ss << std::endl;
             ss << configOptions->help({CONFIG_MANAGEMENT_HELP_GROUP}) << std::endl;
+            // Print main options first, then task-specific graph options
+            std::cout << ss.str();
             GraphCLIParser parser1;
             RerankGraphCLIParser parser2;
             EmbeddingsGraphCLIParser parser3;
@@ -457,7 +547,9 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             parser2.printHelp();
             parser3.printHelp();
             imageGenParser.printHelp();
-            return std::make_pair(OVMS_EX_OK, ss.str());
+            ttsParser.printHelp();
+            sttParser.printHelp();
+            return std::make_pair(OVMS_EX_OK, "");
         }
 
         return true;
@@ -499,8 +591,9 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.metricsEnabled = result->operator[]("metrics_enable").as<bool>();
     serverSettings.metricsList = result->operator[]("metrics_list").as<std::string>();
     serverSettings.filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
+    serverSettings.memoryTrimmingIntervalSeconds = result->operator[]("memory_trimming_interval_seconds").as<uint32_t>();
 
-    serverSettings.resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
+    serverSettings.idleUnloadTimeoutSeconds = result->operator[]("idle_unload_timeout_seconds").as<uint32_t>();
     serverSettings.grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
     if (result->count("log_level"))
@@ -509,6 +602,8 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.logPath = result->operator[]("log_path").as<std::string>();
     if (result->count("verbose_response"))
         serverSettings.verboseResponse = result->operator[]("verbose_response").as<bool>();
+    if (result->count("disable_input_count_validation"))
+        serverSettings.disableInputCountValidation = result->operator[]("disable_input_count_validation").as<bool>();
 
     if (result->count("grpc_channel_arguments"))
         serverSettings.grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
@@ -542,7 +637,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.restWorkers = result->operator[]("rest_workers").as<uint32_t>();
 
 #if (PYTHON_DISABLE == 0)
-        serverSettings.withPython = true;
+    serverSettings.withPython = result->operator[]("with_python").as<bool>();
 #endif
 
 #ifdef MTR_ENABLED
@@ -605,7 +700,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     }
 
     if (result->count("mean")) {
-        if (modelsSettings.layout.empty()) {
+        if (modelsSettings.layout.empty() && !result->count("add_to_config")) {
             throw std::logic_error("error parsing options - --mean parameter requires --layout to be set");
         }
         modelsSettings.mean = result->operator[]("mean").as<std::string>();
@@ -613,7 +708,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     }
 
     if (result->count("scale")) {
-        if (modelsSettings.layout.empty()) {
+        if (modelsSettings.layout.empty() && !result->count("add_to_config")) {
             throw std::logic_error("error parsing options - --scale parameter requires --layout to be set");
         }
         modelsSettings.scale = result->operator[]("scale").as<std::string>();
@@ -621,7 +716,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     }
 
     if (result->count("color_format")) {
-        if (modelsSettings.layout.empty()) {
+        if (modelsSettings.layout.empty() && !result->count("add_to_config")) {
             throw std::logic_error("error parsing options - --color_format parameter requires --layout to be set");
         }
         modelsSettings.colorFormat = result->operator[]("color_format").as<std::string>();
@@ -629,7 +724,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     }
 
     if (result->count("precision")) {
-        if (modelsSettings.layout.empty()) {
+        if (modelsSettings.layout.empty() && !result->count("add_to_config")) {
             throw std::logic_error("error parsing options - --precision parameter requires --layout to be set");
         }
         modelsSettings.precision = result->operator[]("precision").as<std::string>();
@@ -648,10 +743,12 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
 
     if (result->count("target_device")) {
         modelsSettings.targetDevice = result->operator[]("target_device").as<std::string>();
-        if (isHFPullOrPullAndStart(this->result)) {
-            hfSettings.exportSettings.targetDevice = modelsSettings.targetDevice;
-        } else {
-            modelsSettings.userSetSingleModelArguments.push_back("target_device");
+        if (!modelsSettings.targetDevice.empty()) {
+            if (isHFFlow(this->result) || isInMemoryGraphMode(this->result)) {
+                hfSettings.exportSettings.targetDevice = modelsSettings.targetDevice;
+            } else {
+                modelsSettings.userSetSingleModelArguments.push_back("target_device");
+            }
         }
     }
 
@@ -666,16 +763,38 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     }
 }
 
-bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
-    // Keep `--task` in the broad mutually exclusive task/pull CLI category so
-    // parse-time checks that rely on this helper continue to reject combining
-    // task-based flows with config-management modes. More specific mode
-    // differentiation is handled by isInMemoryGraphMode().
-    return (result->count("pull") || result->count("task"));
+bool CLIParser::isHFFlow(const std::unique_ptr<cxxopts::ParseResult>& result) {
+    // True when the model originates from HuggingFace (--pull or --source_model).
+    // In HF flows the graph.pbtxt is written to disk alongside the downloaded model
+    // and persists across restarts. Contrast with isInMemoryGraphMode() where the
+    // graph is held only in process memory and rebuilt from CLI args on each startup.
+    return result->count("pull") || result->count("source_model");
 }
 
 bool CLIParser::isInMemoryGraphMode(const std::unique_ptr<cxxopts::ParseResult>& result) {
-    return (result->count("task") && !result->count("source_model") && !result->count("pull"));
+    // True for local-model deployments where the graph config is generated at startup
+    // and held ONLY in process memory (writeToFile=false; graph.pbtxt never touches disk).
+    // On each restart the graph is rebuilt from CLI arguments.
+    // Contrast with HF flows (isHFFlow) where graph.pbtxt is written to disk and persists.
+    if (result->count("source_model") || result->count("pull")) return false;
+    // Info/management commands do not create in-memory graphs.
+    if (result->count("help") || result->count("version")) return false;
+    if (result->count("add_to_config") || result->count("remove_from_config") || result->count("list_models")) return false;
+    // Explicit --task always drives in-memory graph creation.
+    if (result->count("task")) return true;
+    // Local model_path without explicit --task: needs an in-memory graph when
+    // graph.pbtxt is absent (first deployment) or when task-specific parameters
+    // are provided (user wants to update the deployment configuration).
+    if (!result->count("model_path")) return false;
+    const auto& modelPath = result->operator[]("model_path").as<std::string>();
+    const auto configPath = std::filesystem::path(modelPath) / MODEL_CONFIG_FILENAME;
+    const auto indexPath = std::filesystem::path(modelPath) / MODEL_INDEX_FILENAME;
+    if (!std::filesystem::exists(configPath) && !std::filesystem::exists(indexPath)) return false;
+    return !::ovms::graphPbtxtExists(modelPath) || ::ovms::hasTaskSpecificParameters(result->unmatched());
+}
+
+bool CLIParser::isConfigureMode(const std::unique_ptr<cxxopts::ParseResult>& result) {
+    return result->count("configure") && !result->count("pull") && !result->count("source_model");
 }
 
 void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
@@ -683,9 +802,11 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
     if (result->count("source_model")) {
         hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
     }
-    // Ovms Pull models mode || pull and start models mode
-    if (isHFPullOrPullAndStart(this->result) || isInMemoryGraphMode(this->result)) {
-        if (isInMemoryGraphMode(this->result)) {
+    // Ovms Pull models mode || pull and start models mode || configure mode
+    if (isHFFlow(this->result) || isInMemoryGraphMode(this->result) || isConfigureMode(this->result)) {
+        if (isConfigureMode(this->result)) {
+            serverSettings.serverMode = CONFIGURE_MODE;
+        } else if (isInMemoryGraphMode(this->result)) {
             serverSettings.serverMode = IN_MEMORY_GRAPH_MODE;
         } else if (result->count("pull")) {
             serverSettings.serverMode = HF_PULL_MODE;
@@ -724,17 +845,23 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.exportSettings.precision = result->operator[]("weight-format").as<std::string>();
         if (result->count("extra_quantization_params"))
             hfSettings.exportSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
-        if (result->count("vocoder"))
-            hfSettings.exportSettings.vocoder = result->operator[]("vocoder").as<std::string>();
         hfSettings.exportSettings.restWorkers = serverSettings.restWorkers;
         hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         // When --task is used with --model_path but without --pull/--source_model,
         // use model_path as the model location (no HF download needed)
         if (!result->count("pull") && !result->count("source_model") && result->count("model_path")) {
-            hfSettings.exportSettings.modelPath = result->operator[]("model_path").as<std::string>();
+            const auto configuredModelPath = std::filesystem::path(result->operator[]("model_path").as<std::string>());
+            hfSettings.exportSettings.modelPath = std::filesystem::absolute(configuredModelPath).lexically_normal().string();
+            SPDLOG_DEBUG("Using local absolute model path for graph export: {}", hfSettings.exportSettings.modelPath);
         }
+        const std::string taskValue = getEffectiveTaskParameter();
         if (result->count("task")) {
-            hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
+            SPDLOG_DEBUG("Task '{}' provided by user", taskValue);
+        } else {
+            SPDLOG_DEBUG("Task '{}' inferred from model config", taskValue);
+        }
+        if (!taskValue.empty()) {
+            hfSettings.task = stringToEnum(taskValue);
             switch (hfSettings.task) {
                 case TEXT_GENERATION_GRAPH: {
                     if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
@@ -785,7 +912,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                     break;
                 }
                 case UNKNOWN_GRAPH: {
-                    throw std::logic_error("Error: --task parameter unsupported value: " + result->operator[]("task").as<std::string>());
+                    throw std::logic_error("Error: --task parameter unsupported value: " + taskValue);
                     break;
                 }
             }
@@ -820,6 +947,10 @@ void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
         modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
     } else if (!result->operator[]("model_repository_path").as<std::string>().empty() && result->count("model_name")) {
         modelsSettings.modelPath = FileSystem::joinPath({result->operator[]("model_repository_path").as<std::string>(), modelsSettings.modelName});
+    }
+    if (result->count("group_name")) {
+        modelsSettings.groupName = result->operator[]("group_name").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("group_name");
     }
     std::string defaultConfigPath = "";
     const char* envModelRepoPath = std::getenv("OVMS_MODEL_REPOSITORY_PATH");

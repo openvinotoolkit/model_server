@@ -18,6 +18,7 @@
 #include <string>
 
 #include "platform_utils.hpp"
+#include "src/shape.hpp"
 
 const std::string dummy_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy", false);
 const std::string dummy_fp64_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_fp64", false);

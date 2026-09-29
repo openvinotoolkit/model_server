@@ -22,7 +22,6 @@ from tests.functional.utils.inference.communication.rest import REST, RestCommun
 from tests.functional.utils.inference.serving.cohere import COHERE, CohereWrapper
 from tests.functional.utils.inference.serving.kf import KFS, KserveWrapper
 from tests.functional.utils.inference.serving.openai import OPENAI, OpenAIWrapper
-from tests.functional.utils.inference.serving.tf import TFS, TensorFlowServingWrapper
 from tests.functional.utils.inference.serving.triton import TRITON, TritonServingWrapper
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.object_model.ovsa import OvsaCerts
@@ -35,9 +34,7 @@ class InferenceClientFactory:
         if ovms_type == OvmsType.CAPI:
             communication_class = CapiServingWrapper
         else:
-            if serving == TFS:
-                serving_class = TensorFlowServingWrapper
-            elif serving == KFS:
+            if serving == KFS:
                 serving_class = KserveWrapper
             elif serving == TRITON:
                 serving_class = TritonServingWrapper
@@ -46,15 +43,15 @@ class InferenceClientFactory:
             elif serving == COHERE:
                 serving_class = CohereWrapper
             else:
-                raise Exception
+                raise NotImplementedError(f"Serving not supported: {serving}")
 
-            if serving in [TFS, KFS, TRITON, OPENAI, COHERE]:
+            if serving in [KFS, TRITON, OPENAI, COHERE]:
                 if communication == REST:
                     communication_class = RestCommunicationInterface
                 elif communication == GRPC:
                     communication_class = GrpcCommunicationInterface
                 else:
-                    raise Exception
+                    raise NotImplementedError(f"Communication interface not supported: {communication}")
 
         # pylint: disable=too-many-arguments
         def common_inference_client_init(self,

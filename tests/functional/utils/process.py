@@ -48,6 +48,9 @@ class AbstractProcess(ABC):
     def get_output(self):
         return self._std_stream.pop(), self._err_stream.pop()
 
+    def get_stdout_mirror_path(self):
+        return getattr(self._std_stream, "mirror_file_path", None)
+
     def set_log_verbose(self):
         self.policy['log-run']['verbose'] = True
         self.policy['log-async-run']['verbose'] = True
@@ -223,6 +226,11 @@ class CommonProcess(AbstractProcess):
     def is_alive(self):
         return self._proc.poll() is None
 
+    def poll_exitcode(self):
+        # get_exitcode() may kill the process, so post-mortem callers need a read-only variant.
+        self._proc.poll()
+        return self._proc.returncode
+
     def timeout_detected(self):
         return self._std_stream.timeout_detected or self._err_stream.timeout_detected
 
@@ -240,9 +248,9 @@ class CommonProcess(AbstractProcess):
 
         try:
             parent_proc = psutil.Process(self._proc.pid)
+            child_processes = parent_proc.children()
         except psutil.NoSuchProcess as e:
             return not self.is_alive()
-        child_processes = parent_proc.children()
         for child_proc in child_processes:
             try:
                 child_proc.terminate()
@@ -400,7 +408,7 @@ class StreamReaderThread:
         self._stream = stream
         self.timeout_detected = False
         self._local_thread = local_thread
-        self._mirror_file_path = mirror_file_path
+        self.mirror_file_path = mirror_file_path
 
     def run(self):
         self._thread = Thread(target=self._enqueue_output, args=(self._stream, ))
@@ -410,11 +418,13 @@ class StreamReaderThread:
     def _enqueue_output(self, out):
         mirror_fd = None
         try:
-            if self._mirror_file_path:
-                mirror_dir = os.path.dirname(self._mirror_file_path)
+            if self.mirror_file_path:
+                mirror_dir = os.path.dirname(self.mirror_file_path)
                 if mirror_dir:
                     os.makedirs(mirror_dir, exist_ok=True)
-                mirror_fd = open(self._mirror_file_path, "a", encoding="utf-8", errors="ignore")
+                # Text mode would turn every CRLF the process wrote into CRCRLF, blank-lining the log.
+                mirror_fd = open(self.mirror_file_path, "a", encoding="utf-8", errors="ignore",
+                                 newline="")
             for line in iter(out.readline, b'' if self._local_thread else ''):
                 line = line.decode('utf8', 'ignore') if self._local_thread else line
                 self._queue.put(line)

@@ -1,0 +1,5 @@
+{
+  "architectures": ["T5EncoderModel"],
+  "model_type": "t5",
+  "d_model": 512
+}

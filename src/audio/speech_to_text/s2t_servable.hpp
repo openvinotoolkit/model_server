@@ -36,8 +36,8 @@ class S2tCalculatorOptions;
 }  // namespace mediapipe
 
 namespace ov::genai {
-class WhisperPipeline;
-class WhisperGenerationConfig;
+class ASRPipeline;
+class ASRGenerationConfig;
 }  // namespace ov::genai
 
 namespace ovms {
@@ -46,7 +46,7 @@ struct HttpPayload;
 
 struct SttServable {
     std::filesystem::path parsedModelsPath;
-    std::shared_ptr<ov::genai::WhisperPipeline> sttPipeline;
+    std::shared_ptr<ov::genai::ASRPipeline> sttPipeline;
     std::mutex sttPipelineMutex;
     bool enableWordTimestamps;
 
@@ -58,9 +58,9 @@ struct SttServable {
 
     void addRequest(std::shared_ptr<SttServableExecutionContext> executionContext);
 
-    static absl::Status parseTemperature(const HttpPayload& payload, ov::genai::WhisperGenerationConfig& config);
+    static absl::Status parseTemperature(const HttpPayload& payload, ov::genai::ASRGenerationConfig& config);
 
-    static absl::Status updateTranscriptionConfig(ov::genai::WhisperGenerationConfig& config,
+    static absl::Status updateTranscriptionConfig(ov::genai::ASRGenerationConfig& config,
         const std::shared_ptr<SttServable>& servable, const HttpPayload& payload);
 };
 

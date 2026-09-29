@@ -33,9 +33,12 @@
 #include "../../../json_parser.hpp"
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
+#include "../../../ov_utils.hpp"
 #include "../../../status.hpp"
+#include "../../io_processing/parser_config_validation.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
+#include "../../servable_initializer.hpp"
 
 namespace ovms {
 Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
@@ -56,10 +59,32 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
 
     if (nodeOptions.has_tool_parser()) {
         properties->toolParserName = nodeOptions.tool_parser();
+        if (!properties->toolParserName.empty() && !isSupportedToolParserName(properties->toolParserName)) {
+            SPDLOG_ERROR("Unsupported tool_parser \"{}\" specified in graph configuration. Supported tool parsers are: {}",
+                properties->toolParserName, getSupportedToolParserNamesAsString());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
     }
 
     if (nodeOptions.has_reasoning_parser()) {
         properties->reasoningParserName = nodeOptions.reasoning_parser();
+        if (!properties->reasoningParserName.empty() && !isSupportedReasoningParserName(properties->reasoningParserName)) {
+            SPDLOG_ERROR("Unsupported reasoning_parser \"{}\" specified in graph configuration. Supported reasoning parsers are: {}",
+                properties->reasoningParserName, getSupportedReasoningParserNamesAsString());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+    }
+    if (nodeOptions.has_chat_template_mode()) {
+#if (PYTHON_DISABLE == 0)
+        properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
+                                           ? ChatTemplateMode::JINJA
+                                           : ChatTemplateMode::MINJA;
+#else
+        if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA) {
+            SPDLOG_WARN("chat_template_mode=JINJA is not supported in Python-disabled builds. Falling back to MINJA.");
+        }
+        properties->chatTemplateMode = ChatTemplateMode::MINJA;
+#endif
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
@@ -69,11 +94,48 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     properties->schedulerConfig.enable_prefix_caching = nodeOptions.enable_prefix_caching();
 
     properties->device = nodeOptions.device();
+    if (properties->device.empty()) {
+        properties->device = recommendTargetDevice();
+        SPDLOG_INFO("No device specified, using recommended device: {}", properties->device);
+    }
 
-    if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
-        // Consider moving draft parameters to separate structure in node options, so it's validated on the proto level
-        SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
-        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    if (!nodeOptions.draft_models_path().empty()) {
+        auto fsDraftModelsPath = std::filesystem::path(nodeOptions.draft_models_path());
+        std::string draftPipelinePath = fsDraftModelsPath.is_relative()
+                                            ? (std::filesystem::path(graphPath) / fsDraftModelsPath).string()
+                                            : fsDraftModelsPath.string();
+        try {
+            const std::string draftDevice = nodeOptions.draft_device().empty() ? properties->device : nodeOptions.draft_device();
+            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, draftDevice);
+            properties->pluginConfig.insert(draftPipeline);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Error during draft model initialization for draft_models_path: {} exception: {}", draftPipelinePath, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        } catch (...) {
+            SPDLOG_ERROR("Error during draft model initialization for draft_models_path: {}", draftPipelinePath);
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        try {
+            properties->draftModelStrategy = detectDraftModelStrategy(draftPipelinePath);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to detect draft model strategy for {}: {}", draftPipelinePath, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        using DS = GenAiServableProperties::DraftModelStrategy;
+        switch (properties->draftModelStrategy) {
+        case DS::EAGLE3:
+            SPDLOG_INFO("Draft model strategy: EAGLE3");
+            break;
+        case DS::DFLASH:
+            SPDLOG_INFO("Draft model strategy: DFlash");
+            break;
+        case DS::MTP:
+            SPDLOG_INFO("Draft model strategy: MTP (Multi-Token Prediction)");
+            break;
+        case DS::FAST_DRAFT:
+            SPDLOG_INFO("Draft model strategy: Fast Draft");
+            break;
+        }
     }
 
     status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);
@@ -81,6 +143,8 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
         return status;
     }
+
+    applyGlobalCacheDir(properties);
 
     // Max prompt len is NPU specific property
     if (properties->device == "NPU") {

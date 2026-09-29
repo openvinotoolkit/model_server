@@ -27,7 +27,6 @@
 #include <openvino/openvino.hpp>
 
 #include "../config.hpp"
-#include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -40,13 +39,14 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
-#include "../model_service.hpp"
 #include "../precision.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
+#include "src/tensorflow_type_utils.hpp"
+#include "src/timer.hpp"
+#include "constructor_enabled_model_manager.hpp"
 #include "c_api_test_utils.hpp"
 #include "environment.hpp"
 #include "test_utils.hpp"
@@ -484,7 +484,7 @@ TEST_F(MediapipeNegativeFrameworkTest, NoOutputPacketProduced) {
 }
 
 TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
-    GTEST_SKIP() << "Terminate called otherwise";  // TODO FIXME check
+    GTEST_SKIP() << "Terminate called otherwise";
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_process.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -506,7 +506,7 @@ TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringProcess) {
         SPDLOG_ERROR("ER: unknown exception");
     }
 }
-TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) {  // TODO FIXME add checks to exception handling?
+TEST_F(MediapipeNegativeFrameworkTest, ExceptionDuringGetContract) {
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/negative/config_exception_during_getcontract.json").c_str());
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();

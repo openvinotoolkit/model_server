@@ -46,17 +46,50 @@ using namespace rapidjson;
 
 namespace ovms {
 
-static bool hasToolCallsInStreamingDelta(const rapidjson::Document& delta) {
-    if (!delta.HasMember("delta") || !delta["delta"].IsObject()) {
-        return false;
-    }
-    const auto& deltaObj = delta["delta"];
-    return deltaObj.HasMember("tool_calls") && deltaObj["tool_calls"].IsArray();
+static bool hasToolCallsInStreamingDelta(const Delta& delta) {
+    return std::holds_alternative<ToolCallDelta>(delta);
+}
+
+Value OpenAIChatCompletionsHandler::serializeDeltaValue(const Delta& delta, Document::AllocatorType& allocator) {
+    return std::visit(overloaded{
+                          [&](const ContentDelta& d) -> Value {
+                              Value v(kObjectType);
+                              v.AddMember("content", Value(d.text.c_str(), allocator), allocator);
+                              return v;
+                          },
+                          [&](const ReasoningDelta& d) -> Value {
+                              Value v(kObjectType);
+                              v.AddMember("reasoning_content", Value(d.text.c_str(), allocator), allocator);
+                              return v;
+                          },
+                          [&](const ToolCallDelta& d) -> Value {
+                              Value tcObj(kObjectType);
+                              if (d.id) {
+                                  tcObj.AddMember("id", Value(d.id->c_str(), allocator), allocator);
+                                  tcObj.AddMember("type", Value("function", allocator), allocator);
+                              }
+                              tcObj.AddMember("index", d.index, allocator);
+                              Value fn(kObjectType);
+                              if (d.name)
+                                  fn.AddMember("name", Value(d.name->c_str(), allocator), allocator);
+                              if (!d.arguments.empty())
+                                  fn.AddMember("arguments", Value(d.arguments.c_str(), allocator), allocator);
+                              tcObj.AddMember("function", fn, allocator);
+                              Value arr(kArrayType);
+                              arr.PushBack(tcObj, allocator);
+                              Value v(kObjectType);
+                              v.AddMember("tool_calls", arr, allocator);
+                              return v;
+                          },
+                          [&](const FinishDelta&) -> Value { return Value(kObjectType); },
+                          [&](const AudioDelta&) -> Value { return Value(kObjectType); },
+                      },
+        delta);
 }
 
 // --- Request parsing ---
 
-absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+absl::Status OpenAIChatCompletionsHandler::parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
     std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
     if (status != absl::OkStatus())
@@ -125,6 +158,17 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
     if (status != absl::OkStatus()) {
         return status;
     }
+    // reasoning_effort: string; optional
+    // OpenAI Chat Completions API reasoning_effort parameter.
+    auto reasoningEffortIt = doc.FindMember("reasoning_effort");
+    if (reasoningEffortIt != doc.MemberEnd() && !reasoningEffortIt->value.IsNull()) {
+        if (!reasoningEffortIt->value.IsString())
+            return absl::InvalidArgumentError("reasoning_effort is not a string");
+        status = applyReasoningEffort(reasoningEffortIt->value.GetString());
+        if (status != absl::OkStatus()) {
+            return status;
+        }
+    }
     // logprobs: bool; optional - defaults to false
     auto it = doc.FindMember("logprobs");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
@@ -163,7 +207,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         return absl::InvalidArgumentError("Messages are not an array");
     if (it->value.GetArray().Size() == 0)
         return absl::InvalidArgumentError("Messages array cannot be empty");
-    bool jsonChanged = false;
     for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
         auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
@@ -196,57 +239,45 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                 continue;
             }
             if (memberName == "content" && member->value.IsArray()) {
-                // Adjust content field format when it is passed as an array of objects (typically with images)
-                if (member->value.GetArray().Size() == 0) {
-                    return absl::InvalidArgumentError("Invalid message structure - content array is empty");
-                }
-                jsonChanged = true;
-                std::string combinedText;
-                for (auto& v : member->value.GetArray()) {
+                // Empty content arrays are accepted and preserved as-is. The
+                // EmptyContentArrayNormalizationProcessor converts them to null before
+                // downstream processing.
+                for (const auto& v : member->value.GetArray()) {
                     if (!v.IsObject()) {
                         return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
                     }
-                    auto entry = v.GetObject();
+                    const auto entry = v.GetObject();
                     if (!entry.HasMember("type") || !entry["type"].IsString()) {
                         return absl::InvalidArgumentError("Invalid message structure - content object type missing");
                     }
-                    auto entryType = entry["type"].GetString();
-                    if (entryType == std::string("text")) {
+                    const std::string entryType = entry["type"].GetString();
+                    if (entryType == "text") {
                         if (!entry.HasMember("text") || !entry["text"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - content text missing");
                         }
-                        if (!combinedText.empty()) {
-                            combinedText += "\n";
-                        }
-                        combinedText.append(entry["text"].GetString(), entry["text"].GetStringLength());
-                        continue;
-                    } else if (entryType == std::string("image_url")) {
+                    } else if (entryType == "image_url") {
                         if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
                             return absl::InvalidArgumentError("Invalid message structure - content image_url missing");
                         }
-                        auto imageUrl = entry["image_url"].GetObject();
+                        const auto imageUrl = entry["image_url"].GetObject();
                         if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - image_url does not have url field");
                         }
-                        std::string url = imageUrl["url"].GetString();
-                        auto tensorResult = loadImage(url, allowedLocalMediaPath, allowedMediaDomains);
-                        if (!tensorResult.ok()) {
-                            return tensorResult.status();
+                    } else if (entryType == "input_audio") {
+                        if (!entry.HasMember("input_audio") || !entry["input_audio"].IsObject()) {
+                            return absl::InvalidArgumentError("Invalid message structure - input_audio object missing");
                         }
-                        request.imageHistory.push_back({i, tensorResult.value()});
+                        const auto inputAudio = entry["input_audio"].GetObject();
+                        if (!inputAudio.HasMember("data") || !inputAudio["data"].IsString()) {
+                            return absl::InvalidArgumentError("Invalid message structure - input_audio does not have a valid data field");
+                        }
                     } else {
                         return absl::InvalidArgumentError("Unsupported content type");
                     }
                 }
-                // Flatten all text parts (joined with newlines) into the "content" field.
-                // Images are stored separately in request.imageHistory.
-                Value contentText(rapidjson::kStringType);
-                contentText.SetString(combinedText.c_str(), combinedText.length(), doc.GetAllocator());
-                member->value = contentText;
-                // Add new field to the last message in history if content is text
-                if (member->value.IsString()) {
-                    request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
-                }
+                // Preserve content array for downstream processors
+                // (ImageDecodingProcessor for VLM, TextContentNormalizationProcessor for LM).
+                request.chatHistory.last()[memberName] = rapidJsonValueToJsonContainer(member->value);
             }
         }
         auto lastMessage = request.chatHistory.last();
@@ -256,20 +287,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         if (!lastMessage.contains("content")) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Message does not have content field which might be an issue for some chat templates. Adding empty content.");
             lastMessage["content"] = "";
-            obj.AddMember("content", Value().SetString("", doc.GetAllocator()), doc.GetAllocator());
-            jsonChanged = true;
         }
         // If message has tool calls, make sure each tool call has "arguments" field
-        auto status = ensureArgumentsInToolCalls(obj, jsonChanged);
+        auto status = ensureArgumentsInToolCalls(obj);
         if (status != absl::OkStatus()) {
             return status;
         }
-    }
-    if (jsonChanged) {
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        request.processedJson = buffer.GetString();
     }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed messages successfully");
     return absl::OkStatus();
@@ -277,89 +300,134 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
 
 // --- Unary response serialization ---
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(
+    const std::vector<Delta>& deltas,
+    ov::genai::GenerationFinishReason finishReason) {
+    OVMS_PROFILE_FUNCTION();
+    ParsedOutput parsedOutput = parsedOutputFromDeltas(deltas);
+
+    OpenAiJsonResponse jsonResponse;
+    jsonResponse.StartObject();
+
+    jsonResponse.StartArray("choices");
+    jsonResponse.StartObject();
+
+    auto finishReasonStr = mapFinishReason(finishReason, !parsedOutput.toolCalls.empty());
+    if (!finishReasonStr.has_value()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unknown finish reason: {}", static_cast<int>(finishReason));
+    }
+    jsonResponse.FinishReason(finishReasonStr.value_or("unknown"));
+    jsonResponse.Index(0);
+    jsonResponse.Null("logprobs");
+
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        jsonResponse.MessageObject(parsedOutput);
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        jsonResponse.Text(parsedOutput);
+    }
+
+    jsonResponse.EndObject();
+    jsonResponse.EndArray();
+
+    jsonResponse.Int("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+    jsonResponse.String("model", request.model);
+
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        jsonResponse.String("object", "chat.completion");
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        jsonResponse.String("object", "text_completion");
+    }
+
+    jsonResponse.UsageObject(usage);
+
+    if (isVerboseResponse()) {
+        jsonResponse.StartObject("__verbose");
+        jsonResponse.String("prompt", getVerbosePrompt());
+        jsonResponse.String("content", getVerboseRawText());
+        jsonResponse.EndObject();
+    }
+
+    jsonResponse.EndObject();
+    return jsonResponse.ToString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(
+    const std::vector<std::vector<Delta>>& allDeltas,
+    const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
+    const std::vector<UnaryChoiceLogprobs>& logprobData) {
     OVMS_PROFILE_FUNCTION();
 
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
 
-    // choices: array of size N, where N is related to n request parameter
     jsonResponse.StartArray("choices");
-    int index = 0;
-    // Manual usage setup for CB pipelines. For legacy we rely on PerfMetrics object from GenAI `generate` results
-    usage.completionTokens = 0;
-    for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
-
-        updateUsage(usage, generationOutput.generated_ids, request.echo);
-        ParsedOutput parsedOutput = parseOutputIfNeeded(generationOutput.generated_ids);
+    for (size_t i = 0; i < allDeltas.size(); ++i) {
+        ParsedOutput parsedOutput = parsedOutputFromDeltas(allDeltas[i]);
 
         jsonResponse.StartObject();
-        // finish_reason: string;
-        // "stop" => natural stop point due to stopping criteria
-        // "length" => due to reaching max_tokens parameter
-        // "tool_calls" => generation stopped due to generated tool calls
 
-        std::optional<std::string> finishReason = mapFinishReason(generationOutput.finish_reason, !parsedOutput.toolCalls.empty());
-        if (!finishReason.has_value()) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unknown finish reason: {}", static_cast<int>(generationOutput.finish_reason));
+        const ov::genai::GenerationFinishReason finishReason =
+            (i < finishReasons.size()) ? finishReasons[i] : ov::genai::GenerationFinishReason::STOP;
+        auto finishReasonStr = mapFinishReason(finishReason, !parsedOutput.toolCalls.empty());
+        if (!finishReasonStr.has_value()) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unknown finish reason: {}", static_cast<int>(finishReason));
         }
-        jsonResponse.FinishReason(finishReason.value_or("unknown"));
-        // index: integer; Choice index, only n=1 supported anyway
-        jsonResponse.Index(index++);
+        jsonResponse.FinishReason(finishReasonStr.value_or("unknown"));
+        jsonResponse.Index(static_cast<int>(i));
 
-        // TODO: logprobs: object/null; Log probability information for the choice.
-        if (this->request.logprobschat || this->request.logprobs) {
+        const bool hasChoiceLogprobs = !logprobData.empty() &&
+                                       i < logprobData.size() &&
+                                       !logprobData[i].generatedIds.empty() &&
+                                       (request.logprobschat || request.logprobs);
+        if (hasChoiceLogprobs) {
             jsonResponse.StartObject("logprobs");
             if (endpoint == Endpoint::CHAT_COMPLETIONS) {
                 jsonResponse.StartArray("content");
-
-                for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
-                    float logprob = generationOutput.generated_log_probs[i];
+                for (size_t j = 0; j < logprobData[i].generatedIds.size(); ++j) {
+                    std::string token = tokenizer.decode(std::vector<int64_t>({logprobData[i].generatedIds[j]}),
+                        ov::genai::skip_special_tokens(request.skipSpecialTokens));
+                    const float logprob = (j < logprobData[i].logProbs.size()) ? logprobData[i].logProbs[j] : 0.0f;
                     jsonResponse.LogprobObject(token, logprob);
                 }
                 jsonResponse.EndArray();
             }
             if (endpoint == Endpoint::COMPLETIONS) {
                 jsonResponse.StartArray("tokens");
-                for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
-                    jsonResponse.String(token);
+                for (size_t j = 0; j < logprobData[i].generatedIds.size(); ++j) {
+                    jsonResponse.String(tokenizer.decode(std::vector<int64_t>({logprobData[i].generatedIds[j]}),
+                        ov::genai::skip_special_tokens(request.skipSpecialTokens)));
                 }
                 jsonResponse.EndArray();
 
                 jsonResponse.StartArray("token_logprobs");
-                for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    float logprob = generationOutput.generated_log_probs[i];
-                    jsonResponse.LogprobValue(logprob);
+                for (size_t j = 0; j < logprobData[i].generatedIds.size(); ++j) {
+                    jsonResponse.LogprobValue((j < logprobData[i].logProbs.size()) ? logprobData[i].logProbs[j] : 0.0f);
                 }
                 jsonResponse.EndArray();
 
                 jsonResponse.StartArray("top_logprobs");
-                for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
+                for (size_t j = 0; j < logprobData[i].generatedIds.size(); ++j) {
                     jsonResponse.StartObject();
-                    std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
-                    float logprob = generationOutput.generated_log_probs[i];
-                    jsonResponse.Logprob(token, logprob);
+                    const std::string token = tokenizer.decode(std::vector<int64_t>({logprobData[i].generatedIds[j]}),
+                        ov::genai::skip_special_tokens(request.skipSpecialTokens));
+                    jsonResponse.Logprob(token, (j < logprobData[i].logProbs.size()) ? logprobData[i].logProbs[j] : 0.0f);
                     jsonResponse.EndObject();
                 }
                 jsonResponse.EndArray();
 
                 jsonResponse.StartArray("text_offset");
-                for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    if (i == 0) {
-                        jsonResponse.TextOffsetValue(0);
-                    } else {
-                        std::string textBeforeToken = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}), ov::genai::skip_special_tokens(this->request.skipSpecialTokens));
-                        jsonResponse.TextOffsetValue(textBeforeToken.size());
-                    }
+                size_t offset = 0;
+                for (size_t j = 0; j < logprobData[i].generatedIds.size(); ++j) {
+                    jsonResponse.TextOffsetValue(static_cast<int>(offset));
+                    offset += tokenizer.decode(std::vector<int64_t>({logprobData[i].generatedIds[j]}),
+                                           ov::genai::skip_special_tokens(request.skipSpecialTokens))
+                                  .size();
                 }
                 jsonResponse.EndArray();
             }
             jsonResponse.EndObject();
         } else {
-            jsonResponse.Null("logprobs");  // "logprobs": null
+            jsonResponse.Null("logprobs");
         }
 
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
@@ -368,19 +436,13 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             jsonResponse.Text(parsedOutput);
         }
 
-        // finish message object
         jsonResponse.EndObject();
     }
-    // finish choices array
     jsonResponse.EndArray();
 
-    // created: integer; Unix timestamp (in seconds) when the MP graph was created.
     jsonResponse.Int("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
-
-    // model: string; copied from the request
     jsonResponse.String("model", request.model);
 
-    // object: string; defined that the type is unary rather than streamed chunk
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         jsonResponse.String("object", "chat.completion");
     } else if (endpoint == Endpoint::COMPLETIONS) {
@@ -389,183 +451,20 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
 
     jsonResponse.UsageObject(usage);
 
-    // TODO: id: string; A unique identifier for the chat completion.
-
-    // TODO: system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
-    // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
-
     if (isVerboseResponse()) {
         jsonResponse.StartObject("__verbose");
         jsonResponse.String("prompt", getVerbosePrompt());
-        std::string rawContent;
-        if (!generationOutputs.empty()) {
-            rawContent = tokenizer.decode(generationOutputs.front().generated_ids, ov::genai::skip_special_tokens(false));
-        }
-        jsonResponse.String("content", rawContent);
+        jsonResponse.String("content", getVerboseRawText());
         jsonResponse.EndObject();
     }
 
-    // finish response object
-    jsonResponse.EndObject();
-    return jsonResponse.ToString();
-}
-
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::EncodedResults& results) {
-    OVMS_PROFILE_FUNCTION();
-    usage.promptTokens = results.perf_metrics.get_num_input_tokens();
-    usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
-
-    OpenAiJsonResponse jsonResponse;
-    jsonResponse.StartObject();
-
-    // choices: array of size N, where N is related to n request parameter
-    jsonResponse.StartArray("choices");
-    if (results.finish_reasons.empty()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary LM generation result, defaulting to STOP for all choices");
-    } else if (results.finish_reasons.size() != results.tokens.size()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Finish reasons size ({}) does not match tokens size ({}) in unary LM generation result, defaulting missing entries to STOP",
-            results.finish_reasons.size(), results.tokens.size());
-    }
-    for (size_t i = 0; i < results.tokens.size(); ++i) {
-        const std::vector<int64_t>& tokens = results.tokens[i];
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
-        ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
-        jsonResponse.StartObject();
-        const ov::genai::GenerationFinishReason finishReasonRaw = i < results.finish_reasons.size() ? results.finish_reasons[i] : ov::genai::GenerationFinishReason::STOP;
-        auto finishReason = mapFinishReason(finishReasonRaw, !parsedOutput.toolCalls.empty());
-        jsonResponse.FinishReason(finishReason.value_or("unknown"));
-        // index: integer; Choice index, only n=1 supported anyway
-        jsonResponse.Index(static_cast<int>(i));
-
-        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            jsonResponse.MessageObject(parsedOutput);
-        } else if (endpoint == Endpoint::COMPLETIONS) {
-            jsonResponse.Text(parsedOutput);
-        }
-
-        // finish message object
-        jsonResponse.EndObject();
-    }
-    // finish choices array
-    jsonResponse.EndArray();
-
-    // created: integer; Unix timestamp (in seconds) when the MP graph was created.
-    jsonResponse.Int("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
-
-    // model: string; copied from the request
-    jsonResponse.String("model", request.model);
-
-    // object: string; defined that the type is unary rather than streamed chunk
-    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        jsonResponse.String("object", "chat.completion");
-    } else if (endpoint == Endpoint::COMPLETIONS) {
-        jsonResponse.String("object", "text_completion");
-    }
-
-    jsonResponse.UsageObject(usage);
-
-    // TODO: id: string; A unique identifier for the chat completion.
-
-    // TODO: system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
-    // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
-
-    if (isVerboseResponse()) {
-        jsonResponse.StartObject("__verbose");
-        jsonResponse.String("prompt", getVerbosePrompt());
-        std::string rawContent;
-        if (!results.tokens.empty()) {
-            rawContent = tokenizer.decode(results.tokens.front(), ov::genai::skip_special_tokens(false));
-        }
-        jsonResponse.String("content", rawContent);
-        jsonResponse.EndObject();
-    }
-
-    // finish response object
-    jsonResponse.EndObject();
-    return jsonResponse.ToString();
-}
-
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) {
-    OVMS_PROFILE_FUNCTION();
-    usage.promptTokens = results.perf_metrics.get_num_input_tokens();
-    usage.completionTokens = results.perf_metrics.get_num_generated_tokens();
-
-    OpenAiJsonResponse jsonResponse;
-    jsonResponse.StartObject();
-
-    // choices: array of size N, where N is related to n request parameter
-    jsonResponse.StartArray("choices");
-    int index = 0;
-
-    if (!textResponse.empty()) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", textResponse);
-
-        // Workaround to use OVMS unary parsers: get tokens from string
-        // This way we have detokenized text from GenAI and calculate tokens, to further convert back to text again, in parseOutputIfNeeded...
-        auto generatedTokens = encodeTextToTokens(textResponse);
-
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generatedTokens);
-        ParsedOutput parsedOutput = parseOutputIfNeeded(generatedTokens);
-        jsonResponse.StartObject();
-        if (results.finish_reasons.empty()) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in unary VLM generation result, defaulting to STOP");
-        }
-        // Current generation flow uses batch=1, so only finish_reasons[0] is expected here.
-        const ov::genai::GenerationFinishReason finishReasonRaw = results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : results.finish_reasons[0];
-        auto finishReason = mapFinishReason(finishReasonRaw, !parsedOutput.toolCalls.empty());
-        jsonResponse.FinishReason(finishReason.value_or("unknown"));
-        // index: integer; Choice index, only n=1 supported anyway
-        jsonResponse.Index(index++);
-        // TODO: logprobs: object/null; Log probability information for the choice.
-
-        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            jsonResponse.MessageObject(parsedOutput);
-        } else if (endpoint == Endpoint::COMPLETIONS) {
-            jsonResponse.Text(parsedOutput);
-        }
-
-        // finish message object
-        jsonResponse.EndObject();
-    }
-    // finish choices array
-    jsonResponse.EndArray();
-
-    // created: integer; Unix timestamp (in seconds) when the MP graph was created.
-    jsonResponse.Int("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
-
-    // model: string; copied from the request
-    jsonResponse.String("model", request.model);
-
-    // object: string; defined that the type is unary rather than streamed chunk
-    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        jsonResponse.String("object", "chat.completion");
-    } else if (endpoint == Endpoint::COMPLETIONS) {
-        jsonResponse.String("object", "text_completion");
-    }
-
-    jsonResponse.UsageObject(usage);
-
-    // TODO: id: string; A unique identifier for the chat completion.
-
-    // TODO: system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
-    // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
-
-    if (isVerboseResponse()) {
-        jsonResponse.StartObject("__verbose");
-        jsonResponse.String("prompt", getVerbosePrompt());
-        // For VLM the raw decoded text is provided by GenAI directly.
-        jsonResponse.String("content", textResponse);
-        jsonResponse.EndObject();
-    }
-
-    // finish response object
     jsonResponse.EndObject();
     return jsonResponse.ToString();
 }
 
 // --- Streaming serialization ---
 
-std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
+std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
 
     Document doc;
@@ -591,33 +490,18 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // TODO: logprobs: object/null; Log probability information for the choice.
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        if (outputParser != nullptr) {
-            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
-            if (!delta.has_value()) {
-                // If the generation is still ongoing, there is nothing to emit yet
-                if (finishReason == ov::genai::GenerationFinishReason::NONE) {
-                    return "";
-                }
-                // Generation finished but parser returned no delta (e.g. empty chunk after tool call).
-                // We still need to emit a chunk with the appropriate finish_reason.
-            }
-            if (delta.has_value() && delta->HasMember("delta")) {
-                // Deep copy the "delta" member value into the choice object
-                choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
-                hasToolCalls = hasToolCallsInStreamingDelta(*delta);
-                if (hasToolCalls) {
-                    toolCallsDetectedInStream = true;
-                }
-            }
-
-        } else {
-            Value delta(kObjectType);
-            delta.SetObject();
-            delta.AddMember("content", Value(chunkResponse.c_str(), allocator), allocator);
-            choice.AddMember("delta", delta, allocator);
-        }
+        hasToolCalls = hasToolCallsInStreamingDelta(delta);
+        if (hasToolCalls)
+            toolCallsDetectedInStream = true;
+        Value deltaVal = serializeDeltaValue(delta, allocator);
+        choice.AddMember("delta", deltaVal, allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        choice.AddMember("text", Value(chunkResponse.c_str(), allocator), allocator);
+        // For /v1/completions extract plain text from ContentDelta only.
+        if (const auto* cd = std::get_if<ContentDelta>(&delta)) {
+            choice.AddMember("text", Value(cd->text.c_str(), allocator), allocator);
+        } else {
+            choice.AddMember("text", Value("", allocator), allocator);
+        }
     }
 
     auto serializedFinishReason = mapFinishReason(finishReason, hasToolCalls || toolCallsDetectedInStream);
@@ -717,6 +601,9 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
 
 std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
     OVMS_PROFILE_FUNCTION();
+    // The handshake chunk signals that prefill is complete and generation has started.
+    // Emitted on every endpoint so clients can distinguish prefill latency from
+    // time-to-first-token.
     Document doc;
     doc.SetObject();
     Document::AllocatorType& allocator = doc.GetAllocator();
@@ -736,7 +623,8 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
         delta.AddMember("content", Value(rapidjson::kNullType), allocator);
         choice.AddMember("delta", delta, allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        choice.AddMember("text", Value(rapidjson::kNullType), allocator);
+        // Empty string (not null) so the field is present and typed as string.
+        choice.AddMember("text", Value("", allocator), allocator);
     }
 
     choice.AddMember("finish_reason", Value(rapidjson::kNullType), allocator);
@@ -750,7 +638,6 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
     // model: string; copied from the request
     doc.AddMember("model", Value(request.model.c_str(), allocator), allocator);
 
-    // object: string; defined that the type streamed chunk rather than complete response
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         doc.AddMember("object", Value("chat.completion.chunk", allocator), allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {
@@ -764,8 +651,23 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
 }
 
 void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
+    const size_t previousProcessed = processedTokens;
     processedTokens += numTokens;
-    if (!request.echo || processedTokens > usage.promptTokens)
+
+    if (!request.echo) {
         usage.completionTokens += numTokens;
+        return;
+    }
+
+    // Echo mode may deliver prompt+completion in one unary batch. Count only
+    // the incremental portion that lies beyond prompt_tokens.
+    const size_t previousCompletionBoundary =
+        (previousProcessed > usage.promptTokens) ? (previousProcessed - usage.promptTokens) : 0;
+    const size_t currentCompletionBoundary =
+        (processedTokens > usage.promptTokens) ? (processedTokens - usage.promptTokens) : 0;
+
+    if (currentCompletionBoundary > previousCompletionBoundary) {
+        usage.completionTokens += (currentCompletionBoundary - previousCompletionBoundary);
+    }
 }
 }  // namespace ovms

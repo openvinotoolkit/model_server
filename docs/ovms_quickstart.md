@@ -133,4 +133,4 @@ In our case, it will be a modified input image with bounding boxes indicating de
 or [PaddlePaddle model demo](../demos/classification_using_paddlepaddle_model/python/README.md).
 
 Congratulations, you have completed the QuickStart guide. Try other Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.
-Check also how to write the client code using [TFS API](./clients_tfs.md) and [KServe API](./clients_kfs.md)
+Check also how to write the client code using [KServe API](./clients_kfs.md)

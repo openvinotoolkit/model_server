@@ -199,6 +199,11 @@ private:
          */
     std::optional<ovms::PrecisionConfiguration> precision;
 
+    /**
+         * @brief Group name for idle model management. Defaults to model name.
+         */
+    std::string groupName;
+
 public:
     /**
          * @brief Construct a new Model Config object
@@ -211,7 +216,7 @@ public:
          */
     ModelConfig(const std::string& name = "",
         const std::string& basePath = "",
-        const std::string& targetDevice = "CPU",
+        const std::string& targetDevice = "",
         const std::string& configBatchSize = "",
         uint64_t nireq = 0,
         const std::string& cacheDir = "",
@@ -279,6 +284,24 @@ public:
          */
     void setName(const std::string& name) {
         this->name = name;
+    }
+
+    /**
+         * @brief Get the group name
+         *
+         * @return const std::string&
+         */
+    const std::string& getGroupName() const {
+        return this->groupName;
+    }
+
+    /**
+         * @brief Set the group name
+         *
+         * @param groupName
+         */
+    void setGroupName(const std::string& groupName) {
+        this->groupName = groupName;
     }
 
     /**

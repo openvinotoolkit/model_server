@@ -17,10 +17,8 @@
 
 #include <optional>
 #include <string>
-#include <thread>
-#include <variant>
+#include <utility>
 
-#include <spdlog/spdlog.h>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -31,12 +29,6 @@ namespace ovms {
 extern const std::string DEFAULT_GRAPH_FILENAME;
 extern const std::string DEFAULT_SUBCONFIG_FILENAME;
 extern const std::string DEFAULT_MODELMESH_SUBCONFIG_FILENAME;
-
-struct GraphQueueAutoTag {
-    bool operator==(const GraphQueueAutoTag&) const { return true; }
-};
-
-using GraphQueueSizeValue = std::optional<std::variant<int, GraphQueueAutoTag>>;
 
 class Status;
 
@@ -69,11 +61,34 @@ private:
     /**
      * @brief Graph queue size configuration.
      *
-     * - std::nullopt              => user did not set this field
-     * - int                       => user explicitly set a numeric size
-     * - GraphQueueAutoTag         => user explicitly set "AUTO"
+     * - std::nullopt => queue disabled (not set or explicitly cleared)
+     * - int > 0      => queue enabled with this size (resolved from AUTO or explicit value)
      */
-    GraphQueueSizeValue graphQueueSize;
+    std::optional<int> graphQueueSize;
+
+    /**
+     * @brief Optional pbtxt content used in IN_MEMORY_GRAPH_MODE.
+     *
+     * Populated by ModelManager::startFromConfig from the pbtxt that
+     * Server::startModules produced via MediapipeRuntimeApi. When set,
+     * MediapipeGraphDefinition::validateForConfigFileExistence uses this
+     * instead of reading graph.pbtxt from disk. Not thread-safe by design:
+     * set during startup, read afterwards.
+     */
+    std::optional<std::string> inMemoryGraphPbTxt;
+
+    /**
+     * @brief Idle unload timeout in seconds.
+     * 0 (default) = feature disabled.
+     * When > 0, the graph's heavy resources are freed after this many seconds
+     * of zero in-flight requests, and lazily reloaded on the next inference.
+     */
+    int idleUnloadTimeoutSeconds = 0;
+
+    /**
+     * @brief Group name for idle model management. Defaults to graph name.
+     */
+    std::string groupName;
 
 public:
     MediapipeGraphConfig(const std::string& graphName = "",
@@ -153,11 +168,27 @@ public:
     }
 
     /**
+     * @brief Populate the in-memory pbtxt buffer used in IN_MEMORY_GRAPH_MODE.
+      *        Called by ModelManager::startFromConfig. The value is stored in
+      *        this configuration; passing an rvalue allows its contents to be moved.
+     */
+    void setInMemoryGraphPbTxt(std::string pbtxt) {
+        this->inMemoryGraphPbTxt = std::move(pbtxt);
+    }
+
+    /**
+     * @brief Access the in-memory pbtxt content, if any.
+     */
+    const std::optional<std::string>& getInMemoryGraphPbTxt() const {
+        return this->inMemoryGraphPbTxt;
+    }
+
+    /**
      * @brief Get the graph queue size setting.
      *
-     * @return const GraphQueueSizeValue& - nullopt if not set, int or GraphQueueAutoTag
+     * @return const std::optional<int>& - nullopt if disabled, positive int if enabled
      */
-    const GraphQueueSizeValue& getGraphQueueSize() const {
+    const std::optional<int>& getGraphQueueSize() const {
         return this->graphQueueSize;
     }
 
@@ -165,34 +196,35 @@ public:
         this->graphQueueSize = size;
     }
 
-    void setGraphQueueSizeAuto() {
-        this->graphQueueSize = GraphQueueAutoTag{};
+    void clearGraphQueueSize() {
+        this->graphQueueSize.reset();
     }
 
     /**
-     * @brief Resolve the graph queue size setting to a concrete integer.
+     * @brief Get the resolved graph queue size as a concrete integer.
      *
      * Returns:
-     *   0   => queue creation disabled (user set 0 or not set)
-     *   >0  => explicit size or resolved AUTO
-     *
-     * Negative values are rejected at parse time (resolveGraphQueueSize).
-     * When not set (nullopt): returns 0 (queue disabled).
-     * When AUTO: returns hardware_concurrency() or 16 as fallback.
+     *   0   => queue creation disabled (or not set)
+     *   >0  => queue enabled with this size
      */
     int getInitialQueueSize() const {
-        if (!this->graphQueueSize.has_value()) {
-            return 0;  // not set - queue disabled by default
-        }
-        if (std::holds_alternative<GraphQueueAutoTag>(*this->graphQueueSize)) {
-            unsigned int hwThreads = std::thread::hardware_concurrency();
-            if (hwThreads == 0) {
-                SPDLOG_WARN("std::thread::hardware_concurrency() returned 0 (unknown). Falling back to graph queue size 16.");
-                return 16;
-            }
-            return static_cast<int>(hwThreads);
-        }
-        return std::get<int>(*this->graphQueueSize);
+        return this->graphQueueSize.value_or(0);
+    }
+
+    int getIdleUnloadTimeoutSeconds() const {
+        return this->idleUnloadTimeoutSeconds;
+    }
+
+    void setIdleUnloadTimeoutSeconds(int seconds) {
+        this->idleUnloadTimeoutSeconds = seconds;
+    }
+
+    const std::string& getGroupName() const {
+        return this->groupName;
+    }
+
+    void setGroupName(const std::string& groupName) {
+        this->groupName = groupName;
     }
 
     bool isReloadRequired(const MediapipeGraphConfig& rhs) const;

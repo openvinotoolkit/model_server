@@ -33,16 +33,12 @@
 #include "tool_schema_wrapper.hpp"
 
 namespace ovms {
-using ImageHistory = std::vector<std::pair<size_t, ov::Tensor>>;
-
 struct StreamOptions {
     bool includeUsage = false;
 };
 // Class that maps OpenAI request content.
 struct OpenAIRequest {
     ov::genai::ChatHistory chatHistory;
-    std::string processedJson;
-    ImageHistory imageHistory;
     std::optional<std::string> prompt{std::nullopt};
     bool stream{false};
     StreamOptions streamOptions;
@@ -72,6 +68,9 @@ struct OpenAIRequest {
     std::optional<int> numAssistantTokens{std::nullopt};
     std::optional<float> assistantConfidenceThreshold{std::nullopt};
     std::optional<int> maxNgramSize{std::nullopt};
+    // EAGLE3 tree drafting (tree_depth > 0 enables tree mode; branching_factor controls top-k per layer)
+    std::optional<size_t> branchingFactor{std::nullopt};
+    std::optional<size_t> treeDepth{std::nullopt};
 
     std::optional<uint32_t> maxModelLength;
 
@@ -84,6 +83,17 @@ struct OpenAIRequest {
     std::string toolChoice;
 
     bool skipSpecialTokens{true};
+
+    // Audio output (Omni pipeline)
+    enum class AudioFormat { WAV,
+        PCM16 };
+    static constexpr AudioFormat DEFAULT_AUDIO_FORMAT = AudioFormat::WAV;
+    bool audioOutputRequested{false};
+    bool textOutputRequested{true};  // false when modalities is ["audio"] without "text"
+    std::string audioVoice;          // maps to OmniTalkerSpeechConfig::speaker
+    AudioFormat audioFormat{DEFAULT_AUDIO_FORMAT};
+    static constexpr size_t DEFAULT_AUDIO_CHUNK_FRAMES = 4;
+    size_t audioChunkFrames{DEFAULT_AUDIO_CHUNK_FRAMES};  // Number of codec frames per streaming audio chunk (each frame = 80ms @ 24kHz)
 
     OpenAIRequest() = default;
     ~OpenAIRequest() = default;

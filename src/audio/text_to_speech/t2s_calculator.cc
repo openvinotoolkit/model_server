@@ -28,6 +28,8 @@
 #include "src/client_connection.hpp"
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
+#include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
+#include "openvino/openvino.hpp"
 #include <mutex>
 #include <thread>
 
@@ -81,6 +83,14 @@ public:
 
     absl::Status Open(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "T2sCalculator  [Node: {}] Open start", cc->NodeName());
+        const auto& calcOptions = cc->Options<T2sCalculatorOptions>();
+        const float speedMin = calcOptions.speed_min();
+        const float speedMax = calcOptions.speed_max();
+        // !(speedMin <= speedMax) is true for inverted ranges and for any NaN bound.
+        if (!(speedMin <= speedMax)) {
+            return absl::InvalidArgumentError(
+                absl::StrCat("Invalid T2sCalculatorOptions: speed_min (", speedMin, ") must be <= speed_max (", speedMax, ")"));
+        }
         return absl::OkStatus();
     }
 
@@ -95,7 +105,7 @@ public:
             auto pipe = it->second;
             const auto& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
 
-            if (absl::StartsWith(payload.uri, "/v3/audio/speech")) {
+            if (absl::StartsWith(payload.uri, "/v3/audio/speech") || absl::StartsWith(payload.uri, "/v1/audio/speech")) {
                 if (payload.parsedJson->HasParseError())
                     return absl::InvalidArgumentError("Failed to parse JSON");
 
@@ -115,24 +125,59 @@ public:
                 }
                 std::optional<std::string> voiceName;
                 auto voiceIt = payload.parsedJson->FindMember("voice");
-                if (voiceIt != payload.parsedJson->MemberEnd() && voiceIt->value.IsString()) {
+                if (voiceIt != payload.parsedJson->MemberEnd()) {
+                    if (!voiceIt->value.IsString()) {
+                        return absl::InvalidArgumentError("voice field is not a string");
+                    }
                     voiceName = voiceIt->value.GetString();
-                    if (pipe->voices.find(voiceName.value()) == pipe->voices.end())
-                        return absl::InvalidArgumentError(absl::StrCat("Requested voice not available: ", voiceName.value()));
                 }
-
+                std::string language = "en-us";
+                auto languageIt = payload.parsedJson->FindMember("language");
+                if (languageIt != payload.parsedJson->MemberEnd()) {
+                    if (!languageIt->value.IsString()) {
+                        return absl::InvalidArgumentError("language field is not a string");
+                    }
+                    language = languageIt->value.GetString();
+                }
+                float speed = 1.0f;
+                auto speedIt = payload.parsedJson->FindMember("speed");
+                if (speedIt != payload.parsedJson->MemberEnd()) {
+                    if (!speedIt->value.IsNumber()) {
+                        return absl::InvalidArgumentError("speed field is not a number");
+                    }
+                    speed = speedIt->value.GetFloat();
+                }
+                // Validate speed bounds regardless of whether it came from request or default
+                const auto& calcOptions = cc->Options<T2sCalculatorOptions>();
+                const float speedMin = calcOptions.speed_min();
+                const float speedMax = calcOptions.speed_max();
+                // Use positive-range predicate: NaN speed makes both comparisons
+                // false, so the negation correctly rejects it.
+                if (!(speedMin <= speed && speed <= speedMax)) {
+                    return absl::InvalidArgumentError(
+                        absl::StrCat("speed must be between speed_min (", speedMin, ") and speed_max (", speedMax, ")"));
+                }
                 ov::genai::Text2SpeechDecodedResults generatedSpeech;
                 std::unique_lock lock(pipe->ttsPipelineMutex);
                 auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before generation");
                 if (!disconnectStatus.ok())
                     return disconnectStatus;
-
+                const ov::Tensor* speakerEmbedding = nullptr;
+                ov::AnyMap properties{{"language", language}, {"speed", speed}};
                 if (voiceName.has_value()) {
-                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), pipe->voices[voiceName.value()]);
-                } else {
-                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
+                    auto speakerIt = pipe->voices.find(voiceName.value());
+                    if (speakerIt != pipe->voices.end()) {
+                        speakerEmbedding = &speakerIt->second;
+                    } else {
+                        // SpeechT5 and other models only support pre-loaded speaker embeddings
+                        return absl::InvalidArgumentError(absl::StrCat("Requested voice '", voiceName.value(), "' not found in available voices"));
+                    }
                 }
-                auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
+                if (speakerEmbedding != nullptr) {
+                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), *speakerEmbedding, properties);
+                } else {
+                    generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString(), ov::Tensor(), properties);
+                }
                 auto speechSize = generatedSpeech.speeches[0].get_size();
                 ov::Tensor cpuTensor(generatedSpeech.speeches[0].get_element_type(), generatedSpeech.speeches[0].get_shape());
                 // copy results to release inference request
@@ -143,13 +188,16 @@ public:
                     return disconnectStatus;
                 void* ppData;
                 size_t pDataSize;
-                prepareAudioOutput(&ppData, pDataSize, bitsPerSample, speechSize, cpuTensor.data<const float>());
+                uint16_t bitsPerSample = static_cast<uint16_t>(generatedSpeech.speeches[0].get_element_type().bitwidth());
+                ovms::audio_utils::prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, bitsPerSample, speechSize, cpuTensor.data<const float>());
                 output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
                 drwav_free(ppData, NULL);
             } else {
                 return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
             }
         } catch (ov::AssertFailure& e) {
+            return absl::InvalidArgumentError(e.what());
+        } catch (const std::runtime_error& e) {
             return absl::InvalidArgumentError(e.what());
         } catch (...) {
             return absl::InvalidArgumentError("Response generation failed");

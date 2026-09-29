@@ -76,7 +76,6 @@ def start_ovms(
     entrypoint=None,
     entrypoint_params=None,
     ovms_type_to_start=None,
-    ensure_nodeport: bool = True,
     ovms_instance_params=None,
     valgrind_mode=None,
     terminate_signal_type=None,

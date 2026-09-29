@@ -15,6 +15,7 @@
 #
 
 # pylint: disable=too-many-nested-blocks
+# pylint: disable=too-many-positional-arguments
 # pylint: disable=unused-argument
 
 import base64
@@ -33,7 +34,7 @@ from tests.functional.utils.logger import get_logger, step
 from tests.functional.utils.inference.serving.openai import OpenAIWrapper, OpenAIFinishReason
 from tests.functional.config import save_image_to_artifacts
 from tests.functional.config import artifacts_dir, pipeline_type
-from ovms.constants.model_dataset import FeatureExtractionModelDataset
+from tests.functional.models.models_datasets import FeatureExtractionModelDataset
 
 logger = get_logger(__name__)
 
@@ -216,7 +217,14 @@ class GenerativeAIValidationUtils:
                         stream_content.append(choice.delta.content)
             else:
                 if not allow_empty_response:
-                    assert len(choice.message.content) > 0, f"Empty response content: {choice}"
+                    if kwargs['model_instance'].allows_reasoning:
+                        reasoning = getattr(choice.message, "reasoning_content", None)
+                        if reasoning is None and hasattr(choice.message, "model_extra"):
+                            reasoning = choice.message.model_extra.get("reasoning_content")
+                        assert reasoning is not None and len(reasoning) > 0, f"Empty reasoning content: {choice}"
+                    else:
+                        assert len(choice.message.content) > 0, f"Empty response content: {choice.message.content}"
+
                 if tools_enabled and validate_tools:
                     # When tools are enabled content might not be empty
                     assert choice.message.role == "assistant", f"Unexpected role: {choice.message.role}"
@@ -435,12 +443,12 @@ class GenerativeAIValidationUtils:
         duration_sec = n_samples / sample_rate
 
         # RMS energy — silence detector
-        rms = float(np.sqrt(np.mean(data ** 2)))
+        rms = float(np.sqrt(np.mean(data ** 2))) if n_samples > 0 else 0.0
 
         # Spectral flatness — noise vs speech detector
         # Wiener entropy: geometric_mean(|FFT|) / arithmetic_mean(|FFT|)
         # White noise → ~1.0, speech → ~0.05-0.4
-        magnitude = np.abs(np.fft.rfft(data))
+        magnitude = np.abs(np.fft.rfft(data)) if n_samples > 0 else np.empty(0, dtype=np.float32)
         magnitude = magnitude[magnitude > 0]  # avoid log(0)
         if len(magnitude) > 0:
             log_mean = np.mean(np.log(magnitude))
@@ -486,6 +494,10 @@ class GenerativeAIValidationUtils:
         if not allow_empty_response:
             metrics = cls._analyze_audio(speech_file_path)
 
+            assert metrics["duration_sec"] > 0, (
+                f"TTS returned no audio: the response is a {file_size} byte container with 0 audio samples. "
+                f"OVMS answered with a success status instead of an error. File: {speech_file_path}"
+            )
             assert metrics["duration_sec"] >= min_duration_sec, (
                 f"Audio too short: {metrics['duration_sec']}s < {min_duration_sec}s minimum. "
                 f"File: {speech_file_path}"
@@ -545,7 +557,7 @@ class GenerativeAIValidationUtils:
             api_type: OpenAI REST API type.
             port: OVMS port where the embeddings model is served.
             request_parameters: Optional pre-built request parameters for embeddings endpoint.
-                If None, will be built automatically via LLMUtils.prepare_request_params.
+                If None, will be built automatically via GenerativeAIUtils.prepare_request_params.
             inference_fn: Callable to run LLM inference (e.g. run_llm_inference).
                 Injected to avoid circular import between this module and inference_helpers.
 
@@ -557,8 +569,8 @@ class GenerativeAIValidationUtils:
         )
 
         if request_parameters is None:
-            from llm.utils import LLMUtils
-            request_parameters = LLMUtils.prepare_request_params(OpenAIWrapper.EMBEDDINGS)
+            from tests.functional.utils.generative_ai.utils import GenerativeAIUtils
+            request_parameters = GenerativeAIUtils.prepare_request_params(OpenAIWrapper.EMBEDDINGS)
 
         def getter(text):
             class TextDataset(FeatureExtractionModelDataset):

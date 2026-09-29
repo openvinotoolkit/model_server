@@ -19,15 +19,63 @@ package(
 )
 
 cc_library(
-    name = "storage",
-    srcs = [
-	"Microsoft.WindowsAzure.Storage/build.release/Binaries/libazurestorage.so.7.5",
-	"Microsoft.WindowsAzure.Storage/build.release/Binaries/libazurestorage.so.7",
-	"Microsoft.WindowsAzure.Storage/build.release/Binaries/libazurestorage.so",
-    ],
+    name = "azure_core",
+    srcs = glob(["lib/libazure-core.so"]),
     hdrs = glob([
-	"Microsoft.WindowsAzure.Storage/includes/**/*.h",
-	"Microsoft.WindowsAzure.Storage/includes/**/*.dat",
-		 ]),
-    strip_include_prefix = "Microsoft.WindowsAzure.Storage/includes/",
+        "include/azure/core/**/*.hpp",
+        "include/azure/core/**/*.h",
+        "include/azure/core.hpp",
+    ]),
+    strip_include_prefix = "include",
+    linkstatic = False,
+    data = glob(["lib/libazure-core.so.*"]),
+)
+
+cc_library(
+    name = "azure_storage_common",
+    srcs = glob(["lib/libazure-storage-common.so"]),
+    hdrs = glob([
+        "include/azure/storage/common/**/*.hpp",
+        "include/azure/storage/common/**/*.h",
+    ]),
+    strip_include_prefix = "include",
+    linkstatic = False,
+    data = glob(["lib/libazure-storage-common.so.*"]),
+    deps = [":azure_core"],
+)
+
+cc_library(
+    name = "azure_storage_blobs",
+    srcs = glob(["lib/libazure-storage-blobs.so"]),
+    hdrs = glob([
+        "include/azure/storage/blobs/**/*.hpp",
+        "include/azure/storage/blobs/**/*.h",
+        "include/azure/storage/blobs.hpp",
+    ]),
+    strip_include_prefix = "include",
+    linkstatic = False,
+    data = glob(["lib/libazure-storage-blobs.so.*"]),
+    deps = [":azure_storage_common"],
+)
+
+cc_library(
+    name = "azure_storage_files_shares",
+    srcs = glob(["lib/libazure-storage-files-shares.so"]),
+    hdrs = glob([
+        "include/azure/storage/files/**/*.hpp",
+        "include/azure/storage/files/**/*.h",
+        "include/azure/storage/files/shares.hpp",
+    ]),
+    strip_include_prefix = "include",
+    linkstatic = False,
+    data = glob(["lib/libazure-storage-files-shares.so.*"]),
+    deps = [":azure_storage_common"],
+)
+
+cc_library(
+    name = "storage",
+    deps = [
+        ":azure_storage_blobs",
+        ":azure_storage_files_shares",
+    ],
 )

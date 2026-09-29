@@ -19,7 +19,7 @@ The example relies on the model [face-detection-retail-0004](https://github.com/
 Clone the repository and enter face_detection directory
 ```console
 git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/demos/face_detection/python
+cd model_server/demos/face_detection/python/
 ```
 
 Prepare environment:
@@ -37,7 +37,7 @@ usage: face_detection.py [-h] [--input_images_dir INPUT_IMAGES_DIR]
                          [--server_cert SERVER_CERT]
                          [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
 
-Demo for face detection requests via TFS gRPC API analyses input images and
+Demo for face detection requests via gRPC API analyses input images and
 saves images with bounding boxes drawn around detected faces. It relies on
 face_detection model...
 
@@ -91,7 +91,7 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
-ovms --model_path model --model_name face-detection --port 9000  --shape auto
+ovms --model_path model --model_name face-detection --port 9000  --shape auto --target_device CPU
 ```
 :::
 Run the client:

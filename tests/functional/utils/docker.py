@@ -33,6 +33,8 @@ from tests.functional.utils.test_framework import generate_test_object_name
 from tests.functional.config import docker_client_timeout
 from tests.functional.constants.core import CONTAINER_STATUS_RUNNING
 
+DOCKER_CONTAINER_TMP_PATH = "/tmp"
+
 logger = get_logger(__name__)
 
 

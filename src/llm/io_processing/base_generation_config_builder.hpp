@@ -22,22 +22,29 @@
 
 namespace ovms {
 
-// TODO: Monitor Eagle3 sampling support in GenAI and update this when Eagle3 supports more sampling strategies.
 /*
 * DecodingMethod enum is used to properly set defaults and validate GenerationConfig depending on whether pipeline has been
 * configured to use standard sampling strategies like greedy, beam search or multinomial or non-standard strategies like 
 * speculative decoding with draft model or prompt lookup technique.
 *
 * STANDARD: Standard decoding methods such as greedy, beam search, and multinomial sampling. No special pipeline configuration.
-* SPECULATIVE_DECODING: A decoding method that uses smaller draft model to generate draft tokens which are then verified and completed by the main model.
-*                       Pipeline with such decoding is configured with draft model.
-* EAGLE3: A decoding method specific to Eagle3 - it's the same a speculative decoding but with additional limitations i.e. random sampling disabled.
-* PROMPT_LOOKUP: A decoding method that utilizes prompt lookup technique for generation. Pipeline with such decoding is configured with {prompt lookup: true} entry in pluginConfig.
+* FAST_DRAFT: Classic two-model speculative decoding — a smaller off-the-shelf LLM drafts tokens that the main model verifies.
+*             Pipeline configured with draft_models_path.
+* EAGLE3: EAGLE3 speculative decoding — draft head conditioned on main model hidden states; supports tree drafting.
+*         Auto-detected from model rt_info (eagle3_mode=true). Greedy decoding only.
+* DFLASH: DFlash speculative decoding — hidden-state-conditioned head using linear attention.
+*         Auto-detected from model rt_info (dflash_mode=true). Supports VLM and multinomial sampling.
+* MTP: Multi-Token Prediction — bundled prediction head (openvino_mtp_model.xml) inside the draft model directory.
+*      Auto-detected from model artifacts; no extra flag required. Multinomial sampling supported.
+* PROMPT_LOOKUP: N-gram prompt lookup decoding; no draft model required.
+*                Pipeline configured with prompt_lookup=true in pluginConfig.
 */
 enum DecodingMethod {
     STANDARD,
-    SPECULATIVE_DECODING,
+    FAST_DRAFT,
     EAGLE3,
+    DFLASH,
+    MTP,
     PROMPT_LOOKUP
 };
 

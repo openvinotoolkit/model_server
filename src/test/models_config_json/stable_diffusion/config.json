@@ -1,0 +1,5 @@
+{
+  "architectures": ["UNet2DConditionModel"],
+  "model_type": "unet",
+  "in_channels": 9
+}

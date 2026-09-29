@@ -14,97 +14,73 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
+
+#include <openvino/genai/tokenizer.hpp>
+
 #include "src/llm/io_processing/base_output_parser.hpp"
 
 namespace ovms {
+
+// Streaming state machine states for LFM2 / LFM2.5 tool-call parsing.
+enum class Lfm2ParseState {
+    Content,
+    ToolCallStarted,
+    ToolCallParameters,
+    ToolCallEnded,
+    AfterToolCall
+};
+
+// Unified tool parser for both LFM2 and LFM2.5.
+// The two model families share identical tool-call grammar; the only differences
+// are the token IDs assigned by their respective tokenizers and whether the
+// chat template appends <|im_end|> after tool calls (LFM2.5 only).
+// The correct OutputParsingConfig variant is chosen automatically via configForTokenizer().
 class Lfm2ToolParser : public BaseOutputParser {
-protected:
-    static const std::string TOOL_CALL_START_TAG;
-    static const std::string TOOL_CALL_END_TAG;
-    static const std::string EOS_TOKEN_STR;
-
-    static const std::string TOOL_LIST_START_INDICATOR;
-    static const std::string TOOL_LIST_END_INDICATOR;
-    static const std::string TOOL_ARGS_START_INDICATOR;
-    static const std::string TOOL_ARGS_END_INDICATOR;
-    static const std::string TOOL_SEPARATOR_STR;
-
-    static const int64_t botTokenId;
-    static const int64_t eotTokenId;
-
-    static constexpr size_t MAX_TOOL_CALLS = 100;
-    static constexpr size_t MAX_TOOLS_PER_CALL = 100;
-    static constexpr int TOOL_CALL_INDEX_START = -1;
-    enum class State {
-        Content,             // Content -> ToolCallStarted (on TOOL_CALL_START_TAG)
-        ToolCallStarted,     // ToolCallStarted -> ToolCallParameters (on TOOL_ARGS_START_INDICATOR, emits name)
-        ToolCallParameters,  // ToolCallParameters -> ToolCallEnded (on TOOL_ARGS_END_INDICATOR, emits args)
-        ToolCallEnded,       // ToolCallEnded -> ToolCallStarted (on separator) | AfterToolCall (on end tag/list end)
-        AfterToolCall        // AfterToolCall -> Content
-    };
-
 public:
-    struct Argument {
-        std::string name;
-        std::string value;
-    };
     Lfm2ToolParser() = delete;
-    explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
-    const std::vector<std::string>& getParsingStartTags() const override {
-        static const std::vector<std::string> parsingStartTags = {TOOL_CALL_START_TAG};
-        return parsingStartTags;
+    // OutputParsingConfig for LFM2 and LFM2.5. Both model families use the same
+    // tool-call grammar and token-boundary strings; the only model-specific
+    // behaviour (stripping <|im_end|> from content) is a no-op on LFM2 since
+    // that model's chat template never emits <|im_end|> in tool-call context.
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"<|tool_call_start|>"};
+        cfg.tokenIdStartTags = {"<|tool_call_start|>"};
+        cfg.endTag = "<|tool_call_end|>";
+        cfg.needsSpecialTokens = true;
+        return cfg;
     }
 
-    const std::vector<std::string>& getSpecialParsingStartTags() const override {
-        static const std::vector<std::string> beginningOnlyTags = {};
-        return beginningOnlyTags;
+    explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    void resetState() override {
+        streamingContent.clear();
+        streamingPosition = 0;
+        currentState = Lfm2ParseState::Content;
+        toolCall = {};
+        toolCallIndex = -1;
     }
 
-    const std::vector<std::string>& getSpecialTagsToErase() const override {
-        static const std::vector<std::string> tagsToErase = {EOS_TOKEN_STR};
-        return tagsToErase;
-    }
-
-    const std::string& getParsingEndTag() const override {
-        return TOOL_CALL_END_TAG;
-    }
-
-    bool requiresStreamingWithSpecialTokens() const override {
-        return true;
-    }
-
-    static std::string normalizeArgStr(const std::string& arg);
-    static std::string parseArrayParameter(std::string argumentStr);
-    static std::string parseObjectParameter(std::string argumentStr);
+    std::optional<Delta> parseChunk(const std::string& chunk,
+        const std::vector<int64_t>& tokens,
+        ov::genai::GenerationFinishReason finishReason) override;
 
 private:
-    void writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
-
-    Argument parseSingleArgument(const std::string& argumentStr);
-    std::vector<Argument> parseArguments(const std::string& argumentsStr);
-    void cutEOSFromContent(std::string& content);
-
-    bool parseSingleToolCall(const std::string& toolStr, ToolCall& toolCall);
-    bool parseNewContent();
-    bool parseInContentState();
-    bool parseInToolCallState();
-    bool parseToolCallParametersState();
-    bool parseInToolCallEndedState();
-
-    rapidjson::Document wrapDeltaContent(const std::string& content);
-    rapidjson::Document wrapDeltaArgs(const std::string& argsStr);
-
     std::string streamingContent;
     size_t streamingPosition{0};
-    State currentState{State::Content};
+    Lfm2ParseState currentState{Lfm2ParseState::Content};
     ToolCall toolCall;
+    int toolCallIndex{-1};
 
-    int toolCallIndex{TOOL_CALL_INDEX_START};
+    bool parseNewContent();
 };
+
 }  // namespace ovms

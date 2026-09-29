@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <future>
 #include <memory>
 #include <string>
 #include <vector>
@@ -26,24 +27,28 @@
 
 namespace ovms {
 
-struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableExecutionContext {
+struct VisualLanguageModelLegacyServableExecutionContext : public LegacyServableExecutionContextBase {
     ov::genai::VLMDecodedResults results;
-    std::promise<void> readySignal;
-    std::future<void> finished = readySignal.get_future();
-    std::mutex mutex;
-    std::vector<ov::Tensor> inputImages;
-    std::condition_variable executionInProgress;
-    std::string inputText;
+    // readySignal, finished, success are inherited from LegacyServableExecutionContextBase
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
-    bool success{true};
 
     // Disconnection handling
     std::atomic<bool> clientDisconnected{false};
 
     void signalDisconnection() {
         clientDisconnected = true;
-        executionInProgress.notify_all();
+        deltaChannel.signalComplete();
+    }
+
+    // Legacy generation path always runs with a single beam, so finish_reasons[0] is the result.
+    ov::genai::GenerationFinishReason legacyFinishReason() const override {
+        return results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP
+                                              : results.finish_reasons[0];
+    }
+    void setLegacyUsage(OpenAIApiHandler& apiHandler) override {
+        apiHandler.setPromptTokensUsage(results.perf_metrics.get_num_input_tokens());
+        apiHandler.setCompletionTokensUsage(results.perf_metrics.get_num_generated_tokens());
     }
 };
 
@@ -53,8 +58,9 @@ struct VisualLanguageModelLegacyServableProperties : public GenAiServablePropert
     std::shared_ptr<VisualLanguageModelLegacyExecutorWrapper> legacyExecutor;
 };
 
-class VisualLanguageModelLegacyServable : public GenAiServable {
+class VisualLanguageModelLegacyServable : public LegacyServableBase {
     std::shared_ptr<VisualLanguageModelLegacyServableProperties> properties;
+    void logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics);
 
 protected:
     void notifyExecutorThread();
@@ -62,10 +68,11 @@ protected:
 public:
     VisualLanguageModelLegacyServable() {
         properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
+        properties->inputProcessorContext.config.isVLM = true;
     }
 
     // Interface methods
-    absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const HttpPayload& payload);
+    absl::Status validateEndpoint(Endpoint endpoint) const override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
@@ -73,7 +80,5 @@ public:
     absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
-    absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
-    absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
 };
 }  // namespace ovms

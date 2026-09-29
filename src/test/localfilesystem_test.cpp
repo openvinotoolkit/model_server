@@ -27,6 +27,9 @@
 
 #include "src/filesystem/filesystem.hpp"
 #include "src/filesystem/localfilesystem.hpp"
+#if CLOUD_DISABLE == 0
+#include "src/filesystem/s3filesystem.hpp"
+#endif
 
 using namespace testing;
 using ::testing::UnorderedElementsAre;
@@ -53,6 +56,18 @@ static void createTmpFiles() {
     std::filesystem::create_directories(TMP_PATH / TMP_DIR1);
     std::filesystem::create_directories(TMP_PATH / TMP_DIR2);
 }
+
+#if CLOUD_DISABLE == 0
+TEST(S3FileSystem, ParseEndpointUsesHttpByDefault) {
+    auto http_default = ovms::S3FileSystem::parseEndpoint("localhost:9000");
+    EXPECT_EQ(http_default.first, "localhost:9000");
+    EXPECT_EQ(http_default.second, Aws::Http::Scheme::HTTP);
+
+    auto https_explicit = ovms::S3FileSystem::parseEndpoint("https://localhost:9000");
+    EXPECT_EQ(https_explicit.first, "localhost:9000");
+    EXPECT_EQ(https_explicit.second, Aws::Http::Scheme::HTTPS);
+}
+#endif
 
 TEST(LocalFileSystem, FileExists) {
     ovms::LocalFileSystem lfs;

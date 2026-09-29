@@ -33,6 +33,8 @@
 #include "src/image_gen/imagegenutils.hpp"
 #include "src/image_gen/imagegen_init.hpp"
 #include "src/image_conversion.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
 #include "src/status.hpp"
 
 using ovms::prepareImageGenPipelineArgs;
@@ -1114,6 +1116,90 @@ TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
     ASSERT_EQ(imageGenArgs.device.size(), 0);
     ASSERT_TRUE(imageGenArgs.pluginConfig.empty());
 }
+
+TEST(ImageGenCalculatorOptionsTest, GlobalCacheDirAppliedWhenPluginConfigMissing) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    ovms::ServerSettingsImpl savedServerSettings = ovms::Config::instance().getServerSettings();
+    ovms::ModelsSettingsImpl savedModelsSettings = ovms::Config::instance().getModelSettings();
+
+    const std::string globalCacheDir = "/tmp/imagegen_global_cache";
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
+    int arg_count = 9;
+    ovms::Config::instance().parse(arg_count, n_argv);
+
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+        << dummyLocation;
+        oss << R"(")";
+    oss << R"pb(
+        }
+        }
+)pb";
+
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(oss.str());
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(node.node_options(0), "");
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.pluginConfig.count("CACHE_DIR"), 1);
+    ASSERT_EQ(imageGenArgs.pluginConfig["CACHE_DIR"].as<std::string>(), globalCacheDir);
+
+    ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
+}
+
+TEST(ImageGenCalculatorOptionsTest, ExplicitPluginCacheDirWinsOverGlobal) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    ovms::ServerSettingsImpl savedServerSettings = ovms::Config::instance().getServerSettings();
+    ovms::ModelsSettingsImpl savedModelsSettings = ovms::Config::instance().getModelSettings();
+
+    const std::string globalCacheDir = "/tmp/imagegen_global_cache";
+    char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--rest_port", (char*)"8080", (char*)"--cache_dir", (char*)globalCacheDir.c_str()};
+    int arg_count = 9;
+    ovms::Config::instance().parse(arg_count, n_argv);
+
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+        << dummyLocation;
+        oss << R"(")";
+    oss << R"pb(
+                    plugin_config: "{\"CACHE_DIR\": \"/tmp/imagegen_node_cache\"}"
+                  }
+                            }
+)pb";
+
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(oss.str());
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(node.node_options(0), "");
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.pluginConfig.count("CACHE_DIR"), 1);
+    ASSERT_EQ(imageGenArgs.pluginConfig["CACHE_DIR"].as<std::string>(), "/tmp/imagegen_node_cache");
+
+    ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
+}
+
 TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
 #ifdef _WIN32
     const std::string cwd = R"(.\\)";

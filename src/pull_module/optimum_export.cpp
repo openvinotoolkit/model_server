@@ -23,7 +23,7 @@
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../stringutils.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "cmd_exec.hpp"
 #include "model_downloader.hpp"
 
@@ -67,7 +67,11 @@ std::string OptimumDownloader::getExportCmdTextToSpeech() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    if (this->exportSettings.vocoder.has_value()){
+    if (this->exportSettings.modelType == "kokoro") {
+        // optimum-intel registers Kokoro under library_name="kokoro" with task "text-to-audio".
+        // The library is auto-detected from the HF repo; --task must be specified explicitly.
+        oss << "--task text-to-audio ";
+    } else if (this->exportSettings.vocoder.has_value()) {
         oss << "--model-kwargs \"{\"vocoder\": \"" << this->exportSettings.vocoder.value() << "\"}\" ";
     }
     oss << "--model " << this->sourceModel << " --trust-remote-code ";

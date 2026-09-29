@@ -14,10 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <algorithm>
+#include <chrono>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -25,6 +26,7 @@
 #include "../../../status.hpp"
 #include "../../apis/openai_completions.hpp"
 #include "../../apis/openai_responses.hpp"
+#include "../../ovms_text_streamer.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -34,35 +36,49 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
+
 #include "../../../config.hpp"
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "../../py_jinja_template_processor.hpp"
+#include "src/llm/py_jinja_template_processor.hpp"
 #endif
+#include "../../io_processing/generation_config_builder.hpp"
 #include "servable.hpp"
 
 namespace ovms {
 
-absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
-    // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
-    if (payload.parsedJson->HasParseError()) {
-        return absl::InvalidArgumentError("Non-json request received in text generation calculator");
+void VisualLanguageModelLegacyServable::logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics) {
+    const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
+    const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();
+    const double prepareEmbeddingsTimeMs = perfMetrics.get_prepare_embeddings_duration().mean;
+    const double ttftMs = perfMetrics.get_ttft().mean;
+    // Legacy VLM measures TTFT from the beginning of generate(), including embeddings preparation.
+    const double llmTtftMs = std::max(ttftMs - prepareEmbeddingsTimeMs, 0.0);
+    const double prefillSpeedTps = calculatePrefillSpeed(inputTokenCount, llmTtftMs);
+
+    SPDLOG_LOGGER_DEBUG(
+        llm_calculator_logger,
+        "Request processing metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | prepare_embeddings_time_ms: {:.3f} | llm_ttft_ms: {:.3f} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f} | image_slice_count: {}",
+        inputTokenCount,
+        outputTokenCount,
+        inputTokenCount + outputTokenCount,
+        prepareEmbeddingsTimeMs,
+        llmTtftMs,
+        ttftMs,
+        prefillSpeedTps,
+        perfMetrics.get_total_image_slice_count());
+}
+
+absl::Status VisualLanguageModelLegacyServable::validateEndpoint(Endpoint endpoint) const {
+    if (endpoint == Endpoint::COMPLETIONS) {
+        return absl::InvalidArgumentError("VLM Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
-    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
-        executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
-    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses") {
-        executionContext->endpoint = Endpoint::RESPONSES;
-    } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
-        executionContext->endpoint = Endpoint::TOKENIZE;
-    } else {
-        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions, /v3/responses endpoint or /v3/tokenize");
-    }
-    executionContext->payload = payload;
     return absl::OkStatus();
 }
 
@@ -82,70 +98,63 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     }
 
     legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
-    if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
-        legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
-            legacyExecutionContext->endpoint,
-            std::chrono::system_clock::now(),
-            getProperties()->tokenizer,
-            getProperties()->toolParserName,
-            getProperties()->reasoningParserName);
-    } else {
-        legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
-            legacyExecutionContext->endpoint,
-            std::chrono::system_clock::now(),
-            getProperties()->tokenizer,
-            getProperties()->toolParserName,
-            getProperties()->reasoningParserName);
+    try {
+        if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
+            legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
+                legacyExecutionContext->endpoint,
+                std::chrono::system_clock::now(),
+                getProperties()->tokenizer,
+                getProperties()->toolParserName,
+                getProperties()->reasoningParserName);
+        } else {
+            legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
+                legacyExecutionContext->endpoint,
+                std::chrono::system_clock::now(),
+                getProperties()->tokenizer,
+                getProperties()->toolParserName,
+                getProperties()->reasoningParserName);
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to create API handler: {}", e.what());
+        return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
     }
 
-    if (legacyExecutionContext->apiHandler->isStream()) {
-        legacyExecutionContext->lastStreamerCallbackOutput = "";  // initialize with empty string
-    }
-    auto callback = [& executionInProgress = legacyExecutionContext->executionInProgress,
-                        &mutex = legacyExecutionContext->mutex,
-                        &lastStreamerCallbackOutput = legacyExecutionContext->lastStreamerCallbackOutput,
-                        &clientDisconnected = legacyExecutionContext->clientDisconnected](std::string text) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
-        if (clientDisconnected.load()) {
-            executionInProgress.notify_one();
-            return ov::genai::StreamingStatus::CANCEL;
-        }
-
-        // TODO(mzegla): unconditional streaming-like behavior also for unary flow due to GenAI generate limitations.
-        // This diverges from the general flow - we should have unified systematic approach.
-        {
-            std::lock_guard<std::mutex> lock(mutex);
-            lastStreamerCallbackOutput += text;
-            executionInProgress.notify_one();
-        }
-        return ov::genai::StreamingStatus::RUNNING;
-    };
     ov::AnyMap streamerConfig;
-    if ((legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
-            legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens()) ||
-        !legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
-        streamerConfig.insert(ov::genai::skip_special_tokens(false));
+    {
+        if (!legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
+            streamerConfig.insert(ov::genai::skip_special_tokens(false));
+        }
+        auto ovmsCallback = [& ctx = *legacyExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+            if (ctx.clientDisconnected.load()) {
+                ctx.deltaChannel.signalComplete();
+                return ov::genai::StreamingStatus::CANCEL;
+            }
+            ctx.deltaChannel.push(std::move(delta), isLast);
+            return ov::genai::StreamingStatus::RUNNING;
+        };
+        legacyExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+            getProperties()->tokenizer,
+            legacyExecutionContext->apiHandler->getOutputParser(),
+            legacyExecutionContext->apiHandler->areToolsAvailable(),
+            std::move(ovmsCallback),
+            streamerConfig);
     }
-    legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
-    legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig,
+    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
         getProperties()->toolParserName,
         getProperties()->enableToolGuidedGeneration,
         getProperties()->decodingMethod);
-    legacyExecutionContext->generationConfigBuilder->parseConfigFromRequest(legacyExecutionContext->apiHandler->getRequest());
-    legacyExecutionContext->generationConfigBuilder->adjustConfigForDecodingMethod();
-    try {
-        legacyExecutionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
-    } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
-        legacyExecutionContext->generationConfigBuilder->unsetStructuredOutputConfig();
+    auto inputRequestResult = legacyExecutionContext->apiHandler->extractInputRequest(configBuilder);
+    if (!inputRequestResult.ok()) {
+        return inputRequestResult.status();
     }
+    legacyExecutionContext->inputRequest = std::move(*inputRequestResult);
     return absl::OkStatus();
 }
 
@@ -183,156 +192,37 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
         return absl::CancelledError();
     }
 
-    // TODO(mzegla): Usage of streaming flow here due to GenAI generate limitations.
-    // This diverges from the general flow - we should have unified systematic approach.
+    // By the time prepareCompleteResponse is called, readCompleteExecutionResults has
+    // already waited on finished — results and perf_metrics are fully populated.
+    executionContext->apiHandler->setPromptTokensUsage(
+        legacyExecutionContext->results.perf_metrics.get_num_input_tokens());
+    executionContext->apiHandler->setCompletionTokensUsage(
+        legacyExecutionContext->results.perf_metrics.get_num_generated_tokens());
 
-    executionContext->textStreamer->end();
+    if (legacyExecutionContext->results.finish_reasons.empty()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in legacy VLM unary generation result, defaulting to STOP");
+    }
+    const ov::genai::GenerationFinishReason finishReason =
+        legacyExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : legacyExecutionContext->results.finish_reasons[0];
 
-    std::string completeText;
-    {
-        std::lock_guard<std::mutex> lock(legacyExecutionContext->mutex);
-        completeText = std::move(executionContext->lastStreamerCallbackOutput);
-        executionContext->lastStreamerCallbackOutput.clear();
+    std::vector<Delta> deltas = executionContext->deltaChannel.drain();
+
+    if (executionContext->apiHandler->isVerboseResponse()) {
+        for (const auto& delta : deltas) {
+            if (const auto* cd = std::get_if<ContentDelta>(&delta)) {
+                executionContext->apiHandler->appendVerboseRawText(cd->text);
+            }
+        }
     }
 
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results, completeText);
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
+        deltas, finishReason);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
 
 absl::Status VisualLanguageModelLegacyServable::readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    return absl::OkStatus();
-}
-
-absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    auto legacyExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
-    if (legacyExecutionContext->payload.client->isDisconnected()) {
-        return absl::CancelledError();
-    }
-    std::string lastTextChunk;
-    auto generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
-    {
-        std::unique_lock lock(legacyExecutionContext->mutex);
-        while (executionContext->lastStreamerCallbackOutput.size() == 0 && generationStatus != std::future_status::ready) {
-            SPDLOG_LOGGER_TRACE(llm_executor_logger, "Waiting for partial data...");
-            auto cvStatus = legacyExecutionContext->executionInProgress.wait_for(lock, std::chrono::milliseconds(10));
-            generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
-            if (cvStatus == std::cv_status::timeout && generationStatus == std::future_status::ready) {
-                SPDLOG_LOGGER_TRACE(llm_executor_logger, "Race condition avoided - notification was missed but recovered with timeout");
-            }
-        }
-        lastTextChunk = executionContext->lastStreamerCallbackOutput;
-        executionContext->lastStreamerCallbackOutput = "";
-    }
-    if (executionContext->apiHandler->isVerboseResponse() && !lastTextChunk.empty()) {
-        executionContext->apiHandler->appendVerboseRawText(lastTextChunk);
-    }
-    if (generationStatus != std::future_status::ready) {  // continue
-        // For RESPONSES endpoint, always call serializeStreamingChunk so that
-        // output item initialization events are emitted even before the tokenizer produces text.
-        if (lastTextChunk.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
-            std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE);
-            if (!serializedChunk.empty()) {
-                executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
-            }
-        }
-        executionContext->sendLoopbackSignal = true;
-    } else {  // finish generation
-        if (!legacyExecutionContext->success) {
-            return absl::InvalidArgumentError("Request processing failed, check its correctness.");
-        }
-        OVMS_PROFILE_SCOPE("Generation of last streaming response");
-        executionContext->textStreamer->end();
-        // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
-        if (!executionContext->lastStreamerCallbackOutput.empty()) {
-            lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
-            if (executionContext->apiHandler->isVerboseResponse()) {
-                executionContext->apiHandler->appendVerboseRawText(executionContext->lastStreamerCallbackOutput);
-            }
-        }
-        if (legacyExecutionContext->results.finish_reasons.empty()) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in legacy VLM streaming generation result, defaulting to STOP");
-        }
-        // Legacy generation path always runs with batch=1, so we read the single finish reason at index 0.
-        ov::genai::GenerationFinishReason finishReason = legacyExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : legacyExecutionContext->results.finish_reasons[0];
-        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
-        if (!serializedChunk.empty()) {
-            executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
-        }
-        executionContext->apiHandler->setPromptTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_input_tokens());
-        executionContext->apiHandler->setCompletionTokensUsage(legacyExecutionContext->results.perf_metrics.get_num_generated_tokens());
-        if (executionContext->apiHandler->getStreamOptions().includeUsage)
-            executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
-
-        executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
-
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
-        executionContext->sendLoopbackSignal = false;
-        return absl::OkStatus();
-    }
-    return absl::OkStatus();
-}
-
-absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
-    if (vlmExecutionContext->apiHandler == nullptr) {
-        return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
-    }
-    if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS || executionContext->endpoint == Endpoint::RESPONSES) {
-        ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
-
-        for (size_t i = 0; i < chatHistory.size(); i++) {
-            const auto& message = chatHistory[i];
-            if (message["content"].as_string().value_or("").find("<ov_genai_image_") != std::string::npos) {
-                return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
-            }
-        }
-
-        const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
-        size_t imageIndex = 0;
-        std::unordered_map<size_t, std::string> imageTags;
-        for (const auto& image : imageHistory) {
-            const auto& [chatTurnIndex, imageTensor] = image;
-            std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
-            vlmExecutionContext->inputImages.push_back(imageTensor);
-        }
-        for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
-            std::string messageContent = chatHistory[chatTurnIndex]["content"].as_string().value_or("");
-            chatHistory[chatTurnIndex]["content"] = imageTagString + messageContent;
-        }
-
-        constexpr bool addGenerationPrompt = true;  // confirm it should be hardcoded
-        auto toolsStatus = vlmExecutionContext->apiHandler->parseToolsToJsonContainer();
-        if (!toolsStatus.ok()) {
-            return toolsStatus.status();
-        }
-        const auto& tools = toolsStatus.value();
-        auto chatTemplateKwargsStatus = vlmExecutionContext->apiHandler->parseChatTemplateKwargsToJsonContainer();
-        if (!chatTemplateKwargsStatus.ok()) {
-            return chatTemplateKwargsStatus.status();
-        }
-        const auto& chatTemplateKwargs = chatTemplateKwargsStatus.value();
-        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, addGenerationPrompt, {}, tools, chatTemplateKwargs);
-        if (vlmExecutionContext->apiHandler->getOutputParser() != nullptr) {
-            vlmExecutionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(vlmExecutionContext->inputText);
-        }
-    } else {
-        return absl::InvalidArgumentError("Unsupported endpoint");
-    }
-
-    if (Config::instance().getServerSettings().verboseResponse) {
-        vlmExecutionContext->apiHandler->enableVerboseResponse(vlmExecutionContext->inputText);
-    }
-
-    // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM input text: {}", vlmExecutionContext->inputText);
-    bool encodeAddSpecialTokens = false;  // assuming chat template application added special tokens
-    ov::Tensor inputTextIds = getProperties()->tokenizer.encode(vlmExecutionContext->inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
-    vlmExecutionContext->apiHandler->setPromptTokensUsage(inputTextIds.get_size());
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(inputTextIds));
-
+    executionContext->deltaChannel.waitForData();
     return absl::OkStatus();
 }
 

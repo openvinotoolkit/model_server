@@ -1,2 +1,2 @@
-tensorflow-serving-api==2.18.1
-tensorflow==2.18.1
+tritonclient[grpc]
+numpy

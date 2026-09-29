@@ -24,8 +24,13 @@ fi
 debug_bazel_flags=$1
 errors=0
 
-printf --  "Searching for PYTHON_DISABLE=0 in debug_bazel_flags=$debug_bazel_flags.\n"
-if [[ $debug_bazel_flags == *"PYTHON_DISABLE=0"* ]]; then
+printf --  "Detecting Python build mode from debug_bazel_flags=$debug_bazel_flags.\n"
+python_disabled=0
+if [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]] || [[ $debug_bazel_flags == *"py_off"* ]]; then
+    python_disabled=1
+fi
+
+if [[ $python_disabled -eq 0 ]]; then
     # /ovms/lib - with python
     input_file="/test/lib_files_python.txt"
     test_path="/ovms/lib"
@@ -49,18 +54,6 @@ else
     else
         printf -- "SUCCESS: $test_path Files list match.\n"
     fi
-fi
-
-# /ovms/lib/custom_nodes
-input_file="/test/lib_custom_nodes_files.txt"
-test_path="/ovms/lib/custom_nodes"
-output="$(diff <(cat $input_file) <(ls -l $test_path | awk '{print $9 $10 $11}'))"
-if [[ -n $output ]]
-then
-    printf -- "ERROR: $test_path against $input_file- File list mismatch: \n%s\n" "$output"
-    errors=$((errors+1))
-else
-    printf -- "SUCCESS: $test_path Files list match.\n"
 fi
 
 # check for errors

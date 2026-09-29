@@ -30,6 +30,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
         "//src:libovmsstring_utils",
+        "//src:libovms_ov_utils",
         "s2t_calculator_cc_proto",
         "@com_google_absl//absl/status",
         "//third_party:genai",

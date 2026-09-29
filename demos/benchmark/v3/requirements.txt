@@ -1,7 +1,7 @@
 datasets==3.6.0
 dataclasses==0.6
 transformers<5.1
-numpy==2.3.5
+numpy==2.2.6
 tqdm==4.67.1
 sentencepiece==0.2.1
 soundfile==0.13.1

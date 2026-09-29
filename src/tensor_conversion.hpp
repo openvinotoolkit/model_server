@@ -28,8 +28,8 @@
 #include "tensorinfo.hpp"
 #include "status.hpp"
 
-namespace tensorflow {
-class TensorProto;
+namespace inference {
+class ModelInferRequest_InferInputTensor;
 }
 namespace ovms {
 class Status;
@@ -121,6 +121,14 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
             image = std::move(imageResized);
         }
 
+        if (firstImage != nullptr && image.channels() != firstImage->channels()) {
+            SPDLOG_DEBUG("Binary data sent to input: {} has mixed channel count within one batch. First image channels: {} current image channels: {}",
+                tensorInfo.getMappedName(),
+                firstImage->channels(),
+                image.channels());
+            return StatusCode::INVALID_NO_OF_CHANNELS;
+        }
+
         // if (i == 0 && src.contents().bytes_contents_size() > 1) {
         //     // Multiply src.string_val_size() * image resolution * precision size
         // }
@@ -156,23 +164,11 @@ class InferenceTensor;
 template <>
 Status convertNativeFileFormatRequestTensorToOVTensor(const InferenceTensor& src, ov::Tensor& tensor, const TensorInfo& tensorInfo, const std::string* buffer);
 
-template <typename TensorType>
-Status convertStringRequestToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::string* buffer) {
-    OVMS_PROFILE_FUNCTION();
-    if (buffer != nullptr) {
-        return convertBinaryExtensionStringFromBufferToNativeOVTensor(src, tensor, buffer);
-    }
-    int batchSize = getBinaryInputsSize(src);
-    tensor = ov::Tensor(ov::element::Type_t::string, ov::Shape{static_cast<size_t>(batchSize)});
-    std::string* data = tensor.data<std::string>();
-    for (int i = 0; i < batchSize; i++) {
-        data[i].assign(getBinaryInput(src, i));
-    }
-    return StatusCode::OK;
-}
-
 template <>
 Status convertStringRequestToOVTensor(const InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
+
+template <>
+Status convertStringRequestToOVTensor(const ::inference::ModelInferRequest_InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
 
 template <typename TensorType>
 Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& dst) {

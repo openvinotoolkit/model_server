@@ -38,7 +38,7 @@ from tests.functional.config import (
     run_ovms_with_opencl_trace,
     run_ovms_with_valgrind,
 )
-from ovms.constants.models import ModelInfo
+from tests.functional.models.models import ModelInfo
 from tests.functional.constants.ovms import CurrentOvmsType, CurrentTarget
 from tests.functional.constants.ovms_binaries import calculate_ovms_binary_name
 from tests.functional.constants.ovms_images import (
@@ -86,7 +86,6 @@ def context(request, sigterm_cleaner, target_device, ovms_type, base_os):
     requirements_with_external_libraries = [
         Requirements.custom_loader,
         Requirements.cpu_extension,
-        Requirements.custom_nodes,
         Requirements.valgrind,
     ]
     classes_with_external_libraries_used = ["TestByXCli2"]

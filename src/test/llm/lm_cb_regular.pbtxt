@@ -18,6 +18,7 @@ node {
     name: "llmNode1"
     calculator: "HttpLLMCalculator"
     input_side_packet: "LLM_NODE_RESOURCES:llm"
+    input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
     input_stream: "LOOPBACK:loopback"
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     output_stream: "LOOPBACK:loopback"
@@ -28,7 +29,7 @@ node {
     }
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          models_path: "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct"
+          models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"
           cache_size: 1
         }
     }

@@ -109,56 +109,7 @@ void Phi4ToolParser::clearState() {
     openBracesCount = 1;  // Reset to 1 as we count the tool call opening brace
 }
 
-void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    std::vector<std::string> tools;
-
-    // Phi4 with vLLM template produces tool calls in the format:
-    // functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
-
-    std::string toolsStartString = "functools";
-    size_t toolsStartPos = 0;
-    toolsStartPos = parsedOutput.content.find(toolsStartString);
-
-    if (toolsStartPos != std::string::npos) {
-        // Extract the tools part, assuming it's all the remaining content after "functools"
-        std::string toolsString = parsedOutput.content.substr(toolsStartPos + toolsStartString.length());
-        rapidjson::Document toolsDoc;
-        toolsDoc.Parse(toolsString.c_str());
-        if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
-            for (auto& toolVal : toolsDoc.GetArray()) {
-                if (!toolVal.IsObject()) {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
-                    continue;
-                }
-                ToolCall toolCall;
-                toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-                if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
-                    toolCall.name = toolVal["name"].GetString();
-                } else {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
-                    continue;
-                }
-
-                if (toolVal.HasMember("arguments") && toolVal["arguments"].IsObject()) {
-                    rapidjson::StringBuffer sb;
-                    rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                    toolVal["arguments"].Accept(toolWriter);
-                    toolCall.arguments = sb.GetString();
-                } else {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-                    continue;
-                }
-                parsedOutput.toolCalls.push_back(toolCall);
-            }
-        } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
-        }
-        // Remove the tools part from the content
-        parsedOutput.content.erase(toolsStartPos);
-    }
-}
-
-std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<Delta> Phi4ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     /* 
     Phi4 with vLLM template produces tool calls in the format:
     functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
@@ -205,7 +156,7 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                 if (remainingChunk.empty()) {
                     return std::nullopt;  // Nothing more to process in this chunk
                 } else {
-                    return parseChunk(remainingChunk, finishReason);
+                    return parseChunk(remainingChunk, {}, finishReason);
                 }
             } else {                  // modifiedChunk.length() == parsingStartTag.length() as at this state, chunk cannot be smaller
                 return std::nullopt;  // Nothing more to process in this chunk
@@ -224,7 +175,7 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                 return std::nullopt;  // Nothing more to process in this chunk
             } else {
                 // Process the remaining chunk as part of tool call processing
-                return parseChunk(remainingChunk, finishReason);
+                return parseChunk(remainingChunk, {}, finishReason);
             }
         } else {
             // Still waiting for the opening bracket, ignore this chunk
@@ -242,7 +193,7 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
             if (remainingChunk.empty()) {
                 return std::nullopt;  // Nothing more to process in this chunk
             } else {
-                return parseChunk(remainingChunk, finishReason);
+                return parseChunk(remainingChunk, {}, finishReason);
             }
         } else {
             // Still waiting for the opening brace, ignore this chunk
@@ -285,7 +236,6 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
             throw std::runtime_error("Generated tool call structure is not valid");
         }
 
-        rapidjson::Document doc;
         // Case 1: 'arguments' has just appeared in the current chunk. If so, we return first delta.
         if (newJson.HasMember("arguments") && !lastJson.HasMember("arguments")) {
             std::string functionName;
@@ -299,9 +249,8 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                 throw std::runtime_error("Tool call name is missing in generated output");
             }
             // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":{"name": <functionName>}}]}
-            doc = wrapFirstDelta(functionName, toolCallIndex);
             lastJson.CopyFrom(newJson, lastJson.GetAllocator());
-            return doc;
+            return ToolCallDelta{toolCallIndex, generateRandomId(), functionName, ""};
             // Case 2: 'arguments' already exists in the last JSON, we compute delta and return it.
         } else if (lastJson.HasMember("arguments")) {
             rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
@@ -326,9 +275,11 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                 }
             }
 
-            // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":<delta>}]}
-            doc = wrapDelta(delta, toolCallIndex);
-            return doc;
+            // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":{"arguments":"..."}}]}
+            std::string argsStr;
+            if (delta.HasMember("arguments") && delta["arguments"].IsString())
+                argsStr = delta["arguments"].GetString();
+            return ToolCallDelta{toolCallIndex, std::nullopt, std::nullopt, argsStr};
             // Case 3: No 'arguments' exists or just appeared, so we keep building up until we have complete function name
         } else {
             lastJson.CopyFrom(newJson, lastJson.GetAllocator());

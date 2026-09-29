@@ -18,45 +18,27 @@
 
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
 #include <limits>
 #include <memory>
-#include <sstream>
 #include <stdexcept>
+#include <unordered_map>
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include <set>
-#include <string.h>
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
-#include "../../filesystem/filesystem.hpp"
+#include "../io_processing/generation_config_builder.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
-#include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #pragma warning(pop)
-
-#include <curl/curl.h>
-#include <regex>
-#include "../../image_conversion.hpp"
 
 using namespace rapidjson;
 
 namespace ovms {
 
 constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
-
-namespace {
-
-bool isPathInsideDirectory(const std::filesystem::path& testedPath, const std::filesystem::path& allowedDirectory) {
-    const auto mismatch = std::mismatch(
-        allowedDirectory.begin(), allowedDirectory.end(),
-        testedPath.begin(), testedPath.end());
-    return mismatch.first == allowedDirectory.end();
-}
-
-}  // namespace
 
 ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value) {
     if (value.IsNull()) {
@@ -118,159 +100,6 @@ std::string OpenAIApiHandler::serializeFailedEvent(const std::string& errorMessa
     return "";
 }
 
-// --- Image download utilities ---
-
-static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nmemb,
-    void* image) {
-    size_t realsize = size * nmemb;
-    auto& mem = *static_cast<std::string*>(image);
-    mem.append(static_cast<char*>(downloadedChunk), realsize);
-    return realsize;
-}
-
-#define CURL_SETOPT(setopt)   \
-    if (status == CURLE_OK) { \
-        status = setopt;      \
-    }
-
-absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
-    CURL* curl_handle = curl_easy_init();
-    if (!curl_handle) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to initialize curl handle");
-        return absl::InternalError("Image downloading failed");
-    }
-    auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curl_handle, curl_easy_cleanup);
-
-    auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
-    const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
-    if (envAllowRedirects != nullptr && (std::strcmp(envAllowRedirects, "1") == 0)) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "URL redirects allowed");
-        CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
-    }
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE, sizeLimit))
-
-    if (status != CURLE_OK) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Setting curl opts failed: {}", curl_easy_strerror(status));
-        return absl::InvalidArgumentError("Image downloading failed");
-    }
-
-    status = curl_easy_perform(curl_handle);
-    if (status != CURLE_OK) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Downloading image failed: {}", curl_easy_strerror(status));
-        return absl::InvalidArgumentError("Image downloading failed");
-    } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", image.size());
-    }
-    return absl::OkStatus();
-}
-
-bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char* url) {
-    if (allowedDomains.size() == 1 && allowedDomains[0] == "all") {
-        return true;
-    }
-    CURLUcode rc;
-    CURLU* parsedUrl = curl_url();
-    rc = curl_url_set(parsedUrl, CURLUPART_URL, url, 0);
-    if (rc) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} failed", url);
-        curl_url_cleanup(parsedUrl);
-        return false;
-    }
-    char* host;
-    rc = curl_url_get(parsedUrl, CURLUPART_HOST, &host, 0);
-    if (rc) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsing url {} hostname failed", url);
-        curl_url_cleanup(parsedUrl);
-        return false;
-    }
-    bool allowed = false;
-    for (const auto& allowedDomain : allowedDomains) {
-        if (allowedDomain.compare(host) == 0) {
-            allowed = true;
-            break;
-        }
-    }
-    curl_free(host);
-    curl_url_cleanup(parsedUrl);
-    return allowed;
-}
-
-absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
-    const std::optional<std::string>& allowedLocalMediaPath,
-    const std::optional<std::vector<std::string>>& allowedMediaDomains) {
-    std::size_t pos = imageSource.find(BASE64_PREFIX);
-    std::string decoded;
-    ov::Tensor tensor;
-    if (pos != std::string::npos) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
-        size_t offset = pos + BASE64_PREFIX.length();
-        if (!absl::Base64Unescape(std::string_view(imageSource.data() + offset, imageSource.size() - offset), &decoded)) {
-            return absl::InvalidArgumentError("Invalid base64 string in request");
-        }
-        try {
-            tensor = loadImageStbiFromMemory(decoded);
-        } catch (std::runtime_error& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
-            return absl::InvalidArgumentError("Image parsing failed");
-        }
-    } else if (std::regex_match(imageSource.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
-        if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), imageSource.c_str())) {
-            return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
-        }
-        auto status = downloadImage(imageSource.c_str(), decoded, MAX_IMAGE_SIZE_BYTES);
-        if (status != absl::OkStatus()) {
-            return status;
-        }
-        try {
-            tensor = loadImageStbiFromMemory(decoded);
-        } catch (std::runtime_error& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
-            return absl::InvalidArgumentError("Image parsing failed");
-        }
-    } else {
-        if (!allowedLocalMediaPath.has_value()) {
-            return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
-        }
-        if (FileSystem::isPathEscaped(imageSource)) {
-            std::stringstream ss;
-            ss << "Path " << imageSource.c_str() << " escape with .. is forbidden.";
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-            return absl::InvalidArgumentError(ss.str());
-        }
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
-        const std::filesystem::path resolvedAllowedPath = FileSystem::normalizeConfiguredPath(allowedLocalMediaPath.value());
-        const std::string resolvedImagePathStr = FileSystem::normalizeConfiguredPath(imageSource);
-        const std::filesystem::path resolvedImagePath = resolvedImagePathStr;
-        if (!isPathInsideDirectory(resolvedImagePath, resolvedAllowedPath)) {
-            return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
-        }
-        try {
-            tensor = loadImageStbiFromFile(resolvedImagePathStr.c_str());
-        } catch (std::runtime_error& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image file {} parsing failed: {}", resolvedImagePathStr, e.what());
-            return absl::InvalidArgumentError("Image file parsing failed");
-        }
-    }
-    return tensor;
-}
-
-std::vector<int64_t> OpenAIApiHandler::encodeTextToTokens(const std::string& text) {
-    auto result = tokenizer.encode(text);
-    auto& input_ids = result.input_ids;
-    if (input_ids.get_shape().size() != 2)
-        throw std::runtime_error("input_ids should have 2 dimensions");
-    if (input_ids.get_shape()[0] != 1)
-        throw std::runtime_error("input_ids should have 1 batch size");
-    if (input_ids.get_element_type() != ov::element::i64)
-        throw std::runtime_error("input_ids should have i64 element type");
-    int64_t* data = reinterpret_cast<int64_t*>(input_ids.data());
-    return std::vector<int64_t>(data, data + input_ids.get_shape()[1]);
-}
-
 absl::Status OpenAIApiHandler::parseResponseFormat() {
     auto it = doc.FindMember("response_format");
     if (it != doc.MemberEnd()) {
@@ -284,9 +113,49 @@ absl::Status OpenAIApiHandler::parseResponseFormat() {
     return absl::OkStatus();
 }
 
+absl::Status OpenAIApiHandler::applyReasoningEffort(const std::string& effort) {
+    // Muse/Onyx models only understand low/medium/high/xhigh; fold the wider OpenAI enum onto that set.
+    // Also serves as the single source of truth for valid effort values.
+    static const std::unordered_map<std::string, std::string> effortToReasoningStrength{
+        {"none", "low"}, {"minimal", "low"}, {"low", "low"}, {"medium", "medium"},
+        {"high", "high"}, {"xhigh", "xhigh"}, {"max", "xhigh"}};
+    auto reasoningStrengthIt = effortToReasoningStrength.find(effort);
+    if (reasoningStrengthIt == effortToReasoningStrength.end()) {
+        const std::string fieldName = (endpoint == Endpoint::RESPONSES) ? "reasoning.effort" : "reasoning_effort";
+        return absl::InvalidArgumentError(absl::StrCat(fieldName, " must be one of: none, minimal, low, medium, high, xhigh, max"));
+    }
+    const bool enableThinking = (effort != "none");
+    const std::string& reasoningStrength = reasoningStrengthIt->second;
+    auto& allocator = doc.GetAllocator();
+    auto kwargsIt = doc.FindMember("chat_template_kwargs");
+    if (kwargsIt != doc.MemberEnd()) {
+        if (kwargsIt->value.IsNull()) {
+            kwargsIt->value.SetObject();
+        } else if (!kwargsIt->value.IsObject()) {
+            return absl::InvalidArgumentError("chat_template_kwargs must be an object");
+        }
+        if (kwargsIt->value.FindMember("reasoning_effort") == kwargsIt->value.MemberEnd()) {
+            kwargsIt->value.AddMember("reasoning_effort", Value(effort.c_str(), allocator), allocator);
+        }
+        if (kwargsIt->value.FindMember("reasoning_strength") == kwargsIt->value.MemberEnd()) {
+            kwargsIt->value.AddMember("reasoning_strength", Value(reasoningStrength.c_str(), allocator), allocator);
+        }
+        if (kwargsIt->value.FindMember("enable_thinking") == kwargsIt->value.MemberEnd()) {
+            kwargsIt->value.AddMember("enable_thinking", enableThinking, allocator);
+        }
+    } else {
+        Value kwargs(kObjectType);
+        kwargs.AddMember("reasoning_effort", Value(effort.c_str(), allocator), allocator);
+        kwargs.AddMember("reasoning_strength", Value(reasoningStrength.c_str(), allocator), allocator);
+        kwargs.AddMember("enable_thinking", enableThinking, allocator);
+        doc.AddMember("chat_template_kwargs", kwargs, allocator);
+    }
+    return absl::OkStatus();
+}
+
 // --- Shared parsing methods ---
 
-absl::Status OpenAIApiHandler::ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged) {
+absl::Status OpenAIApiHandler::ensureArgumentsInToolCalls(Value& messageObj) {
     auto& allocator = doc.GetAllocator();
     auto toolCallsIt = messageObj.FindMember("tool_calls");
     if (toolCallsIt != messageObj.MemberEnd() && toolCallsIt->value.IsArray()) {
@@ -307,7 +176,6 @@ absl::Status OpenAIApiHandler::ensureArgumentsInToolCalls(Value& messageObj, boo
                 rapidjson::Value argumentsValue;
                 argumentsValue.SetString("{}", allocator);
                 functionIt->value.GetObject().AddMember(argumentsKey, argumentsValue, allocator);
-                jsonChanged = true;
             }
         }
     }
@@ -348,11 +216,9 @@ absl::Status OpenAIApiHandler::parseTools() {
             return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
         }
     }
-    bool jsonChanged = false;
     if (toolChoice == "none") {
         // remove tools from the request
         doc.RemoveMember("tools");
-        jsonChanged = true;
     }
     auto it = doc.FindMember("tools");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
@@ -405,7 +271,6 @@ absl::Status OpenAIApiHandler::parseTools() {
             // If toolChoice is set to a specific function name, we keep only that tool
             if (toolChoice != "auto" && toolChoice != "required" && toolChoice != functionName) {
                 it->value.Erase(&obj);
-                jsonChanged = true;
                 continue;
             }
 
@@ -430,13 +295,21 @@ absl::Status OpenAIApiHandler::parseTools() {
     }
 
     request.toolChoice = toolChoice;
-    if (jsonChanged) {
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        request.processedJson = buffer.GetString();
-    }
     return absl::OkStatus();
+}
+
+absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+    std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+    auto status = parseRequestImpl(maxTokensLimit, bestOfLimit, maxModelLength, allowedLocalMediaPath, allowedMediaDomains);
+    if (status.ok())
+        initOutputParser();
+    return status;
+}
+
+void OpenAIApiHandler::initOutputParser() {
+    if (toolParserName.empty() && reasoningParserName.empty())
+        return;
+    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, request.toolNameSchemaMap);
 }
 
 absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseToolsToJsonContainer() {
@@ -492,16 +365,50 @@ const OpenAIRequest& OpenAIApiHandler::getRequest() const {
     return request;
 }
 
-const std::string& OpenAIApiHandler::getProcessedJson() const {
-    return request.processedJson;
-}
-
-const ImageHistory& OpenAIApiHandler::getImageHistory() const {
-    return request.imageHistory;
-}
-
 ov::genai::ChatHistory& OpenAIApiHandler::getChatHistory() {
     return request.chatHistory;
+}
+
+absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationConfigBuilder& configBuilder) {
+    configBuilder.parseConfigFromRequest(request);
+    try {
+        configBuilder.adjustConfigForDecodingMethod();
+    } catch (const std::invalid_argument& e) {
+        return absl::InvalidArgumentError(e.what());
+    }
+    try {
+        configBuilder.validateStructuredOutputConfig(tokenizer);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
+        configBuilder.unsetStructuredOutputConfig();
+    }
+    InputRequest req;
+    req.generationConfig = configBuilder.getConfig();
+    if (endpoint == Endpoint::COMPLETIONS) {
+        req.input = request.prompt.value_or("");
+    } else {
+        // CHAT_COMPLETIONS and RESPONSES both use ChatHistory.
+        // Copied (not moved) so the handler retains its own copy for response serialization.
+        req.input = request.chatHistory;
+        // Populate tools and chat_template_kwargs on the copied ChatHistory so
+        // ChatTemplateProcessor can access them via get_tools()/get_extra_context().
+        auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
+        auto toolsResult = parseToolsToJsonContainer();
+        if (!toolsResult.ok()) {
+            return toolsResult.status();
+        }
+        if (toolsResult.value().has_value()) {
+            chatHistory.set_tools(toolsResult.value().value());
+        }
+        auto kwargsResult = parseChatTemplateKwargsToJsonContainer();
+        if (!kwargsResult.ok()) {
+            return kwargsResult.status();
+        }
+        if (kwargsResult.value().has_value()) {
+            chatHistory.set_extra_context(kwargsResult.value().value());
+        }
+    }
+    return req;
 }
 
 std::optional<int> OpenAIApiHandler::getMaxTokens() const {
@@ -520,7 +427,7 @@ bool OpenAIApiHandler::isStream() const { return request.stream; }
 Endpoint OpenAIApiHandler::getEndpoint() const { return endpoint; }
 std::string OpenAIApiHandler::getModel() const { return request.model; }
 std::string OpenAIApiHandler::getToolChoice() const { return request.toolChoice; }
-const std::unique_ptr<OutputParser>& OpenAIApiHandler::getOutputParser() const { return outputParser; }
+const std::shared_ptr<OutputParser>& OpenAIApiHandler::getOutputParser() const { return outputParser; }
 
 void OpenAIApiHandler::setPromptTokensUsage(size_t promptTokens) {
     usage.promptTokens = promptTokens;
@@ -534,15 +441,37 @@ void OpenAIApiHandler::incrementProcessedTokens(size_t numTokens) {
     usage.completionTokens += numTokens;
 }
 
-ParsedOutput OpenAIApiHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
-    OVMS_PROFILE_FUNCTION();
-    ParsedOutput parsedOutput;
-    if ((endpoint != Endpoint::CHAT_COMPLETIONS && endpoint != Endpoint::RESPONSES) || outputParser == nullptr) {
-        parsedOutput.content = this->tokenizer.decode(generatedIds, ov::genai::skip_special_tokens(request.skipSpecialTokens));
-    } else {
-        parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
+std::string OpenAIApiHandler::serializeUnaryResponse(
+    const std::vector<std::vector<Delta>>& allDeltas,
+    const std::vector<ov::genai::GenerationFinishReason>& finishReasons) {
+    return serializeUnaryResponse(allDeltas, finishReasons, {});
+}
+
+ParsedOutput OpenAIApiHandler::parsedOutputFromDeltas(const std::vector<Delta>& deltas) {
+    ParsedOutput output;
+    std::vector<ToolCall> toolCalls;
+    for (const Delta& d : deltas) {
+        std::visit(overloaded{
+                       [&](const ContentDelta& x) { output.content += x.text; },
+                       [&](const ReasoningDelta& x) { output.reasoning += x.text; },
+                       [&](const ToolCallDelta& x) {
+                           const auto idx = static_cast<size_t>(x.index);
+                           if (idx >= toolCalls.size())
+                               toolCalls.resize(idx + 1);
+                           ToolCall& tc = toolCalls[idx];
+                           if (x.id)
+                               tc.id = *x.id;
+                           if (x.name)
+                               tc.name = *x.name;
+                           tc.arguments += x.arguments;
+                       },
+                       [&](const FinishDelta&) {},
+                       [&](const AudioDelta&) {},
+                   },
+            d);
     }
-    return parsedOutput;
+    output.toolCalls = std::move(toolCalls);
+    return output;
 }
 
 // --- Free functions ---
@@ -874,10 +803,14 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     auto numAssistantTokensIt = doc.FindMember("num_assistant_tokens");
     auto assistantConfidenceThresholdIt = doc.FindMember("assistant_confidence_threshold");
     auto maxNgramSizeIt = doc.FindMember("max_ngram_size");
+    auto branchingFactorIt = doc.FindMember("branching_factor");
+    auto treeDepthIt = doc.FindMember("tree_depth");
 
     bool numAssistantTokensItHasValue = (numAssistantTokensIt != doc.MemberEnd() && !numAssistantTokensIt->value.IsNull());
     bool assistantConfidenceThresholdItHasValue = (assistantConfidenceThresholdIt != doc.MemberEnd() && !assistantConfidenceThresholdIt->value.IsNull());
     bool maxNgramSizeItHasValue = (maxNgramSizeIt != doc.MemberEnd() && !maxNgramSizeIt->value.IsNull());
+    bool branchingFactorItHasValue = (branchingFactorIt != doc.MemberEnd() && !branchingFactorIt->value.IsNull());
+    bool treeDepthItHasValue = (treeDepthIt != doc.MemberEnd() && !treeDepthIt->value.IsNull());
 
     if (numAssistantTokensItHasValue) {
         request.numAssistantTokens = numAssistantTokensIt->value.GetUint();
@@ -888,6 +821,16 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
     if (maxNgramSizeItHasValue) {
         request.maxNgramSize = maxNgramSizeIt->value.GetUint();
     }
+    if (branchingFactorItHasValue) {
+        if (!branchingFactorIt->value.IsUint())
+            return absl::InvalidArgumentError("branching_factor is not an unsigned integer");
+        request.branchingFactor = branchingFactorIt->value.GetUint();
+    }
+    if (treeDepthItHasValue) {
+        if (!treeDepthIt->value.IsUint())
+            return absl::InvalidArgumentError("tree_depth is not an unsigned integer");
+        request.treeDepth = treeDepthIt->value.GetUint();
+    }
 
     it = doc.FindMember("skip_special_tokens");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
@@ -895,11 +838,67 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
             return absl::InvalidArgumentError("skip_special_tokens is not a bool");
         request.skipSpecialTokens = it->value.GetBool();
     }
-    if (!request.skipSpecialTokens && outputParser != nullptr) {
-        outputParser.reset();
-    }
 
     request.maxModelLength = maxModelLength;
+
+    // modalities: array of strings; optional — controls output modalities
+    it = doc.FindMember("modalities");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsArray())
+            return absl::InvalidArgumentError("modalities is not an array");
+        bool hasText = false;
+        bool hasAudio = false;
+        for (const auto& mod : it->value.GetArray()) {
+            if (!mod.IsString())
+                return absl::InvalidArgumentError("modalities array must contain strings");
+            const std::string modality = mod.GetString();
+            if (modality == "audio") {
+                hasAudio = true;
+            } else if (modality == "text") {
+                hasText = true;
+            }
+        }
+        request.audioOutputRequested = hasAudio;
+        // When "modalities" field is explicitly provided and "text" is absent, suppress text in response
+        if (!hasText && hasAudio) {
+            request.textOutputRequested = false;
+        }
+    }
+
+    // audio: object; optional — required when modalities includes "audio"
+    it = doc.FindMember("audio");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsObject())
+            return absl::InvalidArgumentError("audio is not an object");
+        auto audioObj = it->value.GetObject();
+        auto voiceIt = audioObj.FindMember("voice");
+        if (voiceIt != audioObj.MemberEnd() && voiceIt->value.IsString()) {
+            request.audioVoice = voiceIt->value.GetString();
+        }
+        auto formatIt = audioObj.FindMember("format");
+        if (formatIt != audioObj.MemberEnd() && formatIt->value.IsString()) {
+            std::string fmt = formatIt->value.GetString();
+            if (fmt == "wav") {
+                request.audioFormat = OpenAIRequest::AudioFormat::WAV;
+            } else if (fmt == "pcm16") {
+                request.audioFormat = OpenAIRequest::AudioFormat::PCM16;
+            } else {
+                return absl::InvalidArgumentError("audio.format must be \"wav\" or \"pcm16\"");
+            }
+        }
+    }
+
+    // chunk_frames: integer; optional — number of codec frames per streaming audio chunk
+    // This is not OpenAI standard, but we allow it since it is configurable in OpenVINO GenAI
+    it = doc.FindMember("chunk_frames");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsUint())
+            return absl::InvalidArgumentError("chunk_frames must be a positive integer");
+        request.audioChunkFrames = it->value.GetUint();
+        if (request.audioChunkFrames < 1) {
+            return absl::InvalidArgumentError("chunk_frames must be >= 1");
+        }
+    }
 
     // TODO: logit_bias
     // TODO: top_logprobs

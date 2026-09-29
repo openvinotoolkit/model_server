@@ -13,6 +13,10 @@ pipeline {
             when { expression { env.PACKAGE_URL == "" } }
             steps {
                 script {
+                    env.BUILDSTAMP = new Date().format('yyyyMMddHHmmss')
+                    echo "Buildstamp: ${env.BUILDSTAMP}"
+                    echo "PRODUCT_VERSION: ${env.PRODUCT_VERSION}"
+                    echo "RELEASE_TAG: ${env.RELEASE_TAG}"
                     echo "JOB_BASE_NAME: ${env.JOB_BASE_NAME}"
                     echo "WORKSPACE: ${env.WORKSPACE}"
                     echo "OVMS_PYTHON_ENABLED: ${env.OVMS_PYTHON_ENABLED}"
@@ -23,16 +27,10 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          windows.unit_test()
-                          def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
-                          def python_presence = ""
-                          if (env.OVMS_PYTHON_ENABLED == "1") {
-                              python_presence = "with_python"
-                          } else {
-                              python_presence = "without_python"
+                          if (env.RUN_TESTS == "1") {
+                            windows.unit_test()
                           }
-                          bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-${python_presence}-${safeBranchName}-latest.zip")
-                          } finally {
+                        } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
                         }
@@ -62,6 +60,7 @@ pipeline {
         stage ("BDBA scans"){
             when { expression { env.BDBA_SCAN == "true" } }
             steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                 script {
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
@@ -81,43 +80,104 @@ pipeline {
                         error "Cannot load ci/loadWin.groovy file."
                     }
                 }
+                }
             }
         }
         stage ("Signing files"){
-            when { expression { env.SIGN_FILES == "true" } }
+            when { expression { env.SIGN_FILES == "true" && env.SIGN_USER_PASSWORD != "" } }
             steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                 echo "OVMS_PYTHON_ENABLED: ${env.OVMS_PYTHON_ENABLED}"
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'PRERELEASE_SIGN',
-                        usernameVariable: 'PRERELEASE_USER',
-                        passwordVariable: 'PRERELEASE_PASS'), 
-                    usernamePassword(
-                        credentialsId: 'RELEASE_SIGN',
-                        usernameVariable: 'RELEASE_USER',
-                        passwordVariable: 'RELEASE_PASS'),
-                    ]) {
-                    script {
-                        if (env.RELEASE_TYPE == "RELEASE") {
-                            env.SIGNING_USER = env.RELEASE_USER
-                            env.OVMS_PASS = env.RELEASE_PASS
-                        } else if (env.RELEASE_TYPE == "PRE-RELEASE") {
-                            env.SIGNING_USER = env.PRERELEASE_USER
-                            env.OVMS_PASS = env.PRERELEASE_PASS
-                        } else {
-                            error "Unknown RELEASE_TYPE: ${env.RELEASE_TYPE}"
+                script {
+                    if (env.RELEASE_TYPE == "RELEASE") {
+                        env.SIGNING_USER = "sys_ovms"
+                    } else if (env.RELEASE_TYPE == "PRE-RELEASE") {
+                        env.SIGNING_USER = "sys_ovms_amr"
+                    } else {
+                        error "Unknown RELEASE_TYPE: ${env.RELEASE_TYPE}"
+                    }
+                    env.OVMS_PASS = env.SIGN_USER_PASSWORD
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        try {
+                            windows.clone_sdl_repo()
+                            windows.sign()
+                        } finally {
+                            windows.archive_sign_results()
                         }
-                        def windows = load 'ci/loadWin.groovy'
-                        if (windows != null) {
-                            try {
-                                windows.clone_sdl_repo()
-                                windows.sign()
-                            } finally {
-                                windows.archive_sign_results()
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
+                }
+                }
+            }
+        }
+        stage ("Promote package"){
+            steps {
+                script {
+                    if (!env.BUILDSTAMP?.trim()) {
+                        env.BUILDSTAMP = new Date().format('yyyyMMddHHmmss')
+                    }
+                    echo "Buildstamp: ${env.BUILDSTAMP}"
+                    def releaseTag = env.RELEASE_TAG?.trim()
+                    if (env.OVMS_PYTHON_ENABLED == "0" && releaseTag && !releaseTag.endsWith("_nopython")) {
+                        env.RELEASE_TAG = "${releaseTag}_nopython"
+                    }
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        def python_suffix = ""
+                        if (env.OVMS_PYTHON_ENABLED == "1") {
+                            python_suffix = "on"
+                        } else {
+                            python_suffix = "off"
+                        }
+                        def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
+                        def sourceFile = "ovms.zip"
+                        def shaFile = ""
+                        if (env.SIGN_FILES == "true" && env.SIGN_USER_PASSWORD != "") {
+                            def signedFiles = "${env.WORKSPACE}\\dist\\windows\\ovms_windows_python_${python_suffix}.zip"
+                            if (fileExists(signedFiles)) {
+                                sourceFile = "ovms_windows_python_${python_suffix}.zip"
+                                shaFile = "ovms_windows_python_${python_suffix}.zip.sha256"
+                            } else {
+                                echo "WARNING: Signed file not found, falling back to unsigned ovms.zip"
                             }
-                        } else {
-                            error "Cannot load ci/loadWin.groovy file."
                         }
+                        def status = bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
+                        if (status != 0) {
+                            error "Failed to map network drive. Status code: ${status}"
+                        }
+                        def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
+                        def latestPath = "${destPath}\\latest"
+                        
+                        status = bat(returnStatus:true, script: "if not exist \"${destPath}\\${env.BUILDSTAMP}\" mkdir \"${destPath}\\${env.BUILDSTAMP}\"")
+                        if (status != 0) {
+                            error "Failed to create directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${destPath}\\${env.BUILDSTAMP}\\${packageName}\"")
+                        if (status != 0) {
+                            error "Failed to copy file. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
+                        if (status != 0) {
+                            error "Failed to remove directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "mkdir \"${latestPath}\"")
+                        if (status != 0) {
+                            error "Failed to create directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${latestPath}\\${packageName}\"")
+                        if (status != 0) {
+                            error "Failed to copy file. Status code: ${status}"
+                        }
+                        if (shaFile != "" && fileExists("${env.WORKSPACE}\\dist\\windows\\${shaFile}")) {
+                            status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${shaFile}\" \"${latestPath}\\${packageName}.sha256\"")
+                            if (status != 0) {
+                                error "Failed to copy sha256 file. Status code: ${status}"
+                            }
+                        }
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
                     }
                 }
             }

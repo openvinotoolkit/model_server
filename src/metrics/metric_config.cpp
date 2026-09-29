@@ -55,6 +55,7 @@ const std::string METRIC_NAME_WAIT_FOR_INFER_REQ_TIME = "ovms_wait_for_infer_req
 
 // MediaPipe
 const std::string METRIC_NAME_CURRENT_GRAPHS = "ovms_current_graphs";
+const std::string METRIC_NAME_GRAPH_LOADED = "ovms_graph_loaded";
 const std::string METRIC_NAME_RESPONSES = "ovms_responses";
 
 const std::string METRIC_NAME_REQUESTS_ACCEPTED = "ovms_requests_accepted";

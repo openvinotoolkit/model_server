@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from ovmsclient import make_grpc_client
+import tritonclient.grpc as grpcclient
 import cv2
 import numpy as np
 import argparse
@@ -29,7 +29,7 @@ parser.add_argument('--model_name', default='faster_rcnn',
                     help='Model name to query. default: faster_rcnn')
 parser.add_argument('--input_name', default='input_tensor',
                     help='Input name to query. default: input_tensor')
-parser.add_argument('--model_version', default=0, type=int,
+parser.add_argument('--model_version', default="0", type=str,
                     help='Model version to query. default: latest available')
 parser.add_argument('--labels', default="coco_91cl.txt", type=str,
                     help='Path to COCO dataset labels with human readable class names')
@@ -39,14 +39,16 @@ args = parser.parse_args()
 image = cv2.imread(filename=str(args.image))
 image = cv2.cvtColor(image, code=cv2.COLOR_BGR2RGB)
 resized_image = cv2.resize(src=image, dsize=(255, 255))
-network_input_image = np.expand_dims(resized_image, 0)
+network_input_image = np.expand_dims(resized_image, 0).astype(np.uint8)
 
-client = make_grpc_client(args.service_url)
-inputs = {
-    args.input_name: network_input_image
-}
+client = grpcclient.InferenceServerClient(url=args.service_url)
+infer_input = grpcclient.InferInput(args.input_name, network_input_image.shape, "UINT8")
+infer_input.set_data_from_numpy(network_input_image)
+result = client.infer(args.model_name, [infer_input], model_version=args.model_version)
 
-response = client.predict(inputs, args.model_name, args.model_version)
+response = {}
+for output in result.get_response().outputs:
+    response[output.name] = result.as_numpy(output.name)
 
 def add_detection_box(box, image, label):
     """

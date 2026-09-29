@@ -36,6 +36,7 @@
 #include "absl/status/statusor.h"
 #pragma warning(pop)
 #include "../io_processing/output_parser.hpp"
+#include "../io_processing/input_request.hpp"
 #include "openai_request.hpp"
 
 // Forward declarations for types only used by reference in virtual method signatures
@@ -49,6 +50,8 @@ class VLMDecodedResults;
 using namespace rapidjson;
 
 namespace ovms {
+
+class GenerationConfigBuilder;
 
 ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value);
 
@@ -84,6 +87,13 @@ struct CompletionUsageStatistics {
     }
 };
 
+// Per-choice raw token data needed to build logprob objects in unary responses.
+// populated in GenAiServable::prepareCompleteResponse from GenerationOutput.
+struct UnaryChoiceLogprobs {
+    std::vector<int64_t> generatedIds;
+    std::vector<float> logProbs;
+};
+
 // Abstract base class for OpenAI API handlers.
 // Holds common state (request, doc, tokenizer, usage, output parser) and implements
 // shared parsing logic. Endpoint-specific parsing and serialization are pure virtual.
@@ -95,9 +105,11 @@ protected:
     OpenAIRequest request;
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
+    const std::string toolParserName;
+    const std::string reasoningParserName;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
-    std::unique_ptr<OutputParser> outputParser = nullptr;
+    std::shared_ptr<OutputParser> outputParser = nullptr;
 
     // Verbose response support (enabled via --verbose_response). When set, the
     // serialized response includes a "__verbose" object with the raw prompt
@@ -110,14 +122,21 @@ protected:
     std::vector<int64_t> verboseRawTokens;
     std::string verboseRawText;
 
+    virtual absl::Status parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+        std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) = 0;
+
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
     absl::Status parseResponseFormat();
-    absl::Status ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged);
-    ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
-
-    // Shared VLM workaround: encode text to tokens using tokenizer, validates shape
-    std::vector<int64_t> encodeTextToTokens(const std::string& text);
+    // Validates effort against the OpenAI reasoning_effort enum and merges its chat-template
+    // representation (reasoning_effort, reasoning_strength mapped onto low/medium/high/xhigh,
+    // enable_thinking) into doc's chat_template_kwargs, without overwriting keys the request
+    // already set explicitly.
+    absl::Status applyReasoningEffort(const std::string& effort);
+    absl::Status ensureArgumentsInToolCalls(Value& messageObj);
+    void initOutputParser();
+    // Assemble a ParsedOutput from a sequence of streaming Delta variants produced by OVMSTextStreamer.
+    static ParsedOutput parsedOutputFromDeltas(const std::vector<Delta>& deltas);
 
 public:
     OpenAIApiHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -125,13 +144,9 @@ public:
         doc(doc),
         endpoint(endpoint),
         created(creationTime),
-        tokenizer(tokenizer) {
-        // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
-        // we pass it now, but it has to be populated first before first use
-        if (!toolParserName.empty() || !reasoningParserName.empty()) {
-            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
-        }
-    }
+        tokenizer(tokenizer),
+        toolParserName(toolParserName),
+        reasoningParserName(reasoningParserName) {}
 
     virtual ~OpenAIApiHandler() = default;
 
@@ -141,9 +156,9 @@ public:
     OpenAIApiHandler(OpenAIApiHandler&&) = delete;
     OpenAIApiHandler& operator=(OpenAIApiHandler&&) = delete;
 
-    // Request parsing - pure virtual, each handler implements its own endpoint-specific dispatch
-    virtual absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
-        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt) = 0;
+    // Request parsing: non-virtual wrapper; calls parseRequestImpl() then initOutputParser().
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
+        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
 
     // Shared parsing (non-virtual)
     absl::Status parseTools();
@@ -156,8 +171,6 @@ public:
     std::optional<std::string> getPrompt() const;
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
-    const std::string& getProcessedJson() const;
-    const ImageHistory& getImageHistory() const;
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
     std::optional<std::string> getResponseFormat() const;
@@ -165,7 +178,11 @@ public:
     Endpoint getEndpoint() const;
     std::string getModel() const;
     std::string getToolChoice() const;
-    const std::unique_ptr<OutputParser>& getOutputParser() const;
+    const std::shared_ptr<OutputParser>& getOutputParser() const;
+    // Builds a complete InputRequest: runs the full generation config pipeline
+    // (parse → adjust → validate) on the provided builder using this handler's
+    // request and tokenizer, then populates input from the parsed request.
+    absl::StatusOr<InputRequest> extractInputRequest(GenerationConfigBuilder& configBuilder);
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {
@@ -193,10 +210,20 @@ public:
     virtual void incrementProcessedTokens(size_t numTokens = 1);
 
     // Serialization - pure virtual, each handler produces its own response format
-    virtual std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) = 0;
-    virtual std::string serializeUnaryResponse(ov::genai::EncodedResults& results) = 0;
-    virtual std::string serializeUnaryResponse(ov::genai::VLMDecodedResults& results, const std::string& textResponse) = 0;
-    virtual std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) = 0;
+    // Delta-based unary serialisation — assembles a complete response from streaming
+    // deltas collected via deltaChannel after OVMSTextStreamer finishes.
+    // Single-choice variant (used by Legacy servables).
+    virtual std::string serializeUnaryResponse(const std::vector<Delta>& deltas, ov::genai::GenerationFinishReason finishReason) = 0;
+    // Multi-choice variant: N delta-vectors (one per sequence) + per-sequence finish reasons.
+    // logprobData may be empty when logprobs are not requested; otherwise its size equals
+    // allDeltas.size(). Used by ContinuousBatchingServable for both n=1 and n>1.
+    virtual std::string serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
+        const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
+        const std::vector<UnaryChoiceLogprobs>& logprobData) = 0;
+    // Convenience overload: no logprobs (delegates to the virtual above with empty logprobData).
+    std::string serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
+        const std::vector<ov::genai::GenerationFinishReason>& finishReasons);
+    virtual std::string serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) = 0;
     virtual std::string serializeStreamingUsageChunk() = 0;
     virtual std::string serializeStreamingHandshakeChunk() = 0;
 
@@ -210,18 +237,5 @@ public:
 void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& generatedIds, bool echoPrompt);
 std::optional<std::string> mapFinishReason(ov::genai::GenerationFinishReason finishReason, bool hasToolCalls);
 std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjson::Value& openAIFormat);
-
-// Constants shared by parseMessages and parseInput
-constexpr std::string_view BASE64_PREFIX = "base64,";
-constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
-
-// Image download utilities shared by parseMessages and parseInput
-absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit);
-bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char* url);
-
-// Loads image from base64 string, URL, or local file path; returns the decoded tensor
-absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
-    const std::optional<std::string>& allowedLocalMediaPath,
-    const std::optional<std::vector<std::string>>& allowedMediaDomains);
 
 }  // namespace ovms

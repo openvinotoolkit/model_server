@@ -30,7 +30,7 @@ def add_common_arguments(parser):
     parser.add_argument('--weight-format', default='int8', help='precision of the exported model', dest='precision')
     parser.add_argument('--config_file_path', default='config.json', help='path to the config file', dest='config_file_path')
     parser.add_argument('--overwrite_models', default=False, action='store_true', help='Overwrite the model if it already exists in the models repository', dest='overwrite_models')
-    parser.add_argument('--target_device', default="CPU", help='CPU, GPU, NPU or HETERO, default is CPU', dest='target_device')
+    parser.add_argument('--target_device', default=None, help='CPU, GPU, NPU or HETERO. When not specified the server will auto-detect the best available device at startup.', dest='target_device')
     parser.add_argument('--ov_cache_dir', default=None, help='Folder path for compilation cache to speedup initialization time', dest='ov_cache_dir')
     parser.add_argument('--extra_quantization_params', required=False, help='Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"', dest='extra_quantization_params')
 
@@ -54,8 +54,8 @@ parser_text.add_argument('--draft_eagle3_mode', action='store_true', help='Set t
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
-parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
-parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral", "lfm2"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
+parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss", "lfm2", "gemma4"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
+parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral", "lfm2", "gemma4"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
 
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
@@ -64,6 +64,7 @@ parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='stor
 parser_embeddings_ov.add_argument('--pooling', default="CLS", choices=["CLS", "LAST", "MEAN"], help='Embeddings pooling mode', dest='pooling')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_embeddings_ov.add_argument('--max_length', default=None, type=int, help='Maximum length of the embeddings input', dest='max_length')
 
 parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_rerank_ov)
@@ -92,10 +93,10 @@ parser_image_generation.add_argument('--source_loras', default=None,
 parser_text2speech = subparsers.add_parser('text2speech', help='export model for text2speech endpoint')
 add_common_arguments(parser_text2speech)
 parser_text2speech.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
-parser_text2speech.add_argument('--vocoder', type=str, help='The vocoder model to use for text2speech. For example microsoft/speecht5_hifigan', dest='vocoder')
-parser_text2speech.add_argument('--speaker_name', type=str, help='Name of the speaker', dest='speaker_name')
-parser_text2speech.add_argument('--speaker_path', type=str, help='Path to the speaker.bin file.', dest='speaker_path')
-
+parser_text2speech.add_argument('--model_type', default='kokoro', choices=['speecht5', 'kokoro'], help='Type of the source TTS model. speecht5 uses optimum-cli; kokoro uses a dedicated PyTorch->OpenVINO conversion path.', dest='model_type')
+parser_text2speech.add_argument('--vocoder', type=str, help='The vocoder model to use for speecht5. For example microsoft/speecht5_hifigan. Ignored for kokoro.', dest='vocoder')
+parser_text2speech.add_argument('--speaker_name', type=str, help='Name of the speaker (speecht5 only; for kokoro all voices from the HF repo are exported).', dest='speaker_name')
+parser_text2speech.add_argument('--speaker_path', type=str, help='Path to the speaker.bin file (speecht5 only; for kokoro all voices from the HF repo are exported).', dest='speaker_path')
 
 parser_speech2text = subparsers.add_parser('speech2text', help='export model for speech2text endpoint')
 add_common_arguments(parser_speech2text)
@@ -117,13 +118,16 @@ node {
       models_path: "{{model_path}}",
       plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
       target_device: "{{target_device|default("CPU", true)}}",
-      {%- if speaker_name and speaker_path %}
+      {%- if voices %}
       voices: [
+        {%- for v in voices %}
         {
-            name: "{{speaker_name}}",
-            path: "{{speaker_path}}"
-        }
-      ]{% endif %}
+            name: "{{v.name}}",
+            path: "{{v.path}}"
+        }{% if not loop.last %},{% endif %}
+        {%- endfor %}
+      ]
+      {%- endif %}
     }
   }
 }
@@ -184,6 +188,8 @@ node {
       {%- if truncate %}
       truncate: true,{% endif %}
       target_device: "{{target_device|default("CPU", true)}}"
+      {%- if max_length is not none %}
+      max_length: {{max_length}},{% endif %}
     }
   }
 }
@@ -218,6 +224,7 @@ node: {
   input_stream: "LOOPBACK:loopback"
   input_stream: "HTTP_REQUEST_PAYLOAD:input"
   input_side_packet: "LLM_NODE_RESOURCES:llm"
+  input_side_packet: "LLM_NODE_EXECUTION_CONTEXTS:llm_ctx"
   output_stream: "LOOPBACK:loopback"
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
   input_stream_info: {
@@ -236,13 +243,14 @@ node: {
           max_num_batched_tokens: {{max_num_batched_tokens}},{% endif %}
           {%- if not dynamic_split_fuse %}
           dynamic_split_fuse: false, {% endif %}
-          max_num_seqs: {% if draft_eagle3_mode %}1{% else %}{{max_num_seqs|default("256", true)}}{% endif %},
-          device: "{{target_device|default("CPU", true)}}",
+          max_num_seqs: {{max_num_seqs|default("256", true)}},
+          {%- if target_device %}
+          device: "{{target_device}}",{% endif %}
           {%- if draft_model_dir_name %}
           # Speculative decoding configuration
           draft_models_path: "./{{draft_model_dir_name}}",
-          draft_device: "{{target_device|default("CPU", true)}}",
-          draft_eagle3_mode: {{draft_eagle3_mode|default(false)}},{% endif %}
+          {%- if target_device %}
+          draft_device: "{{target_device}}",{% endif %}{% endif %}
           {%- if reasoning_parser %}
           reasoning_parser: "{{reasoning_parser}}",{% endif %}
           {%- if tool_parser %}
@@ -454,7 +462,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         plugin_config['prompt_lookup'] = True
     
     # Additional plugin properties for HETERO
-    if "HETERO" in task_parameters['target_device']:
+    if task_parameters['target_device'] and "HETERO" in task_parameters['target_device']:
         plugin_config['MODEL_DISTRIBUTION_POLICY'] = 'PIPELINE_PARALLEL'
 
     if task_parameters['target_device'] == 'NPU':
@@ -503,11 +511,26 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
 def export_text2speech_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting text2speech model to ",destination_path)
-    if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code --model-kwargs \"{{\\\"vocoder\\\": \\\"{}\\\"}}\" {}".format(source_model, precision, task_parameters['vocoder'], destination_path)
-        print('Running command: ', optimum_command)  # for debug purposes
-        if os.system(optimum_command):
-            raise ValueError("Failed to export text2speech model", source_model)
+    model_type = task_parameters.get('model_type', 'speecht5')
+
+    if model_type == 'kokoro':
+        # optimum-intel registers Kokoro under library_name=kokoro / task=text-to-audio.
+        if not os.path.isfile(os.path.join(destination_path, 'openvino_model.xml')) or args['overwrite_models']:
+            optimum_command = "optimum-cli export openvino --model {} --task text-to-audio --weight-format {} {} --trust-remote-code {}".format(
+                source_model, precision, task_parameters['extra_quantization_params'], destination_path)
+            print('Running command:', optimum_command)
+            if os.system(optimum_command):
+                raise ValueError("Failed to export kokoro model", source_model)
+    else:
+        if not os.path.isdir(destination_path) or args['overwrite_models']:
+            if not task_parameters.get('vocoder'):
+                raise ValueError("--vocoder is required when --model_type=speecht5")
+            optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code --model-kwargs \"{{\\\"vocoder\\\": \\\"{}\\\"}}\" {}".format(source_model, precision, task_parameters['vocoder'], destination_path)
+            print('Running command: ', optimum_command)
+            if os.system(optimum_command):
+                raise ValueError("Failed to export text2speech model", source_model)
+        if task_parameters.get('speaker_name') and task_parameters.get('speaker_path'):
+            task_parameters['voices'] = [{'name': task_parameters['speaker_name'], 'path': task_parameters['speaker_path']}]
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(t2s_graph_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
@@ -519,7 +542,7 @@ def export_speech2text_model(model_repository_path, source_model, model_name, pr
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting speech2text model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         print('Running command: ', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export speech2text model", source_model)

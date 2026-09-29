@@ -24,6 +24,7 @@ from tests.functional.constants.metrics import MetricsPolicy
 from tests.functional.constants.ovms import Ovms, set_plugin_config_boolean_value
 from tests.functional.constants.ovms_openai import ImagesRequestParamsValues
 from tests.functional.constants.paths import Paths
+from tests.functional.utils.helpers import get_base_device
 
 logger = get_logger(__name__)
 
@@ -53,7 +54,6 @@ def create_ovms_command(
         cache_size=None,
         pooling=None,
 ):
-    is_stateful = parameters.is_stateful_model_present() if parameters.is_stateful is None else parameters.is_stateful
     layout = parameters.get_layout_from_regular_models()
 
     common_parameters = {
@@ -61,7 +61,6 @@ def create_ovms_command(
         "rest_port": parameters.rest_port,
         "logging_level": parameters.log_level,
         "layout": layout,
-        "stateful": is_stateful,
         "rest_workers": parameters.rest_workers,
         "grpc_workers": parameters.grpc_workers,
         "check_version": parameters.check_version,
@@ -69,7 +68,6 @@ def create_ovms_command(
         "cpu_extension": cpu_extension_path,
         "metrics_enable": parameters.metrics_enable,
         "metrics_list": parameters.metrics_list,
-        "sequence_cleaner_poll_wait_minutes": parameters.sequence_cleaner_poll_wait_minutes,
         "ovms_type": ovms_type,
         "base_os": base_os,
         "allowed_local_media_path": parameters.allowed_local_media_path,
@@ -97,7 +95,7 @@ def create_ovms_command(
     else:
         plugin_config = parameters.get_plugin_config_from_regular_models()
         if enable_plugin_config_target_device:
-            plugin_config_target_device = Ovms.PLUGIN_CONFIG[parameters.target_device]
+            plugin_config_target_device = Ovms.PLUGIN_CONFIG[get_base_device(parameters.target_device)]
             plugin_config = (
                 {**plugin_config, **plugin_config_target_device}
                 if plugin_config is not None
@@ -113,9 +111,6 @@ def create_ovms_command(
             target_device=parameters.target_device if use_parameter else None,
             shape=shape if use_parameter else None,
             model_version_policy=parameters.model_version_policy if use_parameter else None,
-            max_sequence_number=parameters.max_sequence_number if use_parameter else None,
-            idle_sequence_cleanup=parameters.idle_sequence_cleanup if use_parameter else None,
-            low_latency_transformation=parameters.low_latency_transformation if use_parameter else None,
             **common_parameters,
             **pull_parameters,
         )
@@ -138,14 +133,9 @@ class OvmsCommand(object):
     shape: str = None
     model_version_policy: str = None
     file_system_poll_wait_seconds: str = None
-    max_sequence_number: int = None
-    sequence_cleaner_poll_wait_minutes: str = None
-    low_latency_transformation: bool = None
-    stateful: bool = False
     check_version: bool = False
     layout: str = None
     cpu_extension: str = None
-    idle_sequence_cleanup: bool = None
     metrics_enable: MetricsPolicy = MetricsPolicy.NotDefined
     metrics_list: list = None
     ovms_type: str = None
@@ -296,22 +286,6 @@ class OvmsCommand(object):
                 command_parts.append("--file_system_poll_wait_seconds")
                 command_parts.append(str(self.file_system_poll_wait_seconds))
 
-            if self.sequence_cleaner_poll_wait_minutes is not None:
-                command_parts.append("--sequence_cleaner_poll_wait_minutes")
-                command_parts.append(str(self.sequence_cleaner_poll_wait_minutes))
-
-            if self.idle_sequence_cleanup is not None:
-                command_parts.append("--idle_sequence_cleanup")
-                command_parts.append(str(self.idle_sequence_cleanup))
-
-            if self.max_sequence_number is not None:
-                command_parts.append("--max_sequence_number")
-                command_parts.append(str(self.max_sequence_number))
-
-            if self.low_latency_transformation is not None:
-                command_parts.append("--low_latency_transformation")
-                command_parts.append(str(self.low_latency_transformation))
-
             if self.layout:
                 command_parts.append("--layout")
                 command_parts.append(str(self.layout))
@@ -319,9 +293,6 @@ class OvmsCommand(object):
             if self.cpu_extension:
                 command_parts.append("--cpu_extension")
                 command_parts.append(str(self.cpu_extension))
-
-            if self.stateful:
-                command_parts.append("--stateful")
 
             if self.metrics_enable == MetricsPolicy.EnabledInCli:
                 command_parts.append("--metrics_enable")

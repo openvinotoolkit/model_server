@@ -494,30 +494,30 @@ class ModelMetricReporterTest : public ::testing::Test {};
 TEST_F(ModelMetricReporterTest, MetricReporterConstructorTest) {
     MetricRegistry registry;
     ModelMetricReporter reporter1(nullptr, nullptr, "example_pipeline_name", 1);
-    ASSERT_EQ(reporter1.requestFailGrpcGetModelMetadata, nullptr);
+    ASSERT_EQ(reporter1.requestFailGrpcModelMetadata, nullptr);
 
     ModelMetricReporter reporter2(nullptr, &registry, "example_pipeline_name", 1);
     auto metrics = registry.collect();
     ASSERT_EQ(metrics, "");
-    ASSERT_EQ(reporter2.requestFailGrpcGetModelMetadata, nullptr);
+    ASSERT_EQ(reporter2.requestFailGrpcModelMetadata, nullptr);
 
     MetricConfig metricConfig;
     ModelMetricReporter reporter3(&metricConfig, &registry, "example_pipeline_name", 1);
     metrics = registry.collect();
     ASSERT_EQ(metrics, "");
-    ASSERT_EQ(reporter3.requestFailGrpcGetModelMetadata, nullptr);
+    ASSERT_EQ(reporter3.requestFailGrpcModelMetadata, nullptr);
 
     metricConfig.setDefaultMetricsTo(true);
     ModelMetricReporter reporter4(&metricConfig, &registry, "example_pipeline_name", 1);
     metrics = registry.collect();
     ASSERT_EQ(metrics, "");
-    ASSERT_EQ(reporter4.requestFailGrpcGetModelMetadata, nullptr);
+    ASSERT_EQ(reporter4.requestFailGrpcModelMetadata, nullptr);
 
     metricConfig.metricsEnabled = true;
     ModelMetricReporter reporter5(&metricConfig, &registry, "example_pipeline_name", 1);
     metrics = registry.collect();
     ASSERT_NE(metrics, "");
-    ASSERT_TRUE(reporter5.requestFailGrpcGetModelMetadata != nullptr);
+    ASSERT_TRUE(reporter5.requestFailGrpcModelMetadata != nullptr);
 }
 
 class MetricsCli : public ::testing::Test {

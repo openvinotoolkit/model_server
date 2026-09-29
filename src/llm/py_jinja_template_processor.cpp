@@ -18,13 +18,7 @@
 #include <string>
 #include <utility>
 
-#pragma warning(push)
-#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4456)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_framework.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
+#include "src/logging.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
@@ -35,7 +29,7 @@
 
 namespace ovms {
 
-bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, std::string modelsPath, const std::string& requestBody, std::string& output) {
+bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output) {
     if (templateProcessor.chatTemplate == nullptr) {
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;
@@ -43,7 +37,7 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = templateProcessor.chatTemplate->getObject(),
-            "tool_chat_template"_a = templateProcessor.toolTemplate->getObject(), "models_path"_a = modelsPath,
+            "tool_chat_template"_a = templateProcessor.toolTemplate->getObject(),
             "bos_token"_a = templateProcessor.bosToken, "eos_token"_a = templateProcessor.eosToken);
         py::exec(R"(
             output = ""
@@ -58,11 +52,17 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
                 elif not isinstance(chat_template_kwargs, dict):
                     raise Exception("chat_template_kwargs must be an object")
 
+                # add_generation_prompt is passed as part of chat_template_kwargs; pop it out so
+                # it is not also supplied via **chat_template_kwargs below (duplicate keyword).
+                add_generation_prompt = chat_template_kwargs.pop("add_generation_prompt", True)
+                if not isinstance(add_generation_prompt, bool):
+                    raise Exception("add_generation_prompt accepts values true or false")
+
                 tools = request_json["tools"] if "tools" in request_json else None
                 if tools is None:
-                    output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True, **chat_template_kwargs)
+                    output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=add_generation_prompt, **chat_template_kwargs)
                 else:
-                    output = tool_chat_template.render(messages=messages, tools=tools, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True, **chat_template_kwargs)
+                    output = tool_chat_template.render(messages=messages, tools=tools, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=add_generation_prompt, **chat_template_kwargs)
             except Exception as e:
                 error = str(e) 
         )",
@@ -79,10 +79,10 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
         output = std::move(result);
         return true;
     } catch (const pybind11::error_already_set& e) {
-        LOG(INFO) << "Error occurred when applying chat template: " << e.what();
+        SPDLOG_INFO("Error occurred when applying chat template: {}", e.what());
         output = "Unexpected error occurred when applying chat template";
     } catch (...) {
-        LOG(INFO) << "Unexpected error occurred when applying chat template";
+        SPDLOG_INFO("Unexpected error occurred when applying chat template");
         output = "Unexpected error occurred when applying chat template";
     }
     return false;

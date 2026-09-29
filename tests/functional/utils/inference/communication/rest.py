@@ -187,13 +187,6 @@ class RestCommunicationInterface(AbstractCommunicationInterface):
             status, error_message_phrase, callable_obj, context, *args, **kwargs
         )
 
-    def prepare_stateful_request(self, input_objects: dict, sequence_ctrl=None, sequence_id=None,
-                                 ctrl_dtype=None, id_dtype=None):
-        return self.prepare_stateful_request_rest(input_objects, sequence_ctrl, sequence_id, ctrl_dtype, id_dtype)
-
-    def predict_stateful_request(self, request, timeout):
-        return self.predict_stateful_request_rest(request, timeout)
-
     def is_server_live(self):
         return self.is_server_live_rest()
 

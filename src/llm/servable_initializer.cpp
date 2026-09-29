@@ -13,7 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -23,8 +25,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include <fstream>
-
+#include <openvino/runtime/properties.hpp>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 
@@ -36,9 +37,13 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../config.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
+#include "io_processing/chat_template/analyzer.hpp"
+#include "io_processing/chat_template/probe.hpp"
+#include "io_processing/parser_config_validation.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
@@ -48,20 +53,143 @@
 #include "servable_initializer.hpp"
 #include "visual_language_model/continuous_batching/servable.hpp"
 #include "visual_language_model/legacy/servable_initializer.hpp"
+#include "omni_model/legacy/servable_initializer.hpp"
+#include "omni_model/legacy/servable.hpp"
 
 namespace ovms {
 
+GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath) {
+    namespace fs = std::filesystem;
+    using DS = GenAiServableProperties::DraftModelStrategy;
+    if (fs::exists(fs::path(draftPath) / "openvino_mtp_model.xml"))
+        return DS::MTP;
+
+    const auto xmlPath = fs::path(draftPath) / "openvino_model.xml";
+    if (!fs::exists(xmlPath))
+        throw std::runtime_error("Draft model XML not found at: " + xmlPath.string());
+    std::ifstream file(xmlPath.string(), std::ios::binary);
+    if (!file.good())
+        throw std::runtime_error("Cannot read draft model XML: " + xmlPath.string());
+
+    file.seekg(0, std::ios::end);
+    std::streamoff remaining = file.tellg();
+
+    static constexpr std::streamoff READ_BUF_SIZE = 4096;  // I/O buffer size, not a scan limit
+    static constexpr size_t MAX_LINES = 500;               // safety cap if rt_info is never found
+
+    bool inRtInfo = false;
+    bool foundDflash = false;
+    bool foundEagle3 = false;
+    bool stop = false;
+    size_t linesRead = 0;
+    std::string buffer;
+
+    // Scans a single line, walking the file from the last line upward.
+    auto processLine = [&](const std::string& l) {
+        if (l.find("</rt_info>") != std::string::npos) {
+            inRtInfo = true;
+            return;
+        }
+        if (l.find("<rt_info") != std::string::npos) {
+            stop = true;
+            return;
+        }
+        if (!inRtInfo)
+            return;
+        auto isTruthy = [&](const char* key, bool& found) {
+            if (found)
+                return;
+            auto keyPos = l.find(key);
+            if (keyPos == std::string::npos)
+                return;
+            auto valuePos = l.find("value=", keyPos);
+            if (valuePos == std::string::npos)
+                return;
+            if (l.find("\"1\"", valuePos) != std::string::npos ||
+                l.find("\"True\"", valuePos) != std::string::npos ||
+                l.find("\"true\"", valuePos) != std::string::npos)
+                found = true;
+        };
+        isTruthy("dflash_mode", foundDflash);
+        isTruthy("eagle3_mode", foundEagle3);
+    };
+
+    // Read backward in fixed-size buffers, prepending each earlier buffer to what's
+    // already accumulated, popping complete lines off the tail as soon as they are known.
+    // Stops as soon as the rt_info block has been fully scanned (its open tag reached)
+    // or MAX_LINES have been processed without finding it.
+    while (remaining > 0 && !stop && linesRead < MAX_LINES) {
+        const std::streamoff readSize = std::min(READ_BUF_SIZE, remaining);
+        remaining -= readSize;
+        file.seekg(remaining, std::ios::beg);
+        std::string chunk(static_cast<size_t>(readSize), '\0');
+        file.read(chunk.data(), readSize);
+        buffer.insert(0, chunk);
+
+        size_t nlPos;
+        while (!stop && linesRead < MAX_LINES && (nlPos = buffer.rfind('\n')) != std::string::npos) {
+            processLine(buffer.substr(nlPos + 1));
+            ++linesRead;
+            buffer.erase(nlPos);
+        }
+    }
+    if (!stop && linesRead < MAX_LINES && !buffer.empty()) {
+        processLine(buffer);
+    }
+
+    // DFlash takes priority over EAGLE3 (mirrors GenAI's CB pipeline strategy selection)
+    if (foundDflash)
+        return DS::DFLASH;
+    if (foundEagle3)
+        return DS::EAGLE3;
+    return DS::FAST_DRAFT;
+}
+
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
 
-void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
-#if (PYTHON_DISABLE == 0)
-    ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
-    loadPyTemplateProcessor(properties, extraGenInfo);
-#else
+// Dry-run probes: render the chat template with synthetic inputs to empirically
+// detect what the template requires. This is model-agnostic and tests actual
+// template behavior rather than relying solely on string pattern matching.
+// Probes for:
+//   - requiresObjectArguments (workaround: string→object conversion of tool_call arguments)
+static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServableProperties> properties) {
     if (properties->tokenizer.get_chat_template().empty()) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
+        return;
+    }
+    if (!properties->chatTemplateCaps.supportsToolCalls) {
+        return;
+    }
+
+#if (PYTHON_DISABLE == 0)
+    if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->templateProcessor.chatTemplate != nullptr) {
+        if (!probeChatTemplateCapsJinja(properties->templateProcessor, properties->chatTemplateCaps)) {
+            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Jinja cannot render this template's tool calls correctly");
+        }
+        return;
     }
 #endif
+
+    // Minja path — use the shared probe component
+    if (!probeChatTemplateCapsMinja(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Minja cannot render this template's tool calls correctly");
+    }
+
+    if (!properties->reasoningParserName.empty() && !probeChatTemplateReasoning(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support reasoning_content field");
+    }
+
+    if (!probeChatTemplateToolResponse(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support tool response field correctly");
+    }
+}
+
+void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
+    const bool shouldWarnOnEmptyTemplate = (properties->chatTemplateMode == ChatTemplateMode::MINJA);
+    if (shouldWarnOnEmptyTemplate) {
+        if (properties->tokenizer.get_chat_template().empty()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
+        }
+    }
 
     // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
     // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
@@ -78,6 +206,110 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         } else {
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
         }
+    }
+
+    // Analyze the chat template to detect capabilities and model family
+    std::string templateSource = properties->tokenizer.get_chat_template();
+    if (!templateSource.empty()) {
+        auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
+        properties->chatTemplateCaps = analysisResult.caps;
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
+            analysisResult.caps.toString());
+        // Auto-detect or report manually configured tool parser
+        if (isParserDisabled(properties->toolParserName)) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
+            properties->toolParserName.clear();
+        } else if (!properties->toolParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
+        } else if (analysisResult.detectedToolParser.has_value()) {
+            properties->toolParserName = analysisResult.detectedToolParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
+        }
+        // Auto-detect or report manually configured reasoning parser
+        if (isParserDisabled(properties->reasoningParserName)) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
+            properties->reasoningParserName.clear();
+        } else if (!properties->reasoningParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
+        } else if (analysisResult.detectedReasoningParser.has_value()) {
+            properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
+        }
+
+        // Dry-run probes: empirically verify requiresObjectArguments
+        // by rendering synthetic messages through GenAI's minja and checking the output.
+        // First check if minja can render basic chat at all (catches unsupported Jinja extensions)
+        if (properties->chatTemplateMode == ChatTemplateMode::MINJA) {
+            if (!probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
+                                                           "Disabling /chat/completions endpoint for this model.");
+                properties->tokenizer.set_chat_template("");
+                return;
+            }
+        }
+        probeServableChatTemplateCaps(properties);
+    }
+
+#if (PYTHON_DISABLE == 0)
+    if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
+        std::string runtimeOutput;
+        RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
+        const auto prepareStatus = prepareRuntimeChatTemplate(
+            chatTemplateDirectory,
+            properties->tokenizer.get_chat_template(),
+            properties->tokenizer.get_bos_token(),
+            properties->tokenizer.get_eos_token(),
+            properties->preparedRuntimeChatTemplate,
+            runtimeOutput,
+            &runtimeError);
+
+        if (prepareStatus == RuntimeChatTemplatePrepareStatus::PREPARED) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Prepared runtime chat template via libovmspython");
+        } else {
+            if (prepareStatus == RuntimeChatTemplatePrepareStatus::UNAVAILABLE) {
+                SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                    "Runtime chat template API is unavailable. In-process PyJinjaTemplateProcessor is disabled in this path.");
+            } else {
+                if (runtimeError == RuntimeChatTemplateError::PYTHON_RUNTIME_INITIALIZATION) {
+                    SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                        "Runtime chat template preparation failed due to Python runtime initialization issue: {}. "
+                        "In-process PyJinjaTemplateProcessor is disabled in this path.",
+                        runtimeOutput.empty() ? std::string("unknown error") : runtimeOutput);
+                } else {
+                    SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                        "Runtime chat template preparation failed: {}. In-process PyJinjaTemplateProcessor is disabled in this path.",
+                        runtimeOutput.empty() ? std::string("unknown error") : runtimeOutput);
+                }
+            }
+        }
+    }
+#endif
+
+    // Populate the InputProcessorContext from the now-fully-initialized properties.
+    properties->inputProcessorContext.tokenizer = properties->tokenizer;
+    const bool runtimeTemplatePrepared = properties->preparedRuntimeChatTemplate.isPrepared();
+    properties->inputProcessorContext.config.useMinja =
+        properties->chatTemplateMode == ChatTemplateMode::MINJA;
+    properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
+    properties->inputProcessorContext.preparedRuntimeChatTemplate =
+        runtimeTemplatePrepared ? &properties->preparedRuntimeChatTemplate : nullptr;
+}
+
+void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties) {
+    // Propagate the global --cache_dir (ServerSettings) into the pipeline plugin config.
+    // Unlike the non-CB ModelInstance path (ModelInstance::setCacheOptions), these GenAI
+    // initializers construct the pipeline directly, so the server-level cache_dir is
+    // otherwise never applied and compiled-model cache artifacts are never persisted.
+    // An explicit CACHE_DIR in the node's plugin_config remains authoritative.
+    const std::string& globalCacheDir = Config::instance().cacheDir();
+    if (globalCacheDir.empty()) {
+        return;
+    }
+    if (properties->pluginConfig.find(ov::cache_dir.name()) == properties->pluginConfig.end()) {
+        properties->pluginConfig[ov::cache_dir.name()] = globalCacheDir;
+        SPDLOG_DEBUG("Applying global cache_dir to GenAI pipeline: {}", globalCacheDir);
+    } else {
+        SPDLOG_DEBUG("CACHE_DIR set explicitly in node plugin_config; keeping user value over global cache_dir");
     }
 }
 
@@ -150,14 +382,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     std::string chatTemplate = properties->tokenizer.get_original_chat_template();
     std::string bosToken = properties->tokenizer.get_bos_token();
     std::string eosToken = properties->tokenizer.get_eos_token();
-    if (bosToken.empty()) {
-        SPDLOG_ERROR("BOS token was not found in model files.");
-        return;
-    }
-    if (eosToken.empty()) {
-        SPDLOG_ERROR("EOS token was not found in model files.");
-        return;
-    }
     if (chatTemplate.empty()) {
         SPDLOG_ERROR("Chat template was not found in model files.");
         return;
@@ -339,6 +563,20 @@ Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string
     return StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE;
 }
 
+static std::optional<uint32_t> findMaxLengthField(const rapidjson::Value& config) {
+    if (!config.IsObject()) {
+        return std::nullopt;
+    }
+    static const std::vector<std::string> maxLengthFields = {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window"};
+    for (const auto& field : maxLengthFields) {
+        auto it = config.FindMember(field.c_str());
+        if (it != config.MemberEnd() && it->value.IsUint()) {
+            return it->value.GetUint();
+        }
+    }
+    return std::nullopt;
+}
+
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
     std::string configPath = FileSystem::appendSlash(modelsPath) + "config.json";
     std::optional<uint32_t> maxModelLength;
@@ -353,12 +591,11 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
         if (parseResult.Code()) {
             return maxModelLength;
         }
-        std::vector<std::string> maxLengthFields = {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window"};
-        for (auto field : maxLengthFields) {
-            if (modelConfig.HasMember(field.c_str()) && modelConfig[field.c_str()].IsUint()) {
-                maxModelLength = modelConfig[field.c_str()].GetUint();
-                break;
-            }
+        maxModelLength = findMaxLengthField(modelConfig);
+        // Composite VLM/omni configs (e.g. Qwen3.5-Omni) nest the language model's
+        // parameters under "text_config" instead of the top level.
+        if (!maxModelLength.has_value() && modelConfig.HasMember("text_config") && modelConfig["text_config"].IsObject()) {
+            maxModelLength = findMaxLengthField(modelConfig["text_config"]);
         }
     }
     return maxModelLength;
@@ -373,13 +610,22 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     }
 
     std::filesystem::path parsedModelsPathFs(parsedModelsPath);
-    // Existence of embeddings models indicates we are dealing with VLM pipeline
-    bool isVLM = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
-                  std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
+
+    // Existence of talker model indicates omni pipeline
+    bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
+    bool hasVlmModels = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
+                         std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
+
+    // Existence of text embeddings and vision embeddings models indicates we are dealing with VLM pipeline
+    // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
+    bool isOmni = hasTalkerModel && hasVlmModels;
+    bool isVLM = !hasTalkerModel && hasVlmModels;
 
     // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
     if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {
-        if (nodeOptions.device() == "NPU") {
+        if (isOmni) {
+            pipelineType = PipelineType::OMNI;
+        } else if (nodeOptions.device() == "NPU") {
             if (isVLM) {
                 pipelineType = PipelineType::VLM;
             } else {
@@ -405,6 +651,9 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
             break;
         case mediapipe::LLMCalculatorOptions::VLM_CB:
             pipelineType = PipelineType::VLM_CB;
+            break;
+        case mediapipe::LLMCalculatorOptions::OMNI:
+            pipelineType = PipelineType::OMNI;
             break;
         default:
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node options do not contain any recognized pipeline configuration.");
@@ -447,6 +696,22 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         } else if (pipelineType == PipelineType::VLM_CB) {
             // VLM uses CB engine, so initialization part is shared (both servables share the same properties),
             // therefore we can use CB servable initializer to initialize VLM servable
+            if (!nodeOptions.draft_models_path().empty()) {
+                // Only plain Fast Draft is unsupported for VLM; EAGLE3, DFlash and MTP all work
+                auto fsDraftPath = std::filesystem::path(nodeOptions.draft_models_path());
+                if (!fsDraftPath.is_absolute())
+                    fsDraftPath = std::filesystem::path(graphPath) / fsDraftPath;
+                try {
+                    auto strategy = detectDraftModelStrategy(fsDraftPath.string());
+                    if (strategy == GenAiServableProperties::DraftModelStrategy::FAST_DRAFT) {
+                        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Fast Draft speculative decoding is not supported for VLM pipelines. Use an EAGLE3 head, DFlash, or an MTP model instead.");
+                        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+                    }
+                } catch (const std::exception& e) {
+                    SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to detect draft model strategy: {}", e.what());
+                    return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+                }
+            }
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<VisualLanguageModelServable>();
@@ -467,6 +732,14 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Legacy servable");
             VisualLanguageModelLegacyServableInitializer legacyServableInitializer;
             status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
+            if (status != StatusCode::OK) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
+                return status;
+            }
+        } else if (pipelineType == PipelineType::OMNI) {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Omni Model Legacy servable");
+            OmniModelLegacyServableInitializer omniServableInitializer;
+            status = omniServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;

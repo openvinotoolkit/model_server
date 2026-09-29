@@ -68,13 +68,13 @@ public:
 
     absl::Status Close(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {} ] Close", cc->NodeName());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator [Node: {} ] Close", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
         ovms::GenAiServableMap servableMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::GenAiServableMap>();
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
@@ -90,7 +90,7 @@ public:
         if (!this->executionContextHolder) {
             this->executionContext = servable->createExecutionContext();
         }
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
     absl::Status handleGenerationError(CalculatorContext* cc, const char* errorMessage) {
@@ -107,7 +107,7 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Process start", cc->NodeName());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Process start", cc->NodeName());
         OVMS_PROFILE_FUNCTION();
         RET_CHECK(this->servable != nullptr);
 
@@ -184,12 +184,12 @@ public:
                 auto status = servable->readCompleteExecutionResults(executionContext);
                 if (status != absl::OkStatus())
                     return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Received complete execution results, preparing response", cc->NodeName());
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Received complete execution results, preparing response", cc->NodeName());
 
                 status = servable->prepareCompleteResponse(executionContext);
                 if (status != absl::OkStatus())
                     return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
 
                 std::string& response = executionContext->response;
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(response)}, iterationBeginTimestamp);
@@ -198,27 +198,32 @@ public:
                 auto status = servable->readPartialExecutionResults(executionContext);
                 if (status != absl::OkStatus())
                     return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Received partial execution results", cc->NodeName());
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Received partial execution results", cc->NodeName());
 
                 status = servable->preparePartialResponse(executionContext);
                 if (status != absl::OkStatus())
                     return status;
                 std::string& response = executionContext->response;
                 if (!response.empty()) {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(response)}, iterationBeginTimestamp);
                 }
                 if (executionContext->sendLoopbackSignal)
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
             }
         } catch (ov::AssertFailure& e) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed: {}", cc->NodeName(), e.what());
+            return handleGenerationError(cc, e.what());
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed: {}", cc->NodeName(), e.what());
             return handleGenerationError(cc, e.what());
         } catch (...) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed due to unknown error", cc->NodeName());
             return handleGenerationError(cc, "Response generation failed");
         }
         auto now = std::chrono::system_clock::now();
         iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Process end", cc->NodeName());
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Process end", cc->NodeName());
         return absl::OkStatus();
     }
 };

@@ -16,8 +16,6 @@
 
 workspace(name = "ovms")
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # 2023-06-05
@@ -71,10 +69,11 @@ py_repositories()
 # https://github.com/google-ai-edge/mediapipe/commit/743cdb747332efdfb43338d92aa6349acc40a06a
 # patch for static_assert(ValidateAsciiCasefold() == 0, "error in case conversion");
 # needs to be before MP & TF
-git_repository(
+http_archive(
     name = "com_google_absl",
-    remote = "https://github.com/abseil/abseil-cpp",
-    commit = "9687a8ea750bfcddf790372093245a1d041b21a3", # MP image buildable original MP
+    url = "https://github.com/abseil/abseil-cpp/archive/9687a8ea750bfcddf790372093245a1d041b21a3.tar.gz",
+    sha256 = "f841f78243f179326f2a80b719f2887c38fe226d288ecdc46e2aa091e6aa43bc",
+    strip_prefix = "abseil-cpp-9687a8ea750bfcddf790372093245a1d041b21a3", # MP image buildable original MP
     patches = [
         "@mediapipe//third_party:com_google_absl_windows_patch.diff",
         "abseil_gcc_8.5_constant_expression.patch",
@@ -89,7 +88,7 @@ http_archive(
     build_file = "@mediapipe//third_party:zlib.BUILD",
     sha256 = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
     strip_prefix = "zlib-1.3.2",
-    url = "http://zlib.net/fossils/zlib-1.3.2.tar.gz",
+    url = "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
 )
 
 # RapidJSON
@@ -154,18 +153,18 @@ cc_library(
 
 new_local_repository(
     name = "windows_curl",
-    path = "C:\\opt\\curl-8.20.0_2-win64-mingw",
+    path = "C:\\opt\\curl-8.21.0_7-win64-mingw",
     build_file_content = """
 cc_import(
     name = "curl_lib",
     hdrs = [],
+    interface_library = "bin/libcurl-x64.lib",
     shared_library = "bin/libcurl-x64.dll",
     visibility = ["//visibility:public"],
 )
 cc_library(
     name = "curl",
     hdrs = glob(["include/curl/curl.h"]),
-    srcs = glob(["lib/libcurl.dll.a"]),
     includes = ["include/"],
     visibility = ["//visibility:public"],
     deps = [":curl_lib"],
@@ -173,21 +172,6 @@ cc_library(
 """,
 )
 
-
-# Used for gRPC API protos only
-# Tensorflow serving
-git_repository(
-    name = "tensorflow_serving",
-    remote = "https://github.com/tensorflow/serving.git",
-    tag = "2.18.0",
-    patch_args = ["-p1"],
-    patches = ["net_http.patch", "listen.patch", "partial_2.18.patch"]
-    #                             ^^^^^^^^^^^^
-    #                       make bind address configurable
-    #          ^^^^^^^^^^^^
-    #        allow all http methods                ^^^^^^^^^
-    #                                        implements partial responses
-)
 
 ########################################################### Mediapipe
 http_archive(
@@ -205,10 +189,11 @@ http_archive(
 
 ################################### Official/forked mediapipe repository #########
 #### Will be used on feature release
-git_repository(
+http_archive(
     name = "mediapipe",
-    remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "12e8d511cfbc5f471c498278a65a02dd250963e8", # top of mediapipe main branch as of 26.11.2025
+    url = "https://github.com/openvinotoolkit/mediapipe/archive/1153c8688f234d3b40ed20105df7893eb517b429.tar.gz",
+    sha256 = "924f4b74fe5a32c4ae807c8387fe7c65cafceb2c9a316e211a2a0a29a53be1b5",
+    strip_prefix = "mediapipe-1153c8688f234d3b40ed20105df7893eb517b429", # top of mediapipe main branch as of 16.09.2026
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -228,8 +213,10 @@ http_archive(
 # Node dependencies
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "5aae76dced38f784b58d9776e4ab12278bc156a9ed2b1d9fcd3e39921dc88fda",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.7.1/rules_nodejs-5.7.1.tar.gz"],
+    sha256 = "d3476f6dc146766d3f35aa8aa39e65df6467ed7dc8dfdcabf9b7cad464516cd5",
+    strip_prefix = "rules_nodejs-5.7.1",
+    type = "tar.gz",
+    urls = ["https://codeload.github.com/bazelbuild/rules_nodejs/tar.gz/refs/tags/5.7.1"],
 )
 
 load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
@@ -251,10 +238,11 @@ http_archive(
     urls = ["https://github.com/protocolbuffers/protobuf-javascript/archive/refs/tags/v3.21.2.tar.gz"],
 )
 
-git_repository( # Using commit past 0.9.0 that adds cmake 3.26.2 for model api. Be sure to update to 0.10.0 when available.
+http_archive( # Using commit past 0.9.0 that adds cmake 3.26.2 for model api. Be sure to update to 0.10.0 when available.
     name = "rules_foreign_cc",
-    remote = "https://github.com/bazelbuild/rules_foreign_cc.git",
-    commit = "1fb8a1e",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/1fb8a1ed9100236590c2a9441d79811aefaabcf8.tar.gz",
+    sha256 = "9d55e5b295dc9de77dfac8c1c2f365894363f2acc54cccdde41f7555a9b28dc6",
+    strip_prefix = "rules_foreign_cc-1fb8a1ed9100236590c2a9441d79811aefaabcf8",
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
@@ -270,13 +258,17 @@ http_archive(
 )
 
 # 2020-08-21 SHA 3a0d4d22c5ae0b9a2216988411cfa6bf860cc372
+load("@ovms//third_party/glog:glog.bzl", "glog_dependencies")
+glog_dependencies()
+
 http_archive(
-    name = "com_github_glog_glog",
+    name = "com_github_glog_glog_no_gflags",
     strip_prefix = "glog-3a0d4d22c5ae0b9a2216988411cfa6bf860cc372",
     sha256 = "170d08f80210b82d95563f4723a15095eff1aad1863000e8eeb569c96a98fefb",
     urls = [
         "https://github.com/google/glog/archive/3a0d4d22c5ae0b9a2216988411cfa6bf860cc372.zip",
     ],
+    build_file = "@mediapipe//third_party:glog_no_gflags.BUILD",
 )
 
 load("@mediapipe//third_party:external_files.bzl", "external_files")
@@ -315,7 +307,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
-    path = "C:\\opt\\opencv_4.13.0",
+    path = "C:\\opt\\opencv_4.14.0",
 )
 
 new_local_repository(
@@ -394,10 +386,11 @@ install_deps()
 ########################################################### Python support end
 
 # minitrace
-new_git_repository(
+http_archive(
     name = "minitrace",
-    remote = "https://github.com/hrydgard/minitrace.git",
-    commit = "020f42b189e8d6ad50e4d8f45d69edee0a6b3f23",
+    url = "https://github.com/hrydgard/minitrace/archive/020f42b189e8d6ad50e4d8f45d69edee0a6b3f23.tar.gz",
+    sha256 = "314bcab4dc069c61f2eb813c9bd649efb2bd1fd75f91205a269a4c5abcd3d66b",
+    strip_prefix = "minitrace-020f42b189e8d6ad50e4d8f45d69edee0a6b3f23",
     build_file_content = """
 cc_library(
     name = "trace",
@@ -450,8 +443,6 @@ http_archive(
     repo_mapping = {"@curl" : "@curl"}
 )
 
-load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
-
 # Initialize TensorFlow's external dependencies.
 load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
 workspace()
@@ -489,7 +480,6 @@ workspace()
 load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
 workspace()
 
-tf_serving_workspace() #moved past TF
 # required after update to mp 0.10.18
 load(
     "@org_tensorflow//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
@@ -513,26 +503,15 @@ libgit2_engine()
 load("@ovms//third_party/drogon:drogon.bzl", "drogon_cpp")
 drogon_cpp()
 
-# Azure Storage SDK
+### espeak-ng (built from source via Bazel; gated by --//:espeak flag)
+load("@ovms//third_party/espeak_ng:espeak_ng.bzl", "espeak_ng")
+espeak_ng()
+
+# Azure SDK for C++ (azure-core, azure-storage-blobs, azure-storage-files-shares)
 new_local_repository(
     name = "azure",
     build_file = "@//third_party/azure:BUILD",
-    path = "/azure/azure-storage-cpp",
-)
-
-# Azure Storage SDK dependency - cpprest
-new_local_repository(
-    name = "cpprest",
-    build_file = "@//third_party/cpprest:BUILD",
-    path = "/azure/cpprestsdk",
-)
-
-# Boost (needed for Azure Storage SDK)
-
-new_local_repository(
-    name = "boost",
-    path = "/usr/local/lib/",
-    build_file = "@//third_party/boost:BUILD"
+    path = "/azure-sdk-install",
 )
 
 # Google Cloud SDK
@@ -625,23 +604,27 @@ new_local_repository(
     path = "third_party/mediapipe_calculators",
 )
 
-git_repository(
+http_archive(
     name = "nlohmann_json",
-    remote = "https://github.com/nlohmann/json/",
-    tag = "v3.11.3",
+    sha256 = "0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406",
+    strip_prefix = "json-3.11.3",
+    type = "tar.gz",
+    url = "https://codeload.github.com/nlohmann/json/tar.gz/refs/tags/v3.11.3",
 )
 # for rest client in unit tests (server_test.cpp)
-git_repository(
+http_archive(
     name = "cpp_httplib",
-    remote = "https://github.com/yhirose/cpp-httplib/",
-    tag = "v0.18.7",
+    url = "https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.18.7.tar.gz",
+    sha256 = "b7b1e9e4e77565a5a9bc95e761d5df3e7c0e8ca37c90fd78b1b031bc6cb90fc1",
+    strip_prefix = "cpp-httplib-0.18.7",
     build_file = "@//third_party/cpp-httplib:BUILD"
 )
 
-new_git_repository(
+http_archive(
     name = "stb",
-    remote = "https://github.com/nothings/stb",
-    commit = "5c205738c191bcb0abc65c4febfa9bd25ff35234",
+    url = "https://github.com/nothings/stb/archive/5c205738c191bcb0abc65c4febfa9bd25ff35234.tar.gz",
+    sha256 = "cfeab9f800961882d6d22ddf36e965523b33002f4f937de08321304c9ba72af3",
+    strip_prefix = "stb-5c205738c191bcb0abc65c4febfa9bd25ff35234",
     build_file_content = """
 cc_library(
     name = "image",
@@ -653,10 +636,11 @@ cc_library(
 """,
 )
 
-new_git_repository(
+http_archive(
     name = "dr_libs",
-    remote = "https://github.com/mackron/dr_libs",
-    commit = "47a4f08e777faddf59a8955c4ea84f69f41020d5",
+    url = "https://github.com/mackron/dr_libs/archive/47a4f08e777faddf59a8955c4ea84f69f41020d5.tar.gz",
+    sha256 = "9f451ba81a65ffa06c14113b13cf257ac70a9193a37782f9a934e5240c371772",
+    strip_prefix = "dr_libs-47a4f08e777faddf59a8955c4ea84f69f41020d5",
     build_file_content = """
 cc_library(
     name = "dr",
@@ -668,10 +652,11 @@ cc_library(
 """,
 )
 
-new_git_repository(
+http_archive(
     name = "winreg",
-    remote = "https://github.com/GiovanniDicanio/WinReg.git",
-    commit = "4e1fab61959ca7a43c2627251ba306ebbbec7f7a", # master Aug 22 2025
+    url = "https://github.com/GiovanniDicanio/WinReg/archive/4e1fab61959ca7a43c2627251ba306ebbbec7f7a.tar.gz",
+    sha256 = "9066cc3eaf2319c23ec49f412b9625f50121608d709ef214ec86a2fd6c0c570e",
+    strip_prefix = "WinReg-4e1fab61959ca7a43c2627251ba306ebbbec7f7a", # master Aug 22 2025
     build_file_content = """
 cc_library(
     name = "winreg",

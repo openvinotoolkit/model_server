@@ -70,17 +70,6 @@ def create_config_settings():
         negate = ":disable_mediapipe",
     )
     native.config_setting(
-        name = "enable_drogon",
-        define_values = {
-            "USE_DROGON": "1",
-        },
-        visibility = ["//visibility:public"],
-    )
-    more_selects.config_setting_negation(
-        name = "enable_net_http",
-        negate = ":enable_drogon",
-    )
-    native.config_setting(
         name = "disable_cloud",
         define_values = {
             "CLOUD_DISABLE": "1",
@@ -147,14 +136,13 @@ def create_config_settings():
 ###############################
 # compilation settings
 ###############################
-LINUX_COMMON_STATIC_LIBS_COPTS = [
+LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY = [
                     "-Wall",
                     # "-Wextra", Requires more cleanup in code
                     # TODO: was in ovms bin "-Wconversion",
-                    "-Wno-unknown-pragmas", 
+                    "-Wno-unknown-pragmas",
                     "-Wno-sign-compare",
-                    "-fvisibility=hidden", # Needed for pybind targets
-                    "-Werror", 
+                    "-Werror",
                     # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
                     "-Wno-deprecated-declarations",
                     "-Werror",
@@ -169,6 +157,10 @@ LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Wl,-z,relro,-z,now",
                     "-Wl,-z,nodlopen",
                     "-fstack-protector-strong",
+]
+
+LINUX_COMMON_STATIC_LIBS_COPTS = LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY + [
+                    "-fvisibility=hidden", # Needed for pybind targets
 ]
 
 WINDOWS_COMMON_STATIC_LIBS_COPTS = [
@@ -200,6 +192,7 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/wd6240", 
                         "/wd6326",
                         "/wd6385",
+                        "/wd6386",
                         "/wd6294",
                         "/guard:cf",
                         "/utf-8",
@@ -241,10 +234,6 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                     "/LTCG",
                 ],
                 })
-COPTS_DROGON = select({
-    "//conditions:default": ["-DUSE_DROGON=0"],
-    "//:enable_drogon" : ["-DUSE_DROGON=1"],
-})
 DEFINES_PYTHON = select({
     "//conditions:default": ["PYTHON_DISABLE=1"],
     "//:not_disable_python" : ["PYTHON_DISABLE=0"],
@@ -266,6 +255,31 @@ COMMON_FUZZER_LINKOPTS = [
 ]
 COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"]
 COMMON_DEFINES = DEFINES_PYTHON + DEFINES_MEDIAPIPE
+COPTS_CLOUD = select({
+    "//conditions:default": ["-DCLOUD_DISABLE=1"],
+    "//:not_disable_cloud": ["-DCLOUD_DISABLE=0"],
+})
+COPTS_TESTS = COMMON_STATIC_TEST_COPTS + COPTS_CLOUD
+
+def ovms_cc_test_library(**kwargs):
+    """cc_library wrapper with defaults suited for test libraries (linkstatic, alwayslink, test copts)."""
+    if "copts" not in kwargs:
+        kwargs["copts"] = COPTS_TESTS
+    if "additional_copts" in kwargs:
+        kwargs["copts"] = kwargs["copts"] + kwargs.pop("additional_copts")
+    if "local_defines" not in kwargs:
+        kwargs["local_defines"] = COMMON_LOCAL_DEFINES
+    if "linkstatic" not in kwargs:
+        kwargs["linkstatic"] = 1
+    if "alwayslink" not in kwargs:
+        kwargs["alwayslink"] = True
+    native.cc_library(**kwargs)
+
+# Headers-only pybind11 for calculator targets - avoids linking python3 into ovms.exe
+PYBIND_HEADERS_ONLY = [
+    "@pybind11//:pybind11",
+]
+# Full pybind11 with Python linkage - only for libovmspython.so/dll
 PYBIND_DEPS = [
     "//third_party:python3",
     "@pybind11//:pybind11_embed",

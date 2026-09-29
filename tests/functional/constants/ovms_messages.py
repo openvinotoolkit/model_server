@@ -242,7 +242,6 @@ class OvmsMessages:
     CUSTOM_LOADER_LOOKING_FOR_LOADER = "Looking for loader {} in loaders list"
     CUSTOM_LOADER_INVALID_CUSTOM_LOADER_OPTIONS = "Invalid custom loader options"
 
-    STATEFUL_MODEL_REGISTERED = "Model: {}, version: {}, has been successfully registered in sequence cleaner"
     ERROR_SEQUENCE_ID_NOT_EXIST = "Sequence with provided ID does not exist"
     DEFAULT_MODEL_VERSION_CHANGED = "Updating default version for model: {}, from: {}"
 
@@ -279,9 +278,6 @@ class OvmsMessages:
     ERROR_METRICS_UNABLE_TO_LOAD_SETTINGS = "Couldn't load metrics settings"
     ERROR_METRICS_INVALID_METRICS = "Error: Invalid name in metrics_list"
     ERROR_METRICS_NOT_SUPPORTED_METRICS = "Metrics family name not supported: {}"
-
-    OPERATOR_UNKNOWN_FIELD = 'strict decoding error: unknown field "{}"'
-    OPERATOR_WARNING_UNKNOWN_FIELD = 'Warning: unknown field "spec.models_settings.model_config"'
 
     TRACE_CHECK_CHANGE = "Checking if something changed with model versions"
     TRACE_CURRENTLY_REGISTERED_MODEL = "Currently registered model: {}"
@@ -473,7 +469,7 @@ class OvmsMessages:
     AUDIO_INVALID_TEMPERATURE_TYPE = "Invalid temperature type."
     AUDIO_NEGATIVE_TEMPERATURE = "temperature must be a strictly positive float"
     AUDIO_INVALID_TIMESTAMP_GRANULARITIES = 'Invalid timestamp_granularities type. Allowed types: "segment", "word"'
-    AUDIO_VOICE_NOT_AVAILABLE = "Requested voice not available"
+    AUDIO_VOICE_NOT_AVAILABLE = "not found in available voices"
     AUDIO_STREAMING_NOT_SUPPORTED = "streaming is not supported"
     AUDIO_WORD_TIMESTAMPS_NOT_SUPPORTED = "Word timestamps not supported for this model"
 

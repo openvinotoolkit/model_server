@@ -28,10 +28,10 @@ Start the container with the image pulled in the previous step and mount the `mo
 docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --layout NHWC:NCHW --port 9000
 ```
 
-### Download ovmsclient Package
+### Download Client Package
 
 ```bash
-pip3 install ovmsclient 
+pip3 install tritonclient[grpc] numpy
 ```
 
 ### Download a Sample Image and Label Mappings
@@ -45,16 +45,23 @@ wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/c
 
 ```bash
 echo '
-import numpy as np 
-from classes import imagenet_classes 
-from ovmsclient import make_grpc_client 
-client = make_grpc_client("localhost:9000") 
+import numpy as np
+from classes import imagenet_classes
+import tritonclient.grpc as grpcclient
 
-with open("zebra.jpeg", "rb") as f: 
-    img = f.read() 
+client = grpcclient.InferenceServerClient(url="localhost:9000")
+metadata = client.get_model_metadata("resnet")
+input_name = metadata.inputs[0].name
+output_name = metadata.outputs[0].name
 
-output = client.predict(inputs={ "0": img}, model_name= "resnet") 
-result_index = np.argmax(output[0]) 
+with open("zebra.jpeg", "rb") as f:
+    img_bytes = f.read()
+
+infer_input = grpcclient.InferInput(input_name, [1], "BYTES")
+infer_input.set_data_from_numpy(np.array([img_bytes], dtype=np.object_))
+result = client.infer("resnet", [infer_input])
+output = result.as_numpy(output_name)
+result_index = np.argmax(output[0])
 print(imagenet_classes[result_index])' >> predict.py
 
 python predict.py

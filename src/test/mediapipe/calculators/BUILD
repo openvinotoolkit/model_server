@@ -78,6 +78,7 @@ cc_library(
         "ovms_calculator.cc",
         "ovms_image_input_calculator.cc",
         "ovms_kfs_calculator.cc",
+        "error_on_negative_test_calculator.cpp",
         "streaming_test_calculator.cpp",
         "two_input_calculator.cpp",
     ],

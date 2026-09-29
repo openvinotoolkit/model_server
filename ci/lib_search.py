@@ -34,7 +34,7 @@ def check_header(fd):
 
 def check_function(fd):
     # Add space separated exceptions for given file in the dictionary
-    fix_applied = {"./src/test/ensemble_flow_custom_node_tests.cpp":"size_t strLen = std::strlen(str);size_t prefixLen = std::strlen(prefix);",}
+    fix_applied = {}
 
     detected = False
     try:
@@ -105,6 +105,7 @@ def check_dir(start_dir):
         'metrics_output.out',
         'missing_headers.txt',
         'net_http.patch',
+        'open_asr_leaderboard.patch',
         'partial.patch',
         'ovms_drogon_trantor.patch',
         'gorilla.patch',
@@ -155,9 +156,10 @@ def check_dir(start_dir):
         "kserve-openvino.yaml",
         "ServingRuntime.yaml",
         "dummy_facebook_template.jinja",
+        "mediapipe_model_api_openvino_windows.patch",
         ]
 
-    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples']
+    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates']
 
     for (d_path, _, file_set) in os.walk(start_dir):
         for f_name in file_set:
@@ -223,6 +225,7 @@ def check_func(start_dir):
         'missing_headers.txt',
         'missing_headers.txt',
         'net_http.patch',
+        'open_asr_leaderboard.patch',
         'partial.patch',
         'ovms_drogon_trantor.patch',
         'openvino.LICENSE.txt',

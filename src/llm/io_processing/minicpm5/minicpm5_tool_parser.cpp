@@ -1,0 +1,347 @@
+//*****************************************************************************
+// Copyright 2026 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+
+#include <openvino/genai/tokenizer.hpp>
+#include <algorithm>
+#include <string>
+#include <stack>
+#include <vector>
+
+#include "rapidjson/error/en.h"
+
+#include "src/llm/io_processing/utils.hpp"
+#include "src/logging.hpp"
+#include "src/utils/rapidjson_utils.hpp"
+#include "minicpm5_tool_parser.hpp"
+
+namespace ovms {
+
+// ---- Tag string constants ----
+const std::string Minicpm5ToolParser::FUNCTION_START_TAG = "<function name=\"";
+const std::string Minicpm5ToolParser::XML_TAG_END = "\">";
+const std::string Minicpm5ToolParser::PARAM_START_TAG = "<param name=\"";
+const std::string Minicpm5ToolParser::PARAM_END_TAG = "</param>";
+const std::string Minicpm5ToolParser::FUNCTION_END_TAG = "</function>";
+const std::string Minicpm5ToolParser::EOS_TOKEN_STR = "<|im_end|>";
+const std::string Minicpm5ToolParser::SOS_TOKEN_STR = "<s>";
+
+// Schema helpers, JSON helpers and string helpers are shared with qwen3coder; see utils.{hpp,cpp}.
+
+// ---- Minicpm5ToolParserImpl ----
+
+Minicpm5ToolParserImpl::Minicpm5ToolParserImpl(const ToolsParameterTypeMap_t& toolsParametersTypeMap) :
+    toolsParametersTypeMap(toolsParametersTypeMap) {}
+
+/*
+ * Given the portion of streamContent that starts immediately after "name=" (i.e. at the
+ * opening quote/apostrophe), extract the attribute value and return it.
+ * tagEnd is the position of the '>' that closes the enclosing tag.
+ * Returns the extracted value, or empty string on failure.
+ */
+
+void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameterValueAsString) {
+    if (this->removeNewlineAroundParameters)
+        trimNewline(parameterValueAsString);
+
+    auto paramIt = this->toolsParametersTypeMap.find(this->currentFunction.name);
+    auto& currentFunctionArgsDoc = this->currentFunction.argumentsAsDocument;
+    auto& allocator = currentFunctionArgsDoc.GetAllocator();
+    auto& key = this->currentParameterName;
+    rapidjson::Value keyVal(key.c_str(), allocator);
+    rapidjson::Value valueCopy;
+
+    rapidjson::Document temp;
+    // Boolean normalisation (shared helper, same as qwen3coder)
+    if (paramIt != this->toolsParametersTypeMap.end()) {
+        auto paramJt = paramIt->second.find(currentParameterName);
+        if (paramJt != paramIt->second.end() && paramJt->second == ParameterType::BOOLEAN) {
+            normalizeBooleanString(parameterValueAsString);
+        }
+    }
+
+    temp.Parse(parameterValueAsString.c_str());
+    rapidjson::Document retryDoc;
+    bool parsingSucceeded = !temp.HasParseError();
+
+    if (!parsingSucceeded) {
+        if (!parameterValueAsString.empty() &&
+            (parameterValueAsString.front() == '{' || parameterValueAsString.front() == '[')) {
+            std::string converted = replaceSingleWithDoubleQuotes(parameterValueAsString);
+            retryDoc.Parse(converted.c_str());
+            if (!retryDoc.HasParseError()) {
+                SPDLOG_TRACE("Minicpm5: successfully parsed after single-to-double quote conversion: {}", converted);
+                parameterValueAsString = std::move(converted);
+                valueCopy.CopyFrom(retryDoc, allocator);
+                parsingSucceeded = true;
+            }
+        }
+        if (!parsingSucceeded) {
+            rapidjson::ParseErrorCode errorCode = temp.GetParseError();
+            size_t errorOffset = temp.GetErrorOffset();
+            SPDLOG_TRACE("Minicpm5: RapidJSON cannot parse param: {} value: {}; error offset: {}; code: {}; falling back to string",
+                this->currentParameterName, parameterValueAsString, errorOffset, rapidjson::GetParseError_En(errorCode));
+            valueCopy.SetString(parameterValueAsString.c_str(), static_cast<rapidjson::SizeType>(parameterValueAsString.size()), allocator);
+        }
+    } else {
+        valueCopy.CopyFrom(temp, allocator);
+        if (paramIt != this->toolsParametersTypeMap.end()) {
+            auto paramJt = paramIt->second.find(currentParameterName);
+            if (paramJt != paramIt->second.end() && paramJt->second == ParameterType::STRING) {
+                enforceStringValue(valueCopy, allocator);
+            }
+        }
+    }
+    if (!currentFunctionArgsDoc.HasMember(keyVal)) {
+        currentFunctionArgsDoc.AddMember(keyVal, valueCopy, allocator);
+    } else {
+        SPDLOG_DEBUG("Minicpm5: parameter {} already exists in document", key);
+    }
+}
+
+void Minicpm5ToolParserImpl::handleInsideContentState() {
+    // Look for the next <function tag; everything else is plain content.
+    auto posFunc = this->streamContent.find(Minicpm5ToolParser::FUNCTION_START_TAG, this->lastProcessedPosition);
+    if (posFunc == std::string::npos) {
+        SPDLOG_TRACE("Minicpm5: no <function> found");
+        return;
+    }
+    this->toolCallPositions.begin.push(posFunc);
+    // Skip past "<function" — we now need to read the name="..." attribute
+    this->lastProcessedPosition = posFunc + Minicpm5ToolParser::FUNCTION_START_TAG.size();
+    this->currentState = State::InsideFunctionName;
+}
+
+void Minicpm5ToolParserImpl::handleInsideFunctionNameState() {
+    auto pos = this->streamContent.find(Minicpm5ToolParser::XML_TAG_END, this->lastProcessedPosition);
+    if (pos == std::string::npos) {
+        SPDLOG_TRACE("Minicpm5: waiting for '>' of <function> tag");
+        return;
+    }
+    this->currentFunction.name = this->streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
+    this->lastProcessedPosition = pos + Minicpm5ToolParser::XML_TAG_END.length();
+    this->currentState = State::InsideFunction;
+}
+
+void Minicpm5ToolParserImpl::handleInsideFunctionState(ToolCalls_t& toolCalls) {
+    // Expect either <param or </function>
+    auto funcEnd = this->streamContent.find(Minicpm5ToolParser::FUNCTION_END_TAG, this->lastProcessedPosition);
+    auto paramStart = this->streamContent.find(Minicpm5ToolParser::PARAM_START_TAG, this->lastProcessedPosition);
+    if (funcEnd == std::string::npos && paramStart == std::string::npos) {
+        // Waiting for more data
+    } else if (paramStart != std::string::npos && (funcEnd == std::string::npos || paramStart < funcEnd)) {
+        // Next <param
+        this->lastProcessedPosition = paramStart + Minicpm5ToolParser::PARAM_START_TAG.size();
+        this->currentState = State::InsideParamName;
+    } else {
+        // </function>
+        this->currentState = State::AfterFunction;
+    }
+}
+
+void Minicpm5ToolParserImpl::handleInsideAfterFunctionState(ToolCalls_t& toolCalls) {
+    auto funcEnd = this->streamContent.find(Minicpm5ToolParser::FUNCTION_END_TAG, this->lastProcessedPosition);
+    this->lastProcessedPosition = funcEnd + Minicpm5ToolParser::FUNCTION_END_TAG.size();
+    this->currentState = State::Content;
+    std::string argumentsAsString;
+    {
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        this->currentFunction.argumentsAsDocument.Accept(writer);
+        argumentsAsString = buffer.GetString();
+    }
+    ToolCall toolCall{generateRandomId(), this->currentFunction.name, argumentsAsString};
+    SPDLOG_TRACE("Minicpm5: adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
+    toolCalls.emplace_back(std::move(toolCall));
+    this->currentFunction.clear();
+    this->toolCallPositions.end.push(this->lastProcessedPosition);
+}
+
+void Minicpm5ToolParserImpl::handleInsideParamNameState() {
+    auto pos = this->streamContent.find(Minicpm5ToolParser::XML_TAG_END, this->lastProcessedPosition);
+    if (pos == std::string::npos) {
+        SPDLOG_TRACE("Minicpm5: waiting for '>' of <param> tag");
+        return;
+    }
+    this->currentParameterName = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
+    this->lastProcessedPosition = pos + Minicpm5ToolParser::XML_TAG_END.length();
+    this->currentState = State::InsideParam;
+}
+
+void Minicpm5ToolParserImpl::handleInsideParamState() {
+    // Read until </param>
+    auto endPos = this->streamContent.find(Minicpm5ToolParser::PARAM_END_TAG, this->lastProcessedPosition);
+    if (endPos == std::string::npos) {
+        SPDLOG_TRACE("Minicpm5: waiting for </param>");
+        return;
+    }
+    std::string paramValue = this->streamContent.substr(this->lastProcessedPosition, endPos - this->lastProcessedPosition);
+    SPDLOG_TRACE("Minicpm5: adding parameter {} with value {}", this->currentParameterName, paramValue);
+    addParameterToCurrentFunctionDoc(paramValue);
+    this->lastProcessedPosition = endPos + Minicpm5ToolParser::PARAM_END_TAG.size();
+    this->currentState = State::InsideFunction;
+}
+
+bool Minicpm5ToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
+    SPDLOG_TRACE("Minicpm5: state: {}", this->currentState);
+    auto previousState = this->currentState;
+
+    switch (this->currentState) {
+    case State::Content:
+        handleInsideContentState();
+        break;
+    case State::InsideFunctionName:
+        handleInsideFunctionNameState();
+        break;
+    case State::InsideFunction:
+        handleInsideFunctionState(toolCalls);
+        break;
+    case State::InsideParamName:
+        handleInsideParamNameState();
+        break;
+    case State::InsideParam:
+        handleInsideParamState();
+        break;
+    case State::AfterFunction:
+        handleInsideAfterFunctionState(toolCalls);
+        break;
+    }
+
+    return previousState != this->currentState;
+}
+
+std::optional<ToolCalls_t> Minicpm5ToolParserImpl::parseChunk(const std::string& chunk) {
+    if (chunk.empty())
+        return std::nullopt;
+    ToolCalls_t toolCalls;
+    this->streamContent += chunk;
+    while (parseUntilStateChange(toolCalls)) {
+    }
+    if (!toolCalls.empty()) {
+        return std::move(toolCalls);
+    }
+    return std::nullopt;
+}
+
+std::optional<ToolCalls_t> Minicpm5ToolParserImpl::finalizeOnGenerationEnd() {
+    if (this->currentState == State::Content ||
+        this->currentState == State::InsideFunctionName) {
+        // No usable function name was ever captured -- nothing to recover. Still clear the
+        // dangling partial state so it doesn't look like a call is still in flight.
+        resetParsingState();
+        return std::nullopt;
+    }
+    if (this->currentState == State::InsideParamName) {
+        // Drop the incomplete parameter name; close the function with whatever was captured before it.
+        this->currentState = State::InsideFunction;
+    }
+    if (this->currentState == State::InsideParam) {
+        this->streamContent += Minicpm5ToolParser::PARAM_END_TAG;
+    }
+    if (this->currentState == State::InsideParam || this->currentState == State::InsideFunction) {
+        this->streamContent += Minicpm5ToolParser::FUNCTION_END_TAG;
+    }
+
+    ToolCalls_t toolCalls;
+    while (parseUntilStateChange(toolCalls)) {
+    }
+
+    resetParsingState();
+    if (!toolCalls.empty()) {
+        return std::move(toolCalls);
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> Minicpm5ToolParserImpl::getCurrentFunctionName() const {
+    if (this->currentFunction.name.empty())
+        return std::nullopt;
+    return this->currentFunction.name;
+}
+
+// ---- Minicpm5ToolParser ----
+
+Minicpm5ToolParser::Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
+    BaseOutputParser(tokenizer,
+        defaultParsingConfig()),
+    toolSchemas(toolSchemas),
+    toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
+    streamParser(this->toolsParametersTypes) {}
+
+std::optional<Delta> Minicpm5ToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
+    if (toolCalls.size() != 1) {
+        SPDLOG_ERROR("Minicpm5ToolParser: for streaming expected one tool call, got: {}", toolCalls.size());
+        throw std::runtime_error("Minicpm5ToolParser: for streaming expected one tool call");
+    }
+    auto& toolCall = toolCalls[0];
+    // If the first delta was not sent yet (complete tool call in a single chunk),
+    // return a combined delta with id, type, name AND arguments.
+    if (this->returnedFirstDeltas.find(this->toolCallIndex) == this->returnedFirstDeltas.end() ||
+        this->toolCallIndex == -1) {
+        int toolCallId = ++this->toolCallIndex;
+        this->returnedFirstDeltas.insert(toolCallId);
+        this->returnedCompleteDeltas.insert(toolCallId);
+        return wrapCombinedDelta(toolCall);
+    }
+    this->returnedCompleteDeltas.insert(this->toolCallIndex);
+    SPDLOG_TRACE("Minicpm5ToolParser: tool call arguments string: {}", toolCall.arguments);
+    SPDLOG_DEBUG("Minicpm5ToolParser: full delta: index={} arguments={}", this->toolCallIndex, toolCall.arguments);
+    return ToolCallDelta{this->toolCallIndex, std::nullopt, std::nullopt, toolCall.arguments};
+}
+
+ToolCallDelta Minicpm5ToolParser::wrapCombinedDelta(const ToolCall& toolCall) {
+    SPDLOG_DEBUG("Minicpm5ToolParser: combined delta: index={} name={} args={}", this->toolCallIndex, toolCall.name, toolCall.arguments);
+    return ToolCallDelta{this->toolCallIndex, generateRandomId(), toolCall.name, toolCall.arguments};
+}
+
+std::optional<Delta> Minicpm5ToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
+    if (this->returnedFirstDeltas.size() == (this->returnedCompleteDeltas.size() + 1)) {
+        SPDLOG_TRACE("Minicpm5ToolParser: skipping first delta, already sent for current function");
+        return std::nullopt;
+    }
+    int toolCallId = ++this->toolCallIndex;
+    this->returnedFirstDeltas.insert(toolCallId);
+    SPDLOG_DEBUG("Minicpm5ToolParser: first delta: name={} index={}", toolCallName, toolCallId);
+    return ToolCallDelta{toolCallId, generateRandomId(), toolCallName, ""};
+}
+
+std::optional<Delta> Minicpm5ToolParser::parseChunk(
+    const std::string& newChunk,
+    const std::vector<int64_t>& /*tokens*/,
+    ov::genai::GenerationFinishReason finishReason) {
+    SPDLOG_DEBUG("Minicpm5ToolParser: chunk: '{}'", newChunk);
+    if (newChunk.empty() && finishReason == ov::genai::GenerationFinishReason::NONE)
+        return std::nullopt;
+    std::optional<ToolCalls_t> toolCallsOpt;
+    if (!newChunk.empty()) {
+        toolCallsOpt = this->streamParser.parseChunk(newChunk);
+    }
+
+    // If no complete tool calls were returned yet and generation has ended, finalize the current
+    // tool call in progress to recover any remaining data (for example if arguments were not closed properly).
+    if (!toolCallsOpt.has_value() && finishReason != ov::genai::GenerationFinishReason::NONE) {
+        toolCallsOpt = this->streamParser.finalizeOnGenerationEnd();
+    }
+    if (toolCallsOpt.has_value()) {
+        return this->sendFullDelta(toolCallsOpt.value());
+    }
+    auto functionNameOpt = this->streamParser.getCurrentFunctionName();
+    if (functionNameOpt.has_value()) {
+        return this->sendFirstDeltaIfNeeded(functionNameOpt.value());
+    }
+    return std::nullopt;
+}
+
+}  // namespace ovms

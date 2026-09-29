@@ -142,6 +142,12 @@ TEST_F(MediapipeValidationTest, NoDataInRawField) {
     ASSERT_EQ(impl->ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
 }
 
+TEST_F(MediapipeValidationTest, RawInputContentsCountMismatch) {
+    prepareDoubleInput();
+    request.mutable_raw_input_contents()->RemoveLast();
+    ASSERT_EQ(impl->ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::INVALID_ARGUMENT);
+}
+
 TEST_F(MediapipeValidationTest, NegativeShape) {
     prepareSingleInput();
     request.mutable_inputs(0)->mutable_shape()->Set(0, -1);

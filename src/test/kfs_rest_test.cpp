@@ -26,9 +26,9 @@
 #include "../grpcservermodule.hpp"
 #include "../http_async_writer_interface.hpp"
 #include "../http_rest_api_handler.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../version.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
@@ -202,7 +202,12 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    auto dispatchStatus = handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser);
+    if (dispatchStatus != ovms::StatusCode::OK) {
+        std::cerr << "dispatchToProcessor failed: code=" << static_cast<int>(dispatchStatus.getCode())
+                  << ", details=" << dispatchStatus.string() << ", response=" << response << std::endl;
+    }
+    ASSERT_EQ(dispatchStatus, ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -408,14 +413,14 @@ TEST_F(HttpRestApiHandlerTest, MetricsParameters) {
 }
 
 TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithLongVersion) {
-    std::string request = "/v1/models/dummy/versions/72487667423532349025128558057";
+    std::string request = "/v2/models/dummy/versions/72487667423532349025128558057";
     ovms::HttpRequestComponents comp;
 
     ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::MODEL_VERSION_MISSING);
 }
 
 TEST_F(HttpRestApiHandlerTest, GetModelMetadataWithEscapedPath) {
-    std::string request = "/v1/models/..iO!.0?E*/versions/1/metadata";
+    std::string request = "/v2/models/..iO!.0?E*/versions/1";
     ovms::HttpRequestComponents comp;
 
     ASSERT_EQ(handler->parseRequestComponents(comp, "GET", request), StatusCode::OK);

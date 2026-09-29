@@ -18,6 +18,16 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
+    name = "graph_export_paths",
+    srcs = ["graph_export_paths.cpp"],
+    hdrs = ["graph_export_paths.hpp"],
+    deps = [
+        "@ovms//src/filesystem:libovmsfilesystem",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "graph_export",
     srcs = ["graph_export.cpp"],
     hdrs = ["graph_export.hpp"],
@@ -33,12 +43,14 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@ovms//src:libovmsschema",
         "@ovms//src:libovms_version",
+        "@ovms//src/graph_export:graph_export_paths",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
     ] + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
                 "@mediapipe//mediapipe/framework:calculator_graph",
+                "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler_cc_proto",
                 ],
             "//:disable_mediapipe": []
             }),
@@ -53,6 +65,7 @@ ovms_cc_library(
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",
+        "@ovms//src/llm:io_processing_parser_config_validation",
         "@com_github_jarro2783_cxxopts//:cxxopts",
     ],
     visibility = ["//visibility:public"],

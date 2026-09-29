@@ -15,6 +15,10 @@
 #
 package(default_visibility = ["//visibility:public"])
 
+exports_files([
+    "mediapipe_model_api_openvino_windows.patch",
+])
+
 alias(
     name = "opencv",
     actual = select({
@@ -66,5 +70,20 @@ alias(
         "//src:windows": "@windows_gstreamer//:gstreamer",
         "//conditions:default": "@linux_gstreamer//:gstreamer_headers",
     }),
+    visibility = ["//visibility:public"],
+)
+
+# espeak-ng built from source via Bazel (rules_foreign_cc cmake).
+# Built as a separate step in the Dockerfile (ARG ESPEAK=1/0), not as
+# a dependency of the OVMS binary.
+alias(
+    name = "espeak_ng",
+    actual = "@espeak_ng//:espeak_ng",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "espeak_ng_data",
+    actual = "@espeak_ng//:espeak_ng_data",
     visibility = ["//visibility:public"],
 )

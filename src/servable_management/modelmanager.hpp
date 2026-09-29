@@ -1,0 +1,472 @@
+//*****************************************************************************
+// Copyright 2020-2021 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#pragma once
+
+#include <future>
+#include <map>
+#include <memory>
+#include <set>
+#include <shared_mutex>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "src/metrics/metric_provider.hpp"
+#include "src/model_instance_provider.hpp"
+#include "src/modelconfig.hpp"
+#include "src/resources_cleaner.hpp"
+#include "src/servable_name_checker.hpp"
+#include "src/status.hpp"
+
+#if (MEDIAPIPE_DISABLE == 0)
+#include "src/mediapipe_runtime_api.hpp"
+#endif
+
+namespace ov {
+class Core;
+}  // namespace ov
+
+namespace ovms {
+
+const uint32_t DEFAULT_WAIT_FOR_MODEL_LOADED_TIMEOUT_MS = 10000;
+extern const std::string DEFAULT_MODEL_CACHE_DIRECTORY;
+
+class Config;
+struct ModelsSettingsImpl;
+class CustomLoaderConfig;
+class MetricConfig;
+class MetricRegistry;
+class MediapipeGraphExecutorInterface;
+class Model;
+class ModelConfig;
+class FileSystem;
+class MediapipeGraphConfig;
+class MediapipeGraphExecutor;
+class MediapipeRuntimeApi;
+class ModelInstance;
+class ServableGroupManager;
+class ServableDefinition;
+class ModelInstanceUnloadGuard;
+class ServableLoadingQueue;
+class PythonBackend;
+struct FunctorResourcesCleaner;
+/**
+ * @brief Model manager is managing the list of model topologies enabled for serving and their versions.
+ */
+class ModelManager : public ServableNameChecker, public MetricProvider, public ModelInstanceProvider, public ResourcesCleaner {
+public:
+    /**
+     * @brief A default constructor is private
+     */
+    ModelManager(const std::string& modelCacheDirectory = "", MetricRegistry* registry = nullptr, PythonBackend* pythonBackend = nullptr);
+
+protected:
+    void logPluginConfiguration();
+
+    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name);
+
+    /**
+     * @brief A collection of models
+     *
+     */
+    std::map<std::string, std::shared_ptr<Model>> models;
+    std::unique_ptr<ov::Core> ieCore;
+
+    std::unique_ptr<ServableLoadingQueue> loadingQueue;
+#if (MEDIAPIPE_DISABLE == 0)
+    std::unique_ptr<MediapipeRuntimeApi> mediapipeFactory;
+#endif
+    uint32_t waitForModelLoadedTimeoutMs;
+
+private:
+    bool watcherStarted = false;
+    bool cleanerStarted = false;
+
+    ModelManager(const ModelManager&) = delete;
+
+    struct ConfigLoader;
+    friend struct ConfigLoader;
+
+    Status lastLoadConfigStatus = StatusCode::OK;
+
+    Status cleanupModelTmpFiles(ModelConfig& config);
+    Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t>& versionsFailed);
+    Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed);
+
+#if (MEDIAPIPE_DISABLE == 0)
+    [[nodiscard]] Status retireMediapipesOtherThan(const std::set<std::string>& graphsInConfigFile);
+    Status loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
+    Status loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
+        std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
+    static Status validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings);
+    bool CheckStartFromGraph(std::string inputPath, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath);
+#endif
+    Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
+
+    /**
+     * @brief creates customloader from the loader configuration
+     */
+    Status createCustomLoader(CustomLoaderConfig& loaderConfig);
+
+    /**
+     * @brief Watcher thread for monitor changes in config
+     */
+    void watcher(std::future<void> exitSignal, bool watchConfigFile);
+
+    /**
+     * @brief Sweep mediapipe graph definitions and unload any that have been
+     *        idle past their configured idle_unload_timeout_seconds.
+     */
+    void unloadIdleGraphs();
+
+    /**
+     * @brief Cleaner thread for resources cleanup
+     */
+    void cleanerRoutine(uint32_t memoryTrimmingIntervalMilliseconds, std::future<void> cleanerExitSignal);
+
+    /**
+     * @brief A JSON configuration filename
+     */
+protected:
+    std::string configFilename;
+
+private:
+    /**
+     * @brief A thread object used for monitoring changes in config
+     */
+    std::thread monitor;
+
+    std::thread cleanerThread;
+
+    /**
+     * @brief Metrics config
+     */
+    std::unique_ptr<MetricConfig> metricConfig;
+
+    /**
+     * @brief Metrics config was loaded flag
+     */
+    bool metricConfigLoadedOnce = false;
+
+    /**
+     * @brief An exit trigger to notify watcher thread to exit
+     */
+    std::promise<void> exitTrigger;
+
+    std::promise<void> cleanerExitTrigger;
+
+    /**
+     * @brief A current configurations of models
+     *
+     */
+    std::unordered_map<std::string, ModelConfig> servedModelConfigs;
+
+    /**
+     * @brief Retires models non existing in config file
+     *
+     * @param modelsExistingInConfigFile
+     */
+    void retireModelsRemovedFromConfigFile(const std::set<std::string>& modelsExistingInConfigFile, const std::set<std::string>& modelsWithInvalidConfig);
+
+    /**
+     * @brief Mutex for protecting concurrent reloading config
+     */
+    mutable std::recursive_mutex configMtx;
+
+protected:
+    /**
+     * Time interval between each config file check
+     */
+    uint32_t watcherIntervalMillisec = 1000;
+    static const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
+
+    uint32_t memoryTrimmingIntervalMilliseconds = 300000;
+
+protected:
+    std::unique_ptr<ServableGroupManager> servableGroupManager;
+
+private:
+    /**
+     * @brief last md5sum of configfile
+     */
+    std::string lastConfigFileMD5;
+
+    /**
+     * @brief Directory for OpenVINO to store cache files.
+     */
+    std::string modelCacheDirectory;
+
+    MetricRegistry* metricRegistry;
+
+    PythonBackend* pythonBackend;
+    /**
+     * @brief Mutex for blocking concurrent add & find of model
+     */
+    mutable std::shared_mutex modelsMtx;
+
+    /**
+     * @brief Json config directory path
+     *
+     */
+    std::string rootDirectoryPath;
+    bool startedWithConfigFile = false;
+
+    /**
+     * @brief Set json config directory path
+     *
+     * @param configFileFullPath
+     */
+    void setRootDirectoryPath(const std::string& configFileFullPath);
+
+public:
+    /**
+     * @brief Get the full path from relative or full path
+     *
+     * @return const std::string&
+     */
+    const std::string getFullPath(const std::string& pathToCheck) const;
+
+    /**
+     * @brief Get the config root path
+     *
+     * @return const std::string&
+     */
+    const std::string getRootDirectoryPath() const {
+        return rootDirectoryPath;
+    }
+
+    /**
+     *  @brief Gets the watcher interval timestep in seconds
+     */
+    uint32_t getWatcherIntervalMillisec() {
+        return watcherIntervalMillisec;
+    }
+
+    uint32_t getMemoryTrimmingIntervalMilliseconds() {
+        return memoryTrimmingIntervalMilliseconds;
+    }
+
+    /**
+     * @brief Destroy the Model Manager object
+     *
+     */
+    virtual ~ModelManager();
+
+    /**
+     * @brief Gets config filename
+     *
+     * @return config filename
+     */
+    bool isStartedWithConfigFile() {
+        return startedWithConfigFile;
+    }
+
+    /**
+     * @brief Gets models collection
+     *
+     * @return models collection
+     */
+    const std::map<std::string, std::shared_ptr<Model>>& getModels() {
+        return models;
+    }
+
+    ServableGroupManager* getGroupManager() const {
+        return servableGroupManager.get();
+    }
+
+    const std::vector<std::string> getNamesOfAvailableModels() const;
+
+    void startCleaner();
+
+#if (MEDIAPIPE_DISABLE == 0)
+    const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
+    const MediapipeRuntimeApi& getMediapipeFactory() const {
+        return *mediapipeFactory;
+    }
+    MediapipeRuntimeApi& getMediapipeFactory() {
+        return *mediapipeFactory;
+    }
+#endif
+
+    /**
+     * @brief Finds model with specific name
+     *
+     * @param name of the model to search for
+     *
+     * @return pointer to Model or nullptr if not found
+     */
+    const std::shared_ptr<Model> findModelByName(const std::string& name) const override;
+
+    Status getModelInstance(const std::string& modelName,
+        ovms::model_version_t modelVersionId,
+        std::shared_ptr<ovms::ModelInstance>& modelInstance,
+        std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const override;
+
+    const bool modelExists(const std::string& name) const {
+        if (findModelByName(name) == nullptr)
+            return false;
+        else
+            return true;
+    }
+
+    bool isServableAvailable(const std::string& name) const;
+
+    /**
+     * @brief Finds model instance with specific name and version, returns default if version not specified
+     *
+     * @param name of the model to search for
+     * @param version of the model to search for or 0 if default
+     *
+     * @return pointer to ModelInstance or nullptr if not found
+     */
+    const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const override;
+
+#if (MEDIAPIPE_DISABLE == 0)
+    Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
+        const std::string& name);
+    Status createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
+        const std::string& name);
+#endif
+
+    /**
+     * @brief Starts model manager using provided config file
+     *
+     * @param filename
+     * @return status
+     */
+    Status startFromFile(const std::string& jsonFilename);
+
+    /**
+     * @brief Starts model manager using command line arguments
+     *
+     * @return Status
+     */
+    Status startFromConfig();
+
+    /**
+     * @brief Get the metric config
+     *
+     * @return const std::string&
+     */
+    const MetricConfig& getMetricConfig() const override {
+        return *this->metricConfig;
+    }
+
+    Status loadMetricsFromCLI(const Config& config);
+
+    /**
+     * @brief Reload model versions located in base path
+     *
+     * @param ModelConfig config
+     *
+     * @return status
+     */
+    Status reloadModelWithVersions(ModelConfig& config);
+
+    // Enqueue an urgent servable load request (for inference threads).
+    std::future<Status> requestServableWakeUp(const std::string& name, bool urgent);
+    std::future<Status> requestServablePutToSleep(const std::string& name, bool urgent);
+
+    /**
+     * @brief Starts model manager using ovms::Config
+     *
+     * @return status
+     */
+    Status start(const Config& config);
+
+    /**
+     * @brief Starts monitoring as new thread
+     *
+     */
+    void startWatcher(bool watchConfigFile);
+
+    /**
+     * @brief Gracefully finish the thread
+     */
+    void join();
+
+    /**
+     * @brief Factory for creating a model
+     *
+     * @return std::shared_ptr<Model>
+     */
+    virtual std::shared_ptr<Model> modelFactory(const std::string& name);
+
+    /**
+     * @brief Reads available versions from given filesystem
+     *
+     * @param fs
+     * @param base
+     * @param versions
+     * @return Status
+     */
+    virtual Status readAvailableVersions(
+        std::shared_ptr<FileSystem>& fs,
+        const std::string& base,
+        model_versions_t& versions);
+
+    /**
+     * @brief Checks what versions needs to be started, reloaded, retired based on currently served ones
+     *
+     * @param modelVersionsInstances map with currently served versions
+     * @param requestedVersions container with requested versions
+     * @param versionsToRetireIn container for versions to retire
+     * @param versionsToReloadIn container for versions to reload
+     * @param versionsToStartIn container for versions to start
+     */
+    static void getVersionsToChange(
+        const ModelConfig& newModelConfig,
+        const std::map<model_version_t, std::shared_ptr<ModelInstance>>& modelVersionsInstances,
+        std::vector<model_version_t> requestedVersions,
+        std::shared_ptr<model_versions_t>& versionsToRetireIn,
+        std::shared_ptr<model_versions_t>& versionsToReloadIn,
+        std::shared_ptr<model_versions_t>& versionsToStartIn);
+
+    static std::shared_ptr<FileSystem> getFilesystem(const std::string& basePath);
+
+    /**
+     * @brief Check if configuration file reload is needed.
+     */
+    Status configFileReloadNeeded(bool& isNeeded);
+
+    /**
+     * @brief Reads models from configuration file
+     *
+     * @param jsonFilename configuration file
+     * @return Status
+     */
+    Status loadConfig();
+
+    /**
+     * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
+     */
+    Status updateConfigurationWithoutConfigFile();
+
+    void cleanupResources() override;
+
+    bool servableExists(const std::string& name, ServableQueryType check = ServableQueryType::All) const override;
+    bool aliasesConflict(const std::vector<std::string>& aliases, const std::string& ownGraphName) const override;
+
+    ServableDefinition* findServableDefinition(const std::string& name) const override;
+
+    std::vector<std::string> getServableDefinitionNames() const override;
+
+    MetricRegistry* getMetricRegistry() const override { return this->metricRegistry; }
+};
+
+}  // namespace ovms
