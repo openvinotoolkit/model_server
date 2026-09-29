@@ -2004,6 +2004,19 @@ TEST_F(TestOptimumDownloaderSetup, Methods) {
     ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
 }
 
+TEST_F(TestOptimumDownloaderSetup, PathsWithSpacesAreQuoted) {
+    inHfSettings.downloadPath = "/path/to/Down load";
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --model model/name --trust-remote-code  --weight-format fp64 --someOptimumParam --anotherOptParam value \"\\path\\to\\Down load\\model\\name\"";
+    std::string expectedCmd2 = "convert_tokenizer model/name --with-detokenizer -o \"\\path\\to\\Down load\\model\\name\"";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+    std::replace(expectedCmd2.begin(), expectedCmd2.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
+}
+
 TEST_F(TestOptimumDownloaderSetup, RerankExportCmd) {
     inHfSettings.task = ovms::RERANK_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
