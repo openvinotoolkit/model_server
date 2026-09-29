@@ -99,6 +99,10 @@ struct GstFunctionTable {
     // libgstva-1.0 (VA surface extraction)
     // gst_va_buffer_get_surface returns VASurfaceID (uint32_t)
     uint32_t (*gst_va_buffer_get_surface)(GstBuffer*);
+    // gst_va_buffer_peek_display returns GstVaDisplay* (opaque to us)
+    void* (*gst_va_buffer_peek_display)(GstBuffer*);
+    // gst_va_display_get_va_dpy returns native VADisplay from a GstVaDisplay
+    void* (*gst_va_display_get_va_dpy)(void*);
 
     // libva-drm / libva (VADisplay lifecycle)
     void* (*vaGetDisplayDRM)(int);                          // returns VADisplay
@@ -176,25 +180,31 @@ static void try_load_va_symbols() {
 
     auto* get_surf = reinterpret_cast<decltype(s_fns.gst_va_buffer_get_surface)>(
         dlsym(gstva_h, "gst_va_buffer_get_surface"));
-    auto* get_disp = reinterpret_cast<decltype(s_fns.vaGetDisplayDRM)>(
+    auto* peek_disp = reinterpret_cast<decltype(s_fns.gst_va_buffer_peek_display)>(
+        dlsym(gstva_h, "gst_va_buffer_peek_display"));
+    auto* get_va_dpy = reinterpret_cast<decltype(s_fns.gst_va_display_get_va_dpy)>(
+        dlsym(gstva_h, "gst_va_display_get_va_dpy"));
+    auto* get_drm_disp = reinterpret_cast<decltype(s_fns.vaGetDisplayDRM)>(
         dlsym(vadrm_h, "vaGetDisplayDRM"));
     auto* va_init  = reinterpret_cast<decltype(s_fns.vaInitialize)>(
         dlsym(va_h, "vaInitialize"));
     auto* va_term  = reinterpret_cast<decltype(s_fns.vaTerminate)>(
         dlsym(va_h, "vaTerminate"));
 
-    if (!get_surf || !get_disp || !va_init || !va_term) return;
+    if (!get_surf || !get_drm_disp || !va_init || !va_term) return;
 
-    s_fns.gst_va_buffer_get_surface = get_surf;
-    s_fns.vaGetDisplayDRM           = get_disp;
-    s_fns.vaInitialize              = va_init;
-    s_fns.vaTerminate               = va_term;
+    s_fns.gst_va_buffer_get_surface  = get_surf;
+    s_fns.gst_va_buffer_peek_display = peek_disp;  // may be null on older gst
+    s_fns.gst_va_display_get_va_dpy  = get_va_dpy; // may be null on older gst
+    s_fns.vaGetDisplayDRM            = get_drm_disp;
+    s_fns.vaInitialize               = va_init;
+    s_fns.vaTerminate                = va_term;
 
     // Open DRM device and initialise a VADisplay for the lifetime of this process.
     s_drm_fd = open("/dev/dri/renderD128", O_RDWR);
     if (s_drm_fd < 0) return;
 
-    void* disp = get_disp(s_drm_fd);
+    void* disp = get_drm_disp(s_drm_fd);
     if (!disp) return;
 
     int maj = 0, min = 0;
@@ -416,6 +426,18 @@ static bool read_frame_va_surface(imp_branch_info_t& branch,
     // Extract VASurfaceID directly — no system-memory map.
     uint32_t surface_id = f.gst_va_buffer_get_surface(buffer);
 
+    // Get GStreamer's native VADisplay from the buffer so OV uses the same
+    // display that owns this surface (avoids cross-display surface conflicts).
+    void* native_va_display = va_display;
+    if (f.gst_va_buffer_peek_display && f.gst_va_display_get_va_dpy) {
+        void* gst_va_disp = f.gst_va_buffer_peek_display(buffer);
+        if (gst_va_disp) {
+            void* native = f.gst_va_display_get_va_dpy(gst_va_disp);
+            if (native)
+                native_va_display = native;
+        }
+    }
+
     branch.live_va_sample = sample;
 
     branch.tensor_cache.y_data       = nullptr;
@@ -425,7 +447,7 @@ static bool read_frame_va_surface(imp_branch_info_t& branch,
     branch.tensor_cache.valid        = true;
     branch.tensor_cache.memory_type  = IMP_MEM_VA_SURFACE;
     branch.tensor_cache.va_surface_id = surface_id;
-    branch.tensor_cache.va_display    = va_display;
+    branch.tensor_cache.va_display    = native_va_display;
 
     auto t2 = chrono::high_resolution_clock::now();
     total_ms += chrono::duration<double, std::milli>(t2 - t0).count();

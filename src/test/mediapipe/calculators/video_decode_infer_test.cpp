@@ -107,76 +107,27 @@ int main(int argc, char* argv[]) {
     }
 
     // ---- Decide whether to request VA surface memory ----------------------
-    // VA surface mode is used when GPU decode is available AND inference runs
-    // on GPU: the frame never leaves GPU memory — zero host copies.
     const bool want_va = (device == "GPU") && imp_video_va_available();
 
-    // ---- Load + compile model -----------------------------------------------
-    // Model must be compiled BEFORE video is opened so that when want_va=true
-    // we can extract OV's internal VADisplay and inject it into gst_loader.
-    // This ensures GStreamer VA surfaces are valid in OV's GPU context.
+    // ---- Read model to get input dimensions ---------------------------------
     ov::Core core;
-    ov::CompiledModel model;
-
-    std::cout << "Inference device: " << device << "\n";
-
-    if (want_va) {
-        // VA surface path: let OV create the GPU context first, then compile
-        // with NV12 surface preprocessing. We extract OV's internal VADisplay
-        // and inject it into gst_loader so both GStreamer and OV share one VA
-        // context — required for valid VASurfaceID cross-context access.
-        auto raw_model = core.read_model(model_path);
-
-        ov::preprocess::PrePostProcessor ppp(raw_model);
-        ppp.input()
-            .tensor()
-            .set_element_type(ov::element::u8)
-            .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES,
-                              {"y", "uv"})
-            .set_memory_type(ov::intel_gpu::memory_type::surface);
-        ppp.input()
-            .preprocess()
-            .convert_color(ov::preprocess::ColorFormat::BGR)
-            .convert_element_type(ov::element::f32);
-        ppp.input().model().set_layout("NCHW");
-        auto processed = ppp.build();
-
-        // Compile once to get OV's own VADisplay.
-        auto tmp_compiled = core.compile_model(processed, "GPU");
-        auto ov_va_ctx = tmp_compiled.get_context().as<ov::intel_gpu::ocl::VAContext>();
-        VADisplay ov_va_disp = ov_va_ctx;
-
-        // Override gst_loader's VADisplay BEFORE opening the video stream so
-        // GStreamer VA surfaces are allocated in the same VA context as OV.
-        imp_video_set_va_display(ov_va_disp);
-
-        // Re-compile explicitly with OV's VAContext so subsequent
-        // create_tensor_nv12 calls share the same device.
-        auto va_ctx_build = ov::intel_gpu::ocl::VAContext(core, ov_va_disp);
-        try {
-            model = core.compile_model(processed, va_ctx_build);
-        } catch (const std::exception& e) {
-            std::cerr << "model compile (VA) failed: " << e.what() << "\n";
-            imp_context_destroy(ctx);
-            return 1;
-        }
-        std::cout << "Model compiled with VA surface input (NV12 two-plane). "
-                     "Shared VADisplay=" << (void*)ov_va_disp << "\n";
-    } else {
-        // System-memory path: standard compile.
-        try {
-            model = core.compile_model(model_path, device);
-        } catch (const std::exception& e) {
-            std::cerr << "model compile failed: " << e.what() << "\n";
-            imp_context_destroy(ctx);
-            return 1;
-        }
-    }
+    auto raw_model = core.read_model(model_path);
+    auto orig_in = raw_model->input(0).get_shape();  // [1,3,H,W]
+    int model_h = static_cast<int>(orig_in[2]);
+    int model_w = static_cast<int>(orig_in[3]);
+    std::cout << "Model input: " << model_w << "x" << model_h << "\n";
 
     // ---- Open video ---------------------------------------------------------
+    // For VA surface path, output at model's resolution so vapostproc does the
+    // resize on GPU — surfaces arrive at exactly the size OV expects.
     imp_video_source_t* src = nullptr;
     imp_video_source_create(&src, IMP_SOURCE_FILE);
     imp_video_source_set(src, "path", video_path);
+    if (want_va) {
+        // Output at model's resolution so vapostproc resizes on GPU.
+        imp_video_source_set(src, "width",  std::to_string(model_w).c_str());
+        imp_video_source_set(src, "height", std::to_string(model_h).c_str());
+    }
 
     imp_video_decode_opts_t vopts{};
     vopts.use_va_surface_memory = want_va;
@@ -196,27 +147,74 @@ int main(int argc, char* argv[]) {
     imp_video_get_info(stream, &frame_w, &frame_h, nullptr, nullptr);
     std::cout << "Video opened: " << frame_w << "x" << frame_h << "\n";
 
-    auto in_shape = model.input(0).get_shape();  // [1,3,H,W] or [1,1,H,W] per plane for NV12
-    // For NV12 VA surface input the model has two inputs (y, uv) — use output shape for sizing.
-    int model_h = 0, model_w = 0;
+    // ---- Compile model ------------------------------------------------------
+    ov::CompiledModel model;
+    std::cout << "Inference device: " << device << "\n";
+
+    // Read first frame early if VA path — we need GStreamer's native VADisplay.
+    imp_tensor_t* first_tensor = nullptr;
     if (want_va) {
-        // Input 0 is the Y plane [1,1,H,W]; resize happens inside OV.
-        // The model's first input is the full-res source — use the original model input size.
-        auto out_shape = model.output(0).get_shape();
-        // fall back: read from original model to get H,W
-        auto orig = core.read_model(model_path);
-        auto orig_in = orig->input(0).get_shape();
-        model_h = static_cast<int>(orig_in[2]);
-        model_w = static_cast<int>(orig_in[3]);
+        st = imp_video_read_frame(&first_tensor, stream, 0);
+        if (st != IMP_OK || !first_tensor) {
+            std::cerr << "Failed to read first frame for VA display discovery\n";
+            imp_video_close(stream);
+            imp_context_destroy(ctx);
+            return 1;
+        }
+
+        uint32_t surf_id = 0;
+        void*    gst_va_disp = nullptr;
+        int      fw = 0, fh = 0;
+        imp_tensor_get_va_surface(first_tensor, &surf_id, &gst_va_disp, &fw, &fh);
+        std::cerr << "First frame: surface=" << surf_id
+                  << " va_display=" << gst_va_disp
+                  << " " << fw << "x" << fh << "\n";
+
+        if (!gst_va_disp) {
+            std::cerr << "Could not get GStreamer's VADisplay from first frame\n";
+            imp_video_close(stream);
+            imp_context_destroy(ctx);
+            return 1;
+        }
+
+        try {
+            auto va_ctx = ov::intel_gpu::ocl::VAContext(core, gst_va_disp);
+
+            ov::preprocess::PrePostProcessor ppp(raw_model);
+            ppp.input()
+                .tensor()
+                .set_element_type(ov::element::u8)
+                .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES,
+                                  {"y", "uv"})
+                .set_memory_type(ov::intel_gpu::memory_type::surface);
+            ppp.input()
+                .preprocess()
+                .convert_color(ov::preprocess::ColorFormat::BGR)
+                .convert_element_type(ov::element::f32);
+            ppp.input().model().set_layout("NCHW");
+            auto processed = ppp.build();
+
+            model = core.compile_model(processed, va_ctx);
+        } catch (const std::exception& e) {
+            std::cerr << "VA model compile failed: " << e.what() << "\n";
+            imp_video_close(stream);
+            imp_context_destroy(ctx);
+            return 1;
+        }
+        std::cout << "Model compiled with VA surface input (NV12 two-plane).\n";
     } else {
-        model_h = static_cast<int>(in_shape[2]);
-        model_w = static_cast<int>(in_shape[3]);
+        try {
+            model = core.compile_model(model_path, device);
+        } catch (const std::exception& e) {
+            std::cerr << "model compile failed: " << e.what() << "\n";
+            imp_video_close(stream);
+            imp_context_destroy(ctx);
+            return 1;
+        }
     }
-    std::cout << "Model input: " << model_w << "x" << model_h << "\n";
 
     ov::InferRequest req = model.create_infer_request();
 
-    // VA context for surface import (only used in VA path)
     std::optional<ov::intel_gpu::ocl::VAContext> va_ctx_infer;
     if (want_va) {
         va_ctx_infer = model.get_context().as<ov::intel_gpu::ocl::VAContext>();
@@ -230,17 +228,24 @@ int main(int argc, char* argv[]) {
 
     for (;;) {
         imp_tensor_t* tensor = nullptr;
-        auto t0 = Clock::now();
-        st = imp_video_read_frame(&tensor, stream, 0);
-        auto t1 = Clock::now();
-        if (st == IMP_ERROR_STREAM_END) break;
-        if (st != IMP_OK || !tensor) {
-            std::cerr << "read_frame failed: " << st << "\n";
-            break;
+
+        // First frame was already read for VA display discovery.
+        if (first_tensor) {
+            tensor = first_tensor;
+            first_tensor = nullptr;
+        } else {
+            auto t0 = Clock::now();
+            st = imp_video_read_frame(&tensor, stream, 0);
+            auto t1 = Clock::now();
+            if (st == IMP_ERROR_STREAM_END) break;
+            if (st != IMP_OK || !tensor) {
+                std::cerr << "read_frame failed: " << st << "\n";
+                break;
+            }
+            t_decode_ms += Ms(t1 - t0).count();
         }
 
         frame_count++;
-        t_decode_ms += Ms(t1 - t0).count();
 
         auto t2 = Clock::now();
 
@@ -251,6 +256,12 @@ int main(int argc, char* argv[]) {
             int      fw = 0, fh = 0;
             imp_tensor_get_va_surface(tensor, &surface_id, &va_disp, &fw, &fh);
 
+            if (frame_count <= 3)
+                std::cerr << "  VA surface: id=" << surface_id
+                          << " disp=" << va_disp
+                          << " " << fw << "x" << fh << "\n";
+
+            try {
             auto nv12 = va_ctx_infer->create_tensor_nv12(
                 static_cast<size_t>(fh),
                 static_cast<size_t>(fw),
@@ -266,6 +277,11 @@ int main(int argc, char* argv[]) {
             req.infer();
             auto t4 = Clock::now();
             t_infer_ms += Ms(t4 - t3).count();
+            } catch (const std::exception& e) {
+                std::cerr << "VA infer failed (frame " << frame_count
+                          << ", surface=" << surface_id << "): " << e.what() << "\n";
+                break;
+            }
 
         } else {
             // System-memory path: CPU NV12→BGR conversion then infer.

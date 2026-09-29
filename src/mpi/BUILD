@@ -56,11 +56,11 @@ cc_library(
         ],
         "//conditions:default": [
             "-std=c++17",
-        ], // TODO @atobisze comply with OVMS copts
+        ],  # TODO @atobisze comply with OVMS copts
     }),
     local_defines = COMMON_LOCAL_DEFINES + select({
         "//src:windows": ["INTEL_MPI_AVAILABLE=1"],
-        "//conditions:default": ["INTEL_MPI_AVAILABLE=1"], // TODO @atobisze not needed anymore?
+        "//conditions:default": ["INTEL_MPI_AVAILABLE=1"],  # TODO @atobisze not needed anymore?
     }),
     linkopts = select({
         "//src:windows": [],
