@@ -130,14 +130,14 @@ This example uses Gemma 4 because it is a published reference pair, but the same
 
 Install the export dependencies:
 
-```console
+```text
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/common/export_models/requirements.txt
 ```
 
 Export only the DFlash draft model. The main model is downloaded directly by OVMS from Hugging Face on startup:
 
 :::{dropdown} **Linux (Docker host)**
-```bash
+```text
 optimum-cli export openvino \
   --model z-lab/gemma-4-31B-it-DFlash \
   --task text-generation-with-past \
@@ -149,7 +149,7 @@ optimum-cli export openvino \
 :::
 
 :::{dropdown} **Windows (Command Prompt)**
-```bat
+```text
 optimum-cli export openvino --model z-lab/gemma-4-31B-it-DFlash --task text-generation-with-past --trust-remote-code --weight-format int4 --all-layers c:\models\gemma-4-31b-it-dflash-int4-ov
 ```
 :::
@@ -171,7 +171,7 @@ models
 ## Server Deployment
 
 :::{dropdown} **Deploying with Docker**
-```bash
+```text
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:2026.4.0-gpu \
   --model_repository_path /models \
@@ -183,7 +183,7 @@ docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
-```bat
+```text
 ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/gemma-4-31B-it-int4-ov --draft_model_path c:\models\gemma-4-31b-it-dflash-int4-ov --enable_prefix_caching false
 ```
 :::
@@ -192,7 +192,7 @@ ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/
 
 Use the standard chat completions API with `num_assistant_tokens` set to the draft budget. DFlash uses the same request interface as other speculative decoding modes; the draft strategy is selected automatically from the exported model metadata.
 
-```python
+```text
 from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
