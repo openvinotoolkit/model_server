@@ -83,13 +83,13 @@ TEST(OciSchemeTest, LocalModelDirectoryNameIsIdentityForHuggingFace) {
 }
 
 TEST(OciSchemeTest, LocalModelDirectoryNameDropsSchemeAndTagSeparator) {
-    EXPECT_EQ(ovms::localModelDirectoryName("oci://ghcr.io/org/model:tag"), "ghcr.io/org/model_tag");
-    EXPECT_EQ(ovms::localModelDirectoryName("oci://registry:5000/org/model:tag"), "registry_5000/org/model_tag");
+    EXPECT_EQ(ovms::localModelDirectoryName("oci://ghcr.io/org/model:tag"), "ghcr.io/org/model+tag");
+    EXPECT_EQ(ovms::localModelDirectoryName("oci://registry:5000/org/model:tag"), "registry+5000/org/model+tag");
     EXPECT_EQ(ovms::localModelDirectoryName("oci://ghcr.io/org/model"), "ghcr.io/org/model");
 }
 
 TEST(OciSchemeTest, GraphDirectoryUsesSanitizedName) {
-    const std::string expected = ovms::FileSystem::joinPath({"/models", "ghcr.io/org/model_tag"});
+    const std::string expected = ovms::FileSystem::joinPath({"/models", "ghcr.io/org/model+tag"});
     EXPECT_EQ(ovms::IModelDownloader::getGraphDirectory("/models", "oci://ghcr.io/org/model:tag"), expected);
 }
 
@@ -123,7 +123,7 @@ TEST_F(OciDownloaderCommands, ResolveCommandDropsTheScheme) {
 
 TEST_F(OciDownloaderCommands, GraphDirectoryIsSanitized) {
     TestOciDownloader downloader(hfSettings, "llmman");
-    EXPECT_EQ(downloader.getGraphDirectory(), ovms::FileSystem::joinPath({"/models", "ghcr.io/org/model_tag"}));
+    EXPECT_EQ(downloader.getGraphDirectory(), ovms::FileSystem::joinPath({"/models", "ghcr.io/org/model+tag"}));
 }
 
 TEST_F(OciDownloaderCommands, BinaryIsTakenFromEnvironment) {

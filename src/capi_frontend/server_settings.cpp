@@ -64,8 +64,9 @@ std::string localModelDirectoryName(const std::string& sourceModel) {
     }
     std::string name = stripOciScheme(sourceModel);
     // ':' separates the tag (and, for a non-default registry port, the port).
-    // It is not a legal filename character on Windows.
-    std::replace(name.begin(), name.end(), ':', '_');
+    // It is not a legal filename character on Windows. '+' is legal there and
+    // never appears in an OCI reference, so the mapping stays injective.
+    std::replace(name.begin(), name.end(), ':', '+');
     return name;
 }
 

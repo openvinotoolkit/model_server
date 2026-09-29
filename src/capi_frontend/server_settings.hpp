@@ -100,7 +100,7 @@ std::string stripOciScheme(const std::string& sourceModel);
 // --model_repository_path. Identity for every non-OCI reference; for OCI
 // references the scheme is dropped and the tag separator is replaced so the
 // result is a legal directory name on Windows too, e.g.
-// "oci://ghcr.io/org/model:tag" -> "ghcr.io/org/model_tag".
+// "oci://ghcr.io/org/model:tag" -> "ghcr.io/org/model+tag".
 std::string localModelDirectoryName(const std::string& sourceModel);
 
 enum OvmsServerMode : int {
