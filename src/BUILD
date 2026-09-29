@@ -2043,11 +2043,6 @@ sh_test(
 cc_test(
     name = "ovms_test",
     linkstatic = 1,
-    env = {
-        "OVMS_TEST_PYTHON_CALCULATORS_INPROCESS": "1",
-        "OVMS_TEST_PYTHON_RUNTIME_INPROCESS": "1",
-        "OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS": "1",
-    },
     srcs = [
         "test/c_api_tests.cpp",
         "test/capi_predict_validation_test.cpp",
