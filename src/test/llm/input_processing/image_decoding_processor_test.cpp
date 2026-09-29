@@ -234,7 +234,7 @@ TEST(ImageDecodingProcessorTest, LocalPathInsideAllowedDirectoryButFileNotFound)
     const auto status = processor.process(req);
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Image file parsing failed");
+    EXPECT_EQ(status.message(), "Image loading failed");
 }
 
 TEST(ImageDecodingProcessorTest, Base64ImageDecodedAndStoredInInputImages) {
