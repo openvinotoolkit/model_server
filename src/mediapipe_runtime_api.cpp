@@ -177,6 +177,55 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     bool loadedFromInProcessSymbols = false;
 
 #ifdef __linux__
+    api->create = OVMS_MPFactoryCreate;
+    api->destroy = OVMS_MPFactoryDestroy;
+    api->lastError = OVMS_MPFactoryGetLastError;
+    api->processConfig = OVMS_MPFactoryProcessConfig;
+    api->createExecutor = OVMS_MPFactoryCreateExecutor;
+    api->createExecutorHandle = OVMS_MPFactoryCreateExecutorHandle;
+    api->definitionExists = OVMS_MPFactoryDefinitionExists;
+    api->wakeUpDefinition = OVMS_MPFactoryWakeUpDefinition;
+    api->putToSleepDefinition = OVMS_MPFactoryPutToSleepDefinition;
+    api->retireDefinition = OVMS_MPFactoryRetireDefinition;
+    api->isDefinitionRetired = OVMS_MPFactoryIsDefinitionRetired;
+    api->isDefinitionAvailable = OVMS_MPFactoryIsDefinitionAvailable;
+    api->shouldUnloadDefinitionDueToIdle = OVMS_MPFactoryShouldUnloadDefinitionDueToIdle;
+    api->hasActiveInference = OVMS_MPFactoryHasActiveInference;
+    api->getDefinitionGroupName = OVMS_MPFactoryGetDefinitionGroupName;
+    api->aliasesConflictExcluding = OVMS_MPFactoryAliasesConflictExcluding;
+    api->getNames = OVMS_MPFactoryGetNames;
+    api->findServableDefinition = OVMS_MPFactoryFindServableDefinitionByName;
+    api->createServableConfig = OVMS_MPGraphExportCreateServableConfig;
+    api->createServableConfigInMemory = OVMS_MPGraphExportCreateServableConfigInMemory;
+    api->setExternalServerHandle = OVMS_MPSetExternalServerHandle;
+    api->configureLogging = OVMS_MPFactoryConfigureLogging;
+
+    loadedFromInProcessSymbols =
+        api->create != nullptr &&
+        api->destroy != nullptr &&
+        api->lastError != nullptr &&
+        api->processConfig != nullptr &&
+        api->createExecutor != nullptr &&
+        api->createExecutorHandle != nullptr &&
+        api->definitionExists != nullptr &&
+        api->wakeUpDefinition != nullptr &&
+        api->putToSleepDefinition != nullptr &&
+        api->retireDefinition != nullptr &&
+        api->isDefinitionRetired != nullptr &&
+        api->isDefinitionAvailable != nullptr &&
+        api->shouldUnloadDefinitionDueToIdle != nullptr &&
+        api->hasActiveInference != nullptr &&
+        api->getDefinitionGroupName != nullptr &&
+        api->aliasesConflictExcluding != nullptr &&
+        api->getNames != nullptr &&
+        api->findServableDefinition != nullptr &&
+        api->createServableConfig != nullptr &&
+        api->createServableConfigInMemory != nullptr;
+
+    if (loadedFromInProcessSymbols) {
+        SPDLOG_TRACE("MediaPipe runtime API resolved from in-process symbols (Linux)");
+        tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(RTLD_DEFAULT);
+    }
 #endif
 #ifdef _WIN32
     {
