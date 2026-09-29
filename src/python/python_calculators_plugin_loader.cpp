@@ -117,11 +117,8 @@ bool loadPythonCalculatorsPlugin() {
     bool hasInProcessKfsBridge = getKfsPyTensorBridgeVTable() != nullptr;
 
 #ifdef __linux__
-    bool hasInProcessRegisterFn = false;
-
     if (registerPythonCalculators != nullptr) {
         registerPythonCalculatorsFn = registerPythonCalculators;
-        hasInProcessRegisterFn = true;
         if (getKfsPyTensorBridgeVTable() == nullptr && OVMS_getKfsPyTensorBridgeVTable != nullptr) {
             if (auto* vtable = OVMS_getKfsPyTensorBridgeVTable(); vtable != nullptr) {
                 activateKfsBridge(vtable, "in-process weak symbol");
@@ -138,7 +135,6 @@ bool loadPythonCalculatorsPlugin() {
     auto* alreadyLoadedRegisterFn = reinterpret_cast<RegisterPythonCalculatorsFn>(dlsym(RTLD_DEFAULT, "registerPythonCalculators"));
     if (alreadyLoadedRegisterFn != nullptr) {
         registerPythonCalculatorsFn = alreadyLoadedRegisterFn;
-        hasInProcessRegisterFn = true;
 
         auto* getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(dlsym(RTLD_DEFAULT, "OVMS_getKfsPyTensorBridgeVTable"));
         if (getKfsBridgeFn != nullptr) {
