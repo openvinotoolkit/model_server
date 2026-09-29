@@ -15,7 +15,7 @@ ovms --pull --source_model oci://ghcr.io/<org>/<model>:<tag> --model_repository_
 OCI pulling is delegated to [`llmman`](https://github.com/llmmanorg/llmman), which implements registry authentication, the ModelPack media types, resumable blob downloads and a local content-addressed store. Install it and make sure it is on `PATH`:
 
 ```text
-curl -fsSL https://raw.githubusercontent.com/llmmanorg/llmman/main/install.sh | sh
+curl -fsSL https://llmmanorg.github.io/install.sh | sh
 ```
 
 If the binary lives outside `PATH`, point OVMS at it with the `LLMMAN_BIN` environment variable:
