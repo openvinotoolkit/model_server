@@ -218,6 +218,8 @@ protected:
     std::unique_ptr<ServableGroupManager> servableGroupManager;
 
 private:
+    const std::vector<std::string> getNamesOfAvailableModels() const;
+
     /**
      * @brief last md5sum of configfile
      */
@@ -317,7 +319,8 @@ public:
         return servableGroupManager.get();
     }
 
-    const std::vector<std::string> getNamesOfAvailableModels() const;
+    // Models, DAGs and MediaPipe graphs; with idle management all configured servables
+    const std::vector<std::string> getNamesOfAvailableServables() const;
 
     /**
      * @brief Starts monitoring cleanup as new thread
