@@ -710,24 +710,23 @@ void imp_video_encoder_close(imp_video_encoder_t* encoder) {
     delete encoder;
 }
 
-#else  // Linux stubs for video encoder
+#else  // Linux video encoder — delegate to gst_loader.cpp
 
 imp_status_t imp_video_encoder_create(imp_video_encoder_t** encoder,
                                       uint32_t width, uint32_t height,
                                       imp_context_t* ctx,
                                       const imp_video_encode_opts_t* opts) {
-    (void)encoder; (void)width; (void)height; (void)ctx; (void)opts;
-    return IMP_ERROR_INTERNAL;  // Not yet implemented on Linux
+    gst_loader_init();
+    return linux_video_encoder_create(encoder, width, height, ctx, opts);
 }
 
 imp_status_t imp_video_encoder_write(imp_video_encoder_t* encoder,
                                      imp_tensor_t* tensor) {
-    (void)encoder; (void)tensor;
-    return IMP_ERROR_INTERNAL;
+    return linux_video_encoder_write(encoder, tensor);
 }
 
 void imp_video_encoder_close(imp_video_encoder_t* encoder) {
-    (void)encoder;
+    linux_video_encoder_close(encoder);
 }
 
 #endif  // _WIN32

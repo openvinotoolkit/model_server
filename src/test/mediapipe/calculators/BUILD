@@ -246,3 +246,17 @@ cc_test(
     }),
 )
 
+# Linux video encoder test: decode host NV12 -> encode H.264/MP4 -> verify
+# readable. Needs GStreamer + test video; skips otherwise.
+cc_test(
+    name = "gst_video_encode_test",
+    srcs = ["gst_video_encode_test.cpp"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@com_google_googletest//:gtest_main",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+

@@ -32,6 +32,7 @@
 // field accesses, not function calls).
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
+#include <gst/app/gstappsrc.h>
 #include <gst/video/video.h>
 
 // ---- standard headers -------------------------------------------------------
@@ -86,6 +87,14 @@ struct GstFunctionTable {
     GstBuffer* (*gst_sample_get_buffer)(GstSample*);
     GstCaps* (*gst_sample_get_caps)(GstSample*);
     void (*gst_sample_unref)(GstSample*);
+    GstFlowReturn (*gst_app_src_push_buffer)(GstAppSrc*, GstBuffer*);
+
+    // gstreamer-1.0 buffers (encode path)
+    GstBuffer* (*gst_buffer_new_allocate)(GstAllocator*, gsize, GstAllocationParams*);
+    gboolean (*gst_buffer_map)(GstBuffer*, GstMapInfo*, GstMapFlags);
+    void (*gst_buffer_unmap)(GstBuffer*, GstMapInfo*);
+    void (*gst_buffer_unref)(GstBuffer*);
+    GstBuffer* (*gst_buffer_ref)(GstBuffer*);
 
     // gstvideo-1.0
     gboolean (*gst_video_info_from_caps)(GstVideoInfo*, const GstCaps*);
@@ -155,6 +164,13 @@ static bool load_symbols(void* gst_h, void* app_h,
     LOAD_SYM(app_h,  gst_sample_get_buffer);
     LOAD_SYM(app_h,  gst_sample_get_caps);
     LOAD_SYM(app_h,  gst_sample_unref);
+    LOAD_SYM(app_h,  gst_app_src_push_buffer);
+
+    LOAD_SYM(gst_h,  gst_buffer_new_allocate);
+    LOAD_SYM(gst_h,  gst_buffer_map);
+    LOAD_SYM(gst_h,  gst_buffer_unmap);
+    LOAD_SYM(gst_h,  gst_buffer_unref);
+    LOAD_SYM(gst_h,  gst_buffer_ref);
 
     LOAD_SYM(vid_h,  gst_video_info_from_caps);
     LOAD_SYM(vid_h,  gst_video_frame_map);
@@ -784,6 +800,156 @@ void linux_video_close(imp_video_stream_t* stream) {
         f.gst_object_unref(stream->pipeline);
     }
     delete stream;
+}
+
+// ============================================================================
+// Public: Linux video encoder (appsrc -> x264enc -> h264parse -> mp4mux -> file)
+// ============================================================================
+
+imp_status_t linux_video_encoder_create(imp_video_encoder_t** encoder,
+                                        uint32_t width, uint32_t height,
+                                        imp_context_t* ctx,
+                                        const imp_video_encode_opts_t* opts) {
+    if (!encoder || !ctx) return IMP_ERROR_INVALID_ARGUMENT;
+    if (!s_available) return IMP_ERROR_DEVICE_NOT_AVAILABLE;
+    const auto& f = s_fns;
+
+    auto* e = new imp_video_encoder_s();
+    e->width   = static_cast<int>(width);
+    e->height  = static_cast<int>(height);
+    e->fps_num = (opts && opts->framerate > 0) ? static_cast<int>(opts->framerate) : 30;
+    e->fps_den = 1;
+
+    const std::string output_path =
+        (opts && opts->output_path) ? opts->output_path : "output.mp4";
+
+    // GPU (VA) zero-copy encode when requested: push the decoded VA surface's
+    // own buffer straight into vah264lpenc — no host copy. Otherwise software
+    // encode from host NV12 planes.
+    const bool gpu = opts && opts->encode_device &&
+                     (std::string(opts->encode_device).rfind("GPU", 0) == 0);
+
+    std::string pipeline;
+    if (gpu) {
+        pipeline =
+            "appsrc name=src format=time do-timestamp=true is-live=false ! "
+            "video/x-raw(memory:VAMemory),format=NV12,width=" + std::to_string(width) +
+            ",height=" + std::to_string(height) +
+            ",framerate=" + std::to_string(e->fps_num) + "/" + std::to_string(e->fps_den) + " ! "
+            "vah264lpenc ! h264parse ! mp4mux ! filesink location=\"" + output_path + "\"";
+    } else {
+        pipeline =
+            "appsrc name=src format=time do-timestamp=false is-live=false ! "
+            "video/x-raw,format=NV12,width=" + std::to_string(width) +
+            ",height=" + std::to_string(height) +
+            ",framerate=" + std::to_string(e->fps_num) + "/" + std::to_string(e->fps_den) + " ! "
+            "videoconvert ! openh264enc ! h264parse ! mp4mux ! filesink location=\"" + output_path + "\"";
+    }
+
+    GError* error = nullptr;
+    e->pipeline = f.gst_parse_launch(pipeline.c_str(), &error);
+    if (error) {
+        ctx->last_error = error->message;
+        f.g_error_free(error);
+        delete e;
+        return IMP_ERROR_ENCODE_FAILED;
+    }
+
+    e->appsrc = f.gst_bin_get_by_name(GST_BIN(e->pipeline), "src");
+    if (!e->appsrc) {
+        f.gst_object_unref(e->pipeline);
+        delete e;
+        return IMP_ERROR_ENCODE_FAILED;
+    }
+
+    if (f.gst_element_set_state(e->pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
+        f.gst_object_unref(e->appsrc);
+        f.gst_object_unref(e->pipeline);
+        delete e;
+        return IMP_ERROR_ENCODE_FAILED;
+    }
+
+    e->encoder_name   = gpu ? "vah264lpenc" : "openh264enc";
+    e->is_gpu_encoder = gpu;
+    e->initialized    = true;
+    *encoder = e;
+    return IMP_OK;
+}
+
+imp_status_t linux_video_encoder_write(imp_video_encoder_t* encoder,
+                                       imp_tensor_t* tensor) {
+    if (!encoder || !encoder->initialized || !tensor || !tensor->valid)
+        return IMP_ERROR_INVALID_ARGUMENT;
+    const auto& f = s_fns;
+
+    // GPU path: push the decoded VA surface's own buffer — zero copy.
+    if (encoder->is_gpu_encoder) {
+        if (tensor->memory_type != IMP_MEM_VA_SURFACE || !tensor->owned_gst_sample)
+            return IMP_ERROR_INVALID_ARGUMENT;
+        GstBuffer* src_buf =
+            f.gst_sample_get_buffer(static_cast<GstSample*>(tensor->owned_gst_sample));
+        if (!src_buf) return IMP_ERROR_ENCODE_FAILED;
+        // Give appsrc its own ref; the tensor keeps owning the sample/surface.
+        GstBuffer* buf = f.gst_buffer_ref(src_buf);
+        if (f.gst_app_src_push_buffer(GST_APP_SRC(encoder->appsrc), buf) != GST_FLOW_OK)
+            return IMP_ERROR_ENCODE_FAILED;
+        encoder->frame_count++;
+        return IMP_OK;
+    }
+
+    // Host path: copy NV12 planes into a fresh buffer.
+    if (!tensor->y_data || !tensor->uv_data)
+        return IMP_ERROR_INVALID_ARGUMENT;
+
+    const int w = tensor->width;
+    const int h = tensor->height;
+    const size_t y_size  = static_cast<size_t>(w) * h;
+    const size_t uv_size = static_cast<size_t>(w) * (h / 2);
+
+    GstBuffer* buffer = f.gst_buffer_new_allocate(nullptr, y_size + uv_size, nullptr);
+    if (!buffer) return IMP_ERROR_ENCODE_FAILED;
+
+    GstMapInfo map;
+    if (!f.gst_buffer_map(buffer, &map, GST_MAP_WRITE)) {
+        f.gst_buffer_unref(buffer);
+        return IMP_ERROR_ENCODE_FAILED;
+    }
+    memcpy(map.data, tensor->y_data, y_size);
+    memcpy(map.data + y_size, tensor->uv_data, uv_size);
+    f.gst_buffer_unmap(buffer, &map);
+
+    const GstClockTime duration =
+        GST_SECOND * static_cast<uint64_t>(encoder->fps_den) / encoder->fps_num;
+    GST_BUFFER_PTS(buffer)      = encoder->frame_count * duration;
+    GST_BUFFER_DURATION(buffer) = duration;
+
+    if (f.gst_app_src_push_buffer(GST_APP_SRC(encoder->appsrc), buffer) != GST_FLOW_OK)
+        return IMP_ERROR_ENCODE_FAILED;  // push takes ownership of buffer
+
+    encoder->frame_count++;
+    return IMP_OK;
+}
+
+void linux_video_encoder_close(imp_video_encoder_t* encoder) {
+    if (!encoder || !encoder->initialized) return;
+    const auto& f = s_fns;
+
+    // Signal end-of-stream and wait for the muxer to finalize the file.
+    f.gst_element_send_event(encoder->appsrc, f.gst_event_new_eos());
+
+    GstBus* bus = f.gst_element_get_bus(encoder->pipeline);
+    if (bus) {
+        GstMessage* msg = f.gst_bus_timed_pop_filtered(
+            bus, 10 * GST_SECOND,
+            static_cast<GstMessageType>(GST_MESSAGE_EOS | GST_MESSAGE_ERROR));
+        if (msg) f.gst_message_unref(msg);
+        f.gst_object_unref(bus);
+    }
+
+    f.gst_element_set_state(encoder->pipeline, GST_STATE_NULL);
+    f.gst_object_unref(encoder->appsrc);
+    f.gst_object_unref(encoder->pipeline);
+    delete encoder;
 }
 
 #endif  // !_WIN32

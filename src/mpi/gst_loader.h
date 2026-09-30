@@ -130,5 +130,19 @@ void gst_loader_release_natives(void* gst_sample, void* gst_vframe);
  */
 void linux_video_close(imp_video_stream_t* stream);
 
+// ---------------------------------------------------------------------------
+// High-level Linux video encode operations (appsrc -> x264enc -> mux -> file).
+// ---------------------------------------------------------------------------
+
+imp_status_t linux_video_encoder_create(imp_video_encoder_t** encoder,
+                                        uint32_t width, uint32_t height,
+                                        imp_context_t* ctx,
+                                        const imp_video_encode_opts_t* opts);
+
+imp_status_t linux_video_encoder_write(imp_video_encoder_t* encoder,
+                                       imp_tensor_t* tensor);
+
+void linux_video_encoder_close(imp_video_encoder_t* encoder);
+
 #endif  // !_WIN32
 #endif  // GST_LOADER_H
