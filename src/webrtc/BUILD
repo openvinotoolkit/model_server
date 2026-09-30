@@ -30,6 +30,26 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "audio_utterance_buffer",
+    srcs = ["audio_utterance_buffer.cpp"],
+    hdrs = ["audio_utterance_buffer.hpp"],
+    deps = [":streaming_audio_model"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "omni_audio_adapter",
+    srcs = ["omni_audio_adapter.cpp"],
+    hdrs = ["omni_audio_adapter.hpp"],
+    deps = [
+        ":streaming_audio_model",
+        "//third_party:genai",
+        "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "mock_echo_streaming_audio_model",
     srcs = ["mock_echo_streaming_audio_model.cpp"],
     hdrs = ["mock_echo_streaming_audio_model.hpp"],
@@ -79,10 +99,13 @@ ovms_cc_library(
     srcs = ["webrtc_session_controller.cpp"],
     hdrs = ["webrtc_session_controller.hpp"],
     deps = [
+        ":audio_utterance_buffer",
         ":mock_echo_streaming_audio_model",
+        ":omni_audio_adapter",
         ":opus_audio_codec",
         ":streaming_audio_processor",
         ":webrtc_peer_connection",
+        "//third_party:genai",
         "@libdatachannel//:libdatachannel",
     ],
     visibility = ["//visibility:public"],
@@ -132,6 +155,16 @@ cc_test(
     linkstatic = 1,
     deps = [
         ":mock_echo_streaming_audio_model",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "audio_utterance_buffer_test",
+    srcs = ["audio_utterance_buffer_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":audio_utterance_buffer",
         "@com_google_googletest//:gtest_main",
     ],
 )

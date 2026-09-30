@@ -33,6 +33,14 @@ TEST(WebRtcSessionControllerTest, RejectsInvalidOffer) {
     EXPECT_EQ(controller.sessionCount(), 0);
 }
 
+TEST(WebRtcSessionControllerTest, RejectsSessionWhenConfiguredOmniModelCannotLoad) {
+    WebRtcSessionController controller(16, "/missing/webrtc/omni/model");
+    WebRtcSessionController::OfferResult result;
+
+    EXPECT_FALSE(controller.createSession("v=0\r\n", "offer", result));
+    EXPECT_EQ(controller.sessionCount(), 0);
+}
+
 TEST(WebRtcSessionControllerTest, CreatesAndRemovesSession) {
     WebRtcSessionController controller;
     WebRtcSessionController::OfferResult result;

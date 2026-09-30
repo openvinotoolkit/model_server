@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <iomanip>
 #include <memory>
 #include <mutex>
@@ -89,6 +90,11 @@ enum : unsigned int {
     TIMER_END
 };
 const std::string DEFAULT_VERSION = "DEFAULT";
+
+std::string getWebRtcOmniModelPath() {
+    const char* modelPath = std::getenv("OVMS_WEBRTC_OMNI_MODEL_PATH");
+    return modelPath == nullptr ? std::string{} : std::string(modelPath);
+}
 }  // namespace
 
 namespace ovms {
@@ -142,7 +148,8 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     ovmsServer(ovmsServer),
 
     kfsGrpcImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getKFSGrpcImpl()),
-    modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
+    modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()),
+    webRtcSessionController(16, getWebRtcOmniModelPath()) {
     if (nullptr == this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))
         throw std::logic_error("Tried to create http rest api handler without grpc server module");
     if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))

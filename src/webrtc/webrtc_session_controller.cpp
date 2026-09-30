@@ -15,13 +15,20 @@
 //*****************************************************************************/
 #include "webrtc_session_controller.hpp"
 
+#include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <exception>
 #include <sstream>
 #include <utility>
 #include <vector>
 
+#include <openvino/genai/omni/pipeline.hpp>
+#include <openvino/genai/omni/talker.hpp>
+#include <openvino/genai/visual_language/pipeline.hpp>
+
 #include "src/logging.hpp"
+#include "omni_audio_adapter.hpp"
 
 namespace ovms {
 
@@ -102,8 +109,30 @@ WebRtcSessionController::Session::Session(rtc::Configuration configuration) :
     processor(codec, model) {
 }
 
-WebRtcSessionController::WebRtcSessionController(size_t maxSessions) :
-    maxSessions_(maxSessions) {
+void WebRtcSessionController::Session::sendGeneratedAudio(const AudioChunk& audio, rtc::FrameInfo info, bool complete) {
+    pendingOutputSamples.insert(pendingOutputSamples.end(), audio.samples.begin(), audio.samples.end());
+    while (pendingOutputSamples.size() >= OpusAudioCodec::FrameSamples || (complete && !pendingOutputSamples.empty())) {
+        const size_t channelCount = codec.channels();
+        std::vector<float> frame(OpusAudioCodec::FrameSamples * channelCount, 0.0f);
+        const size_t samplesToCopy = std::min(OpusAudioCodec::FrameSamples, pendingOutputSamples.size());
+        for (size_t index = 0; index < samplesToCopy; ++index) {
+            const float sample = pendingOutputSamples.front();
+            pendingOutputSamples.pop_front();
+            for (size_t channel = 0; channel < channelCount; ++channel)
+                frame[index * channelCount + channel] = sample;
+        }
+        const auto encoded = codec.encode(frame);
+        rtc::binary packet(encoded.size());
+        for (size_t index = 0; index < encoded.size(); ++index) {
+            packet[index] = static_cast<std::byte>(encoded[index]);
+        }
+        peer.sendAudioFrame(std::move(packet), info);
+    }
+}
+
+WebRtcSessionController::WebRtcSessionController(size_t maxSessions, std::string omniModelPath) :
+    maxSessions_(maxSessions),
+    omniModelPath_(std::move(omniModelPath)) {
 }
 
 bool WebRtcSessionController::createSession(const std::string& offerSdp, const std::string& offerType, OfferResult& result) {
@@ -112,12 +141,31 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
         return false;
     }
 
+    std::shared_ptr<OmniAudioAdapter> omniAdapter;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         if (sessions_.size() >= maxSessions_) {
             SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected session creation, session limit reached: {}", maxSessions_);
             return false;
         }
+        if (!omniModelPath_.empty() && !omniAdapter_) {
+            try {
+                const char* configuredDevice = std::getenv("OVMS_WEBRTC_OMNI_DEVICE");
+                const std::string device = configuredDevice == nullptr || configuredDevice[0] == '\0' ? "CPU" : configuredDevice;
+                auto vlm = std::make_shared<ov::genai::VLMPipeline>(omniModelPath_, device, ov::AnyMap{});
+                auto talker = std::make_shared<ov::genai::Talker>(omniModelPath_, device, ov::AnyMap{});
+                auto pipeline = std::make_shared<ov::genai::OmniPipeline>(std::move(vlm), std::move(talker));
+                omniAdapter_ = std::make_shared<OmniAudioAdapter>(std::move(pipeline));
+                SPDLOG_LOGGER_INFO(webrtc_logger, "Initialized WebRTC Omni pipeline from {} on {}", omniModelPath_, device);
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not initialize WebRTC Omni model at {}: {}", omniModelPath_, e.what());
+                return false;
+            } catch (...) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not initialize WebRTC Omni model at {}", omniModelPath_);
+                return false;
+            }
+        }
+        omniAdapter = omniAdapter_;
     }
 
     SPDLOG_LOGGER_INFO(webrtc_logger, "Creating WebRTC session from browser offer");
@@ -155,9 +203,55 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
         std::lock_guard<std::mutex> lock(session->mutex);
         session->localCandidates.push_back({candidate, mid});
     });
-    session->peer.onProcessedAudioFrame(session->processor, [session](rtc::binary data, rtc::FrameInfo info) {
-        session->peer.sendAudioFrame(std::move(data), info);
-    });
+    if (omniAdapter) {
+        session->conversation = omniAdapter->createConversation();
+        const std::weak_ptr<Session> weakSession = session;
+        session->peer.onAudioFrame([weakSession, omniAdapter, conversation = session->conversation](rtc::binary data, rtc::FrameInfo info) {
+            const auto currentSession = weakSession.lock();
+            if (!currentSession)
+                return;
+            try {
+                std::vector<uint8_t> encoded(data.size());
+                for (size_t index = 0; index < data.size(); ++index)
+                    encoded[index] = std::to_integer<uint8_t>(data[index]);
+                const auto decoded = currentSession->codec.decode(encoded);
+                const uint64_t timestampUs = info.timestampSeconds ?
+                    static_cast<uint64_t>(info.timestampSeconds->count() * 1000000.0) :
+                    static_cast<uint64_t>((static_cast<uint64_t>(info.timestamp) * 1000000) / OpusAudioCodec::SampleRate);
+                auto utterance = currentSession->utteranceBuffer.push(
+                    AudioChunk{decoded, OpusAudioCodec::SampleRate, timestampUs, static_cast<uint32_t>(currentSession->codec.channels())});
+                if (!utterance)
+                    return;
+
+                const std::weak_ptr<Session> outputSession = currentSession;
+                omniAdapter->submit(conversation, std::move(*utterance),
+                    [outputSession, info](AudioChunk audio) {
+                        if (const auto activeSession = outputSession.lock())
+                            activeSession->sendGeneratedAudio(audio, info, false);
+                    },
+                    [](std::exception_ptr error) {
+                        try {
+                            if (error)
+                                std::rethrow_exception(error);
+                        } catch (const std::exception& e) {
+                            SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC Omni generation failed: {}", e.what());
+                        } catch (...) {
+                            SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC Omni generation failed with an unknown error");
+                        }
+                    },
+                    [outputSession, info] {
+                        if (const auto activeSession = outputSession.lock())
+                            activeSession->sendGeneratedAudio(AudioChunk{{}, OpusAudioCodec::SampleRate, 0, 1}, info, true);
+                    });
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to buffer WebRTC audio for Omni: {}", e.what());
+            }
+        });
+    } else {
+        session->peer.onProcessedAudioFrame(session->processor, [session](rtc::binary data, rtc::FrameInfo info) {
+            session->peer.sendAudioFrame(std::move(data), info);
+        });
+    }
     try {
         // Reuse the browser's single sendrecv m-line (via onTrack) instead of
         // calling addAudioTrack(), which would add a second, unmatched m-line
