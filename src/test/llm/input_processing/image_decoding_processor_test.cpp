@@ -203,12 +203,13 @@ TEST(ImageDecodingProcessorTest, RuntimeConfigSnapshotCarriesMediaSettings) {
 TEST(ImageDecodingProcessorTest, InputProcessorUsesRuntimeConfigForMediaDomains) {
     InputProcessorContext context;
     context.config.isVLM = true;
-    context.runtimeConfig.allowedMediaDomains = {"safe.example"};
+    context.runtimeConfig.allowedMediaDomains = {"not.existing.domain"};
 
-    InputRequest req = makeImageUrlRequest("http://safe.example:bad/image.jpg");
+    InputRequest req = makeImageUrlRequest("http://not.existing.domain/image.jpg");
     InputProcessor processor(context, req);
     const auto status = processor.process(req);
 
+    // The host is allowed, so processing should reach image download and fail there.
     ASSERT_FALSE(status.ok());
     EXPECT_NE(status.message(), "Given url does not match any allowed domain from allowed_media_domains");
 }

@@ -143,7 +143,11 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", pluginConfig);
         throw std::runtime_error("Error during plugin_config option parsing");
     }
-    applyGlobalCacheDirFallback(config, getRuntimeConfig().cacheDir);
+    if (getRuntimeConfig().cacheDir.empty()) {
+        applyGlobalCacheDirFallback(config);
+    } else {
+        applyGlobalCacheDirFallback(config, getRuntimeConfig().cacheDir);
+    }
     ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), device, config);
     const ov::Shape speakerEmbeddingShape = ttsPipeline->get_speaker_embedding_shape();
     const std::filesystem::path voicesDir = parsedModelsPath / VOICES_DIR_NAME;

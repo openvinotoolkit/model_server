@@ -38,6 +38,7 @@
 #pragma warning(pop)
 
 #include "../logging.hpp"
+#include "../config.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "src/status.hpp"
 #include "io_processing/chat_template/analyzer.hpp"
@@ -301,7 +302,9 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
     // initializers construct the pipeline directly, so the server-level cache_dir is
     // otherwise never applied and compiled-model cache artifacts are never persisted.
     // An explicit CACHE_DIR in the node's plugin_config remains authoritative.
-    const std::string& globalCacheDir = getRuntimeConfig().cacheDir;
+    const std::string& globalCacheDir = getRuntimeConfig().cacheDir.empty()
+                                            ? Config::instance().cacheDir()
+                                            : getRuntimeConfig().cacheDir;
     if (globalCacheDir.empty()) {
         return;
     }
