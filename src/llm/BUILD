@@ -633,7 +633,6 @@ ovms_cc_library(
         "//src:libhttpclientconnection",
         "//src:sse_utils",
         "//src:libovms_systeminfo",
-        "//src:libovms_config",
         "//src:libovms_ov_utils",
         "//third_party:genai",
         ":runtime_chat_template_loader",

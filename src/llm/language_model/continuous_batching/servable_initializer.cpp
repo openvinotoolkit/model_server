@@ -33,7 +33,6 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../../../config.hpp"
 #include "../../../json_parser.hpp"
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"

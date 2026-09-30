@@ -46,6 +46,10 @@ Status createSharedTensor(ov::Tensor& destinationTensor, ov::element::Type_t pre
 
 void applyGlobalCacheDirFallback(ov::AnyMap& properties) {
     const std::string& globalCacheDir = Config::instance().cacheDir();
+    applyGlobalCacheDirFallback(properties, globalCacheDir);
+}
+
+void applyGlobalCacheDirFallback(ov::AnyMap& properties, const std::string& globalCacheDir) {
     if (globalCacheDir.empty()) {
         return;
     }

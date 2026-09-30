@@ -30,6 +30,7 @@
 #include "src/logging.hpp"
 #include "src/ov_utils.hpp"
 #include "src/stringutils.hpp"
+#include "src/mediapipe_internal/runtime_config.hpp"
 
 namespace ovms {
 
@@ -54,7 +55,7 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
         throw std::runtime_error("Error during plugin_config option parsing");
     }
-    applyGlobalCacheDirFallback(config);
+    applyGlobalCacheDirFallback(config, getRuntimeConfig().cacheDir);
     enableWordTimestamps = nodeOptions.enable_word_timestamps();
     if (enableWordTimestamps && device == "NPU") {
         config["STATIC_PIPELINE"] = true;

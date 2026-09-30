@@ -494,7 +494,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             settings.allowedLocalMediaPath.has_value() ? settings.allowedLocalMediaPath->c_str() : nullptr,
             allowedMediaDomains.str().c_str(),
             settings.cacheDir.c_str(),
-            settings.restWorkers.value_or(1),
+            Config::instance().restWorkers(),
             settings.verboseResponse);
     }
 

@@ -29,7 +29,6 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../config.hpp"
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"

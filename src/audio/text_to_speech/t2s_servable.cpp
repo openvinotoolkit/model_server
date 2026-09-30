@@ -29,6 +29,7 @@
 #include "src/logging.hpp"
 #include "src/json_parser.hpp"
 #include "src/ov_utils.hpp"
+#include "src/mediapipe_internal/runtime_config.hpp"
 
 #include "src/audio/text_to_speech/t2s_servable.hpp"
 
@@ -142,7 +143,7 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", pluginConfig);
         throw std::runtime_error("Error during plugin_config option parsing");
     }
-    applyGlobalCacheDirFallback(config);
+    applyGlobalCacheDirFallback(config, getRuntimeConfig().cacheDir);
     ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), device, config);
     const ov::Shape speakerEmbeddingShape = ttsPipeline->get_speaker_embedding_shape();
     const std::filesystem::path voicesDir = parsedModelsPath / VOICES_DIR_NAME;

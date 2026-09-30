@@ -40,6 +40,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
         "//src:libovms_ov_utils",
+        "//src/mediapipe_internal:runtime_config",
         "//src/filesystem:libovmsfilesystem",
         "//src:libovmsstring_utils",
         "imagegenutils",
