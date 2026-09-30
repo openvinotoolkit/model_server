@@ -64,6 +64,12 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
     const size_t endTagPos = text.rfind(parsingConfig.endTag);
     if (endTagPos != std::string::npos) {
         text = text.substr(0, endTagPos);
+        // A later <|channel> segment can still be routed to this parser within the same
+        // generation - reuse the per-segment reset so it strips its own opener/header instead
+        // of being treated as Body already; implicit start applies only to the prompt-supplied
+        // first opener, so it's cleared here too (resetState() leaves it untouched).
+        resetState();
+        setImplicitStart(false);
     }
 
     if (text.empty()) {

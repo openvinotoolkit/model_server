@@ -222,6 +222,22 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningDoesNotTreatContentNewlineAsHeaderB
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
+TEST_F(Gemma4OutputParserTest, ParseSecondReasoningSegmentStripsItsOwnOpenerAndHeader) {
+    // A second <|channel>...<channel|> segment can occur later in the same generation (e.g.
+    // reasoning again after a tool response); it must strip its own opener/header rather than
+    // being treated as body text left over from the first segment's Body phase.
+    std::string input =
+        "<|channel>thought\nFirst reasoning<channel|>Some content"
+        "<|channel>thought\nSecond reasoning<channel|>Final content";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.reasoning, "First reasoningSecond reasoning");
+    EXPECT_EQ(parsedOutput.content, "Some contentFinal content");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
 TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedByNoKeyword) {
     // Opener directly followed by a space - no keyword to skip, the sentence itself is body.
     std::string input = "<|channel> way of thinking about this is very mature and thorough.<channel|>SOME CONTENT WITHOUT TOOL CALL";

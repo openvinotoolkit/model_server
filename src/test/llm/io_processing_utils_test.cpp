@@ -167,6 +167,13 @@ TEST(FindInStringTest, DoubleQuoteInsideSingleQuoteDoesNotDesyncTracking) {
     EXPECT_EQ(findInStringRespectingSpecialChars(R"(key:'say "hi}" now',next:1})", "}", 0), 26u);
 }
 
+TEST(FindInStringTest, WhitespacePrecedingSingleQuoteOpensSpan) {
+    // A single quote preceded by whitespace (not one of the explicit boundary chars) must
+    // still open - e.g. a Python code snippet's `return 'a,b'` - so the comma inside stays
+    // protected and only the true argument-separating comma after it is found.
+    EXPECT_EQ(findInStringRespectingSpecialChars("code:return 'a,b',next:1", ",", 0), 17u);
+}
+
 // ── trimSurroundingQuotes: tag-attribute quote normalization (issue #4487) ───
 
 TEST(TrimSurroundingQuotesTest, RemovesWrappingDoubleQuotes) {

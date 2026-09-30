@@ -102,15 +102,14 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
 
             if (singleQuoteDepth == 0) {
                 // Opening single quote: only when it directly follows a value boundary
-                // (: , [ {) - e.g. in s'START', the closing quote sits right before '}'
-                // and must not be mistaken for an opener too.
-                size_t k = i;
-                while (k > 0 && std::isspace(static_cast<unsigned char>(str[k - 1])) != 0) {
-                    --k;
-                }
-                const bool precededByBoundary = (k == 0) || str[k - 1] == ':' || str[k - 1] == ',' ||
-                                                str[k - 1] == '[' || str[k - 1] == '{' || str[k - 1] == '=' ||
-                                                str[k - 1] == '(';
+                // (: , [ { = ( or whitespace, e.g. after a keyword like "return") - e.g. in
+                // s'START', the quote sits right after the word char 's' with no boundary in
+                // between and must not be mistaken for an opener.
+                const bool precededByBoundary = (i == 0) ||
+                                                std::isspace(static_cast<unsigned char>(str[i - 1])) != 0 ||
+                                                str[i - 1] == ':' || str[i - 1] == ',' ||
+                                                str[i - 1] == '[' || str[i - 1] == '{' || str[i - 1] == '=' ||
+                                                str[i - 1] == '(';
                 if (precededByBoundary) {
                     singleQuoteDepth = 1;
                 }
