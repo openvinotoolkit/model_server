@@ -134,7 +134,7 @@ protected:
         InputProcessorContext ctx;
         ctx.config.isVLM = isVLM;
         ctx.config.isOmni = isOmni;
-        ctx.config.useMinja = false;
+        ctx.config.useMinja = true;
         ctx.tokenizer = *sharedTokenizer;
 
         InputProcessor processor(ctx, result.req);
@@ -529,7 +529,7 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
 
         InputProcessorContext ctx;
         ctx.config.isVLM = true;
-        ctx.config.useMinja = false;
+        ctx.config.useMinja = true;
         ctx.tokenizer = tokenizer;
 
         InputProcessor processor(ctx, req);
