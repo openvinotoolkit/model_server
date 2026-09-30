@@ -122,15 +122,16 @@ $env:DEMO_DIR = (Get-Location).Path
 
 ### Step 4: Install dependencies
 
+Run these commands from inside the demo directory (`demos/integration_with_deepagents_code`):
+
 ::::{tab-set}
 :::{tab-item} Linux
 :sync: Linux
 ```bash
 python -m venv .env
 source .env/bin/activate
-cd demos/integration_with_deepagents_code
 python -m pip install --upgrade pip
-python -m pip install deepagents-code 'mcp<2'
+python -m pip install 'deepagents-code==0.1.70' 'mcp<2'
 ```
 :::
 :::{tab-item} Windows
@@ -138,9 +139,8 @@ python -m pip install deepagents-code 'mcp<2'
 ```powershell
 python -m venv .env
 .\.env\Scripts\Activate.ps1
-cd demos\integration_with_deepagents_code
 python -m pip install --upgrade pip
-python -m pip install deepagents-code 'mcp<2' colorama
+python -m pip install 'deepagents-code==0.1.70' 'mcp<2' colorama
 ```
 
 `colorama` is required by the console renderer on Windows.
@@ -153,13 +153,13 @@ python -m pip install deepagents-code 'mcp<2' colorama
 
 Set the default model once so subsequent dcode invocations don't have to repeat `--model` (persisted to `~/.deepagents/config.toml`):
 
-```bash
+```text
 dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
 ```
 
 dcode uses git to track file state and pins its project root (and its skill / MCP / subagent discovery) at the closest `.git` directory. Initialize a repository *inside the demo folder* so dcode scopes to it, even when the folder itself lives inside another checkout (like the `model_server` clone):
 
-```bash
+```text
 git init
 ```
 
@@ -221,13 +221,13 @@ First response can be slower because initial dcode context is large. Later turns
 :::{tab-item} Headless
 :sync: Headless
 
-```bash
+```text
 dcode -n "Summarize demo in current directory." --allow-fs-tools read_file,grep,ls --no-mcp --no-interpreter --quiet
 ```
 
 Expected output:
 
-```console
+```text
 ## Demo Summary: DeepAgents Code Integration with OpenVINO Model Server
 
 This demo (`integration_with_deepagents_code`) showcases how to integrate [DeepAgents Code](https://github.com/langchain-ai/deepagents) (`dcode`) with [OpenVINO Model Server (OVMS)](https://github.com/openvinotoolkit/model_server) using OpenAI-compatible endpoints.
@@ -282,13 +282,13 @@ The project ships with a preconfigured MCP client entry in `.deepagents/.mcp.jso
 :::{tab-item} Headless
 :sync: Headless
 
-```bash
+```text
 dcode -n "Implement a Python MCP stdio server at mcp_server/time_mcp_server.py that provides current UTC time using the Python MCP SDK." --skill python-mcp-sdk-skill --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
 ```
 
 Expected output:
 
-```console
+```text
 Created `mcp_server/time_mcp_server.py` with:
 
 - `get_current_utc_iso8601()` tool returning the current UTC time as an ISO 8601 string with trailing `Z`.
@@ -331,13 +331,13 @@ Once the goal is satisfied, clear it so subsequent prompts run in normal mode:
 :::{tab-item} Headless
 :sync: Headless
 
-```bash
+```text
 dcode -n "Extend mcp_server/time_mcp_server.py with a date tool." --rubric "mcp_server/time_mcp_server.py defines a new @mcp.tool returning the current UTC date as an ISO string; the existing time tool still works; python -m py_compile mcp_server/time_mcp_server.py succeeds." --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
 ```
 
 Expected output:
 
-```console
+```text
 Done. Added `get_current_utc_date()` tool to `time_mcp_server.py`. It returns the current UTC date as an ISO 8601 string (`YYYY-MM-DD`). Compiles cleanly.⏳ Checking acceptance criteria…
 ✓ Acceptance criteria satisfied
 ```
@@ -366,13 +366,13 @@ Test mcp_server/time_mcp_server.py
 :::{tab-item} Headless
 :sync: Headless
 
-```bash
+```text
 dcode -n "Delegate to subagent mcp-tester: Test mcp_server/time_mcp_server.py" --allow-fs-tools read_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
 ```
 
 Expected output:
 
-```console
+```text
 **time_mcp_server.py — MCP Test Results: All PASSED ✅**
 
 | Check | Result |
@@ -432,13 +432,13 @@ Give me the exact current UTC timestamp down to the current second along with cu
 :::{tab-item} Headless
 :sync: Headless
 
-```bash
+```text
 dcode -n "Give me the exact current UTC timestamp down to the current second along with current date." --allow-fs-tools read_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --trust-project-mcp --no-interpreter --quiet
 ```
 
 Expected output:
 
-```console
+```text
 Current UTC timestamp: `2026-09-30T14:00:12.508579Z`
 
 Current UTC date: `2026-09-30`
