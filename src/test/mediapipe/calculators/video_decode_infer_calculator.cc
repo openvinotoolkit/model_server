@@ -211,8 +211,10 @@ class VideoDecodeInferCalculator : public CalculatorBase {
             const uint8_t* y_ptr  = nullptr;
             const uint8_t* uv_ptr = nullptr;
             int fw = 0, fh = 0;
-            if (imp_tensor_get_nv12_planes(tensor, &y_ptr, &uv_ptr, &fw, &fh) != IMP_OK)
+            if (imp_tensor_get_nv12_planes(tensor, &y_ptr, &uv_ptr, &fw, &fh) != IMP_OK) {
+                imp_tensor_release(tensor);
                 continue;
+            }
 
             // NV12 → BGR float, resize to model input
             nv12_to_bgr_float(y_ptr, uv_ptr,
@@ -250,6 +252,8 @@ class VideoDecodeInferCalculator : public CalculatorBase {
             if (frame_count <= 5 || frame_count % 50 == 0)
                 LOG(INFO) << "[VideoDecodeInferCalculator] frame " << frame_count
                           << " detections=" << frame_dets;
+
+            imp_tensor_release(tensor);
         }
 
         LOG(INFO) << "[VideoDecodeInferCalculator] Done: " << frame_count

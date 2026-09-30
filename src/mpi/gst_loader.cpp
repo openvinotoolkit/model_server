@@ -315,21 +315,11 @@ void gst_loader_set_va_display(void* va_display) {
 // ============================================================================
 
 static bool read_frame_borrow(imp_branch_info_t& branch,
+                               imp_tensor_s& out,
                                double& total_ms,
                                double& pull_ms,
                                double& copy_ms) {
     const auto& f = s_fns;
-
-    // Release the previous borrowed frame before pulling the next one.
-    if (branch.live_vframe) {
-        f.gst_video_frame_unmap(static_cast<GstVideoFrame*>(branch.live_vframe));
-        delete static_cast<GstVideoFrame*>(branch.live_vframe);
-        branch.live_vframe = nullptr;
-    }
-    if (branch.live_sample) {
-        f.gst_sample_unref(static_cast<GstSample*>(branch.live_sample));
-        branch.live_sample = nullptr;
-    }
 
     auto t0 = chrono::high_resolution_clock::now();
     GstSample* sample = f.gst_app_sink_try_pull_sample(
@@ -361,31 +351,34 @@ static bool read_frame_borrow(imp_branch_info_t& branch,
     bool packed = (y_stride == info.width) && (uv_stride == info.width);
 
     if (packed) {
-        // Zero-copy: tensor points directly into the mapped GstBuffer memory.
-        branch.tensor_cache.y_data  = y_ptr;
-        branch.tensor_cache.uv_data = uv_ptr;
-        branch.live_sample = sample;
-        branch.live_vframe = vframe;
+        // Zero-copy: tensor points directly into the mapped GstBuffer memory,
+        // which this tensor now owns (released in imp_tensor_release).
+        out.y_data           = y_ptr;
+        out.uv_data          = uv_ptr;
+        out.owned_gst_sample = sample;
+        out.owned_gst_vframe = vframe;
     } else {
         // Fallback: compact copy (stride != width — uncommon, e.g. some cameras).
-        branch.frame.allocate(info.width, info.height);
+        // Copy into this tensor's own storage so it stays valid per-packet.
+        out.owned_y.resize(static_cast<size_t>(info.width) * info.height);
+        out.owned_uv.resize(static_cast<size_t>(info.width) * (info.height / 2));
         for (int row = 0; row < info.height; row++)
-            memcpy(branch.frame.y_plane.data()  + row * info.width,
+            memcpy(out.owned_y.data()  + row * info.width,
                    y_ptr  + row * y_stride, info.width);
         for (int row = 0; row < info.height / 2; row++)
-            memcpy(branch.frame.uv_plane.data() + row * info.width,
+            memcpy(out.owned_uv.data() + row * info.width,
                    uv_ptr + row * uv_stride, info.width);
-        branch.tensor_cache.y_data  = branch.frame.y_plane.data();
-        branch.tensor_cache.uv_data = branch.frame.uv_plane.data();
+        out.y_data  = out.owned_y.data();
+        out.uv_data = out.owned_uv.data();
         f.gst_video_frame_unmap(vframe);
         delete vframe;
         f.gst_sample_unref(sample);
     }
 
-    branch.tensor_cache.width       = info.width;
-    branch.tensor_cache.height      = info.height;
-    branch.tensor_cache.valid       = true;
-    branch.tensor_cache.memory_type = IMP_MEM_SYSTEM;
+    out.width       = info.width;
+    out.height      = info.height;
+    out.valid       = true;
+    out.memory_type = IMP_MEM_SYSTEM;
 
     auto t3 = chrono::high_resolution_clock::now();
     copy_ms  += chrono::duration<double, std::milli>(t3 - t2).count();
@@ -402,17 +395,12 @@ static bool read_frame_borrow(imp_branch_info_t& branch,
 // ============================================================================
 
 static bool read_frame_va_surface(imp_branch_info_t& branch,
+                                   imp_tensor_s& out,
                                    void* va_display,
                                    double& total_ms,
                                    double& pull_ms,
                                    double& /*copy_ms*/) {
     const auto& f = s_fns;
-
-    // Release previous VA surface sample.
-    if (branch.live_va_sample) {
-        f.gst_sample_unref(static_cast<GstSample*>(branch.live_va_sample));
-        branch.live_va_sample = nullptr;
-    }
 
     auto t0 = chrono::high_resolution_clock::now();
     GstSample* sample = f.gst_app_sink_try_pull_sample(
@@ -438,16 +426,18 @@ static bool read_frame_va_surface(imp_branch_info_t& branch,
         }
     }
 
-    branch.live_va_sample = sample;
+    // Transfer sample ownership to the tensor; the surface stays valid until
+    // imp_tensor_release() unrefs it. Each frame owns its own surface.
+    out.owned_gst_sample = sample;
 
-    branch.tensor_cache.y_data       = nullptr;
-    branch.tensor_cache.uv_data      = nullptr;
-    branch.tensor_cache.width        = branch.width;
-    branch.tensor_cache.height       = branch.height;
-    branch.tensor_cache.valid        = true;
-    branch.tensor_cache.memory_type  = IMP_MEM_VA_SURFACE;
-    branch.tensor_cache.va_surface_id = surface_id;
-    branch.tensor_cache.va_display    = native_va_display;
+    out.y_data       = nullptr;
+    out.uv_data      = nullptr;
+    out.width        = branch.width;
+    out.height       = branch.height;
+    out.valid        = true;
+    out.memory_type  = IMP_MEM_VA_SURFACE;
+    out.va_surface_id = surface_id;
+    out.va_display    = native_va_display;
 
     auto t2 = chrono::high_resolution_clock::now();
     total_ms += chrono::duration<double, std::milli>(t2 - t0).count();
@@ -714,26 +704,50 @@ imp_status_t linux_video_read_frame(imp_tensor_t** tensor,
 
     auto& branch = stream->branches[branch_index];
 
+    // Each frame is a fresh, caller-owned tensor that owns its own GStreamer
+    // surface/buffer — released by imp_tensor_release(). This lets N frames be
+    // in flight at once (MediaPipe fan-out) with distinct, valid surfaces.
+    auto* t = new imp_tensor_s{};
+    t->format = IMP_FORMAT_NV12;
+
     bool ok;
     if (stream->use_va_surface_memory) {
         ok = read_frame_va_surface(
-            branch, stream->va_display,
+            branch, *t, stream->va_display,
             branch.total_decode_ms,
             branch.total_decode_pull_ms,
             branch.total_decode_copy_ms);
     } else {
         ok = read_frame_borrow(
-            branch,
+            branch, *t,
             branch.total_decode_ms,
             branch.total_decode_pull_ms,
             branch.total_decode_copy_ms);
     }
 
-    if (!ok) return IMP_ERROR_STREAM_END;
+    if (!ok) {
+        delete t;
+        return IMP_ERROR_STREAM_END;
+    }
 
-    branch.tensor_cache.device_type = IMP_DEVICE_CPU;
-    if (tensor) *tensor = &branch.tensor_cache;
+    t->device_type = IMP_DEVICE_CPU;
+    if (tensor) *tensor = t;
     return IMP_OK;
+}
+
+// ============================================================================
+// Public: gst_loader_release_natives — free a tensor's owned GStreamer natives
+// ============================================================================
+
+void gst_loader_release_natives(void* gst_sample, void* gst_vframe) {
+    const auto& f = s_fns;
+    if (gst_vframe) {
+        f.gst_video_frame_unmap(static_cast<GstVideoFrame*>(gst_vframe));
+        delete static_cast<GstVideoFrame*>(gst_vframe);
+    }
+    if (gst_sample) {
+        f.gst_sample_unref(static_cast<GstSample*>(gst_sample));
+    }
 }
 
 // ============================================================================

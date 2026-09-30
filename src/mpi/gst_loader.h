@@ -106,7 +106,10 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
  * Read one NV12 frame from the given branch of an open stream.
  * Equivalent to imp_video_read_frame() on Linux.
  *
- * @param tensor        output: pointer to internal tensor cache (not owned)
+ * @param tensor        output: newly allocated tensor OWNED by the caller;
+ *                      free it with imp_tensor_release(), which also releases
+ *                      the backing GStreamer surface. The surface stays valid
+ *                      until that release (each frame owns its own).
  * @param stream        open stream
  * @param branch_index  branch to read from (0 for single-branch streams)
  * @return IMP_OK, IMP_ERROR_STREAM_END when exhausted, or error code.
@@ -114,6 +117,12 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
 imp_status_t linux_video_read_frame(imp_tensor_t** tensor,
                                     imp_video_stream_t* stream,
                                     uint32_t branch_index);
+
+/**
+ * Release GStreamer natives owned by a per-packet tensor: unmaps+deletes the
+ * GstVideoFrame (if any) and unrefs the GstSample (if any). Both may be null.
+ */
+void gst_loader_release_natives(void* gst_sample, void* gst_vframe);
 
 /**
  * Close and free a stream opened with linux_video_open().

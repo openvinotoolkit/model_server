@@ -1,0 +1,26 @@
+# P3/P4 split graph: GStreamer/VA source -> NV12 GPU inference, zero-copy.
+# The source publishes its VA context as a side packet; the inference node
+# compiles its model on that same context and binds the Y/UV planes.
+
+input_side_packet: "VIDEO_PATH:video_path"
+input_side_packet: "WIDTH:width"
+input_side_packet: "HEIGHT:height"
+input_side_packet: "MODEL_PATH:model_path"
+output_stream: "DETECTIONS:detections"
+
+node {
+  calculator: "GstVideoSourceCalculator"
+  input_side_packet: "VIDEO_PATH:video_path"
+  input_side_packet: "WIDTH:width"
+  input_side_packet: "HEIGHT:height"
+  output_side_packet: "VA_CONTEXT:va_context"
+  output_stream: "FRAME:frame"
+}
+
+node {
+  calculator: "GstNv12InferenceCalculator"
+  input_stream: "FRAME:frame"
+  input_side_packet: "MODEL_PATH:model_path"
+  input_side_packet: "VA_CONTEXT:va_context"
+  output_stream: "DETECTIONS:detections"
+}

@@ -129,3 +129,120 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+# P0: monolithic decode+infer calculator using the GPU VA zero-copy path.
+cc_library(
+    name = "video_decode_infer_va_calculator",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = ["video_decode_infer_va_calculator.cc"],
+    copts = COPTS_ADJUSTED,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# P0 graph test. Needs GPU + GStreamer + test assets; skips otherwise.
+# Run with:
+#   bazel run //src/test/mediapipe/calculators:video_decode_infer_va_test
+cc_test(
+    name = "video_decode_infer_va_test",
+    srcs = ["video_decode_infer_va_test.cpp"],
+    data = ["video_decode_infer_va.pbtxt"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        ":video_decode_infer_va_calculator",
+        "//src/mpi:intel_mpi",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": [],
+        "//conditions:default": ["-lOpenCL"],
+    }),
+)
+
+# P2: standalone GStreamer/VA video source calculator emitting GstVideoFramePacket.
+cc_library(
+    name = "gst_video_source_calculator",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = ["gst_video_source_calculator.cc"],
+    hdrs = ["gst_video_frame_packet.hpp"],
+    copts = COPTS_ADJUSTED,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# P2 graph test: proves per-packet surface ownership (N in-flight distinct
+# surfaces). Needs GPU + GStreamer + test video; skips otherwise.
+cc_test(
+    name = "gst_video_source_test",
+    srcs = ["gst_video_source_test.cpp"],
+    data = ["gst_video_source.pbtxt"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        ":gst_video_source_calculator",
+        "//src/mpi:intel_mpi",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": [],
+        "//conditions:default": ["-lOpenCL"],
+    }),
+)
+
+# P3: in-tree NV12 two-plane GPU inference calculator (temporary stand-in for the
+# external OpenVINOInferenceCalculator). Binds Y/UV on the shared VA context.
+cc_library(
+    name = "gst_nv12_inference_calculator",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = ["gst_nv12_inference_calculator.cc"],
+    hdrs = ["gst_video_frame_packet.hpp"],
+    copts = COPTS_ADJUSTED,
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# P3/P4 split-path graph test: source -> inference, zero-copy on GPU.
+cc_test(
+    name = "gst_video_infer_test",
+    srcs = ["gst_video_infer_test.cpp"],
+    data = ["gst_video_infer.pbtxt"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        ":gst_video_source_calculator",
+        ":gst_nv12_inference_calculator",
+        "//src/mpi:intel_mpi",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": [],
+        "//conditions:default": ["-lOpenCL"],
+    }),
+)
+

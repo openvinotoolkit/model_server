@@ -165,6 +165,15 @@ struct imp_tensor_s {
     ov::Tensor        ov_tensor;
     imp_device_type_t device_type = IMP_DEVICE_CPU;
     std::string       device_name;
+
+    // Per-packet ownership (Linux read path). imp_tensor_release frees this
+    // tensor and the owned GStreamer natives below. Set false only for the
+    // reusable Windows cache tensor, which must never be deleted.
+    bool  heap_owned       = true;
+    void* owned_gst_sample = nullptr;  // GstSample*    — unref on release
+    void* owned_gst_vframe = nullptr;  // GstVideoFrame* — unmap+delete on release
+    std::vector<uint8_t> owned_y;      // compact-copy fallback storage (Y)
+    std::vector<uint8_t> owned_uv;     // compact-copy fallback storage (UV)
 };
 
 //////////////////////////////////////////////////////////////////////////////

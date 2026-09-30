@@ -319,6 +319,8 @@ int main(int argc, char* argv[]) {
         if (frame_count <= 5 || frame_count % 50 == 0)
             std::cout << "  frame " << frame_count
                       << "  detections=" << frame_dets << "\n";
+
+        imp_tensor_release(tensor);
     }
 
     double t_total_ms = t_decode_ms + t_preproc_ms + t_infer_ms;

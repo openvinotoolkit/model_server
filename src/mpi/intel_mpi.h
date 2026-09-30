@@ -485,7 +485,10 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
 /**
  * Read next frame from a specific branch
  * 
- * @param tensor Output: frame tensor pointer (NV12 data, CPU side)
+ * @param tensor Output: newly allocated frame tensor OWNED by the caller. Free
+ *               it with imp_tensor_release(), which also releases the backing
+ *               surface/buffer. Each frame owns its own surface, so multiple
+ *               frames may be held in flight at once.
  * @param stream Stream handle
  * @param branch_index Branch index (0-based, must be < branch_count)
  * @return Status code (IMP_ERROR_STREAM_END when no more frames)
@@ -998,8 +1001,9 @@ imp_status_t imp_tensor_get_nv12_planes(imp_tensor_t* tensor,
  * Get VA surface handle for GPU-resident NV12 tensors.
  * Only valid when imp_tensor_get_memory_type() == IMP_MEM_VA_SURFACE.
  *
- * The returned VASurfaceID is valid until the next imp_video_read_frame()
- * call on the same branch, or until imp_video_close().
+ * The returned VASurfaceID is valid until imp_tensor_release() is called on
+ * this tensor. Each frame owns its own surface, so distinct in-flight tensors
+ * return distinct, simultaneously valid surface IDs.
  *
  * @param tensor      Tensor handle
  * @param surface_id  Output: VASurfaceID (cast from uint32_t)

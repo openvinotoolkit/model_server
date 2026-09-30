@@ -1,0 +1,20 @@
+# P0 graph: a single node that decodes a video (GStreamer/VA) and runs
+# inference (OpenVINO) entirely inside one Process() call. Zero-copy on GPU.
+#
+# The TICK input stream drives exactly one Process() call. VIDEO_PATH, MODEL_PATH
+# and DEVICE arrive as input side packets. DETECTIONS carries the total count.
+
+input_stream: "TICK:tick"
+input_side_packet: "VIDEO_PATH:video_path"
+input_side_packet: "MODEL_PATH:model_path"
+input_side_packet: "DEVICE:device"
+output_stream: "DETECTIONS:detections"
+
+node {
+  calculator: "VideoDecodeInferVACalculator"
+  input_stream: "TICK:tick"
+  input_side_packet: "VIDEO_PATH:video_path"
+  input_side_packet: "MODEL_PATH:model_path"
+  input_side_packet: "DEVICE:device"
+  output_stream: "DETECTIONS:detections"
+}

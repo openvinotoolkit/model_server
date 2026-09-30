@@ -513,6 +513,7 @@ imp_status_t imp_video_read_frame(imp_tensor_t** tensor,
     branch.tensor_cache.format  = IMP_FORMAT_NV12;
     branch.tensor_cache.valid   = true;
     branch.tensor_cache.device_type = IMP_DEVICE_CPU;
+    branch.tensor_cache.heap_owned = false;  // reusable cache; not owned by caller
 
     if (tensor) *tensor = &branch.tensor_cache;
     return IMP_OK;
@@ -836,6 +837,11 @@ imp_status_t imp_tensor_get_va_surface(imp_tensor_t* tensor,
 
 void imp_tensor_release(imp_tensor_t* tensor) {
     if (!tensor) return;
+    if (!tensor->heap_owned) return;  // reusable cache tensor (Windows) — not owned
+#ifndef _WIN32
+    if (tensor->owned_gst_sample || tensor->owned_gst_vframe)
+        gst_loader_release_natives(tensor->owned_gst_sample, tensor->owned_gst_vframe);
+#endif
     delete tensor;
 }
 
