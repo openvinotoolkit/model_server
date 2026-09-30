@@ -20,7 +20,7 @@
 namespace ovms {
 
 class GenAiServable;
-class GenAiServableExecutionContext;
+struct GenAiServableExecutionContext;
 
 #if defined(_WIN32)
 #define OVMS_LLM_HOST_EXPORT
