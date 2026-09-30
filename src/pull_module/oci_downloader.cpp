@@ -189,12 +189,20 @@ Status OciDownloader::downloadModel() {
     SPDLOG_DEBUG("llmman resolved {} to {} (format: {})", this->sourceModel, resolvedPath, format);
 
     if (format == "gguf") {
+        if (!std::filesystem::is_regular_file(resolvedPath, ec)) {
+            SPDLOG_ERROR("llmman reported format gguf for {}, but {} is not a regular file.", this->sourceModel, resolvedPath);
+            return StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID;
+        }
         // models_path must point at the GGUF file itself, which the graph
         // exporter builds by joining the directory with ggufFilename.
         const std::filesystem::path ggufPath(resolvedPath);
         this->modelPath = ggufPath.parent_path().string();
         this->ggufFilename = ggufPath.filename().string();
     } else if (format == "safetensors") {
+        if (!std::filesystem::is_directory(resolvedPath, ec)) {
+            SPDLOG_ERROR("llmman reported format safetensors for {}, but {} is not a directory.", this->sourceModel, resolvedPath);
+            return StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID;
+        }
         if (containsOpenVinoIr(resolvedPath)) {
             // Already an OpenVINO IR ModelPack - serve it straight from
             // llmman's store, no conversion and no second copy on disk.

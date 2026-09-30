@@ -32,28 +32,22 @@ Registry credentials are `llmman`'s concern, not OVMS's. Log in once with `llmma
 
 | ModelPack payload | What OVMS does | Extra requirements |
 |---|---|---|
-| OpenVINO IR (`openvino_model.xml` + `.bin`) | Serves it directly out of the `llmman` store; only `graph.pbtxt` is written to the model repository. Requires an `llmman` that resolves IR layers, which `llmman resolve` does not do yet. | none |
+| OpenVINO IR (`openvino_model.xml` + `.bin`) | Serves it directly out of the `llmman` store; only `graph.pbtxt` is written to the model repository. `llmman resolve` only reports `gguf` and `safetensors`, so an IR-only image fails with `OCI_LLMMAN_RESOLVE_FAILED` for now. IR is used in place only when a `safetensors` image also carries IR files. | none |
 | GGUF | Serves the `.gguf` file directly out of the `llmman` store. | `--task text_generation` only |
 | Hugging Face safetensors | Converts to OpenVINO IR with `optimum-cli` into the model repository, honoring `--weight-format` and `--extra_quantization_params`. | Python dependencies, see [pulling with conversion](./pull_optimum_cli.md) |
 
 ## Examples
 
-Pull an OpenVINO IR ModelPack image without starting the server (once `llmman` resolves IR layers):
+Pull a GGUF ModelPack image without starting the server:
 
 ```text
-ovms --pull --source_model oci://ghcr.io/my-org/phi-3-mini-int8-ov:1.0 --model_repository_path /models --task text_generation
+ovms --pull --source_model oci://docker.io/ai/qwen3.5:0.8b --model_repository_path /models --task text_generation
 ```
 
 Pull and start in one step, overriding the served model name:
 
 ```text
-ovms --rest_port 8000 --source_model oci://ghcr.io/my-org/phi-3-mini-int8-ov:1.0 --model_repository_path /models --model_name phi-3-mini --task text_generation
-```
-
-Pull a GGUF ModelPack image:
-
-```text
-ovms --pull --source_model oci://docker.io/ai/qwen3.5:0.8b --model_repository_path /models --task text_generation
+ovms --rest_port 8000 --source_model oci://docker.io/ai/qwen3.5:0.8b --model_repository_path /models --model_name qwen --task text_generation
 ```
 
 Pull a safetensors ModelPack image and quantize it during the conversion:

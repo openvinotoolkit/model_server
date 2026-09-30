@@ -264,8 +264,8 @@ Status HfPullModelModule::clone() {
         return status;
     }
     graphDirectory = downloader->getGraphDirectory();
-    auto* ociDownloader = dynamic_cast<OciDownloader*>(downloader.get());
-    if (ociDownloader != nullptr) {
+    if (this->hfSettings.downloadType == OCI_DOWNLOAD) {
+        const auto* ociDownloader = static_cast<const OciDownloader*>(downloader.get());
         // llmman keeps the weights in its own content-addressed store, so the
         // resolved location has to be propagated into graph.pbtxt rather than
         // relying on the default "models live next to graph.pbtxt" layout.
