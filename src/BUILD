@@ -193,7 +193,7 @@ ovms_cc_library(
     deps = [
         "servable",
         "libovms_servable_definition",
-        "//src/dags:pipelinedefinitionstatus",
+        "//src/mediapipe_internal:pipelinedefinitionstatus",
         "libovms_tensorinfo",
         "libovmslogging",
         "libovmsmodelversion",
@@ -220,6 +220,17 @@ ovms_cc_library(
     name = "libovms_shutdown_state",
     hdrs = ["shutdown_state.hpp"],
     srcs = ["shutdown_state.cpp"],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
+    name = "libovms_curl_global_init",
+    hdrs = ["curl_global_initializer.hpp"],
+    srcs = ["curl_global_initializer.cpp"],
+    deps = [
+        "//third_party:curl",
+        "libovmslogging",
+        "libovmsstatus",
+    ],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -718,7 +729,7 @@ ovms_cc_library(
         "libovms_execution_context",
         "libovmsmodelversionstatus",
         "libovmsstatus",
-        "//src/dags:pipelinedefinitionstatus",
+        "//src/mediapipe_internal:pipelinedefinitionstatus",
         "//src/metrics:libovmsmetrics",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
@@ -778,6 +789,7 @@ ovms_cc_library(
             "libmultipart_parser_drogon_impl",
             "cpp_headers",
             "libovms_shutdown_state",
+            "libovms_curl_global_init",
             "ovms_header",
             "capi_backend_impl",
             "config_status_utils",
@@ -799,34 +811,8 @@ ovms_cc_library(
             "rest_parser_utils",
             "libovms_cliparser",
             "libovms_config",
-            "//src/dags:pipelinedefinitionstatus",
-            "//src/dags:aliases",
-            "//src/dags:pipeline",
-            "//src/dags:dl_node",
-            "//src/dags:dlnodesession",
-            "//src/dags:custom_node",
-            "//src/dags:entry_node",
-            "//src/dags:exit_node",
-            "//src/dags:exitnodesession",
-            "//src/dags:pipelinedefinition",
-            "//src/dags:pipeline_factory",
-            "//src/dags:dag_capi",
-            "//src/dags:dag_kfs",
-            "//src/dags:custom_node_library_manager",
-            "//src/dags:node",
-            "//src/dags:node_library",
-            "//src/dags:node_library_utils",
-            "//src/dags:custom_node_library_internal_manager_wrapper",
-            "//src/dags:dag_resource_manager",
-            "//src/dags:nodeinfo",
+            "//src/mediapipe_internal:pipelinedefinitionstatus",
             "ovms_exit_codes",
-            "//src/dags:nodestreamidguard",
-            "//src/dags:session_id",
-            "//src/dags:pipelineeventqueue",
-            "//src/dags:nodesessionmetadata",
-            "//src/dags:nodesessionresult",
-            "//src/dags:nodeinputhandler",
-            "//src/dags:custom_node_output_allocator",
             "libovms_execution_context",
             "executingstreamidguard",
             "//src/filesystem:libovmsfilesystem",
@@ -864,7 +850,6 @@ ovms_cc_library(
             "libovms_queue",
             "libovms_ovinferrequestsqueue",
             "libovmstensor_utils",
-            "//src/dags:tensormap",
             "libovmsstring_utils",
             "libovmsmodelversioning",
             "httppayload",
@@ -1095,68 +1080,6 @@ ovms_cc_library(
 )
 load("@pip_deps//:requirements.bzl", "all_requirements")
 
-cc_binary(
-    name = "lib_node_mock.so",
-    srcs = [
-	    "test/custom_nodes/node_mock.c",
-	    "custom_node_interface.h",
-    ],
-    linkshared = 1,
-)
-
-cc_binary(
-    name = "lib_node_missing_implementation.so",
-    srcs = [
-	    "test/custom_nodes/node_missing_implementation.c",
-	    "custom_node_interface.h",
-    ],
-    linkshared = 1,
-)
-
-cc_binary(
-    name = "lib_node_add_sub.so",
-    srcs = [
-	    "test/custom_nodes/node_add_sub.c",
-	    "custom_node_interface.h",
-    ],
-    linkshared = 1,
-)
-
-cc_binary(
-    name = "lib_node_dynamic_image.so",
-    srcs = [
-	    "test/custom_nodes/node_dynamic_image.c",
-	    "custom_node_interface.h",
-    ],
-    linkshared = 1,
-)
-
-cc_binary(
-    name = "lib_node_choose_maximum.so",
-    srcs = [
-        "test/custom_nodes/node_choose_maximum.cpp",
-        "custom_node_interface.h",
-    ],
-    linkshared = 1,
-)
-cc_binary(
-    name = "lib_node_perform_different_operations.so",
-    srcs = [
-        "test/custom_nodes/node_perform_different_operations.cpp",
-        "custom_node_interface.h",
-    ],
-    linkshared = 1,
-)
-
-cc_binary(
-    name = "lib_node_dynamic_demultiplex.so",
-    srcs = [
-        "test/custom_nodes/node_dynamic_demultiplex.cpp",
-        "custom_node_interface.h",
-    ],
-    linkshared = 1,
-)
-
 # POC which can start OVMS with C-API built by bazel
 # Standalone example for building outside of bazel (with bare g++ is inside MakefileCapi)
 cc_binary(
@@ -1302,7 +1225,7 @@ ovms_cc_library(
             "libovmsprecision",
             "extractchoice",
             "requesttensorextractor",
-            "//src/dags:pipelinedefinitionstatus",
+            "//src/mediapipe_internal:pipelinedefinitionstatus",
             "predict_request_validation_utils",
     ],
     visibility = ["//visibility:public"],
@@ -1327,7 +1250,7 @@ ovms_cc_library(
     srcs = ["capi_frontend/capi_dag_utils.cpp",],
     deps = [
             "//third_party:openvino",
-            "//src/dags:pipelinedefinitionstatus",
+            "//src/mediapipe_internal:pipelinedefinitionstatus",
             "ovms_header",
             "libovmslogging",
             "libovmscapi_utils",
@@ -1639,12 +1562,6 @@ ovms_cc_library(
     deps = [
             "//third_party:openvino",
     ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
-    name = "custom_node_interface",
-    hdrs = ["custom_node_interface.h",],
-    deps = [],
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -2048,14 +1965,12 @@ cc_test(
     name = "ovms_test",
     linkstatic = 1,
     srcs = [
-        "test/c_api_stress_tests.cpp",
         "test/c_api_tests.cpp",
         "test/capi_predict_validation_test.cpp",
+        "test/c_api_stress_tests.cpp",
         #"test/custom_loader_test.cpp", # TODO remove?
-        "test/demultiplexer_node_test.cpp",
         "test/deserialization_tests.cpp",
         "test/ensemble_config_change_stress.cpp",
-        "test/ensemble_metadata_test.cpp",
         "test/standalone_http_server_test.cpp",
         "test/http_rest_api_handler_test.cpp",
         "test/kfs_metadata_test.cpp",
@@ -2072,8 +1987,6 @@ cc_test(
         "test/modelconfig_test.cpp",
         "test/modelmanager_test.cpp",
         "test/modelversionstatus_test.cpp",
-        "test/node_library_manager_test.cpp",
-        "test/nodesessionmetadata_test.cpp",
         "test/ov_utils_test.cpp",
         "test/ovinferrequestqueue_test.cpp",
         "test/ovmsconfig_test.cpp",
@@ -2155,8 +2068,6 @@ cc_test(
         "test/binaryutils/rgb4x4.jpg",
         "test/configs/config.json",
         "test/configs/config_benchmark.json",
-        "test/configs/config_dummy_dag.json",
-        "test/configs/config_dummy_dynamic_entry_dag.json",
         "test/configs/config_metadata_all.json",
         "test/configs/config_standard_dummy.json",
         "test/configs/config_standard_scalar.json",
@@ -2190,7 +2101,6 @@ cc_test(
         "test/mediapipe/config_mediapipe_openai_chat_completions_mock_with_queue.json",
         "test/mediapipe/config_mediapipe_add_adapter_full.json",
         "test/mediapipe/config_mediapipe_all_graphs_adapter_full.json",
-        "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_dummy_in_both_config_and_subconfig.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full_subconfig.json",
         "test/mediapipe/config_mediapipe_dummy_adapter_full.json",
@@ -2199,7 +2109,6 @@ cc_test(
         "test/mediapipe/config_mediapipe_dummy_two_outputs.json",
         "test/mediapipe/config_mediapipe_graph_with_side_packets.json",
         "test/mediapipe/config_mediapipe_two_inputs.json",
-        "test/mediapipe/config_mediapipe_two_outputs_dag.json",
         "test/mediapipe/config_mediapipe_multipart_mock.json",
         "test/mediapipe/config_standard_add.json",
         "test/mediapipe/config_standard_dummy.json",
@@ -2218,7 +2127,6 @@ cc_test(
         "test/mediapipe/graph_gpt_with_queue.pbtxt",
         "test/mediapipe/graph_queue_dummyadapterfull_dummyinputnames.pbtxt",
         "test/mediapipe/graph_queue_dummyadapterfull_dummyinputnames_newpath.pbtxt",
-        "test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt",
         "test/mediapipe/graphdummyadapterfull_two_outputs.pbtxt",
         "test/mediapipe/graph_multipart.pbtxt",
         "test/mediapipe/negative/config_exception_during_process.json",
@@ -2262,13 +2170,6 @@ cc_test(
         "test/summator/1/summator.bin",
         "test/scalar/1/saved_model.xml",
         "test/scalar/1/saved_model.bin",
-        "//src:lib_node_mock.so",
-        "//src:lib_node_missing_implementation.so",
-        "//src:lib_node_add_sub.so",
-        "//src:lib_node_dynamic_image.so",
-        "//src:lib_node_dynamic_demultiplex.so",
-        "//src:lib_node_perform_different_operations.so",
-        "//src:lib_node_choose_maximum.so",
     ] + glob(["test/models_config_json/**"]) + select({
         "//:not_disable_mediapipe": [
             "//src/llm:libovms_llm_calculators.so",
@@ -2309,7 +2210,6 @@ cc_test(
             ":graph_export_test",
             ":lora_graph_export_test",
             ":config_export_test",
-            ":config_export_full_test",
             ":test_constructor_enabled_model_manager",
             ":test_test_models",
             ":test_test_models_configs",
@@ -2327,7 +2227,8 @@ cc_test(
                     "@mediapipe//mediapipe/framework/port:gtest_main",
                     ],
             })  + select({
-            "//conditions:default": [
+                "//:not_disable_mediapipe": [
+                    ":config_export_full_test",
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
                 ":test_llm_output_parser_tests",
@@ -2352,8 +2253,7 @@ cc_test(
                 "//src/mediapipe_internal:mediapipe_utils",
                 "//src/llm:llmcalculator_proto_owner",
             ],
-            "//:disable_mediapipe" :
-            [
+            "//:disable_mediapipe": [
                 "serialization_common",
             ],
         }) + select({
@@ -2539,7 +2439,7 @@ ovms_cc_test_library(
     deps = [
         ":test_constructor_enabled_model_manager",
         ":test_utils",
-        "//src/dags:pipelinedefinitionstatus",
+        "//src/mediapipe_internal:pipelinedefinitionstatus",
         "//src/mediapipe_internal:libovms_mediapipe",
         "//src/mediapipe_internal:mediapipegraphconfig",
         "@com_google_googletest//:gtest",
@@ -2566,16 +2466,20 @@ cc_library(
         "//:disable_python": [],
     }) + [
         "test_test_models",
-        "//src/mediapipe_internal:graph_executor_constants",
-        "//src/mediapipe_internal:graph_side_packets",
-        "//src/mediapipe_internal:graphqueue",
-        "//src/mediapipe_internal:libovms_mediapipe",
         "//src:ovms_lib",
         "//src:network_utils",
         "//src:test_platform_utils",
         "//src:test_light_test_utils",
         "@com_google_googletest//:gtest",
-    ],
+    ] + select({
+        "//:not_disable_mediapipe": [
+            "//src/mediapipe_internal:graph_executor_constants",
+            "//src/mediapipe_internal:graph_side_packets",
+            "//src/mediapipe_internal:graphqueue",
+            "//src/mediapipe_internal:libovms_mediapipe",
+        ],
+        "//:disable_mediapipe": [],
+    }),
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
@@ -3070,6 +2974,7 @@ cc_library(
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
         ":test_wav_utils",
+        "//src/llm:image_utils",
         "//src/llm:io_processing_input_processors",
         "//src/llm:runtime_chat_template_loader",
     ],

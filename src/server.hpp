@@ -16,6 +16,7 @@
 #pragma once
 #include <csignal>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -33,6 +34,8 @@ class Server {
     mutable std::mutex startMtx;
     mutable std::mutex exitMtx;
     mutable std::mutex shutdownMtx;
+    std::once_flag globalInitFlag;
+    bool curlGlobalInitialized = false;
 
 protected:
     std::unordered_map<std::string, std::unique_ptr<Module>> modules;
@@ -60,5 +63,6 @@ public:
 
 private:
     void ensureModuleShutdown(const std::string& name);
+    Status ensureGlobalInit();
 };
 }  // namespace ovms

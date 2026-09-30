@@ -21,6 +21,7 @@
 #include <openvino/genai/chat_history.hpp>
 
 #include "../../../llm/io_processing/input_processors/image_decoding_processor.hpp"
+#include "../../../llm/io_processing/image_utils.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 
 using namespace ovms;
@@ -172,6 +173,32 @@ TEST(ImageDecodingProcessorTest, HttpUrlWithNoAllowedDomainsConfiguredRejected) 
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(status.message(), "Given url does not match any allowed domain from allowed_media_domains");
+}
+
+TEST(ImageDecodingProcessorTest, ChunkedImageLargerThanLimitRejected) {
+    std::string image;
+    ImageDownloadContext context{&image, 10};
+    const char firstChunk[] = "123456";
+    const char secondChunk[] = "78901";
+
+    EXPECT_EQ(context.append(firstChunk, 1, 6), 6);
+    EXPECT_EQ(context.append(secondChunk, 1, 5), 0);
+    EXPECT_EQ(image, "123456");
+    EXPECT_EQ(context.bytesReceived, 6);
+    EXPECT_TRUE(context.sizeLimitExceeded);
+}
+
+TEST(ImageDecodingProcessorTest, ImageDownloadAtLimitAccepted) {
+    std::string image;
+    ImageDownloadContext context{&image, 10};
+    const char firstChunk[] = "123456";
+    const char secondChunk[] = "7890";
+
+    EXPECT_EQ(context.append(firstChunk, 1, 6), 6);
+    EXPECT_EQ(context.append(secondChunk, 1, 4), 4);
+    EXPECT_EQ(image, "1234567890");
+    EXPECT_EQ(context.bytesReceived, 10);
+    EXPECT_FALSE(context.sizeLimitExceeded);
 }
 
 TEST(ImageDecodingProcessorTest, LocalFilesystemDisabledRejected) {
