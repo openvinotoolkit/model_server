@@ -367,6 +367,25 @@ TEST_F(OciDownloaderPayload, GgufModelIsSplitIntoDirectoryAndFilename) {
     EXPECT_EQ(downloader.getGgufFilename().value(), "model-Q4_K_M.gguf");
 }
 
+TEST_F(OciDownloaderPayload, GgufResolvedToDirectoryIsRejected) {
+    EnvGuard guard;
+    guard.set("LLMMAN_MOCK_PATH", resolvedPath);
+    guard.set("LLMMAN_MOCK_FORMAT", "gguf");
+
+    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID);
+}
+
+TEST_F(OciDownloaderPayload, SafetensorsResolvedToFileIsRejected) {
+    createFile(resolvedPath, "model.safetensors");
+    EnvGuard guard;
+    guard.set("LLMMAN_MOCK_PATH", std::filesystem::path(resolvedPath).append("model.safetensors").generic_string());
+    guard.set("LLMMAN_MOCK_FORMAT", "safetensors");
+
+    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID);
+}
+
 TEST_F(OciDownloaderPayload, UnsupportedFormatIsRejected) {
     EnvGuard guard;
     guard.set("LLMMAN_MOCK_PATH", resolvedPath);
