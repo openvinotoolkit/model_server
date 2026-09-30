@@ -174,6 +174,19 @@ TEST(FindInStringTest, WhitespacePrecedingSingleQuoteOpensSpan) {
     EXPECT_EQ(findInStringRespectingSpecialChars("code:return 'a,b',next:1", ",", 0), 17u);
 }
 
+TEST(FindInStringTest, OperatorPrecedingSingleQuoteOpensSpan) {
+    // Any non-word predecessor opens the span, not just a fixed punctuation whitelist - e.g. a
+    // Python operator like '+' in x+'a,b' - so the comma inside stays protected.
+    EXPECT_EQ(findInStringRespectingSpecialChars("code:x+'a,b',next:1", ",", 0), 12u);
+}
+
+TEST(FindInStringTest, OperatorFollowingClosingSingleQuoteClosesSpan) {
+    // Any non-word follower closes the span, not just a fixed delimiter whitelist - e.g. a
+    // Python operator like '+' right after 'a,b' in 'a,b'+y - so the real separating comma
+    // after it is found, instead of the quote staying stuck open.
+    EXPECT_EQ(findInStringRespectingSpecialChars("code:x+'a,b'+y,next:1", ",", 0), 14u);
+}
+
 // ── trimSurroundingQuotes: tag-attribute quote normalization (issue #4487) ───
 
 TEST(TrimSurroundingQuotesTest, RemovesWrappingDoubleQuotes) {

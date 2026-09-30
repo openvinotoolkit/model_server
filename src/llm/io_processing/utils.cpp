@@ -101,22 +101,19 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
             const bool nextIsWord = (i + 1 < str.size()) && isWordChar(str[i + 1]);
 
             if (singleQuoteDepth == 0) {
-                // Opening single quote: only when it directly follows a value boundary
-                // (: , [ { = ( or whitespace, e.g. after a keyword like "return") - e.g. in
-                // s'START', the quote sits right after the word char 's' with no boundary in
-                // between and must not be mistaken for an opener.
-                const bool precededByBoundary = (i == 0) ||
-                                                std::isspace(static_cast<unsigned char>(str[i - 1])) != 0 ||
-                                                str[i - 1] == ':' || str[i - 1] == ',' ||
-                                                str[i - 1] == '[' || str[i - 1] == '{' || str[i - 1] == '=' ||
-                                                str[i - 1] == '(';
+                // Opening single quote: any non-word predecessor counts as a value boundary
+                // (covers operators like '+' in x+'a,b' too, not just an explicit punctuation
+                // whitelist) - e.g. in s'START', the quote directly follows the word char 's'
+                // and must not be mistaken for an opener.
+                const bool precededByBoundary = (i == 0) || !prevIsWord;
                 if (precededByBoundary) {
                     singleQuoteDepth = 1;
                 }
             } else {
                 // Inside single-quoted text: treat apostrophes in words as plain
-                // characters (it's, Johns'). Close only when the following
-                // non-space token looks like an argument/list/object delimiter.
+                // characters (it's, Johns'). Close only when the following non-space
+                // character is a non-word boundary (any operator/punctuation, not just a
+                // fixed delimiter whitelist - e.g. '+' in 'a,b'+y) or end of string.
                 if (prevIsWord && nextIsWord) {
                     continue;
                 }
@@ -125,7 +122,7 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
                 while (j < str.size() && std::isspace(static_cast<unsigned char>(str[j])) != 0) {
                     ++j;
                 }
-                if (j == str.size() || str[j] == ',' || str[j] == ':' || str[j] == ']' || str[j] == '}' || str[j] == ')') {
+                if (j == str.size() || !isWordChar(str[j])) {
                     singleQuoteDepth = 0;
                 }
             }
