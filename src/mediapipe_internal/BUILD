@@ -248,6 +248,7 @@ ovms_cc_library(
         "//src/image_gen:image_gen_calculator",
         "//src/audio/speech_to_text:s2t_calculator",
         "//src/audio/text_to_speech:t2s_calculator",
+        "//src/mediapipe_calculators/ovms:ovms_calculator",
     ] + select({
         "//:not_disable_python": ["//src/python:python_calculators_runtime_objects"],
         "//:disable_python": [],
