@@ -171,11 +171,15 @@ Parameter notes:
 
 ## Demo flow
 
-Every demo step below shows the interactive prompt or slash command to type into the dcode TUI. Most steps are followed by a `dcode -n ...` (headless) equivalent that runs a single task and exits. The headless block is what an automated test or CI job would execute; `--quiet` limits stdout to the agent's final response so it is safe to pipe or capture.
+Each demo step has an **Interactive** tab (the prompt or slash command to type into the dcode TUI, with reference screenshots) and a **Headless** tab (a single `dcode -n ...` invocation that runs the same task and exits). The Headless block is what an automated test or CI job would execute; `--quiet` limits stdout to the agent's final response so it is safe to pipe or capture.
 
 ### Step 1: Ask agent to summarize demo
 
 Start with a broad, low-risk prompt so the agent explores the working directory, loads project files into its context and confirms that OVMS is reachable. This also warms up prefix caching on the server for later turns.
+
+::::{tab-set}
+:::{tab-item} Interactive
+:sync: Interactive
 
 ```text
 Summarize demo in current directory.
@@ -184,12 +188,15 @@ Summarize demo in current directory.
 First response can be slower because initial dcode context is large. Later turns are typically faster due to prefix caching.
 
 ![demo summary](./screenshots/demo_summary.jpg)
-
-Headless:
+:::
+:::{tab-item} Headless
+:sync: Headless
 
 ```bash
 dcode -n "Summarize demo in current directory." --allow-fs-tools read_file,grep,ls --no-mcp --no-interpreter --quiet
 ```
+:::
+::::
 
 ### Step 2: Create MCP server file
 
@@ -199,21 +206,32 @@ The project ships with a preconfigured MCP client entry in `.deepagents/.mcp.jso
 
 The MCP server script is missing. Ask the agent to create it using the project skill located at `.deepagents/skills/python-mcp-sdk-skill/SKILL.md`. Invoking a skill with `/skill:<name>` gives the agent a focused, tested recipe instead of relying on generic knowledge:
 
+::::{tab-set}
+:::{tab-item} Interactive
+:sync: Interactive
+
 ```text
 /skill:python-mcp-sdk-skill implement a Python MCP stdio server at mcp_server/time_mcp_server.py that provides current UTC time using the Python MCP SDK.
 ```
 
 ![MCP server created](./screenshots/server_created.jpg)
-
-Headless:
+:::
+:::{tab-item} Headless
+:sync: Headless
 
 ```bash
 dcode -n "Implement a Python MCP stdio server at mcp_server/time_mcp_server.py that provides current UTC time using the Python MCP SDK." --skill python-mcp-sdk-skill --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
 ```
+:::
+::::
 
 ### Step 3: Extend MCP server with date tool
 
 Use `/goal` to switch the agent into goal mode: it will propose acceptance criteria, iterate on the implementation and self-grade the result against those criteria. This is a good fit for incremental changes on top of an existing file. Headless mode replaces the interactive acceptance-criteria negotiation with a preset rubric passed to `--rubric`.
+
+::::{tab-set}
+:::{tab-item} Interactive
+:sync: Interactive
 
 ```text
 /goal Extend mcp_server/time_mcp_server.py with date tool.
@@ -231,17 +249,20 @@ And finally grades its own output:
 
 ![grader result](./screenshots/grader.jpg)
 
-Headless:
-
-```bash
-dcode -n "Extend mcp_server/time_mcp_server.py with a date tool." --rubric "mcp_server/time_mcp_server.py defines a new @mcp.tool returning the current UTC date as an ISO string; the existing time tool still works; python -m py_compile mcp_server/time_mcp_server.py succeeds." --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
-```
-
 Once the goal is satisfied, clear it so subsequent prompts run in normal mode:
 
 ```text
 /goal clear
 ```
+:::
+:::{tab-item} Headless
+:sync: Headless
+
+```bash
+dcode -n "Extend mcp_server/time_mcp_server.py with a date tool." --rubric "mcp_server/time_mcp_server.py defines a new @mcp.tool returning the current UTC date as an ISO string; the existing time tool still works; python -m py_compile mcp_server/time_mcp_server.py succeeds." --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
+```
+:::
+::::
 
 ### Step 4: Delegate validation to subagent
 
@@ -251,7 +272,9 @@ Instead of running tests in the main context, delegate validation to a dedicated
 
 `mcp-tester` verifies static structure and runtime behavior of the MCP server and returns a concise `PASS`/`FAIL` verdict.
 
-Prompt:
+::::{tab-set}
+:::{tab-item} Interactive
+:sync: Interactive
 
 ```text
 Delegate to subagent mcp-tester:
@@ -259,18 +282,25 @@ Test mcp_server/time_mcp_server.py
 ```
 
 ![tester validation](./screenshots/tester.jpg)
-
-Headless:
+:::
+:::{tab-item} Headless
+:sync: Headless
 
 ```bash
 dcode -n "Delegate to subagent mcp-tester: Test mcp_server/time_mcp_server.py" --allow-fs-tools read_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
 ```
+:::
+::::
 
 If tester returns `FAIL`, main agent can proceed with fixes. If tester returns `PASS`, continue below.
 
 ### Step 5: Reload tools in current session
 
 The MCP server is now on disk, but the current dcode session was started before it existed, so its tools are not yet registered. Use `/tools` to inspect the currently loaded tool list, then `/reload` to re-scan the MCP configuration without restarting dcode.
+
+::::{tab-set}
+:::{tab-item} Interactive
+:sync: Interactive
 
 ```text
 /tools
@@ -282,25 +312,40 @@ The MCP server is now on disk, but the current dcode session was started before 
 /reload
 /tools
 ```
+
 ![tools after reload](./screenshots/tools_after.jpg)
+:::
+:::{tab-item} Headless
+:sync: Headless
+
+Not applicable in headless mode: each `dcode -n` invocation is a fresh session and re-discovers the MCP configuration on start, so there is no stale tool list to reload.
+:::
+::::
 
 ### Step 6: Verify tool use
 
 With the MCP tools now registered, issue a prompt that can only be answered correctly by calling the freshly created server. If the agent invokes the MCP tool and reports the real UTC time and date, the end-to-end integration is working.
+
+::::{tab-set}
+:::{tab-item} Interactive
+:sync: Interactive
 
 ```text
 Give me the exact current UTC timestamp down to the current second along with current date.
 ```
 
 ![final tool result](./screenshots/final.jpg)
+:::
+:::{tab-item} Headless
+:sync: Headless
 
-MCP loading is left on for the headless block (no `--no-mcp` flag) so the tool built in Steps 2 and 3 is available.
-
-Headless:
+MCP loading is left on (no `--no-mcp` flag) so the tool built in Steps 2 and 3 is available.
 
 ```bash
 dcode -n "Give me the exact current UTC timestamp down to the current second along with current date." --allow-fs-tools read_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --trust-project-mcp --no-interpreter --quiet
 ```
+:::
+::::
 
 ---
 
