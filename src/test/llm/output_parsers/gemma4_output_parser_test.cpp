@@ -234,6 +234,20 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedByNoKeyword) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithNoKeywordPreservesMultilineFirstLine) {
+    // Keyword omitted entirely and the reasoning itself is multiline - the first line is a real
+    // multi-word sentence, not a single-token keyword, so the newline it ends with must not be
+    // mistaken for a header terminator (which would silently drop the first line).
+    std::string input = "<|channel>first line\nsecond line<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.reasoning, "first line\nsecond line");
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
 TEST_F(Gemma4OutputParserTest, ParseReasoningWithDuplicatedEndTagDoesNotEmitInterveningTextTwice) {
     // A single decoded chunk holding two "<channel|>" occurrences (e.g. a stray repeated end tag)
     // must not have the text between them emitted twice: once leaked into the first reasoning
