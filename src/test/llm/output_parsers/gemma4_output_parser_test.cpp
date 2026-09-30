@@ -195,6 +195,20 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithDegenerateKeyword) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithSkippedKeywordLeavesEmptyHeaderLine) {
+    // Keyword skipped entirely - the opener is directly followed by the header-terminating
+    // newline. That newline must still be consumed as the (empty) header line, not misread as
+    // "no keyword to skip" and leaked into reasoning.
+    std::string input = "<|channel>\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "Some reasoning content");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
 TEST_F(Gemma4OutputParserTest, ParseReasoningDoesNotTreatContentNewlineAsHeaderBoundary) {
     // A newline arriving in CONTENT, after the closing tag, must not be mistaken for the
     // channel-header newline (which would wrongly discard the real reasoning text).

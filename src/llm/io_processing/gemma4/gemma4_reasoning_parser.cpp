@@ -15,7 +15,6 @@
 //*****************************************************************************
 
 #include <openvino/genai/tokenizer.hpp>
-#include <cctype>
 #include <string>
 #include <vector>
 
@@ -48,7 +47,7 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
     if (phase == Phase::AwaitingChannelHeader) {
         pendingChannelHeaderText += text;
         const bool noKeywordAtAll = !pendingChannelHeaderText.empty() &&
-                                    std::isspace(static_cast<unsigned char>(pendingChannelHeaderText.front())) != 0;
+                                    (pendingChannelHeaderText.front() == ' ' || pendingChannelHeaderText.front() == '\t');
         const size_t newlinePos = pendingChannelHeaderText.find('\n');
         const size_t endTagPos = pendingChannelHeaderText.find(parsingConfig.endTag);
         if (noKeywordAtAll) {
