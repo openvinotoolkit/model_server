@@ -1996,7 +1996,7 @@ cc_binary(
     deps = [
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
+        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
         "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
         ":libovms_version_impl",
         "//src/llm:llmcalculator_proto_owner",
