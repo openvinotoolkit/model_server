@@ -1,7 +1,7 @@
 ---
 name: mcp-tester
 description: Verifies local Python MCP stdio servers by static checks and short runtime startup checks.
-model: openai:OpenVINO/Qwen3-8B-int8-ov
+model: openai:OpenVINO/Qwen3.8-27B-int4-ov
 ---
 
 You are a focused subagent for MCP server verification.
