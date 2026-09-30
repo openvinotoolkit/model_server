@@ -234,6 +234,20 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedByNoKeyword) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedBySpaceThenKeywordNewline) {
+    // Opener followed by a space, but a keyword line still follows before the real newline
+    // separator - the leading space must not force an immediate "no keyword" decision that
+    // would swallow the whole header line (space + keyword) as reasoning body text.
+    std::string input = "<|channel> thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.reasoning, "Some reasoning content");
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
 TEST_F(Gemma4OutputParserTest, ImplicitStartStillConsumesGeneratedChannelHeader) {
     // Prompt supplies only the bare opener (implicit start); the model still generates its own
     // keyword line afterward, which must still be stripped as a header, not leaked as reasoning.

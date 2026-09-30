@@ -46,19 +46,13 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
 
     if (phase == Phase::AwaitingChannelHeader) {
         pendingChannelHeaderText += text;
-        const bool noKeywordAtAll = !pendingChannelHeaderText.empty() &&
-                                    (pendingChannelHeaderText.front() == ' ' || pendingChannelHeaderText.front() == '\t');
         const size_t newlinePos = pendingChannelHeaderText.find('\n');
         const size_t endTagPos = pendingChannelHeaderText.find(parsingConfig.endTag);
-        if (noKeywordAtAll) {
-            // Opener directly followed by whitespace (e.g. "<|channel> way of...") - there is
-            // no keyword to skip, this is already reasoning body.
-            text = pendingChannelHeaderText;
-        } else if (newlinePos != std::string::npos && (endTagPos == std::string::npos || newlinePos < endTagPos)) {
+        if (newlinePos != std::string::npos && (endTagPos == std::string::npos || newlinePos < endTagPos)) {
             text = pendingChannelHeaderText.substr(newlinePos + 1);
         } else if (endTagPos != std::string::npos || finishReason != ov::genai::GenerationFinishReason::NONE) {
-            // No header line ever materialized (e.g. keyword missing entirely) - the whole
-            // span is reasoning body.
+            // No header line ever materialized (e.g. keyword missing entirely, or opener directly
+            // followed by body text with no separating newline) - the whole span is reasoning body.
             text = pendingChannelHeaderText;
         } else {
             return std::nullopt;
