@@ -31,26 +31,7 @@ Requirements:
 
 This demo can be followed without changes on a Panther Lake host with 64 GB RAM and VRAM allocation to the GPU extended via Intel Graphics Software; on that class of machine the Qwen3.8-27B int4 model runs at interactive latency on the GPU. On hosts with less VRAM available, switch to a smaller model from the [preconfigured OpenVINO models](https://huggingface.co/OpenVINO) catalog or move the target device to CPU or NPU (see the [OVMS baremetal deployment guide](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server_baremetal.html) for host-native options).
 
-### Step 1: Prepare model directory
-
-::::{tab-set}
-:::{tab-item} Linux
-:sync: Linux
-```bash
-mkdir -p ${HOME}/models
-export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-```
-:::
-:::{tab-item} Windows
-:sync: Windows
-```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\models" | Out-Null
-$env:MODELS_DIR = "$env:USERPROFILE\models"
-```
-:::
-::::
-
-### Step 2: Start OVMS
+### Step 1: Start OVMS
 
 The model is auto-pulled on first start if it is not already present in the model repository.
 
@@ -58,6 +39,8 @@ The model is auto-pulled on first start if it is not already present in the mode
 :::{tab-item} Linux
 :sync: Linux
 ```bash
+mkdir -p ${HOME}/models
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) \
   -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -e "no_proxy=${no_proxy}" \
   -v ${HOME}/models:/models -p 8000:8000 openvino/model_server:latest-gpu \
@@ -68,11 +51,9 @@ docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) \
 :::
 :::{tab-item} Windows
 :sync: Windows
-```powershell
-docker run -d -v ${env:MODELS_DIR}:/models -p 8000:8000 openvino/model_server:latest `
-  --rest_port 8000 --model_repository_path /models `
-  --source_model OpenVINO/Qwen3.8-27B-int4-ov --task text_generation `
-  --log_path /models/ovms-log.txt
+```bat
+mkdir models
+ovms.exe --source_model OpenVINO/Qwen3.8-27B-int4-ov --model_repository_path models --task text_generation --target_device GPU --model_name OpenVINO/Qwen3.8-27B-int4-ov --rest_port 8000
 ```
 :::
 ::::
@@ -89,7 +70,7 @@ curl http://localhost:8000/v1/chat/completions \
   -d '{"model":"OpenVINO/Qwen3.8-27B-int4-ov","messages":[{"role":"user","content":"ping"}]}'
 ```
 
-### Step 3: Configure dcode environment
+### Step 2: Configure dcode environment
 
 Use the same shell where dcode will be started. Run these from inside the demo directory (`demos/integration_with_deepagents_code`) so `DEMO_DIR` resolves correctly.
 
@@ -106,12 +87,12 @@ export DEMO_DIR="$PWD"
 :::
 :::{tab-item} Windows
 :sync: Windows
-```powershell
-$env:OPENAI_API_KEY = "not_used"
-$env:OPENAI_BASE_URL = "http://localhost:8000/v1"
-$env:TAVILY_API_KEY = "not_used"
-$env:DEEPAGENTS_CODE_PRICES_AUTO_UPDATE = "0"
-$env:DEMO_DIR = (Get-Location).Path
+```bat
+set OPENAI_API_KEY=not_used
+set OPENAI_BASE_URL=http://localhost:8000/v1
+set TAVILY_API_KEY=not_used
+set DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
+set DEMO_DIR=%CD%
 ```
 :::
 ::::
@@ -120,7 +101,7 @@ $env:DEMO_DIR = (Get-Location).Path
 - **`DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0`**: avoids external pricing refresh.
 - **`DEMO_DIR`**: expanded inside `.deepagents/.mcp.json` so the MCP server script is located reliably. dcode spawns MCP stdio servers from a temporary CWD, so a relative path in `.mcp.json` cannot be resolved.
 
-### Step 4: Install dependencies
+### Step 3: Install dependencies
 
 Run these commands from inside the demo directory (`demos/integration_with_deepagents_code`):
 
@@ -136,11 +117,11 @@ python -m pip install 'deepagents-code==0.1.70' 'mcp<2'
 :::
 :::{tab-item} Windows
 :sync: Windows
-```powershell
+```bat
 python -m venv .env
-.\.env\Scripts\Activate.ps1
+call .env\Scripts\activate.bat
 python -m pip install --upgrade pip
-python -m pip install 'deepagents-code==0.1.70' 'mcp<2' colorama
+python -m pip install "deepagents-code==0.1.70" "mcp<2" colorama
 ```
 
 `colorama` is required by the console renderer on Windows.
@@ -149,7 +130,7 @@ python -m pip install 'deepagents-code==0.1.70' 'mcp<2' colorama
 
 > On Windows, use a short relative working directory such as `demo` or `dcode-demo`; dcode may reject absolute paths with `Error: Windows absolute paths are not supported`.
 
-### Step 5: Prepare dcode configuration
+### Step 4: Prepare dcode configuration
 
 Set the default model once so subsequent dcode invocations don't have to repeat `--model` (persisted to `~/.deepagents/config.toml`):
 
