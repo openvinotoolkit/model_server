@@ -20,10 +20,16 @@ By the end of this demo you will have:
 
 ### Prerequisites
 
+This demo deploys OpenVINO Model Server on Linux or Windows with a Docker container and installs `dcode` via Python pip.
+
 Requirements:
-- Linux or Windows
-- Python 3.12+
-- Docker (Docker Engine on Linux, Docker Desktop on Windows)
+* Host with x86_64 architecture
+* Linux or Windows
+* [Docker Engine](https://docs.docker.com/engine/) (Docker Desktop on Windows)
+* Python 3.12+ with pip
+* HuggingFace access to `OpenVINO/Qwen3.8-27B-int4-ov` (auto-downloaded on first OVMS start)
+
+This demo can be followed without changes on a Panther Lake host with 64 GB RAM and VRAM allocation to the GPU extended via Intel Graphics Software; on that class of machine the Qwen3.8-27B int4 model runs at interactive latency on the GPU. On hosts with less VRAM available, switch to a smaller model from the [preconfigured OpenVINO models](https://huggingface.co/OpenVINO) catalog or move the target device to CPU or NPU (see the [OVMS baremetal deployment guide](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server_baremetal.html) for host-native options).
 
 ### Step 1: Prepare model directory
 
@@ -85,7 +91,7 @@ curl http://localhost:8000/v1/chat/completions \
 
 ### Step 3: Configure dcode environment
 
-Use the same shell where dcode will be started:
+Use the same shell where dcode will be started. Run these from inside the demo directory (`demos/integration_with_deepagents_code`) so `DEMO_DIR` resolves correctly.
 
 ::::{tab-set}
 :::{tab-item} Linux
@@ -93,7 +99,9 @@ Use the same shell where dcode will be started:
 ```bash
 export OPENAI_API_KEY=not_used
 export OPENAI_BASE_URL=http://localhost:8000/v1
+export TAVILY_API_KEY=not_used
 export DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
+export DEMO_DIR="$PWD"
 ```
 :::
 :::{tab-item} Windows
@@ -101,12 +109,16 @@ export DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
 ```powershell
 $env:OPENAI_API_KEY = "not_used"
 $env:OPENAI_BASE_URL = "http://localhost:8000/v1"
+$env:TAVILY_API_KEY = "not_used"
 $env:DEEPAGENTS_CODE_PRICES_AUTO_UPDATE = "0"
+$env:DEMO_DIR = (Get-Location).Path
 ```
 :::
 ::::
 
+- **`TAVILY_API_KEY=not_used`**: silences the web-search key warning; the demo never invokes web search, so the placeholder is inert.
 - **`DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0`**: avoids external pricing refresh.
+- **`DEMO_DIR`**: expanded inside `.deepagents/.mcp.json` so the MCP server script is located reliably. dcode spawns MCP stdio servers from a temporary CWD, so a relative path in `.mcp.json` cannot be resolved.
 
 ### Step 4: Install dependencies
 
@@ -118,7 +130,7 @@ python -m venv .env
 source .env/bin/activate
 cd demos/integration_with_deepagents_code
 python -m pip install --upgrade pip
-python -m pip install deepagents-code mcp
+python -m pip install deepagents-code 'mcp<2'
 ```
 :::
 :::{tab-item} Windows
@@ -128,7 +140,7 @@ python -m venv .env
 .\.env\Scripts\Activate.ps1
 cd demos\integration_with_deepagents_code
 python -m pip install --upgrade pip
-python -m pip install deepagents-code mcp colorama
+python -m pip install deepagents-code 'mcp<2' colorama
 ```
 
 `colorama` is required by the console renderer on Windows.
@@ -145,19 +157,21 @@ Set the default model once so subsequent dcode invocations don't have to repeat 
 dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
 ```
 
-dcode uses git to track file state and diffs it applies during the session. Initialize a repository if one is not already present:
+dcode uses git to track file state and pins its project root (and its skill / MCP / subagent discovery) at the closest `.git` directory. Initialize a repository *inside the demo folder* so dcode scopes to it, even when the folder itself lives inside another checkout (like the `model_server` clone):
 
 ```bash
-git rev-parse --git-dir >/dev/null 2>&1 || git init
+git init
 ```
 
-The check makes the command a no-op inside an existing working tree, including the `model_server` clone. To keep the demo state isolated from the model_server repo, copy the demo folder elsewhere first.
+The check keeps re-runs idempotent while still creating a fresh nested repo the first time.
 
 ---
 
 ## Demo flow
 
 Each demo step has an **Interactive** tab (the prompt or slash command to type into the dcode TUI, with reference screenshots) and a **Headless** tab (a single `dcode -n ...` invocation that runs the same task and exits). In the Headless block, `--quiet` limits stdout to the agent's final response so it is safe to pipe or capture.
+
+The headless `dcode -n ...` invocations use no shell-specific syntax and are therefore identical on Linux (bash) and Windows (PowerShell) — paste them into whichever shell you used for Setup Step 3.
 
 ### Step 1: Start dcode
 
@@ -210,6 +224,44 @@ First response can be slower because initial dcode context is large. Later turns
 ```bash
 dcode -n "Summarize demo in current directory." --allow-fs-tools read_file,grep,ls --no-mcp --no-interpreter --quiet
 ```
+
+Expected output:
+
+```console
+## Demo Summary: DeepAgents Code Integration with OpenVINO Model Server
+
+This demo (`integration_with_deepagents_code`) showcases how to integrate [DeepAgents Code](https://github.com/langchain-ai/deepagents) (`dcode`) with [OpenVINO Model Server (OVMS)](https://github.com/openvinotoolkit/model_server) using OpenAI-compatible endpoints.
+
+### Architecture
+
+- **OVMS** serves an OpenVINO model (`OpenVINO/Qwen3.8-27B-int4-ov`) via a Docker container on port `8000`
+- **dcode** connects to OVMS via `OPENAI_BASE_URL=http://localhost:8000/v1`
+- An **MCP stdio server** (`mcp_server/time_mcp_server.py`) provides `time` and `date` tools to agents
+- A **subagent** (`mcp-tester`) validates the MCP server's structure and runtime behavior
+
+### Demo Flow (6 Steps)
+
+| Step | Description |
+|------|-------------|
+| 1 | Ask agent to summarize the demo (exploration + OVMS reachability check) |
+| 2 | Agent creates the MCP server using `python-mcp-sdk-skill` |
+| 3 | Agent extends the server with a `date` tool (via `/goal` acceptance-criteria loop) |
+| 4 | Subagent `mcp-tester` validates the server statically and at runtime |
+| 5 | Reload MCP tools in the current session (`/reload`) |
+| 6 | End-to-end tool use — agent calls `time` + `date` MCP tools to answer a real prompt |
+
+### Key Components
+
+- **Config**: `.deepagents/.mcp.json` declares the `time-server` MCP endpoint
+- **Agent**: `.deepagents/agents/mcp-tester/` defines the validation subagent
+- **Skill**: `.deepagents/skills/python-mcp-sdk-skill/` provides the MCP server scaffolding recipe
+- **Screenshots**: `screenshots/` contains visual reference images for each step
+
+### Use Cases
+
+- **Interactive**: Type prompts into the dcode TUI for hands-on learning
+- **Headless**: Run `dcode -n "..." --quiet` for CI/automation scripts
+```
 :::
 ::::
 
@@ -232,6 +284,16 @@ The project ships with a preconfigured MCP client entry in `.deepagents/.mcp.jso
 
 ```bash
 dcode -n "Implement a Python MCP stdio server at mcp_server/time_mcp_server.py that provides current UTC time using the Python MCP SDK." --skill python-mcp-sdk-skill --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
+```
+
+Expected output:
+
+```console
+Created `mcp_server/time_mcp_server.py` with:
+
+- `get_current_utc_iso8601()` tool returning the current UTC time as an ISO 8601 string with trailing `Z`.
+- No third-party dependencies beyond `mcp`.
+- No network calls. Deterministic, machine-readable output.
 ```
 :::
 ::::
@@ -272,6 +334,13 @@ Once the goal is satisfied, clear it so subsequent prompts run in normal mode:
 ```bash
 dcode -n "Extend mcp_server/time_mcp_server.py with a date tool." --rubric "mcp_server/time_mcp_server.py defines a new @mcp.tool returning the current UTC date as an ISO string; the existing time tool still works; python -m py_compile mcp_server/time_mcp_server.py succeeds." --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
 ```
+
+Expected output:
+
+```console
+Done. Added `get_current_utc_date()` tool to `time_mcp_server.py`. It returns the current UTC date as an ISO 8601 string (`YYYY-MM-DD`). Compiles cleanly.⏳ Checking acceptance criteria…
+✓ Acceptance criteria satisfied
+```
 :::
 ::::
 
@@ -299,6 +368,19 @@ Test mcp_server/time_mcp_server.py
 
 ```bash
 dcode -n "Delegate to subagent mcp-tester: Test mcp_server/time_mcp_server.py" --allow-fs-tools read_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
+```
+
+Expected output:
+
+```console
+**time_mcp_server.py — MCP Test Results: All PASSED ✅**
+
+| Check | Result |
+|---|---|
+| Script Structure | ✅ FastMCP, 2 tools, `mcp.run(transport="stdio")` |
+| py_compile | ✅ Compiles cleanly (Python 3.12) |
+| Startup Timeout | ✅ Exits cleanly (no TTY in sandbox) |
+| MCP Config Match | ✅ `.deepagents/.mcp.json` references the correct server |
 ```
 :::
 ::::
@@ -350,11 +432,21 @@ Give me the exact current UTC timestamp down to the current second along with cu
 :::{tab-item} Headless
 :sync: Headless
 
-MCP loading is left on (no `--no-mcp` flag) so the tool built in Steps 3 and 4 is available.
-
 ```bash
 dcode -n "Give me the exact current UTC timestamp down to the current second along with current date." --allow-fs-tools read_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --trust-project-mcp --no-interpreter --quiet
 ```
+
+Expected output:
+
+```console
+Current UTC timestamp: `2026-09-30T14:00:12.508579Z`
+
+Current UTC date: `2026-09-30`
+
+Full datetime: **Tuesday, September 30, 2026 at 14:00:12 UTC**
+```
+
+If the agent instead returns *"This MCP action requires approval, but the current headless runtime has no approval UI"*, the tools in `mcp_server/time_mcp_server.py` are missing MCP `ToolAnnotations`. dcode's headless guard rejects any MCP tool whose metadata does not have `readOnlyHint=True` and `destructiveHint=False`. The `python-mcp-sdk-skill` used in Step 3 emits these annotations for read-only tools; if you edited the server by hand, re-run Step 3 or add the annotations manually.
 :::
 ::::
 
