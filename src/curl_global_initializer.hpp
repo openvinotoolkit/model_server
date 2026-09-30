@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,15 +15,11 @@
 //*****************************************************************************
 #pragma once
 
-#include <utility>
-
-#include "../threadsafequeue.hpp"
-#include "session_id.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
-class Node;
+Status initializeCurlGlobal();
+void cleanupCurlGlobal();
 
-using NodeSessionKeyPair = std::pair<std::reference_wrapper<Node>, session_key_t>;
-using PipelineEventQueue = ThreadSafeQueue<NodeSessionKeyPair>;
 }  // namespace ovms

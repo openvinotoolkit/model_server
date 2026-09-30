@@ -53,7 +53,10 @@ WORKDIR /
 ####### Azure SDK (modern azure-sdk-for-cpp: azure-core, azure-storage-blobs, azure-storage-files-shares)
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 WORKDIR /azure-sdk-for-cpp
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git clone --depth 1 --branch azure-storage-blobs_12.18.0 https://github.com/Azure/azure-sdk-for-cpp.git . && \
+RUN curl -fsSL https://github.com/Azure/azure-sdk-for-cpp/archive/refs/tags/azure-storage-blobs_12.18.0.tar.gz -o /tmp/azure-sdk-for-cpp.tar.gz && \
+    echo "0f266f91cf00b79bb6c7c6f99e44942b43a7141db565556a4298f6ebe3a86fcc  /tmp/azure-sdk-for-cpp.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/azure-sdk-for-cpp.tar.gz --strip-components=1 && \
+    rm /tmp/azure-sdk-for-cpp.tar.gz && \
     echo "# no-op: use system libcurl and openssl" > /azure-sdk-toolchain.cmake && \
     cmake -S sdk/core/azure-core -B build/azure-core \
         -DCMAKE_TOOLCHAIN_FILE=/azure-sdk-toolchain.cmake \

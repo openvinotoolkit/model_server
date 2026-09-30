@@ -140,6 +140,17 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "pipelinedefinitionstatus",
+    hdrs = ["pipelinedefinitionstatus.hpp"],
+    srcs = ["pipelinedefinitionstatus.cpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//src:libovmsmodelversionstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "mediapipegraphconfig",
     srcs = [
         "mediapipegraphconfig.cpp",
@@ -199,7 +210,6 @@ ovms_cc_library(
         ":mediapipe_utils",
         ":side_packet_builder",
         "//src:mediapipe_executor_interface",
-        "//src/dags:pipelinedefinitionstatus",
         "//src:libovms_single_version_servable_definition",
         "//src:libovms_tensorinfo",
         "//src:libovmslogging",
