@@ -30,7 +30,6 @@ extern "C" OVMS_LLM_CALCULATORS_EXPORT int OVMS_LLMCreateExecutionContext(
     if (servable == nullptr || executionContext == nullptr) {
         return 1;
     }
-    auto* genAiServable = static_cast<ovms::GenAiServable*>(servable);
-    *executionContext = genAiServable->createExecutionContext();
+    *executionContext = ovms::createGenAiServableExecutionContext(*static_cast<ovms::GenAiServable*>(servable));
     return *executionContext ? 0 : 1;
 }

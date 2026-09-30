@@ -33,6 +33,7 @@ find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d \
     ! -name "*params" ! -name "*.hana.*" ! -name "*runfiles_manifest*" \
     ! -name "py_generate_pipeline.cpython*" ! -name "lib_node_*" \
     ! -name "libazure-*" ! -name "pyovms.so" ! -name "*.repo_mapping" \
+	! -name "libexternal_Sjsoncpp_Slibjsoncpp.so" \
     ! -path "*/_solib_k8/*" ! -path "*test_python_binding*" \
     ! -name "libpython[0-9]*.so*" \
 	-exec cp -vLf --remove-destination {} /ovms_release/lib/ \;

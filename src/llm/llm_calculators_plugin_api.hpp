@@ -19,12 +19,16 @@
 
 namespace ovms {
 
+class GenAiServable;
 class GenAiServableExecutionContext;
 
-class GenAiServable {
-public:
-    virtual ~GenAiServable() = default;
-    virtual std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() = 0;
-};
+#if defined(_WIN32)
+#define OVMS_LLM_HOST_EXPORT
+#else
+#define OVMS_LLM_HOST_EXPORT __attribute__((visibility("default")))
+#endif
+
+// Defined in servable.cpp; the plugin resolves it from the host process so it never depends on GenAiServable's vtable layout.
+OVMS_LLM_HOST_EXPORT std::shared_ptr<GenAiServableExecutionContext> createGenAiServableExecutionContext(GenAiServable& servable);
 
 }  // namespace ovms

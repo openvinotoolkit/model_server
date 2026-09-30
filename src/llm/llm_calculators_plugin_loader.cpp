@@ -81,12 +81,6 @@ std::vector<std::string> getLlmPluginCandidates() {
 }  // namespace
 
 bool loadLlmCalculatorsPlugin() {
-    const char* enabled = std::getenv("OVMS_LLM_CALCULATORS_PLUGIN_DLOPEN");
-    if (enabled == nullptr || std::string(enabled) != "1") {
-        SPDLOG_DEBUG("LLM calculators plugin loading is disabled; set OVMS_LLM_CALCULATORS_PLUGIN_DLOPEN=1 to enable the experimental plugin");
-        return false;
-    }
-
     if (llmPluginHandle != nullptr) {
         return true;
     }

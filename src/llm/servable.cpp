@@ -39,6 +39,7 @@
 #include "apis/openai_responses.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #include "io_processing/input_processor.hpp"
+#include "llm_calculators_plugin_api.hpp"
 #include "ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
@@ -48,6 +49,10 @@ namespace ovms {
 
 double calculatePrefillSpeed(size_t inputTokenCount, double ttftMs) {
     return ttftMs > 0.0 ? (1000.0 * inputTokenCount) / ttftMs : 0.0;
+}
+
+std::shared_ptr<GenAiServableExecutionContext> createGenAiServableExecutionContext(GenAiServable& servable) {
+    return servable.createExecutionContext();
 }
 
 void GenAiServable::determineDecodingMethod() {

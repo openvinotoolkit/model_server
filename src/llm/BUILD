@@ -701,6 +701,7 @@ ovms_cc_library(
         "//src:libovms_ov_utils",
         "//third_party:genai",
         ":runtime_chat_template_loader",
+        ":llm_calculators_plugin_api",
     ],
     visibility = ["//visibility:public"],
 )
