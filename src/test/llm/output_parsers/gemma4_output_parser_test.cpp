@@ -220,6 +220,22 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedByNoKeyword) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
+TEST_F(Gemma4OutputParserTest, ImplicitStartStillConsumesGeneratedChannelHeader) {
+    // Prompt supplies only the bare opener (implicit start); the model still generates its own
+    // keyword line afterward, which must still be stripped as a header, not leaked as reasoning.
+    outputParserWithRegularToolParsing->detectAndSetImplicitReasoningStart("<|turn>model\n<|channel>");
+    std::vector<std::pair<std::string, std::optional<std::string>>> chunks{
+        {"thought\n", std::nullopt},
+        {"Some reasoning content", R"({"delta":{"reasoning_content":"Some reasoning content"}})"},
+        {"<channel|>", std::nullopt},
+        {"Final answer", R"({"delta":{"content":"Final answer"}})"},
+    };
+    for (const auto& [chunk, expected] : chunks) {
+        auto doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
+        assertChunkEqual(doc, expected, chunk);
+    }
+}
+
 TEST_F(Gemma4OutputParserTest, ParseReasoningWithMissingOpenerTag) {
     std::string input = "thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
 
@@ -1007,6 +1023,19 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithUnwrappedValueLeadingSpace) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "cp");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"destination":"backup_tests","source":"raw_value<|\"|>rest<|\"|>"})");
+}
+
+// A bare (non-<|"|>-wrapped) function-call-style value containing a literal brace, protected
+// only by single quotes - the brace inside must not be mistaken for the tool call's own
+// terminator.
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithParenthesizedSingleQuotedValueContainingBrace) {
+    std::string input = "<|tool_call>call:exec{code:fn('a}b')}<tool_call|>";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "exec");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"x({"code":"fn('a}b')"})x");
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithEmptyStringArgument) {

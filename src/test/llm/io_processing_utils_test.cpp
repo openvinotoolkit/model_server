@@ -150,6 +150,23 @@ TEST(FindInStringTest, EqualsSignOpensSingleQuote) {
     EXPECT_EQ(findInStringRespectingSpecialChars("location='Paris, France',unit='celsius'", ",", 0), 24u);
 }
 
+TEST(FindInStringTest, OpenParenOpensSingleQuoteFindsTrueBraceMatch) {
+    // '(' must open a quote span too (closing already accepts ')'), protecting a brace inside
+    // a function-call-style value so the true terminator - not the inner one - is found.
+    EXPECT_EQ(findInStringRespectingSpecialChars("code:fn('a}b')}", "}", 0), 14u);
+}
+
+TEST(FindInStringTest, BraceInsideDoubleQuotesDoesNotDesyncTracking) {
+    // A brace inside "..." must not affect braceDepth; comma after the closing quote is found.
+    EXPECT_EQ(findInStringRespectingSpecialChars(R"("a}b", c)", ",", 0), 5u);
+}
+
+TEST(FindInStringTest, DoubleQuoteInsideSingleQuoteDoesNotDesyncTracking) {
+    // A '"' inside a single-quoted value must not toggle quoteDepth; the true closing '}' is
+    // found, not the one hidden inside the embedded "..." text.
+    EXPECT_EQ(findInStringRespectingSpecialChars(R"(key:'say "hi}" now',next:1})", "}", 0), 26u);
+}
+
 // ── trimSurroundingQuotes: tag-attribute quote normalization (issue #4487) ───
 
 TEST(TrimSurroundingQuotesTest, RemovesWrappingDoubleQuotes) {

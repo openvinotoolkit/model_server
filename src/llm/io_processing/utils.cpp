@@ -81,15 +81,20 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
             return i;
         }
 
-        if (str[i] == '{') {
+        // Structural chars inside an already-open quote (of either kind) belong to the
+        // value's own payload, not to the outer structure - e.g. the '}' in a bare value
+        // like fn('a}b') must not desync brace tracking for the real terminator that follows.
+        const bool insideAnyQuote = quoteDepth != 0 || singleQuoteDepth != 0;
+
+        if (!insideAnyQuote && str[i] == '{') {
             braceDepth++;
-        } else if (str[i] == '}') {
+        } else if (!insideAnyQuote && str[i] == '}') {
             braceDepth--;
-        } else if (str[i] == '[') {
+        } else if (!insideAnyQuote && str[i] == '[') {
             bracketDepth++;
-        } else if (str[i] == ']') {
+        } else if (!insideAnyQuote && str[i] == ']') {
             bracketDepth--;
-        } else if (str[i] == '"' && (i == 0 || str[i - 1] != '\\')) {
+        } else if (singleQuoteDepth == 0 && str[i] == '"' && (i == 0 || str[i - 1] != '\\')) {
             quoteDepth = 1 - quoteDepth;
         } else if (quoteDepth == 0 && str[i] == '\'' && (i == 0 || str[i - 1] != '\\')) {
             const bool prevIsWord = (i > 0) && isWordChar(str[i - 1]);
@@ -104,7 +109,8 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
                     --k;
                 }
                 const bool precededByBoundary = (k == 0) || str[k - 1] == ':' || str[k - 1] == ',' ||
-                                                str[k - 1] == '[' || str[k - 1] == '{' || str[k - 1] == '=';
+                                                str[k - 1] == '[' || str[k - 1] == '{' || str[k - 1] == '=' ||
+                                                str[k - 1] == '(';
                 if (precededByBoundary) {
                     singleQuoteDepth = 1;
                 }

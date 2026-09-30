@@ -32,17 +32,17 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
     std::string text = chunk;
 
     if (phase == Phase::AwaitingOpener) {
-        if (isImplicitStart()) {
-            // Prompt already supplied the opener - nothing to strip.
-            phase = Phase::Body;
-        } else {
+        if (!isImplicitStart()) {
             const std::string& opener = parsingConfig.startTags[0];  // "<|channel>"
             const size_t openerPos = text.find(opener);
             if (openerPos != std::string::npos) {
                 text = text.substr(openerPos + opener.size());
             }
-            phase = Phase::AwaitingChannelHeader;
         }
+        // Implicit start means the prompt already supplied the opener, not the keyword line -
+        // the model may still generate its own (possibly corrupted) header, so header detection
+        // must run either way.
+        phase = Phase::AwaitingChannelHeader;
     }
 
     if (phase == Phase::AwaitingChannelHeader) {
