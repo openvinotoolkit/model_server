@@ -16,6 +16,7 @@
 #include "rapidjson_utils.hpp"
 
 #include <cstddef>
+#include <cstring>
 #include <string>
 
 #pragma warning(push)
@@ -23,6 +24,7 @@
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/error/error.h>
+#include <rapidjson/memorystream.h>
 #include <rapidjson/reader.h>
 #include <rapidjson/stream.h>
 #include "src/port/rapidjson_stringbuffer.hpp"
@@ -47,24 +49,80 @@ void addJsonOrStringMember(rapidjson::Value& obj, const char* key, const std::st
     }
 }
 
-// Lightweight SAX handler that only tracks nesting depth.
-// No DOM allocation — all SAX events are accepted and discarded.
+enum class JsonLimitViolation {
+    NONE,
+    DEPTH,
+    COMPLEXITY,
+};
+
+// Lightweight SAX handler that tracks nesting depth and total JSON complexity.
+// No DOM allocation — all SAX events are accepted and discarded until a limit trips.
 struct DepthOnlyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, DepthOnlyHandler> {
     std::size_t depth{0};
+    std::size_t complexity{0};
     const std::size_t maxDepth;
+    const std::size_t maxComplexity;
+    JsonLimitViolation violation{JsonLimitViolation::NONE};
 
-    explicit DepthOnlyHandler(std::size_t m) :
-        maxDepth(m) {}
+    DepthOnlyHandler(std::size_t maxDepth, std::size_t maxComplexity) :
+        maxDepth(maxDepth),
+        maxComplexity(maxComplexity) {}
+
+    bool incrementComplexity() {
+        if (++complexity > maxComplexity) {
+            violation = JsonLimitViolation::COMPLEXITY;
+            return false;
+        }
+        return true;
+    }
 
     bool StartObject() {
+        if (!incrementComplexity())
+            return false;
         if (++depth > maxDepth)
+            violation = JsonLimitViolation::DEPTH;
+        if (violation == JsonLimitViolation::DEPTH)
             return false;
         return true;
     }
     bool StartArray() {
+        if (!incrementComplexity())
+            return false;
         if (++depth > maxDepth)
+            violation = JsonLimitViolation::DEPTH;
+        if (violation == JsonLimitViolation::DEPTH)
             return false;
         return true;
+    }
+    bool Key(const char*, rapidjson::SizeType, bool) {
+        return incrementComplexity();
+    }
+    bool Null() {
+        return incrementComplexity();
+    }
+    bool Bool(bool) {
+        return incrementComplexity();
+    }
+    bool Int(int) {
+        return incrementComplexity();
+    }
+    bool Uint(unsigned) {
+        return incrementComplexity();
+    }
+    bool Int64(int64_t) {
+        return incrementComplexity();
+    }
+    bool Uint64(uint64_t) {
+        return incrementComplexity();
+    }
+    bool Double(double) {
+        return incrementComplexity();
+    }
+    bool RawNumber(const char*, rapidjson::SizeType, bool) {
+        return incrementComplexity();
+    }
+    bool String(const char*, rapidjson::SizeType, bool) {
+        return incrementComplexity();
     }
     bool EndObject(rapidjson::SizeType) {
         --depth;
@@ -74,21 +132,35 @@ struct DepthOnlyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
         --depth;
         return true;
     }
-    // All other events (Null, Bool, Int, …) accepted by BaseReaderHandler defaults.
 };
 
 Status parseJsonWithDepthLimit(
     rapidjson::Document& doc,
     const char* json,
-    std::size_t maxDepth) {
+    std::size_t maxDepth,
+    std::size_t maxComplexity) {
+    return parseJsonWithDepthLimit(doc, json, std::strlen(json), maxDepth, maxComplexity);
+}
+
+Status parseJsonWithDepthLimit(
+    rapidjson::Document& doc,
+    const char* json,
+    std::size_t jsonLength,
+    std::size_t maxDepth,
+    std::size_t maxComplexity) {
     // Pass 1: depth-only scan — no DOM allocation.
     {
         rapidjson::Reader reader;
-        rapidjson::StringStream ss(json);
-        DepthOnlyHandler depthHandler(maxDepth);
+        rapidjson::MemoryStream ss(json, jsonLength);
+        DepthOnlyHandler depthHandler(maxDepth, maxComplexity);
         if (!reader.Parse<rapidjson::kParseIterativeFlag>(ss, depthHandler)) {
             if (reader.GetParseErrorCode() == rapidjson::kParseErrorTermination) {
-                return StatusCode::JSON_NESTING_DEPTH_EXCEEDED;
+                if (depthHandler.violation == JsonLimitViolation::DEPTH) {
+                    return StatusCode::JSON_NESTING_DEPTH_EXCEEDED;
+                }
+                if (depthHandler.violation == JsonLimitViolation::COMPLEXITY) {
+                    return StatusCode::JSON_COMPLEXITY_EXCEEDED;
+                }
             }
             std::string details = std::string("Error: ") +
                                   rapidjson::GetParseError_En(reader.GetParseErrorCode()) +
@@ -97,8 +169,9 @@ Status parseJsonWithDepthLimit(
         }
     }
 
-    // Pass 2: real DOM parse (depth is guaranteed safe).
-    doc.Parse<rapidjson::kParseIterativeFlag>(json);
+    // Pass 2: real DOM parse (depth and complexity are guaranteed safe).
+    rapidjson::MemoryStream ss(json, jsonLength);
+    doc.ParseStream<rapidjson::kParseIterativeFlag>(ss);
     if (doc.HasParseError()) {
         std::string details = std::string("Error: ") +
                               rapidjson::GetParseError_En(doc.GetParseError()) +
