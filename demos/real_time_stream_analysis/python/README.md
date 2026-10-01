@@ -6,7 +6,7 @@ In the video analysis we can deal with various form of the source content. Here,
 take the source of the video from a local USB camera, saved encoded video file and an encoded video stream.
 
 The client application is expected to read the video source and send for the analysis every frame to the OpenVINO Model Server via gRPC connection. The analysis can be fully delegated to the model server endpoint with the
-complete processing pipeline arranged via a [MediaPipe graph](../../../docs/mediapipe.md) or [DAG](../../../docs/dag_scheduler.md). The remote analysis can be also reduced just to inference execution but in such case the video frame preprocessing and the postprocessing of the results must be implemented on the client side.
+complete processing pipeline arranged via a [MediaPipe graph](../../../docs/mediapipe.md). The remote analysis can be also reduced just to inference execution but in such case the video frame preprocessing and the postprocessing of the results must be implemented on the client side.
 
 In this demo, reading the video content from a local USB camera and encoded video file is straightforward using OpenCV library. The use case with encoded network stream might require more explanation.
 We will present using RTSP stream transferred by the server component and encoded using FFMPEG utility.

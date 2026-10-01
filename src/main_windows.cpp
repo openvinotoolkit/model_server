@@ -61,6 +61,10 @@ static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 
 using ovms::Server;
 
+namespace {
+constexpr DWORD SERVICE_WORKER_WAIT_INTERVAL_MS = 250;
+}
+
 OvmsWindowsServiceManager& OvmsWindowsServiceManager::instance() {
     static OvmsWindowsServiceManager global;
     return global;
@@ -154,8 +158,11 @@ int main_windows(int argc, char** argv) {
 }
 
 SERVICE_STATUS OvmsWindowsServiceManager::serviceStatus = {0};
+std::mutex OvmsWindowsServiceManager::serviceStateMutex;
 std::unique_ptr<WinServiceStatusWrapper> OvmsWindowsServiceManager::statusHandle = std::make_unique<WinServiceStatusWrapper>();
 std::unique_ptr<WinServiceEventWrapper> OvmsWindowsServiceManager::serviceStopEvent = std::make_unique<WinServiceEventWrapper>();
+std::atomic<ServiceLifecycleState> OvmsWindowsServiceManager::serviceLifecycleState{ServiceLifecycleState::Stopped};
+std::atomic<DWORD> OvmsWindowsServiceManager::serviceWorkerWin32Error{ERROR_SUCCESS};
 LPSTR OvmsWindowsServiceManager::serviceName = _T("ovms");
 LPSTR OvmsWindowsServiceManager::serviceDisplayName = _T("OpenVino Model Server");
 LPSTR OvmsWindowsServiceManager::serviceDesc = _T("Hosts models and makes them accessible to software components over standard network protocols.");
@@ -188,6 +195,19 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     if (this->statusHandle->handle == NULL || this->statusHandle->handle == INVALID_HANDLE_VALUE) {
         DEBUG_LOG("ServiceMain: RegisterserviceCtrlHandler returned error");
         serviceReportEvent("RegisterServiceCtrlHandler");
+        return;
+    }
+
+    // Create the stop event before the service starts accepting stop controls.
+    serviceLifecycleState.store(ServiceLifecycleState::Starting);
+    serviceWorkerWin32Error.store(ERROR_SUCCESS);
+    serviceStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+    serviceStopEvent->handle = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (serviceStopEvent->handle == NULL || serviceStopEvent->handle == INVALID_HANDLE_VALUE) {
+        const DWORD createEventError = GetLastError();
+        DEBUG_LOG("ServiceMain: CreateEvent(serviceStopEvent) returned error");
+        serviceReportEvent("CreateEvent", createEventError);
+        this->setServiceStopStatusWithError(createEventError);
         return;
     }
 
@@ -226,27 +246,54 @@ void WINAPI OvmsWindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
 
     std::unique_ptr<HANDLE, WinHandleDeleter> mainThread(CreateThread(NULL, 0, OvmsWindowsServiceManager::serviceWorkerThread, &OvmsWindowsServiceManager::instance().parsedParameters, 0, NULL));
     if (mainThread.get() == NULL || mainThread.get() == INVALID_HANDLE_VALUE) {
-        // Handle error
+        const DWORD createThreadError = GetLastError();
         DEBUG_LOG("ServiceMain: mainThread == NULL || mainThread == INVALID_HANDLE_VALUE");
-        serviceReportEvent("CreateThread");
-        return;
-    }
-
-    // Create stop event to wait on later.
-    serviceStopEvent->handle = CreateEvent(NULL, TRUE, FALSE, NULL);
-    if (serviceStopEvent->handle == NULL || serviceStopEvent->handle == INVALID_HANDLE_VALUE) {
-        DEBUG_LOG("ServiceMain: CreateEvent(serviceStopEvent) returned error");
-        serviceReportEvent("CreateEvent");
-        this->setServiceStopStatusWithError();
+        serviceReportEvent("CreateThread", createThreadError);
+        this->setServiceStopStatusWithError(createThreadError);
         return;
     }
 
     DEBUG_LOG("ServiceMain: Waiting for Worker Thread to complete");
 
-    WaitForSingleObject(mainThread.get(), INFINITE);
+    const DWORD workerWaitResult = WaitForSingleObject(mainThread.get(), INFINITE);
+    if (workerWaitResult == WAIT_FAILED) {
+        const DWORD waitError = GetLastError();
+        DEBUG_LOG("ServiceMain: WaitForSingleObject(mainThread) returned error");
+        serviceReportEvent("WaitForSingleObject", waitError);
+        this->setServiceStopStatusWithError(waitError);
+        return;
+    }
+    if (workerWaitResult != WAIT_OBJECT_0) {
+        DEBUG_LOG("ServiceMain: WaitForSingleObject(mainThread) returned unexpected status");
+        serviceReportEvent("WaitForSingleObject", ERROR_INVALID_FUNCTION);
+        this->setServiceStopStatusWithError(ERROR_INVALID_FUNCTION);
+        return;
+    }
     DEBUG_LOG("ServiceMain: Worker Thread Stop Event signaled after we leave the WaitForSingle call");
 
-    this->setServiceStopStatusWithSuccess();
+    DWORD workerExitCode = ERROR_GEN_FAILURE;
+    if (!GetExitCodeThread(mainThread.get(), &workerExitCode)) {
+        const DWORD getExitCodeError = GetLastError();
+        DEBUG_LOG("ServiceMain: GetExitCodeThread returned error");
+        serviceReportEvent("GetExitCodeThread", getExitCodeError);
+        this->setServiceStopStatusWithError(getExitCodeError);
+        return;
+    }
+
+    DWORD workerWin32Error = serviceWorkerWin32Error.load();
+    if (workerWin32Error != ERROR_SUCCESS) {
+        this->setServiceStopStatusWithError(workerWin32Error);
+    } else if (workerExitCode == ERROR_SUCCESS) {
+        this->setServiceStopStatusWithSuccess();
+    } else if (workerExitCode == static_cast<DWORD>(OVMS_EX_FAILURE) ||
+               workerExitCode == static_cast<DWORD>(OVMS_EX_WARNING) ||
+               workerExitCode == static_cast<DWORD>(OVMS_EX_USAGE)) {
+        // Map known OVMS application exit codes through setServiceStopStatusWithExitCode
+        // so SCM receives the established Win32 status translation instead of the raw code.
+        this->setServiceStopStatusWithExitCode(static_cast<int>(workerExitCode));
+    } else {
+        this->setServiceStopStatusWithError(workerExitCode);
+    }
     DEBUG_LOG("ServiceMain: Exit");
 
     return;
@@ -389,17 +436,24 @@ struct WinESHandleDeleter {
 };
 
 void OvmsWindowsServiceManager::serviceReportEvent(const std::string& szFunction) {
-    serviceReportEvent(const_cast<LPSTR>(szFunction.c_str()));
+    serviceReportEvent(szFunction.c_str(), GetLastError());
 }
 
-void OvmsWindowsServiceManager::serviceReportEvent(LPSTR szFunction) {
+void OvmsWindowsServiceManager::serviceReportEvent(LPCSTR szFunction) {
+    serviceReportEvent(szFunction, GetLastError());
+}
+
+void OvmsWindowsServiceManager::serviceReportEvent(const std::string& szFunction, DWORD errorCode) {
+    serviceReportEvent(szFunction.c_str(), errorCode);
+}
+
+void OvmsWindowsServiceManager::serviceReportEvent(LPCSTR szFunction, DWORD errorCode) {
     LPCTSTR lpszStrings[2];
     TCHAR Buffer[200];
     std::unique_ptr<SC_HANDLE, WinESHandleDeleter> hEventSource(RegisterEventSource(NULL, OvmsWindowsServiceManager::serviceName));
     if (hEventSource.get() != NULL) {
-        DWORD errcode = GetLastError();
-        std::string message = std::system_category().message(errcode);
-        StringCchPrintf(Buffer, 200, TEXT("%s failed with %lu error: %s"), szFunction, errcode, message.c_str());
+        std::string message = std::system_category().message(errorCode);
+        StringCchPrintf(Buffer, 200, TEXT("%s failed with %lu error: %s"), szFunction, errorCode, message.c_str());
         lpszStrings[0] = OvmsWindowsServiceManager::serviceName;
         lpszStrings[1] = Buffer;
         ReportEvent(hEventSource.get(),  // event log handle
@@ -482,12 +536,23 @@ void WINAPI OvmsWindowsServiceManager::serviceCtrlHandler(DWORD CtrlCode) {
     switch (CtrlCode) {
     case SERVICE_CONTROL_STOP:
         DEBUG_LOG("serviceCtrlHandler: SERVICE_CONTROL_STOP Request");
-        if (serviceStatus.dwCurrentState != SERVICE_RUNNING)
-            break;
+        {
+            std::lock_guard<std::mutex> lock(serviceStateMutex);
+            if (serviceStatus.dwCurrentState != SERVICE_RUNNING &&
+                serviceStatus.dwCurrentState != SERVICE_START_PENDING &&
+                serviceStatus.dwCurrentState != SERVICE_STOP_PENDING)
+                break;
 
-        setServiceStopStatusPending();
-        // Signal the worker thread to start shutting down
-        SetEvent(serviceStopEvent->handle);
+            if (serviceStatus.dwCurrentState != SERVICE_STOP_PENDING) {
+                setServiceStopStatusPending();
+            }
+            serviceLifecycleState.store(ServiceLifecycleState::StopRequested);
+        }
+        if (!SetEvent(serviceStopEvent->handle)) {
+            const DWORD setEventError = GetLastError();
+            DEBUG_LOG("serviceCtrlHandler: SetEvent returned error");
+            serviceReportEvent("SetEvent", setEventError);
+        }
         break;
     // Currently not supported controls
     case SERVICE_CONTROL_INTERROGATE:
@@ -511,12 +576,15 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     ovmsService->setup = false;
 
     //  Start OVMS and check for stop
-    while (WaitForSingleObject(serviceStopEvent->handle, 0) != WAIT_OBJECT_0) {
+    while (serviceLifecycleState.load() != ServiceLifecycleState::StopRequested) {
         // Already started
         if (!ovmsService->setup) {
             std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>* params = (std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>*)lpParam;
             DEBUG_LOG("serviceWorkerThread: Starting ovms from parameters.");
             ovmsService->SetUp(params);
+        }
+        if (serviceLifecycleState.load() == ServiceLifecycleState::StopRequested) {
+            break;
         }
         // Check thread not exited
         if (!ovmsService->isRunning()) {
@@ -525,10 +593,31 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
         }
 
         if (!ovmsService->started && ovmsService->checkModulesStarted()) {
-            // Tell the service controller we are started
-            OvmsWindowsServiceManager::setServiceRunningStatus();
-            ovmsService->started = true;
+            if (serviceLifecycleState.load() == ServiceLifecycleState::StopRequested) {
+                break;
+            }
+            // Publish RUNNING only if startup still owns the lifecycle state.
+            if (OvmsWindowsServiceManager::setServiceRunningStatus()) {
+                ovmsService->started = true;
+            } else {
+                break;
+            }
         }
+
+        DWORD waitResult = WaitForSingleObject(serviceStopEvent->handle, SERVICE_WORKER_WAIT_INTERVAL_MS);
+        if (waitResult == WAIT_OBJECT_0) {
+            serviceLifecycleState.store(ServiceLifecycleState::StopRequested);
+            break;
+        }
+        if (waitResult == WAIT_TIMEOUT) {
+            continue;
+        }
+
+        const DWORD waitError = GetLastError();
+        DEBUG_LOG("serviceWorkerThread: WaitForSingleObject returned error.");
+        serviceReportEvent("WaitForSingleObject", waitError);
+        serviceWorkerWin32Error.store(waitError);
+        break;
     }
 
     if (ovmsService->started || ovmsService->setup) {
@@ -550,9 +639,10 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
 }
 
 void OvmsWindowsServiceManager::setServiceStartStatus() {
+    std::lock_guard<std::mutex> lock(serviceStateMutex);
     ZeroMemory(&serviceStatus, sizeof(serviceStatus));
     serviceStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
-    serviceStatus.dwControlsAccepted = 0;
+    serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
     serviceStatus.dwCurrentState = SERVICE_START_PENDING;
     serviceStatus.dwWin32ExitCode = 0;
     serviceStatus.dwServiceSpecificExitCode = 0;
@@ -565,10 +655,12 @@ void OvmsWindowsServiceManager::setServiceStartStatus() {
     DEBUG_LOG("ServiceMain: SetServiceStatus start");
 }
 
-void OvmsWindowsServiceManager::setServiceStopStatusWithError() {
+void OvmsWindowsServiceManager::setServiceStopStatusWithError(DWORD errorCode) {
+    std::lock_guard<std::mutex> lock(serviceStateMutex);
+    serviceLifecycleState.store(ServiceLifecycleState::Stopped);
     serviceStatus.dwControlsAccepted = 0;
     serviceStatus.dwCurrentState = SERVICE_STOPPED;
-    serviceStatus.dwWin32ExitCode = GetLastError();
+    serviceStatus.dwWin32ExitCode = errorCode;
     serviceStatus.dwCheckPoint = 1;
     if (SetServiceStatus(this->statusHandle->handle, &serviceStatus) == FALSE) {
         DEBUG_LOG("ServiceMain: SetServiceStatus returned error");
@@ -578,6 +670,8 @@ void OvmsWindowsServiceManager::setServiceStopStatusWithError() {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusWithExitCode(const int& exitCode) {
+    std::lock_guard<std::mutex> lock(serviceStateMutex);
+    serviceLifecycleState.store(ServiceLifecycleState::Stopped);
     DWORD exitToError = static_cast<DWORD>(exitCode);
     // Map known exit code to known win errors for proper service status report on error
     // Check https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499- for details
@@ -613,7 +707,13 @@ void OvmsWindowsServiceManager::setServiceStopStatusWithExitCode(const int& exit
     DEBUG_LOG("ServiceMain: SetServiceStatus stop with exit code");
 }
 
-void OvmsWindowsServiceManager::setServiceRunningStatus() {
+bool OvmsWindowsServiceManager::setServiceRunningStatus() {
+    std::lock_guard<std::mutex> lock(serviceStateMutex);
+    ServiceLifecycleState expected = ServiceLifecycleState::Starting;
+    if (!OvmsWindowsServiceManager::serviceLifecycleState.compare_exchange_strong(expected, ServiceLifecycleState::Running)) {
+        return false;
+    }
+
     OvmsWindowsServiceManager::serviceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
     OvmsWindowsServiceManager::serviceStatus.dwCurrentState = SERVICE_RUNNING;
     OvmsWindowsServiceManager::serviceStatus.dwWin32ExitCode = 0;
@@ -622,8 +722,11 @@ void OvmsWindowsServiceManager::setServiceRunningStatus() {
     if (SetServiceStatus(OvmsWindowsServiceManager::statusHandle->handle, &OvmsWindowsServiceManager::serviceStatus) == FALSE) {
         DEBUG_LOG("OvmsWindowsServiceManager: SetServiceStatus returned error");
         serviceReportEvent("SetServiceStatus");
+        OvmsWindowsServiceManager::serviceLifecycleState.store(ServiceLifecycleState::StopRequested);
+        return false;
     }
     DEBUG_LOG("OvmsWindowsServiceManager: SetServiceStatus running");
+    return true;
 }
 
 std::string OvmsWindowsServiceManager::getRegValue(const winreg::RegKey& key, const std::wstring& name, const DWORD& regType) {
@@ -731,6 +834,7 @@ void OvmsWindowsServiceManager::setPythonPathRegistry() {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusPending() {
+    serviceLifecycleState.store(ServiceLifecycleState::StopRequested);
     serviceStatus.dwControlsAccepted = 0;
     serviceStatus.dwCurrentState = SERVICE_STOP_PENDING;
     serviceStatus.dwWin32ExitCode = 0;
@@ -744,6 +848,8 @@ void OvmsWindowsServiceManager::setServiceStopStatusPending() {
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusWithSuccess() {
+    std::lock_guard<std::mutex> lock(serviceStateMutex);
+    serviceLifecycleState.store(ServiceLifecycleState::Stopped);
     serviceStatus.dwControlsAccepted = 0;
     serviceStatus.dwCurrentState = SERVICE_STOPPED;
     serviceStatus.dwWin32ExitCode = 0;
