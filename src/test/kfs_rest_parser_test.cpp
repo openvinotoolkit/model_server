@@ -1042,6 +1042,18 @@ TEST_F(KFSRestParserTest, ComplexityLimitExceededBeforeDomParse) {
     EXPECT_EQ(status, StatusCode::JSON_COMPLEXITY_EXCEEDED);
 }
 
+TEST_F(KFSRestParserTest, ComplexityLimitBoundary) {
+    rapidjson::Document doc;
+    std::string request = R"({"inputs":[{"name":"input0","shape":[4],"datatype":"FP32","data":[0,1,2,3]}]})";
+
+    auto okStatus = parseJsonWithDepthLimit(doc, request.c_str(), request.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, 17);
+    EXPECT_EQ(okStatus, StatusCode::OK);
+
+    rapidjson::Document failingDoc;
+    auto failingStatus = parseJsonWithDepthLimit(failingDoc, request.c_str(), request.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, 16);
+    EXPECT_EQ(failingStatus, StatusCode::JSON_COMPLEXITY_EXCEEDED);
+}
+
 TEST_F(KFSRestParserTest, ParseJsonPrefixWithoutCopyingSubstring) {
     std::string jsonPrefix = R"({"inputs":[{"name":"input0","shape":[1],"datatype":"FP32","data":[1.5]}]})";
     std::string request = jsonPrefix + std::string("BINARY_SUFFIX");

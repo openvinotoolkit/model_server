@@ -347,6 +347,12 @@ TEST_F(OvmsConfigDeathTest, nonExistingLogLevel) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "log_level should be one of");
 }
 
+TEST_F(OvmsConfigDeathTest, jsonMaxComplexityZero) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--json_max_complexity", "0"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "json_max_complexity must be greater than 0");
+}
+
 TEST_F(OvmsConfigDeathTest, RestPortNegativeUint64Max) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "0xffffffffffffffff"};
     int arg_count = 5;
@@ -2527,9 +2533,10 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--log_level", "ERROR",
         "--grpc_max_threads", "100",
         "--grpc_memory_quota", "1000000",
+        "--json_max_complexity", "123456",
         "--config_path", "/config.json"};
 
-    int arg_count = 45;
+    int arg_count = 47;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2563,6 +2570,7 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.configPath(), "/config.json");
     EXPECT_EQ(config.grpcMaxThreads(), 100);
     EXPECT_EQ(config.grpcMemoryQuota(), (size_t)1000000);
+    EXPECT_EQ(config.jsonMaxComplexity(), (size_t)123456);
     EXPECT_TRUE(config.allowCredentials());
     EXPECT_EQ(config.allowedHeaders(), "Content-Type");
     EXPECT_EQ(config.allowedMethods(), "GET,POST");
@@ -2587,6 +2595,22 @@ TEST(OvmsConfigTest, disableInputCountValidationDefaultsToFalse) {
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     EXPECT_FALSE(config.disableInputCountValidation());
+}
+
+TEST(OvmsConfigTest, jsonMaxComplexityDefaultsToBuiltInLimit) {
+    char* n_argv[] = {
+        "ovms",
+        "--rest_port",
+        "45",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    EXPECT_EQ(config.jsonMaxComplexity(), ovms::DEFAULT_MAX_JSON_COMPLEXITY);
 }
 
 TEST(OvmsConfigTest, allowedLocalMediaPathRelativeIsNormalized) {

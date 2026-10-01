@@ -502,7 +502,7 @@ static Status createV3HttpPayload(
     } else if (isApplicationJson) {
         {
             OVMS_PROFILE_SCOPE("rapidjson parse");
-            auto status = parseJsonWithDepthLimit(*parsedJson, request_body.data(), request_body.size(), DEFAULT_MAX_JSON_NESTING_DEPTH);
+            auto status = parseJsonWithDepthLimit(*parsedJson, request_body.data(), request_body.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, Config::instance().jsonMaxComplexity());
             if (!status.ok()) {
                 ensureJsonParserInErrorState(parsedJson);
                 if (status == StatusCode::JSON_NESTING_DEPTH_EXCEEDED) {
