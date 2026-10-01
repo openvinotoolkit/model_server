@@ -113,13 +113,17 @@ bool loadLlmCalculatorsPlugin() {
 }
 
 void* getLlmCalculatorsPluginSymbol(const char* symbolName) {
-    if (llmPluginHandle == nullptr && !loadLlmCalculatorsPlugin()) {
+    if (!loadLlmCalculatorsPlugin()) {
+        return nullptr;
+    }
+    auto handle = llmPluginHandle;
+    if (handle == nullptr) {
         return nullptr;
     }
 #ifdef _WIN32
-    return reinterpret_cast<void*>(GetProcAddress(llmPluginHandle, symbolName));
+    return reinterpret_cast<void*>(GetProcAddress(handle, symbolName));
 #else
-    return dlsym(llmPluginHandle, symbolName);
+    return dlsym(handle, symbolName);
 #endif
 }
 
