@@ -209,9 +209,6 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithDegenerateKeyword) {
 }
 
 TEST_F(Gemma4OutputParserTest, ParseReasoningWithSkippedKeywordLeavesEmptyHeaderLine) {
-    // Keyword skipped entirely - the opener is directly followed by the header-terminating
-    // newline. That newline must still be consumed as the (empty) header line, not misread as
-    // "no keyword to skip" and leaked into reasoning.
     std::string input = "<|channel>\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
 
     auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
@@ -223,8 +220,6 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithSkippedKeywordLeavesEmptyHeader
 }
 
 TEST_F(Gemma4OutputParserTest, ParseReasoningDoesNotTreatContentNewlineAsHeaderBoundary) {
-    // A newline arriving in CONTENT, after the closing tag, must not be mistaken for the
-    // channel-header newline (which would wrongly discard the real reasoning text).
     std::string input = "<|channel>reasoning<channel|>first content line\nsecond line";
 
     auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
@@ -236,7 +231,6 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningDoesNotTreatContentNewlineAsHeaderB
 }
 
 TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedByNoKeyword) {
-    // Opener directly followed by a space - no keyword to skip, the sentence itself is body.
     std::string input = "<|channel> way of thinking about this is very mature and thorough.<channel|>SOME CONTENT WITHOUT TOOL CALL";
 
     auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
@@ -248,9 +242,6 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedByNoKeyword) {
 }
 
 TEST_F(Gemma4OutputParserTest, ParseReasoningWithNoKeywordPreservesMultilineFirstLine) {
-    // Keyword omitted entirely and the reasoning itself is multiline - the first line is a real
-    // multi-word sentence, not a single-token keyword, so the newline it ends with must not be
-    // mistaken for a header terminator (which would silently drop the first line).
     std::string input = "<|channel>first line\nsecond line<channel|>SOME CONTENT WITHOUT TOOL CALL";
 
     auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
@@ -262,10 +253,6 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithNoKeywordPreservesMultilineFirs
 }
 
 TEST_F(Gemma4OutputParserTest, ParseReasoningWithDuplicatedEndTagDoesNotEmitInterveningTextTwice) {
-    // A single decoded chunk holding two "<channel|>" occurrences (e.g. a stray repeated end tag)
-    // must not have the text between them emitted twice: once leaked into the first reasoning
-    // delta (via an overly-greedy last-occurrence match) and again from the remainder that
-    // OutputParser re-queues after the first occurrence.
     std::string chunk = "<|channel>thought\nSome reasoning<channel|>Oops<channel|>Final content";
 
     auto doc1 = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
@@ -279,9 +266,6 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithDuplicatedEndTagDoesNotEmitInte
 }
 
 TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedBySpaceThenKeywordNewline) {
-    // Opener followed by a space, but a keyword line still follows before the real newline
-    // separator - the leading space must not force an immediate "no keyword" decision that
-    // would swallow the whole header line (space + keyword) as reasoning body text.
     std::string input = "<|channel> thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
 
     auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
@@ -293,8 +277,6 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedBySpaceThenKeywor
 }
 
 TEST_F(Gemma4OutputParserTest, ImplicitStartStillConsumesGeneratedChannelHeader) {
-    // Prompt supplies only the bare opener (implicit start); the model still generates its own
-    // keyword line afterward, which must still be stripped as a header, not leaked as reasoning.
     outputParserWithRegularToolParsing->detectAndSetImplicitReasoningStart("<|turn>model\n<|channel>");
     std::vector<std::pair<std::string, std::optional<std::string>>> chunks{
         {"thought\n", std::nullopt},

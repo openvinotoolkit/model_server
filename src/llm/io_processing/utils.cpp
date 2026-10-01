@@ -82,8 +82,7 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
         }
 
         // Structural chars inside an already-open quote (of either kind) belong to the
-        // value's own payload, not to the outer structure - e.g. the '}' in a bare value
-        // like fn('a}b') must not desync brace tracking for the real terminator that follows.
+        // value's own payload, not to the outer structure.
         const bool insideAnyQuote = quoteDepth != 0 || singleQuoteDepth != 0;
 
         if (!insideAnyQuote && str[i] == '{') {
@@ -101,19 +100,11 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
             const bool nextIsWord = (i + 1 < str.size()) && isWordChar(str[i + 1]);
 
             if (singleQuoteDepth == 0) {
-                // Opening single quote: any non-word predecessor counts as a value boundary
-                // (covers operators like '+' in x+'a,b' too, not just an explicit punctuation
-                // whitelist) - e.g. in s'START', the quote directly follows the word char 's'
-                // and must not be mistaken for an opener.
                 const bool precededByBoundary = (i == 0) || !prevIsWord;
                 if (precededByBoundary) {
                     singleQuoteDepth = 1;
                 }
             } else {
-                // Inside single-quoted text: treat apostrophes in words as plain
-                // characters (it's, Johns'). Close only when the following non-space
-                // character is a non-word boundary (any operator/punctuation, not just a
-                // fixed delimiter whitelist - e.g. '+' in 'a,b'+y) or end of string.
                 if (prevIsWord && nextIsWord) {
                     continue;
                 }

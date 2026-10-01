@@ -41,7 +41,6 @@ public:
             if (configOverride.has_value())
                 return configOverride;
             OutputParsingConfig cfg;
-            // Bare opener: tolerate any/corrupted keyword after it.
             cfg.startTags = {"<|channel>"};
             cfg.preambleStartTags = {"thought\n"};
             cfg.tokenIdStartTags = {"<|channel>"};

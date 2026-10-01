@@ -33,15 +33,12 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
 
     if (phase == Phase::AwaitingOpener) {
         if (!isImplicitStart()) {
-            const std::string& opener = parsingConfig.startTags[0];  // "<|channel>"
+            const std::string& opener = parsingConfig.startTags[0];
             const size_t openerPos = text.find(opener);
             if (openerPos != std::string::npos) {
                 text = text.substr(openerPos + opener.size());
             }
         }
-        // Implicit start means the prompt already supplied the opener, not the keyword line -
-        // the model may still generate its own (possibly corrupted) header, so header detection
-        // must run either way.
         phase = Phase::AwaitingChannelHeader;
     }
 
@@ -49,9 +46,6 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
         pendingChannelHeaderText += text;
         const size_t newlinePos = pendingChannelHeaderText.find('\n');
         const size_t endTagPos = pendingChannelHeaderText.find(parsingConfig.endTag);
-        // A first line with an internal space is a real multi-word reasoning sentence, not a
-        // discardable single-token keyword - it must be kept, otherwise a keyword-omitted
-        // multiline body would silently lose its first line.
         bool firstLineIsMultiWord = false;
         if (newlinePos != std::string::npos) {
             const std::string firstLine = pendingChannelHeaderText.substr(0, newlinePos);
@@ -70,8 +64,6 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
             (endTagPos == std::string::npos || newlinePos < endTagPos)) {
             text = pendingChannelHeaderText.substr(newlinePos + 1);
         } else if (endTagPos != std::string::npos || finishReason != ov::genai::GenerationFinishReason::NONE) {
-            // No header line ever materialized (e.g. keyword missing entirely, or opener directly
-            // followed by body text with no separating newline) - the whole span is reasoning body.
             text = pendingChannelHeaderText;
         } else {
             return std::nullopt;
