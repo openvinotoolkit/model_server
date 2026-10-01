@@ -17,6 +17,7 @@
 #include <string>
 #include <system_error>
 
+#include <fmt/ranges.h>
 #include <gtest/gtest.h>
 #include <openvino/genai/chat_history.hpp>
 
@@ -179,6 +180,16 @@ TEST(ImageDecodingProcessorTest, HttpUrlWithNoAllowedDomainsConfiguredRejected) 
 }
 
 TEST(ImageDecodingProcessorTest, RuntimeConfigSnapshotCarriesMediaSettings) {
+    struct RuntimeConfigGuard {
+        RuntimeConfig saved = getRuntimeConfig();
+
+        ~RuntimeConfigGuard() {
+            const std::string domains = fmt::format("{}", fmt::join(saved.allowedMediaDomains, ","));
+            setRuntimeConfig(saved.allowedLocalMediaPath ? saved.allowedLocalMediaPath->c_str() : nullptr,
+                domains.c_str(), saved.cacheDir.c_str(), saved.restWorkers, saved.verboseResponse);
+        }
+    } guard;
+
     setRuntimeConfig("/models/media", "raw.githubusercontent.com,githubusercontent.com", "/models/cache", 8, true);
 
     const auto& runtimeConfig = getRuntimeConfig();
