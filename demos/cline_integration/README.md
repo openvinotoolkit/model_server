@@ -109,7 +109,7 @@ It may be changed in Cline's **Settings** under **Reasoning Effort** section.
 
 ## Coding task
 
-For coding task example check [CodingAgenticWorflow Demo](https://github.com/intel-samples/agentic-demos/tree/main/CodingAgenticWorkflow#setup-ovms-server).
+For coding task example check [CodingAgenticWorkflow Demo](https://github.com/intel-samples/agentic-demos/tree/main/CodingAgenticWorkflow#setup-ovms-server).
 
 ## Agentic and coding capabilities summary
 
