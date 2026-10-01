@@ -63,6 +63,8 @@ models/
 the version number in parameters, by default, the latest version is served.
 - As an alternative for local filesystem only, `model_path` / `base_path` can point directly to a single model file (`.xml`, `.onnx`, `.pdmodel`, `.pdiparams`, `.pb`, `.tflite`). In this mode, Model Server exposes synthetic version `1`.
 - Every version folder _must_ include model files, that is, .bin and .xml for IR, .onnx for ONNX, .pdiparams and .pdmodel for Paddlepaddle. The file name can be arbitrary.
+
+> **Note:** [Idle servable management](./idle_servable_management.md) (preview) can unload inactive model groups and reload them on inference request. Set `group_name` in model configuration to load and unload related models together.
 - Each model defines input and output tensors in the AI graph. The client passes data to model input tensors by filling appropriate entries in the request input map.
 - Prediction results can be read from the response output map. By default, OpenVINO™ Model Server uses model tensor names as input and output names in prediction requests and responses. The client passes the input values to the request and reads the results by referring to the corresponding output names.
 - You can optionally add a `mapping_config.json` file to customize input and output names. This file maps tensor names to user-friendly keys, which is particularly useful for models with complex tensor naming. Here is an example:

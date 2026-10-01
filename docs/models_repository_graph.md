@@ -23,6 +23,7 @@ graph_models
 
 In case the graph includes python nodes, there should be included also a python file with the node implementation.
 
+> **Note:** [Idle servable management](./idle_servable_management.md) (preview) can unload inactive graph groups and reload them on inference request. Set `group_name` in graph configuration to load and unload related servables together.
 
 For more information on how to use MediaPipe graphs, refer to the [article](./mediapipe.md).
 Check also the documentation about [python nodes](./python_support/reference.md)
