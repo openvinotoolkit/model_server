@@ -140,6 +140,17 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "pipelinedefinitionstatus",
+    hdrs = ["pipelinedefinitionstatus.hpp"],
+    srcs = ["pipelinedefinitionstatus.cpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//src:libovmsmodelversionstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "mediapipegraphconfig",
     srcs = [
         "mediapipegraphconfig.cpp",
@@ -201,7 +212,7 @@ ovms_cc_library(
         # Keep the in-process Python calculator bridge available for test/runtime
         # use without forcing the main ovms binary to link Python directly.
         "//src/python:python_calculators_runtime_objects",
-        "//src/dags:pipelinedefinitionstatus",
+        ":pipelinedefinitionstatus",
         "//src:libovms_single_version_servable_definition",
         "//src:libovms_tensorinfo",
         "//src:libovmslogging",
