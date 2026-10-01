@@ -50,6 +50,7 @@
 #include "../../llm/text_utils.hpp"
 #include "../../mediapipe_internal/mediapipefactory.hpp"
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../../mediapipe_internal/runtime_config.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
 #include "src/filesystem/filesystem.hpp"
@@ -4546,15 +4547,20 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
 struct GlobalCacheDirGuard {
     ovms::ServerSettingsImpl savedServerSettings;
     ovms::ModelsSettingsImpl savedModelsSettings;
+    ovms::RuntimeConfig savedRuntimeConfig;
     std::string cacheDirToRemove;
 
     explicit GlobalCacheDirGuard(std::string cacheDirToRemove = "") :
         savedServerSettings(ovms::Config::instance().getServerSettings()),
         savedModelsSettings(ovms::Config::instance().getModelSettings()),
+        savedRuntimeConfig(ovms::getRuntimeConfig()),
         cacheDirToRemove(std::move(cacheDirToRemove)) {}
 
     ~GlobalCacheDirGuard() {
         ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
+        const std::string allowedMediaDomains = fmt::format("{}", fmt::join(savedRuntimeConfig.allowedMediaDomains, ","));
+        ovms::setRuntimeConfig(savedRuntimeConfig.allowedLocalMediaPath ? savedRuntimeConfig.allowedLocalMediaPath->c_str() : nullptr,
+            allowedMediaDomains.c_str(), savedRuntimeConfig.cacheDir.c_str(), savedRuntimeConfig.restWorkers, savedRuntimeConfig.verboseResponse);
         if (!cacheDirToRemove.empty()) {
             std::error_code ec;
             std::filesystem::remove_all(cacheDirToRemove, ec);
