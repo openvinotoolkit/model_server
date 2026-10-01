@@ -1079,9 +1079,6 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithUnwrappedValueLeadingSpace) {
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"destination":"backup_tests","source":"raw_value<|\"|>rest<|\"|>"})");
 }
 
-// A bare (non-<|"|>-wrapped) function-call-style value containing a literal brace, protected
-// only by single quotes - the brace inside must not be mistaken for the tool call's own
-// terminator.
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithParenthesizedSingleQuotedValueContainingBrace) {
     std::string input = "<|tool_call>call:exec{code:fn('a}b')}<tool_call|>";
     auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
