@@ -29,6 +29,7 @@
 #include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "src/status.hpp"
+#include "src/utils/rapidjson_utils.hpp"
 #include "../version.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
@@ -44,6 +45,20 @@ using ovms::Server;
 using ovms::StatusCode;
 
 namespace {
+std::string makeKfsComplexityLimitPayload(size_t dataElements) {
+    std::string payload;
+    payload.reserve(dataElements * 2 + 128);
+    payload += R"({"inputs":[{"name":"b","shape":[1],"datatype":"FP32","data":[)";
+    if (dataElements > 0) {
+        payload.push_back('0');
+        for (size_t i = 1; i < dataElements; ++i) {
+            payload += ",0";
+        }
+    }
+    payload += R"(]}]})";
+    return payload;
+}
+
 class MockedServer : public Server {
 public:
     MockedServer() = default;
@@ -1461,6 +1476,16 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidJson) {
     auto status = HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request, inferenceHeaderContentLength);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - Error: Invalid value. Offset: 12");
+}
+
+TEST_F(HttpRestApiHandlerTest, PrepareGrpcRequestRejectsExcessiveJsonComplexity) {
+    std::string request_body = makeKfsComplexityLimitPayload(ovms::DEFAULT_MAX_JSON_COMPLEXITY);
+
+    ::KFSRequest grpc_request;
+    auto status = HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
+
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::JSON_COMPLEXITY_EXCEEDED);
+    ASSERT_EQ(status.string(), "JSON structure exceeds the allowed complexity");
 }
 
 TEST_F(HttpRestApiHandlerWithStringModelTest, invalidPrecision) {

@@ -15,8 +15,10 @@
 //*****************************************************************************
 #include "rest_parser.hpp"
 
+#include <cstring>
 #include <string>
 
+#include "config.hpp"
 #include "logging.hpp"
 #include "status.hpp"
 #include "utils/rapidjson_utils.hpp"
@@ -251,8 +253,12 @@ Status KFSRestParser::parseInputs(rapidjson::Value& node) {
 }
 
 Status KFSRestParser::parse(const char* json) {
+    return parse(json, std::strlen(json));
+}
+
+Status KFSRestParser::parse(const char* json, size_t jsonLength) {
     rapidjson::Document doc;
-    auto status = parseJsonWithDepthLimit(doc, json, MAX_NESTING_DEPTH);
+    auto status = parseJsonWithDepthLimit(doc, json, jsonLength, MAX_NESTING_DEPTH, Config::instance().jsonMaxComplexity());
     if (!status.ok()) {
         SPDLOG_DEBUG("Request is not a valid JSON: {}", status.string());
         return status;

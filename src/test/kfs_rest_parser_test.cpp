@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "../rest_parser.hpp"
+#include "../utils/rapidjson_utils.hpp"
 #include "src/status.hpp"
 
 using namespace ovms;
@@ -1030,4 +1031,38 @@ TEST_F(KFSRestParserTest, NestingDepthExceeded_FP32) {
     std::string request = R"({"inputs":[{"name":"input0","shape":[1],"datatype":"FP32","data":)" + makeNestedArrayJson(200) + "}]}";
     auto status = parser.parse(request.c_str());
     EXPECT_EQ(status, StatusCode::JSON_NESTING_DEPTH_EXCEEDED);
+}
+
+TEST_F(KFSRestParserTest, ComplexityLimitExceededBeforeDomParse) {
+    rapidjson::Document doc;
+    std::string request = R"({"inputs":[{"name":"input0","shape":[4],"datatype":"FP32","data":[0,1,2,3]}]})";
+
+    auto status = parseJsonWithDepthLimit(doc, request.c_str(), request.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, 10);
+
+    EXPECT_EQ(status, StatusCode::JSON_COMPLEXITY_EXCEEDED);
+}
+
+TEST_F(KFSRestParserTest, ComplexityLimitBoundary) {
+    rapidjson::Document doc;
+    std::string request = R"({"inputs":[{"name":"input0","shape":[4],"datatype":"FP32","data":[0,1,2,3]}]})";
+
+    auto okStatus = parseJsonWithDepthLimit(doc, request.c_str(), request.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, 17);
+    EXPECT_EQ(okStatus, StatusCode::OK);
+
+    rapidjson::Document failingDoc;
+    auto failingStatus = parseJsonWithDepthLimit(failingDoc, request.c_str(), request.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, 16);
+    EXPECT_EQ(failingStatus, StatusCode::JSON_COMPLEXITY_EXCEEDED);
+}
+
+TEST_F(KFSRestParserTest, ParseJsonPrefixWithoutCopyingSubstring) {
+    std::string jsonPrefix = R"({"inputs":[{"name":"input0","shape":[1],"datatype":"FP32","data":[1.5]}]})";
+    std::string request = jsonPrefix + std::string("BINARY_SUFFIX");
+
+    auto status = parser.parse(request.data(), jsonPrefix.size());
+
+    ASSERT_EQ(status, StatusCode::OK);
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].contents().fp32_contents_size(), 1);
+    EXPECT_FLOAT_EQ(proto.inputs()[0].contents().fp32_contents(0), 1.5f);
 }
