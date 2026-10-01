@@ -27,7 +27,6 @@
 #include <openvino/openvino.hpp>
 
 #include "src/config.hpp"
-#include "src/dags/pipelinedefinition.hpp"
 #include "src/grpcservermodule.hpp"
 #include "src/http_rest_api_handler.hpp"
 #include "src/kfs_frontend/kfs_grpc_inference_service.hpp"

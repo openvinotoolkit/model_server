@@ -27,11 +27,6 @@
 #include "src/port/rapidjson_writer.hpp"
 #pragma warning(pop)
 
-#include "src/dags/pipeline.hpp"
-#include "src/dags/pipeline_factory.hpp"
-#include "src/dags/pipelinedefinition.hpp"
-#include "src/servable_definition_unload_guard.hpp"
-#include "src/execution_context.hpp"
 #include "src/version.hpp"
 #include "src/modelinstance.hpp"
 #include "capi_request_utils.hpp"  // TODO @atobisze must be before executor
@@ -44,7 +39,7 @@
 #include "src/module_names.hpp"
 #include "src/ovms.h"  // NOLINT
 #include "src/profiler.hpp"
-#include "src/dags/pipelinedefinitionstatus.hpp"
+#include "src/mediapipe_internal/pipelinedefinitionstatus.hpp"
 #include "src/servable_definition.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
 #include "src/server.hpp"
@@ -63,16 +58,12 @@
 #include "src/filesystem/filesystem.hpp"
 
 using ovms::Buffer;
-using ovms::ExecutionContext;
 using ovms::InferenceParameter;
 using ovms::InferenceRequest;
 using ovms::InferenceResponse;
 using ovms::InferenceTensor;
 using ovms::ModelInstanceUnloadGuard;
 using ovms::ModelManager;
-using ovms::Pipeline;
-using ovms::PipelineDefinition;
-using ovms::ServableDefinitionUnloadGuard;
 using ovms::ServableManagerModule;
 using ovms::Server;
 using ovms::Status;
@@ -110,30 +101,6 @@ static Status getModelInstance(ovms::Server& server, const std::string& modelNam
     return modelManager->getModelInstance(modelName, modelVersion, modelInstance, modelInstanceUnloadGuardPtr);
 }
 
-static Status getPipeline(ovms::Server& server, const InferenceRequest* request,
-    InferenceResponse* response,
-    std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
-    OVMS_PROFILE_FUNCTION();
-    ModelManager* modelManager{nullptr};
-    auto status = getModelManager(server, &modelManager);
-    if (!status.ok()) {
-        return status;
-    }
-    return modelManager->getPipelineFactory().create(pipelinePtr, request->getServableName(), request, response, *modelManager);
-}
-
-static Status getPipelineDefinition(Server& server, const std::string& servableName, PipelineDefinition** pipelineDefinition, std::unique_ptr<ServableDefinitionUnloadGuard>& unloadGuard) {
-    ModelManager* modelManager{nullptr};
-    Status status = getModelManager(server, &modelManager);
-    if (!status.ok()) {
-        return status;
-    }
-    *pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
-    if (!*pipelineDefinition) {
-        return Status(StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
-    }
-    return (*pipelineDefinition)->waitForLoaded(unloadGuard, 0);
-}
 }  // namespace
 
 #ifdef __cplusplus
@@ -497,12 +464,9 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVM
 
 DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds) {
-    if (settings == nullptr) {
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NONEXISTENT_PTR, "server settings"));
-    }
-    ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(settings);
-    serverSettings->resourcesCleanerPollWaitSeconds = seconds;
-    return nullptr;
+    (void)settings;
+    (void)seconds;
+    return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NOT_IMPLEMENTED, "DAGs are no longer supported"));
 }
 
 DLL_PUBLIC OVMS_Status* OVMS_ServerSettingsSetCpuExtensionPath(OVMS_ServerSettings* settings,
@@ -1061,14 +1025,9 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
         req->getServableVersion());
 
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
     auto status = getModelInstance(server, req->getServableName(), req->getServableVersion(), modelInstance, modelInstanceUnloadGuard);
 
-    if (status == StatusCode::MODEL_NAME_MISSING) {
-        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", req->getServableName());
-        status = getPipeline(server, req, res.get(), pipelinePtr);
-    }
     if (!status.ok()) {
         if (modelInstance) {
             //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
@@ -1076,18 +1035,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
-    // fix execution context and metrics
-    ExecutionContext executionContext{
-        ExecutionContext::Interface::GRPC,
-        ExecutionContext::Method::ModelInfer};
-
-    if (pipelinePtr) {
-        status = pipelinePtr->execute(executionContext);
-        // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
-    } else {
-        status = ovms::infer(*modelInstance, req, res.get(), modelInstanceUnloadGuard);
-        //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
-    }
+    status = ovms::infer(*modelInstance, req, res.get(), modelInstanceUnloadGuard);
 
     if (!status.ok()) {
         return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
@@ -1095,11 +1043,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
 
     timer.stop(TIMER_TOTAL);
     double reqTotal = timer.elapsed<microseconds>(TIMER_TOTAL);
-    if (pipelinePtr) {
-        //  OBSERVE_IF_ENABLED(pipelinePtr->getMetricReporter().reqTimeGrpc, reqTotal);
-    } else {
-        //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);
-    }
+    //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);
     SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
     callbackGuard.success = true;
     return nullptr;
@@ -1124,15 +1068,10 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_Inferen
         req->getServableVersion());
 
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::Pipeline> pipelinePtr;
 
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     auto status = getModelInstance(server, req->getServableName(), req->getServableVersion(), modelInstance, modelInstanceUnloadGuard);
 
-    if (status == StatusCode::MODEL_NAME_MISSING) {
-        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", req->getServableName());
-        status = getPipeline(server, req, nullptr, pipelinePtr);
-    }
     if (!status.ok()) {
         if (modelInstance) {
             //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);
@@ -1140,18 +1079,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_Inferen
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return reinterpret_cast<OVMS_Status*>(new Status(status));
     }
-    // fix execution context and metrics
-    ExecutionContext executionContext{
-        ExecutionContext::Interface::GRPC,
-        ExecutionContext::Method::ModelInfer};
-    if (pipelinePtr) {
-        SPDLOG_DEBUG("Async inference for DAG is not implemented");  // TODO add negative test
-        return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NOT_IMPLEMENTED));
-        // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
-    } else {
-        status = ovms::modelInferAsync<InferenceRequest, InferenceResponse>(*modelInstance, req, modelInstanceUnloadGuard);
-        //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
-    }
+    status = ovms::modelInferAsync<InferenceRequest, InferenceResponse>(*modelInstance, req, modelInstanceUnloadGuard);
 
     if (!status.ok()) {
         return reinterpret_cast<OVMS_Status*>(new Status(status));
@@ -1258,21 +1186,9 @@ DLL_PUBLIC OVMS_Status* OVMS_GetServableMetadata(OVMS_Server* serverPtr, const c
     // TODO metrics
     std::unique_ptr<ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     std::shared_ptr<ovms::ModelInstance> modelInstance;
-    std::unique_ptr<ovms::Pipeline> pipelinePtr;
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     auto status = getModelInstance(server, servableName, servableVersion, modelInstance, modelInstanceUnloadGuard);
 
-    if (status == StatusCode::MODEL_NAME_MISSING) {
-        SPDLOG_DEBUG("Requested model: {} does not exist. Searching for pipeline with that name...", servableName);
-        PipelineDefinition* pipelineDefinition = nullptr;
-        std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
-        status = getPipelineDefinition(server, servableName, &pipelineDefinition, unloadGuard);
-        if (!status.ok() || !pipelineDefinition) {
-            return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
-        }
-        *servableMetadata = reinterpret_cast<OVMS_ServableMetadata*>(new ovms::ServableMetadata(servableName, servableVersion, pipelineDefinition->getInputsInfo(), pipelineDefinition->getOutputsInfo()));
-        return nullptr;
-    }
     if (!status.ok()) {
         if (modelInstance) {
             //    INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().reqFailGrpcPredict);

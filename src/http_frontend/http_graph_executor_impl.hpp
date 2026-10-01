@@ -36,10 +36,6 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#if (PYTHON_DISABLE == 0)
-#include "src/python/python_backend.hpp"
-#endif
-
 #include "src/http_async_writer_interface.hpp"
 
 namespace ovms {

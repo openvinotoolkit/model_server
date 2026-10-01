@@ -16,7 +16,7 @@
 
 #include "python_backend.hpp"
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 

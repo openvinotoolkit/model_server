@@ -26,7 +26,7 @@
 #include "python_backend.hpp"
 #include "utils.hpp"
 #include "src/kfs_python_tensor_bridge.hpp"
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "src/status.hpp"
 
 #pragma warning(push)

@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/dags/pipelinedefinitionstatus.hpp"
+#include "src/mediapipe_internal/pipelinedefinitionstatus.hpp"
 #include "src/modelinstance.hpp"
 #include "src/prediction_service_utils.hpp"
 #include "src/status.hpp"

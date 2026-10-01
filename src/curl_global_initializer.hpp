@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,25 +15,11 @@
 //*****************************************************************************
 #pragma once
 
-#include <stddef.h>
-
-#include "src/custom_node_interface.h"  // NOLINT
-#include "node_library.hpp"
+#include "status.hpp"
 
 namespace ovms {
 
-bool operator==(const CustomNodeTensor& t1, const CustomNodeTensor& t2);
-
-class CustomNodeOutputAllocator {
-    struct ::CustomNodeTensor tensor;
-    NodeLibrary nodeLibrary;
-    void* customNodeLibraryInternalManager;
-
-public:
-    CustomNodeOutputAllocator(struct CustomNodeTensor tensor, NodeLibrary nodeLibrary, void* customNodeLibraryInternalManager);
-    void* allocate(const size_t bytes, const size_t alignment = alignof(max_align_t));
-    void deallocate(void* handle, const size_t bytes, size_t alignment = alignof(max_align_t)) noexcept;
-    bool is_equal(const CustomNodeOutputAllocator& other) const;
-};
+Status initializeCurlGlobal();
+void cleanupCurlGlobal();
 
 }  // namespace ovms

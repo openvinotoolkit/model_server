@@ -56,7 +56,7 @@ TEST_F(VLMServableInitializationTest, determinePipelineTypeDefault) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B-int4-ov"
+                models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-llava-ov"
             }
         }
         input_stream_handler {
@@ -98,7 +98,7 @@ TEST_F(VLMServableInitializationTest, determinePipelineType_VLM_Specified) {
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
                 pipeline_type: VLM
-                models_path: "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B-int4-ov"
+                models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-llava-ov"
             }
         }
         input_stream_handler {
@@ -140,7 +140,7 @@ TEST_F(VLMServableInitializationTest, determinePipelineType_LM_CB_Specified) {
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
                 pipeline_type: LM_CB
-                models_path: "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B-int4-ov"
+                models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-llava-ov"
             }
         }
         input_stream_handler {
@@ -182,8 +182,8 @@ TEST_F(VLMServableInitializationTest, fastDraftNotSupportedForVlm) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B-int4-ov"
-                draft_models_path: "/ovms/src/test/llm_testing/OpenVINO/InternVL2-1B-int4-ov"
+                models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-llava-ov"
+                draft_models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-llava-ov"
             }
         }
         input_stream_handler {

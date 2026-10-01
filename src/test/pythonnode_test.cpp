@@ -29,10 +29,10 @@
 #pragma warning(pop)
 
 #include "src/config.hpp"
-#include "src/dags/pipelinedefinition.hpp"
 #include "src/grpcservermodule.hpp"
 #include "src/kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/kfs_python_tensor_bridge.hpp"
 #include "src/mediapipe_internal/mediapipefactory.hpp"
 #include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "src/mediapipe_internal/mediapipegraphexecutor.hpp"

@@ -24,17 +24,18 @@
 #include <string>
 #include <vector>
 
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
-#include "../metrics/metric_provider.hpp"
-#include "../graph_export/graph_export.hpp"
-#include "../servable_definition.hpp"
-#include "../servable_name_checker.hpp"
+#include "src/mediapipe_internal/mediapipe_graph_executor_interface.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/metrics/metric_provider.hpp"
+#include "src/graph_export/graph_export.hpp"
+#include "src/servable_definition.hpp"
+#include "src/servable_name_checker.hpp"
 #include "src/status.hpp"
-#include "../ovms.h"  // NOLINT
-#include "../utils/newline_delimited.hpp"
+#include "src/ovms.h"  // NOLINT
+#include "src/utils/newline_delimited.hpp"
 #include "mediapipegraphconfig.hpp"
 #include "mediapipegraphdefinition.hpp"
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 #if defined(_WIN32)
 #define MEDIAPIPE_RUNTIME_EXPORT __declspec(dllexport)
