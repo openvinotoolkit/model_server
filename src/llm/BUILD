@@ -735,6 +735,17 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
+# Windows DLLs cannot bind back to symbols exported by the host executable, so the
+# dlopen-based plugin split only works on Linux. Windows calls the servable directly.
+alias(
+    name = "execution_context_utils_runtime",
+    actual = select({
+        "//src:windows": ":execution_context_utils",
+        "//conditions:default": ":execution_context_utils_no_python",
+    }),
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library(
     name = "servable_interface",
     hdrs = ["servable.hpp"],

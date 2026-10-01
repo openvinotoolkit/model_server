@@ -181,7 +181,7 @@ ovms_cc_library(
         ":mediapipe_utils",
         ":side_packet_builder",
     ] + [
-        "//src/llm:execution_context_utils_no_python",
+        "//src/llm:execution_context_utils_runtime",
         "//src:model_metric_reporter",
         "//src:libovms_execution_context",
         "//src:libovmsprofiler",
@@ -230,7 +230,7 @@ ovms_cc_library(
         "//src:libovms_time_utils",
         "//src:libovmsprofiler",
     ] + [
-        "//src/llm:execution_context_utils_no_python",
+        "//src/llm:execution_context_utils_runtime",
         "//src/utils:env_guard",
     ],
     implementation_deps = [
