@@ -16,13 +16,8 @@
 
 #include "execution_context_utils.hpp"
 
-#ifdef __linux__
-#include <dlfcn.h>
-#elif _WIN32
-#include <windows.h>
-#endif
-
 #include "../logging.hpp"
+#include "llm_calculators_plugin_loader.hpp"
 
 namespace ovms {
 namespace {
@@ -30,17 +25,7 @@ namespace {
 using CreateExecutionContextFn = int (*)(void*, std::shared_ptr<GenAiServableExecutionContext>*);
 
 CreateExecutionContextFn resolveCreateExecutionContextFn() {
-#ifdef __linux__
-    return reinterpret_cast<CreateExecutionContextFn>(dlsym(RTLD_DEFAULT, "OVMS_LLMCreateExecutionContext"));
-#elif _WIN32
-    HMODULE currentModule = GetModuleHandleA(nullptr);
-    if (currentModule == nullptr) {
-        return nullptr;
-    }
-    return reinterpret_cast<CreateExecutionContextFn>(GetProcAddress(currentModule, "OVMS_LLMCreateExecutionContext"));
-#else
-    return nullptr;
-#endif
+    return reinterpret_cast<CreateExecutionContextFn>(getLlmCalculatorsPluginSymbol("OVMS_LLMCreateExecutionContext"));
 }
 
 }  // namespace

@@ -42,40 +42,51 @@ HMODULE llmPluginHandle = nullptr;
 #endif
 
 std::vector<std::string> getLlmPluginCandidates() {
-#ifdef _WIN32
-    return {
-        "ovms_llm_calculators.dll",
-        ".\\ovms_llm_calculators.dll",
-        "src\\llm\\ovms_llm_calculators.dll",
-        ".\\src\\llm\\ovms_llm_calculators.dll",
-        "bazel-bin\\src\\llm\\ovms_llm_calculators.dll",
-        ".\\bazel-bin\\src\\llm\\ovms_llm_calculators.dll"};
-#else
+    // Bazel keeps the ".so" name of the shared library target on every platform.
     std::vector<std::string> candidates{
         "libovms_llm_calculators.so",
+#ifdef _WIN32
+        ".\\libovms_llm_calculators.so",
+        "src\\llm\\libovms_llm_calculators.so",
+        ".\\src\\llm\\libovms_llm_calculators.so",
+        "bazel-bin\\src\\llm\\libovms_llm_calculators.so",
+        ".\\bazel-bin\\src\\llm\\libovms_llm_calculators.so",
+#else
         "/ovms/lib/libovms_llm_calculators.so",
         "./libovms_llm_calculators.so",
         "src/llm/libovms_llm_calculators.so",
         "./src/llm/libovms_llm_calculators.so",
         "bazel-bin/src/llm/libovms_llm_calculators.so",
-        "./bazel-bin/src/llm/libovms_llm_calculators.so"};
+        "./bazel-bin/src/llm/libovms_llm_calculators.so",
+#endif
+    };
 
     if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr) {
         candidates.emplace_back(std::string(testSrcDir) + "/_main/src/llm/libovms_llm_calculators.so");
         candidates.emplace_back(std::string(testSrcDir) + "/ovms/src/llm/libovms_llm_calculators.so");
     }
 
+    std::filesystem::path exeDir;
+#ifdef _WIN32
+    std::array<char, MAX_PATH> exePath{};
+    DWORD exePathLength = GetModuleFileNameA(nullptr, exePath.data(), static_cast<DWORD>(exePath.size()));
+    if (exePathLength > 0 && exePathLength < static_cast<DWORD>(exePath.size())) {
+        exeDir = std::filesystem::path(exePath.data()).parent_path();
+    }
+#else
     std::array<char, PATH_MAX> exePath{};
     ssize_t exePathLength = readlink("/proc/self/exe", exePath.data(), exePath.size() - 1);
     if (exePathLength > 0) {
         exePath[exePathLength] = '\0';
-        std::filesystem::path exeDir = std::filesystem::path(exePath.data()).parent_path();
+        exeDir = std::filesystem::path(exePath.data()).parent_path();
+    }
+#endif
+    if (!exeDir.empty()) {
         candidates.emplace_back((exeDir / "libovms_llm_calculators.so").string());
         candidates.emplace_back((exeDir / "src/llm/libovms_llm_calculators.so").string());
         candidates.emplace_back((exeDir / "llm/libovms_llm_calculators.so").string());
     }
     return candidates;
-#endif
 }
 
 }  // namespace
@@ -99,6 +110,17 @@ bool loadLlmCalculatorsPlugin() {
 
     SPDLOG_DEBUG("LLM calculators plugin is unavailable");
     return false;
+}
+
+void* getLlmCalculatorsPluginSymbol(const char* symbolName) {
+    if (llmPluginHandle == nullptr && !loadLlmCalculatorsPlugin()) {
+        return nullptr;
+    }
+#ifdef _WIN32
+    return reinterpret_cast<void*>(GetProcAddress(llmPluginHandle, symbolName));
+#else
+    return dlsym(llmPluginHandle, symbolName);
+#endif
 }
 
 }  // namespace ovms

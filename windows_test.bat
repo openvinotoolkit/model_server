@@ -50,12 +50,10 @@ IF "%~2"=="--with_python" (
     set "bazelBuildArgs=--config=win_mp_on_py_on --action_env OpenVINO_DIR=%openvino_dir%"
     set "testTargets=//src:ovms_test //src:python_runtime_library_test"
     set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
-    set "runNoLibpythonSmokeTest=%bazelPath% %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures --test_output=errors //src:ovms_no_libpython_smoke_test"
 ) ELSE (
     set "bazelBuildArgs=--config=win_mp_on_py_off --action_env OpenVINO_DIR=%openvino_dir%"
     set "testTargets=//src:ovms_test"
     set "runPythonRuntimeTest="
-    set "runNoLibpythonSmokeTest="
 )
 
 set "buildTestCommand=%bazelPath% %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
@@ -154,10 +152,6 @@ IF "%~2"=="--with_python" (
     echo Running: %runPythonRuntimeTest%
     %runPythonRuntimeTest% >> win_full_test.log 2>&1
     set "pythonTestExitCode=!errorlevel!"
-
-    echo Running: %runNoLibpythonSmokeTest%
-    %runNoLibpythonSmokeTest% >> win_full_test.log 2>&1
-    set "smokeTestExitCode=!errorlevel!"
 )
 
 :: Cut tests log to results

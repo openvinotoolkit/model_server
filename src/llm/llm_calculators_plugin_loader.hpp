@@ -20,4 +20,7 @@ namespace ovms {
 
 bool loadLlmCalculatorsPlugin();
 
+// Resolves a symbol exported by the LLM calculators plugin. Returns nullptr when the plugin is not loaded.
+void* getLlmCalculatorsPluginSymbol(const char* symbolName);
+
 }  // namespace ovms

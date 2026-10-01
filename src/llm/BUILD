@@ -727,6 +727,7 @@ ovms_cc_library(
     hdrs = ["execution_context_utils.hpp"],
     srcs = ["execution_context_utils_no_python.cpp"],
     deps = [
+        ":llm_calculators_plugin_loader",
         "//src/mediapipe_internal:graph_side_packets",
         "//src:libovmslogging",
         "//src:libovmsstatus",
