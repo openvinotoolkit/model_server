@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <functional>
+#include <iterator>
 #include <optional>
 #include <random>
 #include <unordered_set>
@@ -826,6 +827,19 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
         startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
         EnsureServerStartedWithTimeout(server, timeoutSeconds);
     }
+}
+
+void SetUpServerWithExtraArgs(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, std::vector<std::string> extraArgs, int timeoutSeconds) {
+    server.setShutdownRequest(0);
+    randomizeAndEnsureFree(port);
+    std::vector<std::string> args = {"ovms",
+        "--config_path",
+        configPath,
+        "--port",
+        port};
+    args.insert(args.end(), std::make_move_iterator(extraArgs.begin()), std::make_move_iterator(extraArgs.end()));
+    startServerWithArgs(t, server, std::move(args), EXIT_SUCCESS);
+    EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
 
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds) {

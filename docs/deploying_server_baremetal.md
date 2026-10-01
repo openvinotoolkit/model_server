@@ -10,8 +10,8 @@ Linux packages use compatible Python runtime libraries provided by the system. T
 :sync: ubuntu-22-04
 Download the precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_ubuntu22_2026.3.0_python_off.tar.gz
-tar -xzvf ovms_ubuntu22_2026.3.0_python_off.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_ubuntu22_2026.4.0_python_on.tar.gz
+tar -xzvf ovms_ubuntu22_2026.4.0_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -40,8 +40,8 @@ The Model Server package is shipped with those libraries, and installing them wi
 :sync: ubuntu-24-04
 Download the precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_ubuntu24_2026.3.0_python_off.tar.gz
-tar -xzvf ovms_ubuntu24_2026.3.0_python_off.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_ubuntu24_2026.4.0_python_on.tar.gz
+tar -xzvf ovms_ubuntu24_2026.4.0_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -70,8 +70,8 @@ The Model Server package is shipped with those libraries, and installing them wi
 :sync: rhel-9.6
 Download the precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_redhat_2026.3.0_python_off.tar.gz
-tar -xzvf ovms_redhat_2026.3.0_python_off.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_redhat_2026.4.0_python_on.tar.gz
+tar -xzvf ovms_redhat_2026.4.0_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -104,7 +104,14 @@ Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/r
 Download and unpack the Model Server archive with embedded Python:
 
 ```bat
-curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_windows_2026.3.0_python_on.zip -o ovms.zip
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_windows_2026.4.0_python_on.zip -o ovms.zip
+tar -xf ovms.zip
+```
+
+or archive without python:
+
+```bat
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_windows_2026.4.0_python_off.zip -o ovms.zip
 tar -xf ovms.zip
 ```
 
