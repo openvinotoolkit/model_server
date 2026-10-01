@@ -180,8 +180,8 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<std::string>(),
                 "ALLOWED_LOCAL_MEDIA_PATH")
             ("max_image_decode_pixels",
-                "Maximum number of pixels (width x height) of a single decoded input image. Images whose header-declared "
-                "pixel count exceeds this limit are rejected before decoding, guarding against decompression-bomb inputs. "
+                    "Maximum total number of decoded input-image pixels (the sum of width x height across all images in a request). "
+                    "Images that would make the request exceed this limit are rejected before decoding, guarding against decompression-bomb inputs. "
                 "Default matches OpenCV's OPENCV_IO_MAX_IMAGE_PIXELS. Note: this does not change OpenCV's own internal limit, "
                 "which is controlled separately by the OPENCV_IO_MAX_IMAGE_PIXELS environment variable read at startup.",
                 cxxopts::value<uint64_t>()->default_value("67108864"),
