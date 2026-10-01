@@ -64,12 +64,6 @@ Readiness checks:
 curl -f http://localhost:8000/v1/models
 ```
 
-```console
-curl http://localhost:8000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model":"OpenVINO/Qwen3.8-27B-int4-ov","messages":[{"role":"user","content":"ping"}]}'
-```
-
 ### Step 2: Configure dcode environment
 
 Use the same shell where dcode will be started. Run these from inside the demo directory (`demos/integration_with_deepagents_code`) so `DEMO_DIR` resolves correctly.
