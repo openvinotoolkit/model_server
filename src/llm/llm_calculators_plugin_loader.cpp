@@ -16,16 +16,17 @@
 
 #include "llm_calculators_plugin_loader.hpp"
 
-#ifdef __linux__
-
 #include <array>
 #include <climits>
 #include <cstdlib>
-#include <dlfcn.h>
 #include <filesystem>
 #include <string>
-#include <unistd.h>
 #include <vector>
+
+#ifdef __linux__
+
+#include <dlfcn.h>
+#include <unistd.h>
 
 #include "src/logging.hpp"
 
