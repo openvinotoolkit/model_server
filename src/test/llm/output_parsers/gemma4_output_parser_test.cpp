@@ -173,6 +173,19 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithoutToolCall) {
     }
 }
 
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithThoughtKeywordEmbeddedInSentence) {
+    // NOTE: For the case "<channel|>thought\n ..." in the output we re-enter reasoning due to getting to UNKNOWN phase
+    // in the main OutputParser where preable is honoured again. Changing that is a OutputParser level behavioral change.
+    std::string input = "<|channel>I thought\nabout this for a while<channel|>Here's my thought\n and SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "Here's my thought\n and SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "I thought\nabout this for a while");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
 TEST_F(Gemma4OutputParserTest, ParseReasoningWithCorruptedKeyword) {
     std::string input = "<|channel>_thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
 
