@@ -137,10 +137,11 @@ Status HfPullModelModule::resolveHfLoraFilenames() {
         std::string apiUrl = this->GetHfEndpoint() + "api/models/" + adapter.sourceLora;
         SPDLOG_DEBUG("Querying HF API for LoRA adapter files: {}", apiUrl);
         std::string responseBody;
+        int httpCode = -1;
         std::string hfToken = this->GetHfToken();
-        auto status = fetchUrlToString(apiUrl, hfToken, responseBody);
+        auto status = fetchUrlToString(apiUrl, hfToken, responseBody, httpCode);
         if (!status.ok()) {
-            SPDLOG_ERROR("Failed to query HF API for LoRA adapter: {}", adapter.sourceLora);
+            SPDLOG_ERROR("Failed to query HF API for LoRA adapter: {} (HTTP code: {})", adapter.sourceLora, httpCode);
             return status;
         }
         // Parse JSON response to find .safetensors files in siblings array

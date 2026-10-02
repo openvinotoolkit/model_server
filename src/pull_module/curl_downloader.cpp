@@ -233,8 +233,10 @@ static size_t string_write_callback(void* buffer, size_t size, size_t nmemb, voi
     return size * nmemb;
 }
 
-Status fetchUrlToString(const std::string& url, const std::string& authToken, std::string& responseBody) {
+Status fetchUrlToString(const std::string& url, const std::string& authToken, std::string& responseBody, int& httpCode) {
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
+
+    httpCode = -1;
 
     CURL* curl = nullptr;
     curl = curl_easy_init();
@@ -260,11 +262,16 @@ Status fetchUrlToString(const std::string& url, const std::string& authToken, st
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL));
-    CHECK_CURL_CALL(curl_easy_perform(curl));
-    int32_t httpCode = 0;
-    CHECK_CURL_CALL(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode));
-    if (httpCode != 200) {
-        SPDLOG_ERROR("HTTP request to {} failed with code: {}", url, httpCode);
+    CURLcode curlStatus = curl_easy_perform(curl);
+    if (curlStatus != CURLE_OK) {
+        SPDLOG_ERROR("HTTP request to {} failed with cURL error: {}", url, curl_easy_strerror(curlStatus));
+        return StatusCode::INTERNAL_ERROR;
+    }
+    int32_t httpCodeValue = 0;
+    CHECK_CURL_CALL(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCodeValue));
+    httpCode = httpCodeValue;
+    if (httpCodeValue != 200) {
+        SPDLOG_ERROR("HTTP request to {} failed with code: {}", url, httpCodeValue);
         return StatusCode::PATH_INVALID;
     }
     return StatusCode::OK;
