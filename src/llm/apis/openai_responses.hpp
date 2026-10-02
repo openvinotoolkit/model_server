@@ -101,6 +101,16 @@ class OpenAIResponsesHandler : public OpenAIApiHandler {
 public:
     using OpenAIApiHandler::OpenAIApiHandler;  // Inherit constructors
 
+    absl::Status parseTools() override {
+        auto status = parseParallelToolCallsPolicy();
+        if (!status.ok())
+            return status;
+        status = validateHardToolChoiceHasTools();
+        if (!status.ok())
+            return status;
+        return OpenAIApiHandler::parseTools();
+    }
+
     absl::Status parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
         std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) override;
 

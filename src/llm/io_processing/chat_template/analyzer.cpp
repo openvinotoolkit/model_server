@@ -45,12 +45,32 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         return result;
     }
 
-    // Gemma4 detection
+    // Gemma4 detection. Compose upstream 2026.5 response-field handling with the
+    // Gemmamonster adapters required by the exact template in use. Current Google
+    // templates require tool_calls[].function.arguments to be a mapping and reject
+    // stringified JSON, while some compatible/older templates accept both shapes.
+    // Detect the contract from template syntax instead of forcing one representation
+    // on every Gemma4-derived template.
     if (contains(templateSource, "'<|tool_call>call:'") || contains(templateSource, "<|tool_call>call:")) {
         result.detectedToolParser = "gemma4";
         result.detectedReasoningParser = "gemma4";  // gemma is always tied to its own parser for reasoning
         result.caps.supportsToolCalls = true;
         result.caps.supportsResponseFieldInToolDefinition = true;
+
+        const bool mapsSingleQuotedArguments = contains(templateSource, "function['arguments'] is mapping");
+        const bool mapsDoubleQuotedArguments = contains(templateSource, "function[\"arguments\"] is mapping");
+        const bool acceptsSingleQuotedStringArguments = contains(templateSource, "function['arguments'] is string");
+        const bool acceptsDoubleQuotedStringArguments = contains(templateSource, "function[\"arguments\"] is string");
+        const bool mapsToolArguments = mapsSingleQuotedArguments || mapsDoubleQuotedArguments;
+        const bool acceptsStringToolArguments = acceptsSingleQuotedStringArguments || acceptsDoubleQuotedStringArguments;
+        result.caps.requiresObjectArguments = mapsToolArguments && !acceptsStringToolArguments;
+
+        // Jinja2 treats mappings as sequences when a template iterates message.content;
+        // in that case part is a string key and part.get(...) fails, so response mapping
+        // conversion must stay disabled for content-parts templates.
+        const bool mapsResponse = contains(templateSource, "response is mapping");
+        const bool iteratesPartsWithGet = contains(templateSource, "part.get('type')") || contains(templateSource, "part.get(\"type\")");
+        result.caps.parseToolResponseJsonContent = mapsResponse && !iteratesPartsWithGet;
         return result;
     }
 
@@ -71,7 +91,6 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
         result.detectedToolParser = "minicpm5";
         result.caps.supportsToolCalls = true;
         result.detectedReasoningParser = "minicpm5";
-
         return result;
     }
 
