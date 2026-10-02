@@ -184,6 +184,16 @@ ovms_cc_library(
     hdrs = ["queue.hpp"],
     visibility = ["//visibility:public",],
 )
+
+cc_library(
+    name = "python_interpreter_module_test_symbols",
+    srcs = ["status.cpp", "module_names.cpp"],
+    hdrs = ["status.hpp", "module_names.hpp"],
+    deps = ["@fmtlib"],
+    linkstatic = 1,
+    visibility = ["//src/python:__pkg__"],
+)
+
 ovms_cc_library(
     name = "libovms_ovinferrequestsqueue",
     hdrs = ["ovinferrequestsqueue.hpp"],
@@ -2520,7 +2530,7 @@ cc_library(
         "test/test_utils.cpp",
         ],
     deps = PYBIND_HEADERS_ONLY + [
-        "//src/python:python_headers_only"
+        "//src/python:python_headers_only",
         "test_test_models",
         "//src:ovms_lib",
         "//src:network_utils",

@@ -303,11 +303,77 @@ ovms_cc_library(
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovms_module",
+        ":python_calculators_plugin_loader",
         "pythonbackend",
     ],
     visibility = ["//src:__pkg__"],
     alwayslink = 1,
     data = ["//src/python/binding:pyovms.so"],
+)
+
+cc_test(
+    name = "pythoninterpretermodule_lifecycle_test",
+    srcs = [
+        "pythoninterpretermodule.cpp",
+        "pythoninterpretermodule_lifecycle_test.cpp",
+        "python_calculators_plugin_loader.hpp",
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
+    deps = PYBIND_DEPS + [
+        ":pythonbackend",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovms_module",
+        "//src:python_interpreter_module_test_symbols",
+        "@com_google_googletest//:gtest_main",
+    ],
+    data = select({
+        "//src:windows": ["//src/python/binding:copy_pyovms"],
+        "//conditions:default": ["//src/python/binding:pyovms.so"],
+    }),
+)
+
+cc_test(
+    name = "pythoninterpretermodule_backend_failure_test",
+    srcs = [
+        "pythoninterpretermodule.cpp",
+        "pythoninterpretermodule_backend_failure_test.cpp",
+        "python_calculators_plugin_loader.hpp",
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
+    deps = PYBIND_DEPS + [
+        ":pythonbackend",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovms_module",
+        "//src:python_interpreter_module_test_symbols",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "pythoninterpretermodule_borrowed_interpreter_test",
+    srcs = [
+        "pythoninterpretermodule.cpp",
+        "pythoninterpretermodule_borrowed_interpreter_test.cpp",
+        "python_calculators_plugin_loader.hpp",
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
+    deps = PYBIND_DEPS + [
+        ":pythonbackend",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovms_module",
+        "//src:python_interpreter_module_test_symbols",
+        "@com_google_googletest//:gtest_main",
+    ],
+    data = select({
+        "//src:windows": ["//src/python/binding:copy_pyovms"],
+        "//conditions:default": ["//src/python/binding:pyovms.so"],
+    }),
 )
 
 # Shared library built from all Python binding sources.

@@ -34,6 +34,7 @@
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
+#include "python_environment.hpp"
 #include "test_utils.hpp"
 
 #ifdef __linux__
@@ -139,6 +140,7 @@ TEST_F(PythonStreamingTest, RepeatedStartIsRejected) {
     EXPECT_EQ(pythonModule->start(ovms::Config::instance()), StatusCode::INTERNAL_ERROR);
 }
 
+// A module borrowing PythonEnvironment's interpreter must reject duplicate starts and leave the borrowed runtime alive.
 TEST(PythonInterpreterModuleLifecycle, ConcurrentStartCallsAreSerialized) {
     PythonInterpreterModule pythonModule;
     std::promise<void> startPromise;
@@ -161,7 +163,11 @@ TEST(PythonInterpreterModuleLifecycle, ConcurrentStartCallsAreSerialized) {
 
     const size_t successfulStarts = std::count_if(statuses.begin(), statuses.end(), [](const Status& status) { return status.ok(); });
     EXPECT_EQ(successfulStarts, 1);
+    EXPECT_EQ((statuses[0].ok() ? statuses[1] : statuses[0]).getCode(), StatusCode::INTERNAL_ERROR);
+    EXPECT_FALSE(pythonModule.ownsPythonInterpreter());
+    ASSERT_NE(pythonModule.getPythonBackend(), nullptr);
     pythonModule.shutdown();
+    EXPECT_NE(getGlobalPythonBackend(), nullptr);
 }
 
 static const std::string TIMESTAMP_PARAMETER_NAME{"OVMS_MP_TIMESTAMP"};
