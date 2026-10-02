@@ -230,21 +230,20 @@ pipeline {
           }
         }
         stage('Cleanup node') {
-          options {
-              timeout(time: 30, unit: 'MINUTES')
-          }
           agent {
             label 'win_ovms'
           }
           steps {
             script {
-              withGithubStageStatus('jenkins/oncommit/cleanup-node', 'Cleanup node') {
-                agent_name_windows = env.NODE_NAME
-                def windows = load 'ci/loadWin.groovy'
-                if (windows != null) {
-                    windows.cleanup_directories()
-                } else {
-                    error "Cannot load ci/loadWin.groovy file."
+              timeout(time: 30, unit: 'MINUTES') {
+                withGithubStageStatus('jenkins/oncommit/cleanup-node', 'Cleanup node') {
+                  agent_name_windows = env.NODE_NAME
+                  def windows = load 'ci/loadWin.groovy'
+                  if (windows != null) {
+                      windows.cleanup_directories()
+                  } else {
+                      error "Cannot load ci/loadWin.groovy file."
+                  }
                 }
               }
             }
