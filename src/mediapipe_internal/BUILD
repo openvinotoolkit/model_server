@@ -248,6 +248,7 @@ ovms_cc_library(
     name = "libovms_mediapipe_runtime_owner_no_python_calculators",
     deps = [
         ":libovms_mediapipe",
+        "@mediapipe//mediapipe/calculators/ovms:ovms_calculator_runtime",
         "//src/llm:llmcalculator",
         "//src:kfs_graph_executor_impl",
         "//src:libovms_mediapipe_http_executor",
