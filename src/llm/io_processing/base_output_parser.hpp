@@ -110,6 +110,12 @@ public:
 
     virtual void resetState() {}
 
+    // Gives a format-specific reasoning parser one narrow unary finalization
+    // hook. finalContentWasPresent describes raw bytes following the completed
+    // reasoning segment before any content/tool parser consumed them. It is
+    // per-generation internal state, never a response/API field.
+    virtual void finalizeUnaryDeltas(std::vector<Delta>& /*deltas*/, bool /*finalContentWasPresent*/) const {}
+
     void setImplicitStart(bool value) { implicitStart = value; }
     bool isImplicitStart() const { return implicitStart; }
 

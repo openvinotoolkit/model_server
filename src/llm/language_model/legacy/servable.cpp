@@ -210,6 +210,9 @@ absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServab
     }
 
     std::vector<Delta> deltas = executionContext->deltaChannel.drain();
+    if (const auto& outputParser = executionContext->apiHandler->getOutputParser()) {
+        outputParser->finalizeUnaryDeltas(deltas);
+    }
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(deltas, finishReason);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();

@@ -36,6 +36,14 @@ namespace ovms {
 //                        These are alternative entry points that cannot appear mid-stream.
 //   endTag             — text-based end-boundary string (checked in TOOL_CALLS_PROCESSING_TOOL
 //                        and REASONING phases).
+//   allowReasoningReentry — whether a reasoning parser may begin a new reasoning
+//                        segment after its first endTag. Most existing parsers
+//                        permit this; formats whose grammar treats all bytes after
+//                        the first endTag as final content set it false.
+//   reasoningStartsWithoutTag — whether the UNKNOWN phase should route text to
+//                        the reasoning parser when no phase-entry tag has appeared.
+//                        This models DeepSeek-R1-compatible formats whose streaming
+//                        parser treats markerless initial output as reasoning.
 //   stringsToErase     — strings stripped from this parser's output before emission
 //                        (e.g. BOS/EOS tokens that leak due to special-token decode mode,
 //                        or chat-template structural markers).
@@ -64,6 +72,8 @@ struct OutputParsingConfig {
     std::vector<std::string> tokenIdStartTags;
     std::vector<std::string> preambleStartTags;
     std::string endTag;
+    bool allowReasoningReentry = true;
+    bool reasoningStartsWithoutTag = false;
     std::vector<std::string> stringsToErase;
 
     bool needsSpecialTokens = false;

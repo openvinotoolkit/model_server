@@ -64,10 +64,30 @@ inline ParsedOutput parseWithStreamer(
 
     outputParser.resetStreamingState();
 
-    ParsedOutput result;
-    std::vector<ToolCall> toolCalls;
+    std::vector<Delta> deltas;
 
     auto callback = [&](Delta delta, bool /*isLast*/) {
+        deltas.push_back(delta);
+        return ov::genai::StreamingStatus::RUNNING;
+    };
+
+    // Non-owning shared_ptr: outputParser is owned by the test fixture and
+    // outlives the streamer which is a local variable.
+    auto parserPtr = std::shared_ptr<OutputParser>(&outputParser, [](OutputParser*) {});
+
+    const ov::AnyMap decodeParams{{ov::genai::skip_special_tokens.name(), !userWantsSpecialTokens}};
+    OVMSTextStreamer streamer(tokenizer, parserPtr, toolsAvailable,
+        std::move(callback), decodeParams);
+
+    for (int64_t token : generatedTokens)
+        streamer.write(token);
+    streamer.end();
+
+    outputParser.finalizeUnaryDeltas(deltas);
+
+    ParsedOutput result;
+    std::vector<ToolCall> toolCalls;
+    for (const Delta& delta : deltas) {
         std::visit(overloaded{
                        [&](const ContentDelta& d) { result.content.append(d.text); },
                        [&](const ReasoningDelta& d) { result.reasoning.append(d.text); },
@@ -88,20 +108,7 @@ inline ParsedOutput parseWithStreamer(
                        [](const AudioDelta&) {},
                    },
             delta);
-        return ov::genai::StreamingStatus::RUNNING;
-    };
-
-    // Non-owning shared_ptr: outputParser is owned by the test fixture and
-    // outlives the streamer which is a local variable.
-    auto parserPtr = std::shared_ptr<OutputParser>(&outputParser, [](OutputParser*) {});
-
-    const ov::AnyMap decodeParams{{ov::genai::skip_special_tokens.name(), !userWantsSpecialTokens}};
-    OVMSTextStreamer streamer(tokenizer, parserPtr, toolsAvailable,
-        std::move(callback), decodeParams);
-
-    for (int64_t token : generatedTokens)
-        streamer.write(token);
-    streamer.end();
+    }
 
     // Compact arguments JSON and drop incomplete calls that never emitted args.
     ToolCalls_t completedToolCalls;

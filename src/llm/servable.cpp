@@ -316,6 +316,13 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
             tempStreamer->end();
         }
 
+        // Unary parsing state belongs to this generated sequence. Finalize here,
+        // before the shared parser is reset for another choice and before common
+        // response aggregation loses parser-specific raw-boundary information.
+        if (const auto& outputParser = executionContext->apiHandler->getOutputParser()) {
+            outputParser->finalizeUnaryDeltas(localDeltas);
+        }
+
         allDeltas.push_back(std::move(localDeltas));
         finishReasons.push_back(output.finish_reason);
         if (hasLogprobs) {
