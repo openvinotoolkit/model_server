@@ -201,6 +201,11 @@ protected:
     std::unique_ptr<ServableGroupManager> servableGroupManager;
 
 private:
+    const std::vector<std::string> getNamesOfAvailableModels() const;
+#if (MEDIAPIPE_DISABLE == 0)
+    const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
+#endif
+
     /**
      * @brief last md5sum of configfile
      */
@@ -289,12 +294,12 @@ public:
         return servableGroupManager.get();
     }
 
-    const std::vector<std::string> getNamesOfAvailableModels() const;
+    // Models, DAGs and MediaPipe graphs; with idle management all configured servables
+    const std::vector<std::string> getNamesOfAvailableServables() const;
 
     void startCleaner();
 
 #if (MEDIAPIPE_DISABLE == 0)
-    const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
     const MediapipeRuntimeApi& getMediapipeFactory() const {
         return *mediapipeFactory;
     }
