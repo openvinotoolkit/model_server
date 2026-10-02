@@ -208,6 +208,12 @@ TEST_F(KFSPredictValidation, RequestWrongBatchSizeAuto) {
 }
 
 TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) {
+    ScopedOVMSConfigGuard configGuard;
+    ovms::ServerSettingsImpl serverSettings = configGuard.getServerSettings();
+    serverSettings.allowUnestimatableImageFormats = true;
+    ovms::ModelsSettingsImpl modelsSettings = configGuard.getModelSettings();
+    configGuard.parse(serverSettings, modelsSettings);
+
     std::string inputName = "Binary_Input";
     ::KFSRequest binaryInputRequest;
 
@@ -256,6 +262,12 @@ TEST_F(KFSPredictValidation, Batch0RequestBinaryInputs) {
 }
 
 TEST_F(KFSPredictValidation, RequestWrongBatchSizeBinaryInputs) {
+    ScopedOVMSConfigGuard configGuard;
+    ovms::ServerSettingsImpl serverSettings = configGuard.getServerSettings();
+    serverSettings.allowUnestimatableImageFormats = true;
+    ovms::ModelsSettingsImpl modelsSettings = configGuard.getModelSettings();
+    configGuard.parse(serverSettings, modelsSettings);
+
     std::string inputName = "Binary_Input";
     ::KFSRequest binaryInputRequest;
 
@@ -308,6 +320,12 @@ TEST_F(KFSPredictValidation, BinaryRequestEndpointScalar) {
 }
 
 TEST_F(KFSPredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
+    ScopedOVMSConfigGuard configGuard;
+    ovms::ServerSettingsImpl serverSettings = configGuard.getServerSettings();
+    serverSettings.allowUnestimatableImageFormats = true;
+    ovms::ModelsSettingsImpl modelsSettings = configGuard.getModelSettings();
+    configGuard.parse(serverSettings, modelsSettings);
+
     modelConfig.setBatchingParams("auto");
     std::string inputName = "Binary_Input";
     ::KFSRequest binaryInputRequest;
