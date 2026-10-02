@@ -101,15 +101,17 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
     ModelCatalogContext ctx(std::filesystem::path{}, *sourceModel);
 
     std::string configBody;
+    int configHttpCode = -1;
     const std::string configUrl = hfEndpoint + *sourceModel + "/resolve/main/config.json";
-    const auto configStatus = fetchUrlToString(configUrl, token, configBody);
+    const auto configStatus = fetchUrlToString(configUrl, token, configBody, configHttpCode);
     if (configStatus.ok()) {
         ctx.addContent("config.json", std::move(configBody));
     } else {
         // config.json not available — try model_index.json (Diffusers repos)
         std::string indexBody;
+        int indexHttpCode = -1;
         const std::string indexUrl = hfEndpoint + *sourceModel + "/resolve/main/model_index.json";
-        const auto indexStatus = fetchUrlToString(indexUrl, token, indexBody);
+        const auto indexStatus = fetchUrlToString(indexUrl, token, indexBody, indexHttpCode);
         if (indexStatus.ok()) {
             ctx.addContent("model_index.json", std::move(indexBody));
         } else {

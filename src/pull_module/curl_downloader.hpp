@@ -22,7 +22,7 @@ class Status;
 
 Status downloadFileWithCurl(const std::string& url, const std::string& filePath);
 Status downloadFileWithCurl(const std::string& url, const std::string& filePath, const std::string& authTokenHF);
-Status fetchUrlToString(const std::string& url, const std::string& authToken, std::string& responseBody);
+Status fetchUrlToString(const std::string& url, const std::string& authToken, std::string& responseBody, int& httpCode);
 
 // Number of filled cells in a barWidth-wide progress bar for count out of max bytes,
 // clamped to [0, barWidth]. max == 0 means the server sent no Content-Length
