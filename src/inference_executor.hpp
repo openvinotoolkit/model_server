@@ -207,9 +207,17 @@ Status modelInferAsync(ModelInstance& instance, const RequestType* request,
         inferRequest.start_async();
     } catch (std::exception& e) {
         SPDLOG_DEBUG("caught exception in ov::InferRequest.start_async: {}", e.what());
+        // start_async threw, so the completion callback will never fire to release the
+        // captured stream-id guard; clear the callback to destroy it and return the
+        // infer-request slot to the pool (otherwise the slot leaks -> #2871).
+        inferRequest.set_callback([](std::exception_ptr) {});
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     } catch (...) {
         SPDLOG_DEBUG("caught exception in ov::InferRequest.start_async");
+        // start_async threw, so the completion callback will never fire to release the
+        // captured stream-id guard; clear the callback to destroy it and return the
+        // infer-request slot to the pool (otherwise the slot leaks -> #2871).
+        inferRequest.set_callback([](std::exception_ptr) {});
         return StatusCode::OV_INTERNAL_INFERENCE_ERROR;
     }
     return StatusCode::OK;
