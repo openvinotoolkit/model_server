@@ -16,30 +16,10 @@
 
 #pragma once
 
+#include <string>
+
 namespace ovms {
 
-struct RuntimeChatTemplateRuntimeApi {
-    using CreatePreparedChatTemplateRuntimeFn = bool (*)(
-        const char* modelsPath,
-        const char* chatTemplate,
-        const char* bosToken,
-        const char* eosToken,
-        void** preparedHandle,
-        const char** output);
-
-    using ApplyPreparedChatTemplateRuntimeFn = bool (*)(
-        void* preparedHandle,
-        const char* requestBody,
-        const char** output);
-
-    using DestroyPreparedChatTemplateRuntimeFn = void (*)(void* preparedHandle);
-
-    CreatePreparedChatTemplateRuntimeFn createPreparedFn = nullptr;
-    ApplyPreparedChatTemplateRuntimeFn applyPreparedFn = nullptr;
-    DestroyPreparedChatTemplateRuntimeFn destroyPreparedFn = nullptr;
-};
-
-// Returns nullptr when runtime library or required symbols are unavailable.
-const RuntimeChatTemplateRuntimeApi* getRuntimeChatTemplateRuntimeApi();
+bool ensurePythonRuntimeInitialized(std::string& errorMessage);
 
 }  // namespace ovms

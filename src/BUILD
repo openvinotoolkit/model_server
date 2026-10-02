@@ -2985,7 +2985,6 @@ cc_library(
         ":test_wav_utils",
         "//src/llm:image_utils",
         "//src/llm:io_processing_input_processors",
-        "//src/llm:runtime_chat_template_loader",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

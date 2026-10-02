@@ -210,7 +210,6 @@ ovms_cc_library(
     srcs = [],
     deps = [
         ":io_processing_input_request",
-        ":runtime_chat_template_loader",
         "//third_party:genai",
     ] + select({
         "//:disable_python": [],
@@ -244,7 +243,6 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         ":image_utils",
         ":io_processing_input_request",
-        ":runtime_chat_template_loader",
         "//third_party:genai",
         "//src:libovmslogging",
         "//src/audio:audio_utils",
@@ -758,21 +756,14 @@ ovms_cc_library(
         ":openai_completions_api_handler",
         ":openai_responses_handler",
         ":generation_config_builders",
-        ":runtime_chat_template_loader",
     ],
     visibility = ["//visibility:public"],
 )
 
 ovms_cc_library(
     name = "runtime_chat_template_loader",
-    hdrs = [
-        "runtime_chat_template.hpp",
-        "runtime_chat_template_runtime_loader.hpp",
-    ],
-    srcs = [
-        "runtime_chat_template.cpp",
-        "runtime_chat_template_runtime_loader.cpp",
-    ],
+    hdrs = ["runtime_chat_template_runtime_loader.hpp"],
+    srcs = ["runtime_chat_template_runtime_loader.cpp"],
     deps = [
         "//src:libovmslogging",
     ],
