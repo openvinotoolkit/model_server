@@ -215,6 +215,20 @@ TEST_F(ChatTemplateProcessorTest, EmptyStringContent_TemplateStillProducesOutput
     EXPECT_FALSE(req.promptText.empty());
 }
 
+TEST_F(ChatTemplateProcessorTest, JinjaSelectedWithoutPreparedRuntime_ReturnsUnavailable) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", "Hello."}});
+
+    InputRequest req = makeChatRequest(std::move(history));
+    ChatTemplateProcessor processor(*sharedTokenizer, /*useMinja=*/false, nullptr);
+    const auto status = processor.process(req);
+
+    ASSERT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kUnavailable);
+    EXPECT_NE(status.message().find("Jinja chat-template mode was selected"), std::string::npos);
+    EXPECT_TRUE(req.promptText.empty());
+}
+
 // ---------------------------------------------------------------------------
 // Negative test — model WITHOUT a chat template
 // (BAAI/bge-reranker-base has no chat_template specified anywhere)
@@ -258,7 +272,6 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
 // same chat template.
 // ---------------------------------------------------------------------------
 
-#if (PYTHON_DISABLE == 0)
 static std::unique_ptr<ov::genai::Tokenizer> pyJinjaTokenizer;
 static std::unique_ptr<PreparedRuntimeChatTemplate> sharedPreparedRuntimeTemplate;
 
@@ -380,7 +393,6 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, EmptyStringContent_TemplateStillProduce
     ASSERT_TRUE(status.ok()) << status.message();
     EXPECT_FALSE(req.promptText.empty());
 }
-#endif  // PYTHON_DISABLE == 0
 
 }  // namespace
 }  // namespace ovms

@@ -63,13 +63,13 @@ In-case of problems, see [Debugging](#debugging).
 
 4. In the docker container context compile the source code via (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel build --//:distro=ubuntu --config=mp_on_py_on //src:ovms
+	bazel build --//:distro=ubuntu --config=mp_on //src:ovms
 > **NOTE**: There are several options that would disable specific parts of OVMS. For details check ovms bazel build files.
 	```
 
 5. From the container, run a single unit test (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel test --//:distro=ubuntu --config=mp_on_py_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --//:distro=ubuntu --config=mp_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |
@@ -323,7 +323,7 @@ sudo reboot
 To check code coverage of unit tests, execute the following command to create build image and run unit tests with code coverage enabled:
 
 ```
-make ovms_builder_image BASE_OS=ubuntu24 CHECK_COVERAGE=1 RUN_TESTS=1 MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 OV_USE_BINARY=1 OVMS_CPP_DOCKER_IMAGE=ovms_coverage
+make ovms_builder_image BASE_OS=ubuntu24 CHECK_COVERAGE=1 RUN_TESTS=1 MEDIAPIPE_DISABLE=0 OV_USE_BINARY=1 OVMS_CPP_DOCKER_IMAGE=ovms_coverage
 ```
 
 Then run `get_coverage` target to extract report from the container:
@@ -357,7 +357,7 @@ Debugging options are available. Click on the required option :
 	mkdir -p /models/1 && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 	```
 	```bash
-	bazel build --config=mp_on_py_on //src:ovms -c dbg
+	bazel build --config=mp_on //src:ovms -c dbg
 	```
 	```bash
 	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models --port 9178

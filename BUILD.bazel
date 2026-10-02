@@ -28,7 +28,6 @@ load("//:common_settings.bzl",
      "create_config_settings")
 create_config_settings()
 
-#To build without python use flags - bazel build --config=linux --define PYTHON_DISABLE=1 --cxxopt=-DPYTHON_DISABLE=1 //src:ovms
 
 cc_library(
   name = "ovms_dependencies",
@@ -56,9 +55,6 @@ cc_library(
                 "@model_api//:model_api",],
             "//:disable_mediapipe": []
             })
-         + select({
-            "//:not_disable_python": [],
-            "//:disable_python": []
-            }),
+            + [],
     visibility = ["//visibility:public"],
 )

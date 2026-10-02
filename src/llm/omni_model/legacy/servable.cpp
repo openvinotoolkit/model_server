@@ -50,9 +50,7 @@
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
-#if (PYTHON_DISABLE == 0)
 #include "src/llm/py_jinja_template_processor.hpp"
-#endif
 #include "../../io_processing/generation_config_builder.hpp"
 #include "src/audio/audio_utils.hpp"
 #include "servable.hpp"

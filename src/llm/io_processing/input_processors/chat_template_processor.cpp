@@ -78,7 +78,12 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
 
     const std::string jsonBody = serializeForJinja(chatHistory);
 
-    if (!useMinja && preparedRuntimeChatTemplate != nullptr && preparedRuntimeChatTemplate->isPrepared()) {
+    if (!useMinja) {
+        if (preparedRuntimeChatTemplate == nullptr || !preparedRuntimeChatTemplate->isPrepared()) {
+            return absl::Status(absl::StatusCode::kUnavailable,
+                "Jinja chat-template mode was selected, but the Python runtime is unavailable");
+        }
+
         std::string runtimeOutput;
         RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
         auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
@@ -91,6 +96,9 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         } else if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
             (void)runtimeError;
             return absl::Status(absl::StatusCode::kInvalidArgument, runtimeOutput);
+        } else {
+            return absl::Status(absl::StatusCode::kUnavailable,
+                "Jinja chat-template runtime is unavailable while processing the request");
         }
     } else {
         const auto& tools = chatHistory.get_tools();

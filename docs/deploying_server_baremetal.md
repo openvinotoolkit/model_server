@@ -3,24 +3,12 @@
 It is possible to deploy Model Server outside of container.
 To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubuntu24, RHEL9 or Windows 11.
 
-You can download model server package in two configurations. One with Python support (containing Python environment for Python code execution) and another without Python dependency - C++ only. Lack of support for Python code execution comes with the following limitations in model server from C++ only package:
-
-- Deploying [Python nodes](./python_support/reference.md) is not available.
-- Chat template application for [LLM servables](./llm/reference.md) (used when requesting generation on chat/completions endpoint) supports basic user/assistant messages. More complex templates that use Pythonic syntax/functions for flow control or input processing might not render all parts of the prompt correctly.
-- System message is not included in the prompt.
-- Due to limited template support, using [tools](https://platform.openai.com/docs/guides/function-calling?api-mode=chat) is not possible.
-
-For advanced LLM chat-template scenarios, the package with Python support is recommended, but it is not a universal fix for every template issue. Final rendering still depends on template correctness and model-specific expectations.
+Linux packages use compatible Python runtime libraries provided by the system. The Windows package includes an embedded Python environment.
 
 ::::{tab-set}
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
-Download precompiled package (without python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_ubuntu22_2026.4.0_python_off.tar.gz
-tar -xzvf ovms_ubuntu22_2026.4.0_python_off.tar.gz
-```
-or precompiled package (with python):
+Download the precompiled package:
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_ubuntu22_2026.4.0_python_on.tar.gz
 tar -xzvf ovms_ubuntu22_2026.4.0_python_on.tar.gz
@@ -34,7 +22,7 @@ Set path to the libraries and add binary to the `PATH`
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the version with python run also:
+To enable Python support, run:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install python3-pip
@@ -45,17 +33,12 @@ and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will al
 pip3 install numpy
 ```
 **Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
-Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
+The Model Server package is shipped with those libraries, and installing them with pip will likely result in broken dependencies.
 
 :::
 :::{tab-item} Ubuntu 24.04
 :sync: ubuntu-24-04
-Download precompiled package (without python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_ubuntu24_2026.4.0_python_off.tar.gz
-tar -xzvf ovms_ubuntu24_2026.4.0_python_off.tar.gz
-```
-or precompiled package (with python):
+Download the precompiled package:
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_ubuntu24_2026.4.0_python_on.tar.gz
 tar -xzvf ovms_ubuntu24_2026.4.0_python_on.tar.gz
@@ -69,7 +52,7 @@ Set path to the libraries and add binary to the `PATH`
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the version with python run also:
+To enable Python support, run:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install python3-pip
@@ -80,17 +63,12 @@ and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will al
 pip3 install numpy
 ```
 **Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
-Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
+The Model Server package is shipped with those libraries, and installing them with pip will likely result in broken dependencies.
 
 :::
 :::{tab-item} RHEL 9.6
 :sync: rhel-9.6
-Download precompiled package (without python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_redhat_2026.4.0_python_off.tar.gz
-tar -xzvf ovms_redhat_2026.4.0_python_off.tar.gz
-```
-or precompiled package (with python):
+Download the precompiled package:
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_redhat_2026.4.0_python_on.tar.gz
 tar -xzvf ovms_redhat_2026.4.0_python_on.tar.gz
@@ -104,7 +82,7 @@ Set path to the libraries and add binary to the `PATH`
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the version with python run also:
+To enable Python support, run:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python3.12 python3.12-pip
@@ -116,14 +94,14 @@ and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will al
 pip3.12 install numpy
 ```
 **Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
-Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
+The Model Server package is shipped with those libraries, and installing them with pip will likely result in broken dependencies.
 
 :::
 :::{tab-item} Windows
 :sync: windows
 Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/VC_redist.x64.exe) installed before moving forward.
 
-Download and unpack model server archive for Windows(with python):
+Download and unpack the Model Server archive with embedded Python:
 
 ```bat
 curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_windows_2026.4.0_python_on.zip -o ovms.zip
@@ -156,7 +134,7 @@ Additionally you can install [ovms as a windows service](windows_service.md)
 .\ovms\install_ovms_service.bat
 ```
 
-> **Note**: If package contains Python, running this script changes Python settings for the shell that runs it. Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
+> **Note**: Running this script changes Python settings for the current shell. Rerun it before using Model Server in a new shell.
 
 You can also build model server from source by following the [developer guide](windows_developer_guide.md).
 
@@ -167,17 +145,14 @@ You can also build model server from source by following the [developer guide](w
 
 ## Python Support and Fallback Behavior
 
-Model Server supports two deployment configurations:
+Model Server can use optional Python runtime support on Linux. The precompiled Windows package includes the Python runtime.
 
-**With Python Support** (`PYTHON_DISABLE=0`, default):
+With Python runtime support:
 - Python nodes are available and LLM chat-template handling has broader feature coverage.
 - Requires runtime Python libraries to be available.
 - Can gracefully degrade if Python runtime libraries/plugins are unavailable.
 
-**Without Python Support** (`PYTHON_DISABLE=1`):
-- Lightweight deployment for C++ models only.
-- Python nodes are unavailable.
-- LLM template rendering has reduced feature coverage.
+When Python runtime cannot be loaded, OVMS starts without Python-dependent features. Python nodes are unavailable and LLM chat template rendering supports less chat templates variations.
 
 For Python runtime setup, fallback behavior details, and common error resolution, see:
 - [Python Runtime Setup and Troubleshooting](python_runtime_setup_and_troubleshooting.md)

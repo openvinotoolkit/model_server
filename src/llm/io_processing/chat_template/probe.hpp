@@ -42,11 +42,9 @@ bool probeChatTemplateReasoning(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
 
 bool probeChatTemplateToolResponse(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
 
-#if (PYTHON_DISABLE == 0)
 class PyJinjaTemplateProcessor;
 
 // The same, but for Jinja.
 bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, ChatTemplateCaps& caps);
-#endif
 
 }  // namespace ovms

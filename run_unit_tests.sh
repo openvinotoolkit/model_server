@@ -23,9 +23,9 @@ CHECK_COVERAGE=${CHECK_COVERAGE:-"0"}
 TEST_LOG=${TEST_LOG:-"test.log"}
 FAIL_LOG=${FAIL_LOG:-"fail.log"}
 if [ -f /etc/redhat-release ] ; then dist="--//:distro=redhat" ; fi
-debug_bazel_flags=${debug_bazel_flags:-"--config=mp_on_py_on $dist"}
+debug_bazel_flags=${debug_bazel_flags:-"--config=mp_on $dist"}
 TEST_FILTER="--test_filter=*"
-UNIT_TEST_TARGETS="//src:ovms_test //src:python_runtime_library_test //src:ovms_no_libpython_smoke_test //src:ovms_no_duplicate_calculator_extensions_smoke_test"
+UNIT_TEST_TARGETS="//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test //src:ovms_no_libpython_smoke_test //src:ovms_no_duplicate_calculator_extensions_smoke_test"
 SHARED_OPTIONS=" \
 --jobs=$JOBS \
 ${debug_bazel_flags} \

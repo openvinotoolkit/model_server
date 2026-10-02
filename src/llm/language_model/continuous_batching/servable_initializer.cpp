@@ -161,17 +161,11 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    if (nodeOptions.has_chat_template_mode()) {
-#if (PYTHON_DISABLE == 0)
-        properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
-                                           ? ChatTemplateMode::JINJA
-                                           : ChatTemplateMode::MINJA;
-#else
-        if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA) {
-            SPDLOG_WARN("chat_template_mode=JINJA is not supported in Python-disabled builds. Falling back to MINJA.");
-        }
-        properties->chatTemplateMode = ChatTemplateMode::MINJA;
-#endif
+    try {
+        properties->chatTemplateMode = determineChatTemplateMode(nodeOptions);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to determine chat template mode: {}", e.what());
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
