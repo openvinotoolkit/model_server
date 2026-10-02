@@ -129,7 +129,7 @@ public:
         const bool useTokenizeEndpoint = TokenizeParser::isTokenizeEndpoint(payload.uri);
         if (useTokenizeEndpoint) {
             ovms::TokenizeRequest tokenizeRequest;
-            absl::Status parsingStatus = ovms::TokenizeParser::parseTokenizeRequest(*payload.parsedJson, tokenizeRequest);
+            absl::Status parsingStatus = ovms::TokenizeParser::parseTokenizeRequest(*payload.parsedJson, tokenizeRequest, embeddings_session->getMaxModelLength());
             if (!parsingStatus.ok()) {
                 return parsingStatus;
             }
