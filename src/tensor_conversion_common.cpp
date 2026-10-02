@@ -15,11 +15,14 @@
 //*****************************************************************************
 #include "tensor_conversion_common.hpp"
 
+#include <cstdint>
 #include <memory>
-#include <vector>
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include "deps/opencv.hpp"
+#include "image_utils/decoded_image_size.hpp"
 #include "logging.hpp"
 #include "precision.hpp"
 #include "predict_request_validation_utils_impl.hpp"
@@ -217,6 +220,41 @@ bool isResizeSupported(const TensorInfo& tensorInfo) {
         return false;
     }
     return true;
+}
+Status checkEstimatedImageSize(std::string_view encodedImage, const std::string& inputName,
+    size_t alreadyAllocatedPixels, size_t maxAllowedImagePixels) {
+    uint64_t estimatedDecodedPixels = 0;
+    auto estimate = image_utils::estimateDecodedImageSize(encodedImage, estimatedDecodedPixels);
+    if (estimate == image_utils::DecodedSizeEstimate::InputTooLarge) {
+        SPDLOG_DEBUG("Image binary payload too large to inspect for input: {}. Size: {}", inputName, encodedImage.size());
+        return StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED;
+    }
+    if (estimate == image_utils::DecodedSizeEstimate::UnsupportedFormat) {
+        if (!request_validation_utils::allowUnestimatableImageFormats()) {
+            SPDLOG_DEBUG("Decoded size could not be estimated for input: {} and unestimatable formats are not allowed", inputName);
+            return StatusCode::IMAGE_PARSING_FAILED;
+        }
+        return StatusCode::OK;
+    }
+    size_t remainingBudget = alreadyAllocatedPixels >= maxAllowedImagePixels ? 0 : maxAllowedImagePixels - alreadyAllocatedPixels;
+    if (estimatedDecodedPixels > remainingBudget) {
+        SPDLOG_DEBUG("Estimated decoded image pixels exceed budget for input: {}. Estimated pixels: {}, max allowed: {}",
+            inputName, estimatedDecodedPixels, maxAllowedImagePixels);
+        return StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED;
+    }
+    return StatusCode::OK;
+}
+Status accumulateAndCheckDecodedImageSize(const cv::Mat& image, const TensorInfo& tensorInfo,
+    size_t& totalAllocatedPixels, size_t maxAllowedImagePixels) {
+    size_t imagePixels = image.total();  // rows * cols
+    size_t remainingBudget = totalAllocatedPixels >= maxAllowedImagePixels ? 0 : maxAllowedImagePixels - totalAllocatedPixels;
+    if (imagePixels > remainingBudget) {
+        SPDLOG_DEBUG("Decoded image pixel budget exceeded for input: {}. Image pixels: {}, max allowed: {}",
+            tensorInfo.getMappedName(), imagePixels, maxAllowedImagePixels);
+        return StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED;
+    }
+    totalAllocatedPixels += imagePixels;
+    return StatusCode::OK;
 }
 /////////////////////////////////
 }  // namespace tensor_conversion

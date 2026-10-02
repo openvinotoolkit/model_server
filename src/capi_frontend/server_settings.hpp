@@ -235,6 +235,10 @@ struct ServerSettingsImpl {
     bool verboseResponse = false;
     bool disableInputCountValidation = false;
     bool allowCredentials = false;
+    // default matches OpenCV's
+    uint64_t maxImageDecodePixels = 67108864;
+    // When false, images whose decoded size cannot be estimated are rejected; when true they are decoded anyway.
+    bool allowUnestimatableImageFormats = false;
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};
     std::string allowedHeaders{"*"};
