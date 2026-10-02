@@ -42,9 +42,22 @@ ovms_cc_library(
     srcs = ["omni_audio_adapter.cpp"],
     hdrs = ["omni_audio_adapter.hpp"],
     deps = [
+        "//src:libovmslogging",
         ":streaming_audio_model",
         "//third_party:genai",
         "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "stt_audio_adapter",
+    srcs = ["stt_audio_adapter.cpp"],
+    hdrs = ["stt_audio_adapter.hpp"],
+    deps = [
+        ":streaming_audio_model",
+        "//src:libovmslogging",
+        "//third_party:genai",
     ],
     visibility = ["//visibility:public"],
 )
@@ -104,6 +117,7 @@ ovms_cc_library(
         ":omni_audio_adapter",
         ":opus_audio_codec",
         ":streaming_audio_processor",
+        ":stt_audio_adapter",
         ":webrtc_peer_connection",
         "//third_party:genai",
         "@libdatachannel//:libdatachannel",

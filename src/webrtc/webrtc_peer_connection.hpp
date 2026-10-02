@@ -39,6 +39,7 @@ public:
     using AudioTrackCallback = std::function<void()>;
     using AudioTrackOpenCallback = std::function<void()>;
     using ProcessedAudioFrameCallback = std::function<void(rtc::binary data, rtc::FrameInfo info)>;
+    using DataChannelCallback = std::function<void(std::shared_ptr<rtc::DataChannel> channel)>;
 
     explicit WebRtcPeerConnection(rtc::Configuration configuration);
 
@@ -50,6 +51,7 @@ public:
     void onAudioTrack(AudioTrackCallback callback);
     void onAudioTrackOpen(AudioTrackOpenCallback callback);
     void onLocalAudioTrackOpen(AudioTrackOpenCallback callback);
+    void onDataChannel(DataChannelCallback callback);
     bool isLocalAudioTrackOpen() const;
 
     // Adds a single Opus audio track (PT 111, the standard WebRTC dynamic payload type).

@@ -7,7 +7,6 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
@@ -15,7 +14,6 @@
 //*****************************************************************************/
 #pragma once
 
-#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <exception>
@@ -23,58 +21,49 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <thread>
 #include <vector>
 
-#include <openvino/genai/omni/pipeline.hpp>
+#include <openvino/genai/automatic_speech_recognition/pipeline.hpp>
 
 #include "streaming_audio_model.hpp"
 
 namespace ovms {
 
-class OmniAudioAdapter {
+class SttAudioAdapter {
 public:
-    struct Conversation;
-    using ConversationPtr = std::shared_ptr<Conversation>;
-    using AudioCallback = std::function<void(AudioChunk)>;
     using TextCallback = std::function<void(const std::string&)>;
     using ErrorCallback = std::function<void(std::exception_ptr)>;
     using CompletionCallback = std::function<void(const std::string&)>;
 
-    OmniAudioAdapter(std::shared_ptr<ov::genai::OmniPipeline> pipeline, size_t audioChunkFrames);
-    ~OmniAudioAdapter();
+    SttAudioAdapter(std::string modelPath, std::string device);
+    ~SttAudioAdapter();
 
-    OmniAudioAdapter(const OmniAudioAdapter&) = delete;
-    OmniAudioAdapter& operator=(const OmniAudioAdapter&) = delete;
+    SttAudioAdapter(const SttAudioAdapter&) = delete;
+    SttAudioAdapter& operator=(const SttAudioAdapter&) = delete;
 
-    ConversationPtr createConversation() const;
-    void submit(ConversationPtr conversation, AudioChunk utterance, AudioCallback audioCallback,
-        TextCallback textCallback = {}, ErrorCallback errorCallback = {}, CompletionCallback completionCallback = {});
-    void cancel();
+    void submit(AudioChunk utterance, TextCallback textCallback, ErrorCallback errorCallback,
+        CompletionCallback completionCallback);
 
 private:
-    void run();
-    void generate(Conversation& conversation, const AudioChunk& utterance, const AudioCallback& audioCallback,
-        const TextCallback& textCallback);
-
     struct Request {
-        ConversationPtr conversation;
         AudioChunk utterance;
-        AudioCallback audioCallback;
         TextCallback textCallback;
         ErrorCallback errorCallback;
         CompletionCallback completionCallback;
     };
 
-    static std::vector<float> resample(const AudioChunk& input, uint32_t outputRate);
+    void run();
+    void transcribe(Request& request);
+    static std::vector<float> prepareAudio(const AudioChunk& utterance);
 
-    std::shared_ptr<ov::genai::OmniPipeline> pipeline_;
-    const size_t audioChunkFrames_;
+    std::shared_ptr<ov::genai::ASRPipeline> pipeline_;
     std::mutex mutex_;
     std::condition_variable condition_;
     std::queue<Request> requests_;
     std::thread worker_;
-    std::atomic<bool> stopping_{false};
+    bool stopping_ = false;
 };
 
 }  // namespace ovms

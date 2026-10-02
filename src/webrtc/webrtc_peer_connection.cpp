@@ -165,6 +165,12 @@ void WebRtcPeerConnection::onLocalAudioTrackOpen(AudioTrackOpenCallback callback
     }
 }
 
+void WebRtcPeerConnection::onDataChannel(DataChannelCallback callback) {
+    peerConnection_->onDataChannel([callback](std::shared_ptr<rtc::DataChannel> channel) {
+        callback(std::move(channel));
+    });
+}
+
 bool WebRtcPeerConnection::isLocalAudioTrackOpen() const {
     return audioTrack_ && audioTrack_->isOpen();
 }

@@ -29,7 +29,8 @@ public:
     struct Config {
         float rmsThreshold = 0.01f;
         size_t minimumSpeechFrames = 2;
-        size_t silenceHangoverFrames = 15;
+        // 20 ms Opus frames, so 40 frames = 800 ms of trailing silence.
+        size_t silenceHangoverFrames = 40;
     };
 
     AudioUtteranceBuffer();

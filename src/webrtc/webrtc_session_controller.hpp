@@ -29,6 +29,7 @@
 #include "mock_echo_streaming_audio_model.hpp"
 #include "omni_audio_adapter.hpp"
 #include "opus_audio_codec.hpp"
+#include "stt_audio_adapter.hpp"
 #include "streaming_audio_processor.hpp"
 
 namespace ovms {
@@ -47,7 +48,8 @@ public:
         std::vector<Candidate> candidates;
     };
 
-    explicit WebRtcSessionController(size_t maxSessions = 16, std::string omniModelPath = {});
+    explicit WebRtcSessionController(size_t maxSessions = 16, std::string omniModelPath = {},
+        std::string sttModelPath = {}, std::string sttDevice = "CPU");
 
     bool createSession(const std::string& offerSdp, const std::string& offerType, OfferResult& result);
     bool addCandidate(const std::string& sessionId, const std::string& candidate, const std::string& mid);
@@ -59,6 +61,7 @@ private:
     struct Session {
         explicit Session(rtc::Configuration configuration);
         void sendGeneratedAudio(const AudioChunk& audio, rtc::FrameInfo info, bool complete);
+        void sendTranscript(const std::string& message);
 
         WebRtcPeerConnection peer;
         OpusAudioCodec codec;
@@ -67,6 +70,8 @@ private:
         AudioUtteranceBuffer utteranceBuffer;
         std::deque<float> pendingOutputSamples;
         OmniAudioAdapter::ConversationPtr conversation;
+        std::shared_ptr<rtc::DataChannel> transcriptChannel;
+        std::mutex transcriptSendMutex;
         std::vector<Candidate> localCandidates;
         std::string localType;
         std::string localSdp;
@@ -77,7 +82,10 @@ private:
     mutable std::mutex mutex_;
     size_t maxSessions_;
     std::string omniModelPath_;
+    std::string sttModelPath_;
+    std::string sttDevice_;
     std::shared_ptr<OmniAudioAdapter> omniAdapter_;
+    std::shared_ptr<SttAudioAdapter> sttAdapter_;
     uint64_t nextSessionId_ = 1;
     std::unordered_map<std::string, std::shared_ptr<Session>> sessions_;
 };
