@@ -42,18 +42,16 @@ The model is auto-pulled on first start if it is not already present in the mode
 mkdir -p ${HOME}/models
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) \
-  -e "http_proxy=$http_proxy" -e "https_proxy=$https_proxy" -e "no_proxy=${no_proxy}" \
   -v ${HOME}/models:/models -p 8000:8000 openvino/model_server:latest-gpu \
   --rest_port 8000 --model_repository_path /models \
-  --source_model OpenVINO/Qwen3.8-27B-int4-ov --task text_generation \
-  --log_path /models/ovms-log.txt
+  --source_model OpenVINO/Qwen3.8-27B-int4-ov
 ```
 :::
 :::{tab-item} Windows
 :sync: Windows
 ```bat
-mkdir models
-ovms.exe --source_model OpenVINO/Qwen3.8-27B-int4-ov --model_repository_path models --task text_generation --target_device GPU --model_name OpenVINO/Qwen3.8-27B-int4-ov --rest_port 8000
+mkdir c:\models
+ovms.exe --source_model OpenVINO/Qwen3.8-27B-int4-ov --model_repository_path c:\models --model_name OpenVINO/Qwen3.8-27B-int4-ov --rest_port 8000
 ```
 :::
 ::::
