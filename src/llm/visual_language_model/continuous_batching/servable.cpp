@@ -30,6 +30,7 @@
 #include "../../../logging.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #include "../../text_utils.hpp"
+#include "src/llm/py_jinja_template_processor.hpp"
 
 namespace ovms {
 

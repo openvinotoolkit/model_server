@@ -2120,6 +2120,8 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 "test/llm/llmtemplate_test.cpp",
                 "test/llm/chat_template_end_to_end_jinja_test.cpp",
+                "test/llm/python_jinja_test_utils.cpp",
+                "test/llm/python_jinja_test_utils.hpp",
         ] + [
             "test/multi_part_parser_drogon_test.cpp",
         ],
@@ -2305,6 +2307,7 @@ cc_test(
                 # via this linkage point to keep runtime-split behavior stable.
                 "//src:libmediapipe_framework_impl",
                 "//src:kfs_graph_executor_impl_h",
+                "//src/python:python_calculators_runtime_objects",
                 ":test_llm_io_processing_utils_tests",
                 ":test_chat_template_workarounds",
                 ":test_llm_input_processing_tests",

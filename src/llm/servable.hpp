@@ -177,6 +177,16 @@ struct LegacyServableExecutionContextBase : public GenAiServableExecutionContext
 // Defined in servable.cpp. Both Legacy servable overrides delegate here.
 absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
+struct ExtraGenerationInfo {
+    std::string bosTokenFromTokenizer;
+    std::string bosTokenIdFromTokenizer;
+    std::string eosTokenFromTokenizer;
+    std::string eosTokenIdFromTokenizer;
+    std::string chatTemplateFromTokenizer;
+    std::string chatTemplateDirectory;
+    bool isGgufModel;
+};
+
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;

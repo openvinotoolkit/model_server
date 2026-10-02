@@ -20,21 +20,28 @@
 #include <string>
 
 #include <gtest/gtest.h>
-#include <openvino/genai/chat_history.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <openvino/genai/tokenizer.hpp>
 #pragma GCC diagnostic pop
 
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
+#include <pybind11/embed.h>
+#pragma warning(pop)
+
+#include <openvino/genai/chat_history.hpp>
+
 #include "../../llm/io_processing/chat_template/analyzer.hpp"
 #include "../../llm/io_processing/chat_template/caps.hpp"
 #include "../../llm/io_processing/chat_template/probe.hpp"
 #include "../../llm/io_processing/input_processors/chat_template_adapter.hpp"
-#include "../../llm/runtime_chat_template.hpp"
-#include "../../llm/runtime_chat_template_runtime_loader.hpp"
+#include "../../llm/py_jinja_template_processor.hpp"
 #include "../../utils/env_guard.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
+#include "../../llm/servable_initializer.hpp"
+#include "python_jinja_test_utils.hpp"
 #include "../platform_utils.hpp"
 #include "../test_with_temp_dir.hpp"
 
@@ -44,15 +51,13 @@ using namespace ovms;
 
 // End-to-end test using Python Jinja for template rendering.
 // This tests the same templates as ChatTemplateEndToEndTest (minja path)
-// but uses the production prepared Python Jinja runtime with full extension support.
+// but uses the real Python Jinja2 engine with full extension support.
 class ChatTemplateEndToEndJinjaTest : public TestWithTempDir {
 protected:
     const std::string& chatTemplatesPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/chat_templates", false);
     const std::string& tokenizerModelPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m", false);
 
     std::shared_ptr<GenAiServable> servable;
-    std::unique_ptr<ov::genai::Tokenizer> tokenizer;
-    PreparedRuntimeChatTemplate preparedTemplate;
     std::string savedLogLevel;
 
     void SetUp() override {
@@ -60,7 +65,7 @@ protected:
         const char* prev = std::getenv("OPENVINO_LOG_LEVEL");
         savedLogLevel = prev ? prev : "";
         SetEnvironmentVar("OPENVINO_LOG_LEVEL", "0");
-        // Copy tokenizer model files to temp dir for runtime template preparation.
+        // Copy tokenizer model files to temp dir (required by PyJinjaTemplateProcessor)
         for (const auto& filename : {"openvino_tokenizer.xml", "openvino_tokenizer.bin",
                  "openvino_detokenizer.xml", "openvino_detokenizer.bin"}) {
             std::filesystem::copy_file(
@@ -100,8 +105,8 @@ protected:
             std::istreambuf_iterator<char>());
     }
 
-    // Prepare the same runtime Jinja template handle used by production.
-    void prepareJinjaTemplate() {
+    // Initialize the Python Jinja template processor with the current chatTemplate
+    void initJinjaProcessor() {
         // Write chat_template.jinja to temp dir
         std::ofstream jinjaFile(directoryPath + "/chat_template.jinja");
         jinjaFile << chatTemplate;
@@ -109,24 +114,11 @@ protected:
 
         servable = std::make_shared<ContinuousBatchingServable>();
         servable->getProperties()->modelsPath = directoryPath;
-        tokenizer = std::make_unique<ov::genai::Tokenizer>(directoryPath);
-        servable->getProperties()->tokenizer = *tokenizer;
+        servable->getProperties()->tokenizer = ov::genai::Tokenizer(directoryPath);
 
-        ASSERT_NE(getRuntimeChatTemplateRuntimeApi(), nullptr)
-            << "libovmspython is unavailable; runtime Jinja tests require the Python runtime";
-        std::string runtimeOutput;
-        RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
-        const auto status = prepareRuntimeChatTemplate(
-            directoryPath,
-            tokenizer->get_chat_template(),
-            tokenizer->get_bos_token(),
-            tokenizer->get_eos_token(),
-            preparedTemplate,
-            runtimeOutput,
-            &runtimeError);
-        ASSERT_EQ(status, RuntimeChatTemplatePrepareStatus::PREPARED)
-            << "Jinja template preparation failed (error=" << static_cast<int>(runtimeError)
-            << "): " << runtimeOutput;
+        ExtraGenerationInfo extraGenInfo = GenAiServableInitializer::readExtraGenerationInfo(
+            servable->getProperties(), directoryPath);
+        GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), extraGenInfo);
     }
 
     // Run the full Jinja pipeline: analyze → probe → workarounds → apply via Python Jinja
@@ -144,12 +136,23 @@ protected:
         std::cout << "  supportsToolCalls: " << caps.supportsToolCalls << std::endl;
         std::cout << "  requiresObjectArguments: " << caps.requiresObjectArguments << std::endl;
 
-        // Step 2: Prepare Jinja through the production runtime interface.
-        prepareJinjaTemplate();
+        // Step 2: Initialize Jinja processor (needed for probe and rendering)
+        initJinjaProcessor();
+        ASSERT_NE(servable->getProperties()->templateProcessor.chatTemplate, nullptr)
+            << "Failed to load Python Jinja template processor";
 
-        // Step 3: Probe capabilities with the same prepared Jinja runtime used by production.
-        if (!probeChatTemplateCapsJinjaRuntime(preparedTemplate, caps)) {
+        // Step 3a: Probe tool caps using Python Jinja (same function used in production)
+        if (!probeChatTemplateCapsJinja(servable->getProperties()->templateProcessor, caps)) {
             std::cout << "=== Jinja Probe FAILED: silent failure detected ===" << std::endl;
+        }
+
+        // Step 3b: Probe reasoning caps using Python Jinja (same function used in production)
+        {
+            ov::genai::Tokenizer probeTokenizer(tokenizerModelPath);
+            probeTokenizer.set_chat_template(chatTemplate);
+            if (!probeChatTemplateReasoning(probeTokenizer, caps)) {
+                std::cout << "=== Jinja Reasoning Probe FAILED: silent failure detected ===" << std::endl;
+            }
         }
 
         std::cout << "=== After Probe ===" << std::endl;
@@ -159,12 +162,13 @@ protected:
         // Step 4: Apply workarounds to chat history
         chat_template_adapter::applyToHistory(caps, chatHistory);
 
-        // Step 5: Render with the prepared Python runtime, as production does.
+        // Step 5: Serialize and render via Python Jinja (same as production ChatTemplateProcessor)
         std::string requestBody = "{\"messages\":" + chatHistory.get_messages().to_json_string() + "}";
         std::string renderOutput;
-        const auto renderStatus = tryApplyPreparedChatTemplateRuntime(
-            preparedTemplate, requestBody, renderOutput);
-        exceptionThrownDuringApplication = renderStatus != RuntimeChatTemplateStatus::APPLIED;
+        bool success = PyJinjaTemplateProcessor::applyChatTemplate(
+            servable->getProperties()->templateProcessor,
+            requestBody, renderOutput);
+        exceptionThrownDuringApplication = !success;
         appliedOutput = renderOutput;
 
         std::cout << "=== Result (Jinja) ===" << std::endl;

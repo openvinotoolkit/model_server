@@ -26,6 +26,17 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "pipelinedefinitionstatus",
+    hdrs = ["pipelinedefinitionstatus.hpp"],
+    srcs = ["pipelinedefinitionstatus.cpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//src:libovmsmodelversionstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "node_initializer",
     srcs = [
         "node_initializer.cpp",
@@ -140,17 +151,6 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "pipelinedefinitionstatus",
-    hdrs = ["pipelinedefinitionstatus.hpp"],
-    srcs = ["pipelinedefinitionstatus.cpp"],
-    deps = [
-        "//src:libovmslogging",
-        "//src:libovmsmodelversionstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
     name = "mediapipegraphconfig",
     srcs = [
         "mediapipegraphconfig.cpp",
@@ -180,6 +180,7 @@ ovms_cc_library(
         ":graphqueue",
         ":mediapipe_utils",
         ":side_packet_builder",
+    ] + [
         "//src/llm:execution_context_utils",
         "//src:model_metric_reporter",
         "//src:libovms_execution_context",
@@ -209,9 +210,6 @@ ovms_cc_library(
         ":mediapipe_utils",
         ":side_packet_builder",
         "//src:mediapipe_executor_interface",
-        # Keep the in-process Python calculator bridge available for test/runtime
-        # use without forcing the main ovms binary to link Python directly.
-        "//src/python:python_calculators_runtime_objects",
         ":pipelinedefinitionstatus",
         "//src:libovms_single_version_servable_definition",
         "//src:libovms_tensorinfo",
@@ -231,6 +229,7 @@ ovms_cc_library(
         "//src:libovmstimer",
         "//src:libovms_time_utils",
         "//src:libovmsprofiler",
+    ] + [
         "//src/llm:execution_context_utils",
         "//src/utils:env_guard",
     ],
@@ -248,21 +247,29 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "libovms_mediapipe_runtime_owner",
+    name = "libovms_mediapipe_runtime_owner_no_python_calculators",
     deps = [
         ":libovms_mediapipe",
-        "//src:kfs_graph_executor_impl_runtime",
+        "//src/llm:llmcalculator",
+        "//src:kfs_graph_executor_impl",
         "//src:libovms_mediapipe_http_executor",
-        "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
-        "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
-        "@mediapipe//mediapipe/calculators/geti/utils:utils",
-        "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
         "//src/embeddings:embeddingscalculator_ov",
         "//src/rerank:rerankcalculator_ov",
-        "//src/llm:llmcalculator",
         "//src/image_gen:image_gen_calculator",
         "//src/audio/speech_to_text:s2t_calculator",
         "//src/audio/text_to_speech:t2s_calculator",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_runtime_owner",
+    deps = [
+        ":libovms_mediapipe_runtime_owner_no_python_calculators",
+        "//src/llm:execution_context_utils",
+        "//src/llm:llmcalculator",
+        "//src/python:python_calculators_runtime_objects",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

@@ -18,7 +18,6 @@
 #include <string>
 
 #include "caps.hpp"
-#include "../../runtime_chat_template.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -43,9 +42,9 @@ bool probeChatTemplateReasoning(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
 
 bool probeChatTemplateToolResponse(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
 
-// Probes the production, prepared-runtime Jinja path for tool-argument,
-// reasoning-field, and tool-definition response-field compatibility.
-bool probeChatTemplateCapsJinjaRuntime(const PreparedRuntimeChatTemplate& preparedTemplate,
-	ChatTemplateCaps& caps);
+class PyJinjaTemplateProcessor;
+
+// The same, but for Jinja.
+bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, ChatTemplateCaps& caps);
 
 }  // namespace ovms

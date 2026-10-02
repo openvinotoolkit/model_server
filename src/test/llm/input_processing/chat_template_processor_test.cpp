@@ -40,12 +40,10 @@
 #include <openvino/genai/tokenizer.hpp>
 
 #include "../../../llm/io_processing/input_processors/chat_template_processor.hpp"
-#include "../../../llm/io_processing/chat_template/probe.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "../../../llm/runtime_chat_template.hpp"
 #include "../../../llm/runtime_chat_template_runtime_loader.hpp"
 #include "../../platform_utils.hpp"
-#include "../../test_with_temp_dir.hpp"
 
 namespace ovms {
 namespace {
@@ -394,35 +392,6 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, EmptyStringContent_TemplateStillProduce
 
     ASSERT_TRUE(status.ok()) << status.message();
     EXPECT_FALSE(req.promptText.empty());
-}
-
-class ChatTemplateRuntimeCapabilityProbeTest : public TestWithTempDir {};
-
-TEST_F(ChatTemplateRuntimeCapabilityProbeTest, DetectsJinjaToolArgumentAndResponseCapabilities) {
-    ASSERT_NE(getRuntimeChatTemplateRuntimeApi(), nullptr)
-        << "libovmspython is unavailable; runtime Jinja probes require the Python runtime";
-
-    const std::string chatTemplate = R"jinja({% if tools is defined and tools %}{{ tools[0].function.response.properties.keys() | list | first }}{% elif messages[-1].tool_calls %}{{ messages[-1].tool_calls[0].function.arguments | tojson }}{% endif %})jinja";
-    PreparedRuntimeChatTemplate preparedTemplate;
-    std::string runtimeOutput;
-    RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
-    const auto prepareStatus = prepareRuntimeChatTemplate(
-        directoryPath,
-        chatTemplate,
-        "",
-        "",
-        preparedTemplate,
-        runtimeOutput,
-        &runtimeError);
-    ASSERT_EQ(prepareStatus, RuntimeChatTemplatePrepareStatus::PREPARED)
-        << "Jinja probe template preparation failed (error=" << static_cast<int>(runtimeError)
-        << "): " << runtimeOutput;
-
-    ChatTemplateCaps caps;
-    caps.supportsToolCalls = true;
-    ASSERT_TRUE(probeChatTemplateCapsJinjaRuntime(preparedTemplate, caps));
-    EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_TRUE(caps.supportsResponseFieldInToolDefinition);
 }
 
 }  // namespace
