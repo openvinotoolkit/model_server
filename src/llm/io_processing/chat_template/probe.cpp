@@ -23,7 +23,6 @@
 #include <spdlog/spdlog.h>
 
 #include "../../../logging.hpp"
-#include "src/llm/py_jinja_template_processor.hpp"
 
 namespace ovms {
 
@@ -84,6 +83,16 @@ static const std::string PROBE_OBJ_ARGS_MSG =
 
 static const std::string PROBE_REASONING_MSG =
     R"({"role":"assistant","reasoning_content":")" + PROBE_NEEDLE + R"("})";
+
+static std::pair<bool, std::string> renderProbeMessageRuntime(
+    const PreparedRuntimeChatTemplate& preparedTemplate,
+    const std::string& assistantMessage) {
+    const std::string requestBody =
+        R"({"messages":[{"role":"user","content":"Hello"},)" + assistantMessage + "]}";
+    std::string output;
+    return {tryApplyPreparedChatTemplateRuntime(preparedTemplate, requestBody, output) == RuntimeChatTemplateStatus::APPLIED,
+        std::move(output)};
+}
 
 // Analyze dry-run probe outputs and update caps accordingly.
 // Returns false if the template silently failed (tool calls not supported).
@@ -250,36 +259,49 @@ bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
     return analyzeProbeToolArgumentResults(strOk, strOut, objOk, objOut, caps);
 }
 
-bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, ChatTemplateCaps& caps) {
-    // For now the capabilities are only related to tool calls, therefore we early exit here.
-    // In the future, if we add more capabilities to probe, we will need to remove this early exit and probe for those capabilities as well.
+bool probeChatTemplateCapsJinjaRuntime(const PreparedRuntimeChatTemplate& preparedTemplate,
+    ChatTemplateCaps& caps) {
     if (!caps.supportsToolCalls) {
         return true;
     }
 
-    static const std::string strArgsJson =
-        R"({"messages":[{"role":"user","content":"Hello"},)" + PROBE_STR_ARGS_MSG + R"(]})";
-    static const std::string objArgsJson =
-        R"({"messages":[{"role":"user","content":"Hello"},)" + PROBE_OBJ_ARGS_MSG + R"(]})";
-
-    std::string strOut, objOut;
-    bool strOk = false, objOk = false;
-
-    try {
-        strOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, strArgsJson, strOut);
-    } catch (...) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Dry-run probe: exception while applying chat template with string arguments");
+    const auto [strOk, strOut] = renderProbeMessageRuntime(preparedTemplate, PROBE_STR_ARGS_MSG);
+    const auto [objOk, objOut] = renderProbeMessageRuntime(preparedTemplate, PROBE_OBJ_ARGS_MSG);
+    if (!analyzeProbeToolArgumentResults(strOk, strOut, objOk, objOut, caps)) {
         return false;
     }
 
-    try {
-        objOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, objArgsJson, objOut);
-    } catch (...) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Dry-run probe: exception while applying chat template with object arguments");
-        return false;
+    if (!caps.missnamedReasoningField.empty()) {
+        const auto [reasoningOk, reasoningOut] = renderProbeMessageRuntime(preparedTemplate, PROBE_REASONING_MSG);
+        if (reasoningOk && reasoningOut.find(PROBE_NEEDLE) != std::string::npos) {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger,
+                "Jinja runtime reasoning probe: standard reasoning_content field is supported");
+            caps.missnamedReasoningField.clear();
+        } else {
+            const std::string alternateReasoningMessage = R"({"role":"assistant", ")" +
+                caps.missnamedReasoningField + R"(":")" + PROBE_NEEDLE + R"("})";
+            const auto [alternateOk, alternateOut] = renderProbeMessageRuntime(preparedTemplate, alternateReasoningMessage);
+            if (!alternateOk || alternateOut.find(PROBE_NEEDLE) == std::string::npos) {
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger,
+                    "Jinja runtime reasoning probe: field '{}' was not rendered", caps.missnamedReasoningField);
+            }
+        }
     }
 
-    return analyzeProbeToolArgumentResults(strOk, strOut, objOk, objOut, caps);
+    static const std::string toolDefinitions =
+        R"([{"type":"function","function":{"name":"cat","description":"A probe tool","parameters":{"type":"object","properties":{}},"response":{"type":"dict","properties":{"probe_needle_xK9m":{"type":"string"}}}}}])";
+    const std::string toolResponseRequest = R"({"messages":[{"role":"user","content":"Hello"}],"tools":)" + toolDefinitions + "}";
+    std::string toolResponseOutput;
+    const auto toolResponseStatus = tryApplyPreparedChatTemplateRuntime(
+        preparedTemplate, toolResponseRequest, toolResponseOutput);
+    if (toolResponseStatus != RuntimeChatTemplateStatus::APPLIED) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger,
+            "Jinja runtime tool response probe could not render the tool definition");
+        return false;
+    }
+    caps.supportsResponseFieldInToolDefinition =
+        toolResponseOutput.find(PROBE_NEEDLE) != std::string::npos;
+    return true;
 }
 
 }  // namespace ovms

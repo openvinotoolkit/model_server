@@ -161,10 +161,11 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    if (nodeOptions.has_chat_template_mode()) {
-        properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
-                                           ? ChatTemplateMode::JINJA
-                                           : ChatTemplateMode::MINJA;
+    try {
+        properties->chatTemplateMode = determineChatTemplateMode(nodeOptions);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to determine chat template mode: {}", e.what());
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();

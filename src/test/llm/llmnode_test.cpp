@@ -21,6 +21,7 @@
 #include <limits>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include <fmt/ranges.h>
@@ -4302,6 +4303,33 @@ INSTANTIATE_TEST_SUITE_P(
 // Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
 // We could consider adding tests for non-CB path in the future in the separate test suite
 class LLMOptionsHttpTestPython : public ::testing::Test {};
+
+TEST(LLMChatTemplateMode, UnsetSelectsJinjaWhenPythonRuntimeIsAvailable) {
+    mediapipe::LLMCalculatorOptions nodeOptions;
+
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateMode(nodeOptions, true), ChatTemplateMode::JINJA);
+}
+
+TEST(LLMChatTemplateMode, UnsetSelectsMinjaWhenPythonRuntimeIsUnavailable) {
+    mediapipe::LLMCalculatorOptions nodeOptions;
+
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateMode(nodeOptions, false), ChatTemplateMode::MINJA);
+}
+
+TEST(LLMChatTemplateMode, ExplicitMinjaDoesNotRequirePythonRuntime) {
+    mediapipe::LLMCalculatorOptions nodeOptions;
+    nodeOptions.set_chat_template_mode(mediapipe::LLMCalculatorOptions::MINJA);
+
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateMode(nodeOptions, false), ChatTemplateMode::MINJA);
+}
+
+TEST(LLMChatTemplateMode, ExplicitJinjaRequiresPythonRuntime) {
+    mediapipe::LLMCalculatorOptions nodeOptions;
+    nodeOptions.set_chat_template_mode(mediapipe::LLMCalculatorOptions::JINJA);
+
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateMode(nodeOptions, true), ChatTemplateMode::JINJA);
+    EXPECT_THROW(GenAiServableInitializer::determineChatTemplateMode(nodeOptions, false), std::runtime_error);
+}
 
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:

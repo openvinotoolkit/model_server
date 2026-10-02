@@ -75,6 +75,7 @@ enum class GenerationPhase {
 };
 
 enum class ChatTemplateMode {
+    UNSET,
     MINJA,  // Use GenAI's apply_chat_template (minja-based)
     JINJA,  // Use Python Jinja2 module for chat template processing
 };
@@ -176,16 +177,6 @@ struct LegacyServableExecutionContextBase : public GenAiServableExecutionContext
 // Defined in servable.cpp. Both Legacy servable overrides delegate here.
 absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
-struct ExtraGenerationInfo {
-    std::string bosTokenFromTokenizer;
-    std::string bosTokenIdFromTokenizer;
-    std::string eosTokenFromTokenizer;
-    std::string eosTokenIdFromTokenizer;
-    std::string chatTemplateFromTokenizer;
-    std::string chatTemplateDirectory;
-    bool isGgufModel;
-};
-
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
@@ -196,7 +187,7 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
-    ChatTemplateMode chatTemplateMode = ChatTemplateMode::JINJA;
+    ChatTemplateMode chatTemplateMode = ChatTemplateMode::UNSET;
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
     // Sampling

@@ -146,7 +146,7 @@ ovms_cc_library(
         ":io_processing_input_request",
         ":runtime_chat_template_loader",
         "//third_party:genai",
-    ] + [":py_jinja_template_processor"] + PYBIND_DEPS,
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -179,7 +179,7 @@ ovms_cc_library(
         "//third_party:genai",
         "//src:libovmslogging",
         "//src/audio:audio_utils",
-    ] + [":py_jinja_template_processor"] + PYBIND_DEPS,
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -235,7 +235,8 @@ ovms_cc_library(
     deps = [
         "//third_party:genai",
         "//src:libovmslogging",
-    ] + [":py_jinja_template_processor"],
+        ":runtime_chat_template_loader",
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -612,6 +613,7 @@ ovms_cc_library(
         ":generation_config_builders",
         ":chat_template_analyzer",
         ":chat_template_probe",
+        ":py_jinja_template_processor_header",
         ":io_processing_input_processor_context",
         "//src:httppayload",
         "//src:libhttpclientconnection",
@@ -651,6 +653,7 @@ ovms_cc_library(
         ":openai_responses_handler",
         ":generation_config_builders",
         ":runtime_chat_template_loader",
+        ":py_jinja_template_processor_header",
     ],
     visibility = ["//visibility:public"],
 )
@@ -674,9 +677,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "py_jinja_template_processor_header",
     hdrs = ["py_jinja_template_processor.hpp"],
-    deps = PYBIND_HEADERS_ONLY + [
-        "//src/python:python_headers_only",
-    ],
+    deps = PYBIND_HEADERS_ONLY + ["//src/python:python_headers_only"],
     visibility = ["//visibility:public"],
 )
 
@@ -684,10 +685,7 @@ ovms_cc_library(
     name = "py_jinja_template_processor",
     hdrs = ["py_jinja_template_processor.hpp"],
     srcs = ["py_jinja_template_processor.cpp"],
-    deps = [
-        "//src:libovmslogging",
-        "//src/python:utils",
-    ] + PYBIND_HEADERS_ONLY,
+    deps = ["//src:libovmslogging", "//src/python:utils"] + PYBIND_HEADERS_ONLY,
     visibility = ["//visibility:public"],
 )
 
