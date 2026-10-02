@@ -84,9 +84,8 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
             return absl::Status(absl::StatusCode::kInvalidArgument, jinjaOutput);
         }
         req.promptText = std::move(jinjaOutput);
-    } else
+    } else {
 #endif
-    {
         const auto& tools = chatHistory.get_tools();
         ov::genai::JsonContainer kwargs;
         bool addGenerationPrompt = true;
@@ -106,7 +105,9 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
             return absl::Status(absl::StatusCode::kInvalidArgument,
                 "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
         }
+#if (PYTHON_DISABLE == 0)
     }
+#endif
 
     if (req.promptText.empty()) {
         return absl::Status(absl::StatusCode::kInvalidArgument,
