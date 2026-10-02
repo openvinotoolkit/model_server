@@ -26,6 +26,13 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "runtime_config",
+    srcs = ["runtime_config.cpp"],
+    hdrs = ["runtime_config.hpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "node_initializer",
     srcs = [
         "node_initializer.cpp",
@@ -204,6 +211,7 @@ ovms_cc_library(
     ],
     deps = [
         ":graphqueue",
+        ":runtime_config",
         ":mediapipegraphconfig",
         ":node_initializer",
         ":mediapipe_utils",
@@ -275,6 +283,7 @@ ovms_cc_library(
     ],
     deps = [
         ":libovms_mediapipe",
+        ":runtime_config",
         "//src/utils:newline_delimited",
     ],
     visibility = ["//visibility:public"],

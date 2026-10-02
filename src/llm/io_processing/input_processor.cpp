@@ -20,7 +20,6 @@
 #include <typeinfo>
 #include <variant>
 
-#include "../../config.hpp"
 #include "../../logging.hpp"
 #include "input_processors/chat_template_processor.hpp"
 #include "input_processors/empty_content_array_normalization_processor.hpp"
@@ -48,10 +47,9 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         processors.emplace_back(std::make_unique<EmptyToolCallsArrayRemovingProcessor>());
 
         if (context.config.isVLM) {  // isVLM is true both in VLMPipeline and OmniPipeline
-            const auto& settings = Config::instance().getServerSettings();
             processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
-                settings.allowedLocalMediaPath,
-                settings.allowedMediaDomains));
+                context.runtimeConfig.allowedLocalMediaPath,
+                context.runtimeConfig.allowedMediaDomains));
         }
 
         if (context.config.isOmni) {

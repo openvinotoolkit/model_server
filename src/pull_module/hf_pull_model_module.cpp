@@ -236,7 +236,21 @@ Status HfPullModelModule::pullLoraAdapters(const std::string& graphDirectory) {
 }
 
 Status HfPullModelModule::clone() {
-    std::string graphDirectory = "";
+    const std::string modelDirectory = IModelDownloader::getGraphDirectory(
+        this->hfSettings.downloadPath, this->hfSettings.sourceModel);
+    const bool modelDirectoryExists = std::filesystem::is_directory(modelDirectory);
+    if (modelDirectoryExists && !this->hfSettings.overwriteModels) {
+        SPDLOG_INFO("Model '{}' found in local model repository path '{}'; using existing files.",
+            this->hfSettings.sourceModel, modelDirectory);
+    } else if (modelDirectoryExists) {
+        SPDLOG_INFO("Model '{}' found in local model repository path '{}'; overwrite_models is enabled, downloading a fresh copy from Hugging Face.",
+            this->hfSettings.sourceModel, modelDirectory);
+    } else {
+        SPDLOG_INFO("Model '{}' not found in local model repository path '{}'; downloading from Hugging Face.",
+            this->hfSettings.sourceModel, modelDirectory);
+    }
+
+    std::string graphDirectory = modelDirectory;
     std::unique_ptr<IModelDownloader> downloader;
     std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> guardOrError;
     if (this->hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
@@ -245,11 +259,11 @@ Status HfPullModelModule::clone() {
             return std::get<Status>(guardOrError);
         }
 
-        downloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->GetHfEndpoint(), this->GetProxy(), this->hfSettings.overwriteModels);
+        downloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, graphDirectory, this->GetHfEndpoint(), this->GetProxy(), this->hfSettings.overwriteModels);
     } else if (this->hfSettings.downloadType == OPTIMUM_CLI_DOWNLOAD) {
-        downloader = std::make_unique<OptimumDownloader>(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
+        downloader = std::make_unique<OptimumDownloader>(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, graphDirectory, this->hfSettings.overwriteModels);
     } else if (this->hfSettings.downloadType == GGUF_DOWNLOAD) {
-        downloader = std::make_unique<GGUFDownloader>(this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels, this->hfSettings.ggufFilename, this->GetHfEndpoint());
+        downloader = std::make_unique<GGUFDownloader>(this->hfSettings.sourceModel, graphDirectory, this->hfSettings.overwriteModels, this->hfSettings.ggufFilename, this->GetHfEndpoint());
     } else {
         SPDLOG_ERROR("Unsupported download type");
         return StatusCode::INTERNAL_ERROR;

@@ -30,6 +30,7 @@
 #include "src/ov_utils.hpp"
 #include "src/status.hpp"
 #include "src/stringutils.hpp"
+#include "src/mediapipe_internal/runtime_config.hpp"
 
 #include "imagegenutils.hpp"
 
@@ -286,7 +287,11 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             return status;
         }
     }
-    applyGlobalCacheDirFallback(args.pluginConfig);
+    if (getRuntimeConfig().cacheDir.empty()) {
+        applyGlobalCacheDirFallback(args.pluginConfig);
+    } else {
+        applyGlobalCacheDirFallback(args.pluginConfig, getRuntimeConfig().cacheDir);
+    }
     auto maxResOptOrStatus = getDimensionsConfig(nodeOptions.max_resolution());
     if (std::holds_alternative<Status>(maxResOptOrStatus)) {
         return std::get<Status>(maxResOptOrStatus);
