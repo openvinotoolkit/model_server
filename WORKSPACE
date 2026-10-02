@@ -138,7 +138,7 @@ cc_library(
 
 new_local_repository(
     name = "windows_curl",
-    path = "C:\\opt\\curl-8.21.0_7-win64-mingw",
+    path = "C:\\opt\\curl-8.22.0_2-win64-mingw",
     build_file_content = """
 cc_import(
     name = "curl_lib",
