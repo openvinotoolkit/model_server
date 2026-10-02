@@ -193,6 +193,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--truncate`              | `bool`       | Truncate input when it exceeds model context length. Default: false            |
 | `--pooling`          | `string`       | Pooling option. One of: CLS, LAST, MEAN. Default: CLS.                                           |
 | `--max_legth`        | `integer`      | Maximum input length in tokens. If omitted, OVMS will detect it from the model's config.json.            |
+| `--max_batch_size`   | `integer`      | Maximum batch size allowed for embeddings endpoint. Default: 1024 | 
 
 ### Rerank
 | option                    | Value format | Description                                                                    |
