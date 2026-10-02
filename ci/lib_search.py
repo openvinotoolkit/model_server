@@ -113,6 +113,7 @@ def check_dir(start_dir):
         'ovms-c/dist',
         'requirements.txt',
         'requirements_win.txt',
+        'bytetrack_ovms.pbtxt',
         'resnet_images.txt',
         "resnet_labels.txt",
         'rest_sdk_v2.10.16.patch',
