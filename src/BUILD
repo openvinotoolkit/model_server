@@ -185,7 +185,7 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 
-cc_library(
+ovms_cc_library(
     name = "python_interpreter_module_test_symbols",
     srcs = ["status.cpp", "module_names.cpp"],
     hdrs = ["status.hpp", "module_names.hpp"],
