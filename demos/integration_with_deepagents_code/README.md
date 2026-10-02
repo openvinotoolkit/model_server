@@ -101,8 +101,6 @@ Run these commands from inside the demo directory (`demos/integration_with_deepa
 :::{tab-item} Linux
 :sync: Linux
 ```bash
-python -m venv .env
-source .env/bin/activate
 python -m pip install --upgrade pip
 python -m pip install 'deepagents-code==0.1.70' 'mcp<2'
 ```
@@ -110,8 +108,6 @@ python -m pip install 'deepagents-code==0.1.70' 'mcp<2'
 :::{tab-item} Windows
 :sync: Windows
 ```bat
-python -m venv .env
-call .env\Scripts\activate.bat
 python -m pip install --upgrade pip
 python -m pip install "deepagents-code==0.1.70" "mcp<2" colorama
 ```
