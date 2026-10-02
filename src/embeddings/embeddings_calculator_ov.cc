@@ -57,8 +57,8 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
     static const std::string EMBEDDINGS_MODEL_INPUT_IDS_NAME;
     static const std::string EMBEDDINGS_MODEL_ATTENTION_MASK_NAME;
     static const std::string EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME;
-    static const size_t MAX_BATCH_SIZE;
     static const size_t MAX_INPUT_TENSORS_BYTE_SIZE;
+    static const size_t MAX_REQUEST_BODY_SIZE;
 
     absl::Status tokenizeStrings(ov::genai::Tokenizer& tokenizer, const std::vector<std::string>& inputStrings, const ov::AnyMap& parameters, ov::genai::TokenizedInputs& tokens) {
         tokens = tokenizer.encode(inputStrings, parameters);
@@ -75,10 +75,10 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
         return absl::OkStatus();
     }
 
-    absl::Status isBatchSizeOk(size_t batchSize) {
-        if (batchSize > MAX_BATCH_SIZE) {
-            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Batch size {} exceeds maxBatchSize {}", batchSize, MAX_BATCH_SIZE);
-            return absl::InvalidArgumentError(absl::StrCat("Batch size ", batchSize, " exceeds allowed maximum of ", MAX_BATCH_SIZE));
+    absl::Status isBatchSizeOk(size_t batchSize, size_t maxBatchSize) {
+        if (batchSize > maxBatchSize) {
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Batch size {} exceeds maxBatchSize {}", batchSize, maxBatchSize);
+            return absl::InvalidArgumentError(absl::StrCat("Batch size ", batchSize, " exceeds allowed maximum of ", maxBatchSize));
         }
         return absl::OkStatus();
     }
@@ -130,7 +130,11 @@ public:
         if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             return absl::InvalidArgumentError("Input is empty");
         }
-        InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
+        const InputDataType& payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
+        if (payload.body.size() > MAX_REQUEST_BODY_SIZE) {
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body size {} exceeds allowed maximum of {} bytes", payload.body.size(), MAX_REQUEST_BODY_SIZE);
+            return absl::InvalidArgumentError(absl::StrCat("Request body size ", payload.body.size(), " exceeds allowed maximum of ", MAX_REQUEST_BODY_SIZE, " bytes"));
+        }
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
 
@@ -185,10 +189,11 @@ public:
         std::unique_ptr<ExecutingStreamIdGuard> executingStreamIdGuardForPostprocessingModel;
         try {
             auto input = handler.getInput();
+            auto maxBatchSize = cc->Options<EmbeddingsCalculatorOVOptions>().max_batch_size();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
                 ov::AnyMap& params = handler.getParameters();
                 receivedBatchSize = strings->size();
-                auto batchSizeCheckStatus = this->isBatchSizeOk(receivedBatchSize);
+                auto batchSizeCheckStatus = this->isBatchSizeOk(receivedBatchSize, maxBatchSize);
                 if (!batchSizeCheckStatus.ok()) {
                     return batchSizeCheckStatus;
                 }
@@ -210,7 +215,6 @@ public:
                     return sizeCheckStatus;
                 }
 
-                // token_type_ids (if present) always mirrors input_ids shape/type, so its size can be derived without allocating it yet.
                 size_t totalInputBytes = tokens.input_ids.get_byte_size() + tokens.attention_mask.get_byte_size();
                 if (embeddings_session->getNumberOfModelInputs() == 3) {
                     totalInputBytes += tokens.input_ids.get_byte_size();
@@ -243,7 +247,7 @@ public:
                 handler.setPromptTokensUsage(attendedTokens);
             } else if (auto tokenizedDocuments = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
                 receivedBatchSize = tokenizedDocuments->size();
-                auto batchSizeCheckStatus = this->isBatchSizeOk(receivedBatchSize);
+                auto batchSizeCheckStatus = this->isBatchSizeOk(receivedBatchSize, maxBatchSize);
                 if (!batchSizeCheckStatus.ok()) {
                     return batchSizeCheckStatus;
                 }
@@ -452,8 +456,8 @@ const std::string EmbeddingsCalculatorOV::OUTPUT_TAG_NAME{"RESPONSE_PAYLOAD"};
 const std::string EmbeddingsCalculatorOV::EMBEDDINGS_MODEL_INPUT_IDS_NAME{"input_ids"};
 const std::string EmbeddingsCalculatorOV::EMBEDDINGS_MODEL_ATTENTION_MASK_NAME{"attention_mask"};
 const std::string EmbeddingsCalculatorOV::EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME{"token_type_ids"};
-const size_t EmbeddingsCalculatorOV::MAX_BATCH_SIZE{1024};
 const size_t EmbeddingsCalculatorOV::MAX_INPUT_TENSORS_BYTE_SIZE{1024ull * 1024 * 1024};  // 1 GB
+const size_t EmbeddingsCalculatorOV::MAX_REQUEST_BODY_SIZE{2'000'000};
 
 REGISTER_CALCULATOR(EmbeddingsCalculatorOV);
 
