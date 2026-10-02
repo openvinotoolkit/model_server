@@ -26,15 +26,15 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../config.hpp"
-#include "../http_rest_api_handler.hpp"
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/config.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
-#include "../precision.hpp"
+#include "src/precision.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
-#include "../shape.hpp"
+#include "src/server.hpp"
+#include "src/shape.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
 #include "test_http_utils.hpp"

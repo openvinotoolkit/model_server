@@ -33,18 +33,18 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../../../config.hpp"
-#include "../../../json_parser.hpp"
-#include "../../../logging.hpp"
-#include "../../../mediapipe_internal/mediapipe_utils.hpp"
-#include "../../../ov_utils.hpp"
-#include "../../../status.hpp"
-#include "../../../systeminfo.hpp"
-#include "../../io_processing/parser_config_validation.hpp"
+#include "src/config.hpp"
+#include "src/json_parser.hpp"
+#include "src/logging.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
+#include "src/ov_utils.hpp"
+#include "src/status.hpp"
+#include "src/systeminfo.hpp"
+#include "src/llm/io_processing/parser_config_validation.hpp"
 #include "llm_executor.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
-#include "../../servable_initializer.hpp"
+#include "src/llm/servable_initializer.hpp"
 
 namespace ovms {
 

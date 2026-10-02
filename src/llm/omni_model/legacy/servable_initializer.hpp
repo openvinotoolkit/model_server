@@ -25,7 +25,7 @@
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
-#include "../../servable_initializer.hpp"
+#include "src/llm/servable_initializer.hpp"
 
 namespace ovms {
 class Status;

@@ -17,9 +17,9 @@
 
 #include <utility>
 
-#include "../../../logging.hpp"
-#include "../../../stringutils.hpp"
-#include "../utils.hpp"
+#include "src/logging.hpp"
+#include "src/stringutils.hpp"
+#include "src/llm/io_processing/utils.hpp"
 
 // Based on https://cookbook.openai.com/articles/openai-harmony
 

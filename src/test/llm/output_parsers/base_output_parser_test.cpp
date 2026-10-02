@@ -15,8 +15,8 @@
 //*****************************************************************************
 #include <gtest/gtest.h>
 #include <string>
-#include "../../../llm/io_processing/delta.hpp"
-#include "../../../llm/apis/openai_rapidjson_delta_serializer.hpp"
+#include "src/llm/io_processing/delta.hpp"
+#include "src/llm/apis/openai_rapidjson_delta_serializer.hpp"
 #include "src/port/rapidjson_document.hpp"
 
 using namespace ovms;

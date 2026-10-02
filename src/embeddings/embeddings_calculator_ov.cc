@@ -30,12 +30,12 @@
 #include <adapters/inference_adapter.h>
 #include "src/port/rapidjson_writer.hpp"
 
-#include "../http_payload.hpp"
-#include "../logging.hpp"
-#include "../precision.hpp"
-#include "../profiler.hpp"
-#include "../executingstreamidguard.hpp"
-#include "../model_metric_reporter.hpp"
+#include "src/http_payload.hpp"
+#include "src/logging.hpp"
+#include "src/precision.hpp"
+#include "src/profiler.hpp"
+#include "src/executingstreamidguard.hpp"
+#include "src/model_metric_reporter.hpp"
 #include "embeddings_api.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
 #include "embeddings_servable.hpp"

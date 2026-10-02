@@ -18,8 +18,8 @@
 #include <memory>
 #include <utility>
 
-#include "../client_connection.hpp"
-#include "../http_async_writer_interface.hpp"
+#include "src/client_connection.hpp"
+#include "src/http_async_writer_interface.hpp"
 
 namespace ovms {
 

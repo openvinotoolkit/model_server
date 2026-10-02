@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include "../module.hpp"
+#include "src/module.hpp"
 #include "pythoninterpretermodule.hpp"
 #include "python_runtime_env.hpp"
 
@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)

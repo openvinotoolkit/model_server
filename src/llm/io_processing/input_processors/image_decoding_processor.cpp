@@ -20,8 +20,8 @@
 #include <utility>
 #include <variant>
 
-#include "../../io_processing/image_utils.hpp"
-#include "../../../logging.hpp"
+#include "src/llm/io_processing/image_utils.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 

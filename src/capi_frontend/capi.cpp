@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdint>
-#include <cstdio>
 #include <exception>
 #include <iterator>
 #include <memory>
@@ -28,25 +27,25 @@
 #include "src/port/rapidjson_writer.hpp"
 #pragma warning(pop)
 
-#include "../version.hpp"
-#include "../modelinstance.hpp"
+#include "src/version.hpp"
+#include "src/modelinstance.hpp"
 #include "capi_request_utils.hpp"  // TODO @atobisze must be before executor
 #include "capi_utils.hpp"
 #include "deserialization.hpp"
-#include "../deserialization_main.hpp"
-#include "../inference_executor.hpp"
-#include "../modelinstanceunloadguard.hpp"
+#include "src/deserialization_main.hpp"
+#include "src/inference_executor.hpp"
+#include "src/modelinstanceunloadguard.hpp"
 #include "src/servable_management/modelmanager.hpp"
-#include "../module_names.hpp"
-#include "../ovms.h"  // NOLINT
-#include "../profiler.hpp"
-#include "../mediapipe_internal/pipelinedefinitionstatus.hpp"
-#include "../servable_definition.hpp"
+#include "src/module_names.hpp"
+#include "src/ovms.h"  // NOLINT
+#include "src/profiler.hpp"
+#include "src/mediapipe_internal/pipelinedefinitionstatus.hpp"
+#include "src/servable_definition.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
-#include "../single_version_servable_definition.hpp"
+#include "src/server.hpp"
+#include "src/single_version_servable_definition.hpp"
 #include "src/status.hpp"
-#include "../timer.hpp"
+#include "src/timer.hpp"
 #include "buffer.hpp"
 #include "capi_dag_utils.hpp"
 #include "inferenceparameter.hpp"
@@ -56,7 +55,7 @@
 #include "servablemetadata.hpp"
 #include "server_settings.hpp"
 #include "serialization.hpp"
-#include "../filesystem/filesystem.hpp"
+#include "src/filesystem/filesystem.hpp"
 
 using ovms::Buffer;
 using ovms::InferenceParameter;

@@ -15,7 +15,7 @@
 //*****************************************************************************
 
 #include "legacy_executor.hpp"
-#include "../../ovms_text_streamer.hpp"
+#include "src/llm/ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include <vector>
 

@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "../../../logging.hpp"
+#include "src/logging.hpp"
 #include "gemma4_reasoning_parser.hpp"
 
 namespace ovms {

@@ -19,8 +19,8 @@
 #include <string>
 #include <vector>
 
-#include "../ovms.h"  // NOLINT
-#include "../shape.hpp"
+#include "src/ovms.h"  // NOLINT
+#include "src/shape.hpp"
 
 namespace ovms {
 class Buffer;

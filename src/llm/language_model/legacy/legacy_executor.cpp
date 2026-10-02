@@ -16,8 +16,8 @@
 
 #include "legacy_executor.hpp"
 
-#include "../../../logging.hpp"
-#include "../../ovms_text_streamer.hpp"
+#include "src/logging.hpp"
+#include "src/llm/ovms_text_streamer.hpp"
 #include "servable.hpp"
 
 #include <utility>

@@ -19,7 +19,7 @@
 
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 
-#include "../../servable.hpp"
+#include "src/llm/servable.hpp"
 #include "src/llm/llm_calculator.pb.h"
 
 namespace ovms {

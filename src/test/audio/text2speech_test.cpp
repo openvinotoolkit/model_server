@@ -18,13 +18,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../../audio/audio_utils.hpp"
-#include "../../http_rest_api_handler.hpp"
-#include "../../server.hpp"
-#include "../test_http_utils.hpp"
-#include "../test_utils.hpp"
-#include "../platform_utils.hpp"
-#include "../constructor_enabled_model_manager.hpp"
+#include "src/audio/audio_utils.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/server.hpp"
+#include "src/test/test_http_utils.hpp"
+#include "src/test/test_utils.hpp"
+#include "src/test/platform_utils.hpp"
+#include "src/test/constructor_enabled_model_manager.hpp"
 
 using namespace ovms;
 using namespace ovms::audio_utils;

@@ -23,7 +23,7 @@
 #endif
 
 #include "src/status.hpp"
-#include "../systeminfo.hpp"
+#include "src/systeminfo.hpp"
 
 using namespace testing;
 using ovms::getCoreCount;

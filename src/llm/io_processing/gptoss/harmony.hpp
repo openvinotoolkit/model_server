@@ -19,7 +19,7 @@
 #include <vector>
 #include <openvino/genai/tokenizer.hpp>
 
-#include "../base_output_parser.hpp"
+#include "src/llm/io_processing/base_output_parser.hpp"
 
 namespace ovms {
 namespace openai {

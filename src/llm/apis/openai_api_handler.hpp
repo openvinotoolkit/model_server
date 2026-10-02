@@ -35,8 +35,8 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #pragma warning(pop)
-#include "../io_processing/output_parser.hpp"
-#include "../io_processing/input_request.hpp"
+#include "src/llm/io_processing/output_parser.hpp"
+#include "src/llm/io_processing/input_request.hpp"
 #include "openai_request.hpp"
 
 // Forward declarations for types only used by reference in virtual method signatures

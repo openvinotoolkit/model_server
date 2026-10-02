@@ -19,9 +19,9 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/tokenizer.hpp>
 
-#include "../../../llm/io_processing/output_parser.hpp"
-#include "../../../llm/io_processing/parser_config_validation.hpp"
-#include "../../platform_utils.hpp"
+#include "src/llm/io_processing/output_parser.hpp"
+#include "src/llm/io_processing/parser_config_validation.hpp"
+#include "src/test/platform_utils.hpp"
 
 using namespace ovms;
 

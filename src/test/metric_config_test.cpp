@@ -19,12 +19,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../config.hpp"
+#include "src/config.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_registry.hpp"
-#include "../model_metric_reporter.hpp"
-#include "../modelconfig.hpp"
-#include "../modelinstance.hpp"
+#include "src/model_metric_reporter.hpp"
+#include "src/modelconfig.hpp"
+#include "src/modelinstance.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"

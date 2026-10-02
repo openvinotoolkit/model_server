@@ -22,7 +22,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../../../logging.hpp"
+#include "src/logging.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "src/llm/py_jinja_template_processor.hpp"
 #endif

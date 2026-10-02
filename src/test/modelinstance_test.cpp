@@ -25,8 +25,8 @@
 #include <openvino/runtime/core.hpp>
 #include <stdlib.h>
 
-#include "../modelinstance.hpp"
-#include "../modelinstanceunloadguard.hpp"
+#include "src/modelinstance.hpp"
+#include "src/modelinstanceunloadguard.hpp"
 #include "environment.hpp"
 #include "gpuenvironment.hpp"
 #include "test_models_configs.hpp"

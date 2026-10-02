@@ -23,14 +23,14 @@
 
 #include "spdlog/spdlog.h"
 
-#include "../capi_frontend/server_settings.hpp"
-#include "../utils/env_guard.hpp"
-#include "../config.hpp"
+#include "src/capi_frontend/server_settings.hpp"
+#include "src/utils/env_guard.hpp"
+#include "src/config.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "../graph_export/embeddings_graph_cli_parser.hpp"
-#include "../graph_export/graph_cli_parser.hpp"
-#include "../ovms_exit_codes.hpp"
-#include "../systeminfo.hpp"
+#include "src/graph_export/embeddings_graph_cli_parser.hpp"
+#include "src/graph_export/graph_cli_parser.hpp"
+#include "src/ovms_exit_codes.hpp"
+#include "src/systeminfo.hpp"
 #include "test_utils.hpp"
 
 #ifdef __linux__

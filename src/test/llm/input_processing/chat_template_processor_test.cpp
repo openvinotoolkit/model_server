@@ -39,11 +39,11 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/tokenizer.hpp>
 
-#include "../../../llm/io_processing/input_processors/chat_template_processor.hpp"
-#include "../../../llm/io_processing/input_request.hpp"
-#include "../../../llm/runtime_chat_template.hpp"
-#include "../../../llm/runtime_chat_template_runtime_loader.hpp"
-#include "../../platform_utils.hpp"
+#include "src/llm/io_processing/input_processors/chat_template_processor.hpp"
+#include "src/llm/io_processing/input_request.hpp"
+#include "src/llm/runtime_chat_template.hpp"
+#include "src/llm/runtime_chat_template_runtime_loader.hpp"
+#include "src/test/platform_utils.hpp"
 
 namespace ovms {
 namespace {

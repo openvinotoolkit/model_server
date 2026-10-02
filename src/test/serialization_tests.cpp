@@ -26,11 +26,11 @@
 
 #include <openvino/runtime/core.hpp>
 
-#include "../capi_frontend/buffer.hpp"
-#include "../capi_frontend/inferenceresponse.hpp"
-#include "../capi_frontend/inferencetensor.hpp"
-#include "../kfs_frontend/serialization.hpp"
-#include "../capi_frontend/serialization.hpp"
+#include "src/capi_frontend/buffer.hpp"
+#include "src/capi_frontend/inferenceresponse.hpp"
+#include "src/capi_frontend/inferencetensor.hpp"
+#include "src/kfs_frontend/serialization.hpp"
+#include "src/capi_frontend/serialization.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

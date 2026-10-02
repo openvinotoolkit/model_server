@@ -20,9 +20,9 @@
 #include <utility>
 
 #include "kfs_utils.hpp"
-#include "../extractchoice.hpp"
-#include "../requesttensorextractor.hpp"
-#include "../shape.hpp"
+#include "src/extractchoice.hpp"
+#include "src/requesttensorextractor.hpp"
+#include "src/shape.hpp"
 #include "src/status.hpp"
 
 namespace ovms {

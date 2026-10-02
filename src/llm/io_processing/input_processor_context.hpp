@@ -21,7 +21,7 @@
 
 #include "chat_template/caps.hpp"
 #include "input_processing_config.hpp"
-#include "../runtime_chat_template.hpp"
+#include "src/llm/runtime_chat_template.hpp"
 
 namespace ovms {
 

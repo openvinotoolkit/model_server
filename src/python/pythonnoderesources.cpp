@@ -22,7 +22,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "src/status.hpp"
 
 #pragma warning(push)
@@ -30,7 +30,7 @@
 #include <pybind11/embed.h>  // everything needed for embedding
 #pragma warning(pop)
 
-#include "../mediapipe_internal/mediapipe_utils.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
 #include "src/python/python_executor_calculator.pb.h"
 
 namespace ovms {

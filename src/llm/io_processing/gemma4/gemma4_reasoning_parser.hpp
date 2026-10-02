@@ -19,7 +19,7 @@
 #include <vector>
 #include <string>
 
-#include "../qwen3/reasoning_parser.hpp"
+#include "src/llm/io_processing/qwen3/reasoning_parser.hpp"
 
 namespace ovms {
 // Delimiter-driven, not keyword-driven: the keyword after the opener is never validated.

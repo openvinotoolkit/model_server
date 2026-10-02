@@ -29,8 +29,8 @@
 #include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/genai/visual_language/pipeline.hpp>
 
-#include "../../logging.hpp"
-#include "../../profiler.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #pragma warning(push)

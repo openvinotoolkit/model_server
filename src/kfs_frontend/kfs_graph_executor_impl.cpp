@@ -23,16 +23,16 @@
 #include <utility>
 #include <vector>
 
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../logging.hpp"
-#include "../mediapipe_internal/graph_executor_constants.hpp"
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
-#include "../mediapipe_internal/mediapipe_utils.hpp"
-#include "../predict_request_validation_utils.hpp"
-#include "../single_version_servable_definition.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
+#include "src/logging.hpp"
+#include "src/mediapipe_internal/graph_executor_constants.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
+#include "src/predict_request_validation_utils.hpp"
+#include "src/single_version_servable_definition.hpp"
 #include "src/status.hpp"
 #if !(defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME)
-#include "../tensorflow_type_utils.hpp"
+#include "src/tensorflow_type_utils.hpp"
 #endif
 #include "src/kfs_python_tensor_bridge.hpp"
 

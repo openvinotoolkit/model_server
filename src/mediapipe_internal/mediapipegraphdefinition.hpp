@@ -28,9 +28,9 @@
 #include "pipelinedefinitionstatus.hpp"
 #include "src/metrics/metric.hpp"
 #include "src/time_utils.hpp"
-#include "../model_metric_reporter.hpp"
-#include "../single_version_servable_definition.hpp"
-#include "../tensorinfo_fwd.hpp"
+#include "src/model_metric_reporter.hpp"
+#include "src/single_version_servable_definition.hpp"
+#include "src/tensorinfo_fwd.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)

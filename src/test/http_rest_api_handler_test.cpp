@@ -15,13 +15,13 @@
 //*****************************************************************************
 #include <gtest/gtest.h>
 
-#include "../config.hpp"
-#include "../http_rest_api_handler.hpp"
+#include "src/config.hpp"
+#include "src/http_rest_api_handler.hpp"
 #include "src/filesystem/localfilesystem.hpp"
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "src/servable_management/modelmanager.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
+#include "src/server.hpp"
 #include "platform_utils.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"

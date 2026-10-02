@@ -19,8 +19,8 @@
 #include <string>
 #include <vector>
 
-#include "../../../logging.hpp"
-#include "../../../status.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -30,10 +30,13 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../../../http_payload.hpp"
-#include "../../../mediapipe_internal/mediapipe_utils.hpp"
-#include "../../apis/openai_completions.hpp"
-#include "../../text_utils.hpp"
+#include "src/http_payload.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
+#include "src/llm/apis/openai_completions.hpp"
+#include "src/llm/text_utils.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "src/llm/py_jinja_template_processor.hpp"
+#endif
 #include "llm_executor.hpp"
 #include "servable.hpp"
 

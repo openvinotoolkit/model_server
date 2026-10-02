@@ -25,10 +25,10 @@
 #include "inferencerequest.hpp"
 #include "inferenceresponse.hpp"
 #include "inferencetensor.hpp"
-#include "../profiler.hpp"
+#include "src/profiler.hpp"
 #include "src/status.hpp"
-#include "../serialization_common.hpp"
-#include "../tensorinfo.hpp"
+#include "src/serialization_common.hpp"
+#include "src/tensorinfo.hpp"
 
 namespace ovms {
 template <typename T>

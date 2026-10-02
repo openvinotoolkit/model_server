@@ -14,9 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 #include "gemma4_tool_parser.hpp"
-#include "../utils.hpp"
-#include "../../../logging.hpp"
-#include "../../../stringutils.hpp"
+#include "src/llm/io_processing/utils.hpp"
+#include "src/logging.hpp"
+#include "src/stringutils.hpp"
 #include "rapidjson/error/en.h"
 #include <algorithm>
 #include <cctype>

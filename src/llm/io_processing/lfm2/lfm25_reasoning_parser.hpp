@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include "../qwen3/reasoning_parser.hpp"
+#include "src/llm/io_processing/qwen3/reasoning_parser.hpp"
 #include <optional>
 #include <string>
 #include <utility>

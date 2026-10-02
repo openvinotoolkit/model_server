@@ -30,15 +30,15 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../../../json_parser.hpp"
-#include "../../../logging.hpp"
-#include "../../../mediapipe_internal/mediapipe_utils.hpp"
-#include "../../../ov_utils.hpp"
-#include "../../../status.hpp"
-#include "../../io_processing/parser_config_validation.hpp"
+#include "src/json_parser.hpp"
+#include "src/logging.hpp"
+#include "src/mediapipe_internal/mediapipe_utils.hpp"
+#include "src/ov_utils.hpp"
+#include "src/status.hpp"
+#include "src/llm/io_processing/parser_config_validation.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
-#include "../../servable_initializer.hpp"
+#include "src/llm/servable_initializer.hpp"
 
 namespace ovms {
 Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
