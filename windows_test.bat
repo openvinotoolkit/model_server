@@ -40,20 +40,31 @@ set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
 IF "%~3"=="" (
     set "gtestFilter=*"
+    set "filteredRun=0"
 ) ELSE (
     set "gtestFilter=%3"
+    set "filteredRun=1"
 )
 
 IF "%~2"=="--with_python" (
     set "bazelBuildArgs=--config=win_mp_on_py_on --action_env OpenVINO_DIR=%openvino_dir%"
-    set "testTargets=//src:ovms_test //src:python_runtime_library_test"
-    set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
-    set "runNoLibpythonSmokeTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures --test_output=errors //src:ovms_no_libpython_smoke_test"
+    if "!filteredRun!"=="1" (
+        set "testTargets=//src:ovms_test"
+        set "runPythonRuntimeTest="
+        set "runNoLibpythonSmokeTest="
+        set "runInstallServiceTests=0"
+    ) else (
+        set "testTargets=//src:ovms_test //src:python_runtime_library_test"
+        set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
+        set "runNoLibpythonSmokeTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures --test_output=errors //src:ovms_no_libpython_smoke_test"
+        set "runInstallServiceTests=1"
+    )
 ) ELSE (
     set "bazelBuildArgs=--config=win_mp_on_py_off --action_env OpenVINO_DIR=%openvino_dir%"
     set "testTargets=//src:ovms_test"
     set "runPythonRuntimeTest="
     set "runNoLibpythonSmokeTest="
+    set "runInstallServiceTests=1"
 )
 
 set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
@@ -68,7 +79,7 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+set "setPath=%cd%\bazel-out\x64_windows-opt\bin\src\python;%cd%\bazel-bin\src\python;C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
@@ -132,23 +143,25 @@ if !errorlevel! neq 0 (
     exit /b !errorlevel!
 )
 
-:: Run install_ovms_service.bat unit tests
-echo Running install_ovms_service.bat unit tests...
-python -m pytest tests\python\test_install_ovms_service_windows.py -v > win_install_service_test.log 2>&1
-set "pytestExitCode=!errorlevel!"
-type win_install_service_test.log
-if !pytestExitCode! neq 0 (
-    echo [ERROR] install_ovms_service.bat unit tests failed. See win_install_service_test.log.
-    exit /b !pytestExitCode!
+:: Run install_ovms_service.bat unit tests only for the full wrapper flow.
+if "!runInstallServiceTests!"=="1" (
+    echo Running install_ovms_service.bat unit tests...
+    python -m pytest tests\python\test_install_ovms_service_windows.py -v > win_install_service_test.log 2>&1
+    set "pytestExitCode=!errorlevel!"
+    type win_install_service_test.log
+    if !pytestExitCode! neq 0 (
+        echo [ERROR] install_ovms_service.bat unit tests failed. See win_install_service_test.log.
+        exit /b !pytestExitCode!
+    )
+    echo [INFO] install_ovms_service.bat unit tests passed.
 )
-echo [INFO] install_ovms_service.bat unit tests passed.
 
 :: Start unit test
 echo Running: %runTest%
 %runTest%
 set "testExitCode=!errorlevel!"
 
-IF "%~2"=="--with_python" (
+IF "%~2"=="--with_python" if "!filteredRun!"=="0" (
     echo Running: %runPythonRuntimeTest%
     %runPythonRuntimeTest% >> win_full_test.log 2>&1
     set "pythonTestExitCode=!errorlevel!"

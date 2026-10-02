@@ -19,7 +19,6 @@
 #include <cstdlib>
 #include <mutex>
 #include <string>
-#include <vector>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -56,67 +55,21 @@ std::once_flag& runtimeInitFlag() {
 void* resolveSymbol(HMODULE handle, const char* symbolName) {
     return reinterpret_cast<void*>(GetProcAddress(handle, symbolName));
 }
-
-bool tryLoadLibrary(const std::vector<std::string>& candidates, HMODULE& handleOut) {
-    for (const auto& candidate : candidates) {
-        const auto handle = LoadLibraryA(candidate.c_str());
-        if (handle != nullptr) {
-            handleOut = handle;
-            return true;
-        }
-    }
-    return false;
-}
 #else
 void* resolveSymbol(void* handle, const char* symbolName) {
     return dlsym(handle, symbolName);
 }
-
-bool tryLoadLibrary(const std::vector<std::string>& candidates, void*& handleOut) {
-    for (const auto& candidate : candidates) {
-        const auto handle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_LOCAL);
-        if (handle != nullptr) {
-            handleOut = handle;
-            return true;
-        }
-    }
-    return false;
-}
 #endif
-
-std::vector<std::string> buildCandidates() {
-    std::vector<std::string> candidates;
-#if defined(_WIN32)
-    candidates.insert(candidates.end(), {
-                                            "libovmspython.dll",
-                                            "./libovmspython.dll",
-                                            "src/python/libovmspython.dll",
-                                            "./src/python/libovmspython.dll",
-                                            "bazel-bin/src/libovmspython.dll",
-                                            "./bazel-bin/src/libovmspython.dll",
-                                            "bazel-bin/src/python/libovmspython.dll",
-                                            "./bazel-bin/src/python/libovmspython.dll",
-                                        });
-#else
-    candidates.insert(candidates.end(), {
-                                            "libovmspython.so",
-                                            "./libovmspython.so",
-                                            "src/python/libovmspython.so",
-                                            "./src/python/libovmspython.so",
-                                            "bazel-bin/src/python/libovmspython.so",
-                                            "./bazel-bin/src/python/libovmspython.so",
-                                        });
-#endif
-    return candidates;
-}
 
 void initializeRuntimeState() {
     auto& state = runtimeState();
-    const auto candidates = buildCandidates();
-    if (!tryLoadLibrary(candidates, state.handle)) {
 #if defined(_WIN32)
+    state.handle = LoadLibraryA("libovmspython.dll");
+    if (state.handle == nullptr) {
         SPDLOG_DEBUG("Python runtime library libovmspython.dll not available for runtime chat template processing");
 #else
+    state.handle = dlopen("libovmspython.so", RTLD_NOW | RTLD_LOCAL);
+    if (state.handle == nullptr) {
         SPDLOG_DEBUG("Python runtime library libovmspython.so not available for runtime chat template processing");
 #endif
         return;
