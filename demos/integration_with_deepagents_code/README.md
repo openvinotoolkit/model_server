@@ -140,8 +140,6 @@ The check keeps re-runs idempotent while still creating a fresh nested repo the 
 
 Each demo step has an **Interactive** tab (the prompt or slash command to type into the dcode TUI, with reference screenshots) and a **Headless** tab (a single `dcode -n ...` invocation that runs the same task and exits). In the Headless block, `--quiet` limits stdout to the agent's final response so it is safe to pipe or capture.
 
-The headless `dcode -n ...` invocations use no shell-specific syntax and are therefore identical on Linux (bash) and Windows (PowerShell) — paste them into whichever shell you used for Setup Step 3.
-
 ### Step 1: Start dcode
 
 Launch dcode with a locked-down tool surface. Only the Interactive tab starts a persistent session; the Headless tabs in later steps each spawn their own one-shot invocation.
