@@ -146,7 +146,7 @@ ovms_cc_library(
         ":io_processing_input_request",
         ":runtime_chat_template_loader",
         "//third_party:genai",
-    ] + [":py_jinja_template_processor"] + PYBIND_DEPS,
+        ":py_jinja_template_processor"] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
 )
 
@@ -179,7 +179,7 @@ ovms_cc_library(
         "//third_party:genai",
         "//src:libovmslogging",
         "//src/audio:audio_utils",
-    ] + [":py_jinja_template_processor"] + PYBIND_DEPS,
+        ":py_jinja_template_processor"] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
 )
 
@@ -235,7 +235,7 @@ ovms_cc_library(
     deps = [
         "//third_party:genai",
         "//src:libovmslogging",
-    ] + [":py_jinja_template_processor"],
+        ":py_jinja_template_processor"],
     visibility = ["//visibility:public"],
 )
 

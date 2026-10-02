@@ -41,7 +41,6 @@
 #include "../../utils/env_guard.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
-#include "python_jinja_test_utils.hpp"
 #include "../platform_utils.hpp"
 #include "../test_with_temp_dir.hpp"
 

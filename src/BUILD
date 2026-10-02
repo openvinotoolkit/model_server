@@ -2122,8 +2122,7 @@ cc_test(
                 "test/llm/chat_template_end_to_end_jinja_test.cpp",
                 "test/llm/python_jinja_test_utils.cpp",
                 "test/llm/python_jinja_test_utils.hpp",
-        ] + [
-            "test/multi_part_parser_drogon_test.cpp",
+                "test/multi_part_parser_drogon_test.cpp",
         ],
     data = [
         "test/add_two_inputs_model/1/add.xml",
@@ -2520,7 +2519,8 @@ cc_library(
         "test/c_api_test_utils.cpp",
         "test/test_utils.cpp",
         ],
-    deps = PYBIND_HEADERS_ONLY + ["//src/python:python_headers_only"] + [
+    deps = PYBIND_HEADERS_ONLY + [
+        "//src/python:python_headers_only"
         "test_test_models",
         "//src:ovms_lib",
         "//src:network_utils",
