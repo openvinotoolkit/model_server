@@ -1,0 +1,19 @@
+# Drop the direct `field_mask_cc_proto` dep from `field_mask_util`.
+# The full `google::protobuf::FieldMask` class is already provided
+# transitively by `//src/google/protobuf` (the "protobuf_headers" copy).
+# In our WORKSPACE setup (protobuf 6.31.1 with bazel_features 1.14.0),
+# `field_mask_cc_proto`'s cc_proto_library rule generates a hollow 317-line
+# `field_mask.pb.h` in `_virtual_includes/field_mask_proto/` that lacks the
+# `FieldMask` message class, and since this dep is more specific its include
+# prefix wins over the correct header, so `field_mask_util.cc` fails to compile
+# with `'FieldMask' does not name a type`.
+--- a/src/google/protobuf/util/BUILD.bazel
++++ b/src/google/protobuf/util/BUILD.bazel
+@@ -100,7 +100,6 @@ cc_library(
+     visibility = ["//:__subpackages__"],
+     deps = [
+         "//src/google/protobuf",
+-        "//src/google/protobuf:field_mask_cc_proto",
+         "//src/google/protobuf:port",
+         "//src/google/protobuf/stubs",
+         "@abseil-cpp//absl/container:btree",

@@ -21,9 +21,10 @@
 
 #include "chat_template/caps.hpp"
 #include "input_processing_config.hpp"
-#include "../runtime_chat_template.hpp"
 
 namespace ovms {
+
+class PyJinjaTemplateProcessor;
 
 // Holds the per-deployment resources needed by InputProcessor.
 // Created once during servable initialization; reused across requests.
@@ -31,7 +32,7 @@ struct InputProcessorContext {
     InputProcessingConfig config;
     ChatTemplateCaps chatTemplateCaps;
     ov::genai::Tokenizer tokenizer;
-    PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate = nullptr;
+    PyJinjaTemplateProcessor* templateProcessor = nullptr;
 };
 
 }  // namespace ovms

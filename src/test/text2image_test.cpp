@@ -1232,7 +1232,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
 #ifdef _WIN32
     ASSERT_EQ(getGenericFullPathForSrcTest(imageGenArgs.modelsPath),
-        getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy\\.\\", false))
+        getGenericFullPathForSrcTest(std::filesystem::current_path().string() + "/src/test/dummy\\.\\", false))
         << imageGenArgs.modelsPath;
 #else
     ASSERT_EQ(imageGenArgs.modelsPath, "/ovms/src/test/dummy/./")

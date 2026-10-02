@@ -20,29 +20,25 @@
 #include <openvino/genai/tokenizer.hpp>
 
 #include "../base_input_processor.hpp"
-#include "src/llm/runtime_chat_template.hpp"
 
 namespace ovms {
+
+class PyJinjaTemplateProcessor;
 
 // Applies the chat template to ChatHistory, producing req.promptText.
 // Active when: input is ChatHistory variant (CHAT_COMPLETIONS and RESPONSES).
 //
-// The processor decides the path based on configuration/resources passed in constructor:
-// - useMinja=true forces tokenizer.apply_chat_template().
-// - useMinja=false uses the prepared runtime Jinja path if available,
-//   otherwise falls back to tokenizer.apply_chat_template() (no runtime prepared).
+// Uses Python Jinja when a processor is available; otherwise falls back to Minja.
 class ChatTemplateProcessor : public BaseInputProcessor {
 public:
     ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
-        bool useMinja,
-        const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate);
+        PyJinjaTemplateProcessor* templateProcessor = nullptr);
 
     absl::Status process(InputRequest& req) override;
 
 private:
     ov::genai::Tokenizer& tokenizer;  // non-owning; lifetime tied to InputProcessorContext
-    bool useMinja = false;
-    const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate = nullptr;
+    PyJinjaTemplateProcessor* templateProcessor = nullptr;
 
     static std::string serializeForJinja(const ov::genai::ChatHistory& chatHistory);
 

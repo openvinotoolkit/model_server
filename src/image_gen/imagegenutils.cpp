@@ -594,7 +594,7 @@ std::variant<absl::Status, std::unique_ptr<std::string>> generateJSONResponseFro
     auto& imagesAsStrings = std::get<std::vector<std::string>>(imagesAsStringsOrStatus);
     std::vector<std::string> base64images(imagesAsStrings.size());
     for (size_t i = 0; i < imagesAsStrings.size(); ++i) {
-        absl::Base64Escape(imagesAsStrings[i], &base64images[i]);
+        base64images[i] = absl::Base64Escape(imagesAsStrings[i]);
     }
     auto output = generateJSONResponseFromB64Images(base64images);
     return output;

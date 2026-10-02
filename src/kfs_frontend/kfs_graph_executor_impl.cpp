@@ -31,9 +31,6 @@
 #include "../predict_request_validation_utils.hpp"
 #include "../single_version_servable_definition.hpp"
 #include "src/status.hpp"
-#if !(defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME)
-#include "../tensorflow_type_utils.hpp"
-#endif
 #include "src/kfs_python_tensor_bridge.hpp"
 
 #pragma warning(push)
@@ -114,9 +111,9 @@ Status MediapipeGraphExecutor::infer(const KFSRequest* request, KFSResponse* res
 
 Status MediapipeGraphExecutor::inferStream(
     const KFSRequest& firstRequest,
-    grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
+    grpc::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
     const ExecutionContext& executionContext) {
-    return this->inferStreamTyped<KFSRequest, grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>>(firstRequest, serverReaderWriter, executionContext);
+    return this->inferStreamTyped<KFSRequest, grpc::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>>(firstRequest, serverReaderWriter, executionContext);
 }
 
 // Utilities
@@ -256,7 +253,6 @@ static Status receiveAndSerializePythonTensorIfSupported(
     return StatusCode::OK;
 }
 
-#if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
 static Status tfTensorRuntimeUnavailable(const std::string& streamName) {
     std::stringstream ss;
     ss << "TFTENSOR is not available in MediaPipe runtime KFS bridge for stream: " << streamName;
@@ -264,7 +260,6 @@ static Status tfTensorRuntimeUnavailable(const std::string& streamName) {
     SPDLOG_DEBUG(details);
     return Status(StatusCode::NOT_IMPLEMENTED, details);
 }
-#endif
 
 static Status kfsPyTensorBridgeUnavailable(const std::string& streamName) {
     std::stringstream ss;
@@ -431,28 +426,6 @@ static Status serializeKfsTypedContentToRawBytes(
     return StatusCode::OK;
 }
 
-#if !(defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME)
-template <>
-Status receiveAndSerializePacket<tensorflow::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
-    try {
-        auto& received = packet.Get<tensorflow::Tensor>();
-        auto* output = response.add_outputs();
-        output->set_name(outputStreamName);
-        output->set_datatype(
-            ovmsPrecisionToKFSPrecision(
-                TFSPrecisionToOvmsPrecision(
-                    received.dtype())));
-        output->clear_shape();
-        for (const auto& dim : received.shape()) {
-            output->add_shape(dim.size);
-        }
-        response.add_raw_output_contents()->assign(reinterpret_cast<char*>(received.data()), received.TotalBytes());
-        return StatusCode::OK;
-    }
-    HANDLE_PACKET_RECEIVAL_EXCEPTIONS();
-}
-#endif
-
 template <>
 Status receiveAndSerializePacket<::mediapipe::Tensor>(const ::mediapipe::Packet& packet, KFSResponse& response, const std::string& outputStreamName) {
     try {
@@ -540,7 +513,7 @@ Status receiveAndSerializePacket<mediapipe::ImageFrame>(const ::mediapipe::Packe
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();
 }
 
-static Status getRequestInput(google::protobuf::internal::RepeatedPtrIterator<const inference::ModelInferRequest_InferInputTensor>& itr, const std::string& requestedName, const KFSRequest& request) {
+static Status getRequestInput(KFSInputTensorIteratorType& itr, const std::string& requestedName, const KFSRequest& request) {
     auto requestInputItr = std::find_if(request.inputs().begin(), request.inputs().end(), [&requestedName](const ::KFSRequest::InferInputTensor& tensor) { return tensor.name() == requestedName; });
     if (requestInputItr == request.inputs().end()) {
         std::stringstream ss;
@@ -689,109 +662,6 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
     HANDLE_DESERIALIZATION_EXCEPTION("Mediapipe tensor")
     return StatusCode::OK;
 }
-
-#if !(defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME)
-static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<tensorflow::Tensor>& outTensor, PythonBackend* pythonBackend) {
-    using tensorflow::Tensor;
-    using tensorflow::TensorShape;
-    auto requestInputItr = request.inputs().begin();
-    OVMS_RETURN_ON_FAIL(getRequestInput(requestInputItr, requestedName, request));
-    auto inputIndex = requestInputItr - request.inputs().begin();
-    try {
-        auto datatype = getPrecisionAsDataType(KFSPrecisionToOvmsPrecision(requestInputItr->datatype()));
-        if (datatype == TFSDataType::DT_INVALID) {
-            std::stringstream ss;
-            ss << "Not supported precision for Tensorflow tensor deserialization: " << requestInputItr->datatype();
-            const std::string details = ss.str();
-            SPDLOG_DEBUG(details);
-            return Status(StatusCode::INVALID_PRECISION, std::move(details));
-        }
-        TensorShape tensorShape;
-        std::vector<int64_t> rawShape;
-        for (int i = 0; i < requestInputItr->shape().size(); i++) {
-            if (requestInputItr->shape()[i] < 0) {
-                std::stringstream ss;
-                ss << "Negative dimension size is not acceptable: " << tensorShapeToString(requestInputItr->shape()) << "; input name: " << requestedName;
-                const std::string details = ss.str();
-                SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", request.model_name(), request.model_version(), details);
-                return Status(StatusCode::INVALID_SHAPE, details);
-            }
-            rawShape.emplace_back(requestInputItr->shape()[i]);
-        }
-        int64_t dimsCount = rawShape.size();
-        auto abslStatus = tensorflow::TensorShapeUtils::MakeShape(rawShape.data(), dimsCount, &tensorShape);
-        if (!abslStatus.ok()) {
-            auto stringViewAbslMessage = abslStatus.message();
-            return Status(StatusCode::UNKNOWN_ERROR, std::string{stringViewAbslMessage});
-        }
-        abslStatus = TensorShape::BuildTensorShapeBase(rawShape, static_cast<tensorflow::TensorShapeBase<TensorShape>*>(&tensorShape));
-        if (!abslStatus.ok()) {
-            auto stringViewAbslMessage = abslStatus.message();
-            return Status(StatusCode::UNKNOWN_ERROR, std::string{stringViewAbslMessage});
-        }
-        size_t expectedBytes = 1;
-        bool expectedBufferSizeValid = computeExpectedBufferSizeReturnFalseIfOverflow(rawShape, KFSDataTypeSize(requestInputItr->datatype()), expectedBytes);
-        if (!expectedBufferSizeValid) {
-            const std::string details = "Provided shape and datatype declare too large buffer.";
-            SPDLOG_DEBUG("[servable name: {} version: {}] {}", request.model_name(), request.model_version(), details);
-            return Status(StatusCode::INVALID_CONTENT_SIZE, details);
-        }
-        if (request.raw_input_contents().size()) {
-            OVMS_RETURN_ON_FAIL(validateRawInputContent(expectedBytes, request.raw_input_contents().at(inputIndex), requestedName, request));
-        } else {
-            OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
-        }
-        outTensor = std::make_unique<tensorflow::Tensor>(datatype, tensorShape);
-        if (request.raw_input_contents().size()) {
-            auto& bufferLocation = request.raw_input_contents().at(inputIndex);
-            void* tfTensordata = outTensor->data();
-            std::memcpy(tfTensordata, bufferLocation.data(), bufferLocation.size());
-        } else {
-            void* data = outTensor->data();
-            switch (datatype) {
-            case TFSDataType::DT_FLOAT: {
-                COPY_INPUT_VALUE_BY_VALUE(float, fp32);
-            }
-            case TFSDataType::DT_DOUBLE: {
-                COPY_INPUT_VALUE_BY_VALUE(double, fp64);
-            }
-            case TFSDataType::DT_INT64: {
-                COPY_INPUT_VALUE_BY_VALUE(int64_t, int64);
-            }
-            case TFSDataType::DT_INT32: {
-                COPY_INPUT_VALUE_BY_VALUE(int32_t, int);
-            }
-            case TFSDataType::DT_INT16: {
-                COPY_INPUT_VALUE_BY_VALUE(int16_t, int);
-            }
-            case TFSDataType::DT_INT8: {
-                COPY_INPUT_VALUE_BY_VALUE(int8_t, int);
-            }
-            case TFSDataType::DT_UINT64: {
-                COPY_INPUT_VALUE_BY_VALUE(uint64_t, uint64);
-            }
-            case TFSDataType::DT_UINT32: {
-                COPY_INPUT_VALUE_BY_VALUE(uint32_t, uint);
-            }
-            case TFSDataType::DT_UINT16: {
-                COPY_INPUT_VALUE_BY_VALUE(uint16_t, uint);
-            }
-            case TFSDataType::DT_UINT8: {
-                COPY_INPUT_VALUE_BY_VALUE(uint8_t, uint);
-            }
-            case TFSDataType::DT_BOOL: {
-                COPY_INPUT_VALUE_BY_VALUE(bool, bool);
-            }
-            case TFSDataType::DT_HALF:
-            default:
-                return ovms::Status(ovms::StatusCode::NOT_IMPLEMENTED, "There is no support for types different than fp32, int64, int32, uint32, uint64, int8, uint8, bool");
-            }
-        }
-    }
-    HANDLE_DESERIALIZATION_EXCEPTION("Tensorflow tensor")
-    return StatusCode::OK;
-}
-#endif
 
 static Status deserializeTensor(const std::string& requestedName, const KFSRequest& request, std::unique_ptr<ov::Tensor>& outTensor, PythonBackend* pythonBackend) {
     auto requestInputItr = request.inputs().begin();
@@ -1180,11 +1050,7 @@ static Status createPacketAndPushIntoGraph(const std::string& inputName, std::sh
         status = createPacketAndPushIntoGraph<Holder>(inputName, request, graph, timestamp, nullptr);
     } else if (inputPacketType == mediapipe_packet_type_enum::TFTENSOR) {
         SPDLOG_DEBUG("Request processing TF tensor: {}", inputName);
-#if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
         status = tfTensorRuntimeUnavailable(inputName);
-#else
-        status = createPacketAndPushIntoGraph<tensorflow::Tensor, Holder>(inputName, request, graph, timestamp, nullptr);
-#endif
     } else if (inputPacketType == mediapipe_packet_type_enum::MPTENSOR) {
         SPDLOG_DEBUG("Request processing MP tensor: {}", inputName);
         status = createPacketAndPushIntoGraph<mediapipe::Tensor, Holder>(inputName, request, graph, timestamp, nullptr);
@@ -1280,11 +1146,7 @@ Status onPacketReadySerializeImpl(
         status = receiveAndSerializePacket<KFSResponse>(packet, response, packetName);
     } else if (packetType == mediapipe_packet_type_enum::TFTENSOR) {
         SPDLOG_DEBUG("Response processing packet type TF Tensor name: {}", packetName);
-#if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
         status = tfTensorRuntimeUnavailable(packetName);
-#else
-        status = receiveAndSerializePacket<tensorflow::Tensor>(packet, response, packetName);
-#endif
     } else if (packetType == mediapipe_packet_type_enum::TFLITETENSOR) {
         SPDLOG_DEBUG("Response processing packet type TFLite Tensor name: {}", packetName);
         std::string details{"Response processing packet type TFLite Tensor is not supported"};

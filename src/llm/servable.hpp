@@ -30,7 +30,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "io_processing/delta.hpp"
 #include "openvino/genai/text_streamer.hpp"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -41,12 +41,13 @@
 #include "io_processing/base_generation_config_builder.hpp"
 #include "io_processing/input_processor_context.hpp"
 #include "io_processing/input_request.hpp"
-#include "runtime_chat_template.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
 #endif
 
 namespace ovms {
+class PyJinjaTemplateProcessor;
+
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
 
@@ -222,7 +223,6 @@ struct GenAiServableProperties {
     // Controls which steps InputProcessor builds for this servable type.
     // Aggregated per-deployment context for InputProcessor.
     InputProcessorContext inputProcessorContext;
-    PreparedRuntimeChatTemplate preparedRuntimeChatTemplate;
 
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;

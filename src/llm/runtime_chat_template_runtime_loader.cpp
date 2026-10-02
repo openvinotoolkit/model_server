@@ -32,6 +32,8 @@
 namespace ovms {
 namespace {
 
+using EnsurePythonInterpreterInitializedFn = bool (*)(const char** errorMessage);
+
 struct RuntimeChatTemplateRuntimeState {
     bool available = false;
 #if defined(_WIN32)
@@ -39,7 +41,7 @@ struct RuntimeChatTemplateRuntimeState {
 #else
     void* handle = nullptr;
 #endif
-    RuntimeChatTemplateRuntimeApi api;
+    EnsurePythonInterpreterInitializedFn ensurePythonInterpreterInitialized = nullptr;
 };
 
 RuntimeChatTemplateRuntimeState& runtimeState() {
@@ -115,24 +117,18 @@ void initializeRuntimeState() {
     const auto candidates = buildCandidates();
     if (!tryLoadLibrary(candidates, state.handle)) {
 #if defined(_WIN32)
-        SPDLOG_DEBUG("Python runtime library libovmspython.dll not available for runtime chat template processing");
+        SPDLOG_DEBUG("Python runtime library libovmspython.dll is unavailable");
 #else
-        SPDLOG_DEBUG("Python runtime library libovmspython.so not available for runtime chat template processing");
+        SPDLOG_DEBUG("Python runtime library libovmspython.so is unavailable");
 #endif
         return;
     }
 
-    state.api.createPreparedFn = reinterpret_cast<RuntimeChatTemplateRuntimeApi::CreatePreparedChatTemplateRuntimeFn>(
-        resolveSymbol(state.handle, "OVMS_createPreparedChatTemplateRuntime"));
-    state.api.applyPreparedFn = reinterpret_cast<RuntimeChatTemplateRuntimeApi::ApplyPreparedChatTemplateRuntimeFn>(
-        resolveSymbol(state.handle, "OVMS_applyPreparedChatTemplateRuntime"));
-    state.api.destroyPreparedFn = reinterpret_cast<RuntimeChatTemplateRuntimeApi::DestroyPreparedChatTemplateRuntimeFn>(
-        resolveSymbol(state.handle, "OVMS_destroyPreparedChatTemplateRuntime"));
+    state.ensurePythonInterpreterInitialized = reinterpret_cast<EnsurePythonInterpreterInitializedFn>(
+        resolveSymbol(state.handle, "OVMS_ensurePythonInterpreterInitialized"));
 
-    if (state.api.createPreparedFn == nullptr ||
-        state.api.applyPreparedFn == nullptr ||
-        state.api.destroyPreparedFn == nullptr) {
-        SPDLOG_WARN("Python runtime library missing prepared chat template runtime symbols");
+    if (state.ensurePythonInterpreterInitialized == nullptr) {
+        SPDLOG_WARN("Python runtime library is missing OVMS_ensurePythonInterpreterInitialized");
         return;
     }
 
@@ -141,13 +137,20 @@ void initializeRuntimeState() {
 
 }  // namespace
 
-const RuntimeChatTemplateRuntimeApi* getRuntimeChatTemplateRuntimeApi() {
+bool ensurePythonRuntimeInitialized(std::string& errorMessage) {
     std::call_once(runtimeInitFlag(), initializeRuntimeState);
     auto& state = runtimeState();
     if (!state.available) {
-        return nullptr;
+        errorMessage = "Python runtime library or interpreter initialization symbol is unavailable";
+        return false;
     }
-    return &state.api;
+    const char* runtimeError = nullptr;
+    if (!state.ensurePythonInterpreterInitialized(&runtimeError)) {
+        errorMessage = runtimeError != nullptr ? runtimeError : "Python interpreter initialization failed";
+        return false;
+    }
+    errorMessage.clear();
+    return true;
 }
 
 }  // namespace ovms

@@ -68,7 +68,7 @@ std::string CLIParser::getEffectiveTaskParameter() const {
     throw std::logic_error("Could not infer model task - specify --task value explicitly");
 }
 
-std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char** argv) {
+std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const char* const* argv) {
     std::stringstream ss;
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");

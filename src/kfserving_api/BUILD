@@ -13,18 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("@com_google_protobuf//:protobuf.bzl", "cc_proto_library")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
+
+proto_library(
+    name = "kfserving_api_proto",
+    srcs = ["grpc_predict_v2.proto"],
+    visibility = ["//visibility:public"],
+)
 
 cc_proto_library(
+    name = "kfserving_api_cpp_proto",
+    deps = [":kfserving_api_proto"],
+    visibility = ["//visibility:public"],
+)
+
+cc_grpc_library(
+    name = "kfserving_api_cpp_grpc",
+    srcs = [":kfserving_api_proto"],
+    grpc_only = True,
+    deps = [":kfserving_api_cpp_proto"],
+    visibility = ["//visibility:public"],
+)
+
+# Aggregate target that both the messages and the grpc service, keeping the
+# historical `kfserving_api_cpp` label used across the codebase.
+cc_library(
     name = "kfserving_api_cpp",
-    srcs = ["grpc_predict_v2.proto",],
-    deps = [],
-    cc_libs = ["@com_google_protobuf//:protobuf"],
-    protoc = "@com_google_protobuf//:protoc",
-    default_runtime = "@com_google_protobuf//:protobuf",
-    use_grpc_plugin = True, # ??
-    testonly = False, # ??
-    visibility = [
-        "//visibility:public",
+    deps = [
+        ":kfserving_api_cpp_grpc",
+        ":kfserving_api_cpp_proto",
     ],
+    visibility = ["//visibility:public"],
 )

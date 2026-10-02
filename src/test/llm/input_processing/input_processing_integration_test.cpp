@@ -134,7 +134,6 @@ protected:
         InputProcessorContext ctx;
         ctx.config.isVLM = isVLM;
         ctx.config.isOmni = isOmni;
-        ctx.config.useMinja = false;
         ctx.tokenizer = *sharedTokenizer;
 
         InputProcessor processor(ctx, result.req);
@@ -445,9 +444,7 @@ INSTANTIATE_TEST_SUITE_P(BothEndpoints, InputProcessingIntegrationTest,
 // ---------------------------------------------------------------------------
 
 static std::string toBase64(const std::string& raw) {
-    std::string encoded;
-    absl::Base64Escape(raw, &encoded);
-    return encoded;
+    return absl::Base64Escape(raw);
 }
 
 TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {
@@ -529,7 +526,6 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
 
         InputProcessorContext ctx;
         ctx.config.isVLM = true;
-        ctx.config.useMinja = false;
         ctx.tokenizer = tokenizer;
 
         InputProcessor processor(ctx, req);
