@@ -271,10 +271,10 @@ pipeline {
                     sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                     sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
                     withCredentials([usernamePassword(credentialsId: 'workflow_lab_mediapipe', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
-                      sh "make ovms_builder_image RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      sh "make ovms_builder_image BASE_OS=ubuntu26 RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
 
                       // release_image
-                      sh "make release_image RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      sh "make release_image BASE_OS=ubuntu26 RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                       sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
                       if ( test_doc_files_linux ) {
                           sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
@@ -340,7 +340,7 @@ pipeline {
                 withGithubStageStatus('jenkins/oncommit/unit-tests-linux', 'Linux unit tests') {
                   println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
                   try {
-                      sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/OVMS_C OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                      sh "make run_unit_tests BASE_OS=ubuntu26 TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/OVMS_C OVMS_CPP_IMAGE_TAG=${shortCommit}"
                   }
                   finally {
                       archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"

@@ -104,7 +104,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
             exit 1
         fi
     fi
-    bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding || exit 1
+    bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" --extra_toolchains=//third_party/python:system_python_toolchain //src/python/binding:test_python_binding || exit 1
     bazel build ${SHARED_OPTIONS} ${UNIT_TEST_TARGETS} || exit 1
     echo "Executing unit tests"
     failed=0
