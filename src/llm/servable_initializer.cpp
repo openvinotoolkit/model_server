@@ -280,7 +280,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         return;
     }
 
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template parser mode: {}",
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template rendering mode: {}",
         properties->chatTemplateMode == ChatTemplateMode::JINJA ? "JINJA" : "MINJA");
 
     if (!properties->tokenizer.get_chat_template().empty()) {
