@@ -162,6 +162,31 @@ if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL
 if [ "$FUZZER_BUILD" == "0" ]; then find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \; ; fi;
 cd /ovms_release/bin
 if [ "$FUZZER_BUILD" == "0" ]; then
+	if ! command -v readelf >/dev/null 2>&1; then
+		echo "Cannot verify OVMS Python linkage: readelf is unavailable."
+		exit 1
+	fi
+	ovms_needed=$(readelf -d ./ovms)
+	if echo "$ovms_needed" | grep -Eiq '[(]NEEDED[)].*(libpython[0-9.]*[.]so|libovmspython[.]so)'; then
+		echo "OVMS binary must not link directly against libpython."
+		exit 1
+	fi
+	if [[ "$debug_bazel_flags" != *"mp_off"* && "$debug_bazel_flags" != *"disable_mediapipe"* ]]; then
+		if ! command -v nm >/dev/null 2>&1; then
+			echo "Cannot verify OVMS MediaPipe symbols: nm is unavailable."
+			exit 1
+		fi
+		exported_symbols=$(nm -D ./ovms | awk '$2 ~ /^[A-TV-Z]$/ { print $3 }')
+		for symbol in OVMS_MPFactoryCreate OVMS_MPFactoryDestroy OVMS_MPFactoryProcessConfig \
+			OVMS_MPFactoryCreateExecutor OVMS_MPGraphExportCreateServableConfig \
+			OVMS_MPGraphExportCreateServableConfigInMemory; do
+			count=$(grep -cx "$symbol" <<< "$exported_symbols" || true)
+			if [ "$count" -ne 1 ]; then
+				echo "Expected exactly one exported $symbol in OVMS; found $count."
+				exit 1
+			fi
+		done
+	fi
     patchelf --remove-rpath ./ovms && \
     patchelf --set-rpath '$ORIGIN/../lib/' ./ovms
 fi

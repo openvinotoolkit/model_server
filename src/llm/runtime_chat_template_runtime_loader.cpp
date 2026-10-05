@@ -33,6 +33,9 @@ namespace ovms {
 namespace {
 
 using EnsurePythonInterpreterInitializedFn = bool (*)(const char** errorMessage);
+using CreatePreparedFn = bool (*)(const char*, const char*, const char*, const char*, void**, const char**);
+using ApplyPreparedFn = bool (*)(void*, const char*, const char**);
+using DestroyPreparedFn = void (*)(void*);
 
 struct RuntimeChatTemplateRuntimeState {
     bool available = false;
@@ -42,6 +45,9 @@ struct RuntimeChatTemplateRuntimeState {
     void* handle = nullptr;
 #endif
     EnsurePythonInterpreterInitializedFn ensurePythonInterpreterInitialized = nullptr;
+    CreatePreparedFn createPrepared = nullptr;
+    ApplyPreparedFn applyPrepared = nullptr;
+    DestroyPreparedFn destroyPrepared = nullptr;
 };
 
 RuntimeChatTemplateRuntimeState& runtimeState() {
@@ -126,6 +132,9 @@ void initializeRuntimeState() {
 
     state.ensurePythonInterpreterInitialized = reinterpret_cast<EnsurePythonInterpreterInitializedFn>(
         resolveSymbol(state.handle, "OVMS_ensurePythonInterpreterInitialized"));
+    state.createPrepared = reinterpret_cast<CreatePreparedFn>(resolveSymbol(state.handle, "OVMS_createPreparedChatTemplateRuntime"));
+    state.applyPrepared = reinterpret_cast<ApplyPreparedFn>(resolveSymbol(state.handle, "OVMS_applyPreparedChatTemplateRuntime"));
+    state.destroyPrepared = reinterpret_cast<DestroyPreparedFn>(resolveSymbol(state.handle, "OVMS_destroyPreparedChatTemplateRuntime"));
 
     if (state.ensurePythonInterpreterInitialized == nullptr) {
         SPDLOG_WARN("Python runtime library is missing OVMS_ensurePythonInterpreterInitialized");
@@ -151,6 +160,51 @@ bool ensurePythonRuntimeInitialized(std::string& errorMessage) {
     }
     errorMessage.clear();
     return true;
+}
+
+PreparedChatTemplateRuntime::~PreparedChatTemplateRuntime() {
+    if (handle != nullptr) {
+        destroy(handle);
+    }
+}
+
+bool PreparedChatTemplateRuntime::prepare(const std::string& modelsPath, const std::string& chatTemplate,
+    const std::string& bosToken, const std::string& eosToken, std::string& errorMessage) {
+    std::call_once(runtimeInitFlag(), initializeRuntimeState);
+    auto& state = runtimeState();
+    if (!state.available || state.createPrepared == nullptr || state.applyPrepared == nullptr || state.destroyPrepared == nullptr) {
+        errorMessage = "Python chat template runtime is unavailable";
+        return false;
+    }
+    const char* runtimeOutput = nullptr;
+    void* newHandle = nullptr;
+    if (!state.createPrepared(modelsPath.c_str(), chatTemplate.c_str(), bosToken.c_str(), eosToken.c_str(), &newHandle, &runtimeOutput)) {
+        errorMessage = runtimeOutput != nullptr ? runtimeOutput : "Failed to prepare Python chat template";
+        return false;
+    }
+    if (newHandle == nullptr) {
+        errorMessage = "Python chat template runtime returned no prepared template";
+        return false;
+    }
+    if (handle != nullptr) {
+        destroy(handle);
+    }
+    handle = newHandle;
+    destroy = state.destroyPrepared;
+    render = state.applyPrepared;
+    errorMessage.clear();
+    return true;
+}
+
+bool PreparedChatTemplateRuntime::apply(const std::string& requestBody, std::string& output) const {
+    if (handle == nullptr) {
+        output = "Python chat template is not prepared";
+        return false;
+    }
+    const char* runtimeOutput = nullptr;
+    const bool success = render(handle, requestBody.c_str(), &runtimeOutput);
+    output = runtimeOutput != nullptr ? runtimeOutput : "Python chat template rendering failed";
+    return success;
 }
 
 }  // namespace ovms

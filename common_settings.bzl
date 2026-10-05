@@ -212,7 +212,6 @@ COMMON_STATIC_TEST_COPTS = select({
                     "-Wall",
                     "-Wno-unknown-pragmas",
                     "-Werror",
-                    "-Wno-deprecated-declarations",
                     "-Wno-error=deprecated-declarations",
                     "-Isrc",
                     "-fconcepts", # for gmock related utils

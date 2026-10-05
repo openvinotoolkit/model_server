@@ -316,8 +316,9 @@ bool MediapipeRuntimeApi::definitionExists(const std::string& name) const {
 Status MediapipeRuntimeApi::wakeUpDefinition(const std::string& name, const ServableNameChecker& checker) const {
     OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED();
     int code = api->wakeUpDefinition(api->factoryHandle, name.c_str(), &checker);
-    if (code == static_cast<int>(StatusCode::OK))
+    if (code == static_cast<int>(StatusCode::OK)) {
         return StatusCode::OK;
+    }
     const char* details = api->lastError();
     return details == nullptr ? Status(static_cast<StatusCode>(code), "MediaPipe runtime API error") : Status(static_cast<StatusCode>(code), details);
 }
@@ -325,8 +326,9 @@ Status MediapipeRuntimeApi::wakeUpDefinition(const std::string& name, const Serv
 Status MediapipeRuntimeApi::putToSleepDefinition(const std::string& name) const {
     OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED();
     int code = api->putToSleepDefinition(api->factoryHandle, name.c_str());
-    if (code == static_cast<int>(StatusCode::OK))
+    if (code == static_cast<int>(StatusCode::OK)) {
         return StatusCode::OK;
+    }
     const char* details = api->lastError();
     return details == nullptr ? Status(static_cast<StatusCode>(code), "MediaPipe runtime API error") : Status(static_cast<StatusCode>(code), details);
 }
@@ -398,8 +400,9 @@ Status MediapipeRuntimeApi::createServableConfig(const std::string& directoryPat
     if (api == nullptr || api->createServableConfig == nullptr)
         return StatusCode::INTERNAL_ERROR;
     int code = api->createServableConfig(directoryPath.c_str(), &hfSettings);
-    if (code == static_cast<int>(StatusCode::OK))
+    if (code == static_cast<int>(StatusCode::OK)) {
         return StatusCode::OK;
+    }
     const char* details = api->lastError ? api->lastError() : nullptr;
     return details == nullptr ? Status(static_cast<StatusCode>(code), "MediaPipe runtime API error") : Status(static_cast<StatusCode>(code), details);
 }

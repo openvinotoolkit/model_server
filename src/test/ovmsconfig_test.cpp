@@ -3158,6 +3158,42 @@ TEST(OvmsGraphCliParserTest, invalidReasoningParserNameThrowsInvalidArgument) {
         std::invalid_argument);
 }
 
+TEST(OvmsGraphCliParserTest, chatTemplateEngineOptions) {
+    for (const auto& option : {"--chat_template_engine", "--chat_tempate_engine"}) {
+        ovms::HFSettingsImpl hfSettings;
+        ovms::GraphCLIParser parser;
+        parser.parse({option, "minja"});
+        parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+        EXPECT_EQ(std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings).chatTemplateEngine, "MINJA");
+    }
+}
+
+TEST(OvmsGraphCliParserTest, jinjaRequiresPythonSupport) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    parser.parse({"--chat_tempate_engine", "jinja"});
+#if (PYTHON_DISABLE == 0)
+    parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+    EXPECT_EQ(std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings).chatTemplateEngine, "JINJA");
+#else
+    EXPECT_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"), std::invalid_argument);
+#endif
+}
+
+TEST(OvmsGraphCliParserTest, invalidChatTemplateEngineIsRejected) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    parser.parse({"--chat_tempate_engine", "invalid"});
+    EXPECT_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, duplicateChatTemplateEngineOptionsAreRejected) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    parser.parse({"--chat_template_engine", "minja", "--chat_tempate_engine", "minja"});
+    EXPECT_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"), std::invalid_argument);
+}
+
 TEST(OvmsGraphCliParserTest, embeddingsMaxLengthZeroThrowsInvalidArgument) {
     ovms::HFSettingsImpl hfSettings;
     ovms::EmbeddingsGraphCLIParser parser;

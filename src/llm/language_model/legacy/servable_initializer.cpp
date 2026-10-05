@@ -75,13 +75,15 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         }
     }
     if (nodeOptions.has_chat_template_mode()) {
+        properties->chatTemplateModeExplicit = true;
 #if (PYTHON_DISABLE == 0)
         properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
                                            ? ChatTemplateMode::JINJA
                                            : ChatTemplateMode::MINJA;
 #else
         if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA) {
-            SPDLOG_WARN("chat_template_mode=JINJA is not supported in Python-disabled builds. Falling back to MINJA.");
+            SPDLOG_ERROR("chat_template_mode=JINJA requires Python support.");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
         properties->chatTemplateMode = ChatTemplateMode::MINJA;
 #endif
@@ -171,7 +173,10 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-    loadChatTemplate(properties, parsedModelsPath);
+    status = loadChatTemplate(properties, parsedModelsPath);
+    if (!status.ok()) {
+        return status;
+    }
     properties->legacyExecutor = std::make_shared<LegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

@@ -18,7 +18,8 @@
 
 namespace ovms {
 
-bool loadLlmCalculatorsPlugin();
+// Returns the process-lifetime plugin handle, or nullptr if loading fails.
+void* loadLlmCalculatorsPlugin();
 
 // Resolves a symbol exported by the LLM calculators plugin. Returns nullptr when the plugin is not loaded.
 void* getLlmCalculatorsPluginSymbol(const char* symbolName);

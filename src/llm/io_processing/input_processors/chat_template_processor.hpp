@@ -23,22 +23,22 @@
 
 namespace ovms {
 
-class PyJinjaTemplateProcessor;
+class PreparedChatTemplateRuntime;
 
 // Applies the chat template to ChatHistory, producing req.promptText.
 // Active when: input is ChatHistory variant (CHAT_COMPLETIONS and RESPONSES).
 //
-// Uses Python Jinja when a processor is available; otherwise falls back to Minja.
+// Uses Python Jinja when a processor is available; otherwise use Minja.
 class ChatTemplateProcessor : public BaseInputProcessor {
 public:
     ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
-        PyJinjaTemplateProcessor* templateProcessor = nullptr);
+        PreparedChatTemplateRuntime* templateProcessor = nullptr);
 
     absl::Status process(InputRequest& req) override;
 
 private:
     ov::genai::Tokenizer& tokenizer;  // non-owning; lifetime tied to InputProcessorContext
-    PyJinjaTemplateProcessor* templateProcessor = nullptr;
+    PreparedChatTemplateRuntime* templateProcessor = nullptr;
 
     static std::string serializeForJinja(const ov::genai::ChatHistory& chatHistory);
 

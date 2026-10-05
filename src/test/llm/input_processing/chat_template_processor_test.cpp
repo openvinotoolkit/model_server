@@ -41,7 +41,7 @@
 
 #include "../../../llm/io_processing/input_processors/chat_template_processor.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
-#include "../../../llm/py_jinja_template_processor.hpp"
+#include "../../../llm/runtime_chat_template_runtime_loader.hpp"
 #include "../../platform_utils.hpp"
 
 namespace ovms {
@@ -246,7 +246,7 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
 
 #if (PYTHON_DISABLE == 0)
 static std::unique_ptr<ov::genai::Tokenizer> pyJinjaTokenizer;
-static std::unique_ptr<PyJinjaTemplateProcessor> sharedPyJinjaTemplateProcessor;
+static std::unique_ptr<PreparedChatTemplateRuntime> sharedPyJinjaTemplateProcessor;
 
 class ChatTemplateProcessorPyJinjaTest : public ::testing::Test {
 protected:
@@ -254,20 +254,14 @@ protected:
         const std::string modelsPath = getGenericFullPathForSrcTest(
             "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
         pyJinjaTokenizer = std::make_unique<ov::genai::Tokenizer>(modelsPath);
-        sharedPyJinjaTemplateProcessor = std::make_unique<PyJinjaTemplateProcessor>();
-        sharedPyJinjaTemplateProcessor->bosToken = pyJinjaTokenizer->get_bos_token();
-        sharedPyJinjaTemplateProcessor->eosToken = pyJinjaTokenizer->get_eos_token();
-
-        py::gil_scoped_acquire acquire;
-        py::exec("import json");
-        py::object environment = py::module_::import("jinja2").attr("Environment")();
-        py::object templateObject = environment.attr("from_string")(
+        sharedPyJinjaTemplateProcessor = std::make_unique<PreparedChatTemplateRuntime>();
+        const std::string chatTemplate =
             "{% for message in messages %}[{{ message.role }}]{{ message.content }}{% endfor %}"
-            "{% if add_generation_prompt %}[assistant]{% endif %}");
-        sharedPyJinjaTemplateProcessor->chatTemplate =
-            std::make_unique<PyObjectWrapper<py::object>>(templateObject);
-        sharedPyJinjaTemplateProcessor->toolTemplate =
-            std::make_unique<PyObjectWrapper<py::object>>(templateObject);
+            "{% if add_generation_prompt %}[assistant]{% endif %}";
+        std::string errorMessage;
+        ASSERT_TRUE(sharedPyJinjaTemplateProcessor->prepare(modelsPath, chatTemplate,
+            pyJinjaTokenizer->get_bos_token(), pyJinjaTokenizer->get_eos_token(), errorMessage))
+            << errorMessage;
     }
 
     static void TearDownTestSuite() {

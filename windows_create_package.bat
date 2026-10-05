@@ -58,7 +58,24 @@ md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-if !errorlevel! neq 0 exit /b !errorlevel!
+where dumpbin >nul 2>&1
+if !errorlevel! equ 0 (
+    set "deps_file=%TEMP%\ovms_deps_!RANDOM!.txt"
+    dumpbin /DEPENDENTS dist\windows\ovms\ovms.exe > "!deps_file!"
+    if !errorlevel! neq 0 (
+        del "!deps_file!"
+        exit /b 1
+    )
+    findstr /I /R "python[0-9][0-9]*\.dll libovmspython\.dll" "!deps_file!" >nul
+    if !errorlevel! equ 0 (
+        del "!deps_file!"
+        echo OVMS binary must not link directly against Python.
+        exit /b 1
+    )
+    del "!deps_file!"
+) else (
+    echo dumpbin not available; skipping OVMS Python linkage check.
+)
 
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!

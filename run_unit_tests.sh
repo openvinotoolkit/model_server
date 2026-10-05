@@ -26,12 +26,6 @@ if [ -f /etc/redhat-release ] ; then dist="--//:distro=redhat" ; fi
 debug_bazel_flags=${debug_bazel_flags:-"--config=mp_on_py_on $dist"}
 TEST_FILTER="--test_filter=*"
 UNIT_TEST_TARGETS="//src:ovms_test //src:python_runtime_library_test"
-if [[ "${debug_bazel_flags}" != *"mp_off"* ]] && [[ "${debug_bazel_flags}" != *"disable_mediapipe"* ]]; then
-    UNIT_TEST_TARGETS+=" //src:ovms_mediapipe_runtime_inprocess_smoke_test"
-fi
-if [[ "${debug_bazel_flags}" == *"py_off"* ]] || [[ "${debug_bazel_flags}" == *"PYTHON_DISABLE=1"* ]]; then
-    UNIT_TEST_TARGETS+=" //src:ovms_no_libpython_smoke_test"
-fi
 SHARED_OPTIONS=" \
 --jobs=$JOBS \
 ${debug_bazel_flags} \

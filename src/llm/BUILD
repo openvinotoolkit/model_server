@@ -210,11 +210,9 @@ ovms_cc_library(
     srcs = [],
     deps = [
         ":io_processing_input_request",
+        ":runtime_chat_template_loader",
         "//third_party:genai",
-    ] + select({
-        "//:disable_python": [],
-        "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,
-    }),
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -243,13 +241,11 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         ":image_utils",
         ":io_processing_input_request",
+        ":runtime_chat_template_loader",
         "//third_party:genai",
         "//src:libovmslogging",
         "//src/audio:audio_utils",
-    ] + select({
-        "//:disable_python": [],
-        "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,
-    }),
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -305,10 +301,7 @@ ovms_cc_library(
     deps = [
         "//third_party:genai",
         "//src:libovmslogging",
-    ] + select({
-        "//:not_disable_python": [":py_jinja_template_processor"],
-        "//conditions:default": [],
-    }),
+    ],
     visibility = ["//visibility:public"],
 )
 

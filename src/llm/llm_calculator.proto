@@ -143,10 +143,10 @@ message LLMCalculatorOptions {
     enum ChatTemplateMode {
       // Use GenAI's apply_chat_template (minja-based).
       // The only option for builds without Python.
-      // For builds with Python, selectible for LLM pipelines, default for VLM pipelines.
+      // Available in all builds; used by default when Python is unavailable.
       MINJA = 0;
       // Use Python Jinja2 module for chat template processing.
-      // For builds with Python, default for LLM pipelines, selectible for VLM pipelines.
+      // Default for all text-generation pipelines when Python is available.
       JINJA = 1;
     }
 

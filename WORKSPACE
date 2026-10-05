@@ -16,7 +16,6 @@
 
 workspace(name = "ovms")
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # 2023-06-05
@@ -213,10 +212,12 @@ rules_java_toolchains()
 
 ################################### Upstream mediapipe repository ###############
 #### Will be used on feature release
-git_repository(
+http_archive(
     name = "mediapipe",
-    remote = "https://github.com/google-ai-edge/mediapipe",
-    commit = "2bce9dd15fa45f267c9e5f77086997c984a9f107", # top of mediapipe master branch as of 17.09.2026
+    sha256 = "c8b4a4a69994146854cd4cd6a8ab4d2fca144c07ba92287efcee1549a7b81870",
+    strip_prefix = "mediapipe-2bce9dd15fa45f267c9e5f77086997c984a9f107",
+    type = "tar.gz",
+    urls = ["https://codeload.github.com/google-ai-edge/mediapipe/tar.gz/2bce9dd15fa45f267c9e5f77086997c984a9f107"],
     patches = [
         "@ovms//third_party/mediapipe:ovms_strip.diff",
         "@ovms//third_party/mediapipe:ovms_no_litert.diff",

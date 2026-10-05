@@ -22,4 +22,22 @@ namespace ovms {
 
 bool ensurePythonRuntimeInitialized(std::string& errorMessage);
 
+class PreparedChatTemplateRuntime {
+public:
+    PreparedChatTemplateRuntime() = default;
+    PreparedChatTemplateRuntime(const PreparedChatTemplateRuntime&) = delete;
+    PreparedChatTemplateRuntime& operator=(const PreparedChatTemplateRuntime&) = delete;
+    ~PreparedChatTemplateRuntime();
+
+    bool prepare(const std::string& modelsPath, const std::string& chatTemplate,
+        const std::string& bosToken, const std::string& eosToken, std::string& errorMessage);
+    bool apply(const std::string& requestBody, std::string& output) const;
+    bool isPrepared() const { return handle != nullptr; }
+
+private:
+    void* handle = nullptr;
+    void (*destroy)(void*) = nullptr;
+    bool (*render)(void*, const char*, const char**) = nullptr;
+};
+
 }  // namespace ovms

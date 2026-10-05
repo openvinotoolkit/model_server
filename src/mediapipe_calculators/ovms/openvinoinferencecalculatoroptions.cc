@@ -164,10 +164,6 @@ bool ValidateCalculatorSettings(CalculatorContract* cc) {
         return false;
     }
 
-    // Skip deep validation when INFO log level to avoid performance impact.
-    if (StringToLogLevel(std::string(std::getenv(OvmsLogLevelEnv) == nullptr ? "" : std::getenv(OvmsLogLevelEnv))) == OVMS_LogLevel::OVMS_LOG_INFO)
-        return true;
-
     const auto& options = cc->Options<OpenVINOInferenceCalculatorOptions>();
 
     if (!ValidateOrderListsForNonVector(cc->Inputs().GetTags(), options.input_order_list())) {

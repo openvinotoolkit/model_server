@@ -20,6 +20,7 @@
 #include <climits>
 #include <cstdlib>
 #include <filesystem>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -32,8 +33,6 @@
 
 namespace ovms {
 namespace {
-
-void* llmPluginHandle = nullptr;
 
 std::vector<std::string> getLlmPluginCandidates() {
     std::vector<std::string> candidates{
@@ -55,6 +54,7 @@ std::vector<std::string> getLlmPluginCandidates() {
     if (exePathLength > 0) {
         exePath[exePathLength] = '\0';
         std::filesystem::path exeDir = std::filesystem::path(exePath.data()).parent_path();
+        candidates.insert(candidates.begin(), (exeDir.parent_path() / "lib/libovms_llm_calculators.so").string());
         candidates.emplace_back((exeDir / "libovms_llm_calculators.so").string());
         candidates.emplace_back((exeDir / "src/llm/libovms_llm_calculators.so").string());
         candidates.emplace_back((exeDir / "llm/libovms_llm_calculators.so").string());
@@ -64,28 +64,28 @@ std::vector<std::string> getLlmPluginCandidates() {
 
 }  // namespace
 
-bool loadLlmCalculatorsPlugin() {
+void* loadLlmCalculatorsPlugin() {
+    static std::mutex loadMutex;
+    static void* llmPluginHandle = nullptr;
+    std::lock_guard<std::mutex> lock(loadMutex);
     if (llmPluginHandle != nullptr) {
-        return true;
+        return llmPluginHandle;
     }
 
     for (const auto& candidate : getLlmPluginCandidates()) {
         llmPluginHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
         if (llmPluginHandle != nullptr) {
             SPDLOG_TRACE("LLM calculators plugin loaded from: {}", candidate);
-            return true;
+            return llmPluginHandle;
         }
     }
 
     SPDLOG_DEBUG("LLM calculators plugin is unavailable");
-    return false;
+    return nullptr;
 }
 
 void* getLlmCalculatorsPluginSymbol(const char* symbolName) {
-    if (!loadLlmCalculatorsPlugin()) {
-        return nullptr;
-    }
-    void* handle = llmPluginHandle;
+    void* handle = loadLlmCalculatorsPlugin();
     if (handle == nullptr) {
         return nullptr;
     }
@@ -100,8 +100,8 @@ namespace ovms {
 
 // The plugin relies on the dynamic linker binding its unresolved references back to the host
 // executable. Windows has no equivalent, so there the runtime calls the servable directly.
-bool loadLlmCalculatorsPlugin() {
-    return false;
+void* loadLlmCalculatorsPlugin() {
+    return nullptr;
 }
 
 void* getLlmCalculatorsPluginSymbol(const char*) {

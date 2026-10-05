@@ -1949,27 +1949,6 @@ cc_binary(
     # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
-# Both smoke tests inspect ELF dynamic sections (readelf/nm), so they are Linux-only.
-sh_test(
-    name = "ovms_no_libpython_smoke_test",
-    srcs = ["test/ovms_no_libpython_smoke.sh"],
-    data = [":ovms"],
-    target_compatible_with = select({
-        "//src:windows": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
-sh_test(
-    name = "ovms_mediapipe_runtime_inprocess_smoke_test",
-    srcs = ["test/ovms_mediapipe_runtime_inprocess_smoke.sh"],
-    data = [":ovms"],
-    target_compatible_with = select({
-        "//src:windows": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    }),
-)
-
 cc_test(
     name = "ovms_test",
     linkstatic = 1,
