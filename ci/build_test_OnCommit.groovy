@@ -29,14 +29,7 @@ def withGithubStageStatus = { String context, String stageName, Closure body ->
     }
     throw ex
   } catch (Exception ex) {
-    if (env.CHANGE_ID) {
-      githubNotify context: context, status: 'FAILURE', description: "${stageName} failed"
-    }
-    throw ex
-  }
-}
-
-// "Restart from Stage" skips Configure, so its results are stashed and restored from there.
+    if (env.CHANGE_ID)       githubNotify context: context, status: 'FAILURE', description: "${stageName}   "Restart from Stage" skips Configure, so its results are stashed and restored from there.
 def configLoaded = false
 
 def ensureConfig = { ->
@@ -49,22 +42,30 @@ def ensureConfig = { ->
     } catch (Exception ex) {
       error "Configuration from the 'Configure' stage is not available (${ex.message}). Restart from 'Configure' or rebuild."
     }
-    def values = new groovy.json.JsonSlurperClassic().parseText(readFile('pipeline-config.json'))
-    image_build_needed = values.image_build_needed
-    win_image_build_needed = values.win_image_build_needed
-    client_test_needed = values.client_test_needed
-    functional_tests_changed = values.functional_tests_changed
-    export_models_changed = values.export_models_changed
-    test_doc_files_linux = values.test_doc_files_linux
-    test_doc_files_windows = values.test_doc_files_windows
-    shortCommit = values.shortCommit
-    agent_name_linux = values.agent_name_linux
-    agent_name_windows = values.agent_name_windows
-    test_agent_linux = values.test_agent_linux
-    test_agent_windows = values.test_agent_windows
-    disable_doc_tests_linux = values.disable_doc_tests_linux
-    disable_doc_tests_windows = values.disable_doc_tests_windows
-    validation_branch = values.validation_branch
+    // Plain key=value lines: JSON parsing classes are blocked by the Groovy sandbox.
+    def values = [:]
+    def lines = readFile('pipeline-config.txt').tokenize('\n')
+    for (int i = 0; i < lines.size(); i++) {
+      def separator = lines[i].indexOf('=')
+      if (separator > 0) {
+        values[lines[i].substring(0, separator)] = lines[i].substring(separator + 1).trim()
+      }
+    }
+    image_build_needed = values['image_build_needed']
+    win_image_build_needed = values['win_image_build_needed']
+    client_test_needed = values['client_test_needed']
+    functional_tests_changed = values['functional_tests_changed']
+    export_models_changed = values['export_models_changed']
+    test_doc_files_linux = values['test_doc_files_linux'].replace(' ', '\n')
+    test_doc_files_windows = values['test_doc_files_windows'].replace(' ', '\n')
+    shortCommit = values['shortCommit']
+    agent_name_linux = values['agent_name_linux']
+    agent_name_windows = values['agent_name_windows']
+    test_agent_linux = values['test_agent_linux']
+    test_agent_windows = values['test_agent_windows']
+    disable_doc_tests_linux = values['disable_doc_tests_linux'] == 'true'
+    disable_doc_tests_windows = values['disable_doc_tests_windows'] == 'true'
+    validation_branch = values['validation_branch']
   }
   configLoaded = true
   println "Restored configuration: shortCommit=${shortCommit} agent_name_linux=${agent_name_linux} agent_name_windows=${agent_name_windows} image_build_needed=${image_build_needed} win_image_build_needed=${win_image_build_needed}"
@@ -77,8 +78,8 @@ def saveConfig = { ->
     client_test_needed: client_test_needed,
     functional_tests_changed: functional_tests_changed,
     export_models_changed: export_models_changed,
-    test_doc_files_linux: test_doc_files_linux,
-    test_doc_files_windows: test_doc_files_windows,
+    test_doc_files_linux: test_doc_files_linux.replace('\n', ' '),
+    test_doc_files_windows: test_doc_files_windows.replace('\n', ' '),
     shortCommit: shortCommit,
     agent_name_linux: agent_name_linux,
     agent_name_windows: agent_name_windows,
@@ -88,9 +89,13 @@ def saveConfig = { ->
     disable_doc_tests_windows: disable_doc_tests_windows,
     validation_branch: validation_branch,
   ]
+  def text = ''
+  for (key in values.keySet()) {
+    text += "${key}=${values[key]}\n"
+  }
   dir('.pipeline_config') {
-    writeFile file: 'pipeline-config.json', text: groovy.json.JsonOutput.toJson(values)
-    stash name: 'pipeline-config', includes: 'pipeline-config.json'
+    writeFile file: 'pipeline-config.txt', text: text
+    stash name: 'pipeline-config', includes: 'pipeline-config.txt'
   }
   configLoaded = true
 }
