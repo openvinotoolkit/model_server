@@ -409,6 +409,16 @@ ovms_cc_library(
         "//src:libovmsprecision",
         "//src:libovmsstatus",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": [
+            "/wd4005",  # GLOG_NO_ABBREVIATED_SEVERITIES redefinition (mediapipe/glog)
+            "/wd4309",  # truncation of constant value (mediapipe circular_buffer.h)
+            "/wd4456",  # variable shadowing (mediapipe graph_profiler.h)
+            "/wd6246",  # local declaration hides previous declaration (mediapipe graph_profiler.h)
+            "/wd6011",  # NULL pointer dereference (mediapipe packet.h)
+        ],
+    }),
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
