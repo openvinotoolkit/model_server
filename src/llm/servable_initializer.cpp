@@ -258,7 +258,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
             } else {
                 failureReason = runtimeError == RuntimeChatTemplateError::PYTHON_RUNTIME_INITIALIZATION
                                     ? "Python runtime initialization failed"
-                                    : "runtime Jinja template preparation failed";
+                                    : "Runtime Jinja template preparation failed";
                 if (!runtimeOutput.empty()) {
                     failureReason += ": " + runtimeOutput;
                 }
