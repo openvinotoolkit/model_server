@@ -49,7 +49,7 @@ set "opt_install_dir=C:\opt"
 :: Python 312 needs to be first in the windows path, as well as MSYS tools
 set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
-:: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
+:: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
 
 :: Bazel compilation settings
@@ -79,22 +79,6 @@ IF /I EXIST %opt_install_dir% (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Installing wget
-echo [INFO] Installing wget ...
-set "wget_path=%opt_install_dir%\wget.exe"
-IF /I EXIST %wget_path% (
-    if %expunge% EQU 1 (
-        rmdir /S /Q %wget_path%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        curl -k -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] ::::::::::::::::::::::: wget installed already in %wget_path% )
-) ELSE (
-    curl -k -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-echo [INFO] Wget installed in %wget_path%
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Msys bash
 echo Installing msys ...
@@ -114,7 +98,7 @@ IF /I EXIST %bash_path% (
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
     IF /I NOT EXIST %msys_install% (
-        %wget_path% -P %opt_install_dir%\ %msys_url%
+        curl -k -f -L -o %msys_install% %msys_url%
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
 
@@ -200,12 +184,12 @@ IF /I EXIST %genai_zip% (
     if %expunge% EQU 1 (
         del /S /Q %genai_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
+        curl -k -f -L -o %genai_zip% %GENAI_PACKAGE_URL%
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %genai_zip% )
     
 ) ELSE (
-    %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
+    curl -k -f -L -o %genai_zip% %GENAI_PACKAGE_URL%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract GenAi
@@ -225,7 +209,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\%genai_dir% (
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
-mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%genai_dir%
+mklink /j %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%genai_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 echo [INFO] GenAI installed: %BAZEL_SHORT_PATH%\%genai_dir%
@@ -367,27 +351,20 @@ echo [INFO] BoringSSL installed: %boringssl_dir%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install bazel
 echo [INFO] Installing bazel ...
-set "bazel_path=%opt_install_dir%\bazel.exe"
-set "bazel_file=bazel-6.4.0-windows-x86_64.exe"
+set /p bazel_version=<"%~dp0.bazelversion"
+set "bazel_file=bazel-%bazel_version%-windows-x86_64.exe"
+set "bazel_path=%opt_install_dir%\%bazel_file%"
+set "bazel_url=https://github.com/bazelbuild/bazel/releases/download/%bazel_version%/%bazel_file%"
 IF /I EXIST %bazel_path% (
     if %expunge% EQU 1 (
         del /S /Q %bazel_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%*
-        if !errorlevel! neq 0 exit /b !errorlevel!
     ) else (
-        echo [INFO] ::::::::::::::::::::::: bazel already installed
+        echo [INFO] ::::::::::::::::::::::: Bazel %bazel_version% already installed
     )
-) ELSE (
-	IF /I EXIST %bazel_file% (
-		echo %bazel_file% exists
-	) ELSE (
-		%wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
-	)
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%*
+)
+IF /I NOT EXIST %bazel_path% (
+    curl -k -f -L -o %bazel_path% %bazel_url%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 echo [INFO] Bazel installed: %bazel_file%
@@ -523,12 +500,12 @@ IF /I EXIST %curl_zip% (
     if %expunge% EQU 1 (
         del /S /Q %curl_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %opt_install_dir%\ %curl_http%%curl_ver%
+        curl -k -f -L -o %curl_zip% %curl_http%%curl_ver%
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %curl_zip% )
     
 ) ELSE (
-    %wget_path% -P %opt_install_dir%\ %curl_http%%curl_ver%
+    curl -k -f -L -o %curl_zip% %curl_http%%curl_ver%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract curl
