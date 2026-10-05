@@ -49,21 +49,22 @@ def ensureConfig = { ->
     } catch (Exception ex) {
       error "Configuration from the 'Configure' stage is not available (${ex.message}). Restart from 'Configure' or rebuild."
     }
-    image_build_needed = readFile('image_build_needed')
-    win_image_build_needed = readFile('win_image_build_needed')
-    client_test_needed = readFile('client_test_needed')
-    functional_tests_changed = readFile('functional_tests_changed')
-    export_models_changed = readFile('export_models_changed')
-    test_doc_files_linux = readFile('test_doc_files_linux')
-    test_doc_files_windows = readFile('test_doc_files_windows')
-    shortCommit = readFile('shortCommit')
-    agent_name_linux = readFile('agent_name_linux')
-    agent_name_windows = readFile('agent_name_windows')
-    test_agent_linux = readFile('test_agent_linux')
-    test_agent_windows = readFile('test_agent_windows')
-    disable_doc_tests_linux = readFile('disable_doc_tests_linux') == 'true'
-    disable_doc_tests_windows = readFile('disable_doc_tests_windows') == 'true'
-    validation_branch = readFile('validation_branch')
+    def values = new groovy.json.JsonSlurperClassic().parseText(readFile('pipeline-config.json'))
+    image_build_needed = values.image_build_needed
+    win_image_build_needed = values.win_image_build_needed
+    client_test_needed = values.client_test_needed
+    functional_tests_changed = values.functional_tests_changed
+    export_models_changed = values.export_models_changed
+    test_doc_files_linux = values.test_doc_files_linux
+    test_doc_files_windows = values.test_doc_files_windows
+    shortCommit = values.shortCommit
+    agent_name_linux = values.agent_name_linux
+    agent_name_windows = values.agent_name_windows
+    test_agent_linux = values.test_agent_linux
+    test_agent_windows = values.test_agent_windows
+    disable_doc_tests_linux = values.disable_doc_tests_linux
+    disable_doc_tests_windows = values.disable_doc_tests_windows
+    validation_branch = values.validation_branch
   }
   configLoaded = true
   println "Restored configuration: shortCommit=${shortCommit} agent_name_linux=${agent_name_linux} agent_name_windows=${agent_name_windows} image_build_needed=${image_build_needed} win_image_build_needed=${win_image_build_needed}"
@@ -87,12 +88,9 @@ def saveConfig = { ->
     disable_doc_tests_windows: disable_doc_tests_windows,
     validation_branch: validation_branch,
   ]
-  def keys = new ArrayList(values.keySet())
   dir('.pipeline_config') {
-    for (int i = 0; i < keys.size(); i++) {
-      writeFile file: keys[i], text: "${values[keys[i]]}"
-    }
-    stash name: 'pipeline-config', includes: '*'
+    writeFile file: 'pipeline-config.json', text: groovy.json.JsonOutput.toJson(values)
+    stash name: 'pipeline-config', includes: 'pipeline-config.json'
   }
   configLoaded = true
 }
@@ -350,9 +348,7 @@ pipeline {
                           error "Cannot load ci/loadWin.groovy file."
                       }
                       timeout(time: 30, unit: 'MINUTES') {
-                        withGithubStageStatus('jenkins/oncommit/cleanup-node', 'Cleanup node') {
-                          windows.cleanup_directories()
-                        }
+                        windows.cleanup_directories()
                       }
                       echo sh(script: 'env|sort', returnStdout: true)
                       if (! env.OVMS_BAZEL_REMOTE_CACHE_URL) {
