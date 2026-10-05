@@ -21,7 +21,7 @@ load("//:common_settings.bzl",
      "COMMON_STATIC_LIBS_LINKOPTS",
      "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS",
     "COMMON_LOCAL_DEFINES", "LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY",
-    "PYBIND_HEADERS_ONLY", "PYBIND_DEPS", "ovms_cc_library")
+    "COPTS_TESTS", "PYBIND_HEADERS_ONLY", "PYBIND_DEPS", "ovms_cc_library")
 
 # Copts for the python shared library. These intentionally mirror the common
 # Linux static-library flags, but omit -fvisibility=hidden so the exported
@@ -320,6 +320,7 @@ cc_test(
         "pythoninterpretermodule.hpp",
         "python_runtime_module_api.hpp",
     ],
+    copts = COPTS_TESTS,
     deps = PYBIND_DEPS + [
         ":pythonbackend",
         "//src:cpp_headers",
@@ -343,6 +344,7 @@ cc_test(
         "pythoninterpretermodule.hpp",
         "python_runtime_module_api.hpp",
     ],
+    copts = COPTS_TESTS,
     deps = PYBIND_DEPS + [
         ":pythonbackend",
         "//src:cpp_headers",
@@ -362,6 +364,7 @@ cc_test(
         "pythoninterpretermodule.hpp",
         "python_runtime_module_api.hpp",
     ],
+    copts = COPTS_TESTS,
     deps = PYBIND_DEPS + [
         ":pythonbackend",
         "//src:cpp_headers",
