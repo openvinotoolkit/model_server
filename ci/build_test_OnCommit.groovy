@@ -29,7 +29,14 @@ def withGithubStageStatus = { String context, String stageName, Closure body ->
     }
     throw ex
   } catch (Exception ex) {
-    if (env.CHANGE_ID)       githubNotify context: context, status: 'FAILURE', description: "${stageName}   "Restart from Stage" skips Configure, so its results are stashed and restored from there.
+    if (env.CHANGE_ID) {
+      githubNotify context: context, status: 'FAILURE', description: "${stageName} failed"
+    }
+    throw ex
+  }
+}
+
+// "Restart from Stage" skips Configure, so its results are stashed and restored from there.
 def configLoaded = false
 
 def ensureConfig = { ->
