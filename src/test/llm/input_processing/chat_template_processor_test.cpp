@@ -240,7 +240,7 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
 }
 
 // ---------------------------------------------------------------------------
-// Fixture: direct Python Jinja rendering through PyJinjaTemplateProcessor.
+// Fixture: a custom template rendered through the Python Jinja runtime.
 //
 // ---------------------------------------------------------------------------
 
@@ -252,15 +252,14 @@ class ChatTemplateProcessorPyJinjaTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite() {
         const std::string modelsPath = getGenericFullPathForSrcTest(
-            "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
-        pyJinjaTokenizer = std::make_unique<ov::genai::Tokenizer>(modelsPath);
+            "/ovms/src/test/dummy/1");
+        pyJinjaTokenizer = std::make_unique<ov::genai::Tokenizer>();
         sharedPyJinjaTemplateProcessor = std::make_unique<PreparedChatTemplateRuntime>();
         const std::string chatTemplate =
             "{% for message in messages %}[{{ message.role }}]{{ message.content }}{% endfor %}"
             "{% if add_generation_prompt %}[assistant]{% endif %}";
         std::string errorMessage;
-        ASSERT_TRUE(sharedPyJinjaTemplateProcessor->prepare(modelsPath, chatTemplate,
-            pyJinjaTokenizer->get_bos_token(), pyJinjaTokenizer->get_eos_token(), errorMessage))
+        ASSERT_TRUE(sharedPyJinjaTemplateProcessor->prepare(modelsPath, chatTemplate, "", "", errorMessage))
             << errorMessage;
     }
 
@@ -270,7 +269,7 @@ protected:
     }
 };
 
-TEST_F(ChatTemplateProcessorPyJinjaTest, TextMessage_DefaultSystemInjected_GenerationPromptAppended) {
+TEST_F(ChatTemplateProcessorPyJinjaTest, TextMessage_CustomTemplate_GenerationPromptAppended) {
     ov::genai::ChatHistory history;
     history.push_back({{"role", "user"}, {"content", "What is OpenVINO?"}});
 
