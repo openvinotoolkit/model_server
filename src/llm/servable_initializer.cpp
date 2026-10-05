@@ -329,7 +329,7 @@ ChatTemplateMode GenAiServableInitializer::determineChatTemplateMode(
 
     if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA) {
         if (!pythonRuntimeAvailable) {
-            throw std::runtime_error("Jinja chat-template mode was explicitly selected, but the Python runtime library or required symbols are unavailable");
+            throw std::runtime_error("Jinja chat template mode was explicitly selected, but the Python runtime library or required symbols are unavailable");
         }
         return ChatTemplateMode::JINJA;
     }
