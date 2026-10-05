@@ -36,6 +36,67 @@ def withGithubStageStatus = { String context, String stageName, Closure body ->
   }
 }
 
+// "Restart from Stage" skips Configure, so its results are stashed and restored from there.
+def configLoaded = false
+
+def ensureConfig = { ->
+  if (configLoaded) {
+    return
+  }
+  dir('.pipeline_config') {
+    try {
+      unstash 'pipeline-config'
+    } catch (Exception ex) {
+      error "Configuration from the 'Configure' stage is not available (${ex.message}). Restart from 'Configure' or rebuild."
+    }
+    image_build_needed = readFile('image_build_needed')
+    win_image_build_needed = readFile('win_image_build_needed')
+    client_test_needed = readFile('client_test_needed')
+    functional_tests_changed = readFile('functional_tests_changed')
+    export_models_changed = readFile('export_models_changed')
+    test_doc_files_linux = readFile('test_doc_files_linux')
+    test_doc_files_windows = readFile('test_doc_files_windows')
+    shortCommit = readFile('shortCommit')
+    agent_name_linux = readFile('agent_name_linux')
+    agent_name_windows = readFile('agent_name_windows')
+    test_agent_linux = readFile('test_agent_linux')
+    test_agent_windows = readFile('test_agent_windows')
+    disable_doc_tests_linux = readFile('disable_doc_tests_linux') == 'true'
+    disable_doc_tests_windows = readFile('disable_doc_tests_windows') == 'true'
+    validation_branch = readFile('validation_branch')
+  }
+  configLoaded = true
+  println "Restored configuration: shortCommit=${shortCommit} agent_name_linux=${agent_name_linux} agent_name_windows=${agent_name_windows} image_build_needed=${image_build_needed} win_image_build_needed=${win_image_build_needed}"
+}
+
+def saveConfig = { ->
+  def values = [
+    image_build_needed: image_build_needed,
+    win_image_build_needed: win_image_build_needed,
+    client_test_needed: client_test_needed,
+    functional_tests_changed: functional_tests_changed,
+    export_models_changed: export_models_changed,
+    test_doc_files_linux: test_doc_files_linux,
+    test_doc_files_windows: test_doc_files_windows,
+    shortCommit: shortCommit,
+    agent_name_linux: agent_name_linux,
+    agent_name_windows: agent_name_windows,
+    test_agent_linux: test_agent_linux,
+    test_agent_windows: test_agent_windows,
+    disable_doc_tests_linux: disable_doc_tests_linux,
+    disable_doc_tests_windows: disable_doc_tests_windows,
+    validation_branch: validation_branch,
+  ]
+  def keys = new ArrayList(values.keySet())
+  dir('.pipeline_config') {
+    for (int i = 0; i < keys.size(); i++) {
+      writeFile file: keys[i], text: "${values[keys[i]]}"
+    }
+    stash name: 'pipeline-config', includes: '*'
+  }
+  configLoaded = true
+}
+
 // Documentation test commit message overrides:
 //
 // Disable tests:
@@ -62,6 +123,7 @@ pipeline {
     }
     options {
       timeout(time: 4, unit: 'HOURS')
+      preserveStashes()
     }
     stages {
         stage('Approve fork PR') {
@@ -194,6 +256,7 @@ pipeline {
                     println "No documentation files changed for windows"
                   }
               }
+              saveConfig()
                 }
             }
           }
@@ -202,6 +265,7 @@ pipeline {
           options {
                 timeout(time: 20, unit: 'MINUTES')
           }
+          when { expression { ensureConfig(); return true } }
           parallel {
             stage('Style check') {
               agent {
@@ -229,30 +293,11 @@ pipeline {
             }
           }
         }
-        stage('Cleanup node') {
-          agent {
-            label 'win_ovms'
-          }
-          steps {
-            script {
-              timeout(time: 30, unit: 'MINUTES') {
-                withGithubStageStatus('jenkins/oncommit/cleanup-node', 'Cleanup node') {
-                  agent_name_windows = env.NODE_NAME
-                  def windows = load 'ci/loadWin.groovy'
-                  if (windows != null) {
-                      windows.cleanup_directories()
-                  } else {
-                      error "Cannot load ci/loadWin.groovy file."
-                  }
-                }
-              }
-            }
-          }
-        }
         stage('Build') {
           options {
             timeout(time: 4, unit: 'HOURS')
           }
+          when { expression { ensureConfig(); return true } }
           parallel {
             stage("Build linux") {
               agent {
@@ -299,25 +344,30 @@ pipeline {
                   script {
                       withGithubStageStatus('jenkins/oncommit/build-windows', 'Build windows') {
                       agent_name_windows = env.NODE_NAME
+                      saveConfig()
+                      def windows = load 'ci/loadWin.groovy'
+                      if (windows == null) {
+                          error "Cannot load ci/loadWin.groovy file."
+                      }
+                      timeout(time: 30, unit: 'MINUTES') {
+                        withGithubStageStatus('jenkins/oncommit/cleanup-node', 'Cleanup node') {
+                          windows.cleanup_directories()
+                        }
+                      }
                       echo sh(script: 'env|sort', returnStdout: true)
                       if (! env.OVMS_BAZEL_REMOTE_CACHE_URL) {
                         env.OVMS_BAZEL_REMOTE_CACHE_URL = "http://mclx-23.sclab.intel.com:8666"
                       }
-                      def windows = load 'ci/loadWin.groovy'
-                      if (windows != null) {
-                        try {
-                          windows.setup_bazel_remote_cache()
-                          windows.install_dependencies()
-                          windows.clean()
-                          windows.build()
-                          if ( test_doc_files_windows ) {
-                            stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
-                          }
-                        } finally {
-                          windows.archive_build_artifacts()
+                      try {
+                        windows.setup_bazel_remote_cache()
+                        windows.install_dependencies()
+                        windows.clean()
+                        windows.build()
+                        if ( test_doc_files_windows ) {
+                          stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
                         }
-                      } else {
-                          error "Cannot load ci/loadWin.groovy file."
+                      } finally {
+                        windows.archive_build_artifacts()
                       }
                         }
                   }
@@ -329,6 +379,7 @@ pipeline {
           options {
             timeout(time: 120, unit: 'MINUTES')
           }
+          when { expression { ensureConfig(); return true } }
           parallel {
             stage("Run unit tests") {
               agent {
@@ -378,50 +429,6 @@ pipeline {
                 }
               }            
             }
-            stage("Documentation tests") {
-              agent none
-              when {
-                expression { test_doc_files_linux && !disable_doc_tests_linux }
-                beforeAgent true
-              }
-              steps {
-                node(test_agent_linux) {
-                  script {
-                    withGithubStageStatus('jenkins/oncommit/doc-tests-linux', 'Linux doc tests') {
-                      checkout scm
-                      dir ('documentation_tests') {
-                        checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
-                        sh "pwd"
-                        def pwd = sh(returnStdout:true, script: "pwd").strip()
-                        def ovms_c_repo_path = sh(returnStdout:true, script: "cd .. && pwd").strip()
-                        def test_doc_files_str = test_doc_files_linux.split('\n').collect { 'U-' + it }.join(' or ')
-                        sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
-                        def cmd_venv_activate = ". .venv/bin/activate"
-                        def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_LOGGING_LEVEL_OVMS=DEBUG && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500 && export CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}"
-                        def cmd_pytest = "pytest tests/non_functional/documentation -k '${test_doc_files_str}' -n 0 --dist loadgroup"
-                        def cmd = ""
-                        if ( image_build_needed == "true" ) {
-                            unstash 'ovms-release-image'
-                            sh "gunzip -c ovms_release_image.tar.gz | docker load"
-                            sh "rm -f ovms_release_image.tar.gz"
-
-                            cmd = "${cmd_venv_activate} && ${cmd_export} && export TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} && export TT_OVMS_IMAGE_LOCAL=True && export TT_FORCE_USE_OVMS_IMAGE=True && ${cmd_pytest}"
-                        } else {
-                            cmd = "${cmd_venv_activate} && ${cmd_export} && ${cmd_pytest}"
-                        }
-                        try {
-                          sh cmd
-                        } finally {
-                          // Always save artifacts
-                          zip zipFile: 'documentation_tests_linux_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
-                          archiveArtifacts(artifacts: 'documentation_tests_linux_logs.zip', allowEmptyArchive: true)
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
             stage('Test windows') {
               agent {
                 label "${agent_name_windows}"
@@ -448,6 +455,54 @@ pipeline {
                   }
               }
             }
+          }
+        }
+        stage("Documentation tests in parallel") {
+          when { expression { ensureConfig(); return true } }
+          parallel {
+            stage("Documentation tests") {
+              agent none
+              when {
+                expression { test_doc_files_linux && !disable_doc_tests_linux }
+                beforeAgent true
+              }
+              steps {
+                node(test_agent_linux) {
+                  script {
+                    withGithubStageStatus('jenkins/oncommit/doc-tests-linux', 'Linux doc tests') {
+                      checkout scm
+                      dir ('documentation_tests') {
+                        checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                        sh "pwd"
+                        def pwd = sh(returnStdout:true, script: "cd .. && pwd").strip()
+                        def ovms_c_repo_path = pwd
+                        def test_doc_files_str = test_doc_files_linux.split('\n').collect { 'U-' + it }.join(' or ')
+                        sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/tests/functional tests/functional"
+                        def cmd_venv_activate = ". .venv/bin/activate"
+                        def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_LOGGING_LEVEL_OVMS=DEBUG && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500 && export CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}"
+                        def cmd_pytest = "pytest tests/non_functional/documentation -k '${test_doc_files_str}' -n 0 --dist loadgroup"
+                        def cmd = ""
+                        if ( image_build_needed == "true" ) {
+                            unstash 'ovms-release-image'
+                            sh "gunzip -c ovms_release_image.tar.gz | docker load"
+                            sh "rm -f ovms_release_image.tar.gz"
+
+                            cmd = "${cmd_venv_activate} && ${cmd_export} && export TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} && export TT_OVMS_IMAGE_LOCAL=True && export TT_FORCE_USE_OVMS_IMAGE=True && ${cmd_pytest}"
+                        } else {
+                            cmd = "${cmd_venv_activate} && ${cmd_export} && ${cmd_pytest}"
+                        }
+                        try {
+                          sh cmd
+                        } finally {
+                          zip zipFile: 'documentation_tests_linux_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
+                          archiveArtifacts(artifacts: 'documentation_tests_linux_logs.zip', allowEmptyArchive: true)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
             stage("Documentation tests windows") {
               agent none
               when {
@@ -469,7 +524,7 @@ pipeline {
                         def cmd_export = "set \"TT_OVMS_C_REPO_PATH=../\" && set \"TT_LOGGING_LEVEL_OVMS=DEBUG\" && set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_DISABLE_DMESG_LOG_MONITOR=True\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\" && set \"PYTHONUTF8=1\" && set \"PYTHONIOENCODING=utf-8\" && set \"CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}\""
                         def cmd_pytest = "pytest tests/non_functional/documentation -k \"${test_doc_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
                         def cmd = ""
-                        if ( win_image_build_needed == "true" ) {
+                        if ( image_build_needed == "true" ) {
                             unstash 'ovms-windows-package'
                             cmd = "${cmd_link_ovms} && ${cmd_requirements} && ${cmd_export} && set \"TT_OVMS_C_RELEASE_ARTIFACTS_PATH=dist\\windows\\ovms.zip\" && ${cmd_pytest}"
                         } else {
@@ -481,7 +536,6 @@ pipeline {
                               error "Documentation tests windows command failed with exit code ${exitCode}"
                           }
                         } finally {
-                          // Always save artifacts
                           zip zipFile: 'documentation_tests_windows_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
                           archiveArtifacts(artifacts: 'documentation_tests_windows_logs.zip', allowEmptyArchive: true)
                         }
