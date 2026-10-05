@@ -39,6 +39,9 @@
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../precision.hpp"
+#include "../python/py_object_handle.hpp"
+#include "../python/python_calculators_plugin_api.hpp"
+#include "../python/python_calculators_plugin_loader.hpp"
 #include "../python/pythonnoderesources.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -956,6 +959,19 @@ TEST_F(PythonFlowTest, PythonNodeLoopback_Correct) {
 
     checkDummyResponse("output", data, req, res, 1 /* expect +1 */, 1, "mediaDummy");
 }
+
+// libpython_calculators passes Python objects to the host as owned py::object* handles.
+static mediapipe::Packet makePyObjectPacket(std::unique_ptr<PyObjectWrapper<py::object>>& pyObject) {
+    py::gil_scoped_acquire acquire;
+    auto handle = std::make_unique<PyObjectHandle>(new py::object(pyObject->getObject()), getPythonCalculatorsPluginApi()->releaseObject);
+    pyObject.reset();
+    return mediapipe::Adopt(handle.release());
+}
+
+static const py::object& getPyObject(const mediapipe::Packet& packet) {
+    return *static_cast<const py::object*>(packet.Get<PyObjectHandle>().get());
+}
+
 // Wrapper on the OvmsPyTensor of datatype FP32 and shape (1, num_elements)
 // where num_elements is the size of C++ float array. See createTensor static method.
 template <typename T>
@@ -982,8 +998,8 @@ public:
     }
 
     static std::vector<T> readVectorFromOutput(const std::string& outputName, int numElements, const mediapipe::CalculatorRunner* runner, int packetIndex = 0) {
-        const PyObjectWrapper<py::object>& pyOutput = runner->Outputs().Tag(outputName).packets[packetIndex].Get<PyObjectWrapper<py::object>>();
-        T* outputData = (T*)pyOutput.getProperty<void*>("ptr");
+        py::gil_scoped_acquire acquire;
+        T* outputData = (T*)getPyObject(runner->Outputs().Tag(outputName).packets[packetIndex]).attr("ptr").cast<void*>();
         std::vector<T> output;
         output.assign(outputData, outputData + numElements);
         return output;
@@ -1040,7 +1056,7 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
 
     ::inference::ModelInferResponse response;
 
-    ::mediapipe::Packet packet = ::mediapipe::Adopt<PyObjectWrapper<py::object>>(tensor.pyTensor.release());
+    ::mediapipe::Packet packet = makePyObjectPacket(tensor.pyTensor);
     ASSERT_EQ(onPacketReadySerializeImpl("id", name, "1", name, mediapipe_packet_type_enum::OVMS_PY_TENSOR, packet, response), StatusCode::OK);
     ASSERT_EQ(response.outputs_size(), 1);
     auto output = response.outputs(0);
@@ -1088,7 +1104,7 @@ TEST_F(PythonFlowTest, KfsPythonTensorBridgeVTableRegistration) {
 static void addInputItem(const std::string& tag, std::unique_ptr<PyObjectWrapper<py::object>>& input, int64_t timestamp,
     mediapipe::CalculatorRunner* runner) {
     runner->MutableInputs()->Tag(tag).packets.push_back(
-        mediapipe::Adopt<PyObjectWrapper<py::object>>(input.release()).At(mediapipe::Timestamp(timestamp)));
+        makePyObjectPacket(input).At(mediapipe::Timestamp(timestamp)));
 }
 
 static void addInputSidePacket(std::string tag, std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>& input,
@@ -2319,7 +2335,7 @@ TEST_F(PythonFlowTest, ConverterCalculator_PyTensorDimensionNegative) {
         std::unique_ptr<PyObjectWrapper<py::object>> pyTensor;
         getPythonBackend()->createOvmsPyTensor(name, (void*)input, std::vector<py::ssize_t>{1, badDimension}, datatype, numElements * sizeof(float), pyTensor);
 
-        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(pyTensor.release()).At(mediapipe::Timestamp(0)));
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(makePyObjectPacket(pyTensor).At(mediapipe::Timestamp(0)));
 
         py::gil_scoped_release release;
         auto status = runner.Run();
@@ -2348,7 +2364,7 @@ TEST_F(PythonFlowTest, ConverterCalculator_PyTensorBufferMismatch) {
         std::unique_ptr<PyObjectWrapper<py::object>> pyTensor;
         getPythonBackend()->createOvmsPyTensor(name, (void*)input, std::vector<py::ssize_t>{1, numElements}, datatype, numElements * sizeof(float) * 2 /*too large*/, pyTensor);
 
-        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(mediapipe::Adopt<PyObjectWrapper<py::object>>(pyTensor.release()).At(mediapipe::Timestamp(0)));
+        runner.MutableInputs()->Tag("OVMS_PY_TENSOR").packets.push_back(makePyObjectPacket(pyTensor).At(mediapipe::Timestamp(0)));
 
         py::gil_scoped_release release;
         auto status = runner.Run();
@@ -2432,7 +2448,7 @@ TEST_F(PythonFlowTest, FinalizePassTest) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), ""), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, toPythonNodeConfig(config.node(0), ""), getPythonBackend()), StatusCode::OK);
     nodeResources->finalize();
 }
 
@@ -2457,8 +2473,8 @@ TEST_F(PythonFlowTest, RelativeBasePath) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(),
-                  getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/scripts")),
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources,
+                  toPythonNodeConfig(config.node(0), getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/scripts")), getPythonBackend()),
         StatusCode::OK);
     nodeResources->finalize();
 }
@@ -2484,8 +2500,8 @@ TEST_F(PythonFlowTest, RelativeBasePath2) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(),
-                  getGenericFullPathForSrcTest("/ovms/src/test/mediapipe")),
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources,
+                  toPythonNodeConfig(config.node(0), getGenericFullPathForSrcTest("/ovms/src/test/mediapipe")), getPythonBackend()),
         StatusCode::OK);
     nodeResources->finalize();
 }
@@ -2511,8 +2527,8 @@ TEST_F(PythonFlowTest, RelativeBasePath3) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(),
-                  getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/")),
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources,
+                  toPythonNodeConfig(config.node(0), getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/")), getPythonBackend()),
         StatusCode::OK);
     nodeResources->finalize();
 }
@@ -2538,8 +2554,8 @@ TEST_F(PythonFlowTest, RelativeHandlerPath) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(),
-                  getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/scripts")),
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources,
+                  toPythonNodeConfig(config.node(0), getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/scripts")), getPythonBackend()),
         StatusCode::OK);
 
     ASSERT_EQ(nodeResources->handlerPath, getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/scripts/good_finalize_pass.py"));
@@ -2569,7 +2585,7 @@ TEST_F(PythonFlowTest, AbsoluteHandlerPath) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), "this_string_doesnt_matter_since_handler_path_is_absolute"), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, toPythonNodeConfig(config.node(0), "this_string_doesnt_matter_since_handler_path_is_absolute"), getPythonBackend()), StatusCode::OK);
 
     // Can't use getGenericFullPathForSrcTest due to mixed separators in the final path
     ASSERT_EQ(nodeResources->handlerPath, getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/scripts/relative_base_path.py"));
@@ -2598,7 +2614,7 @@ TEST_F(PythonFlowTest, FinalizeMissingPassTest) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), ""), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, toPythonNodeConfig(config.node(0), ""), getPythonBackend()), StatusCode::OK);
     nodeResources->finalize();
 }
 
@@ -2626,7 +2642,7 @@ TEST_F(PythonFlowTest, FinalizeDestructorRemoveFileTest) {
     std::string path = getGenericFullPathForTmp("/tmp/pythonNodeTestRemoveFile.txt");
     {
         std::shared_ptr<PythonNodeResources> nodeResouce = nullptr;
-        ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResouce, config.node(0), getPythonBackend(), ""), StatusCode::OK);
+        ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResouce, toPythonNodeConfig(config.node(0), ""), getPythonBackend()), StatusCode::OK);
 
         ASSERT_TRUE(std::filesystem::exists(path));
         // nodeResources destructor calls finalize and removes the file
@@ -2657,7 +2673,7 @@ TEST_F(PythonFlowTest, FinalizeException) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
     std::shared_ptr<PythonNodeResources> nodeResources = nullptr;
-    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, config.node(0), getPythonBackend(), ""), StatusCode::OK);
+    ASSERT_EQ(PythonNodeResources::createPythonNodeResources(nodeResources, toPythonNodeConfig(config.node(0), ""), getPythonBackend()), StatusCode::OK);
     nodeResources->finalize();
 }
 

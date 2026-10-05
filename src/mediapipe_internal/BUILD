@@ -270,6 +270,7 @@ ovms_cc_library(
         ":libovms_mediapipe_runtime_owner_no_python_calculators",
         "//src/llm:execution_context_utils",
         "//src/llm:llmcalculator_registration",
+        "//src/python:python_calculators_host",
         "//src/python:python_calculators_runtime_objects",
     ],
     visibility = ["//visibility:public"],

@@ -658,7 +658,6 @@ ovms_cc_library(
     srcs = ["mediapipe_runtime_api.cpp"],
     deps = [
         "cpp_headers",
-        "kfs_python_tensor_bridge_hdrs",
         "mediapipe_executor_interface",
         "libovms_execution_context",
         "libovmsstatus",
@@ -1922,6 +1921,10 @@ cc_binary(
             "//conditions:default": [],
             "//src:windows" : ["@winreg//:winreg"],
         })
+    + select({
+            "//:not_disable_python": ["//src/python:python_calculators_host"],
+            "//:disable_python": [],
+        })
      + select({
             "//conditions:default": [],
             "//:disable_mediapipe" : [],
@@ -2252,6 +2255,7 @@ cc_test(
                 # tests and embedded execution paths without pulling the full
                 # runtime into the main ovms link graph.
                 "//src/python:python_runtime_entry_static",
+                "//src/python:python_calculators_host",
                 "//src/python:python_calculators_runtime_objects",
             ],
             "//:disable_python": [],

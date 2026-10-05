@@ -29,7 +29,6 @@
 #endif
 
 #include "config.hpp"
-#include "kfs_python_tensor_bridge.hpp"
 #include "logging.hpp"
 #include "mediapipe_internal/mediapipe_graph_executor_interface.hpp"
 #include "utils/newline_delimited.hpp"
@@ -62,7 +61,6 @@ extern "C" const char* OVMS_MPFactoryGetNames(void*, int) __attribute__((weak));
 extern "C" void* OVMS_MPFactoryFindServableDefinitionByName(void*, const char*) __attribute__((weak));
 extern "C" int OVMS_MPGraphExportCreateServableConfig(const char*, const ovms::HFSettingsImpl*) __attribute__((weak));
 extern "C" int OVMS_MPGraphExportCreateServableConfigInMemory(const char*, const ovms::HFSettingsImpl*, char**) __attribute__((weak));
-extern "C" const ovms::KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
 extern "C" void OVMS_MPSetExternalServerHandle(void*) __attribute__((weak));
 extern "C" void OVMS_MPFactoryConfigureLogging(const char*, const char*) __attribute__((weak));
 #endif
@@ -134,45 +132,6 @@ static void* resolveSymbol(HMODULE handle, const char* name) {
 }
 #endif
 
-namespace {
-void tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(
-#ifdef __linux__
-    void* handle
-#elif _WIN32
-    HMODULE handle
-#endif
-) {
-    using GetKfsBridgeFn = const ovms::KfsPyTensorBridgeVTable* (*)();
-    using SetKfsBridgeFn = int (*)(const ovms::KfsPyTensorBridgeVTable*);
-
-    if (ovms::getKfsPyTensorBridgeVTable() != nullptr) {
-        return;
-    }
-
-#ifdef __linux__
-    auto* getBridgeFn = OVMS_getKfsPyTensorBridgeVTable != nullptr ? OVMS_getKfsPyTensorBridgeVTable : reinterpret_cast<GetKfsBridgeFn>(resolveSymbol(handle, "OVMS_getKfsPyTensorBridgeVTable"));
-#elif _WIN32
-    auto* getBridgeFn = reinterpret_cast<GetKfsBridgeFn>(resolveSymbol(handle, "OVMS_getKfsPyTensorBridgeVTable"));
-#endif
-    if (getBridgeFn == nullptr) {
-        return;
-    }
-
-    if (auto* bridge = getBridgeFn(); bridge != nullptr) {
-#ifdef __linux__
-        auto* setBridgeFn = reinterpret_cast<SetKfsBridgeFn>(resolveSymbol(handle, "OVMS_setKfsPyTensorBridgeVTable"));
-#elif _WIN32
-        auto* setBridgeFn = reinterpret_cast<SetKfsBridgeFn>(resolveSymbol(handle, "OVMS_setKfsPyTensorBridgeVTable"));
-#endif
-        if (setBridgeFn != nullptr) {
-            setBridgeFn(bridge);
-        }
-        ovms::setKfsPyTensorBridgeVTable(bridge);
-        SPDLOG_TRACE("KFS Python tensor bridge activated from in-process MediaPipe runtime symbols");
-    }
-}
-}  // namespace
-
 MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     api(std::make_unique<ApiSymbols>()) {
 #ifdef __linux__
@@ -221,7 +180,6 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     }
 
     SPDLOG_TRACE("MediaPipe runtime API resolved from in-process symbols");
-    tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(currentModule);
 
     if (api->configureLogging != nullptr) {
         const auto& config = Config::instance();
