@@ -3561,6 +3561,46 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
 }
 
+TEST(Mediapipe, OVTensorZeroElementTypedContentsShouldPass) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "PassThroughCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+)"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    auto sidePackets = std::make_shared<GraphSidePackets>();
+    auto reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");
+    auto queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
+    GraphIdGuard guard(queue);
+    MediapipeGraphExecutor executor{
+        "zero_tensor_graph", "1", config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(), std::move(guard)};
+
+    KFSRequest request;
+    request.set_model_name("zero_tensor_graph");
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(0);
+    input->add_shape(10);
+    KFSResponse response;
+
+    ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};
+    auto status = executor.inferTyped<KFSRequest, KFSResponse>(&request, &response, executionContext);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    EXPECT_EQ(response.raw_output_contents(0).size(), 0);
+}
+
 #if (PYTHON_DISABLE == 0)
 TYPED_TEST(KFSGRPCContentFieldsSupportTest, PyTensorCheckExpectedStatusCode) {
     const std::string pbtxtContentPytensor = R"(
