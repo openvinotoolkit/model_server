@@ -76,6 +76,26 @@ OmniAudioAdapter::ConversationPtr OmniAudioAdapter::createConversation() const {
     return std::make_shared<Conversation>();
 }
 
+ov::genai::ChatHistory OmniAudioAdapter::buildHistory(const std::vector<std::string>& assistantHistory) {
+    ov::genai::ChatHistory history;
+    history.push_back({});
+    history.last()["role"] = "system";
+    history.last()["content"] = "Respond in English only. Use English for both your text response and generated speech. "
+                                "This is a spoken conversation: keep answers to one or two short sentences.";
+    for (size_t audioIndex = 0; audioIndex < assistantHistory.size(); ++audioIndex) {
+        history.push_back({});
+        history.last()["role"] = "user";
+        history.last()["content"] = "Audio input <ov_genai_audio_" + std::to_string(audioIndex) + ">";
+        history.push_back({});
+        history.last()["role"] = "assistant";
+        history.last()["content"] = assistantHistory[audioIndex];
+    }
+    history.push_back({});
+    history.last()["role"] = "user";
+    history.last()["content"] = "Audio input <ov_genai_audio_" + std::to_string(assistantHistory.size()) + ">";
+    return history;
+}
+
 void OmniAudioAdapter::submit(ConversationPtr conversation, AudioChunk utterance, AudioCallback audioCallback,
     TextCallback textCallback, ErrorCallback errorCallback, CompletionCallback completionCallback) {
     if (!conversation)
@@ -128,24 +148,11 @@ void OmniAudioAdapter::generate(Conversation& conversation, const AudioChunk& ut
 
     std::vector<ov::Tensor> audios = conversation.audioHistory;
     audios.push_back(audio);
-    ov::genai::ChatHistory history;
-    history.push_back({});
-    history.last()["role"] = "system";
-    history.last()["content"] = "Respond in English only. Use English for both your text response and generated speech. "
-                                "This is a spoken conversation: keep answers to one or two short sentences.";
-    for (const auto& assistantText : conversation.assistantHistory) {
-        history.push_back({});
-        history.last()["role"] = "user";
-        history.last()["content"] = "Audio input";
-        history.push_back({});
-        history.last()["role"] = "assistant";
-        history.last()["content"] = assistantText;
-    }
-    history.push_back({});
-    history.last()["role"] = "user";
-    history.last()["content"] = "Audio input";
+    ov::genai::ChatHistory history = buildHistory(conversation.assistantHistory);
+    const std::string prompt = pipeline_->get_vlm()->get_tokenizer().apply_chat_template(history, true);
     ov::genai::GenerationConfig generationConfig;
     generationConfig.max_new_tokens = 64;
+    generationConfig.apply_chat_template = false;
     ov::genai::OmniTalkerSpeechConfig speechConfig;
     speechConfig.return_audio = true;
     speechConfig.audio_chunk_frames = audioChunkFrames_;
@@ -193,7 +200,10 @@ void OmniAudioAdapter::generate(Conversation& conversation, const AudioChunk& ut
     };
 
     std::vector<ov::genai::VideoMetadata> videosMetadata;
-    pipeline_->generate(history, {}, {}, videosMetadata, audios,
+    if (webrtc_logger->should_log(spdlog::level::info)) {
+        SPDLOG_LOGGER_INFO(webrtc_logger, "WebRTC Omni input prompt (audio tensors={}): {}", audios.size(), prompt);
+    }
+    pipeline_->generate(prompt, {}, {}, videosMetadata, audios,
         generationConfig, speechConfig, generationTextCallback, speechCallback);
     const auto totalMs = elapsedMs();
     const uint64_t totalAudioMs = generatedAudioSamples * 1000 / OmniOutputSampleRate;

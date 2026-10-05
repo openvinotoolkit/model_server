@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+CONTAINER=openvino/model_server-build:krz 
+CONTAINER=docker.io/openvino/model_server-build:audio-placement
 mkdir -p /home/krz/.cache/ovms-bazel
 chmod a+rwx /home/krz/.cache/ovms-bazel
 docker rm ovms-build-krz
@@ -13,5 +15,5 @@ docker run -it \
   -v /home/krz/.gitconfig:/root/.gitconfig:ro \
   -v /usr/bin/gh:/usr/bin/gh:ro \
   -v /home/krz/.config/gh:/root/.config/gh:ro \
-  openvino/model_server-build:krz \
+  $CONTAINER \
   bash

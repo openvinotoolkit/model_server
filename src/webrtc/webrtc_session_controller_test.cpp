@@ -24,6 +24,21 @@
 
 namespace ovms {
 
+TEST(OmniAudioAdapterTest, PlacesAudioAtEachUserTurn) {
+    const auto history = OmniAudioAdapter::buildHistory({"First reply", "Second reply"});
+
+    ASSERT_EQ(history.size(), 6u);
+    EXPECT_EQ(history[1]["content"].as_string().value_or(""), "Audio input <ov_genai_audio_0>");
+    EXPECT_EQ(history[2]["content"].as_string().value_or(""), "First reply");
+    EXPECT_EQ(history[3]["content"].as_string().value_or(""), "Audio input <ov_genai_audio_1>");
+    EXPECT_EQ(history[4]["content"].as_string().value_or(""), "Second reply");
+    EXPECT_EQ(history[5]["content"].as_string().value_or(""), "Audio input <ov_genai_audio_2>");
+
+    const auto trimmedHistory = OmniAudioAdapter::buildHistory({"Second reply"});
+    EXPECT_EQ(trimmedHistory[1]["content"].as_string().value_or(""), "Audio input <ov_genai_audio_0>");
+    EXPECT_EQ(trimmedHistory[3]["content"].as_string().value_or(""), "Audio input <ov_genai_audio_1>");
+}
+
 TEST(WebRtcSessionControllerTest, RejectsInvalidOffer) {
     WebRtcSessionController controller;
     WebRtcSessionController::OfferResult result;

@@ -23,6 +23,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -48,6 +49,7 @@ public:
     OmniAudioAdapter& operator=(const OmniAudioAdapter&) = delete;
 
     ConversationPtr createConversation() const;
+    static ov::genai::ChatHistory buildHistory(const std::vector<std::string>& assistantHistory);
     void submit(ConversationPtr conversation, AudioChunk utterance, AudioCallback audioCallback,
         TextCallback textCallback = {}, ErrorCallback errorCallback = {}, CompletionCallback completionCallback = {});
     void cancel();
