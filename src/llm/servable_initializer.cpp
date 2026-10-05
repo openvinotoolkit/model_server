@@ -274,7 +274,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
     if (properties->chatTemplateMode == ChatTemplateMode::MINJA &&
         !properties->tokenizer.get_chat_template().empty() &&
         !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Minja chat-template parser failed: template is not compatible with Minja. "
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template probing with Minja failed."
                                                    "Disabling /chat/completions endpoint for this model.");
         properties->tokenizer.set_chat_template("");
         return;
