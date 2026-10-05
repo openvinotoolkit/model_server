@@ -494,15 +494,19 @@ TEST_P(InputProcessingIntegrationTest, MultiTurnAudio_PreservesPlacement) {
     std::string json;
     if (GetParam() == Endpoint::CHAT_COMPLETIONS) {
         json = R"({"model":"m","messages":[{"role":"user","content":[)"
-               R"({"type":"text","text":"First."},)" + firstAudio + R"(]},)"
-               R"({"role":"assistant","content":"I heard it."},)"
-               R"({"role":"user","content":[{"type":"text","text":"Before."},)" + firstAudio +
+               R"({"type":"text","text":"First."},)" +
+               firstAudio + R"(]},)"
+                            R"({"role":"assistant","content":"I heard it."},)"
+                            R"({"role":"user","content":[{"type":"text","text":"Before."},)" +
+               firstAudio +
                R"(,{"type":"text","text":"After."}]}]})";
     } else {
         json = R"({"model":"m","input":[{"type":"message","role":"user","content":[)"
-               R"({"type":"input_text","text":"First."},)" + firstAudio + R"(]},)"
-               R"({"type":"message","role":"assistant","content":[{"type":"output_text","text":"I heard it."}]},)"
-               R"({"type":"message","role":"user","content":[{"type":"input_text","text":"Before."},)" + firstAudio +
+               R"({"type":"input_text","text":"First."},)" +
+               firstAudio + R"(]},)"
+                            R"({"type":"message","role":"assistant","content":[{"type":"output_text","text":"I heard it."}]},)"
+                            R"({"type":"message","role":"user","content":[{"type":"input_text","text":"Before."},)" +
+               firstAudio +
                R"(,{"type":"input_text","text":"After."}]}]})";
     }
 
