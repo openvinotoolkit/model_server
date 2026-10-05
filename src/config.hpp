@@ -318,7 +318,7 @@ public:
      * 
      * @return uint32_t
      */
-    uint32_t resourcesCleanerPollWaitSeconds() const;
+    uint32_t memoryTrimmingIntervalSeconds() const;
 
     uint32_t idleUnloadTimeoutSeconds() const;
 
