@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <pybind11/embed.h>
@@ -41,11 +42,45 @@ class ScopedPythonPath {
 
 public:
     bool addBindingRunfile() {
-        const char* testSrcDir = std::getenv("TEST_SRCDIR");
-        const char* testWorkspace = std::getenv("TEST_WORKSPACE");
-        if (testSrcDir == nullptr || testWorkspace == nullptr) {
-            return false;
+        std::vector<std::filesystem::path> bindingDirectories;
+
+        if (const char* pythonPath = std::getenv("PYTHONPATH"); pythonPath != nullptr && pythonPath[0] != '\0') {
+            std::string pathCopy(pythonPath);
+            std::size_t start = 0;
+            while (start <= pathCopy.size()) {
+                const std::size_t sep = pathCopy.find_first_of(";:", start);
+                const std::string entry = (sep == std::string::npos) ? pathCopy.substr(start) : pathCopy.substr(start, sep - start);
+                if (!entry.empty()) {
+                    bindingDirectories.emplace_back(entry);
+                }
+                if (sep == std::string::npos) {
+                    break;
+                }
+                start = sep + 1;
+            }
         }
+
+        if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr && testSrcDir[0] != '\0') {
+            const char* testWorkspace = std::getenv("TEST_WORKSPACE");
+            std::filesystem::path runfilesRoot(testSrcDir);
+            for (std::filesystem::path current = runfilesRoot; !current.empty(); current = current.parent_path()) {
+                if (testWorkspace != nullptr && testWorkspace[0] != '\0') {
+                    bindingDirectories.emplace_back(current / testWorkspace / "src/python/binding");
+                }
+                bindingDirectories.emplace_back(current / "bazel-bin" / "src/python/binding");
+                bindingDirectories.emplace_back(current / "bazel-out" / "x64_windows-opt" / "bin" / "src/python/binding");
+                bindingDirectories.emplace_back(current / "_main" / "src/python/binding");
+                bindingDirectories.emplace_back(current / "model_server" / "src/python/binding");
+                if (current == current.parent_path()) {
+                    break;
+                }
+            }
+        }
+
+        const auto currentDir = std::filesystem::current_path();
+        bindingDirectories.emplace_back(currentDir / "src/python/binding");
+        bindingDirectories.emplace_back(currentDir / "bazel-bin/src/python/binding");
+        bindingDirectories.emplace_back(currentDir / "bazel-out" / "x64_windows-opt" / "bin" / "src/python/binding");
 
 #ifdef _WIN32
         const char* extension = "pyovms.pyd";
@@ -54,9 +89,15 @@ public:
         const char* extension = "pyovms.so";
         const char separator = ':';
 #endif
-        const std::filesystem::path bindingDirectory =
-            std::filesystem::path(testSrcDir) / testWorkspace / "src/python/binding";
-        if (!std::filesystem::exists(bindingDirectory / extension)) {
+
+        std::filesystem::path bindingDirectory;
+        for (const auto& candidate : bindingDirectories) {
+            if (std::filesystem::exists(candidate / extension)) {
+                bindingDirectory = candidate;
+                break;
+            }
+        }
+        if (bindingDirectory.empty()) {
             return false;
         }
 
