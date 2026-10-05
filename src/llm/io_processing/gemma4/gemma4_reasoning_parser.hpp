@@ -22,16 +22,16 @@
 #include "src/llm/io_processing/qwen3/reasoning_parser.hpp"
 
 namespace ovms {
+// Delimiter-driven, not keyword-driven: the keyword after the opener is never validated.
 class Gemma4ReasoningParser : public Qwen3ReasoningParser {
 protected:
-    const int64_t channelStartTokenId = 100;  // <|channel>
-    const int64_t channelEndTokenId = 101;    // <channel|>
-
-    const std::string reasoningStrIndicator = "thought\n";
-    const std::string parsingStartTag = "<|channel>" + reasoningStrIndicator;
-    const std::string parsingEndTag = "<channel|>";
-
-    void skipToken(const std::vector<int64_t>& generatedTokens, size_t& pos, int64_t tokenId);
+    enum class Phase {
+        AwaitingOpener,
+        AwaitingChannelHeader,
+        Body
+    };
+    Phase phase = Phase::AwaitingOpener;
+    std::string pendingChannelHeaderText;
 
 public:
     Gemma4ReasoningParser() = delete;
@@ -41,7 +41,7 @@ public:
             if (configOverride.has_value())
                 return configOverride;
             OutputParsingConfig cfg;
-            cfg.startTags = {"<|channel>thought\n"};
+            cfg.startTags = {"<|channel>"};
             cfg.preambleStartTags = {"thought\n"};
             cfg.tokenIdStartTags = {"<|channel>"};
             cfg.endTag = "<channel|>";
@@ -50,6 +50,12 @@ public:
         }()) {
         resolveSpecialTokenIds();
     }
+
+    void resetState() override {
+        phase = Phase::AwaitingOpener;
+        pendingChannelHeaderText.clear();
+    }
+
     std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };
 }  // namespace ovms
