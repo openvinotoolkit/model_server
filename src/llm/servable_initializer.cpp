@@ -242,7 +242,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
         RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
         const auto prepareStatus = prepareRuntimeChatTemplate(
             chatTemplateDirectory,
-            properties->tokenizer.get_chat_template(),
+            properties->tokenizer.get_original_chat_template(),
             properties->tokenizer.get_bos_token(),
             properties->tokenizer.get_eos_token(),
             properties->preparedRuntimeChatTemplate,
@@ -325,15 +325,16 @@ ChatTemplateMode GenAiServableInitializer::determineChatTemplateMode(
     bool pythonRuntimeAvailable) {
     if (!nodeOptions.has_chat_template_mode()) {
         return pythonRuntimeAvailable ? ChatTemplateMode::JINJA : ChatTemplateMode::MINJA;
-    }
-
-    if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA) {
+    } else if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA) {
         if (!pythonRuntimeAvailable) {
             throw std::runtime_error("Jinja chat template mode was explicitly selected, but the Python runtime library or required symbols are unavailable");
         }
         return ChatTemplateMode::JINJA;
+    } else if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::MINJA) {
+        return ChatTemplateMode::MINJA;
     }
-    return ChatTemplateMode::MINJA;
+
+    throw std::runtime_error("Unrecognized chat template mode");
 }
 
 // Helper function for case-insensitive comparison of file extensions
