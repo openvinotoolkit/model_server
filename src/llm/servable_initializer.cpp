@@ -264,7 +264,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
                 }
             }
 
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Jinja chat-template parser failed: {}", failureReason);
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed loading chat template with python Jinja: {}", failureReason);
             return;
         }
     }
